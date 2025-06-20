@@ -1,23 +1,22 @@
 // Merchant Aggregate Root - 지역 상점 관리 (Local League)
 // UTF-8 인코딩
 
-import type { Result } from '../../../../shared/types/common';
-import type { DomainEvent } from '../../../../shared/types/common';
+import type { DomainEvent, Result } from "../../../../shared/types/common";
+import type { UserId } from "../../../auth/domain/value-objects/user-value-objects";
 import {
-  MerchantId,
-  MerchantCategory,
-  MerchantStatus,
   Location,
+  MerchantCategory,
+  MerchantId,
+  MerchantStatus,
   QRCode,
   Rating,
-  RewardRate
-} from '../value-objects/investment-value-objects';
-import type { UserId } from '../../../auth/domain/value-objects/user-value-objects';
+  RewardRate,
+} from "../value-objects/investment-value-objects";
 
 // Merchant 도메인 이벤트
 export class MerchantRegisteredEvent implements DomainEvent {
   public readonly id: string;
-  public readonly type: string = 'MerchantRegistered';
+  public readonly type: string = "MerchantRegistered";
   public readonly aggregateId: string;
   public readonly data: Record<string, unknown>;
   public readonly version: number = 1;
@@ -36,14 +35,14 @@ export class MerchantRegisteredEvent implements DomainEvent {
       merchantId,
       name,
       category,
-      ownerId
+      ownerId,
     };
   }
 }
 
 export class MerchantActivatedEvent implements DomainEvent {
   public readonly id: string;
-  public readonly type: string = 'MerchantActivated';
+  public readonly type: string = "MerchantActivated";
   public readonly aggregateId: string;
   public readonly data: Record<string, unknown>;
   public readonly version: number = 1;
@@ -62,7 +61,7 @@ export class MerchantActivatedEvent implements DomainEvent {
 
 export class QRCodeGeneratedEvent implements DomainEvent {
   public readonly id: string;
-  public readonly type: string = 'QRCodeGenerated';
+  public readonly type: string = "QRCodeGenerated";
   public readonly aggregateId: string;
   public readonly data: Record<string, unknown>;
   public readonly version: number = 1;
@@ -89,6 +88,7 @@ export interface BusinessHours {
   friday: { open: string; close: string; closed?: boolean };
   saturday: { open: string; close: string; closed?: boolean };
   sunday: { open: string; close: string; closed?: boolean };
+  [key: string]: { open: string; close: string; closed?: boolean };
 }
 
 // 상점 연락처 정보
@@ -121,7 +121,8 @@ export class Merchant {
     private description: string,
     private readonly location: Location,
     private readonly ownerId: UserId,
-    private status: MerchantStatus,    private readonly rewardRate: RewardRate,
+    private status: MerchantStatus,
+    private readonly rewardRate: RewardRate,
     private readonly createdAt: Date,
     private updatedAt: Date,
     private businessHours: BusinessHours,
@@ -146,19 +147,31 @@ export class Merchant {
   ): Result<Merchant> {
     // 검증
     if (!name || name.trim().length < 2) {
-      return { success: false, error: new Error('Merchant name must be at least 2 characters') };
+      return {
+        success: false,
+        error: new Error("Merchant name must be at least 2 characters"),
+      };
     }
 
     if (!description || description.trim().length < 10) {
-      return { success: false, error: new Error('Description must be at least 10 characters') };
+      return {
+        success: false,
+        error: new Error("Description must be at least 10 characters"),
+      };
     }
 
     if (name.trim().length > 100) {
-      return { success: false, error: new Error('Merchant name must not exceed 100 characters') };
+      return {
+        success: false,
+        error: new Error("Merchant name must not exceed 100 characters"),
+      };
     }
 
     if (description.trim().length > 1000) {
-      return { success: false, error: new Error('Description must not exceed 1000 characters') };
+      return {
+        success: false,
+        error: new Error("Description must not exceed 1000 characters"),
+      };
     }
 
     const id = MerchantId.generate();
@@ -180,12 +193,9 @@ export class Merchant {
     );
 
     // 도메인 이벤트 발행
-    merchant.addDomainEvent(new MerchantRegisteredEvent(
-      id.getValue(),
-      name.trim(),
-      category,
-      ownerId
-    ));
+    merchant.addDomainEvent(
+      new MerchantRegisteredEvent(id.getValue(), name.trim(), category, ownerId)
+    );
 
     return { success: true, data: merchant };
   }
@@ -193,17 +203,19 @@ export class Merchant {
   // 상점 활성화
   activate(): Result<void> {
     if (this.status !== MerchantStatus.PENDING) {
-      return { success: false, error: new Error('Only pending merchants can be activated') };
+      return {
+        success: false,
+        error: new Error("Only pending merchants can be activated"),
+      };
     }
 
     this.status = MerchantStatus.ACTIVE;
     this.updatedAt = new Date();
 
     // 도메인 이벤트 발행
-    this.addDomainEvent(new MerchantActivatedEvent(
-      this.id.getValue(),
-      this.updatedAt
-    ));
+    this.addDomainEvent(
+      new MerchantActivatedEvent(this.id.getValue(), this.updatedAt)
+    );
 
     return { success: true, data: undefined };
   }
@@ -211,7 +223,10 @@ export class Merchant {
   // QR 코드 생성
   generateQRCode(expirationHours: number = 24): Result<QRCode> {
     if (!this.isActive()) {
-      return { success: false, error: new Error('Only active merchants can generate QR codes') };
+      return {
+        success: false,
+        error: new Error("Only active merchants can generate QR codes"),
+      };
     }
 
     const expiresAt = new Date();
@@ -226,11 +241,13 @@ export class Merchant {
     this.updatedAt = new Date();
 
     // 도메인 이벤트 발행
-    this.addDomainEvent(new QRCodeGeneratedEvent(
-      this.id.getValue(),
-      this.currentQRCode.getCode(),
-      expiresAt
-    ));
+    this.addDomainEvent(
+      new QRCodeGeneratedEvent(
+        this.id.getValue(),
+        this.currentQRCode.getCode(),
+        expiresAt
+      )
+    );
 
     return { success: true, data: this.currentQRCode };
   }
@@ -238,16 +255,21 @@ export class Merchant {
   // 리뷰 추가
   addReview(userId: UserId, rating: Rating, comment?: string): Result<void> {
     // 중복 리뷰 확인
-    const existingReview = this.reviews.find(review => review.userId === userId);
+    const existingReview = this.reviews.find(
+      (review) => review.userId === userId
+    );
     if (existingReview) {
-      return { success: false, error: new Error('User has already reviewed this merchant') };
+      return {
+        success: false,
+        error: new Error("User has already reviewed this merchant"),
+      };
     }
 
     this.reviews.push({
       userId,
       rating,
       comment: comment?.trim(),
-      createdAt: new Date()
+      createdAt: new Date(),
     });
 
     this.updatedAt = new Date();
@@ -263,14 +285,21 @@ export class Merchant {
   ): Result<void> {
     if (name !== undefined) {
       if (!name || name.trim().length < 2 || name.trim().length > 100) {
-        return { success: false, error: new Error('Invalid name length') };
+        return { success: false, error: new Error("Invalid name length") };
       }
       this.name = name.trim();
     }
 
     if (description !== undefined) {
-      if (!description || description.trim().length < 10 || description.trim().length > 1000) {
-        return { success: false, error: new Error('Invalid description length') };
+      if (
+        !description ||
+        description.trim().length < 10 ||
+        description.trim().length > 1000
+      ) {
+        return {
+          success: false,
+          error: new Error("Invalid description length"),
+        };
       }
       this.description = description.trim();
     }
@@ -290,7 +319,10 @@ export class Merchant {
   // 이벤트 활성화
   activateEvent(eventRewardRate: RewardRate): Result<void> {
     if (!this.isActive()) {
-      return { success: false, error: new Error('Merchant must be active to activate events') };
+      return {
+        success: false,
+        error: new Error("Merchant must be active to activate events"),
+      };
     }
 
     this.eventActive = true;
@@ -312,7 +344,10 @@ export class Merchant {
   // 매출 기록
   recordSale(amount: number, customerCount: number = 1): Result<void> {
     if (amount <= 0) {
-      return { success: false, error: new Error('Sale amount must be positive') };
+      return {
+        success: false,
+        error: new Error("Sale amount must be positive"),
+      };
     }
 
     this.totalEarnings += amount;
@@ -325,7 +360,10 @@ export class Merchant {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   suspend(_reason?: string): Result<void> {
     if (this.status === MerchantStatus.TERMINATED) {
-      return { success: false, error: new Error('Cannot suspend terminated merchant') };
+      return {
+        success: false,
+        error: new Error("Cannot suspend terminated merchant"),
+      };
     }
 
     this.status = MerchantStatus.SUSPENDED;
@@ -336,8 +374,14 @@ export class Merchant {
 
   // 상점 재활성화
   reactivate(): Result<void> {
-    if (this.status !== MerchantStatus.SUSPENDED && this.status !== MerchantStatus.INACTIVE) {
-      return { success: false, error: new Error('Can only reactivate suspended or inactive merchants') };
+    if (
+      this.status !== MerchantStatus.SUSPENDED &&
+      this.status !== MerchantStatus.INACTIVE
+    ) {
+      return {
+        success: false,
+        error: new Error("Can only reactivate suspended or inactive merchants"),
+      };
     }
 
     this.status = MerchantStatus.ACTIVE;
@@ -412,7 +456,12 @@ export class Merchant {
     return this.currentQRCode;
   }
 
-  getReviews(): Array<{ userId: UserId; rating: Rating; comment?: string; createdAt: Date }> {
+  getReviews(): Array<{
+    userId: UserId;
+    rating: Rating;
+    comment?: string;
+    createdAt: Date;
+  }> {
     return [...this.reviews];
   }
 
@@ -449,13 +498,18 @@ export class Merchant {
   }
 
   getEffectiveRewardRate(): RewardRate {
-    return this.isEventActive() && this.eventRewardRate ? this.eventRewardRate : this.rewardRate;
+    return this.isEventActive() && this.eventRewardRate
+      ? this.eventRewardRate
+      : this.rewardRate;
   }
 
   getAverageRating(): number {
     if (this.reviews.length === 0) return 0;
-    
-    const totalScore = this.reviews.reduce((sum, review) => sum + review.rating.getScore(), 0);
+
+    const totalScore = this.reviews.reduce(
+      (sum, review) => sum + review.rating.getScore(),
+      0
+    );
     return totalScore / this.reviews.length;
   }
 
@@ -464,11 +518,13 @@ export class Merchant {
   }
 
   isOpenAt(date: Date): boolean {
-    const day = date.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+    const day = date
+      .toLocaleDateString("en-US", { weekday: "long" })
+      .toLowerCase();
     const hours = this.businessHours[day];
-    
+
     if (hours.closed) return false;
-    
+
     const currentTime = date.toTimeString().substring(0, 5); // HH:MM
     return currentTime >= hours.open && currentTime <= hours.close;
   }
@@ -495,9 +551,10 @@ export class Merchant {
     return {
       totalEarnings: this.totalEarnings,
       customerCount: this.customerCount,
-      averageRating: this.getAverageRating(),      reviewCount: 0, // 임시값, 실제로는 별도 관리 필요
+      averageRating: this.getAverageRating(),
+      reviewCount: 0, // 임시값, 실제로는 별도 관리 필요
       isEventActive: this.isEventActive(),
-      rewardRate: this.getEffectiveRewardRate().toString()
+      rewardRate: this.getEffectiveRewardRate().toString(),
     };
   }
 }

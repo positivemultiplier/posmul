@@ -1,6 +1,6 @@
 # PosMul Prediction Game Platform
 
-PosMul은 Next.js 15, Domain-Driven Design (DDD), Clean Architecture 원칙을 구현한 예측 게임 MVP 플랫폼입니다.
+PosMul은 Next.js 15, Domain-Driven Design (DDD), Clean ArchitecturPosmul은 Next.js App Router, Domain-Driven Design (DDD), Clean Architecture 원칙을 구현한 예측 게임과 지역 경제 연동을 통해 시민이 직접 참여하는 새로운 민주주의를 경험을 제공하는 AI 시대 직접민주주의 플랫폼입니다. Supabase를 백엔드 서비스로, MCP(Model Context Protocol)를 외부 통합을 위해 사용합니다.
 
 ## 🎯 프로젝트 개요
 
@@ -77,9 +77,12 @@ npm start
 
 ```
 src/
-├── bounded-contexts/        # DDD Bounded Contexts
-│   ├── economic/           # 경제 시스템
-│   ├── prediction/         # 예측 게임
+├── bounded-contexts/      # DDD Bounded Contexts
+│   ├── economic/          # 경제 시스템
+│   ├── prediction/        # 예측 게임
+│   ├── investment/        # 시간과 화폐 투자를 통한 PMP/PMC 획득
+│   ├── donation/          # PMC 소비
+│   ├── forum/             # 포럼 및 커뮤니티
 │   ├── user/              # 사용자 관리
 │   ├── auth/              # 인증
 │   └── payment/           # 결제 시스템

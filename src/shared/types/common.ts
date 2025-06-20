@@ -5,6 +5,18 @@
 // 기본 ID 타입들
 export type BaseId = string;
 
+// 도메인 에러 클래스
+export class DomainError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+    public readonly details?: Record<string, unknown>
+  ) {
+    super(message);
+    this.name = 'DomainError';
+  }
+}
+
 // 결과 패턴 타입
 export type Result<T, E = Error> = 
   | { success: true; data: T }
