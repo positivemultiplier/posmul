@@ -164,7 +164,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
 
     // Dunbar's number와 network theory를 고려한 최적 밀도
     // 일반적으로 0.1-0.3 사이가 최적
-    let optimalDensity = Math.min(
+    const optimalDensity = Math.min(
       0.25, // 이론적 최적값
       constrainedMaxConnections / maxPossibleConnections,
       constraints.qualityThreshold

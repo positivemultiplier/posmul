@@ -104,6 +104,7 @@ export interface UtilityPrediction {
     readonly riskLevel: number;
   };
   readonly predictedUtility: number;
+  readonly confidence: number; // 예측 신뢰도
   readonly confidenceInterval: {
     readonly lower: number;
     readonly upper: number;
@@ -134,6 +135,64 @@ export interface SocialWelfareMeasurement {
   readonly prioritarianWeighted: number;
   readonly sampleSize: number;
   readonly staticticalPower: number;
+}
+
+/**
+ * 사회후생 분석 결과
+ */
+export interface SocialWelfareAnalysis {
+  readonly analysisId: string;
+  readonly analysisDate: Date;
+  readonly aggregateUtility: number;
+  readonly inequalityMeasures: {
+    readonly giniCoefficient: number;
+    readonly athkinsonIndex: number;
+    readonly theilIndex: number;
+  };
+  readonly distributionMetrics: {
+    readonly mean: number;
+    readonly median: number;
+    readonly variance: number;
+    readonly skewness: number;
+    readonly kurtosis: number;
+  };
+  readonly socialMobilityIndex: number;
+  readonly publicGoodContribution: number;
+  readonly welfareImprovementSuggestions: string[];
+  readonly confidence: number;
+  readonly sampleSize: number;
+}
+
+/**
+ * 효용함수 최적화 결과
+ */
+export interface UtilityOptimizationResult {
+  readonly optimizationId: string;
+  readonly userId: UserId;
+  readonly optimizedParameters: IndividualUtilityParameters;
+  readonly expectedUtilityImprovement: number;
+  readonly optimizationMethod:
+    | "GRADIENT_DESCENT"
+    | "GENETIC_ALGORITHM"
+    | "BAYESIAN_OPTIMIZATION";
+  readonly convergenceMetrics: {
+    readonly iterations: number;
+    readonly convergenceRate: number;
+    readonly finalError: number;
+  };
+  readonly actionRecommendations: {
+    readonly pmpAllocation: number;
+    readonly pmcAllocation: number;
+    readonly donationAmount: number;
+    readonly riskProfile: string;
+  };
+  readonly confidenceInterval: {
+    readonly lower: number;
+    readonly upper: number;
+    readonly confidence: number;
+  };
+  readonly createdAt: Date;
+  readonly validUntil: Date;
 }
 
 /**
