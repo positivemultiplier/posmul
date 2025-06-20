@@ -8,11 +8,12 @@
 import {
   IMoneyWaveHistoryRepository,
   IPMPPMCAccountRepository,
+  IUtilityFunctionRepository,
 } from "../domain/repositories";
+import { EconomicRealtimeEventPublisher } from "./events/economic-realtime-publisher";
 import { SupabaseMoneyWaveHistoryRepository } from "./repositories/supabase-money-wave-history.repository";
 import { SupabasePMPPMCAccountRepository } from "./repositories/supabase-pmp-pmc-account.repository";
-// import { SupabaseUtilityFunctionRepository } from "./repositories/supabase-utility-function.repository";
-import { EconomicRealtimeEventPublisher } from "./events/economic-realtime-publisher";
+import { SupabaseUtilityFunctionRepository } from "./repositories/supabase-utility-function.repository";
 
 /**
  * 경제 인프라스트럭처 컨테이너
@@ -21,7 +22,7 @@ export interface EconomyInfrastructureContainer {
   repositories: {
     pmpPmcAccountRepository: IPMPPMCAccountRepository;
     moneyWaveHistoryRepository: IMoneyWaveHistoryRepository;
-    // utilityFunctionRepository: IUtilityFunctionRepository;
+    utilityFunctionRepository: IUtilityFunctionRepository;
   };
   events: {
     realtimeEventPublisher: EconomicRealtimeEventPublisher;
@@ -58,20 +59,18 @@ export function createEconomyInfrastructure(
     },
   };
 
-  const finalConfig = { ...defaultConfig, ...config };
-  // Repository 인스턴스 생성
+  const finalConfig = { ...defaultConfig, ...config }; // Repository 인스턴스 생성
   const pmpPmcAccountRepository = new SupabasePMPPMCAccountRepository();
   const moneyWaveHistoryRepository = new SupabaseMoneyWaveHistoryRepository();
-  // const utilityFunctionRepository = new SupabaseUtilityFunctionRepository();
+  const utilityFunctionRepository = new SupabaseUtilityFunctionRepository();
 
   // 이벤트 시스템 생성
   const realtimeEventPublisher = new EconomicRealtimeEventPublisher();
-
   return {
     repositories: {
       pmpPmcAccountRepository,
       moneyWaveHistoryRepository,
-      // utilityFunctionRepository,
+      utilityFunctionRepository,
     },
     events: {
       realtimeEventPublisher,
