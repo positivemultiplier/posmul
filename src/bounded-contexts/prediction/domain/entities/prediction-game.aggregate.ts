@@ -590,6 +590,247 @@ export class PredictionGame {
   }
 
   /**
+   * 게임 제목 조회
+   */
+  public getTitle(): string {
+    return this._configuration.title;
+  }
+
+  /**
+   * 게임 설명 조회
+   */
+  public getDescription(): string {
+    return this._configuration.description;
+  }
+
+  /**
+   * 예측 타입 조회
+   */
+  public getPredictionType(): PredictionType {
+    return this._configuration.predictionType;
+  }
+
+  /**
+   * 예측 옵션들 조회
+   */
+  public getOptions(): PredictionOption[] {
+    return this._configuration.options;
+  }
+
+  /**
+   * 게임 시작 시간 조회
+   */
+  public getStartTime(): Date {
+    return this._configuration.startTime;
+  }
+
+  /**
+   * 게임 종료 시간 조회
+   */
+  public getEndTime(): Date {
+    return this._configuration.endTime;
+  }
+
+  /**
+   * 정산 시간 조회
+   */
+  public getSettlementTime(): Date {
+    return this._configuration.settlementTime;
+  }
+
+  /**
+   * 생성자 ID 조회
+   */
+  public getCreatedBy(): UserId {
+    return this._creatorId;
+  }
+
+  /**
+   * 게임 버전 조회
+   */
+  public getVersion(): number {
+    // 현재 구조에서는 버전 관리가 없으므로 기본값 반환
+    return 1;
+  }
+
+  /**
+   * 생성 시간 조회
+   */
+  public getCreatedAt(): Date {
+    return this._timestamps.createdAt;
+  }
+
+  /**
+   * 수정 시간 조회
+   */
+  public getUpdatedAt(): Date {
+    return this._timestamps.updatedAt;
+  }
+
+  /**
+   * 최소 스테이크 조회
+   */
+  public getMinimumStake(): PMP {
+    return this._configuration.minimumStake;
+  }
+
+  /**
+   * 최대 스테이크 조회
+   */
+  public getMaximumStake(): PMP {
+    return this._configuration.maximumStake;
+  }
+
+  /**
+   * 최대 참여자 수 조회
+   */
+  public getMaxParticipants(): number | undefined {
+    return this._configuration.maxParticipants;
+  }
+
+  /**
+   * 게임 제목 업데이트
+   */
+  public updateTitle(newTitle: string): Result<void, ValidationError> {
+    if (!newTitle || newTitle.trim().length === 0) {
+      return failure(new ValidationError("Title cannot be empty", "title"));
+    }
+
+    // configuration은 readonly이므로 새로운 객체 생성
+    (this._configuration as any).title = newTitle;
+    return { success: true, data: undefined } as Result<void, ValidationError>;
+  }
+
+  /**
+   * 게임 설명 업데이트
+   */
+  public updateDescription(
+    newDescription: string
+  ): Result<void, ValidationError> {
+    (this._configuration as any).description = newDescription;
+    return { success: true, data: undefined } as Result<void, ValidationError>;
+  }
+
+  /**
+   * 종료 시간 업데이트
+   */
+  public updateEndTime(newEndTime: Date): Result<void, ValidationError> {
+    if (newEndTime <= this._configuration.startTime) {
+      return failure(
+        new ValidationError("End time must be after start time", "endTime")
+      );
+    }
+
+    if (newEndTime >= this._configuration.settlementTime) {
+      return failure(
+        new ValidationError(
+          "End time must be before settlement time",
+          "endTime"
+        )
+      );
+    }
+
+    (this._configuration as any).endTime = newEndTime;
+    return { success: true, data: undefined } as Result<void, ValidationError>;
+  }
+
+  /**
+   * 정산 시간 업데이트
+   */
+  public updateSettlementTime(
+    newSettlementTime: Date
+  ): Result<void, ValidationError> {
+    if (newSettlementTime <= this._configuration.endTime) {
+      return failure(
+        new ValidationError(
+          "Settlement time must be after end time",
+          "settlementTime"
+        )
+      );
+    }
+
+    (this._configuration as any).settlementTime = newSettlementTime;
+    return { success: true, data: undefined } as Result<void, ValidationError>;
+  }
+
+  /**
+   * 최소 스테이크 업데이트
+   */
+  public updateMinimumStake(
+    newMinimumStake: PMP
+  ): Result<void, ValidationError> {
+    if (newMinimumStake >= this._configuration.maximumStake) {
+      return failure(
+        new ValidationError(
+          "Minimum stake must be less than maximum stake",
+          "minimumStake"
+        )
+      );
+    }
+
+    (this._configuration as any).minimumStake = newMinimumStake;
+    return { success: true, data: undefined } as Result<void, ValidationError>;
+  }
+
+  /**
+   * 최대 스테이크 업데이트
+   */
+  public updateMaximumStake(
+    newMaximumStake: PMP
+  ): Result<void, ValidationError> {
+    if (newMaximumStake <= this._configuration.minimumStake) {
+      return failure(
+        new ValidationError(
+          "Maximum stake must be greater than minimum stake",
+          "maximumStake"
+        )
+      );
+    }
+
+    (this._configuration as any).maximumStake = newMaximumStake;
+    return { success: true, data: undefined } as Result<void, ValidationError>;
+  }
+
+  /**
+   * 최대 참여자 수 업데이트
+   */
+  public updateMaxParticipants(
+    newMaxParticipants: number
+  ): Result<void, ValidationError> {
+    if (newMaxParticipants <= 0) {
+      return failure(
+        new ValidationError(
+          "Max participants must be positive",
+          "maxParticipants"
+        )
+      );
+    }
+
+    (this._configuration as any).maxParticipants = newMaxParticipants;
+    return { success: true, data: undefined } as Result<void, ValidationError>;
+  }
+
+  /**
+   * 게임 삭제 마크 (소프트 삭제)
+   */
+  public markAsDeleted(
+    deletedBy: UserId,
+    reason: string
+  ): Result<void, DomainError> {
+    if (this._status === GameStatus.COMPLETED) {
+      return failure(
+        new DomainError(
+          "Cannot delete completed game",
+          "CANNOT_DELETE_COMPLETED"
+        )
+      );
+    }
+
+    this._status = GameStatus.CANCELLED; // DELETED 상태가 없으므로 CANCELLED 사용
+    return success(undefined);
+  }
+
+  /**
    * 게임 활성 상태 확인
    */
   public isActive(): boolean {

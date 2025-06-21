@@ -10,9 +10,13 @@
 
 // Use Case Classes
 export { CreatePredictionGameUseCase } from "./create-prediction-game.use-case";
+export { DeletePredictionGameUseCase } from "./delete-prediction-game.use-case";
 export { DistributeMoneyWaveUseCase } from "./distribute-money-wave.use-case";
+export { GetPredictionGameByIdUseCase } from "./get-prediction-game-by-id.use-case";
+export { GetPredictionGamesUseCase } from "./get-prediction-games.use-case";
 export { ParticipatePredictionUseCase } from "./participate-prediction.use-case";
 export { SettlePredictionGameUseCase } from "./settle-prediction-game.use-case";
+export { UpdatePredictionGameUseCase } from "./update-prediction-game.use-case";
 
 // DTOs
 export type {
@@ -26,6 +30,27 @@ export type {
   SettlePredictionGameResponse,
   UseCaseResponse,
 } from "../dto/prediction-use-case.dto";
+
+// Additional DTOs from new use cases
+export type {
+  GetPredictionGamesRequest,
+  GetPredictionGamesResponse,
+} from "./get-prediction-games.use-case";
+
+export type {
+  GetPredictionGameByIdRequest,
+  GetPredictionGameByIdResponse,
+} from "./get-prediction-game-by-id.use-case";
+
+export type {
+  UpdatePredictionGameRequest,
+  UpdatePredictionGameResponse,
+} from "./update-prediction-game.use-case";
+
+export type {
+  DeletePredictionGameRequest,
+  DeletePredictionGameResponse,
+} from "./delete-prediction-game.use-case";
 
 export { MoneyWaveDistributionType } from "../dto/prediction-use-case.dto";
 

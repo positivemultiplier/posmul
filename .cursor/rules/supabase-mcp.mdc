@@ -1,8 +1,9 @@
 ---
-description: supabase
-globs:
+description: "supabase","데이터베이스", "스키마", "마이그레이션","mcp_supabase_", "SQL", "테이블"
+globs: 
 alwaysApply: false
 ---
+
 
 # PosMul - Supabase MCP Integration Rules
 

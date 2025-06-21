@@ -201,6 +201,26 @@ export interface IPredictionGameRepository {
   delete(id: PredictionGameId): Promise<Result<void, RepositoryError>>;
 
   /**
+   * 필터 조건으로 게임 목록 조회 (새로운 UseCase용)
+   *
+   * @param options 조회 옵션
+   * @returns 성공 시 게임 목록, 실패 시 RepositoryError
+   */
+  findMany(options: {
+    filters?: any;
+    pagination?: { limit: number; offset: number };
+    sorting?: { field: string; order: "asc" | "desc" };
+  }): Promise<Result<PredictionGame[], RepositoryError>>;
+
+  /**
+   * 필터 조건에 해당하는 게임 수 조회
+   *
+   * @param filters 필터 조건
+   * @returns 성공 시 게임 수, 실패 시 RepositoryError
+   */
+  countByFilters(filters: any): Promise<Result<number, RepositoryError>>;
+
+  /**
    * 게임 통계 조회
    *
    * @param id 게임 ID

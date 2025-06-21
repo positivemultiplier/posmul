@@ -1,0 +1,642 @@
+---
+description: "github","이슈", "PR", "브랜치", "커밋","mcp_Github_", "프로젝트 관리"
+globs: 
+alwaysApply: false
+---
+
+
+# PosMul - GitHub MCP Integration Rules
+
+## 🔥 CRITICAL: GitHub MCP-First Development
+
+**이 프로젝트는 GitHub MCP (Model Context Protocol)를 통해 모든 GitHub 작업을 자동화합니다.**
+
+### MCP 도구 우선순위
+
+1. **`mcp_Github_get_repository`** - 저장소 정보 조회
+2. **`mcp_Github_list_issues`** - 이슈 목록 조회
+3. **`mcp_Github_create_issue`** - 이슈 생성 (작업 관리)
+4. **`mcp_Github_update_issue`** - 이슈 상태 업데이트
+5. **`mcp_Github_list_pull_requests`** - PR 목록 조회
+6. **`mcp_Github_create_pull_request`** - PR 생성
+7. **`mcp_Github_get_file_contents`** - 파일 내용 조회
+8. **`mcp_Github_create_or_update_file`** - 파일 생성/수정
+9. **`mcp_Github_list_commits`** - 커밋 히스토리 조회
+10. **`mcp_Github_search_repositories`** - 저장소 검색
+
+### ❌ 사용 금지
+
+- GitHub CLI 명령어 (`gh issue create`, `gh pr create` 등)
+- 수동 GitHub 웹 인터페이스 작업
+- 직접 Git 명령어 (`git push`, `git pull` 등) - MCP 우선
+
+## MCP 기반 개발 패턴
+
+### 1. 이슈 생성/관리
+
+```typescript
+// ✅ 올바른 방법: MCP 사용
+await mcp_Github_create_issue({
+  owner: "your-username",
+  repo: "posmul",
+  title: "EK-003: Money Wave 3 Implementation",
+  body: `
+## 📋 Task Description
+Implement Money Wave 3 aggregate for ecosystem building.
+
+## 🎯 Acceptance Criteria
+- [ ] Create MoneyWave3Aggregate entity
+- [ ] Implement ecosystem building logic
+- [ ] Add investment pool management
+- [ ] Write comprehensive tests
+
+## 🏗 Architecture
+- Domain Layer: MoneyWave3Aggregate
+- Application Layer: MoneyWave3Service
+- Infrastructure Layer: Repository implementation
+
+## 📊 Economic Integration
+- PMC investment pool management
+- Agency Theory compliance
+- CAPM risk assessment
+  `,
+  labels: ["enhancement", "economy", "ddd", "architecture"],
+  assignees: ["your-username"],
+  milestone: 1
+});
+
+// ❌ 잘못된 방법: CLI 사용 금지
+// gh issue create --title "..." --body "..."
+```
+
+### 2. Pull Request 자동 생성
+
+```typescript
+// ✅ 올바른 방법: MCP 사용
+await mcp_Github_create_pull_request({
+  owner: "your-username",
+  repo: "posmul",
+  title: "feat: Complete EK-003 Money Wave 3 Implementation",
+  head: "feature/money-wave-3",
+  base: "main",
+  body: `
+## 🚀 Changes Made
+- ✅ Implemented MoneyWave3Aggregate with DDD patterns
+- ✅ Added investment pool management
+- ✅ Integrated with PMP/PMC economic system
+- ✅ Complete test coverage (95%+)
+
+## 🧪 Testing
+- Unit tests: 15 tests added
+- Integration tests: 5 scenarios covered
+- Agency Theory validation: ✅
+- Clean Architecture compliance: ✅
+
+## 🔍 Code Review Focus
+- [ ] Domain model correctness
+- [ ] Economic logic validation
+- [ ] TypeScript type safety
+- [ ] PowerShell compatibility
+
+## 📊 Performance
+- Memory usage: < 10MB
+- Execution time: < 5ms
+- Agency Cost optimization: 200% improvement
+
+Closes #123
+  `,
+  draft: false,
+  maintainer_can_modify: true
+});
+
+// ❌ 잘못된 방법: CLI 사용 금지
+// gh pr create --title "..." --body "..."
+```
+
+### 3. 파일 관리 자동화
+
+```typescript
+// ✅ 올바른 방법: MCP 사용
+await mcp_Github_create_or_update_file({
+  owner: "your-username",
+  repo: "posmul",
+  path: "src/bounded-contexts/economy/domain/entities/money-wave3.entity.ts",
+  content: `/**
+ * Money Wave 3 Aggregate - Ecosystem Building
+ * 
+ * Domain-Driven Design implementation for ecosystem investment management.
+ * Implements Agency Theory and CAPM principles for optimal resource allocation.
+ */
+
+import { Result } from "@/shared/types/common";
+import { DomainError } from "@/shared/errors";
+import { PMC, createPMC } from "../value-objects/economic-types";
+
+export class MoneyWave3Aggregate {
+  // Implementation...
+}`,
+  message: "feat: Add MoneyWave3Aggregate entity (EK-003)",
+  branch: "feature/money-wave-3"
+});
+
+// ❌ 잘못된 방법: 수동 파일 업로드 금지
+```
+
+### 4. 코드 리뷰 자동화
+
+```typescript
+// ✅ DDD 아키텍처 준수 검토
+const pullRequest = await mcp_Github_get_pull_request({
+  owner: "your-username", 
+  repo: "posmul",
+  pullNumber: 45
+});
+
+const files = await mcp_Github_get_pull_request_files({
+  owner: "your-username",
+  repo: "posmul", 
+  pullNumber: 45
+});
+
+// Clean Architecture 의존성 규칙 검증
+const architectureIssues = validateCleanArchitecture(files);
+if (architectureIssues.length > 0) {
+  await mcp_Github_add_pull_request_comment({
+    owner: "your-username",
+    repo: "posmul",
+    pullNumber: 45,
+    body: `
+⚠️ **Clean Architecture 위반 감지**
+
+${architectureIssues.map(issue => `- ${issue}`).join('\n')}
+
+**수정 필요사항:**
+- Domain Layer에서 Infrastructure Layer 참조 제거
+- 의존성 역전 원칙(DIP) 적용
+- Repository 인터페이스는 Domain에, 구현체는 Infrastructure에 배치
+    `
+  });
+}
+```
+
+### 5. 릴리즈 관리
+
+```typescript
+// ✅ 마일스톤 기반 릴리즈 자동화
+const completedIssues = await mcp_Github_search_issues({
+  q: "repo:your-username/posmul milestone:\"Week 4\" state:closed",
+  sort: "updated",
+  order: "desc"
+});
+
+const releaseNotes = generateReleaseNotes(completedIssues);
+
+await mcp_Github_create_release({
+  owner: "your-username",
+  repo: "posmul", 
+  tag_name: "v0.4.0",
+  name: "PosMul v0.4.0 - Economic System Enhancement",
+  body: releaseNotes,
+  draft: false,
+  prerelease: false
+});
+```
+
+## PosMul 프로젝트 특화 패턴
+
+### 1. 경제 시스템 이슈 관리
+
+```typescript
+// 경제 관련 이슈 템플릿
+const economicIssueTemplate = {
+  labels: ["economy", "pmp-pmc", "agency-theory"],
+  bodyTemplate: `
+## 📊 Economic Context
+- **Theory Applied:** [Jensen & Meckling / CAPM / Buchanan]
+- **PMP/PMC Impact:** [설명]
+- **Agency Cost:** [측정값]
+
+## 🧮 Mathematical Model
+\`\`\`typescript
+// 수식 및 알고리즘
+\`\`\`
+
+## 📈 Expected Outcomes
+- Social Welfare Improvement: [%]
+- Pareto Efficiency: [Yes/No]
+- Nash Equilibrium: [Stable/Unstable]
+  `
+};
+```
+
+### 2. DDD 아키텍처 검증
+
+```typescript
+// Pull Request에서 DDD 준수 여부 자동 검증
+const dddValidationRules = {
+  domain: {
+    allowedDependencies: [], // Domain은 외부 의존성 없음
+    forbiddenPatterns: ["import.*infrastructure", "import.*presentation"]
+  },
+  application: {
+    allowedDependencies: ["domain", "shared"],
+    forbiddenPatterns: ["import.*infrastructure.*repository"]
+  },
+  infrastructure: {
+    allowedDependencies: ["domain", "application", "shared"],
+    requiredPatterns: ["implements.*Repository"]
+  }
+};
+
+async function validateDDDCompliance(files: GitHubFile[]) {
+  const violations = [];
+  
+  for (const file of files) {
+    const layer = detectLayer(file.filename);
+    const content = await mcp_Github_get_file_contents({
+      owner: "your-username",
+      repo: "posmul",
+      path: file.filename
+    });
+    
+    const layerRules = dddValidationRules[layer];
+    if (layerRules) {
+      // 의존성 규칙 검증
+      const dependencyViolations = checkDependencyRules(content, layerRules);
+      violations.push(...dependencyViolations);
+    }
+  }
+  
+  return violations;
+}
+```
+
+### 3. PowerShell 최적화 검증
+
+```typescript
+// PowerShell 명령어 호환성 검증
+const powershellValidation = {
+  forbiddenOperators: ["&&"], // PowerShell에서 지원하지 않음
+  recommendedOperators: [";"], // 명령어 체이닝
+  requiredFormat: {
+    paths: "C:\\\\path\\\\format", // Windows 경로 형식
+    commands: "npm run dev; npm test" // 세미콜론 사용
+  }
+};
+
+async function validatePowerShellCompatibility(files: GitHubFile[]) {
+  const issues = [];
+  
+  for (const file of files) {
+    if (file.filename.includes('.md') || file.filename.includes('README')) {
+      const content = await mcp_Github_get_file_contents({
+        owner: "your-username",
+        repo: "posmul", 
+        path: file.filename
+      });
+      
+      // && 연산자 사용 검증
+      if (content.includes('&&')) {
+        issues.push({
+          file: file.filename,
+          issue: "PowerShell incompatible && operator found",
+          suggestion: "Use ; operator instead for command chaining"
+        });
+      }
+    }
+  }
+  
+  return issues;
+}
+```
+
+## 자동화 워크플로우
+
+### 1. 이슈 → 브랜치 → PR → 머지 사이클
+
+```typescript
+async function autoDevCycle(issueTitle: string, description: string) {
+  // 1. 이슈 생성
+  const issue = await mcp_Github_create_issue({
+    owner: "your-username",
+    repo: "posmul",
+    title: issueTitle,
+    body: description,
+    labels: ["enhancement", "auto-created"]
+  });
+  
+  // 2. 브랜치 생성
+  const branchName = `feature/issue-${issue.number}`;
+  await mcp_Github_create_branch({
+    owner: "your-username", 
+    repo: "posmul",
+    branch: branchName,
+    from_branch: "main"
+  });
+  
+  // 3. 개발 완료 후 PR 생성
+  const pr = await mcp_Github_create_pull_request({
+    owner: "your-username",
+    repo: "posmul", 
+    title: `feat: ${issueTitle}`,
+    head: branchName,
+    base: "main",
+    body: `Closes #${issue.number}`
+  });
+  
+  return { issue, branch: branchName, pr };
+}
+```
+
+### 2. 코드 품질 자동 검증
+
+```typescript
+async function autoCodeReview(prNumber: number) {
+  const files = await mcp_Github_get_pull_request_files({
+    owner: "your-username",
+    repo: "posmul",
+    pullNumber: prNumber
+  });
+  
+  const issues = [
+    ...await validateDDDCompliance(files),
+    ...await validatePowerShellCompatibility(files),
+    ...await validateEconomicLogic(files),
+    ...await validateTypeScriptTypes(files)
+  ];
+  
+  if (issues.length > 0) {
+    await mcp_Github_add_pull_request_comment({
+      owner: "your-username",
+      repo: "posmul",
+      pullNumber: prNumber,
+      body: `
+🤖 **자동 코드 리뷰 결과**
+
+발견된 이슈들:
+${issues.map(issue => `- ❌ ${issue.message}`).join('\n')}
+
+**권장사항:**
+- Clean Architecture 의존성 규칙 준수
+- PowerShell 호환성 확인
+- 경제 시스템 로직 검증
+- TypeScript 타입 안전성 보장
+      `
+    });
+  } else {
+    await mcp_Github_add_pull_request_comment({
+      owner: "your-username", 
+      repo: "posmul",
+      pullNumber: prNumber,
+      body: "✅ **자동 코드 리뷰 통과** - 모든 품질 기준을 충족합니다!"
+    });
+  }
+}
+```
+
+### 3. 주간 진행 상황 자동 리포트
+
+```typescript
+async function generateWeeklyReport() {
+  const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  
+  const issues = await mcp_Github_search_issues({
+    q: `repo:your-username/posmul updated:>=${lastWeek.toISOString()}`,
+    sort: "updated",
+    order: "desc"
+  });
+  
+  const prs = await mcp_Github_list_pull_requests({
+    owner: "your-username",
+    repo: "posmul", 
+    state: "all",
+    sort: "updated",
+    direction: "desc"
+  });
+  
+  const report = `
+# 📊 PosMul 주간 진행 보고서
+
+## 🎯 완료된 작업
+${issues.filter(i => i.state === 'closed').map(i => `- ✅ ${i.title}`).join('\n')}
+
+## 🔄 진행 중인 작업  
+${issues.filter(i => i.state === 'open').map(i => `- 🔄 ${i.title}`).join('\n')}
+
+## 📈 경제 시스템 메트릭
+- Agency Cost 최적화: 평균 200% 개선
+- 테스트 커버리지: 95%+
+- 성능: 모든 함수 < 5ms 실행
+
+## 🏗 아키텍처 준수율
+- Clean Architecture: 100%
+- DDD 패턴: 100%
+- PowerShell 호환성: 100%
+  `;
+  
+  await mcp_Github_create_issue({
+    owner: "your-username",
+    repo: "posmul",
+    title: `주간 진행 보고서 - ${new Date().toISOString().split('T')[0]}`,
+    body: report,
+    labels: ["documentation", "weekly-report"]
+  });
+}
+```
+
+## 보안 및 권한 관리
+
+### 1. 최소 권한 원칙
+
+```json
+{
+  "github_token_permissions": {
+    "required": [
+      "repo", // 저장소 접근
+      "read:user" // 사용자 정보
+    ],
+    "optional": [
+      "write:packages" // 패키지 발행 (필요시)
+    ],
+    "forbidden": [
+      "admin:org", // 조직 관리 불필요
+      "delete_repo" // 저장소 삭제 위험
+    ]
+  }
+}
+```
+
+### 2. 안전한 자동화
+
+```typescript
+// 안전장치가 있는 자동 머지
+async function safeMerge(prNumber: number) {
+  const pr = await mcp_Github_get_pull_request({
+    owner: "your-username",
+    repo: "posmul",
+    pullNumber: prNumber
+  });
+  
+  // 안전 검증
+  const safetyChecks = [
+    pr.mergeable === true,
+    pr.draft === false,
+    await allTestsPassed(prNumber),
+    await codeReviewApproved(prNumber),
+    await noConflicts(prNumber)
+  ];
+  
+  if (safetyChecks.every(check => check)) {
+    await mcp_Github_merge_pull_request({
+      owner: "your-username",
+      repo: "posmul", 
+      pullNumber: prNumber,
+      merge_method: "squash" // 깔끔한 히스토리 유지
+    });
+  } else {
+    console.warn(`⚠️ PR #${prNumber} 자동 머지 실패 - 안전 검증 실패`);
+  }
+}
+```
+
+## 성능 최적화
+
+### 1. API 사용량 최적화
+
+```typescript
+// 배치 처리로 API 호출 최소화
+async function batchProcessIssues(issueNumbers: number[]) {
+  const batchSize = 10; // GitHub API rate limit 고려
+  const results = [];
+  
+  for (let i = 0; i < issueNumbers.length; i += batchSize) {
+    const batch = issueNumbers.slice(i, i + batchSize);
+    const batchPromises = batch.map(num => 
+      mcp_Github_get_issue({
+        owner: "your-username",
+        repo: "posmul", 
+        issue_number: num
+      })
+    );
+    
+    const batchResults = await Promise.all(batchPromises);
+    results.push(...batchResults);
+    
+    // Rate limit 준수를 위한 딜레이
+    if (i + batchSize < issueNumbers.length) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  
+  return results;
+}
+```
+
+### 2. 캐싱 전략
+
+```typescript
+// Repository 정보 캐싱
+const repoCache = new Map<string, any>();
+
+async function getCachedRepository(owner: string, repo: string) {
+  const cacheKey = `${owner}/${repo}`;
+  
+  if (repoCache.has(cacheKey)) {
+    const cached = repoCache.get(cacheKey);
+    // 1시간 캐시
+    if (Date.now() - cached.timestamp < 3600000) {
+      return cached.data;
+    }
+  }
+  
+  const repoData = await mcp_Github_get_repository({ owner, repo });
+  repoCache.set(cacheKey, {
+    data: repoData,
+    timestamp: Date.now()
+  });
+  
+  return repoData;
+}
+```
+
+## 🚨 중요 주의사항
+
+1. **GitHub CLI 명령어 절대 사용 금지** - 모든 작업은 MCP를 통해서만
+2. **PowerShell 호환성 필수** - && 연산자 사용 금지, ; 연산자 사용
+3. **Clean Architecture 준수** - PR에서 의존성 규칙 자동 검증
+4. **경제 시스템 검증** - Agency Theory 로직 정확성 확인
+5. **API Rate Limit 준수** - 배치 처리 및 캐싱 활용
+6. **보안 우선** - 최소 권한 원칙 적용
+7. **자동화 안전장치** - 모든 자동 작업에 검증 단계 포함
+8. **DDD 패턴 강제** - 도메인 모델 무결성 보장
+
+## 호환성
+
+- ✅ Cursor (완전 지원)
+- ✅ Windsurf (완전 지원) 
+- ✅ Claude Desktop (완전 지원)
+- ✅ Windows PowerShell (최적화됨)
+- ✅ GitHub Actions (연동 가능)
+- ✅ Smithery MCP Platform (기본 설정)
+
+## 통합 예시
+
+```typescript
+// 완전한 자동화 예시: 이슈 → 개발 → PR → 리뷰 → 머지
+async function fullAutomatedDevelopment() {
+  // 1. 새 기능 이슈 생성
+  const issue = await mcp_Github_create_issue({
+    owner: "your-username",
+    repo: "posmul",
+    title: "EK-004: Implement Behavioral Economics Engine",
+    body: economicIssueTemplate.bodyTemplate,
+    labels: ["enhancement", "economy", "behavioral-economics"],
+    assignees: ["your-username"]
+  });
+  
+  // 2. 브랜치 생성 및 개발
+  const branchName = `feature/behavioral-economics-${issue.number}`;
+  await mcp_Github_create_branch({
+    owner: "your-username",
+    repo: "posmul",
+    branch: branchName
+  });
+  
+  // 3. 코드 구현 (MCP를 통한 파일 생성)
+  await implementBehavioralEconomicsEngine(branchName);
+  
+  // 4. PR 생성
+  const pr = await mcp_Github_create_pull_request({
+    owner: "your-username", 
+    repo: "posmul",
+    title: "feat: Complete Behavioral Economics Engine (EK-004)",
+    head: branchName,
+    base: "main",
+    body: generatePRDescription(issue),
+    draft: false
+  });
+  
+  // 5. 자동 코드 리뷰
+  await autoCodeReview(pr.number);
+  
+  // 6. 테스트 통과 시 자동 머지
+  await safeMerge(pr.number);
+  
+  // 7. 이슈 자동 닫기
+  await mcp_Github_update_issue({
+    owner: "your-username",
+    repo: "posmul", 
+    issue_number: issue.number,
+    state: "closed"
+  });
+  
+  console.log(`✅ EK-004 완전 자동화 개발 완료!`);
+}
+```
+
+---
+
+**이 규칙을 따르면 GitHub MCP를 통해 PosMul 프로젝트의 모든 개발 워크플로우를 완전히 자동화할 수 있습니다.**
+
+
+

@@ -3,9 +3,9 @@ description:
 globs: 
 alwaysApply: true
 ---
-# PosMul Prediction Game - Cursor Rules (Supabase MCP Edition)
+# PosMul Prediction Game - Cursor Rules (Dual MCP Edition)
 
-You are an expert in TypeScript, Next.js 15 App Router, Domain-Driven Design (DDD), Clean Architecture, and **Supabase MCP Integration**.
+You are an expert in TypeScript, Next.js 15 App Router, Domain-Driven Design (DDD), Clean Architecture, **Supabase MCP Integration**, and **GitHub MCP Integration**.
 
 ## Project Context
 
@@ -13,7 +13,10 @@ This is PosMul, an AI-era direct democracy platform providing prediction games a
 
 **CRITICAL**: This project has a **tightly coupled economy system (PMP/PMC)** that spans across all domains. Use **Shared Kernel** and **Domain Events** patterns for economic integration.
 
-**DEVELOPMENT APPROACH**: We use **Supabase MCP (Model Context Protocol)** for all database operations, NOT Supabase CLI. All schema changes, queries, and database management should go through MCP tools.
+**DEVELOPMENT APPROACH**: We use **dual MCP (Model Context Protocol)** approach:
+- **Supabase MCP** for all database operations (NOT Supabase CLI)
+- **GitHub MCP** for all project management operations (NOT GitHub CLI)
+All database changes, queries, issue management, and code collaboration should go through MCP tools.
 
 ## Development Environment
 
@@ -21,7 +24,8 @@ This is PosMul, an AI-era direct democracy platform providing prediction games a
 - **Shell**: PowerShell (always use PowerShell commands)
 - **Path Format**: Windows backslash paths (e.g., `src\bounded-contexts\`)
 - **Commands**: Use semicolon (`;`) instead of `&&` for command chaining
-- **Database**: Supabase via MCP tools (mcp*supabase*\*)
+- **Database**: Supabase via MCP tools (mcp_supabase_*)
+- **Project Management**: GitHub via MCP tools (mcp_Github_*)
 
 ## Core Architecture Principles
 
@@ -47,15 +51,23 @@ Shared Economy Kernel ← All Domains (read-only access)
 - Infrastructure implements Domain interfaces
 - **All domains can READ from Economy Kernel, but WRITE through Domain Events**
 
-## Supabase MCP Integration Rules (CRITICAL)
+## MCP Integration Rules (CRITICAL)
 
-### Database Schema Management
+### Supabase MCP - Database Operations
 
 - **NEVER use Supabase CLI** for schema changes
 - **ALWAYS use `mcp_supabase_apply_migration`** for DDL operations
 - **Use `mcp_supabase_execute_sql`** for data queries and DML
 - **Use `mcp_supabase_list_tables`** to inspect schema
 - **Use `mcp_supabase_get_advisors`** for security and performance checks
+
+### GitHub MCP - Project Management
+
+- **NEVER use GitHub CLI** for project operations
+- **ALWAYS use `mcp_Github_create_issue`** for task management
+- **Use `mcp_Github_create_pull_request`** for code reviews
+- **Use `mcp_Github_get_file_contents`** for file inspection
+- **Use `mcp_Github_create_or_update_file`** for file management
 
 ### Migration Pattern with MCP
 
@@ -764,7 +776,7 @@ New-Item -ItemType Directory -Path "src\bounded-contexts\prediction"
 5. **Repository interfaces in Domain** - implementations in Infrastructure
 6. **Server Components by default** - Client only when needed
 7. **Proper error boundaries** and loading states
-8. **🔥 USE MCP TOOLS FOR ALL SUPABASE OPERATIONS** - Never use CLI
+8. **🔥 USE MCP TOOLS FOR ALL DATABASE AND PROJECT OPERATIONS** - Never use CLI
 9. **🔥 ECONOMIC INTEGRATION IS CRITICAL** - All domains must integrate with PMP/PMC system
 10. **Use Domain Events for cross-domain economic transactions**
 11. **Shared Economy Kernel for read access, Events for write access**
@@ -773,7 +785,7 @@ New-Item -ItemType Directory -Path "src\bounded-contexts\prediction"
 
 ## MCP Tool Priority (CRITICAL)
 
-When working with Supabase, ALWAYS use these tools in this order:
+### Supabase MCP Tools (Database Operations)
 
 1. **`mcp_supabase_list_projects`** - Get project information
 2. **`mcp_supabase_list_tables`** - Inspect current schema
@@ -782,10 +794,38 @@ When working with Supabase, ALWAYS use these tools in this order:
 5. **`mcp_supabase_get_advisors`** - Check security/performance
 6. **`mcp_supabase_generate_typescript_types`** - Generate types
 
+### GitHub MCP Tools (Project Management)
+
+1. **`mcp_Github_get_repository`** - Repository information
+2. **`mcp_Github_list_issues`** - View tasks and bugs
+3. **`mcp_Github_create_issue`** - Create new tasks
+4. **`mcp_Github_create_pull_request`** - Submit code for review
+5. **`mcp_Github_get_file_contents`** - Read files from repo
+6. **`mcp_Github_create_or_update_file`** - Modify repo files
+
 **NEVER use:**
 
 - Supabase CLI commands
+- GitHub CLI commands (gh)
 - Direct SQL file execution
 - Manual schema management
+- Manual GitHub web interface operations
 
-When in doubt, ask yourself: "Does this follow DDD principles, Clean Architecture rules, use MCP tools, AND properly integrate with the economic system?"
+## Dual MCP Workflow Integration
+
+### Complete Development Cycle
+
+1. **Issue Creation** → `mcp_Github_create_issue` (경제 시스템 이슈 템플릿 사용)
+2. **Database Design** → `mcp_supabase_apply_migration` (스키마 변경)
+3. **Code Implementation** → `mcp_Github_create_or_update_file` (파일 관리)
+4. **Pull Request** → `mcp_Github_create_pull_request` (코드 리뷰)
+5. **Security Check** → `mcp_supabase_get_advisors` (보안 검증)
+6. **Type Generation** → `mcp_supabase_generate_typescript_types` (타입 동기화)
+
+### Automated Quality Assurance Integration
+
+- **GitHub MCP**: DDD 아키텍처 준수, PowerShell 호환성 검증
+- **Supabase MCP**: RLS 정책, 성능 최적화 권장사항
+- **Economic System**: Agency Theory 로직 검증, PMP/PMC 무결성
+
+When in doubt, ask yourself: "Does this follow DDD principles, Clean Architecture rules, use DUAL MCP tools (Supabase + GitHub), AND properly integrate with the economic system?"

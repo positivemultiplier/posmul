@@ -112,11 +112,28 @@ export class SupabasePredictionGameRepository
   }
 
   /**
-   * 예측 게임 저장
+   * 예측 게임을 데이터베이스에 저장
    */
   async save(game: PredictionGame): Promise<Result<void, RepositoryError>> {
     try {
-      const gameData = this.mapDomainToDatabase(game);
+      const gameData = {
+        id: game.id,
+        creator_id: game.getCreatedBy(),
+        title: game.getTitle(),
+        description: game.getDescription(),
+        prediction_type: game.getPredictionType(),
+        options: JSON.stringify(game.getOptions()),
+        start_time: game.getStartTime().toISOString(),
+        end_time: game.getEndTime().toISOString(),
+        settlement_time: game.getSettlementTime().toISOString(),
+        minimum_stake: game.getMinimumStake(),
+        maximum_stake: game.getMaximumStake(),
+        max_participants: game.getMaxParticipants(),
+        status: game.status,
+        created_at: game.getCreatedAt().toISOString(),
+        updated_at: game.getUpdatedAt().toISOString(),
+        version: game.getVersion(),
+      };
 
       const { error: gameError } = await this.supabase
         .from("prediction_games")
@@ -1055,24 +1072,24 @@ export class SupabasePredictionGameRepository
   private mapDomainToDatabase(game: PredictionGame): PredictionGameRow {
     return {
       id: game.id,
-      creator_id: game.creatorId,
-      title: game.configuration.title,
-      description: game.configuration.description,
-      prediction_type: game.configuration.predictionType,
-      options: JSON.stringify(game.configuration.options),
-      start_time: game.configuration.startTime.toISOString(),
-      end_time: game.configuration.endTime.toISOString(),
-      settlement_time: game.configuration.settlementTime.toISOString(),
-      minimum_stake: game.configuration.minimumStake,
-      maximum_stake: game.configuration.maximumStake,
-      max_participants: game.configuration.maxParticipants || null,
+      creator_id: game.getCreatedBy(),
+      title: game.getTitle(),
+      description: game.getDescription(),
+      prediction_type: game.getPredictionType(),
+      options: JSON.stringify(game.getOptions()),
+      start_time: game.getStartTime().toISOString(),
+      end_time: game.getEndTime().toISOString(),
+      settlement_time: game.getSettlementTime().toISOString(),
+      minimum_stake: game.getMinimumStake(),
+      maximum_stake: game.getMaximumStake(),
+      max_participants: game.getMaxParticipants() || null,
       status: game.status,
       money_wave_id: null, // MoneyWave 연동 시 설정
       game_importance_score: 1.0, // 기본값
       allocated_prize_pool: 0, // MoneyWave에서 설정
-      created_at: game.timestamps.createdAt.toISOString(),
-      updated_at: new Date().toISOString(),
-      version: 1, // 기본 버전
+      created_at: game.getCreatedAt().toISOString(),
+      updated_at: game.getUpdatedAt().toISOString(),
+      version: game.getVersion(),
     };
   }
 
@@ -1088,7 +1105,7 @@ export class SupabasePredictionGameRepository
       stake: prediction.stake,
       confidence: prediction.confidence,
       reasoning: prediction.reasoning || null,
-      is_correct: prediction.result?.isCorrect || null,
+      is_correct: (prediction.result as any)?.isCorrect || null,
       accuracy_score: prediction.accuracyScore || null,
       reward_amount: prediction.reward || null,
       created_at: prediction.timestamps.createdAt.toISOString(),
@@ -1130,7 +1147,7 @@ export class SupabasePredictionGameRepository
     const predictionGame = game.data;
 
     // 상태 설정
-    (predictionGame as any)._status = gameData.status as GameStatus;
+    (predictionGame as any)._status = gameData.status as unknown as GameStatus;
     (predictionGame as any)._timestamps = {
       createdAt: new Date(gameData.created_at),
       updatedAt: new Date(gameData.updated_at),
@@ -1301,6 +1318,131 @@ export class SupabasePredictionGameRepository
         RepositoryHelpers.createQueryFailedError(
           "calculateRealTimeStatistics",
           "Unexpected error during real-time statistics calculation",
+          error as Error
+        )
+      );
+    }
+  }
+
+  /**
+   * 필터 조건으로 게임 목록 조회 (새로운 UseCase용)
+   */
+  async findMany(options: {
+    filters?: any;
+    pagination?: { limit: number; offset: number };
+    sorting?: { field: string; order: "asc" | "desc" };
+  }): Promise<Result<PredictionGame[], RepositoryError>> {
+    try {
+      const {
+        filters = {},
+        pagination = { limit: 20, offset: 0 },
+        sorting = { field: "created_at", order: "desc" },
+      } = options;
+
+      // Supabase 쿼리 빌더 생성
+      let query = this.supabase.from("prediction_games").select("*");
+
+      // 필터 조건 추가
+      if (filters.status) {
+        query = query.eq("status", filters.status);
+      }
+
+      if (filters.createdBy) {
+        query = query.eq("creator_id", filters.createdBy);
+      }
+
+      // 정렬 추가
+      const sortField =
+        sorting.field === "created_at" ? "created_at" : "updated_at";
+      const ascending = sorting.order === "asc";
+      query = query.order(sortField, { ascending });
+
+      // 페이지네이션 추가
+      query = query.range(
+        pagination.offset,
+        pagination.offset + pagination.limit - 1
+      );
+
+      const { data: gamesData, error: gamesError } = await query;
+
+      if (gamesError) {
+        return failure(
+          RepositoryHelpers.createQueryFailedError(
+            "findMany",
+            gamesError.message,
+            gamesError
+          )
+        );
+      }
+
+      if (!gamesData || gamesData.length === 0) {
+        return success([]);
+      }
+
+      // 예측 데이터 조회
+      const gameIds = gamesData.map((game) => game.id);
+      const predictionsResult = await this.fetchPredictionsForGames(gameIds);
+
+      if (!predictionsResult.success) {
+        return failure(predictionsResult.error);
+      }
+
+      const predictionsByGame = predictionsResult.data;
+
+      // 도메인 객체로 변환
+      const games = gamesData.map((gameData) => {
+        const predictions = predictionsByGame.get(gameData.id) || [];
+        return this.mapDatabaseToDomain(gameData, predictions);
+      });
+
+      return success(games);
+    } catch (error) {
+      return failure(
+        RepositoryHelpers.createQueryFailedError(
+          "findMany",
+          "Unexpected error during find many",
+          error as Error
+        )
+      );
+    }
+  }
+
+  /**
+   * 필터 조건에 해당하는 게임 수 조회
+   */
+  async countByFilters(filters: any): Promise<Result<number, RepositoryError>> {
+    try {
+      let query = this.supabase
+        .from("prediction_games")
+        .select("*", { count: "exact", head: true });
+
+      // 필터 조건 추가
+      if (filters.status) {
+        query = query.eq("status", filters.status);
+      }
+
+      if (filters.createdBy) {
+        query = query.eq("creator_id", filters.createdBy);
+      }
+
+      const { count, error } = await query;
+
+      if (error) {
+        return failure(
+          RepositoryHelpers.createQueryFailedError(
+            "countByFilters",
+            error.message,
+            error
+          )
+        );
+      }
+
+      return success(count || 0);
+    } catch (error) {
+      return failure(
+        RepositoryHelpers.createQueryFailedError(
+          "countByFilters",
+          "Unexpected error during count",
           error as Error
         )
       );
