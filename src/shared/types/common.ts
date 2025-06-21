@@ -13,12 +13,12 @@ export class DomainError extends Error {
     public readonly details?: Record<string, unknown>
   ) {
     super(message);
-    this.name = 'DomainError';
+    this.name = "DomainError";
   }
 }
 
 // 결과 패턴 타입
-export type Result<T, E = Error> = 
+export type Result<T, E = Error> =
   | { success: true; data: T }
   | { success: false; error: E };
 
@@ -27,7 +27,7 @@ export interface PaginationParams {
   page: number;
   limit: number;
   sortBy?: string;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface PaginatedResult<T> {
@@ -47,8 +47,8 @@ export interface PointTransaction {
   id: string;
   userId: string;
   amount: number;
-  type: 'PMC' | 'PMP';
-  transactionType: 'EARN' | 'SPEND' | 'TRANSFER';
+  type: "PMC" | "PMP";
+  transactionType: "EARN" | "SPEND" | "TRANSFER";
   description: string;
   metadata?: Record<string, unknown>;
   createdAt: Date;
@@ -59,7 +59,7 @@ export interface BaseGame {
   id: string;
   title: string;
   description: string;
-  status: 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+  status: "ACTIVE" | "COMPLETED" | "CANCELLED";
   startDate: Date;
   endDate: Date;
   createdAt: Date;
@@ -102,10 +102,21 @@ export interface Auditable extends Timestamps {
 }
 
 // 상태 관리 타입
-export type LoadingState = 'idle' | 'loading' | 'success' | 'error';
+export type LoadingState = "idle" | "loading" | "success" | "error";
 
 export interface AsyncState<T> {
   data: T | null;
   loading: LoadingState;
   error: string | null;
 }
+
+// Result 패턴 헬퍼 함수들
+export const success = <T>(data: T): Result<T, never> => ({
+  success: true,
+  data,
+});
+
+export const failure = <E extends Error>(error: E): Result<never, E> => ({
+  success: false,
+  error,
+});

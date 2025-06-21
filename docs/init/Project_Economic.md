@@ -1,33 +1,106 @@
 # Economic Idea
+
 - PMP(Positive Multiplier Point): PosMul Plateform에는 User Activity를 통해 PMC를 획득할 수 있다.
 - PMC(Positive Multiplier Coin): PosMul 3LC(Lowprofit Limited Liability Company)의 EBIT - Interest - Tax를 기반으로 발행된다.
 - 예상Return = 예상EBIT- 예상Tax(최고법인세율) - 예상Interest)
 - MoneyWave1 = 예상Return/365일
-  
 
 - PosMul Plateform에서 User Activity를 통해 PMP를 획득 할 수 있다.
 - PMP는 Expect Game(사회적학습)을 통해 PMC로 전환된다.
-- PMC는 오직 Donate에만 활용할 수 있다. 
+- PMC는 오직 Donate에만 활용할 수 있다.
 - Donate Ranking은 특별한 대우를 받는다.
 
-## MoneyWave1
-- PosMul plateform 에서는 예상 기반으로 PMC가 발행된다.
-- 예상Return일별 MoneyWave가 계산되고, 이를기반으로 하루 생성 Expect Game 별로 PMC가 배분된다.
-- User는 PMP를 소모하여 Expect Game에 참여하고 Expect 에따른 보상으로 PMC를 획득한다.
+## MoneyWave1: 일일 EBIT 기반 상금 풀 시스템
 
- 
-## MoneyWave2
-- PMC는 일정기간 소비하지 않으면 재분배 재원이 된다.
-- PosMul Plateform은 일정기간 소비하지않은 PMC재분배 방법으로 Expect Game 제안
+- **일일 계산**: 매일 자정(00:00)에 예상 EBIT 기반으로 일일 상금 풀 계산
+- **상금 풀 배분**: 그날 생성된 각 Prediction Game별로 중요도/난이도에 따라 차등 배분
+- **참여 메커니즘**: User는 PMP를 소모하여 Prediction Game에 참여
+- **보상 시스템**: **오직 정답을 맞춘 사람들만** 정확도에 비례하여 상금 풀 분배
+- **수식**: `일일 상금 풀 = (예상 EBIT - 예상 Tax - 예상 Interest) / 365`
 
-## MoneyWave3
-- 기업가는 PosMul Plateform 에서 홍보서비스(Invest/MajorLeague)와 PMC를 일정기간 제공받는다. 대가로 일정금액을 지불한다.
-- 기업가는 PosMul 3LC와 상호협력하여 홍보서비스의 방향(ESG Marketing)을 결정한다.
-- 기업가는 PMC를 활용하여 자신의 의지에 맞게 Donate를 할 수 있다. Ranking을 획득할 수 있다. PosMul은 기업의 ESG홍보에 적극 동참한다.
-- 기업가는 PMC를 활용하여 Target User에게 Expect Game을 제안 할 수 있다. PosMul은 기업의 관련Data획득에 적극 동참한다.
+## MoneyWave2: 미소비 PMC 자동 재분배 시스템
+
+- **재분배 조건**: 예측 게임에서 PMC를 획득한 사용자가 일정 기간 내 기부하지 않을 경우
+- **자동 재분배**: 미소비 PMC가 자동으로 새로운 예측 게임의 상금 풀로 재투입
+- **순환 경제**: 사용되지 않는 PMC가 플랫폼 내에서 지속적으로 순환하여 활성화
+- **인센티브**: Loss Aversion 심리를 활용하여 PMC 사용 유도
+
+## MoneyWave3: 기업가 맞춤 예측 게임 생성 시스템
+
+- **기업가 참여**: Major League 광고를 통해 PMC를 제공받은 기업가
+- **맞춤 예측 생성**: 기업가가 PMC를 사용하여 자신의 비즈니스 관련 맞춤 예측 게임 요청
+- **데이터 수집**: 기업가는 타겟 고객층의 예측 행동 데이터 획득
+- **ESG 연계**: 기업의 ESG 마케팅과 연계된 사회적 가치 창출 예측 게임
+- **Win-Win 구조**: 기업가는 마케팅 데이터 획득, 사용자는 PMC 보상 획득
+
+## **MoneyWave 시스템 전체 흐름도**
+
+```mermaid
+graph TD
+    subgraph "💰 MoneyWave1: 일일 EBIT 기반 상금 풀"
+        EBIT["📊 예상 EBIT<br/>(매일 자정 계산)"]
+        DAILY_POOL["🏆 일일 상금 풀<br/>(EBIT-Tax-Interest)/365"]
+        GAME_ALLOCATION["🎯 게임별 상금 배정<br/>(중요도/난이도 차등)"]
+
+        EBIT --> DAILY_POOL
+        DAILY_POOL --> GAME_ALLOCATION
+    end
+
+    subgraph "🎮 Prediction Game 참여 과정"
+        PMP_SPEND["💸 PMP 소모<br/>(게임 참여비)"]
+        PREDICTION["🔮 예측 참여<br/>(Binary/WDL/Ranking)"]
+        ACCURACY["📈 정확도 계산<br/>(맞춘 사람만)"]
+        PMC_REWARD["💎 PMC 보상<br/>(정확도 비례 분배)"]
+
+        GAME_ALLOCATION --> PMP_SPEND
+        PMP_SPEND --> PREDICTION
+        PREDICTION --> ACCURACY
+        ACCURACY --> PMC_REWARD
+    end
+
+    subgraph "🔄 MoneyWave2: 미소비 PMC 재분배"
+        PMC_UNUSED["⏰ 미소비 PMC<br/>(일정기간 기부 안함)"]
+        AUTO_REDISTRIBUTE["🔄 자동 재분배<br/>(새 게임 상금풀로)"]
+        LOSS_AVERSION["⚡ Loss Aversion<br/>(사용 유도)"]
+
+        PMC_REWARD --> PMC_UNUSED
+        PMC_UNUSED --> AUTO_REDISTRIBUTE
+        AUTO_REDISTRIBUTE --> GAME_ALLOCATION
+        PMC_UNUSED --> LOSS_AVERSION
+    end
+
+    subgraph "🏢 MoneyWave3: 기업가 맞춤 예측"
+        MAJOR_LEAGUE["📺 Major League<br/>(기업 광고)"]
+        ENTERPRISE_PMC["💼 기업가 PMC<br/>(광고 대가)"]
+        CUSTOM_PREDICTION["🎯 맞춤 예측 요청<br/>(비즈니스 관련)"]
+        DATA_COLLECTION["📊 데이터 수집<br/>(타겟 고객 행동)"]
+
+        MAJOR_LEAGUE --> ENTERPRISE_PMC
+        ENTERPRISE_PMC --> CUSTOM_PREDICTION
+        CUSTOM_PREDICTION --> GAME_ALLOCATION
+        CUSTOM_PREDICTION --> DATA_COLLECTION
+    end
+
+    subgraph "🎁 PMC 사용처"
+        DONATION["❤️ 기부<br/>(직접/기관/오피니언리더)"]
+        RANKING["🏆 기부 랭킹<br/>(사회적 인정)"]
+
+        PMC_REWARD --> DONATION
+        DONATION --> RANKING
+    end
+
+    style EBIT fill:#e8f5e9,stroke:#4caf50,stroke-width:2px
+    style PMC_REWARD fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
+    style AUTO_REDISTRIBUTE fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    style CUSTOM_PREDICTION fill:#e3f2fd,stroke:#2196f3,stroke-width:2px
+    style DONATION fill:#ffebee,stroke:#f44336,stroke-width:2px
+```
+
 ---
+
 # 보완된 Economic Idea
-**Economic Idea**  분석한 결과, 현재 기본적인 경제 메커니즘은 잘 구성되어 있지만 **학술적 근거**와 **경제학적 이론적 토대**가 부족합니다. Vision 문서에서 언급된 고도의 경제학 이론들을 반영하여 보완해드리겠습니다.
+
+**Economic Idea** 분석한 결과, 현재 기본적인 경제 메커니즘은 잘 구성되어 있지만 **학술적 근거**와 **경제학적 이론적 토대**가 부족합니다. Vision 문서에서 언급된 고도의 경제학 이론들을 반영하여 보완해드리겠습니다.
 
 ## **보완된 Economic Ide구조**
 
@@ -75,10 +148,10 @@ text
 
 이렇게 보완하면 **Economic Idea**가 단순한 시스템 설명을 넘어서 **학술적 근거가 탄탄한 경제학 연구 문서**로 발전할 수 있습니다. 특히 노벨경제학상 수상자들의 이론(Buchanan, Kahneman, Stigler 등)을 직접 인용하여 **전문가 수준의 이론적 토대**를 구축했습니다.
 
-
 ---
 
 # Economic System
+
 보완된 Economic Idea의 경제학 이론들과 다이어그램 분석을 바탕으로, **PosMul Platform**의 **PMP/PMC 시스템** 구현을 위한 전문적인 프로그래밍 문서들을 제공드리겠습니다.
 
 ## **1. 핵심 경제 엔진 문서들**
@@ -131,12 +204,10 @@ python
 
 이상의 프로그래밍 문서들은 **노벨경제학상 수상자들의 이론**을 실제 코드로 구현한 것으로, PosMul Platform의 **PMP/PMC 경제 시스템**을 뒷받침하는 **학술적으로 검증된 알고리즘**들입니다. 각 모듈은 독립적으로 작동하면서도 서로 연계되어 **전체적인 사회적 학습과 민주주의 실험**을 지원합니다.
 
-
-
 ---
 
+# 쉬운이해
 
-# 쉬운이해 
 PosMul Platform의 전체 시스템을 **경제학적 이론**과 **실제 구현**을 연결해서 이해하기 쉽게 설명드리겠습니다.
 
 ## **PosMul Platform의 핵심 아이디어**
@@ -149,35 +220,29 @@ PosMul Platform의 전체 시스템을 **경제학적 이론**과 **실제 구�
 
 ## **PMP vs PMC의 차이점**
 
-| 구분         | PMP (PosMul Points)        | PMC (PosMul Coins)    |
-| ---------- | -------------------------- | --------------------- |
-| **성격**     | 위험프리 자산 (Risk-Free)        | 위험자산 (Risky Asset)    |
-| **획득방법**   | 활동 참여 (Major League, 토론 등) | 예측 게임 성공 + EBIT 기반 발행 |
-| **사용처**    | 예측 게임 참여비                  | 기부 전용                 |
-| **경제학 근거** | CAPM의 무위험수익률               | CAPM의 위험프리미엄 반영       |
+| 구분            | PMP (PosMul Points)               | PMC (PosMul Coins)              |
+| --------------- | --------------------------------- | ------------------------------- |
+| **성격**        | 위험프리 자산 (Risk-Free)         | 위험자산 (Risky Asset)          |
+| **획득방법**    | 활동 참여 (Major League, 토론 등) | 예측 게임 성공 + EBIT 기반 발행 |
+| **사용처**      | 예측 게임 참여비                  | 기부 전용                       |
+| **경제학 근거** | CAPM의 무위험수익률               | CAPM의 위험프리미엄 반영        |
 
 ## **3단계 Money Wave 시스템**
 
 **MoneyWave1**: EBIT 기반 PMC 발행
 
 - 예상 EBIT를 365일로 나누어 일일 PMC 생성
-    
 - Jensen & Meckling의 Agency Theory 적용
-    
 
 **MoneyWave2**: 미사용 PMC 재분배
 
 - Kahneman의 Loss Aversion 활용
-    
 - 일정기간 미사용 PMC를 자동 재분배하여 사용 유인 증대
-    
 
 **MoneyWave3**: 기업가 생태계
 
 - 기업가가 PMC 제공받아 ESG 마케팅 + 데이터 수집
-    
 - Metcalfe's Law에 따른 네트워크 가치 증대
-    
 
 ## **6개 핵심 모듈의 연관관계**
 
@@ -194,9 +259,7 @@ text
 `PMP 투입 → 예측 게임 참여 → 성공 시 PMC 획득`
 
 - **Buchanan의 공공선택이론**: 정보 비대칭 해소
-    
 - **Behavioral Economics**: 게임화를 통한 학습 유인
-    
 
 ## **3. Donate (기부) - PMC 소비**
 
@@ -205,7 +268,6 @@ text
 `PMC → 직접기부/기관기부/오피니언리더 후원`
 
 - **사회후생함수**: 개인효용 + 사회적 가치
-    
 
 ## **4. Forum (포럼) - 사회적 학습**
 
@@ -214,7 +276,6 @@ text
 `뉴스/토론/브레인스토밍/예산 참여 → PMP 획득`
 
 - **Median Voter Theorem**: 집단지성을 통한 민주적 의사결정
-    
 
 ## **5. Other (전문서비스) - PMC 획득**
 
@@ -237,23 +298,17 @@ text
 `U(x) = α·ln(PMP) + β·ln(PMC) + γ·S(Donate)`
 
 - **α, β**: 포인트/코인에 대한 한계효용
-    
 - **γ**: 이타적 선호 (사회적 효용)
-    
 
 ## **Agency Cost 최소화**
 
 - **정보 비대칭**: 예측 게임을 통한 집단학습으로 해소
-    
 - **대리인 문제**: 시민 직접 참여로 관료/정치인 견제
-    
 
 ## **Network Effect 극대화**
 
 - **Metcalfe's Law**: 사용자 증가 → 네트워크 가치 기하급수적 증대
-    
 - **Cross-Network Effect**: 다양한 리그 간 상호작용
-    
 
 ## **실제 작동 예시**
 
@@ -272,30 +327,22 @@ text
 ## **1년차 Goal**
 
 - 이벤트 예측과 결과 평가를 통한 **사회적 학습** 증진
-    
 - 국방/치안/외교 제외한 분야에서 **가상 예산 집행** 연습
-    
 
 ## **5년차 Mission**
 
 - CAPM 기반 **개인 효용 극대화** 의사결정 실증 검증
-    
 - **직접민주주의** 실현 역량 강화
-    
 
 ## **10년차 Vision**
 
 - **철의 삼각형** 극복
-    
 - 시민의 **실질적 예산 참여** 시스템 구축
-    
 
 ## **50년차 Dream**
 
 - **Cosmos 시대** 민주주의 표준 모델
-    
 - AI와 함께하는 **참여형 거버넌스** 완성
-    
 
 ## **핵심 포인트**
 
@@ -305,7 +352,4 @@ PosMul Platform은 단순한 포인트 적립 앱이 아니라, **노벨경제�
 
 이 순환 과정을 통해 시민이 **합리적 의사결정 능력**을 기르고, 궁극적으로는 **직접민주주의**를 실현하는 것이 목표입니다.
 
-
-
 ---
-

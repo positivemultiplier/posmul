@@ -2,7 +2,8 @@
 
 ## Project Context
 
-Posmul은 Next.js App Router, Domain-Driven Design (DDD), Clean Architecture 원칙을 구현한 예측 게임과 지역 경제 연동을 통해 시민이 직접 참여하는 새로운 민주주의를 경험을 제공하는 AI 시대 직접민주주의 플랫폼입니다. Supabase를 백엔드 서비스로, MCP(Model Context Protocol)를 외부 통합을 위해 사용합니다.
+Posmul은 Next.js App Router, Domain-Driven Design (DDD), Clean Architecture 원칙을 구현한 예측 게임과 지역 경제 연동을 통해 시민이 직접 참여하는 새로운 민주주의를 경험을 제공하는 AI 시대 직접민주주의 플랫폼입니다.
+supabase MCP(Model Context Protocol)를 통해 supabase와 연결하여 사용합니다.
 
 ## 개발 환경
 
