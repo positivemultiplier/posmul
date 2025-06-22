@@ -1,0 +1,203 @@
+---
+description:
+globs:
+alwaysApply: false
+---
+# AI Agent Collaboration Guidelines
+
+> **Purpose**: General AI Agent collaboration principles independent of specific projects  
+> **Scope**: Communication methods, code quality, documentation, debugging, and other universal guidelines  
+> **Application**: All projects and domains
+
+## 📚 Table of Contents
+
+- [1. Basic Communication and Environment Setup](#1-basic-communication-and-environment-setup)
+- [2. Code Quality and Development Principles](#2-code-quality-and-development-principles)
+- [3. Refactoring and Code Improvement](#3-refactoring-and-code-improvement)
+- [4. Debugging and Problem Solving](#4-debugging-and-problem-solving)
+- [5. Documentation and Communication](#5-documentation-and-communication)
+- [6. Collaboration and Quality Management](#6-collaboration-and-quality-management)
+- [7. Final Checklist](#7-final-checklist)
+
+---
+
+## 1. Basic Communication and Environment Setup
+
+### 📝 **Communication Principles**
+
+- **Language**: Always respond and explain in Korean. Use clear expressions that are easy for Koreans to understand.
+- **Encoding**: Use UTF-8 encoding to ensure Korean text is not corrupted.
+- **Clarity**: Provide specific and clear explanations rather than ambiguous expressions.
+
+### 🔧 **Environment Considerations**
+
+- **Path Specification**: When executing code or scripts, write them to be executable using direct paths.
+- **Environment Assumptions**: Consider the user's development environment when suggesting commands or scripts.
+- **Compatibility**: Consider cross-platform compatibility, but optimize for the specific environment when specified.
+
+### 🚀 **Work Flow**
+
+- **MCP Utilization**: Actively utilize MCP (Model Context Protocol) tools.
+- **Direct Execution**: When executing code or scripts, write them to be executable using direct paths. For example, when executing in the `C:\E\posmul` path, explicitly include that path.
+
+---
+
+## 2. Code Quality and Development Principles
+
+### 🏗️ **General Development Principles**
+
+- **Context7 MCP Utilization**: Search and apply best practices.
+- **Simplicity (KISS Principle)**: Prioritize the simplest and clearest solutions over complex ones.
+- **DRY (Don't Repeat Yourself)**: Avoid code duplication and actively suggest the use of reusable functions or modules.
+- **Mock Data Prohibition (Guardrail)**: Generate code that does not use mock data in development or production environments, except for testing environments.
+- **Conciseness and Clarity**: Write code as concisely as possible without compromising clarity, minimizing unnecessary comments or complex logic.
+
+### 🎯 **Code Structure Principles**
+
+- **Modularity**: Design code to be modular and reusable.
+- **Separation of Concerns**: Clearly separate different responsibilities and functionalities.
+- **Interface Design**: Design clear interfaces between different layers or modules.
+- **Error Handling**: Implement proper error handling and validation.
+
+### 📊 **Performance and Security**
+
+- **Performance Considerations**: Consider performance implications when suggesting code changes.
+- **Security Best Practices**: Follow security best practices and validate all inputs.
+- **Resource Management**: Properly manage resources like memory, file handles, and network connections.
+
+---
+
+## 3. Refactoring and Code Improvement
+
+### 🔄 **Refactoring Guidelines**
+
+- **Context7 MCP Utilization**: Search and apply best practices.
+- **Refactoring Suggestions**: When suggesting refactoring for code structure improvement, explain the code before and after changes along with clear reasons (e.g., improved readability, duplication removal, performance improvement).
+- **Minimize Functional Changes**: Aim to improve the internal structure of code without changing existing functionality.
+- **Test Compatibility**: Suggest code in a form that allows all related tests to pass normally after refactoring. (Actual test execution is performed by the developer)
+
+### 📈 **Improvement Strategies**
+
+- **Incremental Improvement**: Suggest gradual improvements rather than major overhauls.
+- **Backward Compatibility**: Maintain backward compatibility when possible.
+- **Documentation Updates**: Update documentation when making structural changes.
+
+---
+
+## 4. Debugging and Problem Solving
+
+### 🐛 **Debugging Support**
+
+- **Context7 MCP Utilization**: Search and apply best practices.
+- **Debugging Suggestions**: When suggesting code error fixes or debugging code changes, clearly explain the expected cause of the problem and the proposed solution.
+- **Normal Operation Priority**: Make normal operation of the suggested code the top priority.
+- **Log Addition Suggestions**: When the cause of the problem is unclear and analysis is needed, suggest adding detailed logs to the code that can help with debugging.
+
+### 🔍 **Problem Analysis**
+
+- **Root Cause Analysis**: Focus on identifying and addressing root causes rather than symptoms.
+- **Systematic Approach**: Use a systematic approach to problem-solving.
+- **Alternative Solutions**: Provide multiple solution options when possible.
+
+### 📋 **Error Handling**
+
+- **Graceful Degradation**: Implement graceful error handling and fallback mechanisms.
+- **User-Friendly Messages**: Provide clear, user-friendly error messages.
+- **Logging Strategy**: Implement comprehensive logging for debugging purposes.
+
+---
+
+## 5. Documentation and Communication
+
+### 📚 **Documentation Standards**
+
+- **Resource Descriptions**: Write descriptions for cloud resources (e.g., AWS, Azure, GCP) or important code resources in English.
+- **Terminology**: Use original terms for technical terms, library names, framework names, etc. (e.g., "React" not "리액트").
+- **Diagrams**: When simple flows or structures need to be explained, create diagrams using Mermaid syntax. For complex architecture diagrams, assume they will be managed as separate SVG files and provide guidance to reference them.
+
+### 🎨 **Documentation Style**
+
+- **Consistency**: Maintain consistent documentation style throughout the project.
+- **Completeness**: Ensure documentation is complete and up-to-date.
+- **Accessibility**: Make documentation accessible to team members with different expertise levels.
+
+### 💬 **Communication Best Practices**
+
+- **Clear Explanations**: Provide clear, step-by-step explanations for complex processes.
+- **Visual Aids**: Use diagrams, code examples, and other visual aids when helpful.
+- **Context Provision**: Provide sufficient context for understanding decisions and changes.
+
+---
+
+## 6. Collaboration and Quality Management
+
+### 🤝 **Team Collaboration**
+
+- **Code Review Culture**: Encourage thorough code reviews and constructive feedback.
+- **Knowledge Sharing**: Promote knowledge sharing among team members.
+- **Best Practice Documentation**: Document and share best practices within the team.
+
+### 🎯 **Quality Assurance**
+
+- **Testing Strategy**: Implement comprehensive testing strategies.
+- **Continuous Integration**: Support continuous integration and deployment practices.
+- **Quality Metrics**: Track and improve code quality metrics.
+
+### 📊 **Process Improvement**
+
+- **Feedback Loops**: Establish feedback loops for continuous improvement.
+- **Process Documentation**: Document development processes and workflows.
+- **Tool Optimization**: Optimize development tools and workflows for efficiency.
+
+---
+
+## 7. Final Checklist
+
+### ✅ **Code Quality Verification**
+
+- [ ] **Simplicity**: Is the solution as simple as possible while maintaining functionality?
+- [ ] **DRY Principle**: Have code duplications been eliminated?
+- [ ] **Mock Data**: Is mock data avoided in non-test environments?
+- [ ] **Error Handling**: Is proper error handling implemented?
+
+### ✅ **Documentation Verification**
+
+- [ ] **Clarity**: Are explanations clear and understandable?
+- [ ] **Completeness**: Is all necessary information provided?
+- [ ] **Consistency**: Is terminology and style consistent?
+- [ ] **Accessibility**: Is documentation accessible to the target audience?
+
+### ✅ **Collaboration Verification**
+
+- [ ] **Communication**: Are explanations clear and helpful?
+- [ ] **Context**: Is sufficient context provided for understanding?
+- [ ] **Best Practices**: Are industry best practices followed?
+- [ ] **Team Alignment**: Does the approach align with team standards?
+
+---
+
+## 📋 **Usage Guidelines**
+
+### **When to Use This Document**
+
+- Setting up AI Agent collaboration workflows
+- Establishing code quality standards
+- Creating documentation guidelines
+- Implementing debugging procedures
+- Training team members on AI collaboration
+
+### **Integration with Project-Specific Rules**
+
+This document provides general guidelines that should be complemented by project-specific rules and requirements. For specialized project requirements, please refer to the respective project documentation.
+
+### **Continuous Improvement**
+
+These guidelines should be regularly reviewed and updated based on:
+- Team feedback and experience
+- Industry best practice evolution
+- Tool and technology updates
+- Project requirement changes
+
+---
+
+**Note**: For project-specific specialized rules, please refer to the respective project's separate documentation files.

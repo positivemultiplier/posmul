@@ -11,8 +11,10 @@ Diataxis는 사용자의 요구사항을 4가지 핵심 유형으로 분류하�
 ```mermaid
 quadrantChart
     title Diataxis 문서 유형 매트릭스
-    x-axis 실무 중심 --> 이론 중심
-    y-axis 학습 지향 --> 실무 지향
+
+    x-axis use --> law
+    y-axis law --> ues
+
     quadrant-1 Reference
     quadrant-2 Explanation
     quadrant-3 Tutorial

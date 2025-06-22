@@ -1,5 +1,5 @@
 ---
-description: "github","이슈", "PR", "브랜치", "커밋","mcp_Github_", "프로젝트 관리"
+description: github,이슈, PR, 브랜치, 커밋,mcp_Github, 프로젝트 관리, push
 globs: 
 alwaysApply: false
 ---

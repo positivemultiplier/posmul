@@ -88,7 +88,8 @@ export class PmpSpentEvent extends BaseEconomicEvent {
     public readonly purpose:
       | "prediction-participation"
       | "system-fee"
-      | "premium-feature",
+      | "premium-feature"
+      | "investment-participation",
     public readonly targetId: string,
     public readonly details?: string,
     timestamp?: Date
@@ -152,7 +153,8 @@ export class PmcSpentEvent extends BaseEconomicEvent {
       | "donation"
       | "investment"
       | "system-fee"
-      | "premium-feature",
+      | "premium-feature"
+      | "investment-participation",
     public readonly targetId: string,
     public readonly details?: string,
     timestamp?: Date

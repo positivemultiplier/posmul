@@ -19,17 +19,17 @@ export type UserId = Brand<string, "UserId">;
 /**
  * 예측 게임 식별자
  */
-export type PredictionGameId = Brand<string, "PredictionGameId">;
+export type PredictionGameId = string & { readonly brand: "PredictionGameId" };
 
 /**
  * 예측 식별자
  */
-export type PredictionId = Brand<string, "PredictionId">;
+export type PredictionId = string & { readonly brand: "PredictionId" };
 
 /**
  * 거래 식별자
  */
-export type TransactionId = Brand<string, "TransactionId">;
+export type TransactionId = string & { readonly brand: "TransactionId" };
 
 /**
  * PMP (PosMul Point) - Risk-Free Asset
@@ -67,6 +67,25 @@ export type AgencyCostScore = Brand<number, "AgencyCostScore">;
  * 위험 회피도 (0-1 범위)
  */
 export type RiskAversionCoefficient = Brand<number, "RiskAversionCoefficient">;
+
+/**
+ * Economy Domain
+ */
+export type PmpAmount = number & { readonly brand: "PmpAmount" };
+export type PmcAmount = number & { readonly brand: "PmcAmount" };
+
+/**
+ * Investment Domain
+ */
+export type InvestmentId = string & { readonly brand: "InvestmentId" };
+export type FundId = string & { readonly brand: "FundId" };
+
+/**
+ * MCP / Shared
+ */
+export type SupabaseProjectId = string & {
+  readonly brand: "SupabaseProjectId";
+};
 
 /**
  * 브랜드 타입 생성자 함수들
