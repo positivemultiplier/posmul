@@ -175,11 +175,14 @@ const predictionGamesData = {
   },
 };
 
-export default function PredictionDetailPage({
+export default async function PredictionDetailPage({
   params,
 }: PredictionDetailPageProps) {
+  const resolvedParams = await params;
   const game =
-    predictionGamesData[params.slug as keyof typeof predictionGamesData];
+    predictionGamesData[
+      resolvedParams.slug as keyof typeof predictionGamesData
+    ];
 
   if (!game) {
     notFound();

@@ -1,4 +1,28 @@
-# PosMul 프로젝트 Task List 📝
+---
+type: task-list
+title: "Prediction Domain Task List"
+description: "예측 게임 도메인의 체계적인 개발 계획과 작업 우선순위 관리"
+domain: prediction
+difficulty: intermediate
+estimated_duration: "8주 개발 일정"
+last_updated: "2024-12-21"
+version: "v1.0"
+tags: [prediction, task-management, project-planning, domain-development, mvp]
+related_docs:
+  - "prediction-analysis-report.md"
+  - "prediction-project-plan.md"
+prerequisites:
+  - "Domain-Driven Design 기본 이해"
+  - "Clean Architecture 패턴 숙지"
+  - "MCP 도구 사용법"
+  - "Agency Theory & CAPM 기본 개념"
+---
+
+# Prediction Domain Task List 📝
+
+> **목적**: Prediction 도메인의 체계적인 개발 계획과 작업 우선순위 관리  
+> **범위**: MVP 개발부터 고급 기능까지 단계별 로드맵  
+> **기간**: 8주 개발 일정 (총 32개 작업)
 
 ## 🚀 **Phase 1: MVP Development Tasks**
 
@@ -11,19 +35,20 @@
 - **Estimate**: 3 days
 - **Assignee**: Backend Developer
 - **Dependencies**: None
+- **Status**: ✅ **완료**
 - **Description**:
   ```typescript
-  // 구현할 파일들:
+  // 구현 완료된 파일들:
   // src/bounded-contexts/prediction/domain/entities/prediction-game.aggregate.ts
   // src/bounded-contexts/prediction/domain/entities/prediction.entity.ts
   // src/bounded-contexts/prediction/domain/value-objects/prediction-types.ts
   ```
 - **Acceptance Criteria**:
-  - [ ] PredictionGame Aggregate 클래스 구현
-  - [ ] Binary, WinDrawLose, Ranking 예측 타입 지원
-  - [ ] 게임 상태 관리 (Created → Active → Ended → Settled)
-  - [ ] Prediction Entity 구현
-  - [ ] 도메인 규칙 검증 로직 포함
+  - [x] PredictionGame Aggregate 클래스 구현
+  - [x] Binary, WinDrawLose, Ranking 예측 타입 지원
+  - [x] 게임 상태 관리 (Created → Active → Ended → Settled)
+  - [x] Prediction Entity 구현
+  - [x] 도메인 규칙 검증 로직 포함
 
 #### **T1.2 - Prediction Value Objects 구현**
 
@@ -32,18 +57,19 @@
 - **Estimate**: 2 days
 - **Assignee**: Backend Developer
 - **Dependencies**: `PD-001`
+- **Status**: ✅ **완료**
 - **Description**:
   ```typescript
-  // 구현할 파일들:
+  // 구현 완료된 파일들:
   // src/bounded-contexts/prediction/domain/value-objects/prediction-id.ts
   // src/bounded-contexts/prediction/domain/value-objects/game-status.ts
   // src/bounded-contexts/prediction/domain/value-objects/prediction-result.ts
   ```
 - **Acceptance Criteria**:
-  - [ ] PredictionId 브랜드 타입 구현
-  - [ ] GameStatus enum (Created, Active, Ended, Settled)
-  - [ ] PredictionResult value objects
-  - [ ] 입력 검증 및 에러 처리
+  - [x] PredictionId 브랜드 타입 구현
+  - [x] GameStatus enum (Created, Active, Ended, Settled)
+  - [x] PredictionResult value objects
+  - [x] 입력 검증 및 에러 처리
 
 #### **T1.3 - Economy-Kernel 기본 인터페이스 구현**
 
@@ -52,18 +78,19 @@
 - **Estimate**: 2 days
 - **Assignee**: Backend Developer
 - **Dependencies**: None
+- **Status**: ✅ **완료**
 - **Description**:
   ```typescript
-  // 구현할 파일들:
+  // 구현 완료된 파일들:
   // src/shared/economy-kernel/entities/pmp-account.entity.ts
   // src/shared/economy-kernel/entities/pmc-account.entity.ts
   // src/shared/economy-kernel/services/economy-kernel.service.ts
   ```
 - **Acceptance Criteria**:
-  - [ ] EconomyKernel 싱글톤 서비스 구현
-  - [ ] PMP/PMC 잔액 조회 기능 (읽기 전용)
-  - [ ] 기본 도메인 이벤트 인터페이스 정의
-  - [ ] Result 패턴으로 에러 처리
+  - [x] EconomyKernel 싱글톤 서비스 구현
+  - [x] PMP/PMC 잔액 조회 기능 (읽기 전용)
+  - [x] 기본 도메인 이벤트 인터페이스 정의
+  - [x] Result 패턴으로 에러 처리
 
 ---
 
@@ -76,16 +103,17 @@
 - **Estimate**: 1 day
 - **Assignee**: Backend Developer
 - **Dependencies**: `PD-001, PD-002`
+- **Status**: ✅ **완료**
 - **Description**:
   ```typescript
-  // 구현할 파일:
+  // 구현 완료된 파일:
   // src/bounded-contexts/prediction/domain/repositories/prediction-game.repository.ts
   ```
 - **Acceptance Criteria**:
-  - [ ] IPredictionGameRepository 인터페이스 정의
-  - [ ] CRUD 기본 메서드 (save, findById, findByStatus 등)
-  - [ ] Result 패턴 적용
-  - [ ] 도메인 계층에서 인프라 의존성 없음
+  - [x] IPredictionGameRepository 인터페이스 정의
+  - [x] CRUD 기본 메서드 (save, findById, findByStatus 등)
+  - [x] Result 패턴 적용
+  - [x] 도메인 계층에서 인프라 의존성 없음
 
 #### **T2.2 - Core Use Cases 구현**
 
@@ -105,7 +133,7 @@
   // src/bounded-contexts/prediction/application/dto/prediction-use-case.dto.ts
   ```
 - **Acceptance Criteria**:
-  - [x] CreatePredictionGame UseCase (MoneyWave1 상금 풀 배정) - 기존 완료
+  - [x] CreatePredictionGame UseCase (MoneyWave1 상금 풀 배정)
   - [x] ParticipatePrediction UseCase (PMP 차감 로직) - 264줄 신규 구현
   - [x] SettlePredictionGame UseCase (정확도 계산 및 결과 확정) - 356줄 신규 구현
   - [x] DistributeMoneyWave UseCase (맞춘 사람만 정확도 비례 분배) - 480줄 신규 구현
@@ -119,9 +147,10 @@
 - **Estimate**: 4 days
 - **Assignee**: Backend Developer
 - **Dependencies**: `EK-001, PD-003`
+- **Status**: ✅ **완료**
 - **Description**:
   ```typescript
-  // 구현할 파일들:
+  // 구현 완료된 파일들:
   // src/shared/economy-kernel/aggregates/money-wave.aggregate.ts
   // src/shared/economy-kernel/services/money-wave-calculator.service.ts
   // src/shared/economy-kernel/services/prize-pool-distributor.service.ts
@@ -249,7 +278,6 @@
   - [x] MoneyWave 시스템 현황 - 실시간 EBIT 풀과 PMC 순환 상태
   - [x] Behavioral Economics 인사이트 - Loss Aversion & Prospect Theory
   - [x] 반응형 디자인과 Suspense 로딩 관리
-- **Task Report**: [UI-002-task-report.md](task-reports/UI-002-task-report.md)
 
 ---
 
@@ -275,7 +303,6 @@
   - [x] predictions 테이블 스키마 (Agency Theory/CAPM 통합)
   - [x] 외래키 제약조건 및 인덱스 (25개 인덱스)
   - [x] RLS (Row Level Security) 정책 (완전 보안)
-- **Task Report**: [DB-001-task-report.md](task-reports/DB-001-task-report.md)
 
 #### **T4.2 - Repository 구현체**
 
@@ -337,6 +364,7 @@
 - **Estimate**: 3 days
 - **Assignee**: Backend Developer
 - **Dependencies**: `PD-001, PD-002, PD-004`
+- **Status**: ⏳ **대기**
 - **Description**:
   ```typescript
   // 구현할 파일들:
@@ -358,6 +386,7 @@
 - **Estimate**: 2 days
 - **Assignee**: Backend Developer
 - **Dependencies**: `PD-006, API-001`
+- **Status**: ⏳ **대기**
 - **Description**:
   ```typescript
   // 구현할 파일들:
@@ -378,6 +407,7 @@
 - **Priority**: 🟢 Medium
 - **Estimate**: 5 days
 - **Dependencies**: Phase 1 완료
+- **Status**: ⏳ **대기**
 - **Description**:
   ```typescript
   // 구현할 파일들:
@@ -398,6 +428,7 @@
 - **Priority**: 🟢 Medium
 - **Estimate**: 4 days
 - **Dependencies**: `API-001`
+- **Status**: ⏳ **대기**
 - **Description**: WebSocket 기반 실시간 업데이트
 
 #### **T6.3 - 고급 예측 분석 도구**
@@ -406,27 +437,30 @@
 - **Priority**: 🟢 Medium
 - **Estimate**: 6 days
 - **Dependencies**: `TEST-001, TEST-002`
+- **Status**: ⏳ **대기**
 - **Description**: 예측 정확도 분석, 트렌드 분석
 
 ---
 
 ## 🎯 **Task 우선순위 매트릭스**
 
-| Task ID   | 우선순위    | 사용자 임팩트 | 기술적 복잡도 | 완료 예상일 | 비고    |
-| --------- | ----------- | ------------- | ------------- | ----------- | ------- |
-| `PD-001`  | 🔥 Critical | High          | Medium        | Week 1      | ✅ 완료 |
-| `PD-002`  | 🔥 Critical | High          | Low           | Week 1      | ✅ 완료 |
-| `EK-001`  | 🔥 Critical | High          | Medium        | Week 1      | ✅ 완료 |
-| `PD-003`  | 🔥 Critical | Medium        | Low           | Week 2      | ✅ 완료 |
-| `MW-001`  | 🔥 Critical | Very High     | High          | Week 2      | ✅ 완료 |
-| `PD-004`  | 🔥 Critical | High          | High          | Week 2      | ✅ 완료 |
-| `EK-002`  | 🔥 Critical | Medium        | Medium        | Week 2      | ✅ 완료 |
-| `PD-005`  | 🟡 High     | High          | Medium        | Week 3      | ✅ 완료 |
-| `UI-001`  | 🟡 High     | Very High     | Medium        | Week 3      | ✅ 완료 |
-| `UI-002`  | 🟡 High     | High          | Low           | Week 3      | ✅ 완료 |
-| `DB-001`  | 🟡 High     | Medium        | Medium        | Week 4      | ✅ 완료 |
-| `PD-006`  | 🟡 High     | Medium        | High          | Week 4      | ✅ 완료 |
-| `API-001` | 🟡 High     | High          | High          | Week 4      | ✅ 완료 |
+| Task ID    | 우선순위    | 사용자 임팩트 | 기술적 복잡도 | 완료 예상일 | 상태    |
+| ---------- | ----------- | ------------- | ------------- | ----------- | ------- |
+| `PD-001`   | 🔥 Critical | High          | Medium        | Week 1      | ✅ 완료 |
+| `PD-002`   | 🔥 Critical | High          | Low           | Week 1      | ✅ 완료 |
+| `EK-001`   | 🔥 Critical | High          | Medium        | Week 1      | ✅ 완료 |
+| `PD-003`   | 🔥 Critical | Medium        | Low           | Week 2      | ✅ 완료 |
+| `MW-001`   | 🔥 Critical | Very High     | High          | Week 2      | ✅ 완료 |
+| `PD-004`   | 🔥 Critical | High          | High          | Week 2      | ✅ 완료 |
+| `EK-002`   | 🔥 Critical | Medium        | Medium        | Week 2      | ✅ 완료 |
+| `PD-005`   | 🟡 High     | High          | Medium        | Week 3      | ✅ 완료 |
+| `UI-001`   | 🟡 High     | Very High     | Medium        | Week 3      | ✅ 완료 |
+| `UI-002`   | 🟡 High     | High          | Low           | Week 3      | ✅ 완료 |
+| `DB-001`   | 🟡 High     | Medium        | Medium        | Week 4      | ✅ 완료 |
+| `PD-006`   | 🟡 High     | Medium        | High          | Week 4      | ✅ 완료 |
+| `API-001`  | 🟡 High     | High          | High          | Week 4      | ✅ 완료 |
+| `TEST-001` | 🟢 Medium   | Medium        | Medium        | Week 5      | ⏳ 대기 |
+| `TEST-002` | 🟢 Medium   | Medium        | High          | Week 5      | ⏳ 대기 |
 
 ---
 
@@ -440,7 +474,7 @@ graph TD
     EK001[EK-001 Economy Kernel ✅] --> MW001[MW-001 MoneyWave System ✅]
     PD003 --> MW001
     MW001 --> PD004[PD-004 Use Cases ✅]
-    MW001 --> EK002[EK-002 Domain Events 📋]
+    MW001 --> EK002[EK-002 Domain Events ✅]
 
     EK002 --> PD005[PD-005 Economy Integration ✅]
     PD004 --> PD005
@@ -449,7 +483,10 @@ graph TD
 
     PD002 --> DB001[DB-001 Database Schema ✅]
     DB001 --> PD006[PD-006 Repository Impl ✅]
-    PD006 --> API001[API-001 API Routes 🚧]
+    PD006 --> API001[API-001 API Routes ✅]
+
+    API001 --> TEST001[TEST-001 Domain Tests ⏳]
+    PD006 --> TEST002[TEST-002 Integration Tests ⏳]
 
     style PD001 fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
     style PD002 fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
@@ -463,29 +500,33 @@ graph TD
     style UI001 fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
     style UI002 fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
     style PD006 fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
-    style API001 fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    style API001 fill:#c8e6c9,stroke:#4caf50,stroke-width:2px
+    style TEST001 fill:#fff3e0,stroke:#ff9800,stroke-width:2px
+    style TEST002 fill:#fff3e0,stroke:#ff9800,stroke-width:2px
 ```
 
 ---
 
 ## ⚡ **Quick Start Commands**
 
-### **이번 주 시작할 작업 (PowerShell)**
+### **다음 단계 작업 (PowerShell)**
 
 ```powershell
-# PD-001: Prediction Domain 엔티티 구현
+# TEST-001: Domain Layer Tests 구현
 cd src\bounded-contexts\prediction\domain\entities
-# prediction-game.aggregate.ts 파일 생성 및 구현
+New-Item -ItemType Directory -Path "__tests__"
+cd __tests__
+# prediction-game.test.ts 파일 생성 및 구현
 
-# EK-001: Economy-Kernel 기본 구현
-cd src\shared
-New-Item -ItemType Directory -Path "economy-kernel"
-cd economy-kernel
-New-Item -ItemType Directory -Path "services"
-# economy-kernel.service.ts 파일 생성 및 구현
+# TEST-002: Integration Tests 구현
+cd src\bounded-contexts\prediction
+New-Item -ItemType Directory -Path "__tests__"
+cd __tests__
+New-Item -ItemType Directory -Path "integration"
+# 통합 테스트 파일들 구현
 
-# 개발 서버 실행 및 테스트
-cd ..\..\..; npm run dev; npm test
+# 테스트 실행
+cd ..\..\..\..\..; npm test
 ```
 
 ---
@@ -499,7 +540,7 @@ cd ..\..\..; npm run dev; npm test
 - [x] **UI-001~002**: 예측 게임 & 대시보드 UI ✅
 - [x] **DB-001**: 데이터베이스 연동 완료 ✅
 - [x] **API-001**: API 연동 완료 ✅
-- [ ] **TEST-001~002**: 핵심 기능 테스트 완료
+- [ ] **TEST-001~002**: 핵심 기능 테스트 완료 (진행 예정)
 
 ### **🚀 출시 준비 현황**
 
@@ -509,15 +550,13 @@ cd ..\..\..; npm run dev; npm test
 - [x] 모바일 반응형 UI (완전 대응)
 - [x] 3초 이내 로딩 시간 (Server Components 최적화)
 
-**현재 상태**: 🎯 **MVP 95% 완성, API 연동만 마무리하면 출시 가능**
+**현재 상태**: 🎯 **MVP 95% 완성, 테스트 작성만 마무리하면 출시 가능**
 
 ---
 
-_작성일: 2024년 12월_  
-_Last Updated: 액션플랜 기반 Task 생성_
+## 📊 **Prediction Game 시스템 아키텍처**
 
 ```mermaid
-
 graph TD
 subgraph "🔮 Prediction Game Types"
 direction TB
@@ -603,5 +642,58 @@ direction TB
     style PMP fill:#ffebee,stroke:#f44336,stroke-width:2px
     style PMC fill:#f3e5f5,stroke:#9c27b0,stroke-width:2px
     style MW fill:#e0f2f1,stroke:#009688,stroke-width:2px
-
 ```
+
+---
+
+## 🔍 **위험 관리 및 대응 계획**
+
+### **🚨 주요 위험 요소**
+
+| 위험 요소            | 확률   | 영향도 | 대응 전략                     | 담당자             |
+| -------------------- | ------ | ------ | ----------------------------- | ------------------ |
+| 테스트 커버리지 부족 | Medium | High   | TDD 방식 적용, 코드 리뷰 강화 | Backend Developer  |
+| 경제 시스템 복잡성   | Low    | Medium | 단계별 구현, 문서화 강화      | Backend Developer  |
+| UI/UX 완성도         | High   | High   | 사용자 피드백 수집, 반복 개선 | Frontend Developer |
+
+### **📋 위험 모니터링**
+
+```mermaid
+pie title 위험 분포
+    "테스트 커버리지" : 40
+    "시스템 복잡성" : 30
+    "사용자 경험" : 20
+    "성능 최적화" : 10
+```
+
+---
+
+## 📈 **진행률 추적**
+
+### **🎯 마일스톤**
+
+```mermaid
+gantt
+    title Prediction Domain 개발 일정
+    dateFormat  2024-12-01
+    section Phase 1 (완료)
+    Domain Entities    :done, entities, 2024-12-01, 7d
+    Use Cases         :done, usecases, 2024-12-08, 7d
+    UI Components     :done, ui, 2024-12-15, 7d
+    Database & API    :done, db, 2024-12-22, 7d
+    section Phase 2 (진행중)
+    Testing           :active, testing, 2024-12-29, 7d
+    Advanced Features :advanced, 2025-01-05, 14d
+    Performance       :perf, 2025-01-19, 7d
+```
+
+### **📊 현재 진행률**
+
+- **전체 진행률**: 85% (13/15개 핵심 작업 완료)
+- **이번 주 목표**: 테스트 작성 완료 (90% 달성)
+- **다음 마일스톤**: 2025-01-05 - Phase 2 시작
+
+---
+
+_작성일: 2024년 12월_  
+_Last Updated: Prediction Domain 95% 완성, 테스트 단계 진입_

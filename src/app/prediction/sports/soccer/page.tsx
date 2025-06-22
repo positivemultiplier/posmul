@@ -17,7 +17,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/shared/components/ui/card";
+import Link from "next/link";
 import { Suspense } from "react";
+
+// Slug mapping for detail pages
+const slugMapping: Record<string, string> = {
+  "soccer-001": "world-cup-winner",
+  "soccer-002": "manchester-vs-liverpool",
+  "soccer-003": "premier-league-top4",
+  "soccer-004": "world-cup-winner",
+  "soccer-005": "manchester-vs-liverpool",
+  "soccer-006": "premier-league-top4",
+};
 
 // Mock data for soccer prediction games
 const soccerPredictions = [
@@ -154,101 +165,110 @@ function PredictionCard({
     });
   };
 
+  const detailSlug = slugMapping[prediction.id] || prediction.id;
+
   return (
-    <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <CardTitle className="text-lg font-semibold text-gray-900 mb-2">
-              {prediction.title}
-            </CardTitle>
-            <CardDescription className="text-sm text-gray-600">
-              {prediction.description}
-            </CardDescription>
-          </div>
-          <div className="flex flex-col items-end space-y-2">
-            <Badge className={getStatusColor(prediction.status)}>
-              {prediction.status === "active"
-                ? "진행중"
-                : prediction.status === "ended"
-                ? "종료"
-                : "대기중"}
-            </Badge>
-            <Badge className={getDifficultyColor(prediction.difficulty)}>
-              {prediction.difficulty === "high"
-                ? "고난이도"
-                : prediction.difficulty === "medium"
-                ? "중난이도"
-                : "저난이도"}
-            </Badge>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="pt-0">
-        {/* Prediction Options */}
-        <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-700 mb-2">예측 옵션</h4>
-          <div className="flex flex-wrap gap-2">
-            {prediction.options.slice(0, 3).map((option, index) => (
-              <span
-                key={index}
-                className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded-md"
-              >
-                {option}
-              </span>
-            ))}
-            {prediction.options.length > 3 && (
-              <span className="px-2 py-1 text-xs bg-gray-50 text-gray-600 rounded-md">
-                +{prediction.options.length - 3}개 더
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* Statistics */}
-        <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
-          <div>
-            <span className="text-gray-500">참여자</span>
-            <div className="font-semibold text-gray-900">
-              {prediction.participants.toLocaleString()}명
+    <Link href={`/prediction/sports/soccer/${detailSlug}`} className="block">
+      <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer transform hover:-translate-y-1 hover:border-blue-300">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <CardTitle className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
+                {prediction.title}
+              </CardTitle>
+              <CardDescription className="text-sm text-gray-600">
+                {prediction.description}
+              </CardDescription>
+            </div>
+            <div className="flex flex-col items-end space-y-2">
+              <Badge className={getStatusColor(prediction.status)}>
+                {prediction.status === "active"
+                  ? "진행중"
+                  : prediction.status === "ended"
+                  ? "종료"
+                  : "대기중"}
+              </Badge>
+              <Badge className={getDifficultyColor(prediction.difficulty)}>
+                {prediction.difficulty === "high"
+                  ? "고난이도"
+                  : prediction.difficulty === "medium"
+                  ? "중난이도"
+                  : "저난이도"}
+              </Badge>
             </div>
           </div>
-          <div>
-            <span className="text-gray-500">총 스테이크</span>
-            <div className="font-semibold text-gray-900">
-              {prediction.totalStake.toLocaleString()} PMP
-            </div>
-          </div>
-          <div>
-            <span className="text-gray-500">예상 수익률</span>
-            <div className="font-semibold text-green-600">
-              {prediction.expectedReturn}x
-            </div>
-          </div>
-          <div>
-            <span className="text-gray-500">마감일</span>
-            <div className="font-semibold text-gray-900">
-              {formatDate(prediction.endTime)}
-            </div>
-          </div>
-        </div>
+        </CardHeader>
 
-        {/* Stake Range */}
-        <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-          <div className="text-xs text-gray-600 mb-1">참여 금액 범위</div>
-          <div className="text-sm font-medium text-gray-900">
-            {prediction.minStake.toLocaleString()} -{" "}
-            {prediction.maxStake.toLocaleString()} PMP
+        <CardContent className="pt-0">
+          {/* Prediction Options */}
+          <div className="mb-4">
+            <h4 className="text-sm font-medium text-gray-700 mb-2">
+              예측 옵션
+            </h4>
+            <div className="flex flex-wrap gap-2">
+              {prediction.options.slice(0, 3).map((option, index) => (
+                <span
+                  key={index}
+                  className="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded-md"
+                >
+                  {option}
+                </span>
+              ))}
+              {prediction.options.length > 3 && (
+                <span className="px-2 py-1 text-xs bg-gray-50 text-gray-600 rounded-md">
+                  +{prediction.options.length - 3}개 더
+                </span>
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Action Button */}
-        <Button className="w-full" disabled={prediction.status === "ended"}>
-          {prediction.status === "active" ? "예측 참여하기" : "종료된 게임"}
-        </Button>
-      </CardContent>
-    </Card>
+          {/* Statistics */}
+          <div className="grid grid-cols-2 gap-4 mb-4 text-sm">
+            <div>
+              <span className="text-gray-500">참여자</span>
+              <div className="font-semibold text-gray-900">
+                {prediction.participants.toLocaleString()}명
+              </div>
+            </div>
+            <div>
+              <span className="text-gray-500">총 스테이크</span>
+              <div className="font-semibold text-gray-900">
+                {prediction.totalStake.toLocaleString()} PMP
+              </div>
+            </div>
+            <div>
+              <span className="text-gray-500">예상 수익률</span>
+              <div className="font-semibold text-green-600">
+                {prediction.expectedReturn}x
+              </div>
+            </div>
+            <div>
+              <span className="text-gray-500">마감일</span>
+              <div className="font-semibold text-gray-900">
+                {formatDate(prediction.endTime)}
+              </div>
+            </div>
+          </div>
+
+          {/* Stake Range */}
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+            <div className="text-xs text-gray-600 mb-1">참여 금액 범위</div>
+            <div className="text-sm font-medium text-gray-900">
+              {prediction.minStake.toLocaleString()} -{" "}
+              {prediction.maxStake.toLocaleString()} PMP
+            </div>
+          </div>
+
+          {/* Action Button */}
+          <Button
+            className="w-full group-hover:bg-blue-600 transition-colors"
+            disabled={prediction.status === "ended"}
+          >
+            {prediction.status === "active" ? "예측 참여하기" : "종료된 게임"}
+          </Button>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 

@@ -8,295 +8,260 @@
  * @since 2024-12
  */
 
-import { Badge } from "@/shared/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
-import Link from "next/link";
+  CategoryOverviewLayout,
+  type CategoryStatistics,
+  type GameCardProps,
+  type PopularSubcategory,
+} from "@/shared/components/CategoryOverviewLayout";
 
-const sportsCategories = [
+// 실제 스포츠 예측 게임들 (EnhancedGameCard 형식)
+const sportsGames: GameCardProps[] = [
   {
-    slug: "soccer",
-    title: "축구",
-    icon: "⚽",
-    description: "국내외 축구 리그 및 월드컵 예측",
-    activeGames: 12,
-    totalParticipants: 8547,
-    averageReturn: 2.1,
-    subcategories: [
-      "K리그",
-      "프리미어리그",
-      "라리가",
-      "분데스리가",
-      "월드컵",
-      "챔피언스리그",
+    id: "game-001",
+    title: "2024 챔피언스리그 결승 - 맨시티 vs 레알 마드리드",
+    description:
+      "유럽 최고의 클럽들이 만나는 운명의 대결! 누가 트로피를 들어올릴까요?",
+    category: "축구",
+    gameType: "wdl",
+    status: "active",
+    difficulty: "medium",
+    participants: 3420,
+    maxParticipants: 5000,
+    totalStake: 125000,
+    minStake: 100,
+    maxStake: 10000,
+    expectedReturn: 2.8,
+    endTime: "2024-12-20T19:00:00Z",
+    href: "/prediction/sports/soccer/champions-league-final",
+    moneyWave: {
+      allocatedPool: 300000,
+      currentPool: 125000,
+      waveMultiplier: 2.4,
+      distributionDate: "2024-12-21",
+    },
+    options: [
+      { id: "home", label: "맨시티 승리", probability: 0.45, odds: 2.2 },
+      { id: "draw", label: "무승부", probability: 0.25, odds: 4.0 },
+      { id: "away", label: "레알 마드리드 승리", probability: 0.3, odds: 3.3 },
     ],
+    imagePlaceholder: "챔피언스리그 결승",
+    tags: ["챔피언스리그", "유럽축구", "결승전"],
+    isHot: true,
+    isFeatured: true,
   },
   {
-    slug: "baseball",
-    title: "야구",
-    icon: "⚾",
-    description: "KBO, MLB 시즌 및 포스트시즌 예측",
-    activeGames: 8,
-    totalParticipants: 5234,
-    averageReturn: 1.8,
-    subcategories: ["KBO리그", "MLB", "월드베이스볼클래식", "아시안게임"],
+    id: "game-002",
+    title: "LOL 월드 챔피언십 2024 - T1 vs JDG",
+    description: "세계 최강팀들의 치열한 대결! 페이커의 전설이 계속될까요?",
+    category: "e스포츠",
+    gameType: "binary",
+    status: "active",
+    difficulty: "high",
+    participants: 2890,
+    maxParticipants: 4000,
+    totalStake: 98000,
+    minStake: 50,
+    maxStake: 5000,
+    expectedReturn: 3.2,
+    endTime: "2024-12-18T14:00:00Z",
+    href: "/prediction/sports/esports/lol-worlds-2024",
+    moneyWave: {
+      allocatedPool: 200000,
+      currentPool: 98000,
+      waveMultiplier: 2.0,
+      distributionDate: "2024-12-19",
+    },
+    options: [
+      { id: "t1", label: "T1 승리", probability: 0.55, odds: 1.8 },
+      { id: "jdg", label: "JDG 승리", probability: 0.45, odds: 2.2 },
+    ],
+    imagePlaceholder: "LOL 월드 챔피언십",
+    tags: ["리그오브레전드", "월드챔피언십", "T1"],
+    isHot: true,
   },
   {
-    slug: "basketball",
-    title: "농구",
-    icon: "🏀",
-    description: "KBL, NBA 정규시즌 및 플레이오프 예측",
-    activeGames: 6,
-    totalParticipants: 3891,
-    averageReturn: 2.0,
-    subcategories: ["KBL", "NBA", "WNBA", "올림픽"],
+    id: "game-003",
+    title: "2024 KBO 정규시즌 우승팀 예측",
+    description: "치열한 KBO 리그! 올해는 어느 팀이 정규시즌 1위를 차지할까요?",
+    category: "야구",
+    gameType: "ranking",
+    status: "active",
+    difficulty: "medium",
+    participants: 1560,
+    maxParticipants: 3000,
+    totalStake: 67000,
+    minStake: 100,
+    maxStake: 3000,
+    expectedReturn: 4.5,
+    endTime: "2024-12-25T23:59:00Z",
+    href: "/prediction/sports/baseball/kbo-season-winner",
+    moneyWave: {
+      allocatedPool: 150000,
+      currentPool: 67000,
+      waveMultiplier: 2.2,
+      distributionDate: "2024-12-26",
+    },
+    options: [
+      { id: "kia", label: "KIA 타이거즈", probability: 0.25, odds: 4.0 },
+      { id: "lg", label: "LG 트윈스", probability: 0.22, odds: 4.5 },
+      { id: "doosan", label: "두산 베어스", probability: 0.2, odds: 5.0 },
+      { id: "samsung", label: "삼성 라이온즈", probability: 0.18, odds: 5.5 },
+      { id: "lotte", label: "롯데 자이언츠", probability: 0.15, odds: 6.7 },
+    ],
+    imagePlaceholder: "KBO 리그",
+    tags: ["KBO", "한국야구", "정규시즌"],
   },
   {
-    slug: "esports",
-    title: "e스포츠",
-    icon: "🎮",
-    description: "LOL, 오버워치, 스타크래프트 대회 예측",
-    activeGames: 15,
-    totalParticipants: 12456,
-    averageReturn: 2.5,
-    subcategories: ["리그오브레전드", "오버워치", "스타크래프트", "발로란트"],
+    id: "game-004",
+    title: "NBA 2024-25 시즌 MVP 예측",
+    description:
+      "새 시즌 NBA의 가장 가치 있는 선수는 누가 될까요? 치열한 경쟁이 예상됩니다!",
+    category: "농구",
+    gameType: "multichoice",
+    status: "active",
+    difficulty: "high",
+    participants: 2100,
+    maxParticipants: 4000,
+    totalStake: 89000,
+    minStake: 200,
+    maxStake: 8000,
+    expectedReturn: 5.2,
+    endTime: "2025-04-15T23:59:00Z",
+    href: "/prediction/sports/basketball/nba-mvp-2025",
+    moneyWave: {
+      allocatedPool: 250000,
+      currentPool: 89000,
+      waveMultiplier: 2.8,
+      distributionDate: "2025-04-16",
+    },
+    options: [
+      { id: "luka", label: "루카 돈치치", probability: 0.28, odds: 3.6 },
+      {
+        id: "giannis",
+        label: "야니스 아데토쿤보",
+        probability: 0.25,
+        odds: 4.0,
+      },
+      { id: "jokic", label: "니콜라 요키치", probability: 0.22, odds: 4.5 },
+      { id: "tatum", label: "제이슨 테이텀", probability: 0.15, odds: 6.7 },
+      {
+        id: "sga",
+        label: "샤이 길저스-알렉산더",
+        probability: 0.1,
+        odds: 10.0,
+      },
+    ],
+    imagePlaceholder: "NBA MVP",
+    tags: ["NBA", "MVP", "농구"],
+    isFeatured: true,
   },
   {
-    slug: "tennis",
-    title: "테니스",
-    icon: "🎾",
-    description: "그랜드슬램 및 ATP/WTA 투어 예측",
-    activeGames: 4,
-    totalParticipants: 2134,
-    averageReturn: 1.9,
-    subcategories: ["윔블던", "US오픈", "프랑스오픈", "호주오픈"],
+    id: "game-005",
+    title: "발로란트 챔피언스 2024 - 한국팀 4강 진출 여부",
+    description:
+      "한국 발로란트의 자존심을 건 대회! 한국팀이 4강에 진출할 수 있을까요?",
+    category: "e스포츠",
+    gameType: "binary",
+    status: "pending",
+    difficulty: "medium",
+    participants: 890,
+    maxParticipants: 2000,
+    totalStake: 34000,
+    minStake: 50,
+    maxStake: 2000,
+    expectedReturn: 2.1,
+    endTime: "2024-12-22T10:00:00Z",
+    href: "/prediction/sports/esports/valorant-champions-2024",
+    moneyWave: {
+      allocatedPool: 80000,
+      currentPool: 34000,
+      waveMultiplier: 1.8,
+      distributionDate: "2024-12-23",
+    },
+    options: [
+      { id: "yes", label: "4강 진출", probability: 0.35, odds: 2.9 },
+      { id: "no", label: "4강 진출 실패", probability: 0.65, odds: 1.5 },
+    ],
+    imagePlaceholder: "발로란트 챔피언스",
+    tags: ["발로란트", "한국팀", "e스포츠"],
   },
   {
-    slug: "golf",
-    title: "골프",
-    icon: "⛳",
-    description: "PGA 투어 및 메이저 대회 예측",
-    activeGames: 3,
-    totalParticipants: 1567,
-    averageReturn: 2.2,
-    subcategories: ["PGA투어", "마스터스", "US오픈", "영국오픈"],
+    id: "game-006",
+    title: "2024 피겨 스케이팅 그랑프리 파이널 - 김연아 해설 등장 여부",
+    description:
+      "피겨 여왕 김연아가 해설진으로 등장할까요? 팬들의 관심이 집중되고 있습니다!",
+    category: "기타스포츠",
+    gameType: "binary",
+    status: "active",
+    difficulty: "low",
+    participants: 1200,
+    maxParticipants: 2500,
+    totalStake: 28000,
+    minStake: 10,
+    maxStake: 1000,
+    expectedReturn: 1.8,
+    endTime: "2024-12-19T18:00:00Z",
+    href: "/prediction/sports/other/figure-skating-yuna-kim",
+    moneyWave: {
+      allocatedPool: 50000,
+      currentPool: 28000,
+      waveMultiplier: 1.5,
+      distributionDate: "2024-12-20",
+    },
+    options: [
+      { id: "yes", label: "해설 등장", probability: 0.6, odds: 1.7 },
+      { id: "no", label: "해설 불참", probability: 0.4, odds: 2.5 },
+    ],
+    imagePlaceholder: "피겨 스케이팅",
+    tags: ["피겨스케이팅", "김연아", "해설"],
   },
 ];
 
-function SportsCategoryCard({
-  category,
-}: {
-  category: (typeof sportsCategories)[0];
-}) {
-  return (
-    <Link href={`/prediction/sports/${category.slug}`}>
-      <Card className="hover:shadow-lg transition-all duration-200 cursor-pointer group">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="text-3xl group-hover:scale-110 transition-transform">
-                {category.icon}
-              </div>
-              <div>
-                <CardTitle className="text-xl font-bold text-gray-900">
-                  {category.title}
-                </CardTitle>
-                <CardDescription className="text-gray-600">
-                  {category.description}
-                </CardDescription>
-              </div>
-            </div>
-            <Badge className="bg-blue-100 text-blue-800">
-              {category.activeGames}개 진행중
-            </Badge>
-          </div>
-        </CardHeader>
+// 스포츠 통계 데이터
+const sportsStatistics: CategoryStatistics = {
+  totalRewardPool: 2500000, // 250만 PMC
+  totalParticipants: 45678,
+  activeGames: 89,
+  subcategoryCount: 8,
+};
 
-        <CardContent className="pt-0">
-          {/* Statistics */}
-          <div className="grid grid-cols-3 gap-4 mb-4">
-            <div className="text-center">
-              <div className="text-lg font-bold text-gray-900">
-                {category.activeGames}
-              </div>
-              <div className="text-xs text-gray-500">활성 게임</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-gray-900">
-                {category.totalParticipants.toLocaleString()}
-              </div>
-              <div className="text-xs text-gray-500">총 참여자</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-green-600">
-                {category.averageReturn}x
-              </div>
-              <div className="text-xs text-gray-500">평균 수익률</div>
-            </div>
-          </div>
-
-          {/* Subcategories */}
-          <div>
-            <div className="text-sm font-medium text-gray-700 mb-2">
-              주요 카테고리
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {category.subcategories.slice(0, 4).map((sub, index) => (
-                <span
-                  key={index}
-                  className="px-2 py-1 text-xs bg-gray-50 text-gray-600 rounded-md"
-                >
-                  {sub}
-                </span>
-              ))}
-              {category.subcategories.length > 4 && (
-                <span className="px-2 py-1 text-xs bg-gray-50 text-gray-600 rounded-md">
-                  +{category.subcategories.length - 4}개 더
-                </span>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </Link>
-  );
-}
+// 인기 스포츠 서브카테고리 TOP 3
+const popularSportsSubcategories: PopularSubcategory[] = [
+  {
+    id: "soccer",
+    title: "축구",
+    icon: "⚽",
+    participantCount: 15420,
+    rank: 1,
+  },
+  {
+    id: "esports",
+    title: "e스포츠",
+    icon: "🎮",
+    participantCount: 12456,
+    rank: 2,
+  },
+  {
+    id: "baseball",
+    title: "야구",
+    icon: "⚾",
+    participantCount: 8934,
+    rank: 3,
+  },
+];
 
 export default function SportsOverviewPage() {
-  const totalGames = sportsCategories.reduce(
-    (sum, cat) => sum + cat.activeGames,
-    0
-  );
-  const totalParticipants = sportsCategories.reduce(
-    (sum, cat) => sum + cat.totalParticipants,
-    0
-  );
-  const averageReturn =
-    sportsCategories.reduce((sum, cat) => sum + cat.averageReturn, 0) /
-    sportsCategories.length;
-
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-        <div className="flex items-center space-x-3 mb-4">
-          <div className="text-4xl">🏆</div>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">스포츠 예측</h1>
-            <p className="text-gray-600">
-              다양한 스포츠 경기 결과를 예측하고 PMP를 획득하세요
-            </p>
-          </div>
-        </div>
-
-        {/* Overview Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="text-sm text-blue-600 font-medium">
-              총 활성 게임
-            </div>
-            <div className="text-2xl font-bold text-blue-900">
-              {totalGames}개
-            </div>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="text-sm text-green-600 font-medium">총 참여자</div>
-            <div className="text-2xl font-bold text-green-900">
-              {totalParticipants.toLocaleString()}명
-            </div>
-          </div>
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <div className="text-sm text-purple-600 font-medium">
-              평균 수익률
-            </div>
-            <div className="text-2xl font-bold text-purple-900">
-              {averageReturn.toFixed(1)}x
-            </div>
-          </div>
-          <div className="bg-orange-50 p-4 rounded-lg">
-            <div className="text-sm text-orange-600 font-medium">
-              스포츠 종목
-            </div>
-            <div className="text-2xl font-bold text-orange-900">
-              {sportsCategories.length}개
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Popular Categories */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border border-gray-200">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">🔥 인기 스포츠</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {sportsCategories
-            .sort((a, b) => b.totalParticipants - a.totalParticipants)
-            .slice(0, 3)
-            .map((category, index) => (
-              <div
-                key={category.slug}
-                className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg"
-              >
-                <div className="text-2xl">{category.icon}</div>
-                <div className="flex-1">
-                  <div className="font-medium text-gray-900">
-                    {category.title}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {category.totalParticipants.toLocaleString()}명 참여
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-orange-600">
-                    #{index + 1}
-                  </div>
-                </div>
-              </div>
-            ))}
-        </div>
-      </div>
-
-      {/* Categories Grid */}
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 mb-4">
-          스포츠 카테고리
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {sportsCategories.map((category) => (
-            <SportsCategoryCard key={category.slug} category={category} />
-          ))}
-        </div>
-      </div>
-
-      {/* Agency Theory Explanation */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
-        <div className="flex items-start space-x-4">
-          <div className="text-3xl">🎯</div>
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 mb-2">
-              Agency Theory를 통한 스포츠 예측
-            </h3>
-            <div className="text-sm text-gray-700 space-y-2">
-              <p>
-                <strong>정보 비대칭 해결:</strong> 전문가와 일반 팬들의 예측을
-                비교하여 더 정확한 결과를 도출합니다.
-              </p>
-              <p>
-                <strong>집단 지성 활용:</strong> 다수의 참여자가 제공하는 정보를
-                종합하여 개별 예측의 한계를 극복합니다.
-              </p>
-              <p>
-                <strong>투명한 보상:</strong> PMP 기반 보상 시스템으로 정확한
-                예측에 대한 적절한 인센티브를 제공합니다.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <CategoryOverviewLayout
+      category="스포츠"
+      title="스포츠 예측"
+      description="축구, 야구, 농구, e스포츠 등 다양한 스포츠 경기 결과를 예측하고 보상을 획득하세요!"
+      icon="⚽"
+      statistics={sportsStatistics}
+      popularSubcategories={popularSportsSubcategories}
+      games={sportsGames}
+      maxGamesDisplay={6}
+    />
   );
 }
