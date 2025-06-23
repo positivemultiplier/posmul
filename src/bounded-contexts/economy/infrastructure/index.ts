@@ -1,16 +1,14 @@
 /**
- * Economy Infrastructure Layer - Index
+ * Economy Infrastructure Layer - Index (MCP Pattern)
  *
  * 경제 도메인의 인프라스트럭처 계층 모든 구현체들을 export
- * Supabase 기반 Repository, Realtime Event Publisher, MCP 통합 등
+ * MCP 기반 Repository, Realtime Event Publisher 등
  */
 
-// Supabase Client 및 기본 설정
-export * from "./supabase/client";
-export * from "./supabase/types";
+// MCP Repository 기본 구현체
+export { BaseMCPRepository } from "./repositories/base-mcp.repository";
 
-// Repository 구현체들
-export { BaseSupabaseRepository } from "./repositories/base-supabase.repository";
+// Repository 구현체들 (MCP 패턴)
 export { SupabaseMoneyWaveHistoryRepository } from "./repositories/supabase-money-wave-history.repository";
 export { SupabasePMPPMCAccountRepository } from "./repositories/supabase-pmp-pmc-account.repository";
 export { SupabaseUtilityFunctionRepository } from "./repositories/supabase-utility-function.repository";
@@ -21,12 +19,6 @@ export type {
   EconomicDomainEvent,
   EconomicEventType,
 } from "./events/economic-realtime-publisher";
-
-// MCP 통합 (향후 구현)
-// export * from "./mcp";
-
-// 외부 서비스 통합 (향후 구현)
-// export * from "./external-services";
 
 // 유틸리티
 export { createEconomyInfrastructure } from "./create-infrastructure";
