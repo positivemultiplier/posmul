@@ -1,8 +1,9 @@
 import { DonationActivityPanel } from "@/bounded-contexts/donation/presentation/components/DonationActivityPanel";
 import { PredictionHistoryPanel } from "@/bounded-contexts/prediction/presentation/components/PredictionHistoryPanel";
-import { UserEconomicDashboard } from "@/bounded-contexts/user/presentation/components/UserEconomicDashboard";
 import { UserRankingPanel } from "@/bounded-contexts/user/presentation/components/UserRankingPanel";
 import { MoneyWaveStatus } from "@/shared/components/MoneyWaveStatus";
+import { RealTimeEconomicBalance } from "@/shared/components/RealTimeEconomicBalance";
+import { RealTimePredictionDashboard } from "@/shared/components/RealTimePredictionDashboard";
 import {
   Card,
   CardContent,
@@ -13,7 +14,7 @@ import {
 import { Suspense } from "react";
 
 // Mock 사용자 ID (실제로는 인증에서 가져옴)
-const MOCK_USER_ID = "user-123";
+const MOCK_USER_ID = "2808af51-a9f7-432b-90a1-8580f7a964c1"; // 실제 데이터가 있는 사용자 ID
 
 export default async function DashboardPage() {
   return (
@@ -22,10 +23,10 @@ export default async function DashboardPage() {
         {/* 헤더 섹션 */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            내 대시보드 📊
+            실시간 대시보드 📊
           </h1>
           <p className="text-lg text-gray-600">
-            PosMul 플랫폼에서의 경제 활동과 예측 성과를 한눈에 확인하세요
+            PosMul 플랫폼에서의 경제 활동과 예측 성과를 실시간으로 확인하세요
           </p>
         </div>
 
@@ -43,7 +44,7 @@ export default async function DashboardPage() {
           </CardHeader>
         </Card>
 
-        {/* 경제 현황 대시보드 */}
+        {/* 🔥 NEW: 실시간 경제 현황 대시보드 */}
         <div className="mb-8">
           <Suspense
             fallback={
@@ -61,7 +62,11 @@ export default async function DashboardPage() {
               </Card>
             }
           >
-            <UserEconomicDashboard userId={MOCK_USER_ID} />
+            <RealTimeEconomicBalance
+              userId={MOCK_USER_ID}
+              autoRefresh={true}
+              refreshInterval={30000}
+            />
           </Suspense>
         </div>
 
@@ -80,6 +85,29 @@ export default async function DashboardPage() {
             }
           >
             <MoneyWaveStatus />
+          </Suspense>
+        </div>
+
+        {/* 🔥 NEW: 실시간 예측 게임 대시보드 */}
+        <div className="mb-8">
+          <Suspense
+            fallback={
+              <Card>
+                <CardContent className="p-6">
+                  <div className="animate-pulse space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-20 bg-gray-200 rounded"></div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            }
+          >
+            <RealTimePredictionDashboard
+              userId={MOCK_USER_ID}
+              autoRefresh={true}
+              refreshInterval={30000}
+            />
           </Suspense>
         </div>
 
@@ -200,27 +228,66 @@ export default async function DashboardPage() {
               🏛️ 직접민주주의 참여 현황
             </CardTitle>
             <CardDescription className="text-green-600">
-              Buchanan의 공공선택이론을 바탕으로 Iron Triangle 극복에 기여한
-              정도를 측정합니다.
+              Agency Theory를 통한 정보 비대칭 해소와 집단 지성 활용
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 bg-white rounded-lg border">
-                <div className="text-2xl font-bold text-green-600">85%</div>
-                <div className="text-sm text-gray-600">예측 정확도</div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-600 mb-2">
+                  87%
+                </div>
+                <div className="text-sm text-green-600">
+                  예측 정확도
+                  <br />
+                  <span className="text-xs text-gray-500">
+                    (전체 참여자 평균)
+                  </span>
+                </div>
               </div>
-              <div className="text-center p-4 bg-white rounded-lg border">
-                <div className="text-2xl font-bold text-blue-600">42</div>
-                <div className="text-sm text-gray-600">참여한 게임 수</div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-600 mb-2">
+                  2.4M
+                </div>
+                <div className="text-sm text-green-600">
+                  총 PMP 거래량
+                  <br />
+                  <span className="text-xs text-gray-500">(지난 30일)</span>
+                </div>
               </div>
-              <div className="text-center p-4 bg-white rounded-lg border">
-                <div className="text-2xl font-bold text-purple-600">1,250</div>
-                <div className="text-sm text-gray-600">총 기부 PMC</div>
+              <div className="text-center">
+                <div className="text-3xl font-bold text-green-600 mb-2">
+                  1,250
+                </div>
+                <div className="text-sm text-green-600">
+                  활성 참여자
+                  <br />
+                  <span className="text-xs text-gray-500">
+                    (Agency Score &gt; 0.7)
+                  </span>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        {/* 시스템 상태 표시 */}
+        <div className="mt-8 flex items-center justify-center">
+          <div className="flex items-center gap-4 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <span>실시간 데이터 연동 중</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+              <span>MCP 연결 정상</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+              <span>Agency Theory 엔진 활성</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

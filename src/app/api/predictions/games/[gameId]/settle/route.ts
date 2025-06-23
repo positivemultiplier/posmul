@@ -28,19 +28,16 @@ class EventPublisherAdapter implements EconomicEventPublisher {
   }
 }
 
-interface RouteParams {
-  params: {
-    gameId: string;
-  };
-}
-
 /**
  * POST /api/predictions/games/[gameId]/settle
  * 예측 게임 정산
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ gameId: string }> }
+) {
   try {
-    const { gameId } = params;
+    const { gameId } = await params;
     const body = await request.json();
 
     if (!gameId) {
@@ -176,10 +173,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       { status: 200 }
     );
   } catch (error) {
-    console.error(
-      `POST /api/predictions/games/${params.gameId}/settle error:`,
-      error
-    );
+    console.error(`POST /api/predictions/games/[gameId]/settle error:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -197,9 +191,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  * GET /api/predictions/games/[gameId]/settle
  * 정산 가능 여부 및 정보 조회
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ gameId: string }> }
+) {
   try {
-    const { gameId } = params;
+    const { gameId } = await params;
 
     if (!gameId) {
       return NextResponse.json(
@@ -243,11 +240,9 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     );
     const participations = participationsResult.success
       ? participationsResult.data.items || []
-      : [];
-
-    // 정산 가능 여부 판단
+      : []; // 정산 가능 여부 판단
     const canSettle =
-      game.status === "ACTIVE" &&
+      game.status.isEnded() &&
       new Date() >= game.configuration.settlementTime &&
       participations.length > 0;
 
@@ -278,10 +273,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       },
     });
   } catch (error) {
-    console.error(
-      `GET /api/predictions/games/${params.gameId}/settle error:`,
-      error
-    );
+    console.error(`GET /api/predictions/games/[gameId]/settle error:`, error);
     return NextResponse.json(
       {
         success: false,

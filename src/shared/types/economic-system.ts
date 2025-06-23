@@ -13,18 +13,6 @@ import type {
 } from "./branded-types";
 
 /**
- * 게임 상태
- */
-export enum GameStatus {
-  PENDING = "PENDING", // 시작 전
-  ACTIVE = "ACTIVE", // 진행 중
-  PREDICTING = "PREDICTING", // 예측 접수 중
-  EVALUATING = "EVALUATING", // 결과 평가 중
-  COMPLETED = "COMPLETED", // 완료
-  CANCELLED = "CANCELLED", // 취소
-}
-
-/**
  * 예측 결과 상태
  */
 export enum PredictionResult {

@@ -9,11 +9,11 @@ import {
   createPMP,
 } from "../../../../shared/types/branded-types";
 import {
-  GameStatus as BaseGameStatus,
   PredictionResult as BasePredictionResult,
   Result,
   ValidationError,
 } from "../../../../shared/types/economic-system";
+import { GameStatus as BaseGameStatus } from "./game-status";
 
 /**
  * 확신도 Value Object
@@ -289,8 +289,9 @@ export class PredictionOption {
 }
 
 // Helper type guards
-export const isValidGameStatus = (value: string): value is BaseGameStatus => {
-  return Object.values(BaseGameStatus).includes(value as BaseGameStatus);
+export const isValidGameStatus = (value: string): boolean => {
+  const result = BaseGameStatus.create(value);
+  return result.success;
 };
 
 export const isValidPredictionResult = (

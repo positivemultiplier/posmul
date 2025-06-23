@@ -1,301 +1,827 @@
-# GitHub Copilot Instructions for Posmul Prediction Game
+# PosMul Prediction Game - Cursor Rules (Dual MCP Edition)
+
+You are an expert in TypeScript, Next.js 15 App Router, Domain-Driven Design (DDD), Clean Architecture, **Supabase MCP Integration**, and **GitHub MCP Integration**.
 
 ## Project Context
 
-Posmul은 Next.js App Router, Domain-Driven Design (DDD), Clean Architecture 원칙을 구현한 예측 게임과 지역 경제 연동을 통해 시민이 직접 참여하는 새로운 민주주의를 경험을 제공하는 AI 시대 직접민주주의 플랫폼입니다.
-supabase MCP(Model Context Protocol)를 통해 supabase와 연결하여 사용합니다.
+This is PosMul, an AI-era direct democracy platform providing prediction games and local economy integration. The platform implements Agency Theory, CAPM, and behavioral economics theories through code.
 
-## 개발 환경
+**CRITICAL**: This project has a **tightly coupled economy system (PMP/PMC)** that spans across all domains. Use **Shared Kernel** and **Domain Events** patterns for economic integration.
 
-- **운영체제**: Windows
-- **기본 셸**: PowerShell (powershell.exe)
-- **터미널 명령어**: PowerShell 명령어 사용
-- **경로 표기**: Windows 경로 표기법 (백슬래시 사용)
+**DEVELOPMENT APPROACH**: We use **dual MCP (Model Context Protocol)** approach:
 
-## Project File Structure
+- **Supabase MCP** for all database operations (NOT Supabase CLI)
+- **GitHub MCP** for all project management operations (NOT GitHub CLI)
+  All database changes, queries, issue management, and code collaboration should go through MCP tools.
+
+## Development Environment
+
+- **OS**: Windows
+- **Shell**: PowerShell (always use PowerShell commands)
+- **Path Format**: Windows backslash paths (e.g., `src\bounded-contexts\`)
+- **Commands**: Use semicolon (`;`) instead of `&&` for command chaining
+- **Database**: Supabase via MCP tools (mcp*supabase*\*)
+- **Project Management**: GitHub via MCP tools (mcp*Github*\*)
+
+## Core Architecture Principles
+
+### DDD + Clean Architecture with Economic Integration
+
+- **Shared Kernel**: Economy domain (PMP/PMC) is shared across all contexts
+- **Domain Events**: Use events for cross-domain communication
+- **Anti-Corruption Layer**: Protect domain integrity while allowing integration
+- Domain layer has NO external dependencies (pure business logic)
+- Use Aggregate, Entity, Value Object, Domain Service appropriately
+- Repository pattern for data access abstraction
+
+### Dependency Rules (CRITICAL)
+
+```
+Presentation → Application → Domain
+Infrastructure → Domain (implements interfaces)
+Shared Economy Kernel ← All Domains (read-only access)
+```
+
+- Domain NEVER depends on external layers
+- Application only depends on Domain + Shared Economy Kernel
+- Infrastructure implements Domain interfaces
+- **All domains can READ from Economy Kernel, but WRITE through Domain Events**
+
+## MCP Integration Rules (CRITICAL)
+
+### Supabase MCP - Database Operations
+
+- **NEVER use Supabase CLI** for schema changes
+- **ALWAYS use `mcp_supabase_apply_migration`** for DDL operations
+- **Use `mcp_supabase_execute_sql`** for data queries and DML
+- **Use `mcp_supabase_list_tables`** to inspect schema
+- **Use `mcp_supabase_get_advisors`** for security and performance checks
+
+### GitHub MCP - Project Management
+
+- **NEVER use GitHub CLI** for project operations
+- **ALWAYS use `mcp_Github_create_issue`** for task management
+- **Use `mcp_Github_create_pull_request`** for code reviews
+- **Use `mcp_Github_get_file_contents`** for file inspection
+- **Use `mcp_Github_create_or_update_file`** for file management
+
+### Migration Pattern with MCP
+
+```typescript
+// 1. Create migration using MCP
+await mcp_supabase_apply_migration({
+  project_id: "your-project-id",
+  name: "create_prediction_tables",
+  query: `
+    CREATE TABLE prediction_games (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      creator_id UUID NOT NULL,
+      title TEXT NOT NULL,
+      -- ... other fields
+    );
+  `,
+});
+
+// 2. Verify with advisors
+await mcp_supabase_get_advisors({
+  project_id: "your-project-id",
+  type: "security",
+});
+```
+
+### Repository Implementation with MCP
+
+```typescript
+export class SupabasePredictionGameRepository
+  implements IPredictionGameRepository
+{
+  constructor(private readonly projectId: string) {}
+
+  async save(game: PredictionGame): Promise<Result<void, RepositoryError>> {
+    try {
+      const query = `
+        INSERT INTO prediction_games (id, creator_id, title, ...)
+        VALUES ($1, $2, $3, ...)
+        ON CONFLICT (id) DO UPDATE SET ...
+      `;
+
+      await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      return success(undefined);
+    } catch (error) {
+      return failure(new RepositoryError("Save failed", error));
+    }
+  }
+}
+```
+
+### Economic Integration with MCP
+
+```sql
+-- Economic tables (shared) - Apply via MCP
+CREATE TABLE pmp_accounts (
+  user_id UUID PRIMARY KEY,
+  balance DECIMAL(15,2) NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE pmc_accounts (
+  user_id UUID PRIMARY KEY,
+  balance DECIMAL(15,2) NOT NULL DEFAULT 0,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE economic_transactions (
+  id UUID PRIMARY KEY,
+  user_id UUID NOT NULL,
+  transaction_type TEXT NOT NULL, -- 'pmp_earned', 'pmp_spent', 'pmc_earned', 'pmc_spent'
+  amount DECIMAL(15,2) NOT NULL,
+  source_domain TEXT NOT NULL, -- 'prediction', 'investment', 'forum', 'donation'
+  source_id UUID NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+## Economic System Integration Patterns
+
+### 1. Shared Kernel Pattern (Economy Domain)
+
+```typescript
+// src/shared/economy-kernel/
+export interface PmpAccount {
+  userId: UserId;
+  balance: number;
+  readonly transactions: PmpTransaction[];
+}
+
+export interface PmcAccount {
+  userId: UserId;
+  balance: number;
+  readonly transactions: PmcTransaction[];
+}
+
+export class EconomyKernel {
+  constructor(private readonly projectId: string) {}
+
+  // Read-only access for all domains
+  async getPmpBalance(userId: UserId): Promise<number> {
+    const result = await mcp_supabase_execute_sql({
+      project_id: this.projectId,
+      query: "SELECT balance FROM pmp_accounts WHERE user_id = $1",
+    });
+    return result.data?.[0]?.balance || 0;
+  }
+
+  async getPmcBalance(userId: UserId): Promise<number> {
+    const result = await mcp_supabase_execute_sql({
+      project_id: this.projectId,
+      query: "SELECT balance FROM pmc_accounts WHERE user_id = $1",
+    });
+    return result.data?.[0]?.balance || 0;
+  }
+
+  // Write operations through domain events only
+  private constructor() {} // Prevent direct instantiation
+}
+```
+
+### 2. Domain Events for Economic Transactions
+
+```typescript
+// Cross-domain economic events
+export class PmpEarnedEvent implements DomainEvent {
+  constructor(
+    public readonly userId: UserId,
+    public readonly amount: number,
+    public readonly source: "major-league" | "brainstorming" | "debate",
+    public readonly sourceId: string,
+    public readonly occurredAt: Date = new Date()
+  ) {}
+}
+
+export class PmcEarnedEvent implements DomainEvent {
+  constructor(
+    public readonly userId: UserId,
+    public readonly amount: number,
+    public readonly source:
+      | "local-league"
+      | "cloud-funding"
+      | "prediction-success"
+      | "gift-aid",
+    public readonly sourceId: string,
+    public readonly occurredAt: Date = new Date()
+  ) {}
+}
+
+export class PmpSpentEvent implements DomainEvent {
+  constructor(
+    public readonly userId: UserId,
+    public readonly amount: number,
+    public readonly purpose: "prediction-participation",
+    public readonly targetId: string,
+    public readonly occurredAt: Date = new Date()
+  ) {}
+}
+```
+
+### 3. Anti-Corruption Layer for Economic Integration
+
+```typescript
+// Each domain has its own economic service
+export class PredictionEconomicService {
+  constructor(
+    private readonly economyKernel: EconomyKernel,
+    private readonly eventPublisher: IDomainEventPublisher
+  ) {}
+
+  async canParticipateInPrediction(
+    userId: UserId,
+    requiredPmp: number
+  ): Promise<boolean> {
+    const balance = await this.economyKernel.getPmpBalance(userId);
+    return balance >= requiredPmp;
+  }
+
+  async participateInPrediction(
+    userId: UserId,
+    predictionId: PredictionId,
+    pmpAmount: number
+  ): Promise<Result<void, EconomicError>> {
+    // Publish event instead of direct modification
+    await this.eventPublisher.publish(
+      new PmpSpentEvent(
+        userId,
+        pmpAmount,
+        "prediction-participation",
+        predictionId
+      )
+    );
+    return { success: true, data: undefined };
+  }
+}
+```
+
+## File Structure Rules (Updated for MCP Integration)
 
 ```
 src\
-  app\                          # Next.js App Router 페이지 및 레이아웃
-  bounded-contexts\             # DDD Bounded Contexts
-    prediction\                 # 핵심 예측 게임 로직
+  shared\
+    economy-kernel\          # Shared economic domain
+      entities\
+        pmp-account.entity.ts
+        pmc-account.entity.ts
+        money-wave.entity.ts
+      value-objects\
+        economic-types.ts
+      services\
+        economy-kernel.service.ts
+      events\
+        economic-events.ts
+    events\                  # Cross-domain event system
+      domain-events.ts
+      event-publisher.ts
+    mcp\                     # MCP integration utilities
+      supabase-client.ts
+      migration-helpers.ts
+  bounded-contexts\
+    [context-name]\
       domain\
-        entities\              # 도메인 엔티티 (PredictionGame, Prediction)
-        value-objects\         # 값 객체 (PredictionId, GameStatus)
-        repositories\          # 리포지토리 인터페이스
-        services\             # 도메인 서비스
+        entities\
+        value-objects\
+        repositories\
+        services\
+          [context]-economic.service.ts  # Economic integration per domain
+        events\
       application\
-        use-cases\            # 애플리케이션 유스케이스
-        services\             # 애플리케이션 서비스
-        dto\                  # 데이터 전송 객체
+        use-cases\
+        services\
+        dto\
+        event-handlers\      # Handle economic events
       infrastructure\
-        repositories\         # 리포지토리 구현
-        mcp\                  # MCP 통합
-        external-services\    # 외부 API 통합
+        repositories\        # MCP-based implementations
+        external-services\
+        event-handlers\      # Infrastructure event handlers
       presentation\
-        components\           # React 컴포넌트
-        pages\                # 페이지 컴포넌트
-        hooks\                # 커스텀 React 훅
-      context.md              # Bounded Context 문서
-    market\                   # 마켓 관리
-    user\                     # 사용자 프로필 및 활동
-    auth\                     # 인증 및 권한
-    payment\                  # PMC/PMP 포인트 시스템
-  shared\                     # 횡단 관심사
-    types\                    # 공유 TypeScript 타입
-    utils\                    # 유틸리티 함수
-    components\               # 공유 UI 컴포넌트
-    constants\                # 애플리케이션 상수
-    events\                   # 도메인 이벤트
+        components\
+        hooks\
+      context.md
 ```
 
-## 아키텍처 원칙
+## MCP-Specific Development Patterns
 
-### DDD (Domain-Driven Design)
-
-- 각 Bounded Context는 완전히 독립적
-- 도메인 계층은 외부 의존성이 없는 순수한 비즈니스 로직 포함
-- Aggregate, Entity, Value Object, Domain Service를 적절히 사용
-- 데이터 접근 추상화를 위한 Repository 패턴 구현
-- 컨텍스트 간 통신을 위한 도메인 이벤트
-
-### Clean Architecture
-
-- **도메인 계층**: 순수 비즈니스 로직, 외부 계층에 대한 의존성 없음
-- **애플리케이션 계층**: 유스케이스 및 애플리케이션 서비스, 도메인에만 의존
-- **인프라스트럭처 계층**: 외부 관심사 (데이터베이스, API, MCP), 도메인 인터페이스 구현
-- **프레젠테이션 계층**: UI 컴포넌트, DTO를 통해 애플리케이션 계층에 의존
-
-### Next.js App Router 모범 사례
-
-- 기본적으로 Server Component 사용
-- Client Component는 필요한 경우에만 (상호작용, 브라우저 API)
-- Bounded Context 내에서 관련 파일들을 함께 배치
-- App Router 기능 활용 (loading.tsx, error.tsx, not-found.tsx)
-
-## 코딩 가이드라인
-
-### TypeScript 표준
-
-- 엄격한 TypeScript 설정 사용
-- 객체 형태에는 type보다 interface 선호
-- 도메인 식별자에는 브랜드 타입 사용
-- Result/Either 패턴으로 적절한 에러 처리 구현
-
-### React/Next.js 패턴
-
-- 데이터 로딩에 Suspense 경계 사용
-- 적절한 에러 경계 구현
-- React Server Component 패턴 따르기
-- Next.js App Router 파일 규칙 사용
-
-### 도메인 모델링
-
-- Entity는 정체성과 생명주기를 가져야 함
-- Value Object는 불변이며 값으로 비교
-- Aggregate는 비즈니스 불변성을 강제
-- Entity에 맞지 않는 비즈니스 로직은 Domain Service에서 처리
-
-## Copilot 프롬프트 예시
-
-### 도메인 계층
-
-```
-Copilot, DDD 원칙에 따라 예측을 추가하고 게임을 종료하는 메서드를 가진 PredictionGame 애그리거트 루트를 생성해주세요.
-
-Copilot, 타입 안전성을 위해 브랜드 타입을 사용하는 PredictionId 값 객체를 구현해주세요.
-
-Copilot, 신뢰도 수준과 정확도를 기반으로 예측 점수를 계산하는 도메인 서비스를 작성해주세요.
-
-Copilot, save, findById, findByStatus 메서드를 가진 PredictionGame 리포지토리 인터페이스를 정의해주세요.
-```
-
-### 애플리케이션 계층
-
-```
-Copilot, 검증과 도메인 이벤트 발행을 포함한 새로운 예측 게임 생성 유스케이스를 만들어주세요.
-
-Copilot, 적절한 에러 처리를 포함한 사용자 예측 제출 애플리케이션 서비스를 구현해주세요.
-
-Copilot, Zod 검증 스키마를 포함한 예측 게임 생성 요청 DTO를 작성해주세요.
-
-Copilot, 페이지네이션을 포함한 예측 통계 조회 쿼리 핸들러를 생성해주세요.
-```
-
-### 인프라스트럭처 계층
-
-```
-Copilot, 도메인 계층의 리포지토리 인터페이스를 사용하여 PredictionGame Supabase 리포지토리를 구현해주세요.
-
-Copilot, 재시도 로직을 포함한 외부 마켓 데이터 조회 MCP 서비스 클라이언트를 생성해주세요.
-
-Copilot, Supabase SQL을 사용하여 예측 관련 테이블의 데이터베이스 마이그레이션 스크립트를 작성해주세요.
-
-Copilot, Supabase 실시간 구독을 사용하는 도메인 이벤트 발행자를 구현해주세요.
-```
-
-### 프레젠테이션 계층
-
-```
-Copilot, 로딩 상태를 포함한 예측 게임 목록을 표시하는 Next.js Server Component를 생성해주세요.
-
-Copilot, 낙관적 업데이트를 포함한 예측 제출 폼 Client Component를 구현해주세요.
-
-Copilot, 에러 처리를 포함한 예측 게임 상태 관리 React 훅을 작성해주세요.
-
-Copilot, Tailwind CSS를 사용하여 반응형 예측 카드 컴포넌트를 생성해주세요.
-```
-
-### 테스트
-
-```
-Copilot, Jest를 사용하여 적절한 격리와 함께 PredictionGame 애그리거트 단위 테스트를 작성해주세요.
-
-Copilot, 리포지토리 목(mock)을 사용한 예측 생성 유스케이스 통합 테스트를 만들어주세요.
-
-Copilot, Playwright를 사용하여 예측 플로우 E2E 테스트를 구현해주세요.
-
-Copilot, React Testing Library를 사용하여 예측 폼 컴포넌트 테스트를 작성해주세요.
-```
-
-### API 라우트
-
-```
-Copilot, 적절한 검증과 에러 처리를 포함한 예측 제출 Next.js API 라우트를 생성해주세요.
-
-Copilot, 폼 검증을 포함한 예측 게임 생성 Server Action을 구현해주세요.
-
-Copilot, Server-Sent Events를 사용하여 예측 업데이트를 스트리밍하는 API 라우트를 작성해주세요.
-
-Copilot, 외부 마켓 데이터 업데이트 처리를 위한 웹훅 핸들러를 생성해주세요.
-```
-
-## 명명 규칙
-
-### 파일 및 디렉토리
-
-- 파일명에는 kebab-case 사용: `prediction-game.entity.ts`
-- 클래스명에는 PascalCase 사용: `PredictionGame`
-- 함수 및 변수명에는 camelCase 사용: `createPredictionGame`
-- 상수명에는 SCREAMING_SNAKE_CASE 사용: `MAX_PREDICTIONS_PER_GAME`
-
-### 도메인 객체
-
-- Entity: `PredictionGame`, `User`, `Market`
-- Value Object: `PredictionId`, `UserId`, `Email`
-- Aggregate: 루트 엔티티와 동일
-- Service: `PredictionScoringService`, `MarketDataService`
-- Repository: `IPredictionGameRepository`, `PredictionGameRepository`
-
-### React 컴포넌트
-
-- 컴포넌트: `PredictionCard`, `GameList`, `UserDashboard`
-- 훅: `usePredictionGame`, `useMarketData`
-- 페이지: `page.tsx`, `layout.tsx`
-- API 라우트: `route.ts`
-
-## 의존성 및 라이브러리
-
-### 핵심 의존성
-
-- App Router를 포함한 Next.js 15
-- 타입 안전성을 위한 TypeScript
-- 스타일링을 위한 Tailwind CSS
-- 검증을 위한 Zod
-- 데이터베이스 통합을 위한 @supabase/supabase-js
-
-### 개발 의존성
-
-- 단위 테스트를 위한 Jest 및 React Testing Library
-- E2E 테스트를 위한 Playwright
-- 코드 품질을 위한 ESLint 및 Prettier
-- Git 훅을 위한 Husky
-
-## 에러 처리 패턴
-
-### 도메인 계층
+### Database Schema Creation
 
 ```typescript
-// 도메인 작업에 Result 패턴 사용
+// Use MCP for all schema operations
+const createPredictionTables = async (projectId: string) => {
+  await mcp_supabase_apply_migration({
+    project_id: projectId,
+    name: "create_prediction_tables",
+    query: `
+      CREATE TABLE prediction_games (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        creator_id UUID NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT,
+        prediction_type TEXT NOT NULL,
+        options JSONB NOT NULL,
+        start_time TIMESTAMPTZ NOT NULL,
+        end_time TIMESTAMPTZ NOT NULL,
+        settlement_time TIMESTAMPTZ NOT NULL,
+        minimum_stake DECIMAL(15,2) NOT NULL DEFAULT 0,
+        maximum_stake DECIMAL(15,2) NOT NULL DEFAULT 1000,
+        max_participants INTEGER,
+        status TEXT NOT NULL DEFAULT 'PENDING',
+        money_wave_id UUID,
+        game_importance_score DECIMAL(3,2) DEFAULT 1.0,
+        allocated_prize_pool DECIMAL(15,2) DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        updated_at TIMESTAMPTZ DEFAULT NOW(),
+        version INTEGER DEFAULT 1,
+        
+        CONSTRAINT valid_status CHECK (status IN ('PENDING', 'ACTIVE', 'ENDED', 'SETTLED', 'CANCELLED', 'DELETED')),
+        CONSTRAINT valid_prediction_type CHECK (prediction_type IN ('binary', 'wdl', 'ranking')),
+        CONSTRAINT positive_stakes CHECK (minimum_stake >= 0 AND maximum_stake > minimum_stake),
+        CONSTRAINT valid_importance CHECK (game_importance_score BETWEEN 0.1 AND 3.0),
+        CONSTRAINT valid_times CHECK (start_time < end_time AND end_time < settlement_time)
+      );
+
+      -- Create indexes
+      CREATE INDEX idx_prediction_games_creator ON prediction_games(creator_id);
+      CREATE INDEX idx_prediction_games_status ON prediction_games(status);
+      CREATE INDEX idx_prediction_games_start_time ON prediction_games(start_time);
+      CREATE INDEX idx_prediction_games_money_wave ON prediction_games(money_wave_id);
+
+      -- Enable RLS
+      ALTER TABLE prediction_games ENABLE ROW LEVEL SECURITY;
+
+      -- RLS Policies
+      CREATE POLICY "Users can view all games" ON prediction_games
+        FOR SELECT USING (true);
+
+      CREATE POLICY "Users can create games" ON prediction_games
+        FOR INSERT WITH CHECK (auth.uid() = creator_id);
+
+      CREATE POLICY "Creators can update their games" ON prediction_games
+        FOR UPDATE USING (auth.uid() = creator_id);
+    `,
+  });
+};
+```
+
+### Data Queries with MCP
+
+```typescript
+// Repository implementation using MCP
+export class MCPPredictionGameRepository implements IPredictionGameRepository {
+  constructor(private readonly projectId: string) {}
+
+  async findByStatus(
+    status: GameStatus
+  ): Promise<Result<PredictionGame[], RepositoryError>> {
+    try {
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: `
+          SELECT pg.*, 
+                 COUNT(p.id) as participant_count,
+                 SUM(p.stake) as total_stake
+          FROM prediction_games pg
+          LEFT JOIN predictions p ON pg.id = p.game_id
+          WHERE pg.status = $1
+          GROUP BY pg.id
+          ORDER BY pg.created_at DESC
+        `,
+        // Note: MCP might handle parameters differently
+      });
+
+      const games = result.data.map((row) => this.mapDatabaseToDomain(row));
+      return success(games);
+    } catch (error) {
+      return failure(new RepositoryError("Query failed", error));
+    }
+  }
+}
+```
+
+### Security and Performance Monitoring
+
+```typescript
+// Regular security checks using MCP
+const checkDatabaseSecurity = async (projectId: string) => {
+  const securityAdvisors = await mcp_supabase_get_advisors({
+    project_id: projectId,
+    type: "security",
+  });
+
+  const performanceAdvisors = await mcp_supabase_get_advisors({
+    project_id: projectId,
+    type: "performance",
+  });
+
+  // Log or handle advisor recommendations
+  console.log("Security recommendations:", securityAdvisors);
+  console.log("Performance recommendations:", performanceAdvisors);
+};
+```
+
+## TypeScript Standards (Updated for MCP)
+
+- Use strict TypeScript configuration
+- Prefer `interface` over `type` for object shapes
+- Use branded types for domain identifiers:
+
+```typescript
+type UserId = string & { readonly brand: unique symbol };
+type PredictionId = string & { readonly brand: unique symbol };
+type PmpAmount = number & { readonly brand: unique symbol };
+type PmcAmount = number & { readonly brand: unique symbol };
+type SupabaseProjectId = string & { readonly brand: unique symbol };
+```
+
+- Implement Result/Either pattern for error handling:
+
+```typescript
 type Result<T, E = Error> =
   | { success: true; data: T }
   | { success: false; error: E };
 ```
 
-### 애플리케이션 계층
+## Naming Conventions
+
+### Files & Directories
+
+- Files: `kebab-case` → `prediction-game.entity.ts`
+- Classes: `PascalCase` → `PredictionGame`
+- Functions/Variables: `camelCase` → `createPredictionGame`
+- Constants: `SCREAMING_SNAKE_CASE` → `MAX_PREDICTIONS_PER_GAME`
+
+### Domain Objects
+
+- Entities: `PredictionGame`, `User`, `Market`
+- Value Objects: `PredictionId`, `UserId`, `Email`
+- Repositories: `IPredictionGameRepository` (interface), `MCPPredictionGameRepository` (impl)
+- Services: `PredictionScoringService`, `MarketDataService`
+- Economic Services: `PredictionEconomicService`, `InvestmentEconomicService`
+
+### React Components
+
+- Components: `PredictionCard`, `GameList`, `UserDashboard`
+- Hooks: `usePredictionGame`, `useMarketData`, `useEconomicBalance`
+- Pages: `page.tsx`, `layout.tsx`
+
+## Code Generation Rules
+
+### When Creating Domain Entities with Economic Integration
 
 ```typescript
-// 커스텀 애플리케이션 에러 사용
-class ValidationError extends Error {
+export class PredictionGame {
+  private constructor(
+    private readonly id: PredictionGameId,
+    private readonly title: string,
+    private status: GameStatus,
+    private predictions: Prediction[]
+  ) {}
+
+  public static create(title: string): Result<PredictionGame, ValidationError> {
+    // Domain validation logic
+  }
+
+  public addPrediction(
+    prediction: Prediction,
+    economicService: PredictionEconomicService
+  ): Result<void, BusinessRuleError> {
+    // Business logic with economic validation
+  }
+}
+```
+
+### When Creating Repository Interfaces
+
+```typescript
+// Domain layer - NO implementation details
+export interface IPredictionGameRepository {
+  save(game: PredictionGame): Promise<Result<void, RepositoryError>>;
+  findById(
+    id: PredictionGameId
+  ): Promise<Result<PredictionGame | null, RepositoryError>>;
+  findByStatus(
+    status: GameStatus
+  ): Promise<Result<PredictionGame[], RepositoryError>>;
+}
+```
+
+### When Creating Use Cases with Economic Integration
+
+```typescript
+// Application layer - orchestrates domain objects + economic kernel
+export class CreatePredictionGameUseCase {
+  constructor(
+    private readonly repository: IPredictionGameRepository,
+    private readonly eventPublisher: IDomainEventPublisher,
+    private readonly economicService: PredictionEconomicService
+  ) {}
+
+  async execute(
+    request: CreateGameRequest
+  ): Promise<Result<CreateGameResponse, UseCaseError>> {
+    // 1. Validate input
+    // 2. Check economic prerequisites
+    // 3. Create domain object
+    // 4. Save via repository (using MCP)
+    // 5. Publish domain events (including economic events)
+    // 6. Return response
+  }
+}
+```
+
+### When Creating React Components with Economic Data
+
+- Default to Server Components
+- Use Client Components only when needed (interactivity, browser APIs)
+- Implement proper loading states with Suspense
+- Include error boundaries
+- **Always display economic balance (PMP/PMC) in relevant components**
+
+```typescript
+// Server Component with economic data
+export default async function GameList({ userId }: { userId: UserId }) {
+  const [games, pmpBalance, pmcBalance] = await Promise.all([
+    getGames(),
+    getPmpBalance(userId),
+    getPmcBalance(userId),
+  ]);
+
+  return (
+    <div>
+      <EconomicBalance pmp={pmpBalance} pmc={pmcBalance} />
+      {/* Game list JSX */}
+    </div>
+  );
+}
+
+// Client Component (when needed)
+("use client");
+export function PredictionForm({ userId }: { userId: UserId }) {
+  const { pmpBalance } = useEconomicBalance(userId);
+  // Interactive form logic with economic validation
+}
+```
+
+## MCP Integration Best Practices
+
+### Project ID Management
+
+```typescript
+// Create a centralized project ID service
+export class SupabaseProjectService {
+  private static instance: SupabaseProjectService;
+  private projectId: SupabaseProjectId;
+
+  private constructor() {
+    this.projectId = process.env.SUPABASE_PROJECT_ID as SupabaseProjectId;
+    if (!this.projectId) {
+      throw new Error("SUPABASE_PROJECT_ID environment variable is required");
+    }
+  }
+
+  static getInstance(): SupabaseProjectService {
+    if (!SupabaseProjectService.instance) {
+      SupabaseProjectService.instance = new SupabaseProjectService();
+    }
+    return SupabaseProjectService.instance;
+  }
+
+  getProjectId(): SupabaseProjectId {
+    return this.projectId;
+  }
+}
+```
+
+### Error Handling for MCP
+
+```typescript
+export class MCPError extends Error {
+  constructor(message: string, public operation: string, public cause?: Error) {
+    super(message);
+    this.name = "MCPError";
+  }
+}
+
+export const handleMCPError = (error: unknown, operation: string): MCPError => {
+  if (error instanceof Error) {
+    return new MCPError(
+      `MCP ${operation} failed: ${error.message}`,
+      operation,
+      error
+    );
+  }
+  return new MCPError(`MCP ${operation} failed with unknown error`, operation);
+};
+```
+
+## Error Handling Patterns
+
+### Domain Errors
+
+```typescript
+export class ValidationError extends Error {
   constructor(message: string, public field: string) {
     super(message);
     this.name = "ValidationError";
   }
 }
-```
 
-### 인프라스트럭처 계층
+export class BusinessRuleError extends Error {
+  constructor(message: string, public rule: string) {
+    super(message);
+    this.name = "BusinessRuleError";
+  }
+}
 
-```typescript
-// 외부 서비스 에러 처리
-class ExternalServiceError extends Error {
+export class EconomicError extends Error {
   constructor(
     message: string,
-    public service: string,
-    public statusCode?: number
+    public economicType:
+      | "insufficient-pmp"
+      | "insufficient-pmc"
+      | "invalid-transaction"
   ) {
     super(message);
-    this.name = "ExternalServiceError";
+    this.name = "EconomicError";
   }
 }
 ```
 
-## 성능 고려사항
+### Application Errors
 
-- 비용이 많이 드는 컴포넌트에는 React.memo 사용
-- 적절한 데이터베이스 인덱싱 구현
-- Supabase 행 수준 보안(RLS) 사용
-- 동적 임포트로 번들 크기 최적화
-- 적절한 캐싱 전략 구현
-
-## 보안 모범 사례
-
-- API 경계에서 모든 입력 검증
-- 데이터 접근 제어를 위한 Supabase RLS 사용
-- 적절한 CSRF 보호 구현
-- 민감한 데이터는 환경 변수 사용
-- OWASP 보안 가이드라인 준수
-
-## 환경 설정
-
-```
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_APP_NAME=Posmul Prediction Game
-MCP_SERVER_URL=http://localhost:3001
+```typescript
+export class UseCaseError extends Error {
+  constructor(message: string, public cause?: Error) {
+    super(message);
+    this.name = "UseCaseError";
+  }
+}
 ```
 
-## PowerShell 명령어 예시
+## Next.js 15 App Router Rules
+
+- Use App Router file conventions
+- Implement loading.tsx, error.tsx, not-found.tsx
+- Leverage Server Actions for mutations
+- Use proper caching strategies
+- **Always include economic data in page props**
+
+```typescript
+// app/predictions/loading.tsx
+export default function Loading() {
+  return <PredictionsSkeleton />;
+}
+
+// app/predictions/error.tsx
+("use client");
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
+  return <ErrorBoundary error={error} reset={reset} />;
+}
+```
+
+## PowerShell Commands (ALWAYS USE)
 
 ```powershell
-# 프로젝트 설정
-npm install
+# Development
 npm run dev
-
-# 테스트 실행
 npm test
-npm run test:e2e
-
-# 빌드 및 배포
 npm run build
-npm start
 
-# 타입 체크
-npm run type-check
+# Multiple commands (use semicolon)
+cd src; npm install; npm run dev
 
-# 린팅
-npm run lint
-npm run lint:fix
+# File operations
+New-Item -ItemType Directory -Path "src\bounded-contexts\prediction"
 ```
 
-주의사항: Clean Architecture의 의존성 규칙을 항상 따라야 합니다 - 내부 계층은 외부 계층에 의존해서는 안 됩니다. 도메인 계층은 외부 의존성이 없는 순수한 비즈니스 로직이어야 합니다.
+## Performance & Security
+
+### Performance
+
+- Use React.memo for expensive components
+- Implement proper database indexing via MCP migrations
+- Use dynamic imports for code splitting
+- Implement caching strategies
+- **Cache economic balance data with proper invalidation**
+
+### Security
+
+- Validate all inputs at API boundaries
+- Use Supabase RLS via MCP migrations
+- Store sensitive data in environment variables
+- Follow OWASP security guidelines
+- **Implement economic transaction validation and audit trails**
+- **Regularly run `mcp_supabase_get_advisors` for security checks**
+
+## Domain-Specific Rules for PosMul
+
+### Economy Domain (Shared Kernel)
+
+- PMP (risk-free asset) and PMC (risky asset) are core value objects
+- MoneyWave system handles PMC distribution
+- Agency Theory implementation is the core differentiator
+- **All economic operations must go through domain events**
+- **Never allow direct balance modification outside economy domain**
+
+### Prediction Domain
+
+- PredictionGame is the main aggregate
+- Prediction is an entity within the aggregate
+- Game lifecycle: Created → Active → Ended → Settled
+- **Always check PMP balance before allowing participation**
+- **Emit PmcEarnedEvent on successful predictions**
+
+### Investment Domain
+
+- Local League, Major League, Cloud Funding are separate aggregates
+- Each has different point earning mechanisms
+- **Major League earns PMP, Local League earns PMC**
+- **Cloud Funding earns PMC**
+
+### Forum Domain
+
+- **Debate and Brainstorming earn PMP**
+- **Quality contributions should be rewarded with economic incentives**
+
+### Donation Domain
+
+- **Uses PMC for donations**
+- **Implements Money Wave redistribution logic**
+
+## CRITICAL REMINDERS
+
+1. **NEVER violate Clean Architecture dependency rules**
+2. **Domain layer must be pure** - no external dependencies
+3. **Use PowerShell commands** - never bash/zsh
+4. **Always implement Result pattern** for error handling
+5. **Repository interfaces in Domain** - implementations in Infrastructure
+6. **Server Components by default** - Client only when needed
+7. **Proper error boundaries** and loading states
+8. **🔥 USE MCP TOOLS FOR ALL DATABASE AND PROJECT OPERATIONS** - Never use CLI
+9. **🔥 ECONOMIC INTEGRATION IS CRITICAL** - All domains must integrate with PMP/PMC system
+10. **Use Domain Events for cross-domain economic transactions**
+11. **Shared Economy Kernel for read access, Events for write access**
+12. **Always display economic balance in relevant UI components**
+13. **🔥 ALWAYS run security advisors after schema changes**
+
+## MCP Tool Priority (CRITICAL)
+
+### Supabase MCP Tools (Database Operations)
+
+1. **`mcp_supabase_list_projects`** - Get project information
+2. **`mcp_supabase_list_tables`** - Inspect current schema
+3. **`mcp_supabase_apply_migration`** - Apply schema changes
+4. **`mcp_supabase_execute_sql`** - Run queries and DML
+5. **`mcp_supabase_get_advisors`** - Check security/performance
+6. **`mcp_supabase_generate_typescript_types`** - Generate types
+
+### GitHub MCP Tools (Project Management)
+
+1. **`mcp_Github_get_repository`** - Repository information
+2. **`mcp_Github_list_issues`** - View tasks and bugs
+3. **`mcp_Github_create_issue`** - Create new tasks
+4. **`mcp_Github_create_pull_request`** - Submit code for review
+5. **`mcp_Github_get_file_contents`** - Read files from repo
+6. **`mcp_Github_create_or_update_file`** - Modify repo files
+
+**NEVER use:**
+
+- Supabase CLI commands
+- GitHub CLI commands (gh)
+- Direct SQL file execution
+- Manual schema management
+- Manual GitHub web interface operations
+
+## Dual MCP Workflow Integration
+
+### Complete Development Cycle
+
+1. **Issue Creation** → `mcp_Github_create_issue` (경제 시스템 이슈 템플릿 사용)
+2. **Database Design** → `mcp_supabase_apply_migration` (스키마 변경)
+3. **Code Implementation** → `mcp_Github_create_or_update_file` (파일 관리)
+4. **Pull Request** → `mcp_Github_create_pull_request` (코드 리뷰)
+5. **Security Check** → `mcp_supabase_get_advisors` (보안 검증)
+6. **Type Generation** → `mcp_supabase_generate_typescript_types` (타입 동기화)
+
+### Automated Quality Assurance Integration
+
+- **GitHub MCP**: DDD 아키텍처 준수, PowerShell 호환성 검증
+- **Supabase MCP**: RLS 정책, 성능 최적화 권장사항
+- **Economic System**: Agency Theory 로직 검증, PMP/PMC 무결성
+
+When in doubt, ask yourself: "Does this follow DDD principles, Clean Architecture rules, use DUAL MCP tools (Supabase + GitHub), AND properly integrate with the economic system?"

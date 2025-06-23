@@ -43,10 +43,9 @@ export class MCPInvestmentOpportunityRepository
         updated_at = NOW(),
         version = investment_opportunities.version + 1;
     `;
-
     try {
       await mcp_supabase_execute_sql({
-        projectId: this.projectId,
+        project_id: this.projectId,
         query,
       });
       return success(undefined);
@@ -61,15 +60,15 @@ export class MCPInvestmentOpportunityRepository
     const query = `SELECT * FROM investment_opportunities WHERE id = '${id.toString()}'`;
     try {
       const result = await mcp_supabase_execute_sql({
-        projectId: this.projectId,
+        project_id: this.projectId,
         query,
       });
 
-      if (!result || result.length === 0) {
+      if (!result || !result.data || result.data.length === 0) {
         return success(null);
       }
 
-      return success(this.mapDatabaseToDomain(result[0]));
+      return success(this.mapDatabaseToDomain(result.data[0]));
     } catch (error) {
       return failure(handleMCPError(error, "find_opportunity_by_id"));
     }
@@ -89,23 +88,21 @@ export class MCPInvestmentOpportunityRepository
       LIMIT ${limit} OFFSET ${offset}
     `;
     const countQuery = `SELECT COUNT(*) as total FROM investment_opportunities ${whereClause}`;
-
     try {
       const [dataResult, countResult] = await Promise.all([
         mcp_supabase_execute_sql({
-          projectId: this.projectId,
+          project_id: this.projectId,
           query: dataQuery,
         }),
         mcp_supabase_execute_sql({
-          projectId: this.projectId,
+          project_id: this.projectId,
           query: countQuery,
         }),
       ]);
 
-      const opportunities = dataResult.map((row: any) =>
-        this.mapDatabaseToDomain(row)
-      );
-      const total = countResult[0]?.total || 0;
+      const opportunities =
+        dataResult.data?.map((row: any) => this.mapDatabaseToDomain(row)) || [];
+      const total = countResult.data?.[0]?.total || 0;
 
       return success({ opportunities, total });
     } catch (error) {
@@ -174,7 +171,7 @@ export class MCPInvestmentOpportunityRepository
   async delete(id: InvestmentOpportunityId): Promise<Result<void, MCPError>> {
     const query = `UPDATE investment_opportunities SET status = 'CANCELLED', updated_at = NOW() WHERE id = '${id.toString()}'`;
     try {
-      await mcp_supabase_execute_sql({ projectId: this.projectId, query });
+      await mcp_supabase_execute_sql({ project_id: this.projectId, query });
       return success(undefined);
     } catch (error) {
       return failure(handleMCPError(error, "delete_opportunity"));
@@ -207,12 +204,11 @@ export class MCPInvestmentOpportunityRepository
     `;
     try {
       const result = await mcp_supabase_execute_sql({
-        projectId: this.projectId,
+        project_id: this.projectId,
         query,
       });
-      const opportunities = result.map((row: any) =>
-        this.mapDatabaseToDomain(row)
-      );
+      const opportunities =
+        result.data?.map((row: any) => this.mapDatabaseToDomain(row)) || [];
       return success(opportunities);
     } catch (error) {
       return failure(handleMCPError(error, "findEndingSoon"));

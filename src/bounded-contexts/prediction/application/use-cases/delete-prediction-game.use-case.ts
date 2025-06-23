@@ -83,11 +83,9 @@ export class DeletePredictionGameUseCase {
             "Only the game creator or admin can delete this game"
           ),
         };
-      }
-
-      // 3. 게임 상태 확인 (활성화된 게임은 삭제 불가)
+      } // 3. 게임 상태 확인 (활성화된 게임은 삭제 불가)
       const currentStatus = game.status;
-      if (currentStatus === "ACTIVE" && this.hasParticipants(game)) {
+      if (currentStatus.isActive() && this.hasParticipants(game)) {
         return {
           success: false,
           error: new UseCaseError(
@@ -96,7 +94,7 @@ export class DeletePredictionGameUseCase {
         };
       }
 
-      if (currentStatus === "COMPLETED" || currentStatus === "CANCELLED") {
+      if (currentStatus.isSettled()) {
         return {
           success: false,
           error: new UseCaseError("Cannot delete completed or cancelled games"),

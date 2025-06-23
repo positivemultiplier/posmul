@@ -163,10 +163,8 @@ export class SettlePredictionGameUseCase {
         };
       }
 
-      const predictionGame = gameResult.data;
-
-      // 3. 게임 상태 검증 (완료된 게임만 정산 가능)
-      if (predictionGame.status !== "COMPLETED") {
+      const predictionGame = gameResult.data; // 3. 게임 상태 검증 (완료된 게임만 정산 가능)
+      if (!predictionGame.status.isEnded()) {
         return {
           success: false,
           error: new UseCaseError("Game must be completed before settlement"),

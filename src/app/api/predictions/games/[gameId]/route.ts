@@ -5,19 +5,16 @@ import { SupabasePredictionGameRepository } from "@/bounded-contexts/prediction/
 import { PredictionGameId, UserId } from "@/shared/types/branded-types";
 import { NextRequest, NextResponse } from "next/server";
 
-interface RouteParams {
-  params: {
-    gameId: string;
-  };
-}
-
 /**
  * GET /api/predictions/games/[gameId]
  * 특정 예측 게임 상세 조회
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ gameId: string }> }
+) {
   try {
-    const { gameId } = params;
+    const { gameId } = await params;
 
     if (!gameId) {
       return NextResponse.json(
@@ -78,7 +75,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       },
     });
   } catch (error) {
-    console.error(`GET /api/predictions/games/${params.gameId} error:`, error);
+    console.error(`GET /api/predictions/games/[gameId] error:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -96,9 +93,12 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
  * PUT /api/predictions/games/[gameId]
  * 예측 게임 정보 수정 (생성자만 가능)
  */
-export async function PUT(request: NextRequest, { params }: RouteParams) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ gameId: string }> }
+) {
   try {
-    const { gameId } = params;
+    const { gameId } = await params;
     const body = await request.json();
 
     if (!gameId) {
@@ -199,7 +199,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       },
     });
   } catch (error) {
-    console.error(`PUT /api/predictions/games/${params.gameId} error:`, error);
+    console.error(`PUT /api/predictions/games/[gameId] error:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -217,9 +217,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
  * DELETE /api/predictions/games/[gameId]
  * 예측 게임 삭제 (생성자 또는 관리자만 가능)
  */
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ gameId: string }> }
+) {
   try {
-    const { gameId } = params;
+    const { gameId } = await params;
     const { searchParams } = new URL(request.url);
     const deletedBy = searchParams.get("deletedBy");
     const reason = searchParams.get("reason") || "User requested deletion";
@@ -326,10 +329,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       },
     });
   } catch (error) {
-    console.error(
-      `DELETE /api/predictions/games/${params.gameId} error:`,
-      error
-    );
+    console.error(`DELETE /api/predictions/games/[gameId] error:`, error);
     return NextResponse.json(
       {
         success: false,

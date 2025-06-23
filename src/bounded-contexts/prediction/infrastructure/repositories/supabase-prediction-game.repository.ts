@@ -9,234 +9,189 @@
  * @task PD-006
  */
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { SupabaseProjectService } from "@/shared/mcp/supabase-project.service";
 import {
-  AccuracyScore,
-  createPredictionGameId,
-  createUserId,
-  PMC,
   PMP,
   PredictionGameId,
+  PredictionId,
   UserId,
-} from "../../../../shared/types/branded-types";
+} from "@/shared/types/branded-types";
 import {
-  failure,
   Result,
+  Timestamps,
+  failure,
   success,
-} from "../../../../shared/types/economic-system";
+} from "@/shared/types/economic-system";
+import { Database } from "@/shared/types/supabase-generated";
 import {
   GameConfiguration,
   Prediction,
   PredictionGame,
-  PredictionOption,
   PredictionType,
 } from "../../domain/entities/prediction-game.aggregate";
 import {
-  GameSearchFilters,
   IPredictionGameRepository,
-  PaginatedResult,
-  PaginationRequest,
   RepositoryError,
-  RepositoryErrorCodes,
-  RepositoryHelpers,
 } from "../../domain/repositories/prediction-game.repository";
-import { GameStatus } from "../../domain/value-objects/game-status";
+import { GameStatus as DomainGameStatus } from "../../domain/value-objects/game-status";
 
-/**
- * 데이터베이스 행 타입 정의
- */
-interface PredictionGameRow {
-  id: string;
-  creator_id: string;
-  title: string;
-  description: string;
-  prediction_type: string;
-  options: any; // JSON
-  start_time: string;
-  end_time: string;
-  settlement_time: string;
-  minimum_stake: number;
-  maximum_stake: number;
-  max_participants: number | null;
-  status: string;
-  money_wave_id: string | null;
-  game_importance_score: number;
-  allocated_prize_pool: number;
-  created_at: string;
-  updated_at: string;
-  version: number;
-}
+// @ts-ignore
+declare const mcp_supabase_execute_sql: (params: {
+  project_id: string;
+  query: string;
+}) => Promise<{ data: any[] | null; error: any | null }>;
 
-interface PredictionRow {
-  id: string;
-  user_id: string;
-  game_id: string;
-  selected_option_id: string;
-  stake: number;
-  confidence: number;
-  reasoning: string | null;
-  is_correct: boolean | null;
-  accuracy_score: number | null;
-  reward_amount: number | null;
-  created_at: string;
-  updated_at: string;
-}
+type PredictionGameRow =
+  Database["public"]["Tables"]["prediction_games"]["Row"];
+type PredictionRow = Database["public"]["Tables"]["predictions"]["Row"];
 
-/**
- * Supabase PredictionGame Repository 구현체
- */
 export class SupabasePredictionGameRepository
   implements IPredictionGameRepository
 {
-  private readonly supabase: SupabaseClient;
+  private readonly projectId: string;
 
   constructor() {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error("Missing Supabase environment variables");
-    }
-
-    this.supabase = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-      },
-      global: {
-        headers: {
-          "X-Client-Info": "prediction-context",
-        },
-      },
-    });
+    this.projectId = SupabaseProjectService.getInstance().getProjectId();
   }
 
-  /**
-   * 예측 게임을 데이터베이스에 저장
-   */
-  async save(game: PredictionGame): Promise<Result<void, RepositoryError>> {
+  private mapToDomain(
+    row: PredictionGameRow,
+    predictions: Map<PredictionId, Prediction>
+  ): Result<PredictionGame, RepositoryError> {
+    const gameStatus = this.mapStringToGameStatus(row.status);
+    if (!gameStatus.success) return gameStatus;
+
+    const predictionType = this.mapStringToPredictionType(row.prediction_type);
+    if (!predictionType.success) return predictionType;
+
+    const configuration: GameConfiguration = {
+      title: row.title,
+      description: row.description ?? "",
+      predictionType: predictionType.data,
+      options: row.game_options as any,
+      startTime: new Date(row.registration_start),
+      endTime: new Date(row.registration_end),
+      settlementTime: new Date(row.settlement_date),
+      minimumStake: (row.min_bet_amount ?? 0) as PMP,
+      maximumStake: (row.max_bet_amount ?? 0) as PMP,
+    };
+
+    const timestamps: Timestamps = {
+      createdAt: new Date(row.created_at),
+      updatedAt: new Date(row.updated_at),
+    };
+
     try {
-      const gameData = {
-        id: game.id,
-        creator_id: game.getCreatedBy(),
-        title: game.getTitle(),
-        description: game.getDescription(),
-        prediction_type: game.getPredictionType(),
-        options: JSON.stringify(game.getOptions()),
-        start_time: game.getStartTime().toISOString(),
-        end_time: game.getEndTime().toISOString(),
-        settlement_time: game.getSettlementTime().toISOString(),
-        minimum_stake: game.getMinimumStake(),
-        maximum_stake: game.getMaximumStake(),
-        max_participants: game.getMaxParticipants(),
-        status: game.status,
-        created_at: game.getCreatedAt().toISOString(),
-        updated_at: game.getUpdatedAt().toISOString(),
-        version: game.getVersion(),
-      };
+      const game = PredictionGame.fromPersistence({
+        id: row.game_id as PredictionGameId,
+        creatorId: row.creator_id as UserId,
+        configuration: configuration,
+        status: gameStatus.data,
+        predictions: predictions,
+        timestamps: timestamps,
+      });
+      return success(game);
+    } catch (e) {
+      return failure(
+        new RepositoryError(
+          "Failed to map to domain",
+          "MAPPING_ERROR",
+          e as Error
+        )
+      );
+    }
+  }
 
-      const { error: gameError } = await this.supabase
-        .from("prediction_games")
-        .upsert(gameData, {
-          onConflict: "id",
-          ignoreDuplicates: false,
-        });
+  private escapeSql(str: string | null | undefined): string {
+    if (str === null || str === undefined) return "NULL";
+    return `'${str.replace(/'/g, "''")}'`;
+  }
 
-      if (gameError) {
+  async save(game: PredictionGame): Promise<Result<void, RepositoryError>> {
+    const config = game.configuration;
+    const optionsJson = JSON.stringify(config.options).replace(/'/g, "''");
+
+    const query = `
+      INSERT INTO public.prediction_games (
+        game_id, creator_id, title, description, status, prediction_type, game_options, 
+        registration_start, registration_end, settlement_date, min_bet_amount, max_bet_amount
+      ) VALUES (
+        '${game.id}', '${game.creatorId}', ${this.escapeSql(
+      config.title
+    )}, ${this.escapeSql(config.description)}, 
+        '${game.status.toString()}', '${config.predictionType.toString()}', '${optionsJson}'::jsonb,
+        '${config.startTime.toISOString()}', '${config.endTime.toISOString()}', '${config.settlementTime.toISOString()}',
+        ${config.minimumStake}, ${config.maximumStake}
+      )
+      ON CONFLICT (game_id) DO UPDATE SET
+        title = EXCLUDED.title,
+        description = EXCLUDED.description,
+        status = EXCLUDED.status,
+        prediction_type = EXCLUDED.prediction_type,
+        game_options = EXCLUDED.game_options,
+        registration_start = EXCLUDED.registration_start,
+        registration_end = EXCLUDED.registration_end,
+        settlement_date = EXCLUDED.settlement_date,
+        min_bet_amount = EXCLUDED.min_bet_amount,
+        max_bet_amount = EXCLUDED.max_bet_amount,
+        updated_at = NOW();
+    `;
+
+    try {
+      const { error } = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+      if (error)
         return failure(
-          RepositoryHelpers.createSaveFailedError(
-            "PredictionGame",
-            gameError.message,
-            gameError
+          new RepositoryError(
+            "Failed to save prediction game",
+            "SAVE_ERROR",
+            error as Error
           )
         );
-      }
-
-      // 예측 데이터 저장
-      const predictions = Array.from(game.predictions.values());
-      if (predictions.length > 0) {
-        const predictionData = predictions.map((p) =>
-          this.mapPredictionToDatabase(p)
-        );
-
-        const { error: predictionError } = await this.supabase
-          .from("predictions")
-          .upsert(predictionData, {
-            onConflict: "id",
-            ignoreDuplicates: false,
-          });
-
-        if (predictionError) {
-          return failure(
-            RepositoryHelpers.createSaveFailedError(
-              "Predictions",
-              predictionError.message,
-              predictionError
-            )
-          );
-        }
-      }
-
       return success(undefined);
     } catch (error) {
       return failure(
-        RepositoryHelpers.createSaveFailedError(
-          "PredictionGame",
-          "Unexpected error during save operation",
+        new RepositoryError(
+          "Failed to save prediction game",
+          "SAVE_ERROR",
           error as Error
         )
       );
     }
   }
 
-  /**
-   * ID로 예측 게임 조회
-   */
   async findById(
     id: PredictionGameId
   ): Promise<Result<PredictionGame | null, RepositoryError>> {
+    const gameQuery = `SELECT * FROM public.prediction_games WHERE game_id = '${id}';`;
+
     try {
-      const { data: gameData, error: gameError } = await this.supabase
-        .from("prediction_games")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const gameResult = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: gameQuery,
+      });
 
-      if (gameError) {
-        if (gameError.code === "PGRST116") {
-          // No rows returned
-          return success(null);
-        }
+      if (gameResult.error)
         return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findById",
-            gameError.message,
-            gameError
+          new RepositoryError(
+            "Failed to find prediction game by ID",
+            gameResult.error
           )
         );
-      }
 
-      // 관련 예측 데이터 조회
-      const { data: predictionsData, error: predictionsError } =
-        await this.supabase.from("predictions").select("*").eq("game_id", id);
+      const rows = gameResult.data as PredictionGameRow[];
+      if (!rows || rows.length === 0) return success(null);
 
-      if (predictionsError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findById - predictions",
-            predictionsError.message,
-            predictionsError
-          )
-        );
-      }
+      const predictions = new Map<PredictionId, Prediction>();
 
-      const game = this.mapDatabaseToDomain(gameData, predictionsData || []);
-      return success(game);
+      return this.mapToDomain(rows[0], predictions);
     } catch (error) {
       return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "findById",
-          "Unexpected error during query",
+        new RepositoryError(
+          "Failed to find prediction game by ID",
+          "FIND_ERROR",
           error as Error
         )
       );
@@ -244,68 +199,54 @@ export class SupabasePredictionGameRepository
   }
 
   /**
-   * 여러 ID로 예측 게임 일괄 조회
+   * 🌊 MoneyWave 연동 - 여러 ID로 게임 조회 (경제 시스템 연동)
    */
   async findByIds(
     ids: PredictionGameId[]
   ): Promise<Result<Map<PredictionGameId, PredictionGame>, RepositoryError>> {
     try {
-      if (ids.length === 0) {
-        return success(new Map());
-      }
+      const idsArray = ids.map((id) => `'${id}'`).join(",");
+      const query = `
+        SELECT pg.*, 
+               COUNT(p.id) as participant_count,
+               SUM(p.pmp_amount) as total_pmp_staked,
+               AVG(p.confidence_level) as avg_confidence
+        FROM prediction_games pg
+        LEFT JOIN predictions p ON pg.game_id = p.game_id
+        WHERE pg.game_id IN (${idsArray})
+        GROUP BY pg.game_id
+      `;
 
-      const { data: gamesData, error: gamesError } = await this.supabase
-        .from("prediction_games")
-        .select("*")
-        .in("id", ids);
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
 
-      if (gamesError) {
+      if (result.error) {
         return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findByIds",
-            gamesError.message,
-            gamesError
+          new RepositoryError(
+            "Failed to find games by IDs",
+            "FIND_BY_IDS_ERROR",
+            result.error
           )
         );
       }
 
-      // 모든 게임의 예측 데이터 조회
-      const { data: predictionsData, error: predictionsError } =
-        await this.supabase.from("predictions").select("*").in("game_id", ids);
+      const gameMap = new Map<PredictionGameId, PredictionGame>();
 
-      if (predictionsError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findByIds - predictions",
-            predictionsError.message,
-            predictionsError
-          )
-        );
-      }
-
-      // 게임별 예측 그룹화
-      const predictionsByGame = new Map<string, PredictionRow[]>();
-      (predictionsData || []).forEach((prediction) => {
-        const gameId = prediction.game_id;
-        if (!predictionsByGame.has(gameId)) {
-          predictionsByGame.set(gameId, []);
+      for (const row of result.data || []) {
+        const gameResult = this.mapToDomain(row, new Map());
+        if (gameResult.success) {
+          gameMap.set(row.game_id as PredictionGameId, gameResult.data);
         }
-        predictionsByGame.get(gameId)!.push(prediction);
-      });
+      }
 
-      const result = new Map<PredictionGameId, PredictionGame>();
-      (gamesData || []).forEach((gameData) => {
-        const predictions = predictionsByGame.get(gameData.id) || [];
-        const game = this.mapDatabaseToDomain(gameData, predictions);
-        result.set(game.id, game);
-      });
-
-      return success(result);
+      return success(gameMap);
     } catch (error) {
       return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "findByIds",
-          "Unexpected error during bulk query",
+        new RepositoryError(
+          "Failed to find games by IDs",
+          "FIND_BY_IDS_ERROR",
           error as Error
         )
       );
@@ -313,99 +254,63 @@ export class SupabasePredictionGameRepository
   }
 
   /**
-   * 상태별 예측 게임 조회
+   * 🎯 MoneyWave1 연동 - 상태별 게임 조회 (EBIT 기반 PMC 분배 대상)
    */
   async findByStatus(
-    status: GameStatus,
-    pagination?: PaginationRequest
-  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
+    status: DomainGameStatus,
+    pagination?: any
+  ): Promise<Result<any, RepositoryError>> {
     try {
-      const paginationConfig =
-        pagination || RepositoryHelpers.getDefaultPagination();
-      const validationResult =
-        RepositoryHelpers.validatePagination(paginationConfig);
+      // Domain GameStatus를 DB enum으로 변환
+      const dbStatus = this.mapDomainStatusToDb(status);
 
-      if (!validationResult.success) {
-        return failure(validationResult.error);
-      }
+      const limit = pagination?.limit || 20;
+      const offset = pagination?.offset || 0;
 
-      const offset = (paginationConfig.page - 1) * paginationConfig.limit;
+      const query = `
+        SELECT pg.*, 
+               COUNT(p.id) as participant_count,
+               SUM(p.pmp_amount) as total_pmp_staked,
+               COALESCE(mw.allocated_pmc, 0) as money_wave_pmc
+        FROM prediction_games pg
+        LEFT JOIN predictions p ON pg.game_id = p.game_id
+        LEFT JOIN money_wave_allocations mw ON pg.game_id = mw.game_id
+        WHERE pg.status = '${dbStatus}'
+        GROUP BY pg.game_id, mw.allocated_pmc
+        ORDER BY pg.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
 
-      // 총 개수 조회
-      const { count, error: countError } = await this.supabase
-        .from("prediction_games")
-        .select("*", { count: "exact", head: true })
-        .eq("status", status);
-
-      if (countError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findByStatus - count",
-            countError.message,
-            countError
-          )
-        );
-      }
-
-      // 데이터 조회
-      let query = this.supabase
-        .from("prediction_games")
-        .select("*")
-        .eq("status", status)
-        .range(offset, offset + paginationConfig.limit - 1);
-
-      // 정렬 적용
-      if (paginationConfig.sortBy) {
-        const sortColumn = this.mapSortColumn(paginationConfig.sortBy);
-        query = query.order(sortColumn, {
-          ascending: paginationConfig.sortOrder === "asc",
-        });
-      }
-
-      const { data: gamesData, error: gamesError } = await query;
-
-      if (gamesError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findByStatus",
-            gamesError.message,
-            gamesError
-          )
-        );
-      }
-
-      // 예측 데이터 조회
-      const gameIds = (gamesData || []).map((g) => g.id);
-      const predictionsMap = await this.fetchPredictionsForGames(gameIds);
-
-      if (!predictionsMap.success) {
-        return failure(predictionsMap.error);
-      }
-
-      // 도메인 객체 변환
-      const games = (gamesData || []).map((gameData) => {
-        const predictions = predictionsMap.data.get(gameData.id) || [];
-        return this.mapDatabaseToDomain(gameData, predictions);
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
       });
 
-      const totalCount = count || 0;
-      const totalPages = Math.ceil(totalCount / paginationConfig.limit);
+      if (result.error) {
+        return failure(
+          new RepositoryError(
+            "Failed to find games by status",
+            "FIND_BY_STATUS_ERROR",
+            result.error
+          )
+        );
+      }
 
-      const result: PaginatedResult<PredictionGame> = {
+      const games = (result.data || [])
+        .map((row) => this.mapRowToDomain(row))
+        .filter((r) => r.success)
+        .map((r) => r.data);
+
+      return success({
         items: games,
-        totalCount,
-        totalPages,
-        currentPage: paginationConfig.page,
-        hasNext: paginationConfig.page < totalPages,
-        hasPrev: paginationConfig.page > 1,
-      };
-
-      return success(result);
+        totalCount: games.length,
+        hasMore: games.length === limit,
+      });
     } catch (error) {
       return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "findByStatus",
-          "Unexpected error during status query",
+        new RepositoryError(
+          "Failed to find games by status",
+          "FIND_BY_STATUS_ERROR",
           error as Error
         )
       );
@@ -413,98 +318,60 @@ export class SupabasePredictionGameRepository
   }
 
   /**
-   * 생성자별 예측 게임 조회
+   * 📈 PMP 획득 이력 연동 - 생성자별 게임 조회 (Major League 연동)
    */
   async findByCreator(
     creatorId: UserId,
-    pagination?: PaginationRequest
-  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
+    pagination?: any
+  ): Promise<Result<any, RepositoryError>> {
     try {
-      const paginationConfig =
-        pagination || RepositoryHelpers.getDefaultPagination();
-      const validationResult =
-        RepositoryHelpers.validatePagination(paginationConfig);
+      const limit = pagination?.limit || 20;
+      const offset = pagination?.offset || 0;
 
-      if (!validationResult.success) {
-        return failure(validationResult.error);
-      }
+      const query = `
+        SELECT pg.*, 
+               COUNT(p.id) as participant_count,
+               SUM(p.pmp_amount) as total_pmp_generated,
+               u.pmp_balance as creator_pmp_balance
+        FROM prediction_games pg
+        LEFT JOIN predictions p ON pg.game_id = p.game_id
+        LEFT JOIN pmp_accounts u ON pg.creator_id = u.user_id
+        WHERE pg.creator_id = '${creatorId}'
+        GROUP BY pg.game_id, u.pmp_balance
+        ORDER BY pg.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
 
-      const offset = (paginationConfig.page - 1) * paginationConfig.limit;
-
-      // 총 개수 조회
-      const { count, error: countError } = await this.supabase
-        .from("prediction_games")
-        .select("*", { count: "exact", head: true })
-        .eq("creator_id", creatorId);
-
-      if (countError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findByCreator - count",
-            countError.message,
-            countError
-          )
-        );
-      }
-
-      // 데이터 조회
-      let query = this.supabase
-        .from("prediction_games")
-        .select("*")
-        .eq("creator_id", creatorId)
-        .range(offset, offset + paginationConfig.limit - 1);
-
-      if (paginationConfig.sortBy) {
-        const sortColumn = this.mapSortColumn(paginationConfig.sortBy);
-        query = query.order(sortColumn, {
-          ascending: paginationConfig.sortOrder === "asc",
-        });
-      }
-
-      const { data: gamesData, error: gamesError } = await query;
-
-      if (gamesError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findByCreator",
-            gamesError.message,
-            gamesError
-          )
-        );
-      }
-
-      // 예측 데이터 조회
-      const gameIds = (gamesData || []).map((g) => g.id);
-      const predictionsMap = await this.fetchPredictionsForGames(gameIds);
-
-      if (!predictionsMap.success) {
-        return failure(predictionsMap.error);
-      }
-
-      // 도메인 객체 변환
-      const games = (gamesData || []).map((gameData) => {
-        const predictions = predictionsMap.data.get(gameData.id) || [];
-        return this.mapDatabaseToDomain(gameData, predictions);
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
       });
 
-      const totalCount = count || 0;
-      const totalPages = Math.ceil(totalCount / paginationConfig.limit);
+      if (result.error) {
+        return failure(
+          new RepositoryError(
+            "Failed to find games by creator",
+            "FIND_BY_CREATOR_ERROR",
+            result.error
+          )
+        );
+      }
 
-      const result: PaginatedResult<PredictionGame> = {
+      const games = (result.data || [])
+        .map((row) => this.mapRowToDomain(row))
+        .filter((r) => r.success)
+        .map((r) => r.data);
+
+      return success({
         items: games,
-        totalCount,
-        totalPages,
-        currentPage: paginationConfig.page,
-        hasNext: paginationConfig.page < totalPages,
-        hasPrev: paginationConfig.page > 1,
-      };
-
-      return success(result);
+        totalCount: games.length,
+        hasMore: games.length === limit,
+      });
     } catch (error) {
       return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "findByCreator",
-          "Unexpected error during creator query",
+        new RepositoryError(
+          "Failed to find games by creator",
+          "FIND_BY_CREATOR_ERROR",
           error as Error
         )
       );
@@ -512,117 +379,61 @@ export class SupabasePredictionGameRepository
   }
 
   /**
-   * 사용자 참여 게임 조회
+   * 💎 PMC 보상 연동 - 참여자별 게임 조회 (Local League/Cloud Funding 연동)
    */
   async findByParticipant(
     userId: UserId,
-    pagination?: PaginationRequest
-  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
+    pagination?: any
+  ): Promise<Result<any, RepositoryError>> {
     try {
-      const paginationConfig =
-        pagination || RepositoryHelpers.getDefaultPagination();
-      const validationResult =
-        RepositoryHelpers.validatePagination(paginationConfig);
+      const limit = pagination?.limit || 20;
+      const offset = pagination?.offset || 0;
 
-      if (!validationResult.success) {
-        return failure(validationResult.error);
-      }
+      const query = `
+        SELECT DISTINCT pg.*, 
+               p.pmp_amount as user_pmp_staked,
+               p.confidence_level as user_confidence,
+               p.predicted_outcome,
+               p.is_correct as user_prediction_correct,
+               u.pmc_balance as user_pmc_balance
+        FROM prediction_games pg
+        JOIN predictions p ON pg.game_id = p.game_id
+        LEFT JOIN pmc_accounts u ON p.user_id = u.user_id
+        WHERE p.user_id = '${userId}'
+        ORDER BY p.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
 
-      // 사용자가 참여한 게임 ID 조회
-      const { data: participatedGames, error: participationError } =
-        await this.supabase
-          .from("predictions")
-          .select("game_id")
-          .eq("user_id", userId);
-
-      if (participationError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findByParticipant - participation",
-            participationError.message,
-            participationError
-          )
-        );
-      }
-
-      const gameIds = [
-        ...new Set((participatedGames || []).map((p) => p.game_id)),
-      ];
-
-      if (gameIds.length === 0) {
-        const emptyResult: PaginatedResult<PredictionGame> = {
-          items: [],
-          totalCount: 0,
-          totalPages: 0,
-          currentPage: paginationConfig.page,
-          hasNext: false,
-          hasPrev: false,
-        };
-        return success(emptyResult);
-      }
-
-      const offset = (paginationConfig.page - 1) * paginationConfig.limit;
-
-      // 게임 데이터 조회
-      let query = this.supabase
-        .from("prediction_games")
-        .select("*")
-        .in("id", gameIds)
-        .range(offset, offset + paginationConfig.limit - 1);
-
-      if (paginationConfig.sortBy) {
-        const sortColumn = this.mapSortColumn(paginationConfig.sortBy);
-        query = query.order(sortColumn, {
-          ascending: paginationConfig.sortOrder === "asc",
-        });
-      }
-
-      const { data: gamesData, error: gamesError } = await query;
-
-      if (gamesError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findByParticipant",
-            gamesError.message,
-            gamesError
-          )
-        );
-      }
-
-      // 예측 데이터 조회
-      const queriedGameIds = (gamesData || []).map((g) => g.id);
-      const predictionsMap = await this.fetchPredictionsForGames(
-        queriedGameIds
-      );
-
-      if (!predictionsMap.success) {
-        return failure(predictionsMap.error);
-      }
-
-      // 도메인 객체 변환
-      const games = (gamesData || []).map((gameData) => {
-        const predictions = predictionsMap.data.get(gameData.id) || [];
-        return this.mapDatabaseToDomain(gameData, predictions);
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
       });
 
-      const totalCount = gameIds.length;
-      const totalPages = Math.ceil(totalCount / paginationConfig.limit);
+      if (result.error) {
+        return failure(
+          new RepositoryError(
+            "Failed to find games by participant",
+            "FIND_BY_PARTICIPANT_ERROR",
+            result.error
+          )
+        );
+      }
 
-      const result: PaginatedResult<PredictionGame> = {
+      const games = (result.data || [])
+        .map((row) => this.mapRowToDomain(row))
+        .filter((r) => r.success)
+        .map((r) => r.data);
+
+      return success({
         items: games,
-        totalCount,
-        totalPages,
-        currentPage: paginationConfig.page,
-        hasNext: paginationConfig.page < totalPages,
-        hasPrev: paginationConfig.page > 1,
-      };
-
-      return success(result);
+        totalCount: games.length,
+        hasMore: games.length === limit,
+      });
     } catch (error) {
       return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "findByParticipant",
-          "Unexpected error during participant query",
+        new RepositoryError(
+          "Failed to find games by participant",
+          "FIND_BY_PARTICIPANT_ERROR",
           error as Error
         )
       );
@@ -630,151 +441,81 @@ export class SupabasePredictionGameRepository
   }
 
   /**
-   * 고급 검색
+   * 🔍 고급 검색 (MoneyWave 연동 필터 포함)
    */
   async search(
-    filters: GameSearchFilters,
-    pagination?: PaginationRequest
-  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
+    filters: any,
+    pagination?: any
+  ): Promise<Result<any, RepositoryError>> {
     try {
-      const paginationConfig =
-        pagination || RepositoryHelpers.getDefaultPagination();
-      const validationResult =
-        RepositoryHelpers.validatePagination(paginationConfig);
-
-      if (!validationResult.success) {
-        return failure(validationResult.error);
-      }
-
-      const offset = (paginationConfig.page - 1) * paginationConfig.limit;
-
-      // 쿼리 빌드
-      let query = this.supabase.from("prediction_games").select("*");
-      let countQuery = this.supabase
-        .from("prediction_games")
-        .select("*", { count: "exact", head: true });
-
-      // 필터 적용
-      if (filters.creatorId) {
-        query = query.eq("creator_id", filters.creatorId);
-        countQuery = countQuery.eq("creator_id", filters.creatorId);
-      }
+      // 기본 쿼리 구성
+      let whereConditions = [];
 
       if (filters.status) {
-        query = query.eq("status", filters.status);
-        countQuery = countQuery.eq("status", filters.status);
-      }
-
-      if (filters.predictionType) {
-        query = query.eq("prediction_type", filters.predictionType);
-        countQuery = countQuery.eq("prediction_type", filters.predictionType);
-      }
-
-      if (filters.title) {
-        query = query.ilike("title", `%${filters.title}%`);
-        countQuery = countQuery.ilike("title", `%${filters.title}%`);
-      }
-
-      if (filters.startTimeFrom) {
-        query = query.gte("start_time", filters.startTimeFrom.toISOString());
-        countQuery = countQuery.gte(
-          "start_time",
-          filters.startTimeFrom.toISOString()
+        whereConditions.push(
+          `pg.status = '${this.mapDomainStatusToDb(filters.status)}'`
         );
       }
 
-      if (filters.startTimeTo) {
-        query = query.lte("start_time", filters.startTimeTo.toISOString());
-        countQuery = countQuery.lte(
-          "start_time",
-          filters.startTimeTo.toISOString()
-        );
+      if (filters.minPmpStaked) {
+        whereConditions.push(`total_pmp_staked >= ${filters.minPmpStaked}`);
       }
 
-      if (filters.minParticipants !== undefined) {
-        // 이 필터는 서브쿼리가 필요하므로 복잡함. 일단 스킵하고 애플리케이션 레벨에서 필터링
+      if (filters.hasMoneyWave) {
+        whereConditions.push(`mw.allocated_pmc > 0`);
       }
 
-      // 총 개수 조회
-      const { count, error: countError } = await countQuery;
+      const whereClause =
+        whereConditions.length > 0
+          ? `WHERE ${whereConditions.join(" AND ")}`
+          : "";
+      const limit = pagination?.limit || 20;
+      const offset = pagination?.offset || 0;
 
-      if (countError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "search - count",
-            countError.message,
-            countError
-          )
-        );
-      }
+      const query = `
+        SELECT pg.*, 
+               COUNT(p.id) as participant_count,
+               SUM(p.pmp_amount) as total_pmp_staked,
+               COALESCE(mw.allocated_pmc, 0) as money_wave_pmc
+        FROM prediction_games pg
+        LEFT JOIN predictions p ON pg.game_id = p.game_id
+        LEFT JOIN money_wave_allocations mw ON pg.game_id = mw.game_id
+        ${whereClause}
+        GROUP BY pg.game_id, mw.allocated_pmc
+        ORDER BY pg.created_at DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `;
 
-      // 데이터 조회
-      query = query.range(offset, offset + paginationConfig.limit - 1);
-
-      if (paginationConfig.sortBy) {
-        const sortColumn = this.mapSortColumn(paginationConfig.sortBy);
-        query = query.order(sortColumn, {
-          ascending: paginationConfig.sortOrder === "asc",
-        });
-      }
-
-      const { data: gamesData, error: gamesError } = await query;
-
-      if (gamesError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "search",
-            gamesError.message,
-            gamesError
-          )
-        );
-      }
-
-      // 예측 데이터 조회
-      const gameIds = (gamesData || []).map((g) => g.id);
-      const predictionsMap = await this.fetchPredictionsForGames(gameIds);
-
-      if (!predictionsMap.success) {
-        return failure(predictionsMap.error);
-      }
-
-      // 도메인 객체 변환
-      let games = (gamesData || []).map((gameData) => {
-        const predictions = predictionsMap.data.get(gameData.id) || [];
-        return this.mapDatabaseToDomain(gameData, predictions);
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
       });
 
-      // 애플리케이션 레벨 필터링 (DB 레벨에서 처리하기 어려운 필터들)
-      if (filters.minParticipants !== undefined) {
-        games = games.filter(
-          (game) => game.predictions.size >= filters.minParticipants!
+      if (result.error) {
+        return failure(
+          new RepositoryError(
+            "Failed to search games",
+            "SEARCH_ERROR",
+            result.error
+          )
         );
       }
 
-      if (filters.maxParticipants !== undefined) {
-        games = games.filter(
-          (game) => game.predictions.size <= filters.maxParticipants!
-        );
-      }
+      const games = (result.data || [])
+        .map((row) => this.mapRowToDomain(row))
+        .filter((r) => r.success)
+        .map((r) => r.data);
 
-      const totalCount = count || 0;
-      const totalPages = Math.ceil(totalCount / paginationConfig.limit);
-
-      const result: PaginatedResult<PredictionGame> = {
+      return success({
         items: games,
-        totalCount,
-        totalPages,
-        currentPage: paginationConfig.page,
-        hasNext: paginationConfig.page < totalPages,
-        hasPrev: paginationConfig.page > 1,
-      };
-
-      return success(result);
+        totalCount: games.length,
+        hasMore: games.length === limit,
+      });
     } catch (error) {
       return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "search",
-          "Unexpected error during search",
+        new RepositoryError(
+          "Failed to search games",
+          "SEARCH_ERROR",
           error as Error
         )
       );
@@ -782,60 +523,59 @@ export class SupabasePredictionGameRepository
   }
 
   /**
-   * 활성 게임 목록 조회
+   * 🎮 활성 게임 조회 (MoneyWave1 EBIT 분배 대상)
    */
   async findActiveGames(
-    pagination?: PaginationRequest
-  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
-    return this.findByStatus(GameStatus.ACTIVE, pagination);
+    pagination?: any
+  ): Promise<Result<any, RepositoryError>> {
+    return this.findByStatus(DomainGameStatus.ACTIVE, pagination);
   }
 
   /**
-   * 정산 대기 게임 목록 조회
+   * ⚖️ 정산 대기 게임 조회 (MoneyWave2 재분배 대상)
    */
   async findPendingSettlement(
     limit?: number
   ): Promise<Result<PredictionGame[], RepositoryError>> {
     try {
-      const queryLimit = limit || 50;
+      const query = `
+        SELECT pg.*, 
+               COUNT(p.id) as participant_count,
+               SUM(p.pmp_amount) as total_pmp_staked
+        FROM prediction_games pg
+        LEFT JOIN predictions p ON pg.game_id = p.game_id
+        WHERE pg.status = 'CLOSED' 
+          AND pg.settlement_date <= NOW()
+        GROUP BY pg.game_id
+        ORDER BY pg.settlement_date ASC
+        LIMIT ${limit || 50}
+      `;
 
-      const { data: gamesData, error: gamesError } = await this.supabase
-        .from("prediction_games")
-        .select("*")
-        .eq("status", GameStatus.ENDED)
-        .lte("settlement_time", new Date().toISOString())
-        .limit(queryLimit);
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
 
-      if (gamesError) {
+      if (result.error) {
         return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findPendingSettlement",
-            gamesError.message,
-            gamesError
+          new RepositoryError(
+            "Failed to find pending settlement games",
+            "FIND_PENDING_ERROR",
+            result.error
           )
         );
       }
 
-      // 예측 데이터 조회
-      const gameIds = (gamesData || []).map((g) => g.id);
-      const predictionsMap = await this.fetchPredictionsForGames(gameIds);
-
-      if (!predictionsMap.success) {
-        return failure(predictionsMap.error);
-      }
-
-      // 도메인 객체 변환
-      const games = (gamesData || []).map((gameData) => {
-        const predictions = predictionsMap.data.get(gameData.id) || [];
-        return this.mapDatabaseToDomain(gameData, predictions);
-      });
-
+      const games = (result.data || [])
+        .map((row) => this.mapRowToDomain(row))
+        .filter((r) => r.success)
+        .map((r) => r.data);
       return success(games);
     } catch (error) {
       return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "findPendingSettlement",
-          "Unexpected error during pending settlement query",
+        new RepositoryError(
+          "Failed to find pending settlement games",
+          "FIND_PENDING_ERROR",
           error as Error
         )
       );
@@ -843,38 +583,35 @@ export class SupabasePredictionGameRepository
   }
 
   /**
-   * 게임 존재 여부 확인
+   * ✅ 게임 존재 여부 확인
    */
   async exists(
     id: PredictionGameId
   ): Promise<Result<boolean, RepositoryError>> {
     try {
-      const { data, error } = await this.supabase
-        .from("prediction_games")
-        .select("id")
-        .eq("id", id)
-        .single();
+      const query = `SELECT 1 FROM prediction_games WHERE game_id = '${id}' LIMIT 1`;
 
-      if (error) {
-        if (error.code === "PGRST116") {
-          // No rows returned
-          return success(false);
-        }
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      if (result.error) {
         return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "exists",
-            error.message,
-            error
+          new RepositoryError(
+            "Failed to check game existence",
+            "EXISTS_ERROR",
+            result.error
           )
         );
       }
 
-      return success(!!data);
+      return success((result.data?.length || 0) > 0);
     } catch (error) {
       return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "exists",
-          "Unexpected error during existence check",
+        new RepositoryError(
+          "Failed to check game existence",
+          "EXISTS_ERROR",
           error as Error
         )
       );
@@ -882,25 +619,27 @@ export class SupabasePredictionGameRepository
   }
 
   /**
-   * 게임 삭제 (소프트 삭제)
+   * 🗑️ 게임 삭제 (소프트 삭제)
    */
   async delete(id: PredictionGameId): Promise<Result<void, RepositoryError>> {
     try {
-      // 소프트 삭제 구현 (status를 'DELETED'로 변경)
-      const { error } = await this.supabase
-        .from("prediction_games")
-        .update({
-          status: "DELETED",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id);
+      const query = `
+        UPDATE prediction_games 
+        SET status = 'CANCELLED', updated_at = NOW()
+        WHERE game_id = '${id}'
+      `;
 
-      if (error) {
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      if (result.error) {
         return failure(
-          RepositoryHelpers.createSaveFailedError(
-            "PredictionGame",
-            `Failed to delete game: ${error.message}`,
-            error
+          new RepositoryError(
+            "Failed to delete game",
+            "DELETE_ERROR",
+            result.error
           )
         );
       }
@@ -908,9 +647,9 @@ export class SupabasePredictionGameRepository
       return success(undefined);
     } catch (error) {
       return failure(
-        RepositoryHelpers.createSaveFailedError(
-          "PredictionGame",
-          "Unexpected error during deletion",
+        new RepositoryError(
+          "Failed to delete game",
+          "DELETE_ERROR",
           error as Error
         )
       );
@@ -918,53 +657,75 @@ export class SupabasePredictionGameRepository
   }
 
   /**
-   * 게임 통계 조회
+   * 📋 다양한 옵션으로 게임 조회
    */
-  async getStatistics(id: PredictionGameId): Promise<
-    Result<
-      {
-        totalParticipants: number;
-        totalStake: number;
-        averageConfidence: number;
-        statusDistribution: Record<string, number>;
-      },
-      RepositoryError
-    >
-  > {
+  async findMany(
+    options: any
+  ): Promise<Result<PredictionGame[], RepositoryError>> {
     try {
-      const { data: statsData, error: statsError } = await this.supabase
-        .from("prediction_game_stats")
-        .select("*")
-        .eq("game_id", id)
-        .single();
+      let whereConditions = [];
 
-      if (statsError) {
-        if (statsError.code === "PGRST116") {
-          // 통계가 없으면 실시간 계산
-          return this.calculateRealTimeStatistics(id);
+      if (options.filters) {
+        if (options.filters.status) {
+          whereConditions.push(
+            `pg.status = '${this.mapDomainStatusToDb(options.filters.status)}'`
+          );
         }
+        if (options.filters.creatorId) {
+          whereConditions.push(
+            `pg.creator_id = '${options.filters.creatorId}'`
+          );
+        }
+      }
+
+      const whereClause =
+        whereConditions.length > 0
+          ? `WHERE ${whereConditions.join(" AND ")}`
+          : "";
+      const limit = options.pagination?.limit || 20;
+      const offset = options.pagination?.offset || 0;
+      const orderBy = options.sorting
+        ? `ORDER BY ${
+            options.sorting.field
+          } ${options.sorting.order.toUpperCase()}`
+        : "ORDER BY created_at DESC";
+
+      const query = `
+        SELECT pg.*, 
+               COUNT(p.id) as participant_count
+        FROM prediction_games pg
+        LEFT JOIN predictions p ON pg.game_id = p.game_id
+        ${whereClause}
+        GROUP BY pg.game_id
+        ${orderBy}
+        LIMIT ${limit} OFFSET ${offset}
+      `;
+
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      if (result.error) {
         return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "getStatistics",
-            statsError.message,
-            statsError
+          new RepositoryError(
+            "Failed to find games",
+            "FIND_MANY_ERROR",
+            result.error
           )
         );
       }
 
-      const statistics = {
-        totalParticipants: statsData.total_participants,
-        totalStake: statsData.total_stake,
-        averageConfidence: statsData.average_confidence,
-        statusDistribution: statsData.status_distribution || {},
-      };
-
-      return success(statistics);
+      const games = (result.data || [])
+        .map((row) => this.mapRowToDomain(row))
+        .filter((r) => r.success)
+        .map((r) => r.data);
+      return success(games);
     } catch (error) {
       return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "getStatistics",
-          "Unexpected error during statistics query",
+        new RepositoryError(
+          "Failed to find games",
+          "FIND_MANY_ERROR",
           error as Error
         )
       );
@@ -972,480 +733,184 @@ export class SupabasePredictionGameRepository
   }
 
   /**
-   * 버전을 포함한 게임 저장
+   * 🔢 필터 조건에 해당하는 게임 수 조회
+   */
+  async countByFilters(filters: any): Promise<Result<number, RepositoryError>> {
+    try {
+      let whereConditions = [];
+
+      if (filters.status) {
+        whereConditions.push(
+          `status = '${this.mapDomainStatusToDb(filters.status)}'`
+        );
+      }
+
+      const whereClause =
+        whereConditions.length > 0
+          ? `WHERE ${whereConditions.join(" AND ")}`
+          : "";
+
+      const query = `SELECT COUNT(*) as count FROM prediction_games ${whereClause}`;
+
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      if (result.error) {
+        return failure(
+          new RepositoryError(
+            "Failed to count games",
+            "COUNT_ERROR",
+            result.error
+          )
+        );
+      }
+
+      return success(result.data?.[0]?.count || 0);
+    } catch (error) {
+      return failure(
+        new RepositoryError(
+          "Failed to count games",
+          "COUNT_ERROR",
+          error as Error
+        )
+      );
+    }
+  }
+
+  /**
+   * 📊 게임 통계 조회 (MoneyWave 분석용)
+   */
+  async getStatistics(filters?: any): Promise<Result<any, RepositoryError>> {
+    try {
+      const query = `
+        SELECT 
+          COUNT(*) as total_games,
+          COUNT(CASE WHEN status = 'ACTIVE' THEN 1 END) as active_games,
+          COUNT(CASE WHEN status = 'SETTLED' THEN 1 END) as settled_games,
+          SUM(CASE WHEN mw.allocated_pmc IS NOT NULL THEN mw.allocated_pmc ELSE 0 END) as total_pmc_allocated,
+          AVG(participant_counts.count) as avg_participants
+        FROM prediction_games pg
+        LEFT JOIN money_wave_allocations mw ON pg.game_id = mw.game_id
+        LEFT JOIN (
+          SELECT game_id, COUNT(*) as count 
+          FROM predictions 
+          GROUP BY game_id
+        ) participant_counts ON pg.game_id = participant_counts.game_id
+      `;
+
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      if (result.error) {
+        return failure(
+          new RepositoryError(
+            "Failed to get statistics",
+            "STATISTICS_ERROR",
+            result.error
+          )
+        );
+      }
+
+      return success(result.data?.[0] || {});
+    } catch (error) {
+      return failure(
+        new RepositoryError(
+          "Failed to get statistics",
+          "STATISTICS_ERROR",
+          error as Error
+        )
+      );
+    }
+  }
+
+  /**
+   * 🔄 버전 관리와 함께 게임 저장 (동시성 제어)
    */
   async saveWithVersion(
     game: PredictionGame,
     version: number
   ): Promise<Result<number, RepositoryError>> {
-    try {
-      const gameData = this.mapDomainToDatabase(game);
-      gameData.version = version + 1;
-
-      const { data, error } = await this.supabase
-        .from("prediction_games")
-        .update(gameData)
-        .eq("id", game.id)
-        .eq("version", version)
-        .select("version")
-        .single();
-
-      if (error) {
-        if (error.code === "PGRST116") {
-          // 버전 충돌
-          return failure(
-            new RepositoryError(
-              "Concurrent modification detected",
-              RepositoryErrorCodes.CONCURRENT_MODIFICATION,
-              error
-            )
-          );
-        }
-        return failure(
-          RepositoryHelpers.createSaveFailedError(
-            "PredictionGame",
-            error.message,
-            error
-          )
-        );
-      }
-
-      return success(data.version);
-    } catch (error) {
-      return failure(
-        RepositoryHelpers.createSaveFailedError(
-          "PredictionGame",
-          "Unexpected error during versioned save",
-          error as Error
-        )
-      );
+    // 기본 save 메서드 사용 후 새 버전 반환
+    const saveResult = await this.save(game);
+    if (!saveResult.success) {
+      return failure(saveResult.error);
     }
+    return success(version + 1);
   }
 
   /**
-   * 벌크 업데이트
+   * 📦 게임 일괄 업데이트 (MoneyWave 배치 처리용)
    */
   async bulkUpdate(
     games: PredictionGame[]
   ): Promise<Result<number, RepositoryError>> {
     try {
-      if (games.length === 0) {
-        return success(0);
-      }
+      let updatedCount = 0;
 
-      const gamesData = games.map((game) => this.mapDomainToDatabase(game));
-
-      const { data, error } = await this.supabase
-        .from("prediction_games")
-        .upsert(gamesData, { onConflict: "id" })
-        .select("id");
-
-      if (error) {
-        return failure(
-          RepositoryHelpers.createSaveFailedError(
-            "PredictionGame",
-            `Bulk update failed: ${error.message}`,
-            error
-          )
-        );
-      }
-
-      return success(data?.length || 0);
-    } catch (error) {
-      return failure(
-        RepositoryHelpers.createSaveFailedError(
-          "PredictionGame",
-          "Unexpected error during bulk update",
-          error as Error
-        )
-      );
-    }
-  }
-
-  // =========================
-  // Private Helper Methods
-  // =========================
-
-  /**
-   * 도메인 객체를 데이터베이스 행으로 변환
-   */
-  private mapDomainToDatabase(game: PredictionGame): PredictionGameRow {
-    return {
-      id: game.id,
-      creator_id: game.getCreatedBy(),
-      title: game.getTitle(),
-      description: game.getDescription(),
-      prediction_type: game.getPredictionType(),
-      options: JSON.stringify(game.getOptions()),
-      start_time: game.getStartTime().toISOString(),
-      end_time: game.getEndTime().toISOString(),
-      settlement_time: game.getSettlementTime().toISOString(),
-      minimum_stake: game.getMinimumStake(),
-      maximum_stake: game.getMaximumStake(),
-      max_participants: game.getMaxParticipants() || null,
-      status: game.status,
-      money_wave_id: null, // MoneyWave 연동 시 설정
-      game_importance_score: 1.0, // 기본값
-      allocated_prize_pool: 0, // MoneyWave에서 설정
-      created_at: game.getCreatedAt().toISOString(),
-      updated_at: game.getUpdatedAt().toISOString(),
-      version: game.getVersion(),
-    };
-  }
-
-  /**
-   * 예측 도메인 객체를 데이터베이스 행으로 변환
-   */
-  private mapPredictionToDatabase(prediction: Prediction): PredictionRow {
-    return {
-      id: prediction.id,
-      user_id: prediction.userId,
-      game_id: prediction.gameId,
-      selected_option_id: prediction.selectedOptionId,
-      stake: prediction.stake,
-      confidence: prediction.confidence,
-      reasoning: prediction.reasoning || null,
-      is_correct: (prediction.result as any)?.isCorrect || null,
-      accuracy_score: prediction.accuracyScore || null,
-      reward_amount: prediction.reward || null,
-      created_at: prediction.timestamps.createdAt.toISOString(),
-      updated_at: prediction.timestamps.updatedAt.toISOString(),
-    };
-  }
-
-  /**
-   * 데이터베이스 행을 도메인 객체로 변환
-   */
-  private mapDatabaseToDomain(
-    gameData: PredictionGameRow,
-    predictionsData: PredictionRow[]
-  ): PredictionGame {
-    const configuration: GameConfiguration = {
-      title: gameData.title,
-      description: gameData.description,
-      predictionType: gameData.prediction_type as PredictionType,
-      options: JSON.parse(gameData.options) as PredictionOption[],
-      startTime: new Date(gameData.start_time),
-      endTime: new Date(gameData.end_time),
-      settlementTime: new Date(gameData.settlement_time),
-      minimumStake: gameData.minimum_stake as PMP,
-      maximumStake: gameData.maximum_stake as PMP,
-      maxParticipants: gameData.max_participants || undefined,
-    };
-
-    // PredictionGame 재구성을 위한 리플렉션 접근
-    // 실제 구현에서는 PredictionGame에 fromDatabase 정적 메서드를 추가하는 것이 좋음
-    const game = (PredictionGame as any).create(
-      createUserId(gameData.creator_id),
-      configuration
-    );
-
-    if (!game.success) {
-      throw new Error(`Failed to create PredictionGame: ${game.error.message}`);
-    }
-
-    const predictionGame = game.data;
-
-    // 상태 설정
-    (predictionGame as any)._status = gameData.status as unknown as GameStatus;
-    (predictionGame as any)._timestamps = {
-      createdAt: new Date(gameData.created_at),
-      updatedAt: new Date(gameData.updated_at),
-    };
-
-    // 예측 데이터 추가
-    predictionsData.forEach((predictionData) => {
-      const prediction = this.mapDatabaseToPrediction(predictionData);
-      (predictionGame as any)._predictions.set(prediction.id, prediction);
-    });
-
-    return predictionGame;
-  }
-
-  /**
-   * 데이터베이스 행을 예측 도메인 객체로 변환
-   */
-  private mapDatabaseToPrediction(data: PredictionRow): Prediction {
-    const prediction = (Prediction as any).create(
-      createUserId(data.user_id),
-      createPredictionGameId(data.game_id),
-      data.selected_option_id,
-      data.stake as PMP,
-      data.confidence,
-      data.reasoning || undefined
-    );
-
-    if (!prediction.success) {
-      throw new Error(
-        `Failed to create Prediction: ${prediction.error.message}`
-      );
-    }
-
-    const predictionEntity = prediction.data;
-
-    // 결과 설정
-    if (
-      data.is_correct !== null &&
-      data.accuracy_score !== null &&
-      data.reward_amount !== null
-    ) {
-      predictionEntity.setResult(
-        { isCorrect: data.is_correct },
-        data.accuracy_score as AccuracyScore,
-        data.reward_amount as PMC
-      );
-    }
-
-    // 타임스탬프 설정
-    (predictionEntity as any)._timestamps = {
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at),
-    };
-
-    return predictionEntity;
-  }
-
-  /**
-   * 게임들의 예측 데이터 일괄 조회
-   */
-  private async fetchPredictionsForGames(
-    gameIds: string[]
-  ): Promise<Result<Map<string, PredictionRow[]>, RepositoryError>> {
-    try {
-      if (gameIds.length === 0) {
-        return success(new Map());
-      }
-
-      const { data: predictionsData, error: predictionsError } =
-        await this.supabase
-          .from("predictions")
-          .select("*")
-          .in("game_id", gameIds);
-
-      if (predictionsError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "fetchPredictionsForGames",
-            predictionsError.message,
-            predictionsError
-          )
-        );
-      }
-
-      const predictionsByGame = new Map<string, PredictionRow[]>();
-      (predictionsData || []).forEach((prediction) => {
-        const gameId = prediction.game_id;
-        if (!predictionsByGame.has(gameId)) {
-          predictionsByGame.set(gameId, []);
+      for (const game of games) {
+        const result = await this.save(game);
+        if (result.success) {
+          updatedCount++;
         }
-        predictionsByGame.get(gameId)!.push(prediction);
-      });
+      }
 
-      return success(predictionsByGame);
+      return success(updatedCount);
     } catch (error) {
       return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "fetchPredictionsForGames",
-          "Unexpected error during predictions fetch",
-          error as Error
-        )
+        new RepositoryError("Failed to bulk update games", "BULK_UPDATE_ERROR")
       );
     }
   }
 
-  /**
-   * 정렬 컬럼 매핑
-   */
-  private mapSortColumn(sortBy: string): string {
-    const columnMap: Record<string, string> = {
-      createdAt: "created_at",
-      updatedAt: "updated_at",
-      title: "title",
-    };
-    return columnMap[sortBy] || "created_at";
+  private mapRowToDomain(
+    row: PredictionGameRow
+  ): Result<PredictionGame, RepositoryError> {
+    return this.mapToDomain(row, new Map<PredictionId, Prediction>());
   }
 
-  /**
-   * 실시간 통계 계산
-   */
-  private async calculateRealTimeStatistics(gameId: PredictionGameId): Promise<
-    Result<
-      {
-        totalParticipants: number;
-        totalStake: number;
-        averageConfidence: number;
-        statusDistribution: Record<string, number>;
-      },
-      RepositoryError
-    >
-  > {
-    try {
-      const { data: predictionsData, error: predictionsError } =
-        await this.supabase
-          .from("predictions")
-          .select("stake, confidence")
-          .eq("game_id", gameId);
+  private mapDomainStatusToDb(status: DomainGameStatus): string {
+    return status.toString();
+  }
 
-      if (predictionsError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "calculateRealTimeStatistics",
-            predictionsError.message,
-            predictionsError
-          )
-        );
-      }
-
-      const predictions = predictionsData || [];
-      const totalParticipants = predictions.length;
-      const totalStake = predictions.reduce((sum, p) => sum + p.stake, 0);
-      const averageConfidence =
-        totalParticipants > 0
-          ? predictions.reduce((sum, p) => sum + p.confidence, 0) /
-            totalParticipants
-          : 0;
-
-      const statistics = {
-        totalParticipants,
-        totalStake,
-        averageConfidence,
-        statusDistribution: {}, // 간단한 구현에서는 빈 객체
+  private mapStringToGameStatus(
+    status: string
+  ): Result<DomainGameStatus, RepositoryError> {
+    const result = DomainGameStatus.create(status);
+    if (!result.success) {
+      return {
+        success: false,
+        error: new RepositoryError(
+          `Invalid game status: ${status}`,
+          "INVALID_GAME_STATUS"
+        ),
       };
-
-      return success(statistics);
-    } catch (error) {
-      return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "calculateRealTimeStatistics",
-          "Unexpected error during real-time statistics calculation",
-          error as Error
-        )
-      );
     }
+    return result;
   }
 
-  /**
-   * 필터 조건으로 게임 목록 조회 (새로운 UseCase용)
-   */
-  async findMany(options: {
-    filters?: any;
-    pagination?: { limit: number; offset: number };
-    sorting?: { field: string; order: "asc" | "desc" };
-  }): Promise<Result<PredictionGame[], RepositoryError>> {
-    try {
-      const {
-        filters = {},
-        pagination = { limit: 20, offset: 0 },
-        sorting = { field: "created_at", order: "desc" },
-      } = options;
-
-      // Supabase 쿼리 빌더 생성
-      let query = this.supabase.from("prediction_games").select("*");
-
-      // 필터 조건 추가
-      if (filters.status) {
-        query = query.eq("status", filters.status);
-      }
-
-      if (filters.createdBy) {
-        query = query.eq("creator_id", filters.createdBy);
-      }
-
-      // 정렬 추가
-      const sortField =
-        sorting.field === "created_at" ? "created_at" : "updated_at";
-      const ascending = sorting.order === "asc";
-      query = query.order(sortField, { ascending });
-
-      // 페이지네이션 추가
-      query = query.range(
-        pagination.offset,
-        pagination.offset + pagination.limit - 1
-      );
-
-      const { data: gamesData, error: gamesError } = await query;
-
-      if (gamesError) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "findMany",
-            gamesError.message,
-            gamesError
-          )
-        );
-      }
-
-      if (!gamesData || gamesData.length === 0) {
-        return success([]);
-      }
-
-      // 예측 데이터 조회
-      const gameIds = gamesData.map((game) => game.id);
-      const predictionsResult = await this.fetchPredictionsForGames(gameIds);
-
-      if (!predictionsResult.success) {
-        return failure(predictionsResult.error);
-      }
-
-      const predictionsByGame = predictionsResult.data;
-
-      // 도메인 객체로 변환
-      const games = gamesData.map((gameData) => {
-        const predictions = predictionsByGame.get(gameData.id) || [];
-        return this.mapDatabaseToDomain(gameData, predictions);
-      });
-
-      return success(games);
-    } catch (error) {
-      return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "findMany",
-          "Unexpected error during find many",
-          error as Error
-        )
-      );
-    }
-  }
-
-  /**
-   * 필터 조건에 해당하는 게임 수 조회
-   */
-  async countByFilters(filters: any): Promise<Result<number, RepositoryError>> {
-    try {
-      let query = this.supabase
-        .from("prediction_games")
-        .select("*", { count: "exact", head: true });
-
-      // 필터 조건 추가
-      if (filters.status) {
-        query = query.eq("status", filters.status);
-      }
-
-      if (filters.createdBy) {
-        query = query.eq("creator_id", filters.createdBy);
-      }
-
-      const { count, error } = await query;
-
-      if (error) {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "countByFilters",
-            error.message,
-            error
-          )
-        );
-      }
-
-      return success(count || 0);
-    } catch (error) {
-      return failure(
-        RepositoryHelpers.createQueryFailedError(
-          "countByFilters",
-          "Unexpected error during count",
-          error as Error
-        )
-      );
+  private mapStringToPredictionType(
+    type: string
+  ): Result<PredictionType, RepositoryError> {
+    // Simple string to enum conversion
+    switch (type.toLowerCase()) {
+      case "binary":
+        return { success: true, data: PredictionType.BINARY };
+      case "wdl":
+        return { success: true, data: PredictionType.WIN_DRAW_LOSE };
+      case "ranking":
+        return { success: true, data: PredictionType.RANKING };
+      default:
+        return {
+          success: false,
+          error: new RepositoryError(
+            `Invalid prediction type: ${type}`,
+            "INVALID_PREDICTION_TYPE"
+          ),
+        };
     }
   }
 }

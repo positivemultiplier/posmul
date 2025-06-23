@@ -5,19 +5,16 @@ import { InMemoryEventPublisher } from "@/shared/events/event-publisher";
 import { PredictionGameId, UserId } from "@/shared/types/branded-types";
 import { NextRequest, NextResponse } from "next/server";
 
-interface RouteParams {
-  params: {
-    gameId: string;
-  };
-}
-
 /**
  * POST /api/predictions/games/[gameId]/participate
  * 예측 게임 참여
  */
-export async function POST(request: NextRequest, { params }: RouteParams) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ gameId: string }> }
+) {
   try {
-    const { gameId } = params;
+    const { gameId } = await params;
     const body = await request.json();
 
     if (!gameId) {
@@ -120,7 +117,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     );
   } catch (error) {
     console.error(
-      `POST /api/predictions/games/${params.gameId}/participate error:`,
+      `POST /api/predictions/games/[gameId]/participate error:`,
       error
     );
     return NextResponse.json(
@@ -140,9 +137,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
  * GET /api/predictions/games/[gameId]/participate
  * 참여 가능 여부 조회
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ gameId: string }> }
+) {
   try {
-    const { gameId } = params;
+    const { gameId } = await params;
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
 
@@ -186,8 +186,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       success: true,
       data: {
         gameId,
-        gameStatus: game.status,
-        canParticipate: game.status === "ACTIVE",
+        gameStatus: game.status.toString(),
+        canParticipate: game.status.isActive(),
         requirements: {
           minimumStake: game.configuration.minimumStake,
           maximumStake: game.configuration.maximumStake,
@@ -201,7 +201,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     });
   } catch (error) {
     console.error(
-      `GET /api/predictions/games/${params.gameId}/participate error:`,
+      `GET /api/predictions/games/[gameId]/participate error:`,
       error
     );
     return NextResponse.json(

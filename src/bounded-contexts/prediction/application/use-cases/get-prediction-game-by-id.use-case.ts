@@ -118,7 +118,7 @@ export class GetPredictionGameByIdUseCase {
         description: game.getDescription(),
         predictionType: game.getPredictionType(),
         options: game.getOptions(),
-        status: game.status,
+        status: game.status.toString(),
         startTime: game.getStartTime(),
         endTime: game.getEndTime(),
         settlementTime: game.getSettlementTime(),

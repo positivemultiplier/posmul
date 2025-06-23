@@ -90,11 +90,9 @@ export class UpdatePredictionGameUseCase {
           success: false,
           error: new UseCaseError("Only the game creator can update this game"),
         };
-      }
-
-      // 3. 게임 상태 확인 (활성화된 게임은 제한적 수정만 가능)
+      } // 3. 게임 상태 확인 (활성화된 게임은 제한적 수정만 가능)
       const currentStatus = game.status;
-      if (currentStatus === "COMPLETED" || currentStatus === "CANCELLED") {
+      if (currentStatus.isSettled()) {
         return {
           success: false,
           error: new UseCaseError("Cannot update completed or cancelled games"),
@@ -140,10 +138,8 @@ export class UpdatePredictionGameUseCase {
         }
         updatedFields.push("description");
         hasChanges = true;
-      }
-
-      // 종료 시간 수정 (활성화 전에만 가능)
-      if (request.updates.endTime && currentStatus === "PENDING") {
+      } // 종료 시간 수정 (활성화 전에만 가능)
+      if (request.updates.endTime && currentStatus.isCreated()) {
         const updateResult = game.updateEndTime(request.updates.endTime);
         if (!updateResult.success) {
           return {
@@ -156,10 +152,8 @@ export class UpdatePredictionGameUseCase {
         }
         updatedFields.push("endTime");
         hasChanges = true;
-      }
-
-      // 정산 시간 수정 (활성화 전에만 가능)
-      if (request.updates.settlementTime && currentStatus === "PENDING") {
+      } // 정산 시간 수정 (활성화 전에만 가능)
+      if (request.updates.settlementTime && currentStatus.isCreated()) {
         const updateResult = game.updateSettlementTime(
           request.updates.settlementTime
         );
@@ -174,12 +168,10 @@ export class UpdatePredictionGameUseCase {
         }
         updatedFields.push("settlementTime");
         hasChanges = true;
-      }
-
-      // 최소 스테이크 수정 (활성화 전에만 가능)
+      } // 최소 스테이크 수정 (활성화 전에만 가능)
       if (
         request.updates.minimumStake !== undefined &&
-        currentStatus === "PENDING"
+        currentStatus.isCreated()
       ) {
         const updateResult = game.updateMinimumStake(
           request.updates.minimumStake as PMP
@@ -195,12 +187,10 @@ export class UpdatePredictionGameUseCase {
         }
         updatedFields.push("minimumStake");
         hasChanges = true;
-      }
-
-      // 최대 스테이크 수정 (활성화 전에만 가능)
+      } // 최대 스테이크 수정 (활성화 전에만 가능)
       if (
         request.updates.maximumStake !== undefined &&
-        currentStatus === "PENDING"
+        currentStatus.isCreated()
       ) {
         const updateResult = game.updateMaximumStake(
           request.updates.maximumStake as PMP
@@ -216,12 +206,10 @@ export class UpdatePredictionGameUseCase {
         }
         updatedFields.push("maximumStake");
         hasChanges = true;
-      }
-
-      // 최대 참여자 수정 (활성화 전에만 가능)
+      } // 최대 참여자 수정 (활성화 전에만 가능)
       if (
         request.updates.maxParticipants !== undefined &&
-        currentStatus === "PENDING"
+        currentStatus.isCreated()
       ) {
         const updateResult = game.updateMaxParticipants(
           request.updates.maxParticipants

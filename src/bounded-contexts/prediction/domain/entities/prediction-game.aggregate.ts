@@ -20,14 +20,14 @@ import {
 } from "@/shared/types/branded-types";
 import {
   DomainError,
-  GameStatus,
-  PredictionResult,
   Result,
   Timestamps,
   ValidationError,
   failure,
   success,
 } from "@/shared/types/economic-system";
+import { GameStatus } from "../value-objects/game-status";
+import { PredictionResult } from "../value-objects/prediction-types";
 
 /**
  * 예측 타입 정의
@@ -187,6 +187,37 @@ export class Prediction {
   public get timestamps(): Timestamps {
     return this._timestamps;
   }
+
+  /**
+   * 영속성 데이터로부터 Prediction 엔티티 재구성
+   */
+  public static fromPersistence(data: {
+    id: PredictionId;
+    userId: UserId;
+    gameId: PredictionGameId;
+    selectedOptionId: string;
+    stake: PMP;
+    confidence: number;
+    reasoning?: string;
+    result?: PredictionResult;
+    accuracyScore?: AccuracyScore;
+    reward?: PMC;
+    timestamps: Timestamps;
+  }): Prediction {
+    return new Prediction(
+      data.id,
+      data.userId,
+      data.gameId,
+      data.selectedOptionId,
+      data.stake,
+      data.confidence,
+      data.reasoning,
+      data.result,
+      data.accuracyScore,
+      data.reward,
+      data.timestamps
+    );
+  }
 }
 
 /**
@@ -204,7 +235,7 @@ export interface GameStatistics {
  */
 export class PredictionGame {
   private readonly _predictions: Map<PredictionId, Prediction> = new Map();
-  private _status: GameStatus = GameStatus.PENDING;
+  private _status: GameStatus = GameStatus.CREATED;
 
   private constructor(
     private readonly _id: PredictionGameId,
@@ -241,7 +272,7 @@ export class PredictionGame {
    * 게임 시작
    */
   public start(): Result<void, DomainError> {
-    if (this._status !== GameStatus.PENDING) {
+    if (this._status !== GameStatus.CREATED) {
       return failure(
         new DomainError(
           "Game can only be started from PENDING status",
@@ -386,7 +417,7 @@ export class PredictionGame {
       );
     }
 
-    this._status = GameStatus.EVALUATING;
+    this._status = GameStatus.ENDED;
     return success(undefined);
   }
 
@@ -405,7 +436,7 @@ export class PredictionGame {
       totalPool: PMP
     ) => PMC
   ): Result<void, DomainError> {
-    if (this._status !== GameStatus.EVALUATING) {
+    if (this._status !== GameStatus.ENDED) {
       return failure(
         new DomainError(
           "Game must be in EVALUATING status to settle",
@@ -438,17 +469,26 @@ export class PredictionGame {
     const totalPool = Array.from(this._predictions.values()).reduce(
       (sum, p) => (sum + p.stake) as PMP,
       0 as PMP
-    );
-
-    // 각 예측의 결과 및 보상 계산
+    ); // 각 예측의 결과 및 보상 계산
     for (const prediction of this._predictions.values()) {
       const isCorrect = prediction.selectedOptionId === correctOptionId;
-      const result = isCorrect
-        ? PredictionResult.CORRECT
-        : PredictionResult.INCORRECT;
+      const result: PredictionResult = {
+        predictionId: prediction.id,
+        userId: prediction.userId,
+        selectedOptionId: prediction.selectedOptionId,
+        confidence: prediction.confidence,
+        stakeAmount: prediction.stake,
+        isCorrect,
+        accuracyScore: undefined, // Will be set below
+        rewardAmount: undefined, // Will be set below
+      };
 
       const accuracy = accuracyCalculator(prediction, isCorrect);
       const reward = rewardCalculator(prediction, accuracy, totalPool);
+
+      // Update the result with calculated values
+      result.accuracyScore = accuracy;
+      result.rewardAmount = reward;
 
       const setResultResult = prediction.setResult(result, accuracy, reward);
       if (!setResultResult.success) {
@@ -456,15 +496,14 @@ export class PredictionGame {
       }
     }
 
-    this._status = GameStatus.COMPLETED;
+    this._status = GameStatus.SETTLED;
     return success(undefined);
   }
 
   /**
    * 게임 취소
-   */
-  public cancel(): Result<void, DomainError> {
-    if (this._status === GameStatus.COMPLETED) {
+   */ public cancel(): Result<void, DomainError> {
+    if (this._status === GameStatus.SETTLED) {
       return failure(
         new DomainError(
           "Cannot cancel completed game",
@@ -473,7 +512,8 @@ export class PredictionGame {
       );
     }
 
-    this._status = GameStatus.CANCELLED;
+    // 취소된 게임은 CREATED 상태로 되돌림 (도메인에 CANCELLED가 없음)
+    this._status = GameStatus.CREATED;
     return success(undefined);
   }
 
@@ -817,7 +857,7 @@ export class PredictionGame {
     deletedBy: UserId,
     reason: string
   ): Result<void, DomainError> {
-    if (this._status === GameStatus.COMPLETED) {
+    if (this._status === GameStatus.SETTLED) {
       return failure(
         new DomainError(
           "Cannot delete completed game",
@@ -826,7 +866,7 @@ export class PredictionGame {
       );
     }
 
-    this._status = GameStatus.CANCELLED; // DELETED 상태가 없으므로 CANCELLED 사용
+    this._status = GameStatus.CREATED; // DELETED 상태가 없으므로 CREATED 사용
     return success(undefined);
   }
 
@@ -842,8 +882,33 @@ export class PredictionGame {
 
   /**
    * 게임 완료 상태 확인
+   */ public isCompleted(): boolean {
+    return this._status === GameStatus.SETTLED;
+  }
+
+  /**
+   * 영속성 데이터로부터 PredictionGame Aggregate 재구성
    */
-  public isCompleted(): boolean {
-    return this._status === GameStatus.COMPLETED;
+  public static fromPersistence(data: {
+    id: PredictionGameId;
+    creatorId: UserId;
+    configuration: GameConfiguration;
+    status: GameStatus;
+    predictions: Map<PredictionId, Prediction>;
+    timestamps: Timestamps;
+  }): PredictionGame {
+    const game = new PredictionGame(
+      data.id,
+      data.creatorId,
+      data.configuration,
+      data.timestamps
+    );
+    game._status = data.status;
+
+    // Using a private field directly is not ideal, but necessary for reconstruction
+    // if there's no public method to set predictions.
+    (game as any)._predictions = data.predictions;
+
+    return game;
   }
 }

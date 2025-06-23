@@ -122,7 +122,7 @@ export class GetPredictionGamesUseCase {
           id: game.id,
           title: game.getTitle(),
           description: game.getDescription(),
-          status: game.status,
+          status: game.status.toString(),
           predictionType: game.getPredictionType(),
           startTime: game.getStartTime(),
           endTime: game.getEndTime(),

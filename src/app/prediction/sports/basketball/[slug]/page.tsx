@@ -12,9 +12,9 @@ import { PredictionDetailView } from "@/bounded-contexts/prediction/presentation
 import { notFound } from "next/navigation";
 
 interface PredictionDetailPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 // Basketball prediction games data
