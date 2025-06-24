@@ -1,15 +1,19 @@
 /**
- * Supabase Donation Repository Implementation
- * Supabase를 사용한 기부 리포지토리 구현
+ * MCP-based Donation Repository Implementation
+ * Supabase MCP를 사용한 기부 리포지토리 구현체
  */
 
 import { UserId } from "@/bounded-contexts/auth/domain/value-objects/user-value-objects";
+import { MCPError, handleMCPError } from "@/shared/mcp/mcp-errors";
+import { mcp_supabase_execute_sql } from "@/shared/mcp/supabase-client";
+import { SupabaseProjectService } from "@/shared/mcp/supabase-project.service";
 import {
   PaginatedResult,
   PaginationParams,
   Result,
+  failure,
+  success,
 } from "@/shared/types/common";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { Donation } from "../../domain/entities/donation.entity";
 import {
   DonationSearchCriteria,
@@ -48,68 +52,72 @@ interface DonationRecord {
 }
 
 /**
- * SupabaseDonationRepository
- * Supabase를 사용한 기부 리포지토리 구현
+ * MCPDonationRepository
+ * MCP를 사용한 기부 리포지토리 구현체
  */
-export class SupabaseDonationRepository implements IDonationRepository {
-  private supabase: SupabaseClient;
+export class MCPDonationRepository implements IDonationRepository {
+  private readonly projectId: string;
 
   constructor() {
-    this.supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
+    this.projectId = SupabaseProjectService.getInstance().getProjectId();
   }
 
   /**
    * 기부 저장
    */
-  async save(donation: Donation): Promise<Result<void>> {
+  async save(donation: Donation): Promise<Result<void, MCPError>> {
     try {
       const record = this.mapDonationToRecord(donation);
 
-      const { error } = await this.supabase.from("donations").upsert(record);
+      const query = `
+        INSERT INTO donations (
+          id, donor_id, type, status, amount, category, description, frequency,
+          target_amount, institute_id, opinion_leader_id, metadata, beneficiary_info,
+          processing_info, scheduled_at, completed_at, cancelled_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          status = EXCLUDED.status,
+          amount = EXCLUDED.amount,
+          metadata = EXCLUDED.metadata,
+          processing_info = EXCLUDED.processing_info,
+          completed_at = EXCLUDED.completed_at,
+          cancelled_at = EXCLUDED.cancelled_at,
+          updated_at = NOW();
+      `;
 
-      if (error) {
-        return {
-          success: false,
-          error: new Error(`Failed to save donation: ${error.message}`),
-        };
-      }
+      await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
 
-      return { success: true, data: undefined };
+      return success(undefined);
     } catch (error) {
-      return { success: false, error: error as Error };
+      return failure(handleMCPError(error, "save_donation"));
     }
   }
 
   /**
    * ID로 기부 조회
    */
-  async findById(id: DonationId): Promise<Result<Donation | null>> {
+  async findById(id: DonationId): Promise<Result<Donation | null, MCPError>> {
     try {
-      const { data, error } = await this.supabase
-        .from("donations")
-        .select("*")
-        .eq("id", id.getValue())
-        .single();
+      const query = `SELECT * FROM donations WHERE id = '${id.getValue()}'`;
 
-      if (error && error.code !== "PGRST116") {
-        // PGRST116 = no rows returned
-        return {
-          success: false,
-          error: new Error(`Failed to find donation: ${error.message}`),
-        };
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      if (!result?.data || result.data.length === 0) {
+        return success(null);
       }
 
-      if (!data) {
-        return { success: true, data: null };
-      }
-
-      const donation = this.mapRecordToDonation(data);
-      return { success: true, data: donation };
+      const donation = this.mapRecordToDonation(result.data[0]);
+      return success(donation);
     } catch (error) {
-      return { success: false, error: error as Error };
+      return failure(handleMCPError(error, "find_donation_by_id"));
     }
   }
 
@@ -119,47 +127,56 @@ export class SupabaseDonationRepository implements IDonationRepository {
   async findByDonorId(
     donorId: UserId,
     pagination: PaginationParams
-  ): Promise<Result<PaginatedResult<Donation>>> {
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
     try {
-      const { data, error, count } = await this.supabase
-        .from("donations")
-        .select("*", { count: "exact" })
-        .eq("donor_id", donorId)
-        .order(pagination.sortBy || "created_at", {
-          ascending: pagination.sortOrder === "asc",
-        })
-        .range(
-          (pagination.page - 1) * pagination.limit,
-          pagination.page * pagination.limit - 1
-        );
+      const offset = (pagination.page - 1) * pagination.limit;
+      const sortBy = pagination.sortBy || "created_at";
+      const sortOrder = pagination.sortOrder === "asc" ? "ASC" : "DESC";
 
-      if (error) {
-        return {
-          success: false,
-          error: new Error(`Failed to find donations: ${error.message}`),
-        };
-      }
+      const dataQuery = `
+        SELECT * FROM donations 
+        WHERE donor_id = '${donorId}'
+        ORDER BY ${sortBy} ${sortOrder}
+        LIMIT ${pagination.limit} OFFSET ${offset}
+      `;
 
-      const donations = data.map((record) => this.mapRecordToDonation(record));
-      const total = count || 0;
+      const countQuery = `
+        SELECT COUNT(*) as total FROM donations 
+        WHERE donor_id = '${donorId}'
+      `;
+
+      const [dataResult, countResult] = await Promise.all([
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: dataQuery,
+        }),
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: countQuery,
+        }),
+      ]);
+
+      const donations =
+        dataResult.data?.map((record: any) =>
+          this.mapRecordToDonation(record)
+        ) || [];
+
+      const total = countResult.data?.[0]?.total || 0;
       const totalPages = Math.ceil(total / pagination.limit);
 
-      return {
-        success: true,
-        data: {
-          data: donations,
-          pagination: {
-            page: pagination.page,
-            limit: pagination.limit,
-            total,
-            totalPages,
-            hasNext: pagination.page < totalPages,
-            hasPrev: pagination.page > 1,
-          },
+      return success({
+        data: donations,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          totalPages,
+          hasNext: pagination.page < totalPages,
+          hasPrev: pagination.page > 1,
         },
-      };
+      });
     } catch (error) {
-      return { success: false, error: error as Error };
+      return failure(handleMCPError(error, "find_donations_by_donor"));
     }
   }
 
@@ -169,47 +186,56 @@ export class SupabaseDonationRepository implements IDonationRepository {
   async findByStatus(
     status: DonationStatus,
     pagination: PaginationParams
-  ): Promise<Result<PaginatedResult<Donation>>> {
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
     try {
-      const { data, error, count } = await this.supabase
-        .from("donations")
-        .select("*", { count: "exact" })
-        .eq("status", status)
-        .order(pagination.sortBy || "created_at", {
-          ascending: pagination.sortOrder === "asc",
-        })
-        .range(
-          (pagination.page - 1) * pagination.limit,
-          pagination.page * pagination.limit - 1
-        );
+      const offset = (pagination.page - 1) * pagination.limit;
+      const sortBy = pagination.sortBy || "created_at";
+      const sortOrder = pagination.sortOrder === "asc" ? "ASC" : "DESC";
 
-      if (error) {
-        return {
-          success: false,
-          error: new Error(`Failed to find donations: ${error.message}`),
-        };
-      }
+      const dataQuery = `
+        SELECT * FROM donations 
+        WHERE status = '${status}'
+        ORDER BY ${sortBy} ${sortOrder}
+        LIMIT ${pagination.limit} OFFSET ${offset}
+      `;
 
-      const donations = data.map((record) => this.mapRecordToDonation(record));
-      const total = count || 0;
+      const countQuery = `
+        SELECT COUNT(*) as total FROM donations 
+        WHERE status = '${status}'
+      `;
+
+      const [dataResult, countResult] = await Promise.all([
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: dataQuery,
+        }),
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: countQuery,
+        }),
+      ]);
+
+      const donations =
+        dataResult.data?.map((record: any) =>
+          this.mapRecordToDonation(record)
+        ) || [];
+
+      const total = countResult.data?.[0]?.total || 0;
       const totalPages = Math.ceil(total / pagination.limit);
 
-      return {
-        success: true,
-        data: {
-          data: donations,
-          pagination: {
-            page: pagination.page,
-            limit: pagination.limit,
-            total,
-            totalPages,
-            hasNext: pagination.page < totalPages,
-            hasPrev: pagination.page > 1,
-          },
+      return success({
+        data: donations,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          totalPages,
+          hasNext: pagination.page < totalPages,
+          hasPrev: pagination.page > 1,
         },
-      };
+      });
     } catch (error) {
-      return { success: false, error: error as Error };
+      return failure(handleMCPError(error, "find_donations_by_status"));
     }
   }
 
@@ -219,77 +245,86 @@ export class SupabaseDonationRepository implements IDonationRepository {
   async search(
     criteria: DonationSearchCriteria,
     pagination: PaginationParams
-  ): Promise<Result<PaginatedResult<Donation>>> {
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
     try {
-      let query = this.supabase
-        .from("donations")
-        .select("*", { count: "exact" });
+      let query = `SELECT * FROM donations WHERE 1 = 1`;
 
       // 검색 조건 적용
       if (criteria.donorId) {
-        query = query.eq("donor_id", criteria.donorId);
+        query += ` AND donor_id = '${criteria.donorId}'`;
       }
       if (criteria.status) {
-        query = query.eq("status", criteria.status);
+        query += ` AND status = '${criteria.status}'`;
       }
       if (criteria.type) {
-        query = query.eq("type", criteria.type);
+        query += ` AND type = '${criteria.type}'`;
       }
       if (criteria.category) {
-        query = query.eq("category", criteria.category);
+        query += ` AND category = '${criteria.category}'`;
       }
       if (criteria.frequency) {
-        query = query.eq("frequency", criteria.frequency);
+        query += ` AND frequency = '${criteria.frequency}'`;
       }
       if (criteria.startDate) {
-        query = query.gte("created_at", criteria.startDate.toISOString());
+        query += ` AND created_at >= '${criteria.startDate.toISOString()}'`;
       }
       if (criteria.endDate) {
-        query = query.lte("created_at", criteria.endDate.toISOString());
+        query += ` AND created_at <= '${criteria.endDate.toISOString()}'`;
       }
       if (criteria.minAmount) {
-        query = query.gte("amount", criteria.minAmount);
+        query += ` AND amount >= ${criteria.minAmount}`;
       }
       if (criteria.maxAmount) {
-        query = query.lte("amount", criteria.maxAmount);
+        query += ` AND amount <= ${criteria.maxAmount}`;
       }
 
-      const { data, error, count } = await query
-        .order(pagination.sortBy || "created_at", {
-          ascending: pagination.sortOrder === "asc",
-        })
-        .range(
-          (pagination.page - 1) * pagination.limit,
-          pagination.page * pagination.limit - 1
-        );
+      const offset = (pagination.page - 1) * pagination.limit;
+      const sortBy = pagination.sortBy || "created_at";
+      const sortOrder = pagination.sortOrder === "asc" ? "ASC" : "DESC";
 
-      if (error) {
-        return {
-          success: false,
-          error: new Error(`Failed to search donations: ${error.message}`),
-        };
-      }
+      const dataQuery = `
+        ${query}
+        ORDER BY ${sortBy} ${sortOrder}
+        LIMIT ${pagination.limit} OFFSET ${offset}
+      `;
 
-      const donations = data.map((record) => this.mapRecordToDonation(record));
-      const total = count || 0;
+      const countQuery = `
+        SELECT COUNT(*) as total FROM donations 
+        WHERE ${query.split("WHERE")[1]}
+      `;
+
+      const [dataResult, countResult] = await Promise.all([
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: dataQuery,
+        }),
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: countQuery,
+        }),
+      ]);
+
+      const donations =
+        dataResult.data?.map((record: any) =>
+          this.mapRecordToDonation(record)
+        ) || [];
+
+      const total = countResult.data?.[0]?.total || 0;
       const totalPages = Math.ceil(total / pagination.limit);
 
-      return {
-        success: true,
-        data: {
-          data: donations,
-          pagination: {
-            page: pagination.page,
-            limit: pagination.limit,
-            total,
-            totalPages,
-            hasNext: pagination.page < totalPages,
-            hasPrev: pagination.page > 1,
-          },
+      return success({
+        data: donations,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          totalPages,
+          hasNext: pagination.page < totalPages,
+          hasPrev: pagination.page > 1,
         },
-      };
+      });
     } catch (error) {
-      return { success: false, error: error as Error };
+      return failure(handleMCPError(error, "search_donations"));
     }
   }
 
@@ -297,61 +332,68 @@ export class SupabaseDonationRepository implements IDonationRepository {
    * 기부 통계 조회
    */
   async getStats(donorId?: UserId): Promise<
-    Result<{
-      totalDonations: number;
-      totalAmount: number;
-      averageAmount: number;
-      donationsByCategory: Record<DonationCategory, number>;
-      donationsByType: Record<DonationType, number>;
-    }>
+    Result<
+      {
+        totalDonations: number;
+        totalAmount: number;
+        averageAmount: number;
+        donationsByCategory: Record<DonationCategory, number>;
+        donationsByType: Record<DonationType, number>;
+      },
+      MCPError
+    >
   > {
     try {
-      let query = this.supabase
-        .from("donations")
-        .select("amount, category, type");
+      let query = `SELECT amount, category, type FROM donations`;
 
       if (donorId) {
-        query = query.eq("donor_id", donorId);
+        query += ` WHERE donor_id = '${donorId}'`;
       }
 
-      const { data, error } = await query;
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
 
-      if (error) {
-        return {
-          success: false,
-          error: new Error(`Failed to get stats: ${error.message}`),
-        };
+      if (!result?.data || result.data.length === 0) {
+        return success({
+          totalDonations: 0,
+          totalAmount: 0,
+          averageAmount: 0,
+          donationsByCategory: {} as Record<DonationCategory, number>,
+          donationsByType: {} as Record<DonationType, number>,
+        });
       }
 
-      const totalDonations = data.length;
-      const totalAmount = data.reduce((sum, record) => sum + record.amount, 0);
+      const totalDonations = result.data.length;
+      const totalAmount = result.data.reduce(
+        (sum, record) => sum + record.amount,
+        0
+      );
       const averageAmount =
         totalDonations > 0 ? totalAmount / totalDonations : 0;
 
-      const donationsByCategory = data.reduce((acc, record) => {
+      const donationsByCategory = result.data.reduce((acc, record) => {
         acc[record.category as DonationCategory] =
           (acc[record.category as DonationCategory] || 0) + 1;
         return acc;
       }, {} as Record<DonationCategory, number>);
 
-      const donationsByType = data.reduce((acc, record) => {
+      const donationsByType = result.data.reduce((acc, record) => {
         acc[record.type as DonationType] =
           (acc[record.type as DonationType] || 0) + 1;
         return acc;
       }, {} as Record<DonationType, number>);
 
-      return {
-        success: true,
-        data: {
-          totalDonations,
-          totalAmount,
-          averageAmount,
-          donationsByCategory,
-          donationsByType,
-        },
-      };
+      return success({
+        totalDonations,
+        totalAmount,
+        averageAmount,
+        donationsByCategory,
+        donationsByType,
+      });
     } catch (error) {
-      return { success: false, error: error as Error };
+      return failure(handleMCPError(error, "get_stats"));
     }
   }
 
@@ -367,27 +409,28 @@ export class SupabaseDonationRepository implements IDonationRepository {
         month: number;
         totalDonations: number;
         totalAmount: number;
-      }>
+      }>,
+      MCPError
     >
   > {
     try {
-      let query = this.supabase
-        .from("donations")
-        .select("amount, created_at")
-        .gte("created_at", `${year}-01-01T00:00:00Z`)
-        .lt("created_at", `${year + 1}-01-01T00:00:00Z`);
+      let query = `SELECT amount, created_at FROM donations`;
 
       if (donorId) {
-        query = query.eq("donor_id", donorId);
+        query += ` WHERE donor_id = '${donorId}'`;
       }
 
-      const { data, error } = await query;
+      query += ` AND created_at >= '${year}-01-01T00:00:00Z' AND created_at < '${
+        year + 1
+      }-01-01T00:00:00Z'`;
 
-      if (error) {
-        return {
-          success: false,
-          error: new Error(`Failed to get monthly stats: ${error.message}`),
-        };
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      if (!result?.data || result.data.length === 0) {
+        return success([]);
       }
 
       const monthlyStats = Array.from({ length: 12 }, (_, index) => ({
@@ -396,15 +439,15 @@ export class SupabaseDonationRepository implements IDonationRepository {
         totalAmount: 0,
       }));
 
-      data.forEach((record) => {
+      result.data.forEach((record: any) => {
         const month = new Date(record.created_at).getMonth();
         monthlyStats[month].totalDonations++;
         monthlyStats[month].totalAmount += record.amount;
       });
 
-      return { success: true, data: monthlyStats };
+      return success(monthlyStats);
     } catch (error) {
-      return { success: false, error: error as Error };
+      return failure(handleMCPError(error, "get_monthly_stats"));
     }
   }
 
@@ -417,23 +460,24 @@ export class SupabaseDonationRepository implements IDonationRepository {
         year: number;
         totalDonations: number;
         totalAmount: number;
-      }>
+      }>,
+      MCPError
     >
   > {
     try {
-      let query = this.supabase.from("donations").select("amount, created_at");
+      let query = `SELECT amount, created_at FROM donations`;
 
       if (donorId) {
-        query = query.eq("donor_id", donorId);
+        query += ` WHERE donor_id = '${donorId}'`;
       }
 
-      const { data, error } = await query;
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
 
-      if (error) {
-        return {
-          success: false,
-          error: new Error(`Failed to get yearly stats: ${error.message}`),
-        };
+      if (!result?.data || result.data.length === 0) {
+        return success([]);
       }
 
       const yearlyStatsMap = new Map<
@@ -441,7 +485,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
         { totalDonations: number; totalAmount: number }
       >();
 
-      data.forEach((record) => {
+      result.data.forEach((record: any) => {
         const year = new Date(record.created_at).getFullYear();
         const existing = yearlyStatsMap.get(year) || {
           totalDonations: 0,
@@ -460,9 +504,9 @@ export class SupabaseDonationRepository implements IDonationRepository {
         }))
         .sort((a, b) => b.year - a.year);
 
-      return { success: true, data: yearlyStats };
+      return success(yearlyStats);
     } catch (error) {
-      return { success: false, error: error as Error };
+      return failure(handleMCPError(error, "get_yearly_stats"));
     }
   }
 
@@ -470,50 +514,49 @@ export class SupabaseDonationRepository implements IDonationRepository {
    * 대시보드 요약 정보 조회
    */
   async getDashboardSummary(donorId: UserId): Promise<
-    Result<{
-      totalDonated: number;
-      donationCount: number;
-      lastDonationDate?: Date;
-      favoriteCategory: DonationCategory;
-      yearlyTotal: number;
-      monthlyAverage: number;
-      rewardPointsEarned: number;
-    }>
+    Result<
+      {
+        totalDonated: number;
+        donationCount: number;
+        lastDonationDate?: Date;
+        favoriteCategory: DonationCategory;
+        yearlyTotal: number;
+        monthlyAverage: number;
+        rewardPointsEarned: number;
+      },
+      MCPError
+    >
   > {
     try {
-      const { data, error } = await this.supabase
-        .from("donations")
-        .select("amount, category, created_at")
-        .eq("donor_id", donorId)
-        .order("created_at", { ascending: false });
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: `
+          SELECT amount, category, created_at FROM donations
+          WHERE donor_id = '${donorId}'
+          ORDER BY created_at DESC
+          LIMIT 1
+        `,
+      });
 
-      if (error) {
-        return {
-          success: false,
-          error: new Error(`Failed to get dashboard summary: ${error.message}`),
-        };
+      if (!result?.data || result.data.length === 0) {
+        return success({
+          totalDonated: 0,
+          donationCount: 0,
+          favoriteCategory: DonationCategory.EDUCATION,
+          yearlyTotal: 0,
+          monthlyAverage: 0,
+          rewardPointsEarned: 0,
+        });
       }
 
-      if (data.length === 0) {
-        return {
-          success: true,
-          data: {
-            totalDonated: 0,
-            donationCount: 0,
-            favoriteCategory: DonationCategory.EDUCATION,
-            yearlyTotal: 0,
-            monthlyAverage: 0,
-            rewardPointsEarned: 0,
-          },
-        };
-      }
-
-      const totalDonated = data.reduce((sum, record) => sum + record.amount, 0);
-      const donationCount = data.length;
-      const lastDonationDate = new Date(data[0].created_at);
+      const totalDonated = result.data?.[0]?.amount || 0;
+      const donationCount = 1;
+      const lastDonationDate = result.data?.[0]?.created_at
+        ? new Date(result.data[0].created_at)
+        : undefined;
 
       // 가장 많이 기부한 카테고리 찾기
-      const categoryCount = data.reduce((acc, record) => {
+      const categoryCount = (result.data || []).reduce((acc, record) => {
         acc[record.category as DonationCategory] =
           (acc[record.category as DonationCategory] || 0) + 1;
         return acc;
@@ -528,9 +571,10 @@ export class SupabaseDonationRepository implements IDonationRepository {
 
       // 올해 기부 총액
       const currentYear = new Date().getFullYear();
-      const yearlyTotal = data
+      const yearlyTotal = (result.data || [])
         .filter(
-          (record) => new Date(record.created_at).getFullYear() === currentYear
+          (record: any) =>
+            new Date(record.created_at).getFullYear() === currentYear
         )
         .reduce((sum, record) => sum + record.amount, 0);
 
@@ -542,50 +586,44 @@ export class SupabaseDonationRepository implements IDonationRepository {
       // 보상 포인트 (임시 계산)
       const rewardPointsEarned = Math.floor(totalDonated * 0.01); // 1% 포인트 적립
 
-      return {
-        success: true,
-        data: {
-          totalDonated,
-          donationCount,
-          lastDonationDate,
-          favoriteCategory,
-          yearlyTotal,
-          monthlyAverage,
-          rewardPointsEarned,
-        },
-      };
+      return success({
+        totalDonated,
+        donationCount,
+        lastDonationDate,
+        favoriteCategory,
+        yearlyTotal,
+        monthlyAverage,
+        rewardPointsEarned,
+      });
     } catch (error) {
-      return { success: false, error: error as Error };
+      return failure(handleMCPError(error, "get_dashboard_summary"));
     }
   }
 
   /**
    * 기부 삭제
    */
-  async delete(id: DonationId): Promise<Result<void>> {
+  async delete(id: DonationId): Promise<Result<void, MCPError>> {
     try {
-      const { error } = await this.supabase
-        .from("donations")
-        .delete()
-        .eq("id", id.getValue());
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: `DELETE FROM donations WHERE id = '${id.getValue()}'`,
+      });
 
-      if (error) {
-        return {
-          success: false,
-          error: new Error(`Failed to delete donation: ${error.message}`),
-        };
+      if (!result?.data || result.data.length === 0) {
+        return success(undefined);
       }
 
-      return { success: true, data: undefined };
+      return success(undefined);
     } catch (error) {
-      return { success: false, error: error as Error };
+      return failure(handleMCPError(error, "delete_donation"));
     }
   }
+
   /**
    * 레코드를 엔티티로 변환
    */
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private mapRecordToDonation(_record: DonationRecord): Donation {
+  private mapRecordToDonation(record: any): Donation {
     // TODO: 실제 Donation 엔티티 생성자에 맞게 구현
     // 현재는 임시 구현
     throw new Error("mapRecordToDonation not implemented yet");
@@ -618,40 +656,43 @@ export class SupabaseDonationRepository implements IDonationRepository {
       updated_at: donation.getUpdatedAt().toISOString(),
     };
   }
+
   // TODO: 누락된 Repository 메서드들 구현
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async update(_donation: Donation): Promise<Result<void>> {
+  async update(_donation: Donation): Promise<Result<void, MCPError>> {
     throw new Error("update method not implemented yet");
   }
 
   async findByType(
     _type: DonationType,
     _pagination: PaginationParams
-  ): Promise<Result<PaginatedResult<Donation>>> {
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
     throw new Error("findByType method not implemented yet");
   }
 
   async findByInstituteId(
     _instituteId: InstituteId,
     _pagination?: PaginationParams
-  ): Promise<Result<PaginatedResult<Donation>>> {
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
     throw new Error("findByInstituteId method not implemented yet");
   }
 
   async findByOpinionLeaderId(
     _leaderId: OpinionLeaderId,
     _pagination?: PaginationParams
-  ): Promise<Result<PaginatedResult<Donation>>> {
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
     throw new Error("findByOpinionLeaderId method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async findRecurring(_donorId?: UserId): Promise<Result<Donation[]>> {
+  async findRecurring(
+    _donorId?: UserId
+  ): Promise<Result<Donation[], MCPError>> {
     throw new Error("findRecurring method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async findScheduled(_date: Date): Promise<Result<Donation[]>> {
+  async findScheduled(_date: Date): Promise<Result<Donation[], MCPError>> {
     throw new Error("findScheduled method not implemented yet");
   }
 
@@ -659,7 +700,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
     _startDate: Date,
     _endDate: Date,
     _pagination: PaginationParams
-  ): Promise<Result<PaginatedResult<Donation>>> {
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
     throw new Error("findByDateRange method not implemented yet");
   }
 
@@ -667,7 +708,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
     _donorId: UserId,
     _startDate?: Date,
     _endDate?: Date
-  ): Promise<Result<number>> {
+  ): Promise<Result<number, MCPError>> {
     throw new Error("getTotalByDonor method not implemented yet");
   }
 
@@ -681,7 +722,8 @@ export class SupabaseDonationRepository implements IDonationRepository {
         totalAmount: number;
         donationCount: number;
         rank: number;
-      }>
+      }>,
+      MCPError
     >
   > {
     throw new Error("getTopDonors method not implemented yet");
@@ -691,7 +733,10 @@ export class SupabaseDonationRepository implements IDonationRepository {
     _startDate?: Date,
     _endDate?: Date
   ): Promise<
-    Result<Record<DonationCategory, { count: number; totalAmount: number }>>
+    Result<
+      Record<DonationCategory, { count: number; totalAmount: number }>,
+      MCPError
+    >
   > {
     throw new Error("getCategoryStats method not implemented yet");
   }
@@ -699,11 +744,11 @@ export class SupabaseDonationRepository implements IDonationRepository {
   async getRecentActivity(
     _donorId: UserId,
     _limit: number
-  ): Promise<Result<Donation[]>> {
+  ): Promise<Result<Donation[], MCPError>> {
     throw new Error("getRecentActivity method not implemented yet");
   }
 
-  async findPendingProcessing(): Promise<Result<Donation[]>> {
+  async findPendingProcessing(): Promise<Result<Donation[], MCPError>> {
     throw new Error("findPendingProcessing method not implemented yet");
   }
 
@@ -711,17 +756,21 @@ export class SupabaseDonationRepository implements IDonationRepository {
     _donorId?: UserId,
     _startDate?: Date,
     _endDate?: Date
-  ): Promise<Result<number>> {
+  ): Promise<Result<number, MCPError>> {
     throw new Error("getCompletionRate method not implemented yet");
   }
 
   async getAverageAmount(
     _donorId?: UserId,
     _category?: DonationCategory
-  ): Promise<Result<number>> {
+  ): Promise<Result<number, MCPError>> {
     throw new Error("getAverageAmount method not implemented yet");
-  } // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async findExpiredScheduled(_date: Date): Promise<Result<Donation[]>> {
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async findExpiredScheduled(
+    _date: Date
+  ): Promise<Result<Donation[], MCPError>> {
     throw new Error("findExpiredScheduled method not implemented yet");
   }
 
@@ -730,45 +779,51 @@ export class SupabaseDonationRepository implements IDonationRepository {
   async findByCriteria(
     _criteria: DonationSearchCriteria,
     _pagination?: PaginationParams
-  ): Promise<Result<PaginatedResult<Donation>>> {
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
     throw new Error("findByCriteria method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async countByStatus(_status: DonationStatus): Promise<Result<number>> {
+  async countByStatus(
+    _status: DonationStatus
+  ): Promise<Result<number, MCPError>> {
     throw new Error("countByStatus method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async countByDonor(_donorId: UserId): Promise<Result<number>> {
+  async countByDonor(_donorId: UserId): Promise<Result<number, MCPError>> {
     throw new Error("countByDonor method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async getTotalAmountByDonor(_donorId: UserId): Promise<Result<number>> {
+  async getTotalAmountByDonor(
+    _donorId: UserId
+  ): Promise<Result<number, MCPError>> {
     throw new Error("getTotalAmountByDonor method not implemented yet");
   }
 
   async getTotalAmountByInstitute(
     _instituteId: InstituteId
-  ): Promise<Result<number>> {
+  ): Promise<Result<number, MCPError>> {
     throw new Error("getTotalAmountByInstitute method not implemented yet");
   }
 
   async getTotalAmountByOpinionLeader(
     _leaderId: OpinionLeaderId
-  ): Promise<Result<number>> {
+  ): Promise<Result<number, MCPError>> {
     throw new Error("getTotalAmountByOpinionLeader method not implemented yet");
   }
 
   async findRecurringDonations(
     _pagination?: PaginationParams
-  ): Promise<Result<PaginatedResult<Donation>>> {
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
     throw new Error("findRecurringDonations method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async findDueRecurringDonations(_dueDate: Date): Promise<Result<Donation[]>> {
+  async findDueRecurringDonations(
+    _dueDate: Date
+  ): Promise<Result<Donation[], MCPError>> {
     throw new Error("findDueRecurringDonations method not implemented yet");
   }
 
@@ -777,13 +832,16 @@ export class SupabaseDonationRepository implements IDonationRepository {
     _endDate: Date,
     _donorId?: UserId
   ): Promise<
-    Result<{
-      totalDonations: number;
-      totalAmount: number;
-      averageAmount: number;
-      donationsByCategory: Record<DonationCategory, number>;
-      donationsByType: Record<DonationType, number>;
-    }>
+    Result<
+      {
+        totalDonations: number;
+        totalAmount: number;
+        averageAmount: number;
+        donationsByCategory: Record<DonationCategory, number>;
+        donationsByType: Record<DonationType, number>;
+      },
+      MCPError
+    >
   > {
     throw new Error("getDonationStatsInPeriod method not implemented yet");
   }
@@ -798,7 +856,8 @@ export class SupabaseDonationRepository implements IDonationRepository {
         totalAmount: number;
         donorCount: number;
         donationCount: number;
-      }[]
+      }[],
+      MCPError
     >
   > {
     throw new Error("getPopularInstitutes method not implemented yet");
@@ -814,7 +873,8 @@ export class SupabaseDonationRepository implements IDonationRepository {
         totalAmount: number;
         supporterCount: number;
         supportCount: number;
-      }[]
+      }[],
+      MCPError
     >
   > {
     throw new Error("getPopularOpinionLeaders method not implemented yet");
