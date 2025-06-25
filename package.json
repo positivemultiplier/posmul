@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "generate-types": "tsx scripts/generate-types-mcp.ts",
-    "prebuild": "npm run generate-types"
+    "gen:types": "tsx C:/G/mcp-automation/universal-mcp-automation.ts batch posmul",
+    "prebuild": "npm run gen:types"
   },
   "dependencies": {
     "@radix-ui/react-dialog": "^1.1.14",
