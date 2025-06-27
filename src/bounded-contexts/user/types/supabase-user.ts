@@ -1,12 +1,12 @@
 /**
  * USER Domain - Supabase 타입
- * 생성 시간: 2025-06-25T09:29:05.109Z
+ * 생성 시간: 2025-06-26T14:27:52.839Z
  * 도메인: user
  * 
  * 🚀 Universal MCP Automation (Standalone)으로 생성됨
  */
 // 📊 도메인별 테이블 통계:
-//   user: 102개 관련 테이블
+//   user: 104개 관련 테이블
 //
 // 🔄 자동 업데이트: npx tsx C:\G\mcp-automation\universal-mcp-automation.ts generate user
 // 🛠️ 수동 적용: 프로젝트별 스크립트 실행
@@ -2343,10 +2343,23 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      auth_security_metrics: {
+        Row: {
+          metric: string | null
+          value: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      get_user_mfa_status: {
+        Args: { user_uuid: string }
+        Returns: boolean
+      }
+      is_secure_session: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

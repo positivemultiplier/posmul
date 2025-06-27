@@ -293,10 +293,7 @@ graph TD
     E[Low Impact<br/>Low Difficulty] --> F[Fill-ins]
     G[Low Impact<br/>High Difficulty] --> H[Avoid]
 
-    style A fill:#90EE90
-    style C fill:#FFB6C1
-    style E fill:#F0E68C
-    style G fill:#FFA07A
+
 ```
 
 **❌ Prohibited Patterns:**

@@ -255,55 +255,47 @@ graph TD
     D --> H[2+ Charts Required]
     E --> I[2+ Charts Required]
 
-    F --> J[Pie + Graph + Matrix + Flow + Timeline]
-    G --> K[Matrix + Dependencies + Gantt + Completion]
-    H --> L[Learning Flow + Progress]
-    I --> M[Problem Flow + Comparison]
+    F --> J["Safe Charts:<br/>Pie, Graph, Flow, Sequence"]
+    G --> K["Safe Charts:<br/>Flow, Graph, Pie"]
+    H --> L["Safe Charts:<br/>Flow, Sequence"]
+    I --> M["Safe Charts:<br/>Flow, Graph"]
 ```
 
-#### 🔧 **Mermaid Usage Standards**
+#### 🔧 **Mermaid Usage Standards (Updated)**
 
-**✅ Recommended Chart Types:**
+To prevent rendering errors and ensure consistency, all Mermaid diagrams must adhere to the following principles.
 
-1. **Pie Chart** - Show ratios and distributions
+**1. Simplicity First (단순성 최우선)**
+   - Instead of large, complex diagrams, break down concepts into multiple, simpler charts.
+   - This improves readability and reduces the chance of syntax errors.
+   - **Good**: Use several simple `flowchart`, `graph TD`, or `sequenceDiagram` charts.
+   - **Bad**: A single, monolithic diagram trying to show everything.
 
-```mermaid
-pie title Implementation Status
-    "Complete" : 30
-    "In Progress" : 25
-    "Not Started" : 45
-```
+**2. Safe Chart-Type Usage (안전한 차트 유형 사용)**
+   - To avoid rendering issues, strictly use the following chart types:
+     - `flowchart`
+     - `graph TD` (and its variations like `LR`)
+     - `sequenceDiagram`
+     - `pie`
+   - These types are well-supported and handle various content gracefully.
 
-2. **Flowchart** - Process and workflow
+**3. Korean Character Handling (한국어 처리 원칙)**
+   - Use English or kebab-case for node IDs.
+   - Use Korean freely within the node labels (the text in quotes).
+   - **Good**: `graph TD; A["데이터베이스 설계"] --> B["API 구현"];`
+   - **Bad**: `graph TD; [데이터베이스 설계] --> [API 구현];`
 
-```mermaid
-flowchart TD
-    A[Start] --> B[Process]
-    B --> C{Decision}
-    C -->|Yes| D[Success]
-    C -->|No| E[Retry]
-```
+**4. Minimal Styling (최소한의 스타일링)**
+   - Use Mermaid's default styling.
+   - Avoid colors unless absolutely necessary for distinction. If needed, use low-saturation, muted colors.
+   - **Good**: `graph TD; A --> B;`
+   - **Bad**: `graph TD; A --> B; style A fill:#ff0000,stroke:#333,stroke-width:4px`
 
-3. **Graph TD** - Priority visualization
-
-```mermaid
-graph TD
-    A[High Impact<br/>Low Difficulty] --> B[Quick Wins]
-    C[High Impact<br/>High Difficulty] --> D[Major Projects]
-    E[Low Impact<br/>Low Difficulty] --> F[Fill-ins]
-    G[Low Impact<br/>High Difficulty] --> H[Avoid]
-
-    style A fill:#90EE90
-    style C fill:#FFB6C1
-    style E fill:#F0E68C
-    style G fill:#FFA07A
-```
-
-**❌ Prohibited Patterns:**
-
-- Complex Korean-heavy diagrams
-- High saturation/brightness colors (only muted colors for special cases)
-- Charts without rendering verification
+**5. Prohibited Patterns (금지 패턴)**
+   - **`quadrantChart`**: Do not use. It has complex syntax and frequent rendering issues.
+   - **Complex `gantt` and `timeline` charts**: High risk of error with Korean text. Use simpler alternatives like tables or lists.
+   - **Unverified code**: All diagrams must be tested in the [Mermaid Live Editor](https://mermaid.live) before being included.
+   - **Long sections without visuals**: No more than 2 consecutive text-heavy sections without a supporting diagram.
 
 #### 🎨 **Minimal Styling Guidelines**
 

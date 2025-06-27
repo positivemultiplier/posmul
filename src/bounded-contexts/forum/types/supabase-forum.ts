@@ -1,6 +1,6 @@
 /**
  * FORUM Domain - Supabase 타입
- * 생성 시간: 2025-06-25T09:29:05.106Z
+ * 생성 시간: 2025-06-26T14:27:52.836Z
  * 도메인: forum
  * 
  * 🚀 Universal MCP Automation (Standalone)으로 생성됨
@@ -2343,10 +2343,23 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      auth_security_metrics: {
+        Row: {
+          metric: string | null
+          value: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
-      [_ in never]: never
+      get_user_mfa_status: {
+        Args: { user_uuid: string }
+        Returns: boolean
+      }
+      is_secure_session: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

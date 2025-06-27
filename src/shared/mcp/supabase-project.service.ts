@@ -1,25 +1,23 @@
-import { SupabaseProjectId } from "@/shared/types/branded-types";
-
 export class SupabaseProjectService {
   private static instance: SupabaseProjectService;
-  private projectId: SupabaseProjectId;
+  private readonly projectId: string;
 
   private constructor() {
-    this.projectId = (process.env.SUPABASE_PROJECT_ID ||
-      "fabyagohqqnusmnwekuc") as SupabaseProjectId;
+    // TODO: 실제로는 process.env 등에서 가져와야 함
+    this.projectId = "fabyagohqqnusmnwekuc";
     if (!this.projectId) {
-      throw new Error("SUPABASE_PROJECT_ID environment variable is required");
+      throw new Error("SUPABASE_PROJECT_ID is required");
     }
   }
 
-  static getInstance(): SupabaseProjectService {
+  public static getInstance(): SupabaseProjectService {
     if (!SupabaseProjectService.instance) {
       SupabaseProjectService.instance = new SupabaseProjectService();
     }
     return SupabaseProjectService.instance;
   }
 
-  getProjectId(): SupabaseProjectId {
+  public getProjectId(): string {
     return this.projectId;
   }
 }
