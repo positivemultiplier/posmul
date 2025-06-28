@@ -22,7 +22,7 @@ import {
   failure,
   success,
 } from "@/shared/types/economic-system";
-import { Database } from "@/shared/types/supabase-generated";
+import type { Database } from "@/bounded-contexts/prediction/types/supabase-prediction";
 import {
   GameConfiguration,
   Prediction,
@@ -42,8 +42,8 @@ declare const mcp_supabase_execute_sql: (params: {
 }) => Promise<{ data: any[] | null; error: any | null }>;
 
 type PredictionGameRow =
-  Database["public"]["Tables"]["prediction_games"]["Row"];
-type PredictionRow = Database["public"]["Tables"]["predictions"]["Row"];
+  Database["prediction"]["Tables"]["prediction_games"]["Row"];
+type PredictionRow = Database["prediction"]["Tables"]["predictions"]["Row"];
 
 export class SupabasePredictionGameRepository
   implements IPredictionGameRepository

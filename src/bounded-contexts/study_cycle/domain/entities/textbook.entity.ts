@@ -1,6 +1,7 @@
-import { Result, success, failure } from "@/shared/types";
-import { BusinessRuleError, ValidationError } from "@/shared/errors";
-import { BaseEntity } from "@/shared/domain/base-entity";
+import { Result, success, failure } from "../../../../shared/types";
+import { BusinessRuleError, ValidationError } from "../../../../shared/errors";
+import { BaseEntity } from "../../../../shared/domain/base-entity";
+import { Tables, TablesInsert, TablesUpdate } from "../../types/supabase-study_cycle";
 
 export type TextbookId = string & { readonly __brand: 'TextbookId' };
 

@@ -25,6 +25,13 @@ export class DomainError extends Error {
   }
 }
 
+export class NotFoundError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NotFoundError";
+  }
+}
+
 export type Result<T, E> =
   | { success: true; data: T }
   | { success: false; error: E };

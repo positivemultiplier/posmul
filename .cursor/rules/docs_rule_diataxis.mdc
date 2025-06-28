@@ -3,6 +3,24 @@ description: 보고서, report, 제출, 분석, docs, 문서
 globs: 
 alwaysApply: false
 ---
+## 🤖 AI 어시스턴트 문서 생성 워크플로우 (필수 준수)
+
+'문서', '보고서', '분석' 등 결과물 작성을 요청받았을 때, AI는 **예외 없이** 다음 절차를 따라야 한다:
+
+1.  사용자의 문서 작성 요청을 인지한다.
+2.  "프로젝트 규칙에 따라 Diátaxis 프레임워크를 적용하여 문서를 작성해야 합니다."라고 명확히 밝힌다.
+3.  사용자에게 다음 목록에서 생성할 **문서의 유형을 명확하게 선택**하도록 요청한다:
+    -   `Tutorial` (튜토리얼)
+    -   `How-to Guide` (실무 가이드)
+    -   `Reference` (참조 자료)
+    -   `Explanation` (개념 설명)
+    -   `Analysis Report` (분석 보고서)
+    -   `Task List` (작업 목록)
+    -   `Project Plan` (프로젝트 계획)
+4.  **절대로 유형을 추측하지 않고**, 사용자의 명시적인 확인을 기다린다.
+5.  유형이 확정되면, 이 규칙에 명시된 해당 유형의 템플릿과 패턴에 따라 문서 작성을 진행한다.
+
+---
 
 # 📖 Diataxis 문서 시스템 규칙
 
@@ -19,21 +37,28 @@ alwaysApply: false
 
 ## 📅 날짜 관리 규칙
 
-### 🕐 현재 날짜 확인 방법
+### 🕐 현재 날짜 및 시간 확인 방법
 
-문서 작성 시 현재 날짜가 필요할 때 다음 PowerShell 명령어를 사용하세요:
+문서 작성 시 정확한 날짜와 시간이 필요할 때 다음 PowerShell 명령어를 사용하세요.
 
+**기본 형식 (날짜만):**
 ```powershell
 # 현재 날짜 확인 (YYYY-MM-DD 형식)
 Get-Date -Format "yyyy-MM-dd"
+```
 
-# 결과 예시: 2025-06-22
+**확장 형식 (시/분/초 포함):**
+```powershell
+# 현재 날짜 및 시간 확인 (YYYY-MM-DD HH:mm:ss 형식)
+Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+
+# 결과 예시: 2025-06-27 14:35:10
 ```
 
 ### 📝 템플릿 사용 방법
 
 1. **템플릿 복사**: 필요한 템플릿을 `docs/diataxis_template/templates/`에서 복사
-2. **날짜 확인**: 위의 PowerShell 명령어로 현재 날짜 확인
+2. **날짜 확인**: 위의 PowerShell 명령어로 현재 날짜와 시간 확인
 3. **날짜 치환**: 템플릿의 `YYYY-MM-DD`를 현재 날짜로 변경
 4. **메타데이터 업데이트**: `last_updated`, `analysis_date` 등 날짜 필드 수정
 
@@ -54,18 +79,17 @@ domain: "[domain-name]"
 ---
 type: task-list
 title: "Donation Task List"
-last_updated: "2025-06-22"
+last_updated: "2025-06-27 14:35:10"
 domain: "donation"
 ---
 ```
 
-### ⚡ 빠른 날짜 복사
+### ⚡ 빠른 날짜 및 시간 복사
 
-날짜를 클립보드에 복사하려면:
-
+전체 날짜와 시간을 클립보드에 복사하려면 이 명령어를 사용하세요:
 ```powershell
-# 현재 날짜를 클립보드에 복사
-Get-Date -Format "yyyy-MM-dd" | Set-Clipboard
+# 현재 날짜와 시간을 클립보드에 복사
+Get-Date -Format "yyyy-MM-dd HH:mm:ss" | Set-Clipboard
 
 # 이후 Ctrl+V로 붙여넣기 가능
 ```

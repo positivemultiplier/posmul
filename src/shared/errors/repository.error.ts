@@ -1,11 +1,12 @@
-export class RepositoryError extends Error {
-  public readonly cause?: Error;
+/**
+ * Repository Error
+ * 
+ * Represents errors that occur in repository operations.
+ */
 
-  constructor(message: string, cause?: any) {
+export class RepositoryError extends Error {
+  constructor(message: string, public readonly cause?: unknown) {
     super(message);
     this.name = "RepositoryError";
-    if (cause instanceof Error) {
-      this.cause = cause;
-    }
   }
 }

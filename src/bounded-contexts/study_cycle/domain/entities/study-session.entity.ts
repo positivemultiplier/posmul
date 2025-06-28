@@ -1,6 +1,6 @@
-import { Result, success, failure } from "@/shared/types";
-import { DomainError } from "@/shared/errors";
-import { BaseEntity } from "@/shared/domain/base-entity";
+import { Result, success, failure } from "../../../../shared/types";
+import { DomainError } from "../../../../shared/errors";
+import { BaseEntity } from "../../../../shared/domain/base-entity";
 import { TextbookId } from "./textbook.entity";
 import { Tables, TablesInsert, TablesUpdate } from "../../types/supabase-study_cycle";
 
@@ -359,12 +359,10 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     return Math.floor((this.props.durationSeconds || 0) / 60);
   }
 
-  /**
-   * Private helper to calculate average rating
-   */
-  private calculateAverageRating(ratings: number[]): number {
+  public calculateAverageRating(ratings: number[]): number {
     if (ratings.length === 0) return 0;
-    return ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+    const sum = ratings.reduce((acc, rating) => acc + rating, 0);
+    return sum / ratings.length;
   }
 
   // Getters for accessing properties
@@ -378,6 +376,9 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
   public get durationSeconds(): number | undefined { return this.props.durationSeconds; }
   public get pagesCompleted(): number { return this.props.pagesCompleted; }
   public get notesCount(): number { return this.props.notesCount; }
+  public get difficultyRatings(): number[] { return [...this.props.difficultyRatings]; }
+  public get comprehensionRatings(): number[] { return [...this.props.comprehensionRatings]; }
   public get createdAt(): Date { return this.props.createdAt; }
   public get updatedAt(): Date { return this.props.updatedAt; }
+
 } 

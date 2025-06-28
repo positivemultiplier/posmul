@@ -3,8 +3,10 @@ import { TextbookId } from "@/bounded-contexts/study_cycle/domain/entities/textb
 import UpdateTextbookForm from "./update-form";
 import DeleteTextbookButton from "./delete-button";
 
-export default async function TextbookDetailPage({ params }: { params: { id: TextbookId } }) {
-    const textbookResult = await getTextbookAction(params.id);
+export default async function TextbookDetailPage({ params }: any) {
+    const { id } = await params;
+    const textbookId = id as TextbookId;
+    const textbookResult = await getTextbookAction(textbookId);
 
     if (!textbookResult.success || !textbookResult.data) {
         return (

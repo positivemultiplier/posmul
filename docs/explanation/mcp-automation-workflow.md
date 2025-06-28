@@ -28,19 +28,19 @@ Universal MCP Automation 시스템은 특정 프로젝트에 종속되지 않고
 ```mermaid
 graph LR
     subgraph "외부 시스템"
-        A[Supabase DB]
+        A["Supabase DB"]
     end
     subgraph "Universal MCP Automation"
-        B[Automation Script]
-        C[Project Configs]
+        B["Automation Script"]
+        C["Project Configs"]
     end
     subgraph "결과물"
-        D[TypeScript 타입 파일]
+        D["TypeScript 타입 파일"]
     end
     
-    A -- 스키마 정보 --> B;
-    C -- 프로젝트 설정 --> B;
-    B -- 생성 --> D;
+    A -- "스키마 정보" --> B;
+    C -- "프로젝트 설정" --> B;
+    B -- "생성" --> D;
 ```
 
 ## 2. 핵심 실행 흐름
@@ -49,17 +49,14 @@ graph LR
 
 ```mermaid
 flowchart TD
-    A["사용자: `npx tsx universal-mcp-automation.ts generate posmul` 실행"] --> B{"1. Supabase 인증 확인"};
-    B -- "인증됨 (npx supabase login)" --> C[2. `config.ts`에서 'posmul' 설정 로드];
-    C --> D["3. 설정 기반으로 `Supabase CLI` 명령어 생성<br/>`--schema public,prediction,...`"];
-    D --> E[4. 생성된 명령어를 `child_process`로 실행];
-    E --> F[5. Supabase로부터 타입 정의 수신];
-    F --> G["6. 수신된 내용을 `posmul` 프로젝트의<br/>`outputPath`에 파일로 저장"];
-    G --> H[✅ 타입 생성 완료];
+    A["💡 사용자: `npx tsx universal-mcp-automation.ts generate posmul` 실행"] --> B{"💡 1. Supabase 인증 확인"};
+    B -- "인증됨 (npx supabase login)" --> C["💡 2. `config.ts`에서 'posmul' 설정 로드"];
+    C --> D["💡 3. 설정 기반으로 `Supabase CLI` 명령어 생성<br/>`--schema public,prediction,...`"];
+    D --> E["💡 4. 생성된 명령어를 `child_process`로 실행"];
+    E --> F["💡 5. Supabase로부터 타입 정의 수신"];
+    F --> G["💡 6. 수신된 내용을 `posmul` 프로젝트의<br/>`outputPath`에 파일로 저장"];
+    G --> H["✅ 타입 생성 완료"];
     B -- "인증 안됨" --> I["❌ 에러 발생: Unauthorized"];
-
-    style H fill:#4CAF50
-    style I fill:#FF5722
 ```
 
 1.  **인증 확인**: 스크립트는 `npx supabase login`을 통해 로컬 환경에 저장된 인증 토큰을 사용하여 Supabase에 접근합니다. 토큰이 없거나 만료되면 `Unauthorized` 오류가 발생합니다.
@@ -83,20 +80,11 @@ flowchart TD
 
 ```mermaid
 graph TD
-    A["`npm run build` 실행"] --> B["TypeScript Compiler (`tsc`) 호출"];
-    B --> C["`universal-mcp-automation.ts` 파일 분석"];
-    C --> D["TypeScript 코드를<br/>JavaScript 코드로 변환 (컴파일)"];
-    D --> E["결과물을 `dist` 디렉터리에 저장"];
-    E --> F["완료: 배포 가능한<br/>`universal-mcp-automation.js` 파일 생성"];
-    
-    subgraph "소스 코드"
-        style C fill:#E3F2FD
-        C
-    end
-    subgraph "빌드 결과물"
-        style E fill:#C8E6C9
-        E
-    end
+    A["💡 npm run build 실행"] --> B["💡 TypeScript Compiler (`tsc`) 호출"];
+    B --> C["💡 `universal-mcp-automation.ts` 파일 분석"];
+    C --> D["💡 TypeScript 코드를<br/>JavaScript 코드로 변환 (컴파일)"];
+    D --> E["💡 결과물을 `dist` 디렉터리에 저장"];
+    E --> F["💡 완료: 배포 가능한<br/>`universal-mcp-automation.js` 파일 생성"];
 ```
 
 - **핵심 역할**: 현재 `.ts` (TypeScript) 파일은 `tsx`와 같은 실행기를 통해서만 실행할 수 있습니다. `npm run build`는 `tsc`를 이용해 이 파일을 순수 JavaScript 파일로 컴파일하여, Node.js가 설치된 어떤 환경에서든 `node dist/universal-mcp-automation.js` 명령어로 직접 실행할 수 있게 만듭니다.
@@ -117,19 +105,20 @@ graph TD
 ```mermaid
 graph TD
     subgraph "AI Agent"
-        A["`mcp_supabase_...` 호출"]
+        A["💡 mcp_supabase_... 호출"]
     end
     
     subgraph "이상적인 자동화 시스템"
-        B[MCP 서버] --> C[Universal Automation 호출]
-        C --> D[자동 인증 및 실행]
+        B["💡 MCP 서버"]
+        C["💡 Universal Automation 호출"]
+        D["💡 자동 인증 및 실행"]
     end
 
     subgraph "결과"
-        E[타입 파일 자동 생성]
+        E["💡 타입 파일 자동 생성"]
     end
 
-    A --> B --> E
+    A -- "요청" --> B -- "전달" --> C -- "실행" --> D -- "생성" --> E
 ```
 
 이 구조가 완성되면, 개발자는 스키마 변경 후 타입 생성을 전혀 신경 쓸 필요 없이 AI Agent와의 대화를 통해 모든 것을 완료할 수 있게 될 것입니다. 이 내용은 `README.md`의 개발 계획에도 반영되어 있습니다. 

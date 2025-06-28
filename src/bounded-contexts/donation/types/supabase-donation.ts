@@ -1,6 +1,6 @@
 /**
  * DONATION Domain - Supabase 타입
- * 생성 시간: 2025-06-26T14:27:52.833Z
+ * 생성 시간: 2025-06-27T14:04:14.752Z
  * 도메인: donation
  * 
  * 🚀 Universal MCP Automation (Standalone)으로 생성됨
@@ -2179,6 +2179,134 @@ export type Database = {
             columns: ["chapter_id"]
             isOneToOne: false
             referencedRelation: "sc_chapters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sc_reading_progress: {
+        Row: {
+          chapter_id: string
+          completed_at: string | null
+          comprehension_rating: number | null
+          created_at: string
+          difficulty_rating: number | null
+          id: string
+          is_completed: boolean
+          notes: string | null
+          pages_read: number
+          reading_id: string
+          time_spent_minutes: number
+          updated_at: string
+        }
+        Insert: {
+          chapter_id: string
+          completed_at?: string | null
+          comprehension_rating?: number | null
+          created_at?: string
+          difficulty_rating?: number | null
+          id?: string
+          is_completed?: boolean
+          notes?: string | null
+          pages_read?: number
+          reading_id: string
+          time_spent_minutes?: number
+          updated_at?: string
+        }
+        Update: {
+          chapter_id?: string
+          completed_at?: string | null
+          comprehension_rating?: number | null
+          created_at?: string
+          difficulty_rating?: number | null
+          id?: string
+          is_completed?: boolean
+          notes?: string | null
+          pages_read?: number
+          reading_id?: string
+          time_spent_minutes?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sc_reading_progress_chapter_id_fkey"
+            columns: ["chapter_id"]
+            isOneToOne: false
+            referencedRelation: "sc_chapters"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sc_reading_progress_reading_id_fkey"
+            columns: ["reading_id"]
+            isOneToOne: false
+            referencedRelation: "sc_readings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sc_readings: {
+        Row: {
+          completed_at: string | null
+          completion_deadline: string | null
+          created_at: string
+          daily_pages_target: number | null
+          id: string
+          last_accessed_at: string | null
+          notes: string | null
+          round: number
+          started_at: string | null
+          status: string
+          textbook_id: string
+          total_pages_read: number
+          total_time_minutes: number
+          updated_at: string
+          user_id: string
+          version: number
+          weekly_hours_target: number | null
+        }
+        Insert: {
+          completed_at?: string | null
+          completion_deadline?: string | null
+          created_at?: string
+          daily_pages_target?: number | null
+          id?: string
+          last_accessed_at?: string | null
+          notes?: string | null
+          round: number
+          started_at?: string | null
+          status?: string
+          textbook_id: string
+          total_pages_read?: number
+          total_time_minutes?: number
+          updated_at?: string
+          user_id: string
+          version?: number
+          weekly_hours_target?: number | null
+        }
+        Update: {
+          completed_at?: string | null
+          completion_deadline?: string | null
+          created_at?: string
+          daily_pages_target?: number | null
+          id?: string
+          last_accessed_at?: string | null
+          notes?: string | null
+          round?: number
+          started_at?: string | null
+          status?: string
+          textbook_id?: string
+          total_pages_read?: number
+          total_time_minutes?: number
+          updated_at?: string
+          user_id?: string
+          version?: number
+          weekly_hours_target?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sc_readings_textbook_id_fkey"
+            columns: ["textbook_id"]
+            isOneToOne: false
+            referencedRelation: "sc_textbooks"
             referencedColumns: ["id"]
           },
         ]

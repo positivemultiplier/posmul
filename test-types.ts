@@ -8,11 +8,11 @@ import {
   Enums,
   Tables,
   TablesInsert,
-} from "./src/shared/types/supabase-generated";
+} from "./src/bounded-contexts/prediction/types/supabase-prediction";
 
-// 🔥 Prediction Game 타입 테스트
-type PredictionGame = Tables<"prediction_games">;
-type PredictionGameInsert = TablesInsert<"prediction_games">;
+// 🔥 Prediction Game 타입 테스트 (prediction 스키마 지정)
+type PredictionGame = Tables<{ schema: "prediction" }, "prediction_games">;
+type PredictionGameInsert = TablesInsert<{ schema: "prediction" }, "prediction_games">;
 
 // 🔥 Enum 타입 테스트
 type GameStatus = Enums<"game_status">;
