@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "test": "jest",
     "gen:types": "tsx C:/G/mcp-automation/universal-mcp-automation.ts batch posmul",
     "prebuild": "npm run gen:types"
   },
