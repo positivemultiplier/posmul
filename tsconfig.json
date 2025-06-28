@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "es5",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "preserve",
+    "incremental": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@posmul/shared-types": ["packages/shared-types/src/index.ts"],
+      "@posmul/shared-ui": ["packages/shared-ui/src/index.ts"],
+      "@posmul/shared-auth": ["packages/shared-auth/src/index.ts"]
+    }
+  },
+  "exclude": ["node_modules"]
+}

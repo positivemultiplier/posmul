@@ -2,7 +2,7 @@
  * 도메인 이벤트 기본 인터페이스 및 구현
  */
 
-import { DomainEvent } from '../types/common';
+import { DomainEvent } from "@posmul/shared-types";
 
 // 기본 도메인 이벤트 추상 클래스
 export abstract class BaseDomainEvent implements DomainEvent {
@@ -48,11 +48,9 @@ export class InMemoryEventBus implements EventBus {
 
   async publish(event: DomainEvent): Promise<void> {
     const eventHandlers = this.handlers.get(event.type) || [];
-    
+
     // 모든 핸들러를 병렬로 실행
-    await Promise.all(
-      eventHandlers.map(handler => handler.handle(event))
-    );
+    await Promise.all(eventHandlers.map((handler) => handler.handle(event)));
   }
 
   subscribe<T extends DomainEvent>(
@@ -62,7 +60,7 @@ export class InMemoryEventBus implements EventBus {
     if (!this.handlers.has(eventType)) {
       this.handlers.set(eventType, []);
     }
-    
+
     this.handlers.get(eventType)!.push(handler as EventHandler<DomainEvent>);
   }
 }
@@ -85,26 +83,26 @@ export const subscribeToEvent = <T extends DomainEvent>(
 
 // 일반적인 도메인 이벤트 타입들
 export const EventTypes = {
-  USER_CREATED: 'USER_CREATED',
-  USER_UPDATED: 'USER_UPDATED',
-  USER_DELETED: 'USER_DELETED',
-  
-  PREDICTION_GAME_CREATED: 'PREDICTION_GAME_CREATED',
-  PREDICTION_GAME_STARTED: 'PREDICTION_GAME_STARTED',
-  PREDICTION_GAME_ENDED: 'PREDICTION_GAME_ENDED',
-  
-  PREDICTION_CREATED: 'PREDICTION_CREATED',
-  PREDICTION_UPDATED: 'PREDICTION_UPDATED',
-  
-  POINTS_EARNED: 'POINTS_EARNED',
-  POINTS_SPENT: 'POINTS_SPENT',
-  POINTS_TRANSFERRED: 'POINTS_TRANSFERRED',
-  
-  LOCAL_LEAGUE_TRANSACTION: 'LOCAL_LEAGUE_TRANSACTION',
-  MAJOR_LEAGUE_VIEW: 'MAJOR_LEAGUE_VIEW',
-  
-  STORE_REGISTERED: 'STORE_REGISTERED',
-  STORE_UPDATED: 'STORE_UPDATED',
+  USER_CREATED: "USER_CREATED",
+  USER_UPDATED: "USER_UPDATED",
+  USER_DELETED: "USER_DELETED",
+
+  PREDICTION_GAME_CREATED: "PREDICTION_GAME_CREATED",
+  PREDICTION_GAME_STARTED: "PREDICTION_GAME_STARTED",
+  PREDICTION_GAME_ENDED: "PREDICTION_GAME_ENDED",
+
+  PREDICTION_CREATED: "PREDICTION_CREATED",
+  PREDICTION_UPDATED: "PREDICTION_UPDATED",
+
+  POINTS_EARNED: "POINTS_EARNED",
+  POINTS_SPENT: "POINTS_SPENT",
+  POINTS_TRANSFERRED: "POINTS_TRANSFERRED",
+
+  LOCAL_LEAGUE_TRANSACTION: "LOCAL_LEAGUE_TRANSACTION",
+  MAJOR_LEAGUE_VIEW: "MAJOR_LEAGUE_VIEW",
+
+  STORE_REGISTERED: "STORE_REGISTERED",
+  STORE_UPDATED: "STORE_UPDATED",
 } as const;
 
 // 구체적인 도메인 이벤트 예시들
@@ -116,10 +114,10 @@ export class UserCreatedEvent extends BaseDomainEvent {
 
 export class PointsEarnedEvent extends BaseDomainEvent {
   constructor(
-    userId: string, 
-    pointData: { 
-      amount: number; 
-      type: 'PMC' | 'PMP'; 
+    userId: string,
+    pointData: {
+      amount: number;
+      type: "PMC" | "PMP";
       source: string;
       metadata?: Record<string, unknown>;
     }

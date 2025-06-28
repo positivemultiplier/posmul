@@ -10,22 +10,19 @@
 
 import {
   AccuracyScore,
-  PMC,
-  PMP,
+  DomainError,
+  PmpAmount,
   PredictionGameId,
   PredictionId,
-  UserId,
-  createPredictionId,
-} from "@/shared/types/branded-types";
-import {
-  DomainError,
-  PredictionResult,
+  PredictionResult as PredictionResultType,
   Result,
   Timestamps,
+  UserId,
   ValidationError,
+  createPredictionId,
   failure,
   success,
-} from "@/shared/types/economic-system";
+} from "@posmul/shared-types";
 
 /**
  * 예측 생성을 위한 입력 데이터 인터페이스
@@ -34,7 +31,7 @@ export interface CreatePredictionInput {
   readonly userId: UserId;
   readonly gameId: PredictionGameId;
   readonly selectedOptionId: string;
-  readonly stake: PMP;
+  readonly stake: PmpAmount;
   readonly confidence: number; // 0-1 범위
   readonly reasoning?: string;
 }
@@ -43,9 +40,9 @@ export interface CreatePredictionInput {
  * 예측 결과 설정을 위한 입력 데이터 인터페이스
  */
 export interface SetPredictionResultInput {
-  readonly result: PredictionResult;
+  readonly result: PredictionResultType;
   readonly accuracyScore: AccuracyScore;
-  readonly reward: PMC;
+  readonly reward: PmpAmount;
 }
 
 /**
@@ -55,11 +52,11 @@ export interface PredictionPerformance {
   readonly predictionId: PredictionId;
   readonly userId: UserId;
   readonly gameId: PredictionGameId;
-  readonly stake: PMP;
+  readonly stake: PmpAmount;
   readonly confidence: number;
-  readonly result?: PredictionResult;
+  readonly result?: PredictionResultType;
   readonly accuracyScore?: AccuracyScore;
-  readonly reward?: PMC;
+  readonly reward?: PmpAmount;
   readonly riskAdjustedReturn?: number; // 위험 조정 수익률
   readonly informationValue?: number; // 정보 가치
 }
@@ -73,12 +70,12 @@ export class Prediction {
     private readonly _userId: UserId,
     private readonly _gameId: PredictionGameId,
     private readonly _selectedOptionId: string,
-    private readonly _stake: PMP,
+    private readonly _stake: PmpAmount,
     private readonly _confidence: number, // 0-1 범위
     private readonly _reasoning?: string,
-    private _result?: PredictionResult,
+    private _result?: PredictionResultType,
     private _accuracyScore?: AccuracyScore,
-    private _reward?: PMC,
+    private _reward?: PmpAmount,
     private readonly _timestamps: Timestamps = {
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -122,12 +119,12 @@ export class Prediction {
     userId: UserId,
     gameId: PredictionGameId,
     selectedOptionId: string,
-    stake: PMP,
+    stake: PmpAmount,
     confidence: number,
     reasoning: string | undefined,
-    result: PredictionResult | undefined,
+    result: PredictionResultType | undefined,
     accuracyScore: AccuracyScore | undefined,
-    reward: PMC | undefined,
+    reward: PmpAmount | undefined,
     timestamps: Timestamps
   ): Prediction {
     return new Prediction(
@@ -235,7 +232,7 @@ export class Prediction {
       return undefined;
     }
 
-    return this._result === PredictionResult.CORRECT;
+    return this._result === PredictionResultType.CORRECT;
   }
 
   /**
@@ -255,7 +252,7 @@ export class Prediction {
   /**
    * 대형 스테이크인지 확인 (임계값 비교)
    */
-  public isLargeStake(threshold: PMP): boolean {
+  public isLargeStake(threshold: PmpAmount): boolean {
     return this._stake >= threshold;
   }
 
@@ -378,7 +375,7 @@ export class Prediction {
   public get selectedOptionId(): string {
     return this._selectedOptionId;
   }
-  public get stake(): PMP {
+  public get stake(): PmpAmount {
     return this._stake;
   }
   public get confidence(): number {
@@ -387,13 +384,13 @@ export class Prediction {
   public get reasoning(): string | undefined {
     return this._reasoning;
   }
-  public get result(): PredictionResult | undefined {
+  public get result(): PredictionResultType | undefined {
     return this._result;
   }
   public get accuracyScore(): AccuracyScore | undefined {
     return this._accuracyScore;
   }
-  public get reward(): PMC | undefined {
+  public get reward(): PmpAmount | undefined {
     return this._reward;
   }
   public get timestamps(): Timestamps {

@@ -30,6 +30,8 @@
     "zustand": "^5.0.5"
   },
   "devDependencies": {
+    "@posmul/shared-types": "workspace:*",
+    "@posmul/shared-ui": "workspace:*",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.6.3",

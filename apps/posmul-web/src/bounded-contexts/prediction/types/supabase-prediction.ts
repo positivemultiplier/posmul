@@ -1,6 +1,6 @@
 /**
  * PREDICTION Domain - Supabase 타입
- * 생성 시간: 2025-06-27T14:04:14.737Z
+ * 생성 시간: 2025-06-28T13:28:11.591Z
  * 도메인: prediction
  * 
  * 🚀 Universal MCP Automation (Standalone)으로 생성됨

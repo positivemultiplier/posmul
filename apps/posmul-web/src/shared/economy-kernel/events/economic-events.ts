@@ -9,11 +9,11 @@
  */
 
 import {
+  DomainEvent,
   PredictionGameId,
   PredictionId,
   UserId,
-} from "@/shared/types/branded-types";
-import { DomainEvent } from "@/shared/types/common";
+} from "@posmul/shared-types";
 
 /**
  * 경제 도메인 이벤트 인터페이스

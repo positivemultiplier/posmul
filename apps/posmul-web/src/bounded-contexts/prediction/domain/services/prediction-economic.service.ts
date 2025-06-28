@@ -9,21 +9,23 @@
  */
 
 import {
-  IDomainEventPublisher,
+  PredictionGameId,
+  PredictionId,
+  Result,
+  UserId,
+  failure,
+  success,
+} from "@posmul/shared-types";
+import {
   PmcEarnedEvent,
   PmpSpentEvent,
   PredictionParticipationEvent,
-} from "@/shared/economy-kernel/events/economic-events";
+} from "../../../../shared/economy-kernel/events/economic-events";
 import {
   EconomyKernel,
   getEconomyKernel,
-} from "@/shared/economy-kernel/services/economy-kernel.service";
-import {
-  PredictionGameId,
-  PredictionId,
-  UserId,
-} from "@/shared/types/branded-types";
-import { Result, failure, success } from "@/shared/types/common";
+} from "../../../../shared/economy-kernel/services/economy-kernel.service";
+import { IDomainEventPublisher } from "../../../../shared/events/event-publisher";
 
 /**
  * 예측 경제 서비스 에러

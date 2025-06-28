@@ -9,8 +9,7 @@
  * @since 2024-12
  */
 
-import { UserId } from "@/shared/types/branded-types";
-import { Result, failure } from "@/shared/types/economic-system";
+import { Result, UserId, failure } from "@posmul/shared-types";
 
 /**
  * Economy Kernel 오류 타입

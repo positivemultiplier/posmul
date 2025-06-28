@@ -38,7 +38,7 @@ export {
 } from "./events/economic-events";
 
 // Re-export DomainEvent from shared types
-export type { DomainEvent } from "@/shared/types/economic-system";
+export type { DomainEvent } from "@posmul/shared-types";
 
 // === Economy Kernel 사용 가이드 ===
 

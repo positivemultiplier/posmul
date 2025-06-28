@@ -4,31 +4,28 @@
  * 예측 도메인의 타입 정의
  */
 
-import { UserId } from "@/shared/types/branded-types";
+import { UserId } from "@posmul/shared-types";
 
 /**
  * 예측 타입
  */
-export type PredictionType =
-  | "BINARY"
-  | "MULTIPLE_CHOICE"
-  | "NUMERICAL"
-  | "CATEGORICAL";
+export type PredictionType = "binary" | "wdl" | "ranking";
 
 /**
  * 예측 옵션
  */
-export interface PredictionOption {
+export interface GameOption {
   id: string;
   label: string;
   description?: string;
-  odds?: number;
 }
+
+export type GameOptions = GameOption[];
 
 /**
  * 예측 결과
  */
-export interface PredictionResult {
+export interface PredictionResultValue {
   predictionId: string;
   userId: UserId;
   selectedOptionId: string;

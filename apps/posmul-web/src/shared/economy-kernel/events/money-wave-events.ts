@@ -8,8 +8,8 @@
  * @since 2024-12
  */
 
-import { BaseDomainEvent } from "@/shared/events/domain-events";
-import { PredictionGameId, UserId } from "@/shared/types/branded-types";
+import { PredictionGameId, UserId } from "@posmul/shared-types";
+import { BaseDomainEvent } from "../../events/domain-events";
 
 /**
  * MoneyWave 분배 타입

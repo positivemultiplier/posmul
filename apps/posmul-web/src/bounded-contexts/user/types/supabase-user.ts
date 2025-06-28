@@ -1,6 +1,6 @@
 /**
  * USER Domain - Supabase 타입
- * 생성 시간: 2025-06-27T14:04:14.763Z
+ * 생성 시간: 2025-06-28T13:28:11.640Z
  * 도메인: user
  * 
  * 🚀 Universal MCP Automation (Standalone)으로 생성됨
