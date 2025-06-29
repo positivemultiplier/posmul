@@ -3,17 +3,17 @@
  * Supabase MCP를 사용한 기부 리포지토리 구현체
  */
 
-import { UserId } from "@/bounded-contexts/auth/domain/value-objects/user-value-objects";
-import { MCPError, handleMCPError } from "@/shared/mcp/mcp-errors";
-import { mcp_supabase_execute_sql } from "@/shared/mcp/supabase-client";
-import { SupabaseProjectService } from "@/shared/mcp/supabase-project.service";
+import { MCPError, handleMCPError } from "@posmul/shared-auth";
+import { mcp_supabase_execute_sql } from "@posmul/shared-auth";
+import { SupabaseProjectService } from "@posmul/shared-auth";
 import {
   PaginatedResult,
   PaginationParams,
   Result,
   failure,
   success,
-} from "@/shared/types/common";
+} from "@posmul/shared-types";
+import { UserId } from "@posmul/shared-types";
 import { Donation } from "../../domain/entities/donation.entity";
 import {
   DonationSearchCriteria,
@@ -373,17 +373,23 @@ export class MCPDonationRepository implements IDonationRepository {
       const averageAmount =
         totalDonations > 0 ? totalAmount / totalDonations : 0;
 
-      const donationsByCategory = result.data.reduce((acc, record) => {
-        acc[record.category as DonationCategory] =
-          (acc[record.category as DonationCategory] || 0) + 1;
-        return acc;
-      }, {} as Record<DonationCategory, number>);
+      const donationsByCategory = result.data.reduce(
+        (acc, record) => {
+          acc[record.category as DonationCategory] =
+            (acc[record.category as DonationCategory] || 0) + 1;
+          return acc;
+        },
+        {} as Record<DonationCategory, number>
+      );
 
-      const donationsByType = result.data.reduce((acc, record) => {
-        acc[record.type as DonationType] =
-          (acc[record.type as DonationType] || 0) + 1;
-        return acc;
-      }, {} as Record<DonationType, number>);
+      const donationsByType = result.data.reduce(
+        (acc, record) => {
+          acc[record.type as DonationType] =
+            (acc[record.type as DonationType] || 0) + 1;
+          return acc;
+        },
+        {} as Record<DonationType, number>
+      );
 
       return success({
         totalDonations,
@@ -556,11 +562,14 @@ export class MCPDonationRepository implements IDonationRepository {
         : undefined;
 
       // 가장 많이 기부한 카테고리 찾기
-      const categoryCount = (result.data || []).reduce((acc, record) => {
-        acc[record.category as DonationCategory] =
-          (acc[record.category as DonationCategory] || 0) + 1;
-        return acc;
-      }, {} as Record<DonationCategory, number>);
+      const categoryCount = (result.data || []).reduce(
+        (acc, record) => {
+          acc[record.category as DonationCategory] =
+            (acc[record.category as DonationCategory] || 0) + 1;
+          return acc;
+        },
+        {} as Record<DonationCategory, number>
+      );
 
       const favoriteCategory = Object.entries(categoryCount).reduce((a, b) =>
         categoryCount[a[0] as DonationCategory] >

@@ -7,7 +7,7 @@
  * MoneyWave3: 기업가 생태계 구축
  */
 
-import { DomainError, Result } from "@/shared/types/common";
+import { DomainError, Result } from "@posmul/shared-types";
 import { MoneyWaveId, PMC, createPMC, unwrapPMC } from "../value-objects";
 
 export interface EBITData {

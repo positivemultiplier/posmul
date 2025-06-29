@@ -9,20 +9,20 @@
  * @task PD-006
  */
 
-import { SupabaseProjectService } from "@/shared/mcp/supabase-project.service";
+import { SupabaseProjectService } from "@posmul/shared-auth";
 import {
   PMP,
   PredictionGameId,
   PredictionId,
   UserId,
-} from "@/shared/types/branded-types";
+} from "@posmul/shared-types";
 import {
   Result,
   Timestamps,
   failure,
   success,
-} from "@/shared/types/economic-system";
-import type { Database } from "@/bounded-contexts/prediction/types/supabase-prediction";
+} from "@posmul/shared-types";
+import type { Database } from "../../../bounded-contexts/prediction/types/supabase-prediction";
 import {
   GameConfiguration,
   Prediction,
@@ -837,7 +837,15 @@ export class SupabasePredictionGameRepository
     // 기본 save 메서드 사용 후 새 버전 반환
     const saveResult = await this.save(game);
     if (!saveResult.success) {
-      return failure(saveResult.error);
+      if (isFailure(saveResult)) {
+  if (isFailure(saveResult)) {
+  return failure(saveResult.error);
+} else {
+  return failure(new Error("Unknown error"));
+};
+} else {
+  return failure(new Error("Unknown error"));
+}
     }
     return success(version + 1);
   }

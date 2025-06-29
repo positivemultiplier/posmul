@@ -5,7 +5,7 @@
  * @version 1.0.0
  */
 
-import { Result } from "../../../../shared/types/common";
+import { Result } from "@posmul/shared-types";
 
 /**
  * 회귀모델 타입 정의

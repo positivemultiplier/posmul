@@ -3,20 +3,20 @@
  * 기부 엔티티 - 모든 기부 활동의 루트 애그리거트
  */
 
-import { Result, DomainEvent } from '@/shared/types/common';
-import { UserId } from '@/bounded-contexts/auth/domain/value-objects/user-value-objects';
-import { 
-  DonationId,
-  InstituteId,
-  OpinionLeaderId,
+import { UserId } from "@posmul/shared-types";
+import { DomainEvent, Result } from "@posmul/shared-types";
+import {
+  BeneficiaryInfo,
   DonationAmount,
   DonationCategory,
+  DonationDescription,
+  DonationFrequency,
+  DonationId,
   DonationStatus,
   DonationType,
-  DonationFrequency,
-  DonationDescription,
-  BeneficiaryInfo
-} from '../value-objects/donation-value-objects';
+  InstituteId,
+  OpinionLeaderId,
+} from "../value-objects/donation-value-objects";
 
 // 기부 생성 이벤트
 export class DonationCreatedEvent implements DomainEvent {
@@ -34,12 +34,12 @@ export class DonationCreatedEvent implements DomainEvent {
     public readonly amount: DonationAmount
   ) {
     this.id = crypto.randomUUID();
-    this.type = 'DonationCreated';
+    this.type = "DonationCreated";
     this.aggregateId = donationId.getValue();
-    this.data = { 
-      donorId: donorId.toString(), 
-      donationType, 
-      amount: amount.getValue() 
+    this.data = {
+      donorId: donorId.toString(),
+      donationType,
+      amount: amount.getValue(),
     };
     this.version = 1;
     this.timestamp = new Date();
@@ -62,12 +62,12 @@ export class DonationCompletedEvent implements DomainEvent {
     public readonly rewardPoints: number
   ) {
     this.id = crypto.randomUUID();
-    this.type = 'DonationCompleted';
+    this.type = "DonationCompleted";
     this.aggregateId = donationId.getValue();
-    this.data = { 
-      donorId: donorId.toString(), 
+    this.data = {
+      donorId: donorId.toString(),
       amount: amount.getValue(),
-      rewardPoints
+      rewardPoints,
     };
     this.version = 1;
     this.timestamp = new Date();
@@ -88,7 +88,7 @@ export class DonationCancelledEvent implements DomainEvent {
     public readonly reason: string
   ) {
     this.id = crypto.randomUUID();
-    this.type = 'DonationCancelled';
+    this.type = "DonationCancelled";
     this.aggregateId = donationId.getValue();
     this.data = { reason };
     this.version = 1;
@@ -141,7 +141,9 @@ export class Donation {
     private updatedAt: Date = new Date()
   ) {
     // 기부 생성 이벤트 발행
-    this.addDomainEvent(new DonationCreatedEvent(id, donorId, donationType, amount));
+    this.addDomainEvent(
+      new DonationCreatedEvent(id, donorId, donationType, amount)
+    );
   }
 
   // Getters
@@ -220,14 +222,17 @@ export class Donation {
   // 기부 처리 시작
   startProcessing(transactionId: string): Result<void> {
     if (this.status !== DonationStatus.PENDING) {
-      return { success: false, error: new Error('Only pending donations can be processed') };
+      return {
+        success: false,
+        error: new Error("Only pending donations can be processed"),
+      };
     }
 
     this.status = DonationStatus.PROCESSING;
     this.processingInfo = {
       ...this.processingInfo,
       transactionId,
-      processedAt: new Date()
+      processedAt: new Date(),
     };
     this.updatedAt = new Date();
 
@@ -237,14 +242,17 @@ export class Donation {
   // 기부 완료
   complete(receiptUrl?: string): Result<void> {
     if (this.status !== DonationStatus.PROCESSING) {
-      return { success: false, error: new Error('Only processing donations can be completed') };
+      return {
+        success: false,
+        error: new Error("Only processing donations can be completed"),
+      };
     }
 
     this.status = DonationStatus.COMPLETED;
     this.completedAt = new Date();
     this.processingInfo = {
       ...this.processingInfo,
-      receiptUrl
+      receiptUrl,
     };
     this.updatedAt = new Date();
 
@@ -252,12 +260,14 @@ export class Donation {
     const rewardPoints = this.amount.calculateRewardPoints();
 
     // 기부 완료 이벤트 발행
-    this.addDomainEvent(new DonationCompletedEvent(
-      this.id, 
-      this.donorId, 
-      this.amount, 
-      rewardPoints
-    ));
+    this.addDomainEvent(
+      new DonationCompletedEvent(
+        this.id,
+        this.donorId,
+        this.amount,
+        rewardPoints
+      )
+    );
 
     return { success: true, data: undefined };
   }
@@ -265,11 +275,17 @@ export class Donation {
   // 기부 취소
   cancel(reason: string): Result<void> {
     if (this.status === DonationStatus.COMPLETED) {
-      return { success: false, error: new Error('Completed donations cannot be cancelled') };
+      return {
+        success: false,
+        error: new Error("Completed donations cannot be cancelled"),
+      };
     }
 
     if (this.status === DonationStatus.CANCELLED) {
-      return { success: false, error: new Error('Donation is already cancelled') };
+      return {
+        success: false,
+        error: new Error("Donation is already cancelled"),
+      };
     }
 
     this.status = DonationStatus.CANCELLED;
@@ -285,7 +301,10 @@ export class Donation {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   fail(_reason: string): Result<void> {
     if (this.status !== DonationStatus.PROCESSING) {
-      return { success: false, error: new Error('Only processing donations can fail') };
+      return {
+        success: false,
+        error: new Error("Only processing donations can fail"),
+      };
     }
 
     this.status = DonationStatus.FAILED;
@@ -296,13 +315,21 @@ export class Donation {
 
   // 처리 정보 업데이트
   updateProcessingInfo(info: Partial<ProcessingInfo>): Result<void> {
-    if (this.status === DonationStatus.COMPLETED || this.status === DonationStatus.CANCELLED) {
-      return { success: false, error: new Error('Cannot update processing info for completed or cancelled donations') };
+    if (
+      this.status === DonationStatus.COMPLETED ||
+      this.status === DonationStatus.CANCELLED
+    ) {
+      return {
+        success: false,
+        error: new Error(
+          "Cannot update processing info for completed or cancelled donations"
+        ),
+      };
     }
 
     this.processingInfo = {
       ...this.processingInfo,
-      ...info
+      ...info,
     };
     this.updatedAt = new Date();
 
@@ -310,8 +337,10 @@ export class Donation {
   }
   // 기부 가능 여부 확인 (PMC 잔액 기준)
   canProcess(pmcBalance: number): boolean {
-    return this.status === DonationStatus.PENDING && 
-           pmcBalance >= this.amount.getValue();
+    return (
+      this.status === DonationStatus.PENDING &&
+      pmcBalance >= this.amount.getValue()
+    );
   }
 
   // 완료된 기부 여부
@@ -359,21 +388,36 @@ export class Donation {
     switch (this.donationType) {
       case DonationType.DIRECT:
         if (!this.beneficiaryInfo) {
-          return { success: false, error: new Error('Beneficiary info is required for direct donations') };
+          return {
+            success: false,
+            error: new Error(
+              "Beneficiary info is required for direct donations"
+            ),
+          };
         }
         break;
       case DonationType.INSTITUTE:
         if (!this.instituteId) {
-          return { success: false, error: new Error('Institute ID is required for institute donations') };
+          return {
+            success: false,
+            error: new Error(
+              "Institute ID is required for institute donations"
+            ),
+          };
         }
         break;
       case DonationType.OPINION_LEADER:
         if (!this.opinionLeaderId) {
-          return { success: false, error: new Error('Opinion leader ID is required for opinion leader support') };
+          return {
+            success: false,
+            error: new Error(
+              "Opinion leader ID is required for opinion leader support"
+            ),
+          };
         }
         break;
       default:
-        return { success: false, error: new Error('Invalid donation type') };
+        return { success: false, error: new Error("Invalid donation type") };
     }
 
     return { success: true, data: undefined };

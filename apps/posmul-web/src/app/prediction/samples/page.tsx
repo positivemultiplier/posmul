@@ -8,7 +8,7 @@
  * @since 2024-12
  */
 
-import { Button } from "@/shared/components/ui/button";
+import { Button } from "@posmul/shared-ui";
 import Link from "next/link";
 
 export default function PredictionSamplesIndexPage() {

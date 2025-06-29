@@ -5,8 +5,8 @@
  * 시계열 예측, 클러스터링, 분류 및 이상 탐지 알고리즘 구현
  */
 
-import { UserId } from "@/shared/types/branded-types";
-import { Result } from "@/shared/types/common";
+import { UserId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import {
   IEconomicAnalyticsRepository,
   PanelDataObservation,

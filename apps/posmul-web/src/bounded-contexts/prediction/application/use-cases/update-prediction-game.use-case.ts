@@ -15,8 +15,8 @@ import {
   PMP,
   PredictionGameId,
   UserId,
-} from "../../../../shared/types/branded-types";
-import { Result } from "../../../../shared/types/common";
+} from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**

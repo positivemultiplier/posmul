@@ -8,8 +8,8 @@
  * @since 2024-12
  */
 
-import { BaseDomainEvent } from "@/shared/events/domain-events";
-import { UserId } from "@/shared/types/branded-types";
+import { BaseDomainEvent } from "@posmul/shared-ui";
+import { UserId } from "@posmul/shared-types";
 
 /**
  * 사용자 생성 이벤트

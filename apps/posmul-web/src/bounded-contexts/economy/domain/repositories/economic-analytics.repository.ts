@@ -5,8 +5,8 @@
  * 실증분석, A/B 테스트, 정책 효과성 측정을 위한 데이터 관리
  */
 
-import { UserId } from "@/shared/types/branded-types";
-import { Result } from "@/shared/types/common";
+import { UserId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import { PMC, PMP } from "../value-objects";
 
 /**

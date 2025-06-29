@@ -12,18 +12,30 @@
  * @since 2024-12
  */
 
-import Link from "next/link";
-import { Badge } from "./ui/badge";
+import type { ComponentType } from "react";
+import { Badge } from "./ui/badge.js";
 import {
   Card,
   CardContent,
-  CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
-} from "./ui/card";
+} from "./ui/card.js";
+
+type LinkProps = {
+  href: string;
+  children: React.ReactNode;
+  className?: string;
+  [key: string]: any;
+};
 
 // 게임 유형 정의
-export type GameType = "binary" | "wdl" | "ranking" | "multichoice";
+export type GameType =
+  | "SPORTS"
+  | "INVESTMENT"
+  | "POLITICS"
+  | "ENTERTAINMENT"
+  | "USER_PROPOSED";
 
 // 옵션 정보 (예측 선택지)
 export interface GameOption {
@@ -54,51 +66,13 @@ export interface MiniChartData {
 export interface EnhancedGameCardProps {
   id: string;
   title: string;
-  description: string;
-  category: string;
-  gameType: GameType;
-
-  // 이미지 정보
-  imageUrl?: string;
-  imageAlt?: string;
-  imagePlaceholder?: string; // 개발 중 placeholder 텍스트
-
-  // 게임 상태
-  status: "active" | "ended" | "pending" | "settling";
-  difficulty: "high" | "medium" | "low";
-
-  // 참여 정보
+  status: string;
   participants: number;
-  maxParticipants?: number;
-  totalStake: number;
-  minStake: number;
-  maxStake: number;
-
-  // MoneyWave 정보
-  moneyWave: MoneyWaveInfo;
-
-  // 게임 옵션
-  options?: GameOption[];
-
-  // 시간 정보
-  startTime?: string;
-  endTime: string;
-  settlementTime?: string;
-
-  // 수익 정보
-  expectedReturn: number;
-  currentOdds?: number;
-
-  // 미니 차트 (추후 구현)
-  chartData?: MiniChartData;
-
-  // 링크
+  totalPrize: number;
+  gameType: string;
   href: string;
-
-  // 추가 정보
-  tags?: string[];
-  isHot?: boolean;
-  isFeatured?: boolean;
+  LinkComponent: ComponentType<LinkProps>;
+  // other game properties can be added here
 }
 
 // 게임 유형별 아이콘과 설명
@@ -245,148 +219,36 @@ function OptionsPreview({
   );
 }
 
-export function EnhancedGameCard({ game }: { game: EnhancedGameCardProps }) {
-  const typeInfo = gameTypeInfo[game.gameType];
-  const timeLeft = new Date(game.endTime).getTime() - new Date().getTime();
-  const daysLeft = Math.ceil(timeLeft / (1000 * 60 * 60 * 24));
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("ko-KR", {
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
+export function EnhancedGameCard({
+  id,
+  title,
+  status,
+  participants,
+  totalPrize,
+  gameType,
+  href,
+  LinkComponent,
+}: EnhancedGameCardProps) {
   return (
-    <Link href={game.href} className="block">
-      <Card className="hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:-translate-y-2 hover:border-blue-300 overflow-hidden group">
-        {/* 헤더 영역 */}
-        <CardHeader className="pb-3 relative">
-          {/* 상단 배지들 */}
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex gap-2">
-              <Badge className={typeInfo.color}>
-                {typeInfo.icon} {typeInfo.label}
-              </Badge>
-              <Badge className={statusColors[game.status]}>
-                {game.status === "active"
-                  ? "진행중"
-                  : game.status === "ended"
-                    ? "종료"
-                    : game.status === "settling"
-                      ? "정산중"
-                      : "대기중"}
-              </Badge>
-            </div>
-            <div className="flex gap-2">
-              {game.isHot && (
-                <Badge className="bg-red-100 text-red-800">🔥 HOT</Badge>
-              )}
-              {game.isFeatured && (
-                <Badge className="bg-yellow-100 text-yellow-800">⭐ 추천</Badge>
-              )}
-            </div>
-          </div>
-
-          {/* 이미지 영역 */}
-          <div className="mb-3">
-            {game.imageUrl ? (
-              <img
-                src={game.imageUrl}
-                alt={game.imageAlt || game.title}
-                className="w-full h-32 object-cover rounded-lg"
-              />
-            ) : (
-              <ImagePlaceholder
-                text={game.imagePlaceholder}
-                gameType={game.gameType}
-              />
-            )}
-          </div>
-
-          {/* 제목과 설명 */}
-          <div>
-            <CardTitle className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors line-clamp-2">
-              {game.title}
-            </CardTitle>
-            <CardDescription className="text-sm text-gray-600 line-clamp-2">
-              {game.description}
-            </CardDescription>
-          </div>
-        </CardHeader>
-
-        <CardContent className="pt-0 space-y-4">
-          {/* MoneyWave 정보 */}
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-3 rounded-lg">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-medium text-gray-700">
-                💰 MoneyWave
-              </span>
-              <span className="text-sm font-bold text-purple-600">
-                {game.moneyWave.waveMultiplier}x 배수
-              </span>
-            </div>
-            <MoneyWaveProgress moneyWave={game.moneyWave} />
-          </div>
-
-          {/* 참여 정보 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="text-center">
-              <div className="text-lg font-bold text-gray-900">
-                {game.participants.toLocaleString()}
-                {game.maxParticipants && (
-                  <span className="text-sm text-gray-500">
-                    /{game.maxParticipants.toLocaleString()}
-                  </span>
-                )}
-              </div>
-              <div className="text-xs text-gray-500">참여자</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-bold text-green-600">
-                {game.expectedReturn}x
-              </div>
-              <div className="text-xs text-gray-500">예상 수익</div>
-            </div>
-          </div>
-
-          {/* 게임 옵션 미리보기 */}
-          <OptionsPreview options={game.options} gameType={game.gameType} />
-
-          {/* 미니 차트 */}
-          <div>
-            <div className="text-xs font-medium text-gray-700 mb-2">
-              📊 참여 트렌드
-            </div>
-            <MiniChart data={game.chartData} />
-          </div>
-
-          {/* 하단 정보 */}
-          <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-            <div className="text-xs text-gray-500">{game.category}</div>
-            <div className="text-xs text-gray-500">
-              {daysLeft > 0 ? `${daysLeft}일 남음` : formatDate(game.endTime)}
-            </div>
-          </div>
-
-          {/* 태그 */}
-          {game.tags && game.tags.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {game.tags.slice(0, 3).map((tag, index) => (
-                <span
-                  key={index}
-                  className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full"
-                >
-                  {tag}
-                </span>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </Link>
+    <Card className="flex flex-col h-full hover:shadow-lg transition-shadow duration-200">
+      <CardHeader>
+        <div className="flex justify-between items-start">
+          <CardTitle className="text-lg font-bold">
+            <LinkComponent href={href} className="hover:underline">
+              {title}
+            </LinkComponent>
+          </CardTitle>
+          <Badge variant="secondary">{status}</Badge>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-grow space-y-2">
+        <p>Participants: {participants}</p>
+        <p>Prize Pool: ${totalPrize.toLocaleString()}</p>
+      </CardContent>
+      <CardFooter>
+        <p className="text-xs text-gray-500">Game Type: {gameType}</p>
+      </CardFooter>
+    </Card>
   );
 }
 
@@ -403,5 +265,5 @@ export function GameCardAdapter({ game }: { game: any }) {
     imagePlaceholder: `${game.category} 예측`,
   };
 
-  return <EnhancedGameCard game={enhancedGame} />;
+  return <EnhancedGameCard {...enhancedGame} />;
 }

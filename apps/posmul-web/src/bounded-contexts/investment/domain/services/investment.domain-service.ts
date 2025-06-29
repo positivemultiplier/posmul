@@ -1,5 +1,5 @@
-import { Result } from '@/shared/types/common';
-import { BusinessLogicError } from '@/shared/utils/errors';
+import { Result } from '@posmul/shared-types';
+import { BusinessLogicError } from '@posmul/shared-ui';
 import { Merchant } from '../entities/merchant.entity';
 import { Advertisement } from '../entities/advertisement.entity';
 import { CrowdFunding } from '../entities/crowdfunding.entity';

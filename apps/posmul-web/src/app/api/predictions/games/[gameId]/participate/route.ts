@@ -1,9 +1,9 @@
-import { ParticipatePredictionUseCase } from "@/bounded-contexts/prediction/application/use-cases/participate-prediction.use-case";
-import { PredictionEconomicService } from "@/bounded-contexts/prediction/domain/services/prediction-economic.service";
-import { SupabasePredictionGameRepository } from "@/bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
-import { InMemoryEventPublisher } from "@/shared/events/event-publisher";
-import { PredictionGameId, UserId } from "@/shared/types/branded-types";
+import { PredictionGameId, UserId } from "@posmul/shared-types";
 import { NextRequest, NextResponse } from "next/server";
+import { ParticipatePredictionUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/participate-prediction.use-case";
+import { PredictionEconomicService } from "../../../../../bounded-contexts/prediction/domain/services/prediction-economic.service";
+import { SupabasePredictionGameRepository } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
+import { InMemoryEventPublisher } from "../../../../../shared/events/event-publisher";
 
 /**
  * POST /api/predictions/games/[gameId]/participate
@@ -58,13 +58,21 @@ export async function POST(
       publish: async (event: any) => {
         const result = await eventPublisher.publish(event);
         if (!result.success) {
-          throw new Error(result.error.message);
+          if (isFailure(result)) {
+  throw new Error(result.error.message);
+} else {
+  throw new Error("Unknown error");
+}
         }
       },
       publishBatch: async (events: any[]) => {
         const result = await eventPublisher.publishBatch(events);
         if (!result.success) {
-          throw new Error(result.error.message);
+          if (isFailure(result)) {
+  throw new Error(result.error.message);
+} else {
+  throw new Error("Unknown error");
+}
         }
       },
     };
@@ -97,7 +105,7 @@ export async function POST(
           success: false,
           error: {
             code: "PARTICIPATION_FAILED",
-            message: result.error.message,
+            message: isFailure(result) ? result.error.message : "Unknown error",
           },
         },
         { status: 400 }

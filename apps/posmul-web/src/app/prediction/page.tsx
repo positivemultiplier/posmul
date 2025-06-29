@@ -8,14 +8,14 @@
  * @since 2024-12
  */
 
-import { Badge } from "@/shared/components/ui/badge";
 import {
+  Badge,
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/shared/components/ui/card";
+} from "@posmul/shared-ui";
 import Link from "next/link";
 
 const predictionCategories = [

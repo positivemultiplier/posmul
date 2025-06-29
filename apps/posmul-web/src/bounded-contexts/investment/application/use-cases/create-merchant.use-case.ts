@@ -1,6 +1,6 @@
-import { Result } from '@/shared/types/common';
-import { ValidationError } from '@/shared/utils/errors';
-import { UserId } from '@/bounded-contexts/auth/domain/value-objects/user-value-objects';
+import { Result } from '@posmul/shared-types';
+import { ValidationError } from '@posmul/shared-ui';
+import { UserId } from '@posmul/shared-types';
 import { Merchant, BusinessHours, ContactInfo } from '../../domain/entities/merchant.entity';
 import { IMerchantRepository } from '../../domain/repositories/merchant.repository';
 import { MerchantId, Location, RewardRate } from '../../domain/value-objects/investment-value-objects';
@@ -38,7 +38,7 @@ export class CreateMerchantUseCase {
       // Value Objects 생성
       const merchantIdResult = MerchantId.create(crypto.randomUUID());
       if (!merchantIdResult.success) {
-        return { success: false, error: merchantIdResult.error };
+        return merchantIdResult;
       }
 
       // 임시로 위도/경도는 0으로 설정 (실제로는 주소 기반 지오코딩 필요)
@@ -50,12 +50,12 @@ export class CreateMerchantUseCase {
         validData.location.district
       );
       if (!locationResult.success) {
-        return { success: false, error: locationResult.error };
+        return locationResult;
       }
 
       const rewardRateResult = RewardRate.createPercentage(validData.rewardRate);
       if (!rewardRateResult.success) {
-        return { success: false, error: rewardRateResult.error };
+        return rewardRateResult;
       }
 
       // 임시 BusinessHours와 ContactInfo (실제로는 DTO에서 변환 필요)
@@ -86,13 +86,13 @@ export class CreateMerchantUseCase {
       );
 
       if (!merchantResult.success) {
-        return { success: false, error: merchantResult.error };
+        return merchantResult;
       }
 
       // 데이터베이스에 저장
       const saveResult = await this.merchantRepository.save(merchantResult.data);
       if (!saveResult.success) {
-        return { success: false, error: saveResult.error };
+        return saveResult;
       }
 
       return {

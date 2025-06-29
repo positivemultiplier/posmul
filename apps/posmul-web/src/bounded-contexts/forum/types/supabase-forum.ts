@@ -1,6 +1,6 @@
 /**
  * FORUM Domain - Supabase 타입
- * 생성 시간: 2025-06-28T13:28:11.634Z
+ * 생성 시간: 2025-06-28T15:29:24.114Z
  * 도메인: forum
  * 
  * 🚀 Universal MCP Automation (Standalone)으로 생성됨

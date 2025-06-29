@@ -3,27 +3,28 @@
  * 기부 생성 유스케이스
  */
 
-import { Result } from '@/shared/types/common';
-import { ValidationError } from '@/shared/utils/errors';
-import { UserId } from '@/bounded-contexts/auth/domain/value-objects/user-value-objects';
-import { Donation } from '../../domain/entities/donation.entity';
-import { Institute } from '../../domain/entities/institute.entity';
-import { OpinionLeader } from '../../domain/entities/opinion-leader.entity';
-import { IDonationRepository } from '../../domain/repositories/donation.repository';
-import { IInstituteRepository } from '../../domain/repositories/institute.repository';
-import { IOpinionLeaderRepository } from '../../domain/repositories/opinion-leader.repository';
-import { DonationDomainService } from '../../domain/services/donation.domain-service';
-import { 
+import { Result, ValidationError } from "@posmul/shared-types";
+import { Donation } from "../../domain/entities/donation.entity";
+import { Institute } from "../../domain/entities/institute.entity";
+import { OpinionLeader } from "../../domain/entities/opinion-leader.entity";
+import { IDonationRepository } from "../../domain/repositories/donation.repository";
+import { IInstituteRepository } from "../../domain/repositories/institute.repository";
+import { IOpinionLeaderRepository } from "../../domain/repositories/opinion-leader.repository";
+import { DonationDomainService } from "../../domain/services/donation.domain-service";
+import {
+  BeneficiaryInfo,
   DonationAmount,
   DonationCategory,
-  DonationType,
-  DonationFrequency,
   DonationDescription,
-  BeneficiaryInfo,
+  DonationFrequency,
+  DonationType,
   InstituteId,
-  OpinionLeaderId
-} from '../../domain/value-objects/donation-value-objects';
-import { CreateDonationRequest, CreateDonationRequestSchema } from '../dto/donation.dto';
+  OpinionLeaderId,
+} from "../../domain/value-objects/donation-value-objects";
+import {
+  CreateDonationRequest,
+  CreateDonationRequestSchema,
+} from "../dto/donation.dto";
 
 export interface DonationMetadata {
   isAnonymous: boolean;
@@ -56,9 +57,9 @@ export class CreateDonationUseCase {
       return {
         success: false,
         error: new ValidationError(
-          'Invalid donation request',
-          validationResult.error.errors.map(e => e.message).join(', ')
-        )
+          "Invalid donation request",
+          validationResult.error.errors.map((e) => e.message).join(", ")
+        ),
       };
     }
 
@@ -66,18 +67,20 @@ export class CreateDonationUseCase {
       // Value Objects 생성
       const amount = new DonationAmount(request.amount);
       const description = new DonationDescription(request.description);
-      
+
       // 기부 메타데이터 구성
       const metadata: DonationMetadata = {
         isAnonymous: request.isAnonymous,
         message: request.message,
         dedicatedTo: request.dedicatedTo,
         taxDeductible: request.taxDeductible,
-        receiptRequired: request.receiptRequired
+        receiptRequired: request.receiptRequired,
       };
 
       // 예약 날짜 처리
-      const scheduledAt = request.scheduledAt ? new Date(request.scheduledAt) : undefined;
+      const scheduledAt = request.scheduledAt
+        ? new Date(request.scheduledAt)
+        : undefined;
 
       // 기부 타입별 엔티티 생성
       let donation: Donation;
@@ -108,11 +111,11 @@ export class CreateDonationUseCase {
             request.instituteId!,
             scheduledAt
           );
-          
+
           if (!instituteResult.success) {
             return instituteResult;
           }
-          
+
           donation = instituteResult.data.donation;
           target = instituteResult.data.target;
           break;
@@ -128,11 +131,11 @@ export class CreateDonationUseCase {
             request.opinionLeaderId!,
             scheduledAt
           );
-          
+
           if (!leaderResult.success) {
             return leaderResult;
           }
-          
+
           donation = leaderResult.data.donation;
           target = leaderResult.data.target;
           break;
@@ -140,16 +143,17 @@ export class CreateDonationUseCase {
         default:
           return {
             success: false,
-            error: new ValidationError('Invalid donation type')
+            error: new ValidationError("Invalid donation type"),
           };
       }
 
       // 기부자 기부 내역 조회
-      const donorHistoryResult = await this.donationRepository.findByDonorId(donorId);
+      const donorHistoryResult =
+        await this.donationRepository.findByDonorId(donorId);
       if (!donorHistoryResult.success) {
         return {
           success: false,
-          error: donorHistoryResult.error
+          error: isFailure(donorHistoryResult) ? donorHistoryResult.error : new Error("Unknown error"),
         };
       }
 
@@ -157,20 +161,22 @@ export class CreateDonationUseCase {
 
       // 기부 적격성 검증
       if (target) {
-        const eligibilityResult = this.donationDomainService.validateDonationEligibility(
-          donorId,
-          donation,
-          donorBalance,
-          donorHistory,
-          target
-        );
+        const eligibilityResult =
+          this.donationDomainService.validateDonationEligibility(
+            donorId,
+            donation,
+            donorBalance,
+            donorHistory,
+            target
+          );
 
         if (!eligibilityResult.isEligible) {
           return {
-            success: false,            error: new ValidationError(
-              'Donation eligibility failed',
-              eligibilityResult.reasons.join(', ')
-            )
+            success: false,
+            error: new ValidationError(
+              "Donation eligibility failed",
+              eligibilityResult.reasons.join(", ")
+            ),
           };
         }
       }
@@ -180,19 +186,19 @@ export class CreateDonationUseCase {
       if (!saveResult.success) {
         return {
           success: false,
-          error: saveResult.error
+          error: isFailure(saveResult) ? saveResult.error : new Error("Unknown error"),
         };
       }
 
       return {
         success: true,
-        data: donation
+        data: donation,
       };
-
     } catch (error) {
       return {
         success: false,
-        error: error instanceof Error ? error : new Error('Unknown error occurred')
+        error:
+          error instanceof Error ? error : new Error("Unknown error occurred"),
       };
     }
   }
@@ -209,7 +215,9 @@ export class CreateDonationUseCase {
   ): Promise<Donation> {
     // 수혜자 정보 검증
     if (!request.beneficiaryName || !request.beneficiaryDescription) {
-      throw new ValidationError('Beneficiary information is required for direct donations');
+      throw new ValidationError(
+        "Beneficiary information is required for direct donations"
+      );
     }
 
     const beneficiaryInfo = new BeneficiaryInfo(
@@ -247,18 +255,20 @@ export class CreateDonationUseCase {
     scheduledAt?: Date
   ): Promise<Result<{ donation: Donation; target: Institute }>> {
     // 기관 존재 및 상태 확인
-    const instituteResult = await this.instituteRepository.findById(new InstituteId(instituteId));
+    const instituteResult = await this.instituteRepository.findById(
+      new InstituteId(instituteId)
+    );
     if (!instituteResult.success) {
       return {
         success: false,
-        error: instituteResult.error
+        error: isFailure(instituteResult) ? instituteResult.error : new Error("Unknown error"),
       };
     }
 
     if (!instituteResult.data) {
       return {
         success: false,
-        error: new ValidationError('Institute not found')
+        error: new ValidationError("Institute not found"),
       };
     }
 
@@ -266,7 +276,7 @@ export class CreateDonationUseCase {
     if (!institute.canReceiveDonations()) {
       return {
         success: false,
-        error: new ValidationError('Institute is not accepting donations')
+        error: new ValidationError("Institute is not accepting donations"),
       };
     }
 
@@ -284,7 +294,7 @@ export class CreateDonationUseCase {
     if (!donationResult.success) {
       return {
         success: false,
-        error: donationResult.error
+        error: isFailure(donationResult) ? donationResult.error : new Error("Unknown error"),
       };
     }
 
@@ -292,8 +302,8 @@ export class CreateDonationUseCase {
       success: true,
       data: {
         donation: donationResult.data,
-        target: institute
-      }
+        target: institute,
+      },
     };
   }
 
@@ -308,18 +318,20 @@ export class CreateDonationUseCase {
     scheduledAt?: Date
   ): Promise<Result<{ donation: Donation; target: OpinionLeader }>> {
     // 오피니언 리더 존재 및 상태 확인
-    const leaderResult = await this.opinionLeaderRepository.findById(new OpinionLeaderId(opinionLeaderId));
+    const leaderResult = await this.opinionLeaderRepository.findById(
+      new OpinionLeaderId(opinionLeaderId)
+    );
     if (!leaderResult.success) {
       return {
         success: false,
-        error: leaderResult.error
+        error: isFailure(leaderResult) ? leaderResult.error : new Error("Unknown error"),
       };
     }
 
     if (!leaderResult.data) {
       return {
         success: false,
-        error: new ValidationError('Opinion leader not found')
+        error: new ValidationError("Opinion leader not found"),
       };
     }
 
@@ -327,7 +339,7 @@ export class CreateDonationUseCase {
     if (!leader.canReceiveSupport()) {
       return {
         success: false,
-        error: new ValidationError('Opinion leader is not accepting support')
+        error: new ValidationError("Opinion leader is not accepting support"),
       };
     }
 
@@ -345,7 +357,7 @@ export class CreateDonationUseCase {
     if (!donationResult.success) {
       return {
         success: false,
-        error: donationResult.error
+        error: isFailure(donationResult) ? donationResult.error : new Error("Unknown error"),
       };
     }
 
@@ -353,8 +365,8 @@ export class CreateDonationUseCase {
       success: true,
       data: {
         donation: donationResult.data,
-        target: leader
-      }
+        target: leader,
+      },
     };
   }
 }

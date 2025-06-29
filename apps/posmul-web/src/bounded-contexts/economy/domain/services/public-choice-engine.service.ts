@@ -10,7 +10,7 @@
  * - 직접민주주의 시뮬레이션
  */
 
-import { Result } from "../../../../shared/types/common";
+import { Result } from "@posmul/shared-types";
 import {
   BudgetTransparencyScore,
   CitizenParticipationRate,

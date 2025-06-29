@@ -1,8 +1,8 @@
 // Advertisement Aggregate Root - 광고 관리 (Major League)
 // UTF-8 인코딩
 
-import type { Result } from '../../../../shared/types/common';
-import type { DomainEvent } from '../../../../shared/types/common';
+import type { Result } from '@posmul/shared-types';
+import type { DomainEvent } from '@posmul/shared-types';
 import {
   AdvertisementId,
   AdvertisementCategory,

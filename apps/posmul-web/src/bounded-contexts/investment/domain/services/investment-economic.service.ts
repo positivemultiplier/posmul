@@ -1,11 +1,13 @@
-import { EconomicError } from "@/shared/economy-kernel/errors/economic-errors";
 import {
+  EconomicError,
+  IDomainEventPublisher,
   PmcSpentEvent,
   PmpSpentEvent,
-} from "@/shared/economy-kernel/events/economic-events";
-import { EconomyKernel } from "@/shared/economy-kernel/services/economy-kernel.service";
-import { IDomainEventPublisher } from "@/shared/events/event-publisher";
-import { Result, failure, success } from "@/shared/types/common";
+  Result,
+  failure,
+  success,
+} from "@posmul/shared-types";
+import { EconomyKernel } from "../../../../shared/economy-kernel/services/economy-kernel.service";
 import { InvestmentParticipation } from "../entities/investment-participation.entity";
 import { IInvestmentOpportunityRepository } from "../repositories/investment-opportunity.repository";
 import { IInvestmentParticipationRepository } from "../repositories/investment-participation.repository";

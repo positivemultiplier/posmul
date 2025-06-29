@@ -5,7 +5,7 @@
  * Agency Theory와 Behavioral Economics를 적용하여 인센티브 구조 최적화
  */
 
-import { UserId } from "@/shared/types/branded-types";
+import { UserId } from "@posmul/shared-types";
 import {
   AccountBalance,
   IPMPPMCAccountRepository,

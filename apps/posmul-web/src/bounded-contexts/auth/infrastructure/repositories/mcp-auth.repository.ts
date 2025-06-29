@@ -5,9 +5,9 @@
  * IAuthRepository 인터페이스를 MCP Supabase로 구현
  */
 
-import { mcp_supabase_execute_sql } from "@/shared/mcp/supabase-client";
-import { UserId } from "@/shared/types/branded-types";
-import { Result } from "@/shared/types/common";
+import { mcp_supabase_execute_sql } from "@posmul/shared-auth";
+import { UserId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import {
   AuthSession,
   Permission,

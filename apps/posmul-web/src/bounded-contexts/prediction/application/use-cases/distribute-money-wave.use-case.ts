@@ -17,8 +17,8 @@ import {
   BaseDomainEvent,
   publishEvent,
 } from "../../../../shared/events/domain-events";
-import { UserId } from "../../../../shared/types/branded-types";
-import { Result } from "../../../../shared/types/common";
+import { UserId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 import {
   DistributeMoneyWaveRequest,

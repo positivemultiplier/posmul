@@ -3,7 +3,7 @@
  * 리스크 관리 관련 애플리케이션 서비스
  */
 
-import { Result } from "../../../../shared/types/common";
+import { Result } from "@posmul/shared-types";
 import {
   EconomicSystemState,
   RiskAssessment,
@@ -71,7 +71,7 @@ export class RiskManagementApplicationService {
         systemState
       );
       if (!stabilityResult.success) {
-        return { success: false, error: stabilityResult.error };
+        return stabilityResult;
       }
 
       // 정책 권고안
@@ -79,7 +79,7 @@ export class RiskManagementApplicationService {
         systemState
       );
       if (!policyResult.success) {
-        return { success: false, error: policyResult.error };
+        return policyResult;
       }
 
       // Circuit Breaker 상태
@@ -87,7 +87,7 @@ export class RiskManagementApplicationService {
         systemState
       );
       if (!circuitBreakerResult.success) {
-        return { success: false, error: circuitBreakerResult.error };
+        return circuitBreakerResult;
       }
 
       return {
@@ -224,7 +224,7 @@ export class RiskManagementApplicationService {
       // 리스크 평가
       const riskResult = await this.assessCurrentRisk(systemState);
       if (!riskResult.success) {
-        return { success: false, error: riskResult.error };
+        return riskResult;
       }
 
       // Circuit Breaker 실행
@@ -232,7 +232,7 @@ export class RiskManagementApplicationService {
         systemState
       );
       if (!circuitBreakerResult.success) {
-        return { success: false, error: circuitBreakerResult.error };
+        return circuitBreakerResult;
       }
 
       // 긴급도 결정

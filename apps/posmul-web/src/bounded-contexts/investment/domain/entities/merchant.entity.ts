@@ -1,7 +1,7 @@
 // Merchant Aggregate Root - 지역 상점 관리 (Local League)
 // UTF-8 인코딩
 
-import type { DomainEvent, Result } from "../../../../shared/types/common";
+import type { DomainEvent, Result } from "@posmul/shared-types";
 import type { UserId } from "../../../auth/domain/value-objects/user-value-objects";
 import {
   Location,

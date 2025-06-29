@@ -8,15 +8,15 @@
  * @since 2024-12
  */
 
-import { Badge } from "@/shared/components/ui/badge";
-import { Button } from "@/shared/components/ui/button";
+import { Badge } from "@posmul/shared-ui";
+import { Button } from "@posmul/shared-ui";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/shared/components/ui/card";
+} from "@posmul/shared-ui";
 import Link from "next/link";
 import { Suspense } from "react";
 

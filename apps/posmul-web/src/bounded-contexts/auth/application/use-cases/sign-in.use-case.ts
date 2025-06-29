@@ -5,8 +5,8 @@
 import { IUserRepository } from '../../domain/repositories/user.repository';
 import { IAuthDomainService, AuthenticationCredentials, AuthResult } from '../../domain/services/auth-domain.service';
 import { IExternalAuthService } from './sign-up.use-case';
-import { UserNotFoundError, InvalidCredentialsError } from '../../../../shared/utils/errors';
-import type { Result } from '../../../../shared/types/common';
+import { UserNotFoundError, InvalidCredentialsError } from '@posmul/shared-ui';
+import type { Result } from '@posmul/shared-types';
 
 export interface ISignInUseCase {
   execute(credentials: AuthenticationCredentials): Promise<Result<AuthResult, Error>>;
@@ -23,7 +23,7 @@ export class SignInUseCase implements ISignInUseCase {
     // 1. 입력 데이터 검증
     const validationResult = this.authDomainService.validateLoginData(credentials);
     if (!validationResult.success) {
-      return { success: false, error: validationResult.error };
+      return validationResult;
     }
 
     try {
@@ -33,7 +33,7 @@ export class SignInUseCase implements ISignInUseCase {
       });
       
       if (!userResult.success) {
-        return { success: false, error: userResult.error };
+        return userResult;
       }
       
       if (!userResult.data) {

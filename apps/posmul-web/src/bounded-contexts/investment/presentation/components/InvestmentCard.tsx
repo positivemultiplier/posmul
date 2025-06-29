@@ -1,11 +1,11 @@
-import { Badge } from "@/shared/components/ui/badge";
+import { Badge } from "@posmul/shared-ui";
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/shared/components/ui/card";
+} from "@posmul/shared-ui";
 import React from "react";
 
 // 임시로 InvestmentOpportunity 타입을 정의합니다.

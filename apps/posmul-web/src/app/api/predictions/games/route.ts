@@ -1,10 +1,10 @@
-import { CreatePredictionGameRequest } from "@/bounded-contexts/prediction/application/dto/prediction-use-case.dto";
-import { CreatePredictionGameUseCase } from "@/bounded-contexts/prediction/application/use-cases/create-prediction-game.use-case";
-import { GetPredictionGamesUseCase } from "@/bounded-contexts/prediction/application/use-cases/get-prediction-games.use-case";
-import { SupabasePredictionGameRepository } from "@/bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
-import { EconomyKernel } from "@/shared/economy-kernel/services/economy-kernel.service";
-import { MoneyWaveCalculatorService } from "@/shared/economy-kernel/services/money-wave-calculator.service";
-import { UserId } from "@/shared/types/branded-types";
+import { CreatePredictionGameRequest } from "../../../../../bounded-contexts/prediction/application/dto/prediction-use-case.dto";
+import { CreatePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/create-prediction-game.use-case";
+import { GetPredictionGamesUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/get-prediction-games.use-case";
+import { SupabasePredictionGameRepository } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
+import { EconomyKernel } from "@posmul/shared-ui";
+import { MoneyWaveCalculatorService } from "@posmul/shared-ui";
+import { UserId } from "@posmul/shared-types";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
           success: false,
           error: {
             code: "FETCH_GAMES_FAILED",
-            message: result.error.message,
+            message: isFailure(result) ? result.error.message : "Unknown error",
           },
         },
         { status: 500 }
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
           success: false,
           error: {
             code: "CREATE_GAME_FAILED",
-            message: result.error.message,
+            message: isFailure(result) ? result.error.message : "Unknown error",
           },
         },
         { status: 500 }

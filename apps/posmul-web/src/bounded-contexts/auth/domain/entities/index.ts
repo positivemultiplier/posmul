@@ -2,7 +2,7 @@
  * Auth Domain Entities
  */
 
-import { UserId } from "@/shared/types/branded-types";
+import { UserId } from "@posmul/shared-types";
 
 /**
  * Auth Session Entity

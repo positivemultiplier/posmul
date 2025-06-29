@@ -1,8 +1,8 @@
 import {
   mcp_supabase_apply_migration,
   mcp_supabase_execute_sql,
-} from "@/shared/mcp/supabase-client";
-import { SupabaseProjectService } from "@/shared/mcp/supabase-project.service";
+} from "@posmul/shared-auth";
+import { SupabaseProjectService } from "@posmul/shared-auth";
 
 export abstract class BaseMCPRepository {
   protected readonly projectId: string;

@@ -3,7 +3,7 @@
  * 기부 도메인 서비스 - 복잡한 비즈니스 로직 처리
  */
 
-import { UserId } from '@/bounded-contexts/auth/domain/value-objects/user-value-objects';
+import { UserId } from '@posmul/shared-types';
 import { Donation } from '../entities/donation.entity';
 import { Institute } from '../entities/institute.entity';
 import { OpinionLeader } from '../entities/opinion-leader.entity';

@@ -1,6 +1,6 @@
-import { Result } from '@/shared/types/common';
-import { ValidationError } from '@/shared/utils/errors';
-import { UserId } from '@/bounded-contexts/auth/domain/value-objects/user-value-objects';
+import { Result } from '@posmul/shared-types';
+import { ValidationError } from '@posmul/shared-ui';
+import { UserId } from '@posmul/shared-types';
 import { Investment } from '../../domain/entities/investment.entity';
 import { IInvestmentRepository, IMerchantRepository, IAdvertisementRepository, ICrowdFundingRepository } from '../../domain/repositories';
 import { InvestmentDomainService } from '../../domain/services/investment.domain-service';
@@ -43,7 +43,7 @@ export class CreateInvestmentUseCase {
         case InvestmentType.LOCAL_LEAGUE:
           const merchantIdResult = MerchantId.create(validData.targetId);
           if (!merchantIdResult.success) {
-            return { success: false, error: merchantIdResult.error };
+            return merchantIdResult;
           }
           const merchantResult = await this.merchantRepository.findById(merchantIdResult.data);
           if (!merchantResult.success || !merchantResult.data) {
@@ -55,7 +55,7 @@ export class CreateInvestmentUseCase {
         case InvestmentType.MAJOR_LEAGUE:
           const advertisementIdResult = AdvertisementId.create(validData.targetId);
           if (!advertisementIdResult.success) {
-            return { success: false, error: advertisementIdResult.error };
+            return advertisementIdResult;
           }
           const advertisementResult = await this.advertisementRepository.findById(advertisementIdResult.data);
           if (!advertisementResult.success || !advertisementResult.data) {
@@ -67,7 +67,7 @@ export class CreateInvestmentUseCase {
         case InvestmentType.CLOUD_FUNDING:
           const crowdFundingIdResult = CrowdFundingId.create(validData.targetId);
           if (!crowdFundingIdResult.success) {
-            return { success: false, error: crowdFundingIdResult.error };
+            return crowdFundingIdResult;
           }
           const crowdFundingResult = await this.crowdFundingRepository.findById(crowdFundingIdResult.data);
           if (!crowdFundingResult.success || !crowdFundingResult.data) {
@@ -90,7 +90,7 @@ export class CreateInvestmentUseCase {
       );
 
       if (!investmentResult.success) {
-        return { success: false, error: investmentResult.error };
+        return investmentResult;
       }
 
       // 도메인 서비스를 통한 투자 검증
@@ -100,7 +100,7 @@ export class CreateInvestmentUseCase {
       );
 
       if (!validationResult2.success) {
-        return { success: false, error: validationResult2.error };
+        return validationResult2;
       }
 
       // 보상률 계산
@@ -111,7 +111,7 @@ export class CreateInvestmentUseCase {
       );
 
       if (!rewardRateResult.success) {
-        return { success: false, error: rewardRateResult.error };
+        return rewardRateResult;
       }
 
       // 예상 수익 계산
@@ -121,13 +121,13 @@ export class CreateInvestmentUseCase {
       );
 
       if (!estimatedReturnResult.success) {
-        return { success: false, error: estimatedReturnResult.error };
+        return estimatedReturnResult;
       }
 
       // 데이터베이스에 저장
       const saveResult = await this.investmentRepository.save(investmentResult.data);
       if (!saveResult.success) {
-        return { success: false, error: saveResult.error };
+        return saveResult;
       }
 
       return {

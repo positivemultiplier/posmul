@@ -93,7 +93,15 @@ export class Prediction {
     // 유효성 검증
     const validationResult = Prediction.validateInput(input);
     if (!validationResult.success) {
-      return failure(validationResult.error);
+      if (isFailure(validationResult)) {
+  if (isFailure(validationResult)) {
+  return failure(validationResult.error);
+} else {
+  return failure(new Error("Unknown error"));
+};
+} else {
+  return failure(new Error("Unknown error"));
+}
     }
 
     const predictionId = createPredictionId(crypto.randomUUID());

@@ -5,8 +5,8 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { IExternalAuthService } from '../../application/use-cases/sign-up.use-case';
 import { SignUpData } from '../../domain/services/auth-domain.service';
-import { ExternalServiceError, AuthenticationError } from '../../../../shared/utils/errors';
-import type { Result } from '../../../../shared/types/common';
+import { ExternalServiceError, AuthenticationError } from '@posmul/shared-ui';
+import type { Result } from '@posmul/shared-types';
 
 export class SupabaseAuthService implements IExternalAuthService {
   private supabase: SupabaseClient;

@@ -5,8 +5,8 @@
  * Clean Architecture 원칙에 따라 도메인 계층에서 인터페이스만 정의
  */
 
-import { UserId } from "@/shared/types/branded-types";
-import { Result } from "@/shared/types/common";
+import { UserId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import { PMC, PMP } from "../value-objects";
 
 /**

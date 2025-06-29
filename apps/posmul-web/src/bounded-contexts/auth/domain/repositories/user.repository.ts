@@ -4,7 +4,7 @@
 
 import { User } from '../entities/user.entity';
 import { UserId, Email } from '../value-objects/user-value-objects';
-import type { Result } from '../../../../shared/types/common';
+import type { Result } from '@posmul/shared-types';
 
 export interface IUserRepository {
   // 사용자 생성

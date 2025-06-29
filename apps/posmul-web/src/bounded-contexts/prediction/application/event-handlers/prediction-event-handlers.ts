@@ -13,12 +13,12 @@ import {
   PmcSpentEvent,
   PmpEarnedEvent,
   PmpSpentEvent,
-} from "@/shared/economy-kernel/events/economic-events";
+} from "@posmul/shared-ui";
 import {
   HandlerError,
   IDomainEventSubscriber,
-} from "@/shared/events/event-publisher";
-import { Result } from "@/shared/types/common";
+} from "@posmul/shared-ui";
+import { Result } from "@posmul/shared-types";
 import {
   MoneyWaveDistributionCompletedEvent,
   PmcEarnedFromPredictionEvent,

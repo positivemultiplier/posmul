@@ -3,8 +3,8 @@
  */
 
 import { UserCreatedEvent, publishEvent } from "../../../../shared/events";
-import type { Result } from "../../../../shared/types/common";
-import { UserAlreadyExistsError } from "../../../../shared/utils/errors";
+import type { Result } from "@posmul/shared-types";
+import { UserAlreadyExistsError } from "@posmul/shared-ui";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {
   AuthResult,
@@ -27,7 +27,7 @@ export class SignUpUseCase implements ISignUpUseCase {
     // 1. 입력 데이터 검증
     const validationResult = this.authDomainService.validateSignUpData(data);
     if (!validationResult.success) {
-      return { success: false, error: validationResult.error };
+      return validationResult;
     }
 
     try {
@@ -37,7 +37,7 @@ export class SignUpUseCase implements ISignUpUseCase {
       });
 
       if (!emailExists.success) {
-        return { success: false, error: emailExists.error };
+        return emailExists;
       }
 
       if (emailExists.data) {
@@ -50,7 +50,7 @@ export class SignUpUseCase implements ISignUpUseCase {
       // 3. 외부 인증 서비스에 사용자 생성
       const authUserResult = await this.authService.signUp(data);
       if (!authUserResult.success) {
-        return { success: false, error: authUserResult.error };
+        return authUserResult;
       }
 
       // 4. 도메인 사용자 생성
@@ -61,7 +61,7 @@ export class SignUpUseCase implements ISignUpUseCase {
       if (!userResult.success) {
         // 외부 인증 서비스에서 생성된 사용자 롤백
         await this.authService.deleteUser(authUserResult.data.id);
-        return { success: false, error: userResult.error };
+        return userResult;
       }
 
       // 5. 사용자 저장
@@ -69,7 +69,7 @@ export class SignUpUseCase implements ISignUpUseCase {
       if (!saveResult.success) {
         // 외부 인증 서비스에서 생성된 사용자 롤백
         await this.authService.deleteUser(authUserResult.data.id);
-        return { success: false, error: saveResult.error };
+        return saveResult;
       }
 
       // 6. 도메인 이벤트 발행

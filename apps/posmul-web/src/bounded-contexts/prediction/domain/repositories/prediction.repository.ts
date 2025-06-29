@@ -13,8 +13,8 @@ import {
   PredictionGameId,
   PredictionId,
   UserId,
-} from "../../../../shared/types/branded-types";
-import { Result } from "../../../../shared/types/economic-system";
+} from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import { Prediction } from "../entities/prediction-game.aggregate";
 import {
   PaginatedResult,

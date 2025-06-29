@@ -202,7 +202,15 @@ export class PredictionEconomicService {
       );
 
       if (!eligibilityResult.success) {
-        return failure(eligibilityResult.error);
+        if (isFailure(eligibilityResult)) {
+  if (isFailure(eligibilityResult)) {
+  return failure(eligibilityResult.error);
+} else {
+  return failure(new Error("Unknown error"));
+};
+} else {
+  return failure(new Error("Unknown error"));
+}
       }
 
       if (!eligibilityResult.data.canParticipate) {

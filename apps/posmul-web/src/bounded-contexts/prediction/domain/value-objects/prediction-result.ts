@@ -12,11 +12,11 @@ import {
   AccuracyScore,
   PMC,
   createPMC,
-} from "../../../../shared/types/branded-types";
+} from "@posmul/shared-types";
 import {
   Result,
   ValidationError,
-} from "../../../../shared/types/economic-system";
+} from "@posmul/shared-types";
 
 /**
  * 예측 결과 열거형

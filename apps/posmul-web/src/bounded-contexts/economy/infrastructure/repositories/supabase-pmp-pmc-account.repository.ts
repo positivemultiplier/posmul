@@ -5,8 +5,8 @@
  * IPMPPMCAccountRepository 인터페이스를 Supabase MCP로 구현
  */
 
-import { UserId } from "@/shared/types/branded-types";
-import { Result } from "@/shared/types/common";
+import { UserId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import {
   AccountActivity,
   AccountBalance,

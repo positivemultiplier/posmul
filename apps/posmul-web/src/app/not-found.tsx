@@ -1,6 +1,6 @@
 "use client";
 
-import Button from "@/shared/components/Button";
+import { Button } from "@posmul/shared-ui";
 import {
   ArrowLeft,
   Gamepad2,

@@ -10,14 +10,15 @@
  * @since 2024-12
  */
 
-import Link from "next/link";
+import type { ComponentType, HTMLAttributes } from "react";
+import React from "react";
 import {
   EnhancedGameCard,
   type EnhancedGameCardProps,
   type GameType,
-} from "./EnhancedGameCard";
-import { Badge } from "./ui/badge";
-import { Card, CardContent } from "./ui/card";
+} from "./EnhancedGameCard.js";
+import { Badge } from "./ui/badge.js";
+import { Card, CardContent } from "./ui/card.js";
 
 // 공통 데이터 인터페이스
 export interface CategoryStatistics {
@@ -38,8 +39,16 @@ export interface PopularSubcategory {
 // 게임 카드 Props (EnhancedGameCard와 호환)
 export interface GameCardProps extends EnhancedGameCardProps {}
 
-// 메인 레이아웃 Props
-export interface CategoryOverviewLayoutProps {
+// Define a type for the Link component that can be passed as a prop.
+// It should be able to accept props like href, children, and other anchor attributes.
+type LinkProps = {
+  href: string;
+  children: React.ReactNode;
+  [key: string]: any; // Allow other props
+};
+
+// Define the props for CategoryOverviewLayout
+interface CategoryOverviewLayoutProps extends HTMLAttributes<HTMLDivElement> {
   // 페이지 기본 정보
   category: string;
   title: string;
@@ -58,6 +67,7 @@ export interface CategoryOverviewLayoutProps {
   // 추가 설정
   showPopularSection?: boolean;
   maxGamesDisplay?: number;
+  LinkComponent: ComponentType<LinkProps>; // Expect a Link component as a prop
 }
 
 // 통계 카드 컴포넌트
@@ -130,6 +140,7 @@ export function CategoryOverviewLayout({
   games,
   showPopularSection = true,
   maxGamesDisplay = 6,
+  LinkComponent,
 }: CategoryOverviewLayoutProps) {
   const displayGames = games.slice(0, maxGamesDisplay);
 
@@ -207,19 +218,23 @@ export function CategoryOverviewLayout({
             🎯 최신 {category} 게임
           </h2>
           {games.length > maxGamesDisplay && (
-            <Link
+            <LinkComponent
               href={`/${category.toLowerCase()}`}
               className="text-blue-600 hover:text-blue-700 font-medium"
             >
               전체 보기 →
-            </Link>
+            </LinkComponent>
           )}
         </div>
 
         {displayGames.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {displayGames.map((game) => (
-              <EnhancedGameCard key={game.id} game={game} />
+              <EnhancedGameCard
+                key={game.id}
+                {...game}
+                LinkComponent={LinkComponent}
+              />
             ))}
           </div>
         ) : (

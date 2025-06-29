@@ -7,12 +7,12 @@ import {
   PMP,
   createPMC,
   createPMP,
-} from "../../../../shared/types/branded-types";
+} from "@posmul/shared-types";
 import {
   PredictionResult as BasePredictionResult,
   Result,
   ValidationError,
-} from "../../../../shared/types/economic-system";
+} from "@posmul/shared-types";
 import { GameStatus as BaseGameStatus } from "./game-status";
 
 /**

@@ -1,5 +1,5 @@
-import { MCPInvestmentOpportunityRepository } from "@/bounded-contexts/investment/infrastructure/repositories/mcp-investment-opportunity.repository";
-import { SupabaseProjectService } from "@/shared/mcp/supabase-project.service";
+import { MCPInvestmentOpportunityRepository } from "../../../../../bounded-contexts/investment/infrastructure/repositories/mcp-investment-opportunity.repository";
+import { SupabaseProjectService } from "@posmul/shared-auth";
 import { NextResponse } from "next/server";
 
 /**

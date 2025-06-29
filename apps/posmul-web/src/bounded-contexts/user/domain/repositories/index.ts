@@ -2,8 +2,8 @@
  * User Domain Repository Interfaces
  */
 
-import { UserId } from "@/shared/types/branded-types";
-import { Result } from "@/shared/types/common";
+import { UserId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import { User, UserActivity, UserProfile, UserStatistics } from "../entities";
 
 /**

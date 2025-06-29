@@ -3,13 +3,13 @@
  * 오피니언 리더 엔티티
  */
 
-import { Result, DomainEvent } from '@/shared/types/common';
-import { UserId } from '@/bounded-contexts/auth/domain/value-objects/user-value-objects';
-import { 
-  OpinionLeaderId, 
+import { UserId } from "@posmul/shared-types";
+import { DomainEvent, Result } from "@posmul/shared-types";
+import {
+  DonorRating,
+  OpinionLeaderId,
   SupportCategory,
-  DonorRating 
-} from '../value-objects/donation-value-objects';
+} from "../value-objects/donation-value-objects";
 
 // 오피니언 리더 등록 이벤트
 export class OpinionLeaderRegisteredEvent implements DomainEvent {
@@ -26,7 +26,7 @@ export class OpinionLeaderRegisteredEvent implements DomainEvent {
     public readonly categories: SupportCategory[]
   ) {
     this.id = crypto.randomUUID();
-    this.type = 'OpinionLeaderRegistered';
+    this.type = "OpinionLeaderRegistered";
     this.aggregateId = leaderId.getValue();
     this.data = { name, categories };
     this.version = 1;
@@ -36,18 +36,18 @@ export class OpinionLeaderRegisteredEvent implements DomainEvent {
 
 // 오피니언 리더 상태
 export enum OpinionLeaderStatus {
-  PENDING = 'PENDING',         // 승인 대기
-  ACTIVE = 'ACTIVE',           // 활성
-  SUSPENDED = 'SUSPENDED',     // 일시 정지
-  TERMINATED = 'TERMINATED'    // 종료
+  PENDING = "PENDING", // 승인 대기
+  ACTIVE = "ACTIVE", // 활성
+  SUSPENDED = "SUSPENDED", // 일시 정지
+  TERMINATED = "TERMINATED", // 종료
 }
 
 // 검증 상태
 export enum VerificationStatus {
-  UNVERIFIED = 'UNVERIFIED',   // 미검증
-  PENDING = 'PENDING',         // 검증 대기
-  VERIFIED = 'VERIFIED',       // 검증됨
-  REJECTED = 'REJECTED'        // 거부됨
+  UNVERIFIED = "UNVERIFIED", // 미검증
+  PENDING = "PENDING", // 검증 대기
+  VERIFIED = "VERIFIED", // 검증됨
+  REJECTED = "REJECTED", // 거부됨
 }
 
 // 소셜 미디어 정보
@@ -169,27 +169,39 @@ export class OpinionLeader {
     websiteUrl?: string
   ): Result<void> {
     if (this.status === OpinionLeaderStatus.TERMINATED) {
-      return { success: false, error: new Error('Cannot update terminated opinion leader') };
+      return {
+        success: false,
+        error: new Error("Cannot update terminated opinion leader"),
+      };
     }
 
     if (!name || name.trim().length === 0) {
-      return { success: false, error: new Error('Name cannot be empty') };
+      return { success: false, error: new Error("Name cannot be empty") };
     }
 
     if (!description || description.trim().length === 0) {
-      return { success: false, error: new Error('Description cannot be empty') };
+      return {
+        success: false,
+        error: new Error("Description cannot be empty"),
+      };
     }
 
     if (!bio || bio.trim().length === 0) {
-      return { success: false, error: new Error('Bio cannot be empty') };
+      return { success: false, error: new Error("Bio cannot be empty") };
     }
 
     if (categories.length === 0) {
-      return { success: false, error: new Error('At least one category is required') };
+      return {
+        success: false,
+        error: new Error("At least one category is required"),
+      };
     }
 
     if (bio.length > 1000) {
-      return { success: false, error: new Error('Bio cannot exceed 1000 characters') };
+      return {
+        success: false,
+        error: new Error("Bio cannot exceed 1000 characters"),
+      };
     }
 
     this.name = name.trim();
@@ -206,14 +218,20 @@ export class OpinionLeader {
   // 소셜 미디어 정보 업데이트
   updateSocialMediaInfo(socialMediaInfo: SocialMediaInfo[]): Result<void> {
     if (this.status === OpinionLeaderStatus.TERMINATED) {
-      return { success: false, error: new Error('Cannot update terminated opinion leader') };
+      return {
+        success: false,
+        error: new Error("Cannot update terminated opinion leader"),
+      };
     }
 
     // 중복 플랫폼 검사
-    const platforms = socialMediaInfo.map(info => info.platform);
+    const platforms = socialMediaInfo.map((info) => info.platform);
     const uniquePlatforms = new Set(platforms);
     if (platforms.length !== uniquePlatforms.size) {
-      return { success: false, error: new Error('Duplicate social media platforms not allowed') };
+      return {
+        success: false,
+        error: new Error("Duplicate social media platforms not allowed"),
+      };
     }
 
     this.socialMediaInfo = [...socialMediaInfo];
@@ -225,7 +243,10 @@ export class OpinionLeader {
   // 오피니언 리더 승인
   approve(): Result<void> {
     if (this.status !== OpinionLeaderStatus.PENDING) {
-      return { success: false, error: new Error('Only pending opinion leaders can be approved') };
+      return {
+        success: false,
+        error: new Error("Only pending opinion leaders can be approved"),
+      };
     }
 
     this.status = OpinionLeaderStatus.ACTIVE;
@@ -237,7 +258,10 @@ export class OpinionLeader {
   // 검증 상태 업데이트
   updateVerificationStatus(status: VerificationStatus): Result<void> {
     if (this.status !== OpinionLeaderStatus.ACTIVE) {
-      return { success: false, error: new Error('Only active opinion leaders can be verified') };
+      return {
+        success: false,
+        error: new Error("Only active opinion leaders can be verified"),
+      };
     }
 
     this.verificationStatus = status;
@@ -250,7 +274,10 @@ export class OpinionLeader {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   suspend(_reason?: string): Result<void> {
     if (this.status !== OpinionLeaderStatus.ACTIVE) {
-      return { success: false, error: new Error('Only active opinion leaders can be suspended') };
+      return {
+        success: false,
+        error: new Error("Only active opinion leaders can be suspended"),
+      };
     }
 
     this.status = OpinionLeaderStatus.SUSPENDED;
@@ -262,7 +289,10 @@ export class OpinionLeader {
   // 오피니언 리더 재활성화
   reactivate(): Result<void> {
     if (this.status !== OpinionLeaderStatus.SUSPENDED) {
-      return { success: false, error: new Error('Only suspended opinion leaders can be reactivated') };
+      return {
+        success: false,
+        error: new Error("Only suspended opinion leaders can be reactivated"),
+      };
     }
 
     this.status = OpinionLeaderStatus.ACTIVE;
@@ -275,7 +305,10 @@ export class OpinionLeader {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   terminate(_reason?: string): Result<void> {
     if (this.status === OpinionLeaderStatus.TERMINATED) {
-      return { success: false, error: new Error('Opinion leader is already terminated') };
+      return {
+        success: false,
+        error: new Error("Opinion leader is already terminated"),
+      };
     }
 
     this.status = OpinionLeaderStatus.TERMINATED;
@@ -306,12 +339,15 @@ export class OpinionLeader {
 
   // 총 팔로워 수 계산
   getTotalFollowers(): number {
-    return this.socialMediaInfo.reduce((total, info) => total + info.followers, 0);
+    return this.socialMediaInfo.reduce(
+      (total, info) => total + info.followers,
+      0
+    );
   }
 
   // 검증된 소셜 미디어 계정 수
   getVerifiedAccountCount(): number {
-    return this.socialMediaInfo.filter(info => info.verified).length;
+    return this.socialMediaInfo.filter((info) => info.verified).length;
   }
 
   // 영향력 점수 계산 (팔로워 수와 검증 상태 기반)
@@ -319,8 +355,10 @@ export class OpinionLeader {
     const totalFollowers = this.getTotalFollowers();
     const verifiedBonus = this.getVerifiedAccountCount() * 10000;
     const verificationMultiplier = this.isVerified() ? 1.5 : 1.0;
-    
-    return Math.floor((totalFollowers + verifiedBonus) * verificationMultiplier);
+
+    return Math.floor(
+      (totalFollowers + verifiedBonus) * verificationMultiplier
+    );
   }
 
   // 오피니언 리더 통계 계산 (외부 데이터 필요)
@@ -330,11 +368,17 @@ export class OpinionLeader {
   ): OpinionLeaderStats {
     const totalSupports = supports.length;
     const totalAmount = supports.reduce((sum, s) => sum + s.amount, 0);
-    const uniqueSupporters = new Set(supports.map(s => s.supporterId.toString())).size;
+    const uniqueSupporters = new Set(
+      supports.map((s) => s.supporterId.toString())
+    ).size;
     const averageAmount = totalSupports > 0 ? totalAmount / totalSupports : 0;
 
-    const totalEngagements = contents.reduce((sum, c) => sum + c.supporterCount, 0);
-    const engagementRate = contents.length > 0 ? totalEngagements / contents.length : 0;
+    const totalEngagements = contents.reduce(
+      (sum, c) => sum + c.supporterCount,
+      0
+    );
+    const engagementRate =
+      contents.length > 0 ? totalEngagements / contents.length : 0;
 
     return {
       totalSupports,
@@ -343,7 +387,7 @@ export class OpinionLeader {
       averageAmount,
       monthlyGrowthRate: 0, // 실제로는 이전 달 데이터와 비교 필요
       contentCount: contents.length,
-      engagementRate
+      engagementRate,
     };
   }
 
@@ -383,30 +427,42 @@ export class OpinionLeader {
   ): Result<OpinionLeader> {
     // 유효성 검사
     if (!name || name.trim().length === 0) {
-      return { success: false, error: new Error('Name cannot be empty') };
+      return { success: false, error: new Error("Name cannot be empty") };
     }
 
     if (!description || description.trim().length === 0) {
-      return { success: false, error: new Error('Description cannot be empty') };
+      return {
+        success: false,
+        error: new Error("Description cannot be empty"),
+      };
     }
 
     if (!bio || bio.trim().length === 0) {
-      return { success: false, error: new Error('Bio cannot be empty') };
+      return { success: false, error: new Error("Bio cannot be empty") };
     }
 
     if (categories.length === 0) {
-      return { success: false, error: new Error('At least one category is required') };
+      return {
+        success: false,
+        error: new Error("At least one category is required"),
+      };
     }
 
     if (bio.length > 1000) {
-      return { success: false, error: new Error('Bio cannot exceed 1000 characters') };
+      return {
+        success: false,
+        error: new Error("Bio cannot exceed 1000 characters"),
+      };
     }
 
     // 중복 플랫폼 검사
-    const platforms = socialMediaInfo.map(info => info.platform);
+    const platforms = socialMediaInfo.map((info) => info.platform);
     const uniquePlatforms = new Set(platforms);
     if (platforms.length !== uniquePlatforms.size) {
-      return { success: false, error: new Error('Duplicate social media platforms not allowed') };
+      return {
+        success: false,
+        error: new Error("Duplicate social media platforms not allowed"),
+      };
     }
 
     const opinionLeader = new OpinionLeader(

@@ -4,8 +4,8 @@
 
 import { User } from '../entities/user.entity';
 import { createEmail, createUserId, createUserRole } from '../value-objects/user-value-objects';
-import { ValidationError } from '../../../../shared/utils/errors';
-import type { Result } from '../../../../shared/types/common';
+import { ValidationError } from '@posmul/shared-ui';
+import type { Result } from '@posmul/shared-types';
 
 export interface AuthenticationCredentials {
   email: string;

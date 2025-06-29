@@ -6,8 +6,8 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { IUserRepository } from '../../domain/repositories/user.repository';
 import { User } from '../../domain/entities/user.entity';
 import { UserId, Email, createUserId, createEmail, createUserRole } from '../../domain/value-objects/user-value-objects';
-import { ExternalServiceError } from '../../../../shared/utils/errors';
-import type { Result } from '../../../../shared/types/common';
+import { ExternalServiceError } from '@posmul/shared-ui';
+import type { Result } from '@posmul/shared-types';
 
 interface UserTable {
   id: string;

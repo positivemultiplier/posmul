@@ -1,13 +1,13 @@
 "use client";
 
-import { BaseErrorUI } from "@/shared/components/error";
+import { BaseErrorUI } from "@posmul/shared-ui";
 import {
   AuthenticationError,
   BusinessLogicError,
   ForbiddenError,
   NetworkError,
   ValidationError,
-} from "@/shared/utils/errors";
+} from "@posmul/shared-ui";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 

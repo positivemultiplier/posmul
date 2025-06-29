@@ -5,7 +5,7 @@
  * DDD 원칙에 따라 구현체와 인터페이스 분리
  */
 
-import { Result } from "../../../../../shared/types/common";
+import { Result } from "@posmul/shared-types";
 import { PMC, PMP, PredictionAccuracy } from "../../value-objects";
 
 /**

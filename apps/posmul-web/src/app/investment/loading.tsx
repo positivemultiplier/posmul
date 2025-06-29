@@ -4,7 +4,7 @@
  * BaseSkeleton을 활용하여 투자 기회 카드와 포트폴리오 통계의 스켈레톤 UI를 제공합니다.
  */
 
-import { BaseSkeleton } from "@/shared/components/loading";
+import { BaseSkeleton } from "@posmul/shared-ui";
 
 export default function InvestmentLoading() {
   return (

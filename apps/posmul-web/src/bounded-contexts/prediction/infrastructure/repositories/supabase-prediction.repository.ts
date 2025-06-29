@@ -19,12 +19,12 @@ import {
   PredictionGameId,
   PredictionId,
   UserId,
-} from "../../../../shared/types/branded-types";
+} from "@posmul/shared-types";
 import {
   failure,
   Result,
   success,
-} from "../../../../shared/types/economic-system";
+} from "@posmul/shared-types";
 import { Prediction } from "../../domain/entities/prediction-game.aggregate";
 import {
   PaginatedResult,
@@ -233,7 +233,15 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.validatePagination(paginationConfig);
 
       if (!validationResult.success) {
-        return failure(validationResult.error);
+        if (isFailure(validationResult)) {
+  if (isFailure(validationResult)) {
+  return failure(validationResult.error);
+} else {
+  return failure(new Error("Unknown error"));
+};
+} else {
+  return failure(new Error("Unknown error"));
+}
       }
 
       const offset = (paginationConfig.page - 1) * paginationConfig.limit;
@@ -323,7 +331,15 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.validatePagination(paginationConfig);
 
       if (!validationResult.success) {
-        return failure(validationResult.error);
+        if (isFailure(validationResult)) {
+  if (isFailure(validationResult)) {
+  return failure(validationResult.error);
+} else {
+  return failure(new Error("Unknown error"));
+};
+} else {
+  return failure(new Error("Unknown error"));
+}
       }
 
       const offset = (paginationConfig.page - 1) * paginationConfig.limit;
@@ -454,7 +470,15 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.validatePagination(paginationConfig);
 
       if (!validationResult.success) {
-        return failure(validationResult.error);
+        if (isFailure(validationResult)) {
+  if (isFailure(validationResult)) {
+  return failure(validationResult.error);
+} else {
+  return failure(new Error("Unknown error"));
+};
+} else {
+  return failure(new Error("Unknown error"));
+}
       }
 
       const offset = (paginationConfig.page - 1) * paginationConfig.limit;

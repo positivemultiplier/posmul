@@ -5,7 +5,7 @@
  * Agency Theory 기반 Principal-Agent 문제 해결과 CAPM 모델 적용
  */
 
-import { UserId } from "@/shared/types/branded-types";
+import { UserId } from "@posmul/shared-types";
 import {
   AccountBalance,
   IPMPPMCAccountRepository,

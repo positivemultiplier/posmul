@@ -1,12 +1,12 @@
-import { SettlePredictionGameUseCase } from "@/bounded-contexts/prediction/application/use-cases/settle-prediction-game.use-case";
-import { PredictionEconomicService } from "@/bounded-contexts/prediction/domain/services/prediction-economic.service";
-import { SupabasePredictionGameRepository } from "@/bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
-import { SupabasePredictionRepository } from "@/bounded-contexts/prediction/infrastructure/repositories/supabase-prediction.repository";
-import { IDomainEventPublisher as EconomicEventPublisher } from "@/shared/economy-kernel/events/economic-events";
-import { MoneyWaveCalculatorService } from "@/shared/economy-kernel/services/money-wave-calculator.service";
-import { InMemoryEventPublisher } from "@/shared/events/event-publisher";
-import { PredictionGameId, UserId } from "@/shared/types/branded-types";
-import { DomainEvent } from "@/shared/types/common";
+import { SettlePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/settle-prediction-game.use-case";
+import { PredictionEconomicService } from "../../../../../bounded-contexts/prediction/domain/services/prediction-economic.service";
+import { SupabasePredictionGameRepository } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
+import { SupabasePredictionRepository } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction.repository";
+import { IDomainEventPublisher as EconomicEventPublisher } from "@posmul/shared-ui";
+import { MoneyWaveCalculatorService } from "@posmul/shared-ui";
+import { InMemoryEventPublisher } from "@posmul/shared-ui";
+import { PredictionGameId, UserId } from "@posmul/shared-types";
+import { DomainEvent } from "@posmul/shared-types";
 import { NextRequest, NextResponse } from "next/server";
 
 // EventPublisher 어댑터 클래스
@@ -97,7 +97,7 @@ export async function POST(
 
     if (!result.success) {
       // 구체적인 에러 처리
-      if (result.error.message.includes("not found")) {
+      if (isFailure(result) && result.error.message.includes("not found")) {
         return NextResponse.json(
           {
             success: false,
@@ -110,7 +110,7 @@ export async function POST(
         );
       }
 
-      if (result.error.message.includes("already settled")) {
+      if (isFailure(result) && result.error.message.includes("already settled")) {
         return NextResponse.json(
           {
             success: false,
@@ -123,7 +123,7 @@ export async function POST(
         );
       }
 
-      if (result.error.message.includes("not ended")) {
+      if (isFailure(result) && result.error.message.includes("not ended")) {
         return NextResponse.json(
           {
             success: false,
@@ -136,7 +136,7 @@ export async function POST(
         );
       }
 
-      if (result.error.message.includes("unauthorized")) {
+      if (isFailure(result) && result.error.message.includes("unauthorized")) {
         return NextResponse.json(
           {
             success: false,
@@ -154,7 +154,7 @@ export async function POST(
           success: false,
           error: {
             code: "SETTLEMENT_FAILED",
-            message: result.error.message,
+            message: isFailure(result) ? result.error.message : "Unknown error",
           },
         },
         { status: 500 }

@@ -7,11 +7,11 @@
  * 하이브리드 접근법으로 안전한 MCP 전환 달성
  */
 
-import { mcp_supabase_execute_sql } from "@/shared/mcp/supabase-client";
-import { SupabaseProjectService } from "@/shared/mcp/supabase-project.service";
+import { mcp_supabase_execute_sql } from "@posmul/shared-auth";
+import { SupabaseProjectService } from "@posmul/shared-auth";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import type { Result } from "../../../../shared/types/common";
-import { ExternalServiceError } from "../../../../shared/utils/errors";
+import type { Result } from "@posmul/shared-types";
+import { ExternalServiceError } from "@posmul/shared-ui";
 import { User } from "../../domain/entities/user.entity";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {

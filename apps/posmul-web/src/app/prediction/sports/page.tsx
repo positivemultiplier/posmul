@@ -13,7 +13,7 @@ import {
   type CategoryStatistics,
   type GameCardProps,
   type PopularSubcategory,
-} from "@/shared/components/CategoryOverviewLayout";
+} from "@posmul/shared-ui";
 
 // 실제 스포츠 예측 게임들 (EnhancedGameCard 형식)
 const sportsGames: GameCardProps[] = [

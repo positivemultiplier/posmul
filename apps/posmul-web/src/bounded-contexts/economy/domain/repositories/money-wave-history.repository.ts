@@ -5,7 +5,7 @@
  * 경제학적 실증 분석과 정책 효과성 측정을 위한 히스토리 데이터 관리
  */
 
-import { Result } from "@/shared/types/common";
+import { Result } from "@posmul/shared-types";
 import { EBIT, PMC } from "../value-objects";
 
 /**

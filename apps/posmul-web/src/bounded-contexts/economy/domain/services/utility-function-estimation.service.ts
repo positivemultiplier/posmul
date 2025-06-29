@@ -13,8 +13,8 @@
  * - Sen's Capability Approach
  */
 
-import { UserId } from "@/shared/types/branded-types";
-import { DomainError, Result } from "@/shared/types/common";
+import { UserId } from "@posmul/shared-types";
+import { DomainError, Result } from "@posmul/shared-types";
 import { PMC, PMP, unwrapPMC, unwrapPMP } from "../value-objects";
 
 /**

@@ -3,18 +3,22 @@
  * 게시물 저장소 인터페이스
  */
 
-import { Result, PaginationParams, PaginatedResult } from '@/shared/types/common';
-import { UserId } from '../../../auth/domain/value-objects/user-value-objects';
-import { Post } from '../entities/post.entity';
 import {
-  PostId,
-  ForumSection,
-  ForumCategory,
-  PostStatus,
-  NewsCategory,
+  PaginatedResult,
+  PaginationParams,
+  Result,
+} from "@posmul/shared-types";
+import { UserId } from "../../../auth/domain/value-objects/user-value-objects";
+import { Post } from "../entities/post.entity";
+import {
   BudgetCategory,
-  DebatePosition
-} from '../value-objects/forum-value-objects';
+  DebatePosition,
+  ForumCategory,
+  ForumSection,
+  NewsCategory,
+  PostId,
+  PostStatus,
+} from "../value-objects/forum-value-objects";
 
 /**
  * 게시물 검색 조건 인터페이스
@@ -43,8 +47,14 @@ export interface PostSearchCriteria {
  * 게시물 정렬 조건
  */
 export interface PostSortOptions {
-  field: 'createdAt' | 'updatedAt' | 'upvoteCount' | 'commentCount' | 'viewCount' | 'popularityScore';
-  direction: 'asc' | 'desc';
+  field:
+    | "createdAt"
+    | "updatedAt"
+    | "upvoteCount"
+    | "commentCount"
+    | "viewCount"
+    | "popularityScore";
+  direction: "asc" | "desc";
 }
 
 /**
@@ -93,7 +103,7 @@ export interface IPostRepository {
    * 작성자별 게시물 목록 조회
    */
   findByAuthor(
-    authorId: UserId, 
+    authorId: UserId,
     pagination?: PaginationParams,
     status?: PostStatus
   ): Promise<Result<PaginatedResult<Post>>>;
@@ -137,7 +147,7 @@ export interface IPostRepository {
   findPopular(
     section?: ForumSection,
     category?: ForumCategory,
-    timeframe?: 'day' | 'week' | 'month' | 'year',
+    timeframe?: "day" | "week" | "month" | "year",
     limit?: number
   ): Promise<Result<Post[]>>;
 
@@ -161,27 +171,21 @@ export interface IPostRepository {
   /**
    * 추천 게시물 조회 (개인화)
    */
-  findRecommended(
-    userId: UserId,
-    limit?: number
-  ): Promise<Result<Post[]>>;
+  findRecommended(userId: UserId, limit?: number): Promise<Result<Post[]>>;
 
   /**
    * 트렌딩 게시물 조회
    */
   findTrending(
     section?: ForumSection,
-    timeframe?: 'hour' | 'day' | 'week',
+    timeframe?: "hour" | "day" | "week",
     limit?: number
   ): Promise<Result<Post[]>>;
 
   /**
    * 관련 게시물 조회
    */
-  findRelated(
-    postId: PostId,
-    limit?: number
-  ): Promise<Result<Post[]>>;
+  findRelated(postId: PostId, limit?: number): Promise<Result<Post[]>>;
 
   /**
    * 태그별 게시물 조회
@@ -276,16 +280,18 @@ export interface IPostRepository {
   getUserStats(
     userId: UserId,
     dateRange?: { start: Date; end: Date }
-  ): Promise<Result<{
-    totalPosts: number;
-    publishedPosts: number;
-    totalUpvotes: number;
-    totalComments: number;
-    totalViews: number;
-    averagePopularityScore: number;
-    mostPopularPost?: Post;
-    recentActivity: Date;
-  }>>;
+  ): Promise<
+    Result<{
+      totalPosts: number;
+      publishedPosts: number;
+      totalUpvotes: number;
+      totalComments: number;
+      totalViews: number;
+      averagePopularityScore: number;
+      mostPopularPost?: Post;
+      recentActivity: Date;
+    }>
+  >;
 
   /**
    * 일별 게시물 수 조회
@@ -298,15 +304,17 @@ export interface IPostRepository {
   /**
    * 섹션별 활동 통계
    */
-  getSectionActivity(
-    timeframe: 'day' | 'week' | 'month'
-  ): Promise<Result<Array<{
-    section: ForumSection;
-    postCount: number;
-    commentCount: number;
-    uniqueUsers: number;
-    totalUpvotes: number;
-  }>>>;
+  getSectionActivity(timeframe: "day" | "week" | "month"): Promise<
+    Result<
+      Array<{
+        section: ForumSection;
+        postCount: number;
+        commentCount: number;
+        uniqueUsers: number;
+        totalUpvotes: number;
+      }>
+    >
+  >;
 
   /**
    * 게시물 일괄 업데이트 (관리자용)

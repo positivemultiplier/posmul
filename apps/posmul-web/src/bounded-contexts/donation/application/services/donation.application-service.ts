@@ -3,29 +3,37 @@
  * 기부 애플리케이션 서비스
  */
 
-import { Result, PaginationParams, PaginatedResult } from '@/shared/types/common';
-import { UserId, createUserId } from '@/bounded-contexts/auth/domain/value-objects/user-value-objects';
-import { Donation } from '../../domain/entities/donation.entity';
-import { Institute } from '../../domain/entities/institute.entity';
-import { OpinionLeader } from '../../domain/entities/opinion-leader.entity';
-import { IDonationRepository, DonationSearchCriteria } from '../../domain/repositories/donation.repository';
-import { IInstituteRepository } from '../../domain/repositories/institute.repository';
-import { IOpinionLeaderRepository } from '../../domain/repositories/opinion-leader.repository';
-import { DonationDomainService } from '../../domain/services/donation.domain-service';
-import { CreateDonationUseCase } from '../use-cases/create-donation.use-case';
-import { 
+import {
+  PaginatedResult,
+  PaginationParams,
+  Result,
+  UserId,
+  createUserId,
+} from "@posmul/shared-types";
+import { Donation } from "../../domain/entities/donation.entity";
+import { Institute } from "../../domain/entities/institute.entity";
+import { OpinionLeader } from "../../domain/entities/opinion-leader.entity";
+import {
+  DonationSearchCriteria,
+  IDonationRepository,
+} from "../../domain/repositories/donation.repository";
+import { IInstituteRepository } from "../../domain/repositories/institute.repository";
+import { IOpinionLeaderRepository } from "../../domain/repositories/opinion-leader.repository";
+import { DonationDomainService } from "../../domain/services/donation.domain-service";
+import {
   DonationId,
   DonationStatus,
-  DonorRating
-} from '../../domain/value-objects/donation-value-objects';
-import { 
+  DonorRating,
+} from "../../domain/value-objects/donation-value-objects";
+import {
   CreateDonationRequest,
+  DonationImpactResponse,
   DonationResponse,
   DonationSearchRequest,
   DonationStatsResponse,
   DonorDashboardResponse,
-  DonationImpactResponse
-} from '../dto/donation.dto';
+} from "../dto/donation.dto";
+import { CreateDonationUseCase } from "../use-cases/create-donation.use-case";
 
 /**
  * DonationApplicationService
@@ -48,10 +56,14 @@ export class DonationApplicationService {
     request: CreateDonationRequest,
     donorBalance: number
   ): Promise<Result<DonationResponse>> {
-    const result = await this.createDonationUseCase.execute(donorId, request, donorBalance);
-    
+    const result = await this.createDonationUseCase.execute(
+      donorId,
+      request,
+      donorBalance
+    );
+
     if (!result.success) {
-      return { success: false, error: result.error };
+      return result;
     }
 
     const donationResponse = this.mapDonationToResponse(result.data);
@@ -61,11 +73,15 @@ export class DonationApplicationService {
   /**
    * 기부 상세 조회
    */
-  async getDonationById(donationId: string): Promise<Result<DonationResponse | null>> {
-    const result = await this.donationRepository.findById(new DonationId(donationId));
-    
+  async getDonationById(
+    donationId: string
+  ): Promise<Result<DonationResponse | null>> {
+    const result = await this.donationRepository.findById(
+      new DonationId(donationId)
+    );
+
     if (!result.success) {
-      return { success: false, error: result.error };
+      return result;
     }
 
     if (!result.data) {
@@ -83,12 +99,18 @@ export class DonationApplicationService {
     donorId: UserId,
     pagination?: PaginationParams
   ): Promise<Result<PaginatedResult<DonationResponse>>> {
-    const result = await this.donationRepository.findByDonorId(donorId, pagination);
-    
+    const result = await this.donationRepository.findByDonorId(
+      donorId,
+      pagination
+    );
+
     if (!result.success) {
-      return { success: false, error: result.error };
-    }    const mappedData = result.data.data.map(donation => this.mapDonationToResponse(donation));
-    
+      return result;
+    }
+    const mappedData = result.data.data.map((donation) =>
+      this.mapDonationToResponse(donation)
+    );
+
     return {
       success: true,
       data: {
@@ -99,9 +121,9 @@ export class DonationApplicationService {
           limit: result.data.pagination.limit,
           totalPages: result.data.pagination.totalPages,
           hasNext: result.data.pagination.hasNext,
-          hasPrev: result.data.pagination.hasPrev
-        }
-      }
+          hasPrev: result.data.pagination.hasPrev,
+        },
+      },
     };
   }
 
@@ -113,29 +135,41 @@ export class DonationApplicationService {
   ): Promise<Result<PaginatedResult<DonationResponse>>> {
     // 검색 조건 변환
     const criteria: DonationSearchCriteria = {
-      donorId: searchRequest.donorId ? createUserId(searchRequest.donorId) : undefined,
+      donorId: searchRequest.donorId
+        ? createUserId(searchRequest.donorId)
+        : undefined,
       status: searchRequest.status,
       type: searchRequest.type,
       category: searchRequest.category,
       frequency: searchRequest.frequency,
-      startDate: searchRequest.startDate ? new Date(searchRequest.startDate) : undefined,
-      endDate: searchRequest.endDate ? new Date(searchRequest.endDate) : undefined,
+      startDate: searchRequest.startDate
+        ? new Date(searchRequest.startDate)
+        : undefined,
+      endDate: searchRequest.endDate
+        ? new Date(searchRequest.endDate)
+        : undefined,
       minAmount: searchRequest.minAmount,
       maxAmount: searchRequest.maxAmount,
-      isAnonymous: searchRequest.isAnonymous
+      isAnonymous: searchRequest.isAnonymous,
     };
 
     const pagination: PaginationParams = {
       page: searchRequest.page,
-      limit: searchRequest.limit
+      limit: searchRequest.limit,
     };
 
-    const result = await this.donationRepository.findByCriteria(criteria, pagination);
-    
+    const result = await this.donationRepository.findByCriteria(
+      criteria,
+      pagination
+    );
+
     if (!result.success) {
-      return { success: false, error: result.error };
-    }    const mappedData = result.data.data.map(donation => this.mapDonationToResponse(donation));
-    
+      return result;
+    }
+    const mappedData = result.data.data.map((donation) =>
+      this.mapDonationToResponse(donation)
+    );
+
     return {
       success: true,
       data: {
@@ -146,9 +180,9 @@ export class DonationApplicationService {
           limit: result.data.pagination.limit,
           totalPages: result.data.pagination.totalPages,
           hasNext: result.data.pagination.hasNext,
-          hasPrev: result.data.pagination.hasPrev
-        }
-      }
+          hasPrev: result.data.pagination.hasPrev,
+        },
+      },
     };
   }
 
@@ -159,15 +193,17 @@ export class DonationApplicationService {
     donationId: string,
     transactionId: string
   ): Promise<Result<void>> {
-    const donationResult = await this.donationRepository.findById(new DonationId(donationId));
-    
+    const donationResult = await this.donationRepository.findById(
+      new DonationId(donationId)
+    );
+
     if (!donationResult.success || !donationResult.data) {
-      return { success: false, error: new Error('Donation not found') };
+      return { success: false, error: new Error("Donation not found") };
     }
 
     const donation = donationResult.data;
     const processResult = donation.startProcessing(transactionId);
-    
+
     if (!processResult.success) {
       return processResult;
     }
@@ -182,15 +218,17 @@ export class DonationApplicationService {
     donationId: string,
     receiptUrl?: string
   ): Promise<Result<void>> {
-    const donationResult = await this.donationRepository.findById(new DonationId(donationId));
-    
+    const donationResult = await this.donationRepository.findById(
+      new DonationId(donationId)
+    );
+
     if (!donationResult.success || !donationResult.data) {
-      return { success: false, error: new Error('Donation not found') };
+      return { success: false, error: new Error("Donation not found") };
     }
 
     const donation = donationResult.data;
     const completeResult = donation.complete(receiptUrl);
-    
+
     if (!completeResult.success) {
       return completeResult;
     }
@@ -205,15 +243,17 @@ export class DonationApplicationService {
     donationId: string,
     reason: string
   ): Promise<Result<void>> {
-    const donationResult = await this.donationRepository.findById(new DonationId(donationId));
-    
+    const donationResult = await this.donationRepository.findById(
+      new DonationId(donationId)
+    );
+
     if (!donationResult.success || !donationResult.data) {
-      return { success: false, error: new Error('Donation not found') };
+      return { success: false, error: new Error("Donation not found") };
     }
 
     const donation = donationResult.data;
     const cancelResult = donation.cancel(reason);
-    
+
     if (!cancelResult.success) {
       return cancelResult;
     }
@@ -236,7 +276,7 @@ export class DonationApplicationService {
     );
 
     if (!statsResult.success) {
-      return { success: false, error: statsResult.error };
+      return statsResult;
     }
 
     const monthlyStatsResult = await this.donationRepository.getMonthlyStats(
@@ -244,48 +284,63 @@ export class DonationApplicationService {
       donorId
     );
 
-    const yearlyStatsResult = await this.donationRepository.getYearlyStats(donorId);    return {
+    const yearlyStatsResult =
+      await this.donationRepository.getYearlyStats(donorId);
+    return {
       success: true,
       data: {
         ...statsResult.data,
         donationsByStatus: {} as Record<DonationStatus, number>, // TODO: 실제 통계 데이터에서 가져와야 함
-        monthlyStats: monthlyStatsResult.success ? monthlyStatsResult.data.map(stat => ({
-          month: stat.month,
-          year: new Date().getFullYear(),
-          totalDonations: stat.totalDonations,
-          totalAmount: stat.totalAmount
-        })) : [],
-        yearlyStats: yearlyStatsResult.success ? yearlyStatsResult.data : []
-      }
+        monthlyStats: monthlyStatsResult.success
+          ? monthlyStatsResult.data.map((stat) => ({
+              month: stat.month,
+              year: new Date().getFullYear(),
+              totalDonations: stat.totalDonations,
+              totalAmount: stat.totalAmount,
+            }))
+          : [],
+        yearlyStats: yearlyStatsResult.success ? yearlyStatsResult.data : [],
+      },
     };
   }
 
   /**
    * 기부자 대시보드 데이터 조회
    */
-  async getDonorDashboard(donorId: UserId): Promise<Result<DonorDashboardResponse>> {
-    const dashboardResult = await this.donationRepository.getDashboardSummary(donorId);
-    
+  async getDonorDashboard(
+    donorId: UserId
+  ): Promise<Result<DonorDashboardResponse>> {
+    const dashboardResult =
+      await this.donationRepository.getDashboardSummary(donorId);
+
     if (!dashboardResult.success) {
-      return { success: false, error: dashboardResult.error };
+      return dashboardResult;
     }
 
     const summary = dashboardResult.data;
 
     // 최근 기부 내역 조회
-    const recentDonationsResult = await this.donationRepository.findByDonorId(donorId, { page: 1, limit: 5 });
-    const recentDonations = recentDonationsResult.success ? 
-      recentDonationsResult.data.data.map(d => this.mapDonationToResponse(d)) : [];
-
-    // 예정된 기부 조회
-    const scheduledDonationsResult = await this.donationRepository.findByCriteria(
-      { donorId, status: DonationStatus.PENDING },
+    const recentDonationsResult = await this.donationRepository.findByDonorId(
+      donorId,
       { page: 1, limit: 5 }
     );
-    const upcomingScheduledDonations = scheduledDonationsResult.success ? 
-      scheduledDonationsResult.data.data
-        .filter(d => d.getScheduledAt() && d.getScheduledAt()! > new Date())
-        .map(d => this.mapDonationToResponse(d)) : [];
+    const recentDonations = recentDonationsResult.success
+      ? recentDonationsResult.data.data.map((d) =>
+          this.mapDonationToResponse(d)
+        )
+      : [];
+
+    // 예정된 기부 조회
+    const scheduledDonationsResult =
+      await this.donationRepository.findByCriteria(
+        { donorId, status: DonationStatus.PENDING },
+        { page: 1, limit: 5 }
+      );
+    const upcomingScheduledDonations = scheduledDonationsResult.success
+      ? scheduledDonationsResult.data.data
+          .filter((d) => d.getScheduledAt() && d.getScheduledAt()! > new Date())
+          .map((d) => this.mapDonationToResponse(d))
+      : [];
 
     // 기부자 등급 계산
     const donorTier = DonorRating.calculateTier(summary.yearlyTotal);
@@ -295,7 +350,8 @@ export class DonationApplicationService {
       donorTier,
       summary.yearlyTotal,
       12 - new Date().getMonth()
-    );    return {
+    );
+    return {
       success: true,
       data: {
         ...summary,
@@ -309,16 +365,21 @@ export class DonationApplicationService {
           currentMonth: new Date().getMonth() + 1,
           target: summary.monthlyAverage * 1.1, // 10% 증가 목표
           achieved: summary.monthlyAverage,
-          percentage: 90 // 임시 값
+          percentage: 90, // 임시 값
         },
         tierProgress: {
           currentTier: donorTier.getTier(),
           nextTier: tierProgress.nextTier,
           requiredAmount: tierProgress.requiredAmount,
-          progressPercentage: tierProgress.requiredAmount ? 
-            Math.round((summary.yearlyTotal / (summary.yearlyTotal + tierProgress.requiredAmount)) * 100) : 100
-        }
-      }
+          progressPercentage: tierProgress.requiredAmount
+            ? Math.round(
+                (summary.yearlyTotal /
+                  (summary.yearlyTotal + tierProgress.requiredAmount)) *
+                  100
+              )
+            : 100,
+        },
+      },
     };
   }
 
@@ -328,63 +389,77 @@ export class DonationApplicationService {
   async analyzeDonationImpact(
     donationId: string
   ): Promise<Result<DonationImpactResponse>> {
-    const donationResult = await this.donationRepository.findById(new DonationId(donationId));
-    
+    const donationResult = await this.donationRepository.findById(
+      new DonationId(donationId)
+    );
+
     if (!donationResult.success || !donationResult.data) {
-      return { success: false, error: new Error('Donation not found') };
+      return { success: false, error: new Error("Donation not found") };
     }
 
     const donation = donationResult.data;
-    
+
     // 기부 대상 정보 조회
     let target: Institute | OpinionLeader | undefined;
-    
+
     if (donation.getInstituteId()) {
-      const instituteResult = await this.instituteRepository.findById(donation.getInstituteId()!);
+      const instituteResult = await this.instituteRepository.findById(
+        donation.getInstituteId()!
+      );
       if (instituteResult.success && instituteResult.data) {
         target = instituteResult.data;
       }
     } else if (donation.getOpinionLeaderId()) {
-      const leaderResult = await this.opinionLeaderRepository.findById(donation.getOpinionLeaderId()!);
+      const leaderResult = await this.opinionLeaderRepository.findById(
+        donation.getOpinionLeaderId()!
+      );
       if (leaderResult.success && leaderResult.data) {
         target = leaderResult.data;
       }
     }
 
     if (!target) {
-      return { success: false, error: new Error('Donation target not found') };
+      return { success: false, error: new Error("Donation target not found") };
     }
 
     // 영향 분석 실행
-    const impactAnalysis = this.donationDomainService.analyzeDonationImpact(donation, target);
-    
+    const impactAnalysis = this.donationDomainService.analyzeDonationImpact(
+      donation,
+      target
+    );
+
     // 최적화 제안 생성
-    const donorHistoryResult = await this.donationRepository.findByDonorId(donation.getDonorId());
-    const donorHistory = donorHistoryResult.success ? donorHistoryResult.data.data : [];
+    const donorHistoryResult = await this.donationRepository.findByDonorId(
+      donation.getDonorId()
+    );
+    const donorHistory = donorHistoryResult.success
+      ? donorHistoryResult.data.data
+      : [];
     const donorTier = DonorRating.calculateTier(
       donorHistory.reduce((sum, d) => sum + d.getAmount().getValue(), 0)
     );
 
-    const optimizationSuggestion = this.donationDomainService.suggestOptimalDonation(
-      donation.getDonorId(),
-      donation.getAmount().getValue(),
-      donorTier,
-      donorHistory
-    );
+    const optimizationSuggestion =
+      this.donationDomainService.suggestOptimalDonation(
+        donation.getDonorId(),
+        donation.getAmount().getValue(),
+        donorTier,
+        donorHistory
+      );
 
     return {
       success: true,
       data: {
         ...impactAnalysis,
-        recommendations: ['Consider regular donations for greater impact'],
+        recommendations: ["Consider regular donations for greater impact"],
         optimizationSuggestions: {
           suggestedAmount: optimizationSuggestion.suggestedAmount.getValue(),
           suggestedFrequency: optimizationSuggestion.suggestedFrequency,
           taxBenefits: optimizationSuggestion.taxBenefits,
           impactMultiplier: optimizationSuggestion.impactMultiplier,
-          reasoning: optimizationSuggestion.reasoning
-        }
-      }
+          reasoning: optimizationSuggestion.reasoning,
+        },
+      },
     };
   }
 
@@ -404,21 +479,24 @@ export class DonationApplicationService {
       metadata: donation.getMetadata(),
       instituteId: donation.getInstituteId()?.getValue(),
       opinionLeaderId: donation.getOpinionLeaderId()?.getValue(),
-      beneficiaryInfo: donation.getBeneficiaryInfo() ? {
-        name: donation.getBeneficiaryInfo()!.getName(),
-        description: donation.getBeneficiaryInfo()!.getDescription(),
-        contactInfo: donation.getBeneficiaryInfo()!.getContactInfo()
-      } : undefined,      processingInfo: {
+      beneficiaryInfo: donation.getBeneficiaryInfo()
+        ? {
+            name: donation.getBeneficiaryInfo()!.getName(),
+            description: donation.getBeneficiaryInfo()!.getDescription(),
+            contactInfo: donation.getBeneficiaryInfo()!.getContactInfo(),
+          }
+        : undefined,
+      processingInfo: {
         processedAt: donation.getProcessingInfo()?.processedAt?.toISOString(),
         processedBy: donation.getProcessingInfo()?.processedBy,
         transactionId: donation.getProcessingInfo()?.transactionId,
-        receiptUrl: donation.getProcessingInfo()?.receiptUrl
+        receiptUrl: donation.getProcessingInfo()?.receiptUrl,
       },
       scheduledAt: donation.getScheduledAt()?.toISOString(),
       completedAt: donation.getCompletedAt()?.toISOString(),
       cancelledAt: donation.getCancelledAt()?.toISOString(),
       createdAt: donation.getCreatedAt().toISOString(),
-      updatedAt: donation.getUpdatedAt().toISOString()
+      updatedAt: donation.getUpdatedAt().toISOString(),
     };
   }
 }

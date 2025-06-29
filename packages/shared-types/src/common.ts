@@ -5,32 +5,6 @@
 // 기본 ID 타입들
 export type BaseId = string;
 
-// 도메인 에러 클래스
-export class DomainError extends Error {
-  constructor(
-    message: string,
-    public readonly code: string
-  ) {
-    super(message);
-    this.name = "DomainError";
-  }
-}
-
-export class ValidationError extends DomainError {
-  constructor(
-    message: string,
-    public readonly field: string
-  ) {
-    super(message, "VALIDATION_ERROR");
-    this.name = "ValidationError";
-  }
-}
-
-// 결과 패턴 타입
-export type Result<T, E = DomainError> =
-  | { success: true; data: T }
-  | { success: false; error: E };
-
 // 페이지네이션 타입
 export interface PaginationParams {
   page: number;
@@ -77,14 +51,7 @@ export interface ApiResponse<T = unknown> {
   message?: string;
 }
 
-// 이벤트 기본 타입
-export interface DomainEvent {
-  readonly eventId: string;
-  readonly eventType: string;
-  readonly aggregateId: string;
-  readonly occurredAt: Date;
-  readonly version: number;
-}
+// DomainEvent는 domain-events.ts에서 import 사용
 
 // 메타데이터 타입
 export interface Timestamps {
@@ -111,10 +78,3 @@ export interface AsyncState<T> {
   loading: LoadingState;
   error: string | null;
 }
-
-// Result 패턴 헬퍼 함수들
-export const success = <T>(data: T): Result<T> => ({ success: true, data });
-export const failure = <E extends DomainError>(error: E): Result<never, E> => ({
-  success: false,
-  error,
-});

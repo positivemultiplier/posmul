@@ -1,6 +1,6 @@
 /**
  * INVESTMENT Domain - Supabase 타입
- * 생성 시간: 2025-06-28T13:28:11.613Z
+ * 생성 시간: 2025-06-28T15:29:24.106Z
  * 도메인: investment
  * 
  * 🚀 Universal MCP Automation (Standalone)으로 생성됨

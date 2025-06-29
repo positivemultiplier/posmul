@@ -6,8 +6,8 @@
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { UserId } from "../../../../shared/types/branded-types";
-import { Result } from "../../../../shared/types/common";
+import { UserId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import { PMC, PMP } from "../../domain/value-objects";
 
 /**

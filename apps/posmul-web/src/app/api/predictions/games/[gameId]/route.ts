@@ -1,9 +1,9 @@
-import { DeletePredictionGameUseCase } from "@/bounded-contexts/prediction/application/use-cases/delete-prediction-game.use-case";
-import { GetPredictionGameByIdUseCase } from "@/bounded-contexts/prediction/application/use-cases/get-prediction-game-by-id.use-case";
-import { UpdatePredictionGameUseCase } from "@/bounded-contexts/prediction/application/use-cases/update-prediction-game.use-case";
-import { SupabasePredictionGameRepository } from "@/bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
-import { PredictionGameId, UserId } from "@/shared/types/branded-types";
+import { PredictionGameId, UserId } from "@posmul/shared-types";
 import { NextRequest, NextResponse } from "next/server";
+import { DeletePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/delete-prediction-game.use-case";
+import { GetPredictionGameByIdUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/get-prediction-game-by-id.use-case";
+import { UpdatePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/update-prediction-game.use-case";
+import { SupabasePredictionGameRepository } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
 
 /**
  * GET /api/predictions/games/[gameId]
@@ -41,7 +41,7 @@ export async function GET(
     });
 
     if (!result.success) {
-      if (result.error.message.includes("not found")) {
+      if (isFailure(result) && result.error.message.includes("not found")) {
         return NextResponse.json(
           {
             success: false,
@@ -59,7 +59,7 @@ export async function GET(
           success: false,
           error: {
             code: "FETCH_GAME_FAILED",
-            message: result.error.message,
+            message: isFailure(result) ? result.error.message : "Unknown error",
           },
         },
         { status: 500 }
@@ -152,7 +152,7 @@ export async function PUT(
     });
 
     if (!result.success) {
-      if (result.error.message.includes("not found")) {
+      if (isFailure(result) && result.error.message.includes("not found")) {
         return NextResponse.json(
           {
             success: false,
@@ -165,7 +165,7 @@ export async function PUT(
         );
       }
 
-      if (result.error.message.includes("unauthorized")) {
+      if (isFailure(result) && result.error.message.includes("unauthorized")) {
         return NextResponse.json(
           {
             success: false,
@@ -183,7 +183,7 @@ export async function PUT(
           success: false,
           error: {
             code: "UPDATE_GAME_FAILED",
-            message: result.error.message,
+            message: isFailure(result) ? result.error.message : "Unknown error",
           },
         },
         { status: 500 }
@@ -265,7 +265,7 @@ export async function DELETE(
     });
 
     if (!result.success) {
-      if (result.error.message.includes("not found")) {
+      if (isFailure(result) && result.error.message.includes("not found")) {
         return NextResponse.json(
           {
             success: false,
@@ -278,7 +278,7 @@ export async function DELETE(
         );
       }
 
-      if (result.error.message.includes("unauthorized")) {
+      if (isFailure(result) && result.error.message.includes("unauthorized")) {
         return NextResponse.json(
           {
             success: false,
@@ -291,7 +291,7 @@ export async function DELETE(
         );
       }
 
-      if (result.error.message.includes("cannot delete active")) {
+      if (isFailure(result) && result.error.message.includes("cannot delete active")) {
         return NextResponse.json(
           {
             success: false,
@@ -309,7 +309,7 @@ export async function DELETE(
           success: false,
           error: {
             code: "DELETE_GAME_FAILED",
-            message: result.error.message,
+            message: isFailure(result) ? result.error.message : "Unknown error",
           },
         },
         { status: 500 }

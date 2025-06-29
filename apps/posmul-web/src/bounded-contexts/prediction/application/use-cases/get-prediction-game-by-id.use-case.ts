@@ -11,8 +11,8 @@
  */
 
 import { UseCaseError } from "../../../../shared/errors";
-import { PredictionGameId } from "../../../../shared/types/branded-types";
-import { Result } from "../../../../shared/types/common";
+import { PredictionGameId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**

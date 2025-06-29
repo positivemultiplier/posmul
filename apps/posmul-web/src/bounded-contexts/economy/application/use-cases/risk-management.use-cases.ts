@@ -3,7 +3,7 @@
  * 리스크 관리 관련 Use Case들
  */
 
-import { Result } from "../../../../shared/types/common";
+import { Result } from "@posmul/shared-types";
 import {
   EconomicSystemState,
   RiskAssessment,
@@ -31,7 +31,7 @@ export class MonitorSystemStabilityUseCase {
       if (!riskResult.success) {
         return {
           success: false,
-          error: riskResult.error,
+          error: isFailure(riskResult) ? riskResult.error : new Error("Unknown error"),
         };
       }
 
@@ -93,7 +93,7 @@ export class AutoEconomicPolicyAdjustmentUseCase {
       if (!taylorResult.success) {
         return {
           success: false,
-          error: taylorResult.error,
+          error: isFailure(taylorResult) ? taylorResult.error : new Error("Unknown error"),
         };
       }
 
@@ -105,7 +105,7 @@ export class AutoEconomicPolicyAdjustmentUseCase {
       if (!riskResult.success) {
         return {
           success: false,
-          error: riskResult.error,
+          error: isFailure(riskResult) ? riskResult.error : new Error("Unknown error"),
         };
       }
 
@@ -298,7 +298,7 @@ export class OptimizeIncentiveMechanismUseCase {
       if (!optimizationResult.success) {
         return {
           success: false,
-          error: optimizationResult.error,
+          error: isFailure(optimizationResult) ? optimizationResult.error : new Error("Unknown error"),
         };
       }
 

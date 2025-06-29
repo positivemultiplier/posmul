@@ -5,7 +5,7 @@
  * Fixed Effects, Random Effects, Difference-in-Differences 모델 구현
  */
 
-import { Result } from "@/shared/types/common";
+import { Result } from "@posmul/shared-types";
 import {
   EconometricModelResult,
   IEconomicAnalyticsRepository,

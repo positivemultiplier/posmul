@@ -11,6 +11,8 @@ import {
   retryMCPOperation,
 } from "./mcp-errors";
 
+export * from "@posmul/shared-auth";
+
 // MCP 함수들의 타입 정의
 declare global {
   function mcp_supabase_execute_sql(params: {
@@ -378,7 +380,7 @@ export const mcp_supabase_apply_migration = async (params: {
     const result = await client.executeSQL(params.query);
 
     if (result.error) {
-      return { success: false, error: result.error };
+      return result;
     }
 
     return { success: true };

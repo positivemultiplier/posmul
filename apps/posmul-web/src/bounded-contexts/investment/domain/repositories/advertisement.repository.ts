@@ -1,7 +1,7 @@
-import { Result } from '@/shared/types/common';
-import { UserId } from '@/bounded-contexts/auth/domain/value-objects/user-value-objects';
-import { Advertisement } from '../entities/advertisement.entity';
-import { AdvertisementId } from '../value-objects/investment-value-objects';
+import { UserId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
+import { Advertisement } from "../entities/advertisement.entity";
+import { AdvertisementId } from "../value-objects/investment-value-objects";
 
 /**
  * Advertisement Repository Interface
@@ -26,26 +26,43 @@ export interface IAdvertisementRepository {
   /**
    * 카테고리별 광고 조회
    */
-  findByCategory(category: string, limit?: number, offset?: number): Promise<Result<{
-    advertisements: Advertisement[];
-    total: number;
-  }>>;
+  findByCategory(
+    category: string,
+    limit?: number,
+    offset?: number
+  ): Promise<
+    Result<{
+      advertisements: Advertisement[];
+      total: number;
+    }>
+  >;
 
   /**
    * 활성 광고 조회
    */
-  findActive(limit?: number, offset?: number): Promise<Result<{
-    advertisements: Advertisement[];
-    total: number;
-  }>>;
+  findActive(
+    limit?: number,
+    offset?: number
+  ): Promise<
+    Result<{
+      advertisements: Advertisement[];
+      total: number;
+    }>
+  >;
 
   /**
    * 사용자 시청 가능한 광고 조회
    */
-  findAvailableForUser(userId: UserId, limit?: number, offset?: number): Promise<Result<{
-    advertisements: Advertisement[];
-    total: number;
-  }>>;
+  findAvailableForUser(
+    userId: UserId,
+    limit?: number,
+    offset?: number
+  ): Promise<
+    Result<{
+      advertisements: Advertisement[];
+      total: number;
+    }>
+  >;
 
   /**
    * 광고 삭제
@@ -55,8 +72,14 @@ export interface IAdvertisementRepository {
   /**
    * 광고 검색
    */
-  search(query: string, limit?: number, offset?: number): Promise<Result<{
-    advertisements: Advertisement[];
-    total: number;
-  }>>;
+  search(
+    query: string,
+    limit?: number,
+    offset?: number
+  ): Promise<
+    Result<{
+      advertisements: Advertisement[];
+      total: number;
+    }>
+  >;
 }

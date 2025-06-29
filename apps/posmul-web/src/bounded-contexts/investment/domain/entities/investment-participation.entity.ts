@@ -1,5 +1,5 @@
-import { UserId } from "@/bounded-contexts/auth/domain/value-objects/user-value-objects";
-import { Result } from "@/shared/types/common";
+import { UserId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
 import { z } from "zod";
 import {
   CurrencyType,
@@ -69,7 +69,7 @@ export class InvestmentParticipation {
 
     const validationResult = schema.safeParse(props);
     if (!validationResult.success) {
-      return { success: false, error: validationResult.error };
+      return validationResult;
     }
 
     const newProps: InvestmentParticipationProps = {

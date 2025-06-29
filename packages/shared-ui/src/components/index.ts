@@ -3,18 +3,31 @@
  */
 
 export { default as Button } from "./Button";
-export { default as Card } from "./Card";
 export { CategoryOverviewLayout, GameCard } from "./CategoryOverviewLayout";
 export { EnhancedGameCard, GameCardAdapter } from "./EnhancedGameCard";
 export { default as Input } from "./Input";
 export { default as LoadingSpinner } from "./LoadingSpinner";
 export { MoneyWaveStatus } from "./MoneyWaveStatus";
+export { BaseErrorUI } from "./error";
 export { default as Navbar } from "./navigation/Navbar";
+
+// UI 컴포넌트들
+export { Badge } from "./ui/badge";
+export {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
+
+// Loading 컴포넌트들
+export { BaseSkeleton } from "./loading/BaseSkeleton";
 
 export type { ButtonProps } from "./Button";
 export type { CardProps } from "./Card";
 export type {
-  CategoryOverviewLayoutProps,
   CategoryStatistics,
   GameCardProps,
   PopularSubcategory,

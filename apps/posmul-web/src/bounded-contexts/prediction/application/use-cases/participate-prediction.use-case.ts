@@ -15,9 +15,11 @@ import {
   PredictionGameId,
   PredictionId,
   Result,
+  UseCaseError,
   UserId,
+  failure,
+  success,
 } from "@posmul/shared-types";
-import { UseCaseError, failure, success } from "../../../../shared/errors";
 import { Prediction } from "../../domain/entities/prediction.entity";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 import { PredictionEconomicService } from "../../domain/services/prediction-economic.service";

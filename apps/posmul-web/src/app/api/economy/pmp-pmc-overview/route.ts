@@ -1,7 +1,7 @@
-import { EconomyKernel } from "@/shared/economy-kernel/services/economy-kernel.service";
-import { MoneyWaveCalculatorService } from "@/shared/economy-kernel/services/money-wave-calculator.service";
-import { UserId } from "@/shared/types/branded-types";
+import { UserId } from "@posmul/shared-types";
 import { NextRequest, NextResponse } from "next/server";
+import { EconomyKernel } from "../../../../shared/economy-kernel/services/economy-kernel.service";
+import { MoneyWaveCalculatorService } from "../../../../shared/economy-kernel/services/money-wave-calculator.service";
 
 /**
  * GET /api/economy/pmp-pmc-overview

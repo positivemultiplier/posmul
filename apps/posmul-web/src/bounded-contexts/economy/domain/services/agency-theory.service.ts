@@ -9,7 +9,7 @@
  * - 해결책: 예측 게임을 통한 집단지성 활용
  */
 
-import { Result } from "../../../../shared/types/common";
+import { Result } from "@posmul/shared-types";
 import {
   PMC,
   PMP,

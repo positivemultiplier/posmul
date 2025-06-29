@@ -8,12 +8,12 @@
  * @since 2024-12
  */
 
-import { BaseDomainEvent } from "@/shared/events/domain-events";
+import { BaseDomainEvent } from "@posmul/shared-ui";
 import {
   PredictionGameId,
   PredictionId,
   UserId,
-} from "@/shared/types/branded-types";
+} from "@posmul/shared-types";
 import { GameStatus } from "../value-objects/game-status";
 import { PredictionType } from "../value-objects/prediction-types";
 

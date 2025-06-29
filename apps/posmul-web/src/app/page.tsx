@@ -1,5 +1,5 @@
+import { Card } from "@posmul/shared-ui";
 import Link from "next/link";
-import { Card } from "../shared/components";
 
 export default function Home() {
   return (

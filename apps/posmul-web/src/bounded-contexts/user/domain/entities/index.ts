@@ -2,7 +2,7 @@
  * User Domain Entities
  */
 
-import { UserId } from "@/shared/types/branded-types";
+import { UserId } from "@posmul/shared-types";
 
 /**
  * User Aggregate Root

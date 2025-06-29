@@ -8,7 +8,7 @@
  * @since 2024-12
  */
 
-import { PredictionDetailView } from "@/bounded-contexts/prediction/presentation/components/PredictionDetailView";
+import { PredictionDetailView } from "../../bounded-contexts/prediction/presentation/components/PredictionDetailView";
 
 export default function BinaryPredictionSamplePage() {
   // Binary prediction sample data

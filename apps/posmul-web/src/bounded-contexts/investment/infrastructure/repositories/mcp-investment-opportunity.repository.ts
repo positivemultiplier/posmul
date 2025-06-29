@@ -1,7 +1,7 @@
-import { UserId } from "@/bounded-contexts/auth/domain/value-objects/user-value-objects";
-import { MCPError, handleMCPError } from "@/shared/mcp/mcp-errors";
-import { mcp_supabase_execute_sql } from "@/shared/mcp/supabase-client";
-import { Result, failure, success } from "@/shared/types/common";
+import { UserId } from "@posmul/shared-types";
+import { MCPError, handleMCPError } from "@posmul/shared-auth";
+import { mcp_supabase_execute_sql } from "@posmul/shared-auth";
+import { Result, failure, success } from "@posmul/shared-types";
 import { InvestmentOpportunity } from "../../domain/entities/investment-opportunity.entity";
 import { IInvestmentOpportunityRepository } from "../../domain/repositories/investment-opportunity.repository";
 import {

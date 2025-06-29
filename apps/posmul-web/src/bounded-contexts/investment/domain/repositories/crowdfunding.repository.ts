@@ -1,7 +1,10 @@
-import { Result } from '@/shared/types/common';
-import { UserId } from '@/bounded-contexts/auth/domain/value-objects/user-value-objects';
-import { CrowdFunding } from '../entities/crowdfunding.entity';
-import { CrowdFundingId, FundingCategory } from '../value-objects/investment-value-objects';
+import { UserId } from "@posmul/shared-types";
+import { Result } from "@posmul/shared-types";
+import { CrowdFunding } from "../entities/crowdfunding.entity";
+import {
+  CrowdFundingId,
+  FundingCategory,
+} from "../value-objects/investment-value-objects";
 
 /**
  * CrowdFunding Repository Interface
@@ -26,34 +29,55 @@ export interface ICrowdFundingRepository {
   /**
    * 카테고리별 크라우드 펀딩 조회
    */
-  findByCategory(category: FundingCategory, limit?: number, offset?: number): Promise<Result<{
-    crowdFundings: CrowdFunding[];
-    total: number;
-  }>>;
+  findByCategory(
+    category: FundingCategory,
+    limit?: number,
+    offset?: number
+  ): Promise<
+    Result<{
+      crowdFundings: CrowdFunding[];
+      total: number;
+    }>
+  >;
 
   /**
    * 활성 크라우드 펀딩 조회
    */
-  findActive(limit?: number, offset?: number): Promise<Result<{
-    crowdFundings: CrowdFunding[];
-    total: number;
-  }>>;
+  findActive(
+    limit?: number,
+    offset?: number
+  ): Promise<
+    Result<{
+      crowdFundings: CrowdFunding[];
+      total: number;
+    }>
+  >;
 
   /**
    * 투자 가능한 크라우드 펀딩 조회
    */
-  findAvailableForInvestment(limit?: number, offset?: number): Promise<Result<{
-    crowdFundings: CrowdFunding[];
-    total: number;
-  }>>;
+  findAvailableForInvestment(
+    limit?: number,
+    offset?: number
+  ): Promise<
+    Result<{
+      crowdFundings: CrowdFunding[];
+      total: number;
+    }>
+  >;
 
   /**
    * 성공한 크라우드 펀딩 조회
    */
-  findSuccessful(limit?: number, offset?: number): Promise<Result<{
-    crowdFundings: CrowdFunding[];
-    total: number;
-  }>>;
+  findSuccessful(
+    limit?: number,
+    offset?: number
+  ): Promise<
+    Result<{
+      crowdFundings: CrowdFunding[];
+      total: number;
+    }>
+  >;
 
   /**
    * 크라우드 펀딩 삭제
@@ -63,8 +87,14 @@ export interface ICrowdFundingRepository {
   /**
    * 크라우드 펀딩 검색
    */
-  search(query: string, limit?: number, offset?: number): Promise<Result<{
-    crowdFundings: CrowdFunding[];
-    total: number;
-  }>>;
+  search(
+    query: string,
+    limit?: number,
+    offset?: number
+  ): Promise<
+    Result<{
+      crowdFundings: CrowdFunding[];
+      total: number;
+    }>
+  >;
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import { BaseErrorUI } from "@/shared/components/error";
 import {
   AuthenticationError,
   BusinessLogicError,
   InsufficientPointsError,
   NetworkError,
   ValidationError,
-} from "@/shared/utils/errors";
+} from "@posmul/shared-types";
+import { BaseErrorUI } from "@posmul/shared-ui";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -77,7 +77,8 @@ export default function InvestmentError({
 
     if (message.includes("validation") || message.includes("invalid")) {
       return new ValidationError(
-        "입력하신 투자 정보가 올바르지 않습니다. 다시 확인해주세요."
+        "입력하신 투자 정보가 올바르지 않습니다.",
+        "validation_error"
       );
     }
 

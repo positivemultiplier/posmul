@@ -10,7 +10,7 @@
  * - Portfolio Variance: Σ(wi² × σi²) + ΣΣ(wi × wj × σij)
  */
 
-import { Result } from "../../../../shared/types/common";
+import { Result } from "@posmul/shared-types";
 import {
   BetaCoefficient,
   ExpectedReturn,

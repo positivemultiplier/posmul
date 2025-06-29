@@ -11,11 +11,11 @@
 import {
   PredictionGameId as BasePredictionGameId,
   PredictionId as BasePredictionId,
-} from "../../../../shared/types/branded-types";
+} from "@posmul/shared-types";
 import {
   Result,
   ValidationError,
-} from "../../../../shared/types/economic-system";
+} from "@posmul/shared-types";
 
 /**
  * 예측 ID Value Object

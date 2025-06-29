@@ -2,12 +2,12 @@
  * 공통 유틸리티 함수들
  */
 
-import type { DomainError, Result as ResultType } from "@posmul/shared-types";
+import type { BaseError, Result as ResultType } from "@posmul/shared-types";
 
 // 결과 패턴 헬퍼 함수들
 export const ResultUtils = {
   success: <T>(data: T): ResultType<T> => ({ success: true, data }),
-  failure: <T>(error: DomainError): ResultType<T, DomainError> => ({
+  failure: <T>(error: BaseError): ResultType<T, BaseError> => ({
     success: false,
     error,
   }),
@@ -16,14 +16,14 @@ export const ResultUtils = {
     result.success,
 
   isFailure: <T>(
-    result: ResultType<T, DomainError>
-  ): result is { success: false; error: DomainError } => !result.success,
+    result: ResultType<T, BaseError>
+  ): result is { success: false; error: BaseError } => !result.success,
 
   map: <T, U>(result: ResultType<T>, mapper: (data: T) => U): ResultType<U> => {
     if (result.success) {
       return ResultUtils.success(mapper(result.data));
     }
-    return ResultUtils.failure(result.error as DomainError);
+    return result;
   },
 
   flatMap: <T, U>(
@@ -33,7 +33,7 @@ export const ResultUtils = {
     if (result.success) {
       return mapper(result.data);
     }
-    return ResultUtils.failure(result.error as DomainError);
+    return result;
   },
 };
 

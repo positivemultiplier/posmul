@@ -1,40 +1,20 @@
 /**
- * 공유 모듈 통합 인덱스
+ * Legacy shared index shim
+ *
+ * 웹 애플리케이션의 기존 `@/shared/*` import를 끊김 없이 유지하기 위해,
+ * 새로운 모노레포 패키지(`@posmul/*`)로 모든 export 를 재전달합니다.
+ * 최종 목표는 해당 디렉터리를 제거하고 각 소스를 직접 패키지로 참조하는 것이지만,
+ * 단계적 마이그레이션을 위해 호환 레이어를 유지합니다.
  */
 
-// 타입 exports (DomainEvent 제외)
-export type {
-  ApiResponse,
-  AsyncState,
-  Auditable,
-  BaseGame,
-  BaseId,
-  DomainError,
-  LoadingState,
-  PaginatedResult,
-  PaginationParams,
-  PointTransaction,
-  Result,
-  SoftDeletable,
-  Timestamps,
-} from "./types/common";
+// Public types – 통합 타입은 shared-types 패키지로 이동
+export * from "@posmul/shared-types";
 
-// 상수 exports
-export * from "./constants/app.constants";
+// UI / util – shared-ui 패키지로부터 re-export
+export * from "@posmul/shared-ui";
 
-// 유틸리티 exports
-export * from "./utils/common";
-export * from "./utils/errors";
+// Auth / Supabase helpers – shared-auth 패키지로부터 re-export
+export * from "@posmul/shared-auth";
 
-// 컴포넌트 exports
-export * from "./components";
-
-// 이벤트 exports (중복 제거)
-export {
-  getDomainEventSystemStatus,
-  initializeDomainEventSystem,
-} from "./events";
-
-// Economy Kernel exports (Shared Kernel Pattern) - 선택적 export
-export { EconomyKernel } from "./economy-kernel/services/economy-kernel.service";
-export { MoneyWaveCalculatorService } from "./economy-kernel/services/money-wave-calculator.service";
+// NOTE: Economy Kernel, Domain Events 등은 향후 @posmul/shared-domain 으로 이동 예정.
+// 일단 기존 경로를 사용하는 코드는 shared-types 내 정의를 사용하도록 안내.

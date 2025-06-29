@@ -11,7 +11,7 @@
  */
 
 import { UseCaseError } from "../../../../shared/errors";
-import { Result } from "../../../../shared/types/common";
+import { Result } from "@posmul/shared-types";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**

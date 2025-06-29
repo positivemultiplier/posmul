@@ -1,5 +1,5 @@
-import { Result } from '@/shared/types/common';
-import { UserId } from '@/bounded-contexts/auth/domain/value-objects/user-value-objects';
+import { Result } from '@posmul/shared-types';
+import { UserId } from '@posmul/shared-types';
 import { IMerchantRepository } from '../../domain/repositories/merchant.repository';
 import { CreateMerchantUseCase } from '../use-cases/create-merchant.use-case';
 import { CreateMerchantRequest, MerchantListRequest, MerchantResponse, MerchantListResponse } from '../dto/merchant.dto';
@@ -40,7 +40,7 @@ export class MerchantApplicationService {
       );
 
       if (!result.success) {
-        return { success: false, error: result.error };
+        return result;
       }
 
       const merchants: MerchantResponse[] = result.data.merchants.map(merchant => ({
@@ -101,13 +101,13 @@ export class MerchantApplicationService {
         .then(module => module.MerchantId.create(merchantId));
       
       if (!merchantIdResult.success) {
-        return { success: false, error: merchantIdResult.error };
+        return merchantIdResult;
       }
 
       const result = await this.merchantRepository.findById(merchantIdResult.data);
 
       if (!result.success) {
-        return { success: false, error: result.error };
+        return result;
       }
 
       if (!result.data) {
@@ -166,7 +166,7 @@ export class MerchantApplicationService {
       const result = await this.merchantRepository.search(query, limit, offset);
 
       if (!result.success) {
-        return { success: false, error: result.error };
+        return result;
       }
 
       const merchants: MerchantResponse[] = result.data.merchants.map(merchant => ({

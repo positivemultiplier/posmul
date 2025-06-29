@@ -5,7 +5,7 @@
  * Network Economics(Metcalfe's Law)와 Learning Curve Theory 적용
  */
 
-import { UserId } from "@/shared/types/branded-types";
+import { UserId } from "@posmul/shared-types";
 import {
   AccountBalance,
   IPMPPMCAccountRepository,

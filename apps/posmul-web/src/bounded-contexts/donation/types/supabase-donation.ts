@@ -1,6 +1,6 @@
 /**
  * DONATION Domain - Supabase 타입
- * 생성 시간: 2025-06-28T13:28:11.623Z
+ * 생성 시간: 2025-06-28T15:29:24.110Z
  * 도메인: donation
  * 
  * 🚀 Universal MCP Automation (Standalone)으로 생성됨

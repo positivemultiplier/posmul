@@ -11,8 +11,8 @@
  * - 벤처 실패율을 고려한 리스크 관리
  */
 
-import { UserId } from "@/shared/types/branded-types";
-import { DomainError, Result } from "@/shared/types/common";
+import { UserId } from "@posmul/shared-types";
+import { DomainError, Result } from "@posmul/shared-types";
 import { MoneyWaveId, PMC, createPMC, unwrapPMC } from "../value-objects";
 
 export interface EntrepreneurProfile {

@@ -5,7 +5,7 @@
  * IMoneyWaveHistoryRepository 인터페이스를 MCP 패턴으로 구현
  */
 
-import { Result, failure, success } from "../../../../shared/types/common";
+import { Result, failure, success } from "@posmul/shared-types";
 import {
   IMoneyWaveHistoryRepository,
   MoneyWave1Record,

@@ -10,7 +10,7 @@
  * @since 2024-12
  */
 
-import { MoneyWaveStatus } from "@/shared/components/MoneyWaveStatus";
+import { MoneyWaveStatus } from "@posmul/shared-ui";
 import { Suspense } from "react";
 
 interface ForumLayoutProps {
