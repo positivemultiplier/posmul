@@ -14,8 +14,7 @@ import {
   Result,
   UserId,
   failure,
-  success,
-} from "@posmul/shared-types";
+  success, isFailure } from "@posmul/shared-types";
 import {
   PmcEarnedEvent,
   PmpSpentEvent,

@@ -1,9 +1,9 @@
-import { PredictionGameId, UserId } from "@posmul/shared-types";
+import { ParticipatePredictionUseCase } from "@/bounded-contexts/prediction/application/use-cases/participate-prediction.use-case";
+import { PredictionEconomicService } from "@/bounded-contexts/prediction/domain/services/prediction-economic.service";
+import { SupabasePredictionGameRepository } from "@/bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
+import { InMemoryEventPublisher } from "@/shared/events/event-publisher";
+import { PredictionGameId, UserId, isFailure } from "@posmul/shared-types";
 import { NextRequest, NextResponse } from "next/server";
-import { ParticipatePredictionUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/participate-prediction.use-case";
-import { PredictionEconomicService } from "../../../../../bounded-contexts/prediction/domain/services/prediction-economic.service";
-import { SupabasePredictionGameRepository } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
-import { InMemoryEventPublisher } from "../../../../../shared/events/event-publisher";
 
 /**
  * POST /api/predictions/games/[gameId]/participate
@@ -59,20 +59,20 @@ export async function POST(
         const result = await eventPublisher.publish(event);
         if (!result.success) {
           if (isFailure(result)) {
-  throw new Error(result.error.message);
-} else {
-  throw new Error("Unknown error");
-}
+            throw new Error(result.error.message);
+          } else {
+            throw new Error("Unknown error");
+          }
         }
       },
       publishBatch: async (events: any[]) => {
         const result = await eventPublisher.publishBatch(events);
         if (!result.success) {
           if (isFailure(result)) {
-  throw new Error(result.error.message);
-} else {
-  throw new Error("Unknown error");
-}
+            throw new Error(result.error.message);
+          } else {
+            throw new Error("Unknown error");
+          }
         }
       },
     };

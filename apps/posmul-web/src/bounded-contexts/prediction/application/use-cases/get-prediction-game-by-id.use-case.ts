@@ -10,9 +10,7 @@
  * @since 2024-12
  */
 
-import { UseCaseError } from "../../../../shared/errors";
-import { PredictionGameId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { PredictionGameId, Result, UseCaseError } from "@posmul/shared-types";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**

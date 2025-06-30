@@ -1,20 +1,23 @@
-import { Result, success, failure } from "../../../../shared/types";
-import { DomainError } from "../../../../shared/errors";
-import { BaseEntity } from "../../../../shared/domain/base-entity";
+import {
+  BaseEntity,
+  DomainError,
+  Result,
+  failure,
+  success,
+} from "@posmul/shared-types";
 import { TextbookId } from "./textbook.entity";
-import { Tables, TablesInsert, TablesUpdate } from "../../types/supabase-study_cycle";
 
 // Branded types for type safety
-export type StudySessionId = string & { readonly __brand: 'StudySessionId' };
-export type ChapterId = string & { readonly __brand: 'ChapterId' };
-export type UserId = string & { readonly __brand: 'UserId' };
+export type StudySessionId = string & { readonly __brand: "StudySessionId" };
+export type ChapterId = string & { readonly __brand: "ChapterId" };
+export type UserId = string & { readonly __brand: "UserId" };
 
 // Study session status enum (derived from database behavior)
 export enum StudySessionStatus {
-  ACTIVE = 'active',
-  COMPLETED = 'completed',
-  PAUSED = 'paused',
-  CANCELLED = 'cancelled'
+  ACTIVE = "active",
+  COMPLETED = "completed",
+  PAUSED = "paused",
+  CANCELLED = "cancelled",
 }
 
 // Progress data value object
@@ -48,14 +51,25 @@ export interface StudySessionConfig {
 }
 
 // Create functions for branded types
-export const createStudySessionId = (id: string): StudySessionId => id as StudySessionId;
+export const createStudySessionId = (id: string): StudySessionId =>
+  id as StudySessionId;
 export const createChapterId = (id: string): ChapterId => id as ChapterId;
 export const createUserId = (id: string): UserId => id as UserId;
 
-// Map Supabase table type to domain properties
-type StudySessionRow = Tables<{ schema: "study_cycle" }, "sc_study_sessions">;
-type StudySessionInsert = TablesInsert<{ schema: "study_cycle" }, "sc_study_sessions">;
-type StudySessionUpdate = TablesUpdate<{ schema: "study_cycle" }, "sc_study_sessions">;
+// Map Supabase table type to domain properties (임시 타입 정의)
+type StudySessionRow = {
+  id: string;
+  user_id: string;
+  textbook_id: string;
+  chapter_id?: string | null;
+  start_time: string;
+  end_time?: string | null;
+  duration_seconds?: number | null;
+  created_at: string;
+};
+
+type StudySessionInsert = Partial<StudySessionRow>;
+type StudySessionUpdate = Partial<StudySessionRow>;
 
 export interface IStudySessionProps {
   id: StudySessionId;
@@ -94,7 +108,7 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     id?: StudySessionId
   ): Result<StudySession, DomainError> {
     const now = new Date();
-    
+
     const studySessionProps: IStudySessionProps = {
       id: id || createStudySessionId(crypto.randomUUID()),
       userId: props.userId,
@@ -117,14 +131,17 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
   /**
    * Factory method to reconstruct from persistence
    */
-  public static fromPersistence(row: StudySessionRow, extendedProps?: {
-    status?: StudySessionStatus;
-    pagesCompleted?: number;
-    notesCount?: number;
-    difficultyRatings?: number[];
-    comprehensionRatings?: number[];
-    config?: StudySessionConfig;
-  }): StudySession {
+  public static fromPersistence(
+    row: StudySessionRow,
+    extendedProps?: {
+      status?: StudySessionStatus;
+      pagesCompleted?: number;
+      notesCount?: number;
+      difficultyRatings?: number[];
+      comprehensionRatings?: number[];
+      config?: StudySessionConfig;
+    }
+  ): StudySession {
     const props: IStudySessionProps = {
       id: createStudySessionId(row.id),
       userId: createUserId(row.user_id),
@@ -133,7 +150,11 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
       startTime: new Date(row.start_time),
       endTime: row.end_time ? new Date(row.end_time) : undefined,
       durationSeconds: row.duration_seconds || undefined,
-      status: extendedProps?.status || (row.end_time ? StudySessionStatus.COMPLETED : StudySessionStatus.ACTIVE),
+      status:
+        extendedProps?.status ||
+        (row.end_time
+          ? StudySessionStatus.COMPLETED
+          : StudySessionStatus.ACTIVE),
       pagesCompleted: extendedProps?.pagesCompleted || 0,
       notesCount: extendedProps?.notesCount || 0,
       difficultyRatings: extendedProps?.difficultyRatings || [],
@@ -175,13 +196,26 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
   /**
    * Start a study session (if paused or cancelled)
    */
-  public startSession(textbookId: TextbookId, chapterId?: ChapterId): Result<void, DomainError> {
+  public startSession(
+    textbookId: TextbookId,
+    chapterId?: ChapterId
+  ): Result<void, DomainError> {
     if (this.props.status === StudySessionStatus.ACTIVE) {
-      return failure(new DomainError("Study session is already active", "SESSION_ALREADY_ACTIVE"));
+      return failure(
+        new DomainError(
+          "Study session is already active",
+          "SESSION_ALREADY_ACTIVE"
+        )
+      );
     }
 
     if (this.props.status === StudySessionStatus.COMPLETED) {
-      return failure(new DomainError("Cannot restart a completed study session", "SESSION_COMPLETED"));
+      return failure(
+        new DomainError(
+          "Cannot restart a completed study session",
+          "SESSION_COMPLETED"
+        )
+      );
     }
 
     // Update session properties
@@ -199,16 +233,24 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
    */
   public endSession(): Result<StudySessionSummary, DomainError> {
     if (this.props.status !== StudySessionStatus.ACTIVE) {
-      return failure(new DomainError("Can only end an active study session", "SESSION_NOT_ACTIVE"));
+      return failure(
+        new DomainError(
+          "Can only end an active study session",
+          "SESSION_NOT_ACTIVE"
+        )
+      );
     }
 
     const now = new Date();
-    const sessionDurationSeconds = Math.floor((now.getTime() - this.props.startTime.getTime()) / 1000);
-    
+    const sessionDurationSeconds = Math.floor(
+      (now.getTime() - this.props.startTime.getTime()) / 1000
+    );
+
     // Update session properties
     this.props.status = StudySessionStatus.COMPLETED;
     this.props.endTime = now;
-    this.props.durationSeconds = (this.props.durationSeconds || 0) + sessionDurationSeconds;
+    this.props.durationSeconds =
+      (this.props.durationSeconds || 0) + sessionDurationSeconds;
     this.touch();
 
     // Generate session summary
@@ -218,8 +260,12 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
       chapterId: this.props.chapterId,
       totalTimeMinutes: Math.floor((this.props.durationSeconds || 0) / 60),
       pagesCompleted: this.props.pagesCompleted,
-      averageDifficulty: this.calculateAverageRating(this.props.difficultyRatings),
-      averageComprehension: this.calculateAverageRating(this.props.comprehensionRatings),
+      averageDifficulty: this.calculateAverageRating(
+        this.props.difficultyRatings
+      ),
+      averageComprehension: this.calculateAverageRating(
+        this.props.comprehensionRatings
+      ),
       startedAt: this.props.startTime,
       completedAt: now,
     };
@@ -232,14 +278,22 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
    */
   public pauseSession(): Result<void, DomainError> {
     if (this.props.status !== StudySessionStatus.ACTIVE) {
-      return failure(new DomainError("Can only pause an active study session", "SESSION_NOT_ACTIVE"));
+      return failure(
+        new DomainError(
+          "Can only pause an active study session",
+          "SESSION_NOT_ACTIVE"
+        )
+      );
     }
 
     const now = new Date();
-    const sessionDurationSeconds = Math.floor((now.getTime() - this.props.startTime.getTime()) / 1000);
-    
+    const sessionDurationSeconds = Math.floor(
+      (now.getTime() - this.props.startTime.getTime()) / 1000
+    );
+
     this.props.status = StudySessionStatus.PAUSED;
-    this.props.durationSeconds = (this.props.durationSeconds || 0) + sessionDurationSeconds;
+    this.props.durationSeconds =
+      (this.props.durationSeconds || 0) + sessionDurationSeconds;
     this.touch();
 
     return success(undefined);
@@ -250,7 +304,12 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
    */
   public resumeSession(): Result<void, DomainError> {
     if (this.props.status !== StudySessionStatus.PAUSED) {
-      return failure(new DomainError("Can only resume a paused study session", "SESSION_NOT_PAUSED"));
+      return failure(
+        new DomainError(
+          "Can only resume a paused study session",
+          "SESSION_NOT_PAUSED"
+        )
+      );
     }
 
     this.props.status = StudySessionStatus.ACTIVE;
@@ -265,7 +324,12 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
    */
   public cancelSession(): Result<void, DomainError> {
     if (this.props.status === StudySessionStatus.COMPLETED) {
-      return failure(new DomainError("Cannot cancel a completed study session", "SESSION_COMPLETED"));
+      return failure(
+        new DomainError(
+          "Cannot cancel a completed study session",
+          "SESSION_COMPLETED"
+        )
+      );
     }
 
     this.props.status = StudySessionStatus.CANCELLED;
@@ -280,19 +344,49 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
    */
   public recordProgress(progressData: ProgressData): Result<void, DomainError> {
     if (this.props.status !== StudySessionStatus.ACTIVE) {
-      return failure(new DomainError("Can only record progress during an active study session", "SESSION_NOT_ACTIVE"));
+      return failure(
+        new DomainError(
+          "Can only record progress during an active study session",
+          "SESSION_NOT_ACTIVE"
+        )
+      );
     }
 
     try {
       // Validate progress data
-      if (progressData.difficultyRating < 1 || progressData.difficultyRating > 5) {
-        return failure(new DomainError("Difficulty rating must be between 1 and 5", "INVALID_DIFFICULTY_RATING"));
+      if (
+        progressData.difficultyRating < 1 ||
+        progressData.difficultyRating > 5
+      ) {
+        return failure(
+          new DomainError(
+            "Difficulty rating must be between 1 and 5",
+            "INVALID_DIFFICULTY_RATING"
+          )
+        );
       }
-      if (progressData.comprehensionRating < 1 || progressData.comprehensionRating > 5) {
-        return failure(new DomainError("Comprehension rating must be between 1 and 5", "INVALID_COMPREHENSION_RATING"));
+      if (
+        progressData.comprehensionRating < 1 ||
+        progressData.comprehensionRating > 5
+      ) {
+        return failure(
+          new DomainError(
+            "Comprehension rating must be between 1 and 5",
+            "INVALID_COMPREHENSION_RATING"
+          )
+        );
       }
-      if (progressData.pagesRead < 0 || progressData.timeSpentMinutes < 0 || progressData.notesCount < 0) {
-        return failure(new DomainError("Progress values cannot be negative", "INVALID_PROGRESS_VALUES"));
+      if (
+        progressData.pagesRead < 0 ||
+        progressData.timeSpentMinutes < 0 ||
+        progressData.notesCount < 0
+      ) {
+        return failure(
+          new DomainError(
+            "Progress values cannot be negative",
+            "INVALID_PROGRESS_VALUES"
+          )
+        );
       }
 
       // Update session progress
@@ -300,12 +394,17 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
       this.props.notesCount += progressData.notesCount;
       this.props.difficultyRatings.push(progressData.difficultyRating);
       this.props.comprehensionRatings.push(progressData.comprehensionRating);
-      
+
       this.touch();
 
       return success(undefined);
     } catch (error) {
-      return failure(new DomainError(error instanceof Error ? error.message : "Invalid progress data", "PROGRESS_VALIDATION_ERROR"));
+      return failure(
+        new DomainError(
+          error instanceof Error ? error.message : "Invalid progress data",
+          "PROGRESS_VALIDATION_ERROR"
+        )
+      );
     }
   }
 
@@ -313,11 +412,14 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
    * Check if session targets are met
    */
   public areTargetsMet(): boolean {
-    const timeTargetMet = !this.props.config?.targetTimeMinutes || 
-      Math.floor((this.props.durationSeconds || 0) / 60) >= this.props.config.targetTimeMinutes;
-    const pageTargetMet = !this.props.config?.targetPages || 
+    const timeTargetMet =
+      !this.props.config?.targetTimeMinutes ||
+      Math.floor((this.props.durationSeconds || 0) / 60) >=
+        this.props.config.targetTimeMinutes;
+    const pageTargetMet =
+      !this.props.config?.targetPages ||
       this.props.pagesCompleted >= this.props.config.targetPages;
-    
+
     return timeTargetMet && pageTargetMet;
   }
 
@@ -325,7 +427,10 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
    * Get current session progress percentage
    */
   public getProgressPercentage(): number {
-    if (!this.props.config?.targetPages && !this.props.config?.targetTimeMinutes) {
+    if (
+      !this.props.config?.targetPages &&
+      !this.props.config?.targetTimeMinutes
+    ) {
       return 0;
     }
 
@@ -333,13 +438,16 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     let targetCount = 0;
 
     if (this.props.config?.targetPages) {
-      progressSum += Math.min(this.props.pagesCompleted / this.props.config.targetPages, 1) * 100;
+      progressSum +=
+        Math.min(this.props.pagesCompleted / this.props.config.targetPages, 1) *
+        100;
       targetCount++;
     }
 
     if (this.props.config?.targetTimeMinutes) {
       const currentMinutes = Math.floor((this.props.durationSeconds || 0) / 60);
-      progressSum += Math.min(currentMinutes / this.props.config.targetTimeMinutes, 1) * 100;
+      progressSum +=
+        Math.min(currentMinutes / this.props.config.targetTimeMinutes, 1) * 100;
       targetCount++;
     }
 
@@ -352,10 +460,14 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
   public getSessionDurationMinutes(): number {
     if (this.props.status === StudySessionStatus.ACTIVE) {
       const now = new Date();
-      const currentSessionSeconds = Math.floor((now.getTime() - this.props.startTime.getTime()) / 1000);
-      return Math.floor(((this.props.durationSeconds || 0) + currentSessionSeconds) / 60);
+      const currentSessionSeconds = Math.floor(
+        (now.getTime() - this.props.startTime.getTime()) / 1000
+      );
+      return Math.floor(
+        ((this.props.durationSeconds || 0) + currentSessionSeconds) / 60
+      );
     }
-    
+
     return Math.floor((this.props.durationSeconds || 0) / 60);
   }
 
@@ -366,19 +478,46 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
   }
 
   // Getters for accessing properties
-  public get id(): StudySessionId { return this.props.id; }
-  public get userId(): UserId { return this.props.userId; }
-  public get textbookId(): TextbookId { return this.props.textbookId; }
-  public get chapterId(): ChapterId | undefined { return this.props.chapterId; }
-  public get status(): StudySessionStatus { return this.props.status; }
-  public get startTime(): Date { return this.props.startTime; }
-  public get endTime(): Date | undefined { return this.props.endTime; }
-  public get durationSeconds(): number | undefined { return this.props.durationSeconds; }
-  public get pagesCompleted(): number { return this.props.pagesCompleted; }
-  public get notesCount(): number { return this.props.notesCount; }
-  public get difficultyRatings(): number[] { return [...this.props.difficultyRatings]; }
-  public get comprehensionRatings(): number[] { return [...this.props.comprehensionRatings]; }
-  public get createdAt(): Date { return this.props.createdAt; }
-  public get updatedAt(): Date { return this.props.updatedAt; }
-
-} 
+  public get id(): StudySessionId {
+    return this.props.id;
+  }
+  public get userId(): UserId {
+    return this.props.userId;
+  }
+  public get textbookId(): TextbookId {
+    return this.props.textbookId;
+  }
+  public get chapterId(): ChapterId | undefined {
+    return this.props.chapterId;
+  }
+  public get status(): StudySessionStatus {
+    return this.props.status;
+  }
+  public get startTime(): Date {
+    return this.props.startTime;
+  }
+  public get endTime(): Date | undefined {
+    return this.props.endTime;
+  }
+  public get durationSeconds(): number | undefined {
+    return this.props.durationSeconds;
+  }
+  public get pagesCompleted(): number {
+    return this.props.pagesCompleted;
+  }
+  public get notesCount(): number {
+    return this.props.notesCount;
+  }
+  public get difficultyRatings(): number[] {
+    return [...this.props.difficultyRatings];
+  }
+  public get comprehensionRatings(): number[] {
+    return [...this.props.comprehensionRatings];
+  }
+  public get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  public get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+}

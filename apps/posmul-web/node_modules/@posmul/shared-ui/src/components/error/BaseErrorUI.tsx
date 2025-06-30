@@ -4,8 +4,8 @@
  * 기존 BaseError 클래스와 연동하여 사용자 친화적인 에러 화면을 제공합니다.
  */
 
-import { ArrowLeft, Home, RefreshCw } from "lucide-react";
-import { BaseError } from "../../utils/errors";
+import { BaseError } from "@posmul/shared-types";
+import { ChevronDown, Home, RotateCw } from "lucide-react";
 import Button from "../Button";
 
 interface CustomAction {
@@ -157,6 +157,12 @@ export function BaseErrorUI({
 }: BaseErrorUIProps) {
   const errorInfo = getErrorDisplayInfo(error);
   const styles = getSeverityClasses(errorInfo.severity);
+  const isOperational =
+    error instanceof BaseError ? error.isOperational : false;
+
+  const handleToggleDetails = () => {
+    // ... existing code ...
+  };
 
   return (
     <div
@@ -191,7 +197,7 @@ export function BaseErrorUI({
             onClick={onRetry}
             className="bg-blue-600 text-white hover:bg-blue-700 flex items-center justify-center"
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
+            <RotateCw className="w-4 h-4 mr-2" />
             다시 시도
           </Button>
         )}
@@ -201,7 +207,7 @@ export function BaseErrorUI({
             variant="outline"
             className="border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ChevronDown className="w-4 h-4 mr-2" />
             이전 페이지
           </Button>
         )}{" "}
@@ -249,8 +255,7 @@ export function BaseErrorUI({
                   <strong>상태 코드:</strong> {error.statusCode}
                 </div>
                 <div>
-                  <strong>운영 에러:</strong>{" "}
-                  {error.isOperational ? "Yes" : "No"}
+                  <strong>운영 에러:</strong> {isOperational ? "Yes" : "No"}
                 </div>
               </>
             )}

@@ -29,13 +29,8 @@ type LinkProps = {
   [key: string]: any;
 };
 
-// 게임 유형 정의
-export type GameType =
-  | "SPORTS"
-  | "INVESTMENT"
-  | "POLITICS"
-  | "ENTERTAINMENT"
-  | "USER_PROPOSED";
+// 게임 유형 (카드 컴포넌트에서 사용하는 4가지 유형)
+export type GameType = "binary" | "wdl" | "ranking" | "multichoice";
 
 // 옵션 정보 (예측 선택지)
 export interface GameOption {
@@ -68,11 +63,13 @@ export interface EnhancedGameCardProps {
   title: string;
   status: string;
   participants: number;
-  totalPrize: number;
+  totalPrize?: number;
   gameType: string;
   href: string;
   LinkComponent: ComponentType<LinkProps>;
-  // other game properties can be added here
+  // 기타 게임 속성 (옵션)
+  description?: string;
+  [key: string]: any;
 }
 
 // 게임 유형별 아이콘과 설명
@@ -243,7 +240,7 @@ export function EnhancedGameCard({
       </CardHeader>
       <CardContent className="flex-grow space-y-2">
         <p>Participants: {participants}</p>
-        <p>Prize Pool: ${totalPrize.toLocaleString()}</p>
+        <p>Prize Pool: ${totalPrize?.toLocaleString() || "N/A"}</p>
       </CardContent>
       <CardFooter>
         <p className="text-xs text-gray-500">Game Type: {gameType}</p>

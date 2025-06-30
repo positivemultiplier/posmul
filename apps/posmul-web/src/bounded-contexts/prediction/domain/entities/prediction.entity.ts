@@ -21,8 +21,7 @@ import {
   ValidationError,
   createPredictionId,
   failure,
-  success,
-} from "@posmul/shared-types";
+  success, isFailure } from "@posmul/shared-types";
 
 /**
  * 예측 생성을 위한 입력 데이터 인터페이스

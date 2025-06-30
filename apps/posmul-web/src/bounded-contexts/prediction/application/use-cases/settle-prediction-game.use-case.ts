@@ -11,18 +11,18 @@
  * @since 2024-12
  */
 
+import {
+  PredictionGameId,
+  PredictionId,
+  Result,
+  UseCaseError,
+  UserId,
+} from "@posmul/shared-types";
 import { MoneyWaveCalculatorService } from "../../../../shared/economy-kernel/services/money-wave-calculator.service";
-import { UseCaseError } from "../../../../shared/errors";
 import {
   BaseDomainEvent,
   publishEvent,
 } from "../../../../shared/events/domain-events";
-import {
-  PredictionGameId,
-  PredictionId,
-  UserId,
-} from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 import { PredictionEconomicService } from "../../domain/services/prediction-economic.service";
 
@@ -256,9 +256,8 @@ export class SettlePredictionGameUseCase {
       }
 
       // 8. 게임 상태 저장
-      const saveResult = await this.predictionGameRepository.save(
-        predictionGame
-      );
+      const saveResult =
+        await this.predictionGameRepository.save(predictionGame);
       if (!saveResult.success) {
         return {
           success: false,

@@ -39,6 +39,7 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
   private _timestamps: Timestamps;
   private _version: number;
   private _predictions: Prediction[];
+  private _isDeleted: boolean = false;
 
   private constructor(
     id: PredictionGameId,
@@ -83,6 +84,7 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
     };
     this._version = props.version ?? 1;
     this._predictions = props.predictions ?? [];
+    this._isDeleted = false;
   }
 
   public static create(props: {
@@ -201,6 +203,45 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
     return success(undefined);
   }
 
+  /**
+   * 게임의 기본 통계 정보를 계산하여 반환
+   */
+  public getStatistics(): {
+    totalParticipants: number;
+    totalStake: number;
+    averageConfidence: number;
+    optionDistribution: Map<string, number>;
+  } {
+    const totalParticipants = this._predictions.length;
+    const totalStake = this._predictions.reduce(
+      (sum, p) => sum + p.stake,
+      0 as PmpAmount
+    );
+
+    const totalConfidence = this._predictions.reduce(
+      (sum, p) => sum + p.confidence,
+      0
+    );
+
+    const averageConfidence =
+      totalParticipants > 0 ? totalConfidence / totalParticipants : 0;
+
+    const optionDistribution = new Map<string, number>();
+    for (const p of this._predictions) {
+      optionDistribution.set(
+        p.selectedOptionId,
+        (optionDistribution.get(p.selectedOptionId) || 0) + 1
+      );
+    }
+
+    return {
+      totalParticipants,
+      totalStake,
+      averageConfidence,
+      optionDistribution,
+    };
+  }
+
   // Getters
   get creatorId(): UserId {
     return this._creatorId;
@@ -208,8 +249,23 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
   get title(): string {
     return this._title;
   }
-  get status(): GameStatus {
-    return this._status;
+  get status(): {
+    value: GameStatus;
+    isActive(): boolean;
+    isEnded(): boolean;
+    isSettled(): boolean;
+    isCreated(): boolean;
+    toString(): GameStatus;
+  } {
+    const value = this._status;
+    return {
+      value,
+      isActive: () => value === "ACTIVE",
+      isEnded: () => value === "ENDED",
+      isSettled: () => value === "COMPLETED" || value === "CANCELLED",
+      isCreated: () => value === "CREATED",
+      toString: () => value,
+    };
   }
   get predictions(): readonly Prediction[] {
     return this._predictions;
@@ -217,4 +273,277 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
   get timestamps(): Timestamps {
     return this._timestamps;
   }
+
+  /** Getter / Mutator helpers **/
+
+  get description(): string {
+    return this._description;
+  }
+
+  get predictionType(): PredictionType {
+    return this._predictionType;
+  }
+
+  get startTime(): Date {
+    return this._startTime;
+  }
+
+  get endTime(): Date {
+    return this._endTime;
+  }
+
+  get settlementTime(): Date {
+    return this._settlementTime;
+  }
+
+  get createdAt(): Date {
+    return this._timestamps.createdAt;
+  }
+
+  /** Title / Description 변경 (게임이 아직 시작 전 상태에서만) */
+  public updateTitle(newTitle: string): Result<void, DomainError> {
+    if (this._status !== "CREATED") {
+      return failure(
+        new DomainError("Cannot update title after game has started")
+      );
+    }
+    if (newTitle.length < 5) {
+      return failure(
+        new DomainError(
+          "Title must be at least 5 characters",
+          "TITLE_TOO_SHORT"
+        )
+      );
+    }
+    this._title = newTitle;
+    this.touch();
+    return success(undefined);
+  }
+
+  public updateDescription(newDescription: string): Result<void, DomainError> {
+    if (this._status !== "CREATED") {
+      return failure(
+        new DomainError("Cannot update description after game has started")
+      );
+    }
+    if (newDescription.length < 10) {
+      return failure(
+        new DomainError(
+          "Description must be at least 10 characters",
+          "DESCRIPTION_TOO_SHORT"
+        )
+      );
+    }
+    this._description = newDescription;
+    this.touch();
+    return success(undefined);
+  }
+
+  public updateEndTime(newEndTime: Date): Result<void, DomainError> {
+    if (this._status !== "CREATED") {
+      return failure(new DomainError("Cannot update end time after start"));
+    }
+    if (newEndTime <= this._startTime) {
+      return failure(
+        new DomainError("End time must be after start time", "INVALID_END_TIME")
+      );
+    }
+    this._endTime = newEndTime;
+    this.touch();
+    return success(undefined);
+  }
+
+  public updateSettlementTime(
+    newSettlementTime: Date
+  ): Result<void, DomainError> {
+    if (this._status !== "CREATED") {
+      return failure(
+        new DomainError("Cannot update settlement time after start")
+      );
+    }
+    if (newSettlementTime <= this._endTime) {
+      return failure(
+        new DomainError(
+          "Settlement time must be after end time",
+          "INVALID_SETTLEMENT_TIME"
+        )
+      );
+    }
+    this._settlementTime = newSettlementTime;
+    this.touch();
+    return success(undefined);
+  }
+
+  public updateMinimumStake(newMin: PmpAmount): Result<void, DomainError> {
+    if (this._status !== "CREATED") {
+      return failure(new DomainError("Cannot change stake after start"));
+    }
+    if (newMin < 0) {
+      return failure(
+        new DomainError("Minimum stake cannot be negative", "NEGATIVE_STAKE")
+      );
+    }
+    this._minimumStake = newMin;
+    this.touch();
+    return success(undefined);
+  }
+
+  public updateMaximumStake(newMax: PmpAmount): Result<void, DomainError> {
+    if (this._status !== "CREATED") {
+      return failure(new DomainError("Cannot change stake after start"));
+    }
+    if (newMax <= this._minimumStake) {
+      return failure(
+        new DomainError(
+          "Maximum stake must be greater than minimum stake",
+          "INVALID_MAX_STAKE"
+        )
+      );
+    }
+    this._maximumStake = newMax;
+    this.touch();
+    return success(undefined);
+  }
+
+  public updateMaxParticipants(newMax: number): Result<void, DomainError> {
+    if (this._status !== "CREATED") {
+      return failure(new DomainError("Cannot change participants after start"));
+    }
+    if (newMax <= 0) {
+      return failure(
+        new DomainError(
+          "Max participants must be positive",
+          "INVALID_MAX_PARTICIPANTS"
+        )
+      );
+    }
+    this._maxParticipants = newMax;
+    this.touch();
+    return success(undefined);
+  }
+
+  public markAsDeleted(): void {
+    this._isDeleted = true;
+    this.touch();
+  }
+
+  /** Helper to update timestamp & version */
+  private touch() {
+    this._timestamps = {
+      ...this._timestamps,
+      updatedAt: new Date(),
+    } as Timestamps;
+    this._version += 1;
+  }
+
+  // Additional getters
+  get options(): GameOptions {
+    return this._options;
+  }
+
+  get minimumStake(): PmpAmount {
+    return this._minimumStake;
+  }
+
+  get maximumStake(): PmpAmount {
+    return this._maximumStake;
+  }
+
+  get maxParticipants(): number | null {
+    return this._maxParticipants;
+  }
+
+  get version(): number {
+    return this._version;
+  }
+
+  /* ------------------------------------------------------------------------- */
+  /* 🛠️  Legacy alias getters (backward compatibility with existing use-cases) */
+  /* ------------------------------------------------------------------------- */
+
+  public getStartTime(): Date {
+    return this._startTime;
+  }
+
+  public getEndTime(): Date {
+    return this._endTime;
+  }
+
+  public getSettlementTime(): Date {
+    return this._settlementTime;
+  }
+
+  public getCreatedBy(): UserId {
+    return this._creatorId;
+  }
+
+  public getCreatedAt(): Date {
+    return this._timestamps.createdAt;
+  }
+
+  public getUpdatedAt(): Date {
+    return this._timestamps.updatedAt;
+  }
+
+  public getVersion(): number {
+    return this._version;
+  }
+
+  /**
+   * Aggregated immutable configuration snapshot.
+   * Used by repositories & presentation mappers.
+   */
+  public get configuration(): GameConfiguration {
+    return {
+      title: this._title,
+      description: this._description,
+      predictionType: this._predictionType,
+      options: this._options,
+      startTime: this._startTime,
+      endTime: this._endTime,
+      settlementTime: this._settlementTime,
+      minimumStake: this._minimumStake,
+      maximumStake: this._maximumStake,
+      maxParticipants: this._maxParticipants,
+    };
+  }
+
+  // Legacy getters retained for backward-compat in older use-cases
+  public getTitle(): string {
+    return this._title;
+  }
+
+  public getDescription(): string {
+    return this._description;
+  }
+
+  public getPredictionType(): PredictionType {
+    return this._predictionType;
+  }
+
+  public getOptions(): GameOptions {
+    return this._options;
+  }
+
+  // End of class
+}
+
+export { PredictionType } from "../value-objects/prediction-types";
+export { Prediction } from "./prediction.entity";
+
+// -----------------------------------------------------------------------------
+// 🔧 Configuration DTO (Repository & Use-case Interop)
+// -----------------------------------------------------------------------------
+
+export interface GameConfiguration {
+  title: string;
+  description: string;
+  predictionType: PredictionType;
+  options: GameOptions;
+  startTime: Date;
+  endTime: Date;
+  settlementTime: Date;
+  minimumStake: PmpAmount;
+  maximumStake: PmpAmount;
+  maxParticipants: number | null;
 }

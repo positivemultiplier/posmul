@@ -14,8 +14,7 @@ import {
   PMP,
   PredictionGameId,
   PredictionId,
-  UserId,
-} from "@posmul/shared-types";
+  UserId, isFailure } from "@posmul/shared-types";
 import {
   Result,
   Timestamps,

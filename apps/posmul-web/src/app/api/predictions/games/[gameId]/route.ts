@@ -1,4 +1,4 @@
-import { PredictionGameId, UserId } from "@posmul/shared-types";
+import { PredictionGameId, UserId, isFailure } from "@posmul/shared-types";
 import { NextRequest, NextResponse } from "next/server";
 import { DeletePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/delete-prediction-game.use-case";
 import { GetPredictionGameByIdUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/get-prediction-game-by-id.use-case";

@@ -1,6 +1,5 @@
-import { Result } from "@/shared/errors";
-import { RepositoryError } from "@/shared/errors/repository.error";
 import { SolutionTemplate, SolutionTemplateId, TemplateType } from "../entities/solution-template.entity";
+import { Result, RepositoryError } from "@posmul/shared-types";
 
 /**
  * SolutionTemplate Repository Interface

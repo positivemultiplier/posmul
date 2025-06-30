@@ -3,7 +3,7 @@
  * 기부 생성 유스케이스
  */
 
-import { Result, ValidationError } from "@posmul/shared-types";
+import { Result, ValidationError, isFailure } from "@posmul/shared-types";
 import { Donation } from "../../domain/entities/donation.entity";
 import { Institute } from "../../domain/entities/institute.entity";
 import { OpinionLeader } from "../../domain/entities/opinion-leader.entity";

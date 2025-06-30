@@ -16,12 +16,16 @@ import {
   success,
 } from "@posmul/shared-types";
 import { v4 as uuid } from "uuid";
-import { SolutionTemplateId } from "./solution-template.entity";
+import { QuestionId } from "../value-objects/question-id.value-object";
+import { SolutionTemplateId } from "../value-objects/solution-template-id.value-object";
 
 // Branded types for type safety
 export type AssessmentId = string & { readonly brand: unique symbol };
-export type QuestionId = string & { readonly brand: unique symbol };
 export type SubmissionId = string & { readonly brand: unique symbol };
+
+// Factory functions for creating IDs
+export const createAssessmentId = (): AssessmentId => uuid() as AssessmentId;
+export const createSubmissionId = (): SubmissionId => uuid() as SubmissionId;
 
 // Enums
 export enum AssessmentStatus {
@@ -116,6 +120,7 @@ export interface ISubmissionProps {
   finalScore: number;
   totalPoints: number;
   isCompleted: boolean;
+  startedAt: Date;
   submittedAt: Date;
   timeSpent?: number;
   createdAt: Date;
@@ -123,6 +128,7 @@ export interface ISubmissionProps {
 }
 
 export interface IAssessmentProps {
+  id: AssessmentId;
   title: string;
   description: string;
   status: AssessmentStatus;
@@ -244,6 +250,13 @@ export class Question extends BaseEntity<IQuestionProps> {
     return this.props.createdAt;
   }
 
+  /**
+   * 도메인 외부(예: Repository)에서 전체 속성이 필요할 때 사용
+   */
+  public getProps(): Readonly<IQuestionProps> {
+    return { ...this.props };
+  }
+
   public gradeSubmission(
     answer: string | string[]
   ): Result<number, DomainError> {
@@ -316,7 +329,10 @@ export class Submission extends BaseEntity<ISubmissionProps> {
   }
 
   public static create(
-    data: Omit<ISubmissionProps, "submittedAt" | "createdAt" | "updatedAt">
+    data: Omit<
+      ISubmissionProps,
+      "startedAt" | "submittedAt" | "createdAt" | "updatedAt"
+    >
   ): Result<Submission, ValidationError> {
     if (data.finalScore < 0) {
       return failure(
@@ -327,6 +343,7 @@ export class Submission extends BaseEntity<ISubmissionProps> {
     const now = new Date();
     const submission = new Submission({
       ...data,
+      startedAt: now,
       submittedAt: now,
       createdAt: now,
       updatedAt: now,
@@ -362,6 +379,9 @@ export class Submission extends BaseEntity<ISubmissionProps> {
   get isCompleted(): boolean {
     return this.props.isCompleted;
   }
+  get startedAt(): Date {
+    return this.props.startedAt;
+  }
   get submittedAt(): Date {
     return this.props.submittedAt;
   }
@@ -373,6 +393,13 @@ export class Submission extends BaseEntity<ISubmissionProps> {
   }
   get updatedAt(): Date {
     return this.props.updatedAt;
+  }
+
+  /**
+   * 도메인 외부(예: Repository)에서 전체 속성이 필요할 때 사용
+   */
+  public getProps(): Readonly<ISubmissionProps> {
+    return { ...this.props };
   }
 }
 
@@ -390,7 +417,7 @@ export class Assessment extends BaseEntity<IAssessmentProps> {
   public static create(
     data: Omit<
       IAssessmentProps,
-      "questions" | "totalPoints" | "status" | "createdAt" | "updatedAt"
+      "id" | "questions" | "totalPoints" | "status" | "createdAt" | "updatedAt"
     > & {
       status?: AssessmentStatus;
     }
@@ -398,15 +425,13 @@ export class Assessment extends BaseEntity<IAssessmentProps> {
     if (!data.title?.trim()) {
       return failure(new ValidationError("제목은 필수입니다.", "title"));
     }
-    if (!data.creatorId) {
-      return failure(
-        new ValidationError("생성자 ID는 필수입니다.", "creatorId")
-      );
+    if (!data.description?.trim()) {
+      return failure(new ValidationError("설명은 필수입니다.", "description"));
     }
-    if (data.allowedAttempts < 1) {
+    if (data.allowedAttempts <= 0) {
       return failure(
         new ValidationError(
-          "허용 시도 횟수는 1 이상이어야 합니다.",
+          "허용 시도 횟수는 0보다 커야 합니다.",
           "allowedAttempts"
         )
       );
@@ -414,7 +439,7 @@ export class Assessment extends BaseEntity<IAssessmentProps> {
     if (data.passingScore < 0 || data.passingScore > 100) {
       return failure(
         new ValidationError(
-          "합격 점수는 0-100 사이여야 합니다.",
+          "통과 점수는 0-100 사이여야 합니다.",
           "passingScore"
         )
       );
@@ -423,6 +448,7 @@ export class Assessment extends BaseEntity<IAssessmentProps> {
     const now = new Date();
     const assessment = new Assessment({
       ...data,
+      id: createAssessmentId(),
       questions: [],
       totalPoints: 0,
       status: data.status ?? AssessmentStatus.Draft,
@@ -575,5 +601,19 @@ export class Assessment extends BaseEntity<IAssessmentProps> {
       (sum, q) => sum + q.points,
       0
     );
+  }
+
+  /**
+   * Repository 및 외부 계층에서 전체 속성을 필요로 할 때 사용
+   */
+  public getProps(): Readonly<IAssessmentProps> {
+    return { ...this.props };
+  }
+
+  /**
+   * 질문 배열을 반환 (질문 엔티티 불변성 유지)
+   */
+  public getQuestions(): Question[] {
+    return [...this.props.questions];
   }
 }

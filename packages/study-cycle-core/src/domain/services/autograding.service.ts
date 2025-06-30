@@ -1,6 +1,5 @@
-import { Result } from "@/shared/types/common";
-import { Submission } from "../entities/submission.entity";
-import { Question } from "../entities/question.entity";
+import { Result } from "@posmul/shared-types";
+import { Question, Submission } from "../entities/assessment.entity";
 
 export interface GradedResult {
   isCorrect: boolean;
@@ -13,4 +12,4 @@ export abstract class IAutoGradingService {
     submission: Submission,
     question: Question
   ): Promise<Result<GradedResult, Error>>;
-} 
+}

@@ -2,6 +2,7 @@ import {
   RepositoryError,
   Result,
   failure,
+  isFailure,
   success,
 } from "@posmul/shared-types";
 import {
@@ -12,13 +13,44 @@ import {
 import { UserId } from "../../domain/entities/study-session.entity";
 import { TextbookId } from "../../domain/entities/textbook.entity";
 import { IReadingRepository } from "../../domain/repositories/reading.repository";
-import { Tables } from "../../types/supabase-study_cycle";
+// import { Tables } from "../../types/supabase-study_cycle"; // 임시 제거
 
-type ReadingRow = Tables<{ schema: "study_cycle" }, "sc_readings">;
-type ReadingProgressRow = Tables<
-  { schema: "study_cycle" },
-  "sc_reading_progress"
->;
+// 임시 타입 정의
+type ReadingRow = {
+  id: string;
+  user_id: string;
+  textbook_id: string;
+  round: number;
+  status: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  last_accessed_at?: string | null;
+  daily_pages_target?: number | null;
+  weekly_hours_target?: number | null;
+  completion_deadline?: string | null;
+  total_time_minutes: number;
+  total_pages_read: number;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+  version?: number;
+};
+
+type ReadingProgressRow = {
+  id: string;
+  reading_id: string;
+  chapter_id: string;
+  chapter_title: string;
+  total_pages: number;
+  completed_pages: number;
+  last_read_at?: string | null;
+  is_completed: boolean;
+  difficulty_rating?: number | null;
+  comprehension_rating?: number | null;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 declare global {
   function mcp_supabase_execute_sql(params: {
@@ -47,14 +79,14 @@ export class McpSupabaseReadingRepository implements IReadingRepository {
       const existingResult = await this.findById(reading.id);
       if (!existingResult.success) {
         if (isFailure(existingResult)) {
-  if (isFailure(existingResult)) {
-  return failure(existingResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+          if (isFailure(existingResult)) {
+            return failure(existingResult.error);
+          } else {
+            return failure(new Error("Unknown error"));
+          }
+        } else {
+          return failure(new Error("Unknown error"));
+        }
       }
 
       let query: string;
@@ -103,7 +135,7 @@ export class McpSupabaseReadingRepository implements IReadingRepository {
             ${insertData.notes ? `'${insertData.notes.replace(/'/g, "''")}'` : "NULL"},
             '${insertData.created_at}',
             '${insertData.updated_at}',
-            ${insertData.version || 1}
+            ${(insertData as any).version || 1}
           )
         `;
       }
@@ -127,14 +159,14 @@ export class McpSupabaseReadingRepository implements IReadingRepository {
         );
         if (!saveProgressResult.success) {
           if (isFailure(saveProgressResult)) {
-  if (isFailure(saveProgressResult)) {
-  return failure(saveProgressResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+            if (isFailure(saveProgressResult)) {
+              return failure(saveProgressResult.error);
+            } else {
+              return failure(new Error("Unknown error"));
+            }
+          } else {
+            return failure(new Error("Unknown error"));
+          }
         }
       }
 
@@ -175,14 +207,14 @@ export class McpSupabaseReadingRepository implements IReadingRepository {
       const chaptersProgressResult = await this.loadChapterProgress(id);
       if (!chaptersProgressResult.success) {
         if (isFailure(chaptersProgressResult)) {
-  if (isFailure(chaptersProgressResult)) {
-  return failure(chaptersProgressResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+          if (isFailure(chaptersProgressResult)) {
+            return failure(chaptersProgressResult.error);
+          } else {
+            return failure(new Error("Unknown error"));
+          }
+        } else {
+          return failure(new Error("Unknown error"));
+        }
       }
 
       const reading = Reading.fromPersistence(readingRow, {
@@ -279,14 +311,14 @@ export class McpSupabaseReadingRepository implements IReadingRepository {
       );
       if (!chaptersProgressResult.success) {
         if (isFailure(chaptersProgressResult)) {
-  if (isFailure(chaptersProgressResult)) {
-  return failure(chaptersProgressResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+          if (isFailure(chaptersProgressResult)) {
+            return failure(chaptersProgressResult.error);
+          } else {
+            return failure(new Error("Unknown error"));
+          }
+        } else {
+          return failure(new Error("Unknown error"));
+        }
       }
 
       const reading = Reading.fromPersistence(readingRow, {
@@ -426,7 +458,7 @@ export class McpSupabaseReadingRepository implements IReadingRepository {
             progressRow.chapter_title ||
             `Chapter ${progressRow.chapter_order || 1}`,
           totalPages: 100, // TODO: Get from chapter data when available
-          completedPages: progressRow.pages_read || 0,
+          completedPages: progressRow.completed_pages || 0,
           lastReadAt: progressRow.updated_at
             ? new Date(progressRow.updated_at)
             : undefined,

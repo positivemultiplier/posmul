@@ -2,9 +2,10 @@ import {
   PmpAmount,
   PredictionGameId,
   Result,
+  UseCaseError,
   UserId,
+  isFailure,
 } from "@posmul/shared-types";
-import { UseCaseError } from "../../../../shared/errors";
 import { PredictionGame } from "../../domain/entities/prediction-game.aggregate";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 import {
@@ -54,7 +55,7 @@ export class CreatePredictionGameUseCase {
         maxParticipants: request.maxParticipants,
       });
 
-      if (!predictionGameResult.success) {
+      if (isFailure(predictionGameResult)) {
         return {
           success: false,
           error: new UseCaseError(
@@ -69,7 +70,7 @@ export class CreatePredictionGameUseCase {
       // 2. Repository에 저장
       const saveResult =
         await this.predictionGameRepository.save(predictionGame);
-      if (!saveResult.success) {
+      if (isFailure(saveResult)) {
         return {
           success: false,
           error: new UseCaseError(

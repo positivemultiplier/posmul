@@ -187,19 +187,12 @@ export class EconomyKernel {
   ): Promise<Result<number, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      if (isFailure(repositoryResult)) {
-  if (isFailure(repositoryResult)) {
-  return failure(repositoryResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+      return failure(repositoryResult.error);
     }
+    const repo = repositoryResult.data;
 
     try {
-      return await repositoryResult.data.getPmpBalance(userId);
+      return await repo.getPmpBalance(userId);
     } catch (error) {
       return failure(
         new EconomyKernelError(
@@ -222,19 +215,12 @@ export class EconomyKernel {
   ): Promise<Result<number, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      if (isFailure(repositoryResult)) {
-  if (isFailure(repositoryResult)) {
-  return failure(repositoryResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+      return failure(repositoryResult.error);
     }
+    const repo = repositoryResult.data;
 
     try {
-      return await repositoryResult.data.getPmcBalance(userId);
+      return await repo.getPmcBalance(userId);
     } catch (error) {
       return failure(
         new EconomyKernelError(
@@ -257,19 +243,12 @@ export class EconomyKernel {
   ): Promise<Result<PmpAccount, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      if (isFailure(repositoryResult)) {
-  if (isFailure(repositoryResult)) {
-  return failure(repositoryResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+      return failure(repositoryResult.error);
     }
+    const repo = repositoryResult.data;
 
     try {
-      return await repositoryResult.data.getPmpAccount(userId);
+      return await repo.getPmpAccount(userId);
     } catch (error) {
       return failure(
         new EconomyKernelError(
@@ -292,19 +271,12 @@ export class EconomyKernel {
   ): Promise<Result<PmcAccount, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      if (isFailure(repositoryResult)) {
-  if (isFailure(repositoryResult)) {
-  return failure(repositoryResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+      return failure(repositoryResult.error);
     }
+    const repo = repositoryResult.data;
 
     try {
-      return await repositoryResult.data.getPmcAccount(userId);
+      return await repo.getPmcAccount(userId);
     } catch (error) {
       return failure(
         new EconomyKernelError(
@@ -338,22 +310,12 @@ export class EconomyKernel {
 
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      if (isFailure(repositoryResult)) {
-  if (isFailure(repositoryResult)) {
-  return failure(repositoryResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+      return failure(repositoryResult.error);
     }
+    const repo = repositoryResult.data;
 
     try {
-      return await repositoryResult.data.hasSufficientPmp(
-        userId,
-        requiredAmount
-      );
+      return await repo.hasSufficientPmp(userId, requiredAmount);
     } catch (error) {
       return failure(
         new EconomyKernelError(
@@ -387,22 +349,12 @@ export class EconomyKernel {
 
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      if (isFailure(repositoryResult)) {
-  if (isFailure(repositoryResult)) {
-  return failure(repositoryResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+      return failure(repositoryResult.error);
     }
+    const repo = repositoryResult.data;
 
     try {
-      return await repositoryResult.data.hasSufficientPmc(
-        userId,
-        requiredAmount
-      );
+      return await repo.hasSufficientPmc(userId, requiredAmount);
     } catch (error) {
       return failure(
         new EconomyKernelError(
@@ -424,19 +376,12 @@ export class EconomyKernel {
   > {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      if (isFailure(repositoryResult)) {
-  if (isFailure(repositoryResult)) {
-  return failure(repositoryResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+      return failure(repositoryResult.error);
     }
+    const repo = repositoryResult.data;
 
     try {
-      return await repositoryResult.data.getSystemStats();
+      return await repo.getSystemStats();
     } catch (error) {
       return failure(
         new EconomyKernelError(
@@ -459,16 +404,9 @@ export class EconomyKernel {
   ): Promise<Result<Map<UserId, number>, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      if (isFailure(repositoryResult)) {
-  if (isFailure(repositoryResult)) {
-  return failure(repositoryResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+      return failure(repositoryResult.error);
     }
+    const repo = repositoryResult.data;
 
     if (userIds.length === 0) {
       return success(new Map());
@@ -476,7 +414,7 @@ export class EconomyKernel {
 
     try {
       const balancePromises = userIds.map(async (userId) => {
-        const balanceResult = await repositoryResult.data.getPmpBalance(userId);
+        const balanceResult = await repo.getPmpBalance(userId);
         if (isFailure(balanceResult)) {
           throw new EconomyKernelError(
             `Failed to get PMP balance for user ${userId}: ${balanceResult.error.message}`,
@@ -513,16 +451,9 @@ export class EconomyKernel {
   ): Promise<Result<Map<UserId, number>, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      if (isFailure(repositoryResult)) {
-  if (isFailure(repositoryResult)) {
-  return failure(repositoryResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+      return failure(repositoryResult.error);
     }
+    const repo = repositoryResult.data;
 
     if (userIds.length === 0) {
       return success(new Map());
@@ -530,7 +461,7 @@ export class EconomyKernel {
 
     try {
       const balancePromises = userIds.map(async (userId) => {
-        const balanceResult = await repositoryResult.data.getPmcBalance(userId);
+        const balanceResult = await repo.getPmcBalance(userId);
         if (isFailure(balanceResult)) {
           throw new EconomyKernelError(
             `Failed to get PMC balance for user ${userId}: ${balanceResult.error.message}`,

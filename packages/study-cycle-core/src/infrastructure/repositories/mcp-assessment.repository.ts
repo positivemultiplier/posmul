@@ -6,21 +6,20 @@
  */
 
 import {
-  RepositoryError,
   Result,
+  UserId,
   failure,
+  isFailure,
   success,
 } from "@posmul/shared-types";
 import {
   Assessment,
   AssessmentId,
   AssessmentStatus,
-  GradingStatus,
   IAssessmentProps,
   IQuestionProps,
   ISubmissionProps,
   Question,
-  QuestionId,
   QuestionType,
   Submission,
   SubmissionId,
@@ -31,6 +30,7 @@ import {
   QuestionStats,
   StudentProgress,
 } from "../../domain/repositories/assessment.repository";
+import { QuestionId } from "../../domain/value-objects/question-id.value-object";
 
 /**
  * Database row interfaces for mapping
@@ -75,17 +75,33 @@ interface QuestionRow {
 
 interface SubmissionRow {
   id: string;
-  question_id: string;
+  assessment_id: string;
   student_id: string;
-  answer: any;
+  answers: any;
+  final_score: number;
+  total_points: number;
+  is_completed: boolean;
+  started_at: string;
   submitted_at: string;
-  grading_status: string;
-  score?: number;
-  feedback?: string;
   time_spent?: number;
-  metadata?: any;
   created_at: string;
   updated_at: string;
+  // Legacy fields for backward compatibility
+  question_id?: string;
+  answer?: any;
+  grading_status?: string;
+  score?: number;
+  feedback?: string;
+  metadata?: any;
+}
+
+// Define RepositoryError locally if not available
+class RepositoryError extends Error {
+  constructor(message: string, cause?: any) {
+    super(message);
+    this.name = "RepositoryError";
+    this.cause = cause;
+  }
 }
 
 export class McpAssessmentRepository implements IAssessmentRepository {
@@ -100,9 +116,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
   async save(assessment: Assessment): Promise<Result<void, RepositoryError>> {
     try {
       const assessmentData = this.mapAssessmentToRow(assessment);
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const query = `
         INSERT INTO assessments (
@@ -163,9 +177,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     id: AssessmentId
   ): Promise<Result<Assessment | null, RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -180,14 +192,10 @@ export class McpAssessmentRepository implements IAssessmentRepository {
       const questionsResult = await this.findQuestionsByAssessmentId(id);
       if (!questionsResult.success) {
         if (isFailure(questionsResult)) {
-  if (isFailure(questionsResult)) {
-  return failure(questionsResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+          return failure(questionsResult.error);
+        } else {
+          return failure(new Error("Unknown error"));
+        }
       }
 
       const assessment = this.mapRowToAssessment(
@@ -204,9 +212,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     creatorId: string
   ): Promise<Result<Assessment[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -238,9 +244,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     status: AssessmentStatus
   ): Promise<Result<Assessment[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: `SELECT * FROM assessments WHERE status = '${status}' ORDER BY created_at DESC`,
@@ -269,9 +273,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
 
   async findAll(): Promise<Result<Assessment[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: "SELECT * FROM assessments ORDER BY created_at DESC",
@@ -298,9 +300,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
 
   async delete(id: AssessmentId): Promise<Result<void, RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: `DELETE FROM submissions WHERE question_id IN (SELECT id FROM questions WHERE assessment_id = '${id}')`,
@@ -325,9 +325,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
   ): Promise<Result<void, RepositoryError>> {
     try {
       const questionData = this.mapQuestionToRow(question, assessmentId);
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const query = `
         INSERT INTO questions (
@@ -362,9 +360,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     id: QuestionId
   ): Promise<Result<Question | null, RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: `SELECT * FROM questions WHERE id = '${id}'`,
@@ -381,9 +377,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     assessmentId: AssessmentId
   ): Promise<Result<Question[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: `SELECT * FROM questions WHERE assessment_id = '${assessmentId}' ORDER BY created_at ASC`,
@@ -401,9 +395,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
 
   async deleteQuestion(id: QuestionId): Promise<Result<void, RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: `DELETE FROM submissions WHERE question_id = '${id}'`,
@@ -423,27 +415,21 @@ export class McpAssessmentRepository implements IAssessmentRepository {
   ): Promise<Result<void, RepositoryError>> {
     try {
       const submissionData = this.mapSubmissionToRow(submission);
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       const query = `
         INSERT INTO submissions (
-          id, question_id, student_id, answer, submitted_at,
-          grading_status, score, feedback, time_spent, metadata,
-          created_at, updated_at
+          id, assessment_id, student_id, answers, final_score, total_points,
+          is_completed, started_at, submitted_at, time_spent, created_at, updated_at
         ) VALUES (
-          '${submissionData.id}', '${submissionData.question_id}', '${submissionData.student_id}',
-          '${this.escapeSql(JSON.stringify(submissionData.answer))}', '${submissionData.submitted_at}',
-          '${submissionData.grading_status}', ${submissionData.score ?? "NULL"},
-          ${submissionData.feedback ? `'${this.escapeSql(submissionData.feedback)}'` : "NULL"},
-          ${submissionData.time_spent ?? "NULL"},
-          '${this.escapeSql(JSON.stringify(submissionData.metadata))}',
-          '${submissionData.created_at}', '${submissionData.updated_at}'
+          '${submissionData.id}', '${submissionData.assessmentId}', '${submissionData.studentId}',
+          '${this.escapeSql(submissionData.answers)}', ${submissionData.finalScore}, ${submissionData.totalPoints},
+          ${submissionData.isCompleted}, '${submissionData.startedAt.toISOString()}', '${submissionData.submittedAt.toISOString()}',
+          ${submissionData.timeSpent ?? "NULL"}, '${submissionData.createdAt.toISOString()}', '${submissionData.updatedAt.toISOString()}'
         ) ON CONFLICT (id) DO UPDATE SET
-          answer = EXCLUDED.answer, grading_status = EXCLUDED.grading_status,
-          score = EXCLUDED.score, feedback = EXCLUDED.feedback,
-          time_spent = EXCLUDED.time_spent, metadata = EXCLUDED.metadata,
-          updated_at = EXCLUDED.updated_at
+          answers = EXCLUDED.answers, final_score = EXCLUDED.final_score,
+          total_points = EXCLUDED.total_points, is_completed = EXCLUDED.is_completed,
+          started_at = EXCLUDED.started_at, submitted_at = EXCLUDED.submitted_at,
+          time_spent = EXCLUDED.time_spent, updated_at = EXCLUDED.updated_at
       `;
       await mcp_supabase_execute_sql({ project_id: this.projectId, query });
       return success(undefined);
@@ -456,9 +442,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     id: SubmissionId
   ): Promise<Result<Submission | null, RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: `SELECT * FROM submissions WHERE id = '${id}'`,
@@ -474,9 +458,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     assessmentId: AssessmentId
   ): Promise<Result<Submission[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: `
@@ -501,19 +483,23 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     studentId: string
   ): Promise<Result<Submission[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: `SELECT * FROM submissions WHERE student_id = '${studentId}' ORDER BY submitted_at DESC`,
       });
-      const submissions = (result.data || []).map((row: any) =>
-        this.mapRowToSubmission(row as SubmissionRow)
-      );
+
+      const submissions: Submission[] = [];
+      if (result.data) {
+        for (const row of result.data as SubmissionRow[]) {
+          submissions.push(this.mapRowToSubmission(row));
+        }
+      }
       return success(submissions);
     } catch (error) {
-      return failure(new RepositoryError("학생별 Submission 조회 실패", error));
+      return failure(
+        new RepositoryError("Student별 Submission 조회 실패", error)
+      );
     }
   }
 
@@ -521,9 +507,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     questionId: QuestionId
   ): Promise<Result<Submission[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: `SELECT * FROM submissions WHERE question_id = '${questionId}' ORDER BY submitted_at DESC`,
@@ -543,9 +527,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     assessmentId: AssessmentId
   ): Promise<Result<AssessmentStats, RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: `
@@ -591,9 +573,12 @@ export class McpAssessmentRepository implements IAssessmentRepository {
         questionStatsResult.data || []
       ).map((row: any) => ({
         questionId: row.question_id as QuestionId,
+        totalAttempts: parseInt(row.total_submissions) || 0,
+        correctAttempts: parseInt(row.correct_submissions) || 0,
         totalSubmissions: parseInt(row.total_submissions) || 0,
         correctSubmissions: parseInt(row.correct_submissions) || 0,
         averageScore: parseFloat(row.average_score) || 0,
+        difficultyRating: parseFloat(row.difficulty_rating) || 1.0,
         averageTimeSpent: parseFloat(row.average_time_spent) || 0,
       }));
 
@@ -611,13 +596,11 @@ export class McpAssessmentRepository implements IAssessmentRepository {
   }
 
   async getStudentProgress(
-    studentId: string,
-    assessmentId: AssessmentId
-  ): Promise<Result<StudentProgress, RepositoryError>> {
+    assessmentId: AssessmentId,
+    studentId: UserId
+  ): Promise<Result<StudentProgress | null, Error>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
         query: `
@@ -636,7 +619,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
 
       const progressRow = result.data?.[0];
       if (!progressRow) {
-        return failure(new RepositoryError("학생 진도를 찾을 수 없습니다."));
+        return success(null);
       }
 
       const submissionsResult =
@@ -645,19 +628,42 @@ export class McpAssessmentRepository implements IAssessmentRepository {
         ? submissionsResult.data.filter((s) => s.studentId === studentId)
         : [];
 
-      return success({
+      const studentProgress: StudentProgress = {
         studentId,
         assessmentId,
+        currentQuestionIndex: 0, // Default value
+        completedQuestions: parseInt(progressRow.answered_questions) || 0,
         totalQuestions: parseInt(progressRow.total_questions) || 0,
-        answeredQuestions: parseInt(progressRow.answered_questions) || 0,
-        correctAnswers: parseInt(progressRow.correct_answers) || 0,
-        currentScore: parseFloat(progressRow.current_score) || 0,
-        timeSpent: parseFloat(progressRow.time_spent) || 0,
-        isCompleted: progressRow.is_completed === true,
-        submissions: studentSubmissions,
-      });
+        startedAt: new Date(), // Default to current date
+        lastActivityAt: new Date(), // Default to current date
+      };
+
+      return success(studentProgress);
     } catch (error) {
-      return failure(new RepositoryError("학생 진도 조회 실패", error));
+      return failure(new Error(`학생 진도 조회 실패: ${error}`));
+    }
+  }
+
+  async findSubmission(
+    assessmentId: AssessmentId,
+    studentId: UserId
+  ): Promise<Result<Submission | null, RepositoryError>> {
+    try {
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: `SELECT * FROM submissions WHERE assessment_id = '${assessmentId}' AND student_id = '${studentId}' LIMIT 1`,
+      });
+
+      if (!result.data || result.data.length === 0) {
+        return success(null);
+      }
+
+      const submissionRow = result.data[0] as SubmissionRow;
+      const submission = this.mapRowToSubmission(submissionRow);
+      return success(submission);
+    } catch (error) {
+      return failure(new RepositoryError("Submission 조회 실패", error));
     }
   }
 
@@ -688,6 +694,7 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     questions: Question[]
   ): Assessment {
     const props: IAssessmentProps = {
+      id: row.id as AssessmentId,
       title: row.title,
       description: row.description,
       status: row.status as AssessmentStatus,
@@ -757,34 +764,34 @@ export class McpAssessmentRepository implements IAssessmentRepository {
     const now = new Date().toISOString();
     return {
       id: submission.id,
-      question_id: submission.questionId,
+      assessment_id: submission.assessmentId,
       student_id: submission.studentId,
-      answer: submission.answer,
+      answers: JSON.stringify(submission.answers),
+      final_score: submission.finalScore,
+      total_points: submission.totalPoints,
+      is_completed: submission.isCompleted,
+      started_at: submission.startedAt.toISOString(),
       submitted_at: submission.submittedAt.toISOString(),
-      grading_status: submission.gradingStatus,
-      score: submission.score,
-      feedback: submission.feedback,
       time_spent: submission.timeSpent,
-      metadata: submission.metadata,
       created_at: submission.createdAt?.toISOString() || now,
       updated_at: now,
     };
   }
 
   private mapRowToSubmission(row: SubmissionRow): Submission {
-    const props: ISubmissionProps = {
-      questionId: row.question_id as QuestionId,
+    const submissionProps: ISubmissionProps = {
+      assessmentId: row.assessment_id as AssessmentId,
       studentId: row.student_id,
-      answer: row.answer,
+      answers: Array.isArray(row.answer) ? row.answer : [],
+      finalScore: row.score || 0,
+      totalPoints: 0, // Default value
+      isCompleted: row.grading_status === "completed",
+      startedAt: new Date(row.created_at),
       submittedAt: new Date(row.submitted_at),
-      gradingStatus: row.grading_status as GradingStatus,
-      score: row.score,
-      feedback: row.feedback,
       timeSpent: row.time_spent,
-      metadata: row.metadata,
       createdAt: new Date(row.created_at),
       updatedAt: new Date(row.updated_at),
     };
-    return Submission.reconstitute(props, row.id as SubmissionId);
+    return Submission.reconstitute(submissionProps, row.id as SubmissionId);
   }
 }

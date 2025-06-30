@@ -5,11 +5,11 @@ import {
   AuthenticationError,
   BusinessLogicError,
   ForbiddenError,
-  NetworkError,
-  ValidationError,
+  NetworkError
 } from "@posmul/shared-ui";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { ValidationError } from "@posmul/shared-types";
 
 interface ForumErrorProps {
   error: Error & { digest?: string };

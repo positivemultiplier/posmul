@@ -10,13 +10,14 @@
  * @since 2024-12
  */
 
-import { UseCaseError } from "../../../../shared/errors";
 import {
-  PMP,
+  PmpAmount,
   PredictionGameId,
+  Result,
+  UseCaseError,
   UserId,
+  isFailure,
 } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**
@@ -66,7 +67,7 @@ export class UpdatePredictionGameUseCase {
         request.gameId
       );
 
-      if (!gameResult.success) {
+      if (isFailure(gameResult)) {
         return {
           success: false,
           error: new UseCaseError(
@@ -85,12 +86,14 @@ export class UpdatePredictionGameUseCase {
       }
 
       // 2. 권한 확인 (생성자만 수정 가능)
-      if (game.getCreatedBy() !== request.updatedBy) {
+      if (game.creatorId !== request.updatedBy) {
         return {
           success: false,
           error: new UseCaseError("Only the game creator can update this game"),
         };
-      } // 3. 게임 상태 확인 (활성화된 게임은 제한적 수정만 가능)
+      }
+
+      // 3. 게임 상태 확인 (활성화된 게임은 제한적 수정만 가능)
       const currentStatus = game.status;
       if (currentStatus.isSettled()) {
         return {
@@ -104,9 +107,9 @@ export class UpdatePredictionGameUseCase {
       let hasChanges = false;
 
       // 제목 수정
-      if (request.updates.title && request.updates.title !== game.getTitle()) {
+      if (request.updates.title && request.updates.title !== game.title) {
         const updateResult = game.updateTitle(request.updates.title);
-        if (!updateResult.success) {
+        if (isFailure(updateResult)) {
           return {
             success: false,
             error: new UseCaseError(
@@ -122,12 +125,12 @@ export class UpdatePredictionGameUseCase {
       // 설명 수정
       if (
         request.updates.description &&
-        request.updates.description !== game.getDescription()
+        request.updates.description !== game.description
       ) {
         const updateResult = game.updateDescription(
           request.updates.description
         );
-        if (!updateResult.success) {
+        if (isFailure(updateResult)) {
           return {
             success: false,
             error: new UseCaseError(
@@ -138,10 +141,12 @@ export class UpdatePredictionGameUseCase {
         }
         updatedFields.push("description");
         hasChanges = true;
-      } // 종료 시간 수정 (활성화 전에만 가능)
+      }
+
+      // 종료 시간 수정 (활성화 전에만 가능)
       if (request.updates.endTime && currentStatus.isCreated()) {
         const updateResult = game.updateEndTime(request.updates.endTime);
-        if (!updateResult.success) {
+        if (isFailure(updateResult)) {
           return {
             success: false,
             error: new UseCaseError(
@@ -152,12 +157,14 @@ export class UpdatePredictionGameUseCase {
         }
         updatedFields.push("endTime");
         hasChanges = true;
-      } // 정산 시간 수정 (활성화 전에만 가능)
+      }
+
+      // 정산 시간 수정 (활성화 전에만 가능)
       if (request.updates.settlementTime && currentStatus.isCreated()) {
         const updateResult = game.updateSettlementTime(
           request.updates.settlementTime
         );
-        if (!updateResult.success) {
+        if (isFailure(updateResult)) {
           return {
             success: false,
             error: new UseCaseError(
@@ -168,15 +175,17 @@ export class UpdatePredictionGameUseCase {
         }
         updatedFields.push("settlementTime");
         hasChanges = true;
-      } // 최소 스테이크 수정 (활성화 전에만 가능)
+      }
+
+      // 최소 스테이크 수정 (활성화 전에만 가능)
       if (
         request.updates.minimumStake !== undefined &&
         currentStatus.isCreated()
       ) {
         const updateResult = game.updateMinimumStake(
-          request.updates.minimumStake as PMP
+          request.updates.minimumStake as PmpAmount
         );
-        if (!updateResult.success) {
+        if (isFailure(updateResult)) {
           return {
             success: false,
             error: new UseCaseError(
@@ -187,15 +196,17 @@ export class UpdatePredictionGameUseCase {
         }
         updatedFields.push("minimumStake");
         hasChanges = true;
-      } // 최대 스테이크 수정 (활성화 전에만 가능)
+      }
+
+      // 최대 스테이크 수정 (활성화 전에만 가능)
       if (
         request.updates.maximumStake !== undefined &&
         currentStatus.isCreated()
       ) {
         const updateResult = game.updateMaximumStake(
-          request.updates.maximumStake as PMP
+          request.updates.maximumStake as PmpAmount
         );
-        if (!updateResult.success) {
+        if (isFailure(updateResult)) {
           return {
             success: false,
             error: new UseCaseError(
@@ -206,7 +217,9 @@ export class UpdatePredictionGameUseCase {
         }
         updatedFields.push("maximumStake");
         hasChanges = true;
-      } // 최대 참여자 수정 (활성화 전에만 가능)
+      }
+
+      // 최대 참여자 수정 (활성화 전에만 가능)
       if (
         request.updates.maxParticipants !== undefined &&
         currentStatus.isCreated()
@@ -214,7 +227,7 @@ export class UpdatePredictionGameUseCase {
         const updateResult = game.updateMaxParticipants(
           request.updates.maxParticipants
         );
-        if (!updateResult.success) {
+        if (isFailure(updateResult)) {
           return {
             success: false,
             error: new UseCaseError(
@@ -237,7 +250,7 @@ export class UpdatePredictionGameUseCase {
 
       // 6. 게임 저장
       const saveResult = await this.predictionGameRepository.save(game);
-      if (!saveResult.success) {
+      if (isFailure(saveResult)) {
         return {
           success: false,
           error: new UseCaseError(
@@ -252,7 +265,7 @@ export class UpdatePredictionGameUseCase {
         data: {
           gameId: game.id,
           updatedFields,
-          version: game.getVersion(),
+          version: game.version,
           updatedAt: new Date(),
         },
       };

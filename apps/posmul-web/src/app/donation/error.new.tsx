@@ -5,11 +5,11 @@ import {
   AuthenticationError,
   BusinessLogicError,
   InsufficientPointsError,
-  NetworkError,
-  ValidationError,
+  NetworkError
 } from "@posmul/shared-ui";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { ValidationError } from "@posmul/shared-types";
 
 interface DonationErrorProps {
   error: Error & { digest?: string };

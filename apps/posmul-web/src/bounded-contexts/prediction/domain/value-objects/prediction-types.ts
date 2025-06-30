@@ -9,7 +9,11 @@ import { UserId } from "@posmul/shared-types";
 /**
  * 예측 타입
  */
-export type PredictionType = "binary" | "wdl" | "ranking";
+export enum PredictionType {
+  BINARY = "binary",
+  WIN_DRAW_LOSE = "wdl",
+  RANKING = "ranking",
+}
 
 /**
  * 예측 옵션

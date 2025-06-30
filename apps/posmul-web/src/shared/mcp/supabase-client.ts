@@ -380,7 +380,7 @@ export const mcp_supabase_apply_migration = async (params: {
     const result = await client.executeSQL(params.query);
 
     if (result.error) {
-      return result;
+      return { success: false, error: result.error };
     }
 
     return { success: true };

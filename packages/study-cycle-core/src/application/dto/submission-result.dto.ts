@@ -3,8 +3,12 @@
  *
  * Represents the detailed result of an assessment submission after grading.
  */
-import { AssessmentId, QuestionId, SubmissionId } from "../../domain/entities/assessment.entity";
-import { UserId } from "../../../../shared/types/branded-types";
+import { UserId } from "@posmul/shared-types";
+import {
+  AssessmentId,
+  SubmissionId,
+} from "../../domain/entities/assessment.entity";
+import { QuestionId } from "../../domain/value-objects/question-id.value-object";
 
 export interface GradedAnswer {
   questionId: QuestionId;
@@ -23,4 +27,4 @@ export interface SubmissionResultDto {
   correctCount: number;
   totalQuestions: number;
   gradedAnswers: GradedAnswer[];
-} 
+}

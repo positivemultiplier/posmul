@@ -3,8 +3,9 @@
  *
  * Represents the data structure for a user's submission for an assessment.
  */
-import { AssessmentId, QuestionId } from "../../domain/entities/assessment.entity";
-import { UserId } from "../../../../shared/types/branded-types";
+import { UserId } from "@posmul/shared-types";
+import { AssessmentId } from "../../domain/entities/assessment.entity";
+import { QuestionId } from "../../domain/value-objects/question-id.value-object";
 
 export interface AnswerDto {
   questionId: QuestionId;
@@ -15,4 +16,4 @@ export interface SubmitAssessmentDto {
   assessmentId: AssessmentId;
   userId: UserId;
   answers: AnswerDto[];
-} 
+}

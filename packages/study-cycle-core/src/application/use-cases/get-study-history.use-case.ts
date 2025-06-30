@@ -1,20 +1,46 @@
-import { IStudySessionRepository } from '../../domain/repositories/study-session.repository';
-import { GetStudyHistoryRequest, GetStudyHistoryResponse } from '../dto/study-query.dto';
-import { Result, success, failure, IUseCase } from '@/shared/types';
-import { UseCaseError } from '@/shared/errors';
-import { StudySession, StudySessionSummary } from '../../domain/entities/study-session.entity';
+import {
+  IUseCase,
+  Result,
+  UseCaseError,
+  failure,
+  success,
+} from "@posmul/shared-types";
+import {
+  StudySession,
+  StudySessionSummary,
+} from "../../domain/entities/study-session.entity";
+import { IStudySessionRepository } from "../../domain/repositories/study-session.repository";
+import {
+  GetStudyHistoryRequest,
+  GetStudyHistoryResponse,
+} from "../dto/study-query.dto";
 
-export class GetStudyHistoryUseCase implements IUseCase<GetStudyHistoryRequest, GetStudyHistoryResponse> {
-  constructor(private readonly studySessionRepository: IStudySessionRepository) {}
+export class GetStudyHistoryUseCase
+  implements IUseCase<GetStudyHistoryRequest, GetStudyHistoryResponse>
+{
+  constructor(
+    private readonly studySessionRepository: IStudySessionRepository
+  ) {}
 
-  async execute(request: GetStudyHistoryRequest): Promise<Result<GetStudyHistoryResponse, UseCaseError>> {
+  async execute(
+    request: GetStudyHistoryRequest
+  ): Promise<Result<GetStudyHistoryResponse, UseCaseError>> {
     try {
       const { userId, limit, offset } = request;
 
       // Fetch sessions from the repository
-      const sessionsResult = await this.studySessionRepository.findByUserId(userId, limit, offset);
+      const sessionsResult = await this.studySessionRepository.findByUserId(
+        userId,
+        limit,
+        offset
+      );
       if (!sessionsResult.success) {
-        return failure(new UseCaseError('Failed to retrieve study history', sessionsResult.error));
+        return failure(
+          new UseCaseError(
+            "Failed to retrieve study history",
+            sessionsResult.error
+          )
+        );
       }
 
       const sessions = sessionsResult.data;
@@ -25,8 +51,8 @@ export class GetStudyHistoryUseCase implements IUseCase<GetStudyHistoryRequest, 
 
       // Map completed entities to summary DTOs
       const history: StudySessionSummary[] = sessions
-        .filter(session => session.status === 'completed' && session.endTime)
-        .map(session => this.mapToSummary(session));
+        .filter((session) => session.status === "completed" && session.endTime)
+        .map((session) => this.mapToSummary(session));
 
       const response: GetStudyHistoryResponse = {
         history,
@@ -35,7 +61,12 @@ export class GetStudyHistoryUseCase implements IUseCase<GetStudyHistoryRequest, 
 
       return success(response);
     } catch (error) {
-      return failure(new UseCaseError('An unexpected error occurred', error instanceof Error ? error : new Error(String(error))));
+      return failure(
+        new UseCaseError(
+          "An unexpected error occurred",
+          error instanceof Error ? error : new Error(String(error))
+        )
+      );
     }
   }
 
@@ -48,10 +79,14 @@ export class GetStudyHistoryUseCase implements IUseCase<GetStudyHistoryRequest, 
       chapterId: session.chapterId,
       totalTimeMinutes: session.getSessionDurationMinutes(),
       pagesCompleted: session.pagesCompleted,
-      averageDifficulty: session.calculateAverageRating(session.difficultyRatings),
-      averageComprehension: session.calculateAverageRating(session.comprehensionRatings),
+      averageDifficulty: session.calculateAverageRating(
+        session.difficultyRatings
+      ),
+      averageComprehension: session.calculateAverageRating(
+        session.comprehensionRatings
+      ),
       startedAt: session.startTime,
       completedAt: session.endTime!, // Non-null assertion is safe here due to the filter above
     };
   }
-} 
+}

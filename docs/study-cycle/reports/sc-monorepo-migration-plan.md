@@ -15,18 +15,23 @@
     - [1.3. 핵심 결정사항](#13-핵심-결정사항)
     - [1.4. 주요 변경사항: Assessment 컨텍스트 처리](#14-주요-변경사항-assessment-컨텍스트-처리)
     - [1.5. 아키텍처 진화 전략: 모노레포에서 마이크로서비스로](#15-아키텍처-진화-전략-모노레포에서-마이크로서비스로)
-2.  [현황 분석 (As-Is Architecture)](#2-현황-분석-as-is-architecture)
-3.  [목표 아키텍처 (To-Be Architecture)](#3-목표-아키텍처-to-be-architecture)
-4.  [경제 시스템 연동 방안](#4-경제-시스템-연동-방안)
-    - [4.1. PMP 보상 모델](#41-pmp-보상-모델)
-    - [4.2. PMP 획득 프로세스](#42-pmp-획득-프로세스)
-5.  [마이그레이션 상세 작업 목록 (Task List)](#5-마이그레이션-상세-작업-목록-task-list)
+2.  [마이그레이션 범위 및 시각화](#2-마이그레이션-범위-및-시각화)
+    - [2.1. 이전 대상](#21-이전-대상)
+    - [2.2. 제외 대상](#22-제외-대상)
+    - [2.3. 아키텍처 변경 시각화](#23-아키텍처-변경-시각화)
+3.  [경제 시스템 연동 방안](#3-경제-시스템-연동-방안)
+4.  [단계별 작업 목록 (Task List)](#4-단계별-작업-목록-task-list)
+    - [Phase 1: 사전 준비 (1~2일)](#phase-1-사전-준비-12일)
+    - [Phase 2: 코어 파일 이전 (3~5일)](#phase-2-코어-파일-이전-35일)
+5.  [현황 분석 (As-Is Architecture)](#5-현황-분석-as-is-architecture)
+6.  [목표 아키텍처 (To-Be Architecture)](#6-목표-아키텍처-to-be-architecture)
+7.  [마이그레이션 상세 작업 목록 (Task List)](#7-마이그레이션-상세-작업-목록-task-list)
     - [Phase 1: 모노레포 구조 기반 마련](#phase-1-모노레포-구조-기반-마련)
     - [Phase 2: 기존 웹 앱을 `apps/web`으로 이동](#phase-2-기존-웹-앱을-appsweb으로-이동)
     - [Phase 3: 범용 공유 패키지 추출](#phase-3-범용-공유-패키지-추출)
     - [Phase 4: Study-Cycle 및 Assessment 코드 분리 및 패키지화](#phase-4-study-cycle-및-assessment-코드-분리-및-패키지화)
     - [Phase 5: 최종 정리 및 검증](#phase-5-최종-정리-및-검증)
-6.  [위험 요소 및 대응 방안](#6-위험-요소-및-대응-방안)
+8.  [위험 요소 및 대응 방안](#8-위험-요소-및-대응-방안)
 
 ---
 
@@ -34,7 +39,9 @@
 
 ### 1.1. 목표
 
-본 문서는 현재 `PosMul` 모놀리식 웹 프로젝트 내에 존재하는 `study-cycle` 및 `assessment` Bounded Context를 독립적인 안드로이드 애플리케이션으로 분리하고, 전체 프로젝트 구조를 효율적인 모노레포(Monorepo)로 전환하기 위한 상세한 계획을 정의하는 것을 목표로 합니다.
+- **문서 목적**: `study-cycle` 기능과 함께 **`assessment` 기능**을 `posmul` 웹 프로젝트에서 분리하여 새로운 모노레포 패키지로 이전하는 전체 과정을 계획하고 추적합니다.
+- **최종 목표**: `study-cycle`과 `assessment`는 안드로이드 네이티브 앱으로, 나머지 기능은 웹 앱으로 분리하여 각 플랫폼에 최적화된 사용자 경험을 제공합니다.
+- **주요 기술**: `TypeScript`, `Next.js`, `DDD`, `Monorepo`, `Supabase MCP`, `GitHub MCP`
 
 ### 1.2. 기대 효과
 
@@ -110,7 +117,121 @@ graph TD
 - **모노레포는 대안이 아니라 과정입니다**: 마이크로서비스와 모노레포는 대립하는 개념이 아닙니다. 모노레포는 여러 마이크로서비스의 코드를 하나의 저장소에서 일관되게 관리하여 코드 재사용성을 극대화하고, 버전 충돌 문제를 원천적으로 해결하는 개발 전략입니다.
 - **점진적 전환**: "한 번에" 마이크로서비스의 모든 인프라(API 게이트웨이, 서비스 디스커버리 등)를 구축하는 대신, 먼저 모노레포를 통해 코드의 경계를 명확히 하고, 준비가 된 `app`부터 독립적으로 배포하여 점진적으로 전환할 수 있습니다.
 
-## 2. 현황 분석 (As-Is Architecture)
+## 2. 마이그레이션 범위 및 시각화
+
+### 2.1. 이전 대상
+
+- **`study-cycle`**: 학습 과정 관리, 교재 보기 등 모든 관련 기능
+- **`assessment`**: 시험, 퀴즈, 과제 등 모든 평가 관련 기능
+- 관련 UI 컴포넌트 및 상태 관리 로직
+- `study-cycle` 및 `assessment` 전용 API 엔드포인트
+
+### 2.2. 제외 대상
+
+- `prediction`, `investment`, `forum`, `donation` 등 웹에 남을 핵심 도메인
+- 공유 커널 (`economy-kernel`, `shared-types` 등) - 이들은 공유 패키지로 이동합니다.
+
+### 2.3. 아키텍처 변경 시각화
+
+```mermaid
+graph TD
+    subgraph "AS-IS: Monolithic Web App"
+        direction TB
+        A["posmul-web"] --> B["src/"]
+        B --> C["bounded-contexts"]
+        C --> D("prediction")
+        C --> E("investment")
+        C --> F("study_cycle")
+        C --> G("assessment")
+        C --> H("...etc")
+    end
+
+    subgraph "TO-BE: Monorepo"
+        direction TB
+        subgraph "packages/posmul-web"
+            I("prediction")
+            J("investment")
+            K("...etc")
+        end
+        subgraph "packages/study-cycle-app"
+            L("study_cycle")
+            M("assessment")
+        end
+        subgraph "packages/shared"
+            N("economy-kernel")
+            O("shared-types")
+        end
+    end
+
+    A --> I
+    A --> J
+    A --> L
+    A --> M
+    A --> N
+    A --> O
+```
+
+## 3. 경제 시스템 연동 방안
+
+`study-cycle`과 `assessment` 기능은 PMP(PosMul Point)를 통한 보상 시스템을 유지합니다.
+
+- **학습 완료**: 특정 학습 단계를 완료하면 PMP 획득
+- **평가 통과**: `assessment`에서 좋은 성적을 거두면 PMP 획득
+- **연동 방식**: `Domain Events`를 통해 `economy-kernel`과 통신하여 PMP 지급 요청
+
+```mermaid
+sequenceDiagram
+    participant SCA as study-cycle-app
+    participant SE as Shared Events
+    participant EK as economy-kernel
+
+    SCA->>+SE: AssessmentPassedEvent 발행
+    SE->>+EK: 이벤트 수신 및 처리
+    EK-->>EK: PMP 지급 로직 실행
+    EK-->>-SE: 처리 완료
+    SE-->>-SCA: (Optional) 콜백
+```
+
+## 4. 단계별 작업 목록 (Task List)
+
+### Phase 1: 사전 준비 (1~2일)
+
+| #   | Task ID  | 작업 내용                                           | 담당자 | 예상 시간 | 상태 | GitHub 이슈 |
+| --- | -------- | --------------------------------------------------- | ------ | --------- | ---- | ----------- |
+| 1   | PREP-001 | 모노레포 구조 기획 및 의존성 분석                   | AI     | 4h        | 완료 | -           |
+| 2   | PREP-002 | `assessment` 도메인 분석 및 마이그레이션 범위 확정  | AI     | 2h        | 완료 | -           |
+| 3   | PREP-003 | 신규 모노레포 저장소 생성 및 기본 설정 (GitHub MCP) | AI     | 2h        | 대기 | -           |
+| 4   | PREP-004 | Turborepo 또는 유사 빌드 시스템 설정                | AI     | 4h        | 대기 | -           |
+
+```mermaid
+graph TD
+    T1_1["PREP-001: 구조 기획"] --> T1_2["PREP-002: assessment 분석"]
+    T1_2 --> T1_3["PREP-003: 저장소 생성"]
+    T1_3 --> T1_4["PREP-004: 빌드 시스템 설정"]
+```
+
+### Phase 2: 코어 파일 이전 (3~5일)
+
+| #   | Task ID | 작업 내용                                                                     | 담당자 | 예상 시간 | 상태 | GitHub 이슈 |
+| --- | ------- | ----------------------------------------------------------------------------- | ------ | --------- | ---- | ----------- |
+| 1   | MIG-001 | `shared` 커널 (`economy-kernel`, `types` 등) 이전                             | AI     | 8h        | 대기 | -           |
+| 2   | MIG-002 | `study_cycle` 바운디드 컨텍스트 파일 이전                                     | AI     | 12h       | 대기 | -           |
+| 3   | MIG-003 | `assessment` 바운디드 컨텍스트 파일 이전                                      | AI     | 12h       | 대기 | -           |
+| 4   | MIG-004 | 관련 API 라우트 (`/api/study-cycle/**`, `/api/assessment/**`) 이전            | AI     | 6h        | 대기 | -           |
+| 5   | MIG-005 | 관련 UI 컴포넌트 및 페이지 (`/app/study-cycle/**`, `/app/assessment/**`) 이전 | AI     | 8h        | 대기 | -           |
+
+```mermaid
+flowchart LR
+    subgraph "Phase 2"
+        M1["MIG-001: shared 이전"] --> M2["MIG-002: study_cycle 이전"]
+        M1 --> M3["MIG-003: assessment 이전"]
+        M2 --> M4["MIG-004: API 라우트 이전"]
+        M3 --> M4
+        M4 --> M5["MIG-005: UI 컴포넌트 이전"]
+    end
+```
+
+## 5. 현황 분석 (As-Is Architecture)
 
 현재 `posmul` 프로젝트는 단일 `package.json`을 가진 모놀리식 애플리케이션입니다. 모든 도메인(prediction, investment, study-cycle, assessment 등)이 하나의 소스 코드(`src`) 내에 Bounded Context로 존재합니다.
 
@@ -139,7 +260,7 @@ graph TD
     end
 ```
 
-## 3. 목표 아키텍처 (To-Be Architecture)
+## 6. 목표 아키텍처 (To-Be Architecture)
 
 새로운 모노레포 구조는 기존 `C:/G/posmul/` 디렉터리 내에 `apps`와 `packages` 폴더를 생성하여 구성됩니다.
 
@@ -175,39 +296,7 @@ graph TD
 
 > **아키텍처 노트**: 이 구조에서 `apps` 폴더의 각 애플리케이션(`web`, `android`)은 잠재적인 마이크로서비스입니다. 모노레포는 이들의 코드를 효율적으로 관리하는 '개발/관리'의 영역이며, 각 `app`은 독립적인 CI/CD 파이프라인을 통해 별도의 '배포/운영' 단위가 될 수 있습니다.
 
-## 4. 경제 시스템 연동 방안
-
-### 4.1. PMP 보상 모델
-
-`study-cycle`은 사용자의 꾸준한 노력과 지적 활동을 장려하는 것을 목표로 합니다. 이는 '위험 감수'보다는 '노력에 대한 보상' 성격이 강하므로, 리스크 없는 자산인 **PMP(PosMul Point)** 를 보상으로 지급하는 것이 가장 적합합니다.
-
-- **획득 조건**: 강의 완료, 퀴즈 통과, 과제 제출(`assessment` 기능), 우수 풀이 템플릿 선정 등
-- **획득량**: 활동의 난이도와 중요도에 따라 차등 지급
-- **목적**: 사용자의 학습 동기를 부여하고, 성실한 활동에 대한 명확한 보상 제공
-
-### 4.2. PMP 획득 프로세스
-
-안드로이드 앱에서 발생한 학습 활동이 어떻게 PosMul 경제 시스템에 반영되어 PMP를 획득하는지 보여주는 프로세스입니다.
-
-```mermaid
-sequenceDiagram
-    participant User as 사용자
-    participant AndroidApp as Study-Cycle 앱
-    participant CorePackage as @posmul/study-cycle-core
-    participant Supabase as Supabase<br/>(Edge Function)
-    participant Economy as PosMul 경제 시스템
-
-    User->>+AndroidApp: 평가(Assessment) 제출
-    AndroidApp->>+CorePackage: 'submitAssessment' Use Case 실행
-    CorePackage->>+Supabase: 'submit-assessment' 함수 호출
-    Supabase->>+Economy: PMP 획득 이벤트 발행<br/>(userId, score)
-    Economy-->>-Supabase: PMP 지급 처리 완료
-    Supabase-->>-CorePackage: API 호출 성공 응답
-    CorePackage-->>-AndroidApp: 성공
-    AndroidApp-->>-User: "PMP 획득!" 알림 표시
-```
-
-## 5. 마이그레이션 상세 작업 목록 (Task List)
+## 7. 마이그레이션 상세 작업 목록 (Task List)
 
 아래 작업 목록은 마이그레이션을 위한 구체적인 실행 계획입니다. 각 단계는 순서대로 진행하는 것을 원칙으로 합니다.
 
@@ -283,7 +372,7 @@ graph TD
 | 5.3 | **최종 통합 테스트**               | 웹 앱과 안드로이드 앱이 동시에 실행되는 환경에서 로그인 공유, 데이터 동기화 등 핵심 기능이 정상적으로 동작하는지 최종 검증합니다. | 통합 테스트 시나리오 모두 통과                  |
 | 5.4 | **[Git] 변경사항 푸시 및 PR 생성** | 변환된 브랜치를 원격 저장소에 푸시하고 Pull Request를 생성하여 팀의 최종 코드 리뷰를 받습니다.                                    | GitHub에 Pull Request 생성 및 팀 리뷰 요청 완료 |
 
-## 6. 위험 요소 및 대응 방안
+## 8. 위험 요소 및 대응 방안
 
 모노레포 전환은 복잡한 작업이며, 다음과 같은 잠재적 위험이 존재합니다.
 

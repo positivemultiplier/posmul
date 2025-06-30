@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     "포인트시스템",
   ],
   authors: [{ name: "Posmul Team" }],
-  viewport: "width=device-width, initial-scale=1",
+  // viewport: "width=device-width, initial-scale=1",
 };
 
 // 임시 경제 정보 (추후 실제 API로 교체)
@@ -65,3 +65,9 @@ export default function RootLayout({
     </html>
   );
 }
+
+// Next.js 15: viewport 메타데이터 분리 export
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};

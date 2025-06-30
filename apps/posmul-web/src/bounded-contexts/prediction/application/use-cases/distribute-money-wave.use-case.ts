@@ -10,15 +10,13 @@
  * @since 2024-12
  */
 
+import { Result, UseCaseError, UserId } from "@posmul/shared-types";
 import { EconomyKernel } from "../../../../shared/economy-kernel/services/economy-kernel.service";
 import { MoneyWaveCalculatorService } from "../../../../shared/economy-kernel/services/money-wave-calculator.service";
-import { UseCaseError } from "../../../../shared/errors";
 import {
   BaseDomainEvent,
   publishEvent,
 } from "../../../../shared/events/domain-events";
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 import {
   DistributeMoneyWaveRequest,

@@ -1,13 +1,19 @@
-import { SettlePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/settle-prediction-game.use-case";
-import { PredictionEconomicService } from "../../../../../bounded-contexts/prediction/domain/services/prediction-economic.service";
-import { SupabasePredictionGameRepository } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
-import { SupabasePredictionRepository } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction.repository";
-import { IDomainEventPublisher as EconomicEventPublisher } from "@posmul/shared-ui";
-import { MoneyWaveCalculatorService } from "@posmul/shared-ui";
-import { InMemoryEventPublisher } from "@posmul/shared-ui";
-import { PredictionGameId, UserId } from "@posmul/shared-types";
-import { DomainEvent } from "@posmul/shared-types";
+import {
+  DomainEvent,
+  PredictionGameId,
+  UserId,
+  isFailure,
+} from "@posmul/shared-types";
+import {
+  IDomainEventPublisher as EconomicEventPublisher,
+  InMemoryEventPublisher,
+  MoneyWaveCalculatorService,
+} from "@posmul/shared-ui";
 import { NextRequest, NextResponse } from "next/server";
+import { SettlePredictionGameUseCase } from "../../../../../../bounded-contexts/prediction/application/use-cases/settle-prediction-game.use-case";
+import { PredictionEconomicService } from "../../../../../../bounded-contexts/prediction/domain/services/prediction-economic.service";
+import { SupabasePredictionGameRepository } from "../../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
+import { SupabasePredictionRepository } from "../../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction.repository";
 
 // EventPublisher 어댑터 클래스
 class EventPublisherAdapter implements EconomicEventPublisher {
@@ -110,7 +116,10 @@ export async function POST(
         );
       }
 
-      if (isFailure(result) && result.error.message.includes("already settled")) {
+      if (
+        isFailure(result) &&
+        result.error.message.includes("already settled")
+      ) {
         return NextResponse.json(
           {
             success: false,

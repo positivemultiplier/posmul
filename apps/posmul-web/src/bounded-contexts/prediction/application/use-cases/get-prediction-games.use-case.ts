@@ -10,8 +10,7 @@
  * @since 2024-12
  */
 
-import { UseCaseError } from "../../../../shared/errors";
-import { Result } from "@posmul/shared-types";
+import { Result, UseCaseError, isFailure } from "@posmul/shared-types";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**
@@ -88,7 +87,7 @@ export class GetPredictionGamesUseCase {
         sorting,
       });
 
-      if (!gamesResult.success) {
+      if (isFailure(gamesResult)) {
         return {
           success: false,
           error: new UseCaseError(
@@ -99,10 +98,9 @@ export class GetPredictionGamesUseCase {
       }
 
       // 3. 총 개수 조회
-      const countResult = await this.predictionGameRepository.countByFilters(
-        filters
-      );
-      if (!countResult.success) {
+      const countResult =
+        await this.predictionGameRepository.countByFilters(filters);
+      if (isFailure(countResult)) {
         return {
           success: false,
           error: new UseCaseError(
@@ -120,19 +118,19 @@ export class GetPredictionGamesUseCase {
         const stats = game.getStatistics();
         return {
           id: game.id,
-          title: game.getTitle(),
-          description: game.getDescription(),
+          title: game.title,
+          description: game.description,
           status: game.status.toString(),
-          predictionType: game.getPredictionType(),
-          startTime: game.getStartTime(),
-          endTime: game.getEndTime(),
-          settlementTime: game.getSettlementTime(),
-          createdBy: game.getCreatedBy(),
-          importance: "medium", // 임시값
-          difficulty: "medium", // 임시값
+          predictionType: game.predictionType,
+          startTime: game.startTime,
+          endTime: game.endTime,
+          settlementTime: game.settlementTime,
+          createdBy: game.creatorId,
+          importance: "medium", // TODO: real value
+          difficulty: "medium", // TODO: real value
           participantCount: stats.totalParticipants,
           totalStake: stats.totalStake,
-          createdAt: game.getCreatedAt(),
+          createdAt: game.createdAt,
         };
       });
 

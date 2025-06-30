@@ -1,21 +1,24 @@
-import { Result, success, failure } from "../../../../shared/types";
-import { DomainError } from "../../../../shared/errors";
-import { BaseEntity } from "../../../../shared/domain/base-entity";
-import { TextbookId } from "./textbook.entity";
+import {
+  BaseEntity,
+  DomainError,
+  Result,
+  failure,
+  success,
+} from "@posmul/shared-types";
 import { StudySessionId, UserId } from "./study-session.entity";
-import { Tables, TablesInsert, TablesUpdate } from "../../types/supabase-study_cycle";
+import { TextbookId } from "./textbook.entity";
 
 // Branded types for type safety
-export type ReadingId = string & { readonly __brand: 'ReadingId' };
-export type ReadingRound = number & { readonly __brand: 'ReadingRound' };
+export type ReadingId = string & { readonly __brand: "ReadingId" };
+export type ReadingRound = number & { readonly __brand: "ReadingRound" };
 
 // Reading status enum
 export enum ReadingStatus {
-  NOT_STARTED = 'not_started',
-  IN_PROGRESS = 'in_progress', 
-  COMPLETED = 'completed',
-  PAUSED = 'paused',
-  ABANDONED = 'abandoned'
+  NOT_STARTED = "not_started",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+  PAUSED = "paused",
+  ABANDONED = "abandoned",
 }
 
 // Reading difficulty level
@@ -24,7 +27,7 @@ export enum ReadingDifficulty {
   MEDIUM = 2,
   HARD = 3,
   VERY_HARD = 4,
-  EXPERT = 5
+  EXPERT = 5,
 }
 
 // Chapter progress value object
@@ -59,19 +62,40 @@ export interface ReadingTargets {
   readonly rounds: ReadingRound; // How many times to read this textbook
 }
 
-// Create functions for branded types  
+// Create functions for branded types
 export const createReadingId = (id: string): ReadingId => id as ReadingId;
 export const createReadingRound = (round: number): ReadingRound => {
   if (round < 1 || round > 10) {
-    throw new DomainError("Reading round must be between 1 and 10", "INVALID_READING_ROUND");
+    throw new DomainError(
+      "Reading round must be between 1 and 10",
+      "INVALID_READING_ROUND"
+    );
   }
   return round as ReadingRound;
 };
 
-// Map Supabase table type to domain properties
-type ReadingRow = Tables<{ schema: "study_cycle" }, "sc_readings">;
-type ReadingInsert = TablesInsert<{ schema: "study_cycle" }, "sc_readings">;
-type ReadingUpdate = TablesUpdate<{ schema: "study_cycle" }, "sc_readings">;
+// Map Supabase table type to domain properties (임시 타입 정의)
+type ReadingRow = {
+  id: string;
+  user_id: string;
+  textbook_id: string;
+  round: number;
+  status: string;
+  started_at?: string | null;
+  completed_at?: string | null;
+  last_accessed_at?: string | null;
+  daily_pages_target?: number | null;
+  weekly_hours_target?: number | null;
+  completion_deadline?: string | null;
+  total_time_minutes: number;
+  total_pages_read: number;
+  notes?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type ReadingInsert = Partial<ReadingRow>;
+type ReadingUpdate = Partial<ReadingRow>;
 
 export interface IReadingProps {
   id: ReadingId;
@@ -94,10 +118,10 @@ export interface IReadingProps {
 
 /**
  * Reading Aggregate - 회독 관리 집계근
- * 
+ *
  * 교재의 회독(Reading Round) 관리를 담당하는 집계근입니다.
  * 여러번 읽는 것을 추적하고, 각 회독별 진도와 성과를 관리합니다.
- * 
+ *
  * 비즈니스 규칙:
  * - 한 교재에 대해 여러 회독을 가질 수 있음 (1회차, 2회차 등)
  * - 회독은 순차적으로 완료되어야 함 (1회차 완료 후 2회차 시작)
@@ -118,18 +142,23 @@ export class Reading extends BaseEntity<IReadingProps> {
       textbookId: TextbookId;
       round: ReadingRound;
       targets?: Partial<ReadingTargets>;
-      initialChapters?: Omit<ChapterProgress, 'completedPages' | 'isCompleted' | 'lastReadAt'>[];
+      initialChapters?: Omit<
+        ChapterProgress,
+        "completedPages" | "isCompleted" | "lastReadAt"
+      >[];
     },
     id?: ReadingId
   ): Result<Reading, DomainError> {
     const now = new Date();
-    
+
     // Initialize chapter progress
-    const chaptersProgress: ChapterProgress[] = (props.initialChapters || []).map(chapter => ({
+    const chaptersProgress: ChapterProgress[] = (
+      props.initialChapters || []
+    ).map((chapter) => ({
       ...chapter,
       completedPages: 0,
       isCompleted: false,
-      lastReadAt: undefined
+      lastReadAt: undefined,
     }));
 
     const readingProps: IReadingProps = {
@@ -140,7 +169,7 @@ export class Reading extends BaseEntity<IReadingProps> {
       status: ReadingStatus.NOT_STARTED,
       targets: {
         rounds: props.round,
-        ...props.targets
+        ...props.targets,
       },
       chaptersProgress,
       studySessionIds: [],
@@ -156,10 +185,13 @@ export class Reading extends BaseEntity<IReadingProps> {
   /**
    * Factory method to reconstruct from persistence
    */
-  public static fromPersistence(row: ReadingRow, extendedProps?: {
-    chaptersProgress?: ChapterProgress[];
-    studySessionIds?: StudySessionId[];
-  }): Reading {
+  public static fromPersistence(
+    row: ReadingRow,
+    extendedProps?: {
+      chaptersProgress?: ChapterProgress[];
+      studySessionIds?: StudySessionId[];
+    }
+  ): Reading {
     const props: IReadingProps = {
       id: createReadingId(row.id),
       userId: row.user_id as UserId,
@@ -167,13 +199,17 @@ export class Reading extends BaseEntity<IReadingProps> {
       round: createReadingRound(row.round),
       status: row.status as ReadingStatus,
       startedAt: row.started_at ? new Date(row.started_at) : undefined,
-      completedAt: row.completed_at ? new Date(row.completed_at) : undefined,  
-      lastAccessedAt: row.last_accessed_at ? new Date(row.last_accessed_at) : undefined,
+      completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
+      lastAccessedAt: row.last_accessed_at
+        ? new Date(row.last_accessed_at)
+        : undefined,
       targets: {
         rounds: createReadingRound(row.round),
         dailyPagesTarget: row.daily_pages_target || undefined,
         weeklyHoursTarget: row.weekly_hours_target || undefined,
-        completionDeadline: row.completion_deadline ? new Date(row.completion_deadline) : undefined,
+        completionDeadline: row.completion_deadline
+          ? new Date(row.completion_deadline)
+          : undefined,
       },
       chaptersProgress: extendedProps?.chaptersProgress || [],
       studySessionIds: extendedProps?.studySessionIds || [],
@@ -202,7 +238,8 @@ export class Reading extends BaseEntity<IReadingProps> {
       last_accessed_at: this.props.lastAccessedAt?.toISOString() || null,
       daily_pages_target: this.props.targets.dailyPagesTarget || null,
       weekly_hours_target: this.props.targets.weeklyHoursTarget || null,
-      completion_deadline: this.props.targets.completionDeadline?.toISOString() || null,
+      completion_deadline:
+        this.props.targets.completionDeadline?.toISOString() || null,
       total_time_minutes: this.props.totalTimeMinutes,
       total_pages_read: this.props.totalPagesRead,
       notes: this.props.notes || null,
@@ -222,7 +259,8 @@ export class Reading extends BaseEntity<IReadingProps> {
       last_accessed_at: this.props.lastAccessedAt?.toISOString() || null,
       daily_pages_target: this.props.targets.dailyPagesTarget || null,
       weekly_hours_target: this.props.targets.weeklyHoursTarget || null,
-      completion_deadline: this.props.targets.completionDeadline?.toISOString() || null,
+      completion_deadline:
+        this.props.targets.completionDeadline?.toISOString() || null,
       total_time_minutes: this.props.totalTimeMinutes,
       total_pages_read: this.props.totalPagesRead,
       notes: this.props.notes || null,
@@ -234,11 +272,16 @@ export class Reading extends BaseEntity<IReadingProps> {
    * Start this reading round
    */
   public startReading(): Result<void, DomainError> {
-    if (this.props.status !== ReadingStatus.NOT_STARTED && this.props.status !== ReadingStatus.PAUSED) {
-      return failure(new DomainError(
-        `Cannot start reading in ${this.props.status} status`, 
-        "INVALID_READING_STATUS"
-      ));
+    if (
+      this.props.status !== ReadingStatus.NOT_STARTED &&
+      this.props.status !== ReadingStatus.PAUSED
+    ) {
+      return failure(
+        new DomainError(
+          `Cannot start reading in ${this.props.status} status`,
+          "INVALID_READING_STATUS"
+        )
+      );
     }
 
     this.props.status = ReadingStatus.IN_PROGRESS;
@@ -254,19 +297,25 @@ export class Reading extends BaseEntity<IReadingProps> {
    */
   public completeReading(): Result<void, DomainError> {
     if (this.props.status !== ReadingStatus.IN_PROGRESS) {
-      return failure(new DomainError(
-        "Can only complete reading that is in progress", 
-        "READING_NOT_IN_PROGRESS"
-      ));
+      return failure(
+        new DomainError(
+          "Can only complete reading that is in progress",
+          "READING_NOT_IN_PROGRESS"
+        )
+      );
     }
 
     // Check if all chapters are completed
-    const incompleteChapters = this.props.chaptersProgress.filter(ch => !ch.isCompleted);
+    const incompleteChapters = this.props.chaptersProgress.filter(
+      (ch) => !ch.isCompleted
+    );
     if (incompleteChapters.length > 0) {
-      return failure(new DomainError(
-        `Cannot complete reading: ${incompleteChapters.length} chapters remain incomplete`,
-        "CHAPTERS_INCOMPLETE"
-      ));
+      return failure(
+        new DomainError(
+          `Cannot complete reading: ${incompleteChapters.length} chapters remain incomplete`,
+          "CHAPTERS_INCOMPLETE"
+        )
+      );
     }
 
     this.props.status = ReadingStatus.COMPLETED;
@@ -282,10 +331,12 @@ export class Reading extends BaseEntity<IReadingProps> {
    */
   public pauseReading(): Result<void, DomainError> {
     if (this.props.status !== ReadingStatus.IN_PROGRESS) {
-      return failure(new DomainError(
-        "Can only pause reading that is in progress", 
-        "READING_NOT_IN_PROGRESS"
-      ));
+      return failure(
+        new DomainError(
+          "Can only pause reading that is in progress",
+          "READING_NOT_IN_PROGRESS"
+        )
+      );
     }
 
     this.props.status = ReadingStatus.PAUSED;
@@ -300,10 +351,9 @@ export class Reading extends BaseEntity<IReadingProps> {
    */
   public resumeReading(): Result<void, DomainError> {
     if (this.props.status !== ReadingStatus.PAUSED) {
-      return failure(new DomainError(
-        "Can only resume paused reading", 
-        "READING_NOT_PAUSED"
-      ));
+      return failure(
+        new DomainError("Can only resume paused reading", "READING_NOT_PAUSED")
+      );
     }
 
     this.props.status = ReadingStatus.IN_PROGRESS;
@@ -316,12 +366,18 @@ export class Reading extends BaseEntity<IReadingProps> {
   /**
    * Add study session to this reading
    */
-  public addStudySession(sessionId: StudySessionId, timeMinutes: number, pagesRead: number): Result<void, DomainError> {
+  public addStudySession(
+    sessionId: StudySessionId,
+    timeMinutes: number,
+    pagesRead: number
+  ): Result<void, DomainError> {
     if (this.props.status !== ReadingStatus.IN_PROGRESS) {
-      return failure(new DomainError(
-        "Cannot add study session to non-active reading", 
-        "READING_NOT_ACTIVE"
-      ));
+      return failure(
+        new DomainError(
+          "Cannot add study session to non-active reading",
+          "READING_NOT_ACTIVE"
+        )
+      );
     }
 
     this.props.studySessionIds.push(sessionId);
@@ -337,28 +393,34 @@ export class Reading extends BaseEntity<IReadingProps> {
    * Update chapter progress
    */
   public updateChapterProgress(
-    chapterId: string, 
-    completedPages: number, 
+    chapterId: string,
+    completedPages: number,
     difficultyRating?: ReadingDifficulty,
     comprehensionRating?: number,
     notes?: string
   ): Result<void, DomainError> {
-    const chapterIndex = this.props.chaptersProgress.findIndex(ch => ch.chapterId === chapterId);
+    const chapterIndex = this.props.chaptersProgress.findIndex(
+      (ch) => ch.chapterId === chapterId
+    );
     if (chapterIndex === -1) {
-      return failure(new DomainError(
-        `Chapter ${chapterId} not found in this reading`, 
-        "CHAPTER_NOT_FOUND"
-      ));
+      return failure(
+        new DomainError(
+          `Chapter ${chapterId} not found in this reading`,
+          "CHAPTER_NOT_FOUND"
+        )
+      );
     }
 
     const chapter = this.props.chaptersProgress[chapterIndex];
-    
+
     // Validate completed pages
     if (completedPages < 0 || completedPages > chapter.totalPages) {
-      return failure(new DomainError(
-        `Completed pages (${completedPages}) must be between 0 and ${chapter.totalPages}`,
-        "INVALID_COMPLETED_PAGES"
-      ));
+      return failure(
+        new DomainError(
+          `Completed pages (${completedPages}) must be between 0 and ${chapter.totalPages}`,
+          "INVALID_COMPLETED_PAGES"
+        )
+      );
     }
 
     // Update chapter progress
@@ -369,7 +431,7 @@ export class Reading extends BaseEntity<IReadingProps> {
       lastReadAt: new Date(),
       difficultyRating,
       comprehensionRating,
-      notes
+      notes,
     };
 
     this.props.lastAccessedAt = new Date();
@@ -382,16 +444,23 @@ export class Reading extends BaseEntity<IReadingProps> {
    * Calculate current reading metrics
    */
   public calculateMetrics(): ReadingMetrics {
-    const totalPages = this.props.chaptersProgress.reduce((sum, ch) => sum + ch.totalPages, 0);
-    const completedPages = this.props.chaptersProgress.reduce((sum, ch) => sum + ch.completedPages, 0);
-    
-    const avgPageTime = this.props.totalPagesRead > 0 
-      ? this.props.totalTimeMinutes / this.props.totalPagesRead 
-      : 0;
+    const totalPages = this.props.chaptersProgress.reduce(
+      (sum, ch) => sum + ch.totalPages,
+      0
+    );
+    const completedPages = this.props.chaptersProgress.reduce(
+      (sum, ch) => sum + ch.completedPages,
+      0
+    );
+
+    const avgPageTime =
+      this.props.totalPagesRead > 0
+        ? this.props.totalTimeMinutes / this.props.totalPagesRead
+        : 0;
 
     const avgDifficulty = this.calculateAverageDifficulty();
     const avgComprehension = this.calculateAverageComprehension();
-    
+
     return {
       totalTimeMinutes: this.props.totalTimeMinutes,
       averagePageTime: avgPageTime,
@@ -399,7 +468,8 @@ export class Reading extends BaseEntity<IReadingProps> {
       averageDifficulty: avgDifficulty,
       averageComprehension: avgComprehension,
       studySessionsCount: this.props.studySessionIds.length,
-      completionPercentage: totalPages > 0 ? (completedPages / totalPages) * 100 : 0
+      completionPercentage:
+        totalPages > 0 ? (completedPages / totalPages) * 100 : 0,
     };
   }
 
@@ -409,30 +479,38 @@ export class Reading extends BaseEntity<IReadingProps> {
   public isOnTrack(): boolean {
     const metrics = this.calculateMetrics();
     const now = new Date();
-    
+
     // Check daily pages target
     if (this.props.targets.dailyPagesTarget && this.props.startedAt) {
-      const daysSinceStart = Math.ceil((now.getTime() - this.props.startedAt.getTime()) / (1000 * 60 * 60 * 24));
-      const expectedPages = this.props.targets.dailyPagesTarget * daysSinceStart;
-      if (this.props.totalPagesRead < expectedPages * 0.8) { // 80% tolerance
+      const daysSinceStart = Math.ceil(
+        (now.getTime() - this.props.startedAt.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      const expectedPages =
+        this.props.targets.dailyPagesTarget * daysSinceStart;
+      if (this.props.totalPagesRead < expectedPages * 0.8) {
+        // 80% tolerance
         return false;
       }
     }
 
     // Check completion deadline
     if (this.props.targets.completionDeadline) {
-      const timeRemaining = this.props.targets.completionDeadline.getTime() - now.getTime();
+      const timeRemaining =
+        this.props.targets.completionDeadline.getTime() - now.getTime();
       const progressNeeded = 100 - metrics.completionPercentage;
-      
+
       if (timeRemaining <= 0 && metrics.completionPercentage < 100) {
         return false;
       }
-      
+
       // Simple projection: if less than 50% done with less than 30% time remaining
-      const totalTimespan = this.props.targets.completionDeadline.getTime() - (this.props.startedAt?.getTime() || now.getTime());
-      const timeElapsed = now.getTime() - (this.props.startedAt?.getTime() || now.getTime());
+      const totalTimespan =
+        this.props.targets.completionDeadline.getTime() -
+        (this.props.startedAt?.getTime() || now.getTime());
+      const timeElapsed =
+        now.getTime() - (this.props.startedAt?.getTime() || now.getTime());
       const timeElapsedRatio = timeElapsed / totalTimespan;
-      
+
       if (metrics.completionPercentage < 50 && timeElapsedRatio > 0.7) {
         return false;
       }
@@ -445,46 +523,90 @@ export class Reading extends BaseEntity<IReadingProps> {
    * Get chapters that need attention (behind schedule or difficult)
    */
   public getChaptersNeedingAttention(): ChapterProgress[] {
-    return this.props.chaptersProgress.filter(chapter => {
+    return this.props.chaptersProgress.filter((chapter) => {
       // Chapter is incomplete and has low comprehension or high difficulty
-      return !chapter.isCompleted && (
-        (chapter.comprehensionRating && chapter.comprehensionRating < 6) ||
-        (chapter.difficultyRating && chapter.difficultyRating >= ReadingDifficulty.HARD)
+      return (
+        !chapter.isCompleted &&
+        ((chapter.comprehensionRating && chapter.comprehensionRating < 6) ||
+          (chapter.difficultyRating &&
+            chapter.difficultyRating >= ReadingDifficulty.HARD))
       );
     });
   }
 
   private calculateAverageDifficulty(): number {
-    const ratingsWithDifficulty = this.props.chaptersProgress.filter(ch => ch.difficultyRating);
+    const ratingsWithDifficulty = this.props.chaptersProgress.filter(
+      (ch) => ch.difficultyRating
+    );
     if (ratingsWithDifficulty.length === 0) return 0;
-    
-    const sum = ratingsWithDifficulty.reduce((acc, ch) => acc + (ch.difficultyRating || 0), 0);
+
+    const sum = ratingsWithDifficulty.reduce(
+      (acc, ch) => acc + (ch.difficultyRating || 0),
+      0
+    );
     return sum / ratingsWithDifficulty.length;
   }
 
   private calculateAverageComprehension(): number {
-    const ratingsWithComprehension = this.props.chaptersProgress.filter(ch => ch.comprehensionRating);
+    const ratingsWithComprehension = this.props.chaptersProgress.filter(
+      (ch) => ch.comprehensionRating
+    );
     if (ratingsWithComprehension.length === 0) return 0;
-    
-    const sum = ratingsWithComprehension.reduce((acc, ch) => acc + (ch.comprehensionRating || 0), 0);
+
+    const sum = ratingsWithComprehension.reduce(
+      (acc, ch) => acc + (ch.comprehensionRating || 0),
+      0
+    );
     return sum / ratingsWithComprehension.length;
   }
 
   // Getters
-  public get id(): ReadingId { return this.props.id; }
-  public get userId(): UserId { return this.props.userId; }
-  public get textbookId(): TextbookId { return this.props.textbookId; }
-  public get round(): ReadingRound { return this.props.round; }
-  public get status(): ReadingStatus { return this.props.status; }
-  public get startedAt(): Date | undefined { return this.props.startedAt; }
-  public get completedAt(): Date | undefined { return this.props.completedAt; }
-  public get lastAccessedAt(): Date | undefined { return this.props.lastAccessedAt; }
-  public get targets(): ReadingTargets { return this.props.targets; }
-  public get chaptersProgress(): ChapterProgress[] { return [...this.props.chaptersProgress]; }
-  public get studySessionIds(): StudySessionId[] { return [...this.props.studySessionIds]; }
-  public get totalTimeMinutes(): number { return this.props.totalTimeMinutes; }
-  public get totalPagesRead(): number { return this.props.totalPagesRead; }
-  public get notes(): string | undefined { return this.props.notes; }
-  public get createdAt(): Date { return this.props.createdAt; }
-  public get updatedAt(): Date { return this.props.updatedAt; }
-} 
+  public get id(): ReadingId {
+    return this.props.id;
+  }
+  public get userId(): UserId {
+    return this.props.userId;
+  }
+  public get textbookId(): TextbookId {
+    return this.props.textbookId;
+  }
+  public get round(): ReadingRound {
+    return this.props.round;
+  }
+  public get status(): ReadingStatus {
+    return this.props.status;
+  }
+  public get startedAt(): Date | undefined {
+    return this.props.startedAt;
+  }
+  public get completedAt(): Date | undefined {
+    return this.props.completedAt;
+  }
+  public get lastAccessedAt(): Date | undefined {
+    return this.props.lastAccessedAt;
+  }
+  public get targets(): ReadingTargets {
+    return this.props.targets;
+  }
+  public get chaptersProgress(): ChapterProgress[] {
+    return [...this.props.chaptersProgress];
+  }
+  public get studySessionIds(): StudySessionId[] {
+    return [...this.props.studySessionIds];
+  }
+  public get totalTimeMinutes(): number {
+    return this.props.totalTimeMinutes;
+  }
+  public get totalPagesRead(): number {
+    return this.props.totalPagesRead;
+  }
+  public get notes(): string | undefined {
+    return this.props.notes;
+  }
+  public get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  public get updatedAt(): Date {
+    return this.props.updatedAt;
+  }
+}

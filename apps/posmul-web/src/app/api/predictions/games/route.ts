@@ -1,11 +1,8 @@
-import { CreatePredictionGameRequest } from "../../../../../bounded-contexts/prediction/application/dto/prediction-use-case.dto";
-import { CreatePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/create-prediction-game.use-case";
-import { GetPredictionGamesUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/get-prediction-games.use-case";
-import { SupabasePredictionGameRepository } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
-import { EconomyKernel } from "@posmul/shared-ui";
-import { MoneyWaveCalculatorService } from "@posmul/shared-ui";
-import { UserId } from "@posmul/shared-types";
+import { UserId, isFailure } from "@posmul/shared-types";
 import { NextRequest, NextResponse } from "next/server";
+import { CreatePredictionGameUseCase } from "../../../../bounded-contexts/prediction/application/use-cases/create-prediction-game.use-case";
+import { GetPredictionGamesUseCase } from "../../../../bounded-contexts/prediction/application/use-cases/get-prediction-games.use-case";
+import { SupabasePredictionGameRepository } from "../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
 
 /**
  * GET /api/predictions/games
@@ -111,18 +108,12 @@ export async function POST(request: NextRequest) {
 
     // Repository 및 서비스 초기화
     const repository = new SupabasePredictionGameRepository();
-    const economyKernel = EconomyKernel.getInstance();
-    const moneyWaveCalculator = new MoneyWaveCalculatorService();
 
     // UseCase 초기화
-    const useCase = new CreatePredictionGameUseCase(
-      repository,
-      economyKernel,
-      moneyWaveCalculator
-    );
+    const useCase = new CreatePredictionGameUseCase(repository);
 
-    // 요청 DTO 생성
-    const createRequest: CreatePredictionGameRequest = {
+    // Use case에서 요구하는 필드에 맞춰 요청 객체 생성
+    const createRequest = {
       title: body.title,
       description: body.description,
       predictionType: body.predictionType,
@@ -130,13 +121,11 @@ export async function POST(request: NextRequest) {
       startTime: new Date(body.startTime),
       endTime: new Date(body.endTime),
       settlementTime: new Date(body.settlementTime),
-      createdBy: body.createdBy as UserId,
-      importance: body.importance,
-      difficulty: body.difficulty,
+      creatorId: body.creatorId as UserId,
       minimumStake: body.minimumStake,
       maximumStake: body.maximumStake,
       maxParticipants: body.maxParticipants,
-    };
+    } as const;
 
     // UseCase 실행
     const result = await useCase.execute(createRequest);
@@ -225,7 +214,7 @@ function validateCreateGameRequest(body: any): {
     errors.push("Settlement time must be after end time");
   }
 
-  if (!body.createdBy) {
+  if (!body.creatorId) {
     errors.push("Creator ID is required");
   }
 

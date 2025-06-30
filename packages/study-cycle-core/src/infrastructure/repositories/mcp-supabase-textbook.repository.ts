@@ -1,4 +1,4 @@
-import { SupabaseProjectService } from "@/shared/mcp/supabase-project.service";
+import { SupabaseProjectService } from "@posmul/shared-auth";
 import {
   RepositoryError,
   Result,

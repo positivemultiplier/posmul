@@ -1,0 +1,21 @@
+{
+  "name": "@posmul/android",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "android": "echo 'To be implemented: react-native run-android'",
+    "ios": "echo 'To be implemented: react-native run-ios'",
+    "start": "echo 'To be implemented: react-native start'",
+    "test": "echo 'No test specified'",
+    "lint": "eslint . --max-warnings 0"
+  },
+  "dependencies": {
+    "@posmul/study-cycle-core": "workspace:*",
+    "@posmul/shared-auth": "workspace:*",
+    "@posmul/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0",
+    "typescript": "^5.4.5"
+  }
+}

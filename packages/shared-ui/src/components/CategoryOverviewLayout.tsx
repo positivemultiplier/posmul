@@ -67,7 +67,7 @@ interface CategoryOverviewLayoutProps extends HTMLAttributes<HTMLDivElement> {
   // 추가 설정
   showPopularSection?: boolean;
   maxGamesDisplay?: number;
-  LinkComponent: ComponentType<LinkProps>; // Expect a Link component as a prop
+  LinkComponent?: ComponentType<LinkProps>; // Optional custom Link component
 }
 
 // 통계 카드 컴포넌트
@@ -142,6 +142,20 @@ export function CategoryOverviewLayout({
   maxGamesDisplay = 6,
   LinkComponent,
 }: CategoryOverviewLayoutProps) {
+  // 기본 LinkComponent (단순 앵커 태그) - 제공되지 않은 경우 사용
+  const DefaultLink: ComponentType<LinkProps> = ({
+    href,
+    children,
+    className,
+    ...rest
+  }) => (
+    <a href={href} className={className} {...rest}>
+      {children}
+    </a>
+  );
+
+  const Link = LinkComponent ?? DefaultLink;
+
   const displayGames = games.slice(0, maxGamesDisplay);
 
   return (
@@ -218,12 +232,12 @@ export function CategoryOverviewLayout({
             🎯 최신 {category} 게임
           </h2>
           {games.length > maxGamesDisplay && (
-            <LinkComponent
+            <Link
               href={`/${category.toLowerCase()}`}
               className="text-blue-600 hover:text-blue-700 font-medium"
             >
               전체 보기 →
-            </LinkComponent>
+            </Link>
           )}
         </div>
 
@@ -233,7 +247,10 @@ export function CategoryOverviewLayout({
               <EnhancedGameCard
                 key={game.id}
                 {...game}
-                LinkComponent={LinkComponent}
+                totalPrize={
+                  (game as any).totalPrize ?? (game as any).totalStake ?? 0
+                }
+                LinkComponent={Link}
               />
             ))}
           </div>
@@ -255,6 +272,17 @@ export function CategoryOverviewLayout({
 
 // 기존 GameCard 컴포넌트 (호환성 유지)
 export function GameCard({ game }: { game: any }) {
+  // 기본 LinkComponent (단순 앵커 태그)
+  const DefaultLink: ComponentType<{
+    href: string;
+    children: React.ReactNode;
+    className?: string;
+  }> = ({ href, children, className }) => (
+    <a href={href} className={className}>
+      {children}
+    </a>
+  );
+
   // 기존 데이터를 EnhancedGameCard 형식으로 변환
   const enhancedGame: EnhancedGameCardProps = {
     id: game.id || `game-${Math.random()}`,
@@ -265,7 +293,7 @@ export function GameCard({ game }: { game: any }) {
     status: game.status || "active",
     difficulty: game.difficulty || "medium",
     participants: game.participants || 0,
-    totalStake: game.totalStake || 0,
+    totalPrize: game.totalPrize ?? game.totalStake ?? 0,
     minStake: game.minStake || 0,
     maxStake: game.maxStake || 1000,
     expectedReturn: game.expectedReturn || 1.5,
@@ -273,6 +301,7 @@ export function GameCard({ game }: { game: any }) {
       game.endTime ||
       new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     href: game.href || `/prediction/game/${game.id}`,
+    LinkComponent: DefaultLink,
     moneyWave: {
       allocatedPool: (game.totalStake || 1000) * 2,
       currentPool: game.totalStake || 500,
@@ -284,5 +313,15 @@ export function GameCard({ game }: { game: any }) {
     isFeatured: game.isFeatured || false,
   };
 
-  return <EnhancedGameCard game={enhancedGame} />;
+  return (
+    <EnhancedGameCard
+      {...enhancedGame}
+      totalPrize={
+        (enhancedGame as any).totalPrize ??
+        (enhancedGame as any).totalStake ??
+        0
+      }
+      LinkComponent={DefaultLink}
+    />
+  );
 }

@@ -20,9 +20,29 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@posmul/shared-types": ["../../packages/shared-types/src/index.ts"],
+      "@posmul/shared-ui": ["../../packages/shared-ui/src/index.ts"],
+      "@posmul/shared-auth": ["../../packages/shared-auth/src/index.ts"],
+      "@/*": ["./src/*"],
+      "@/shared/components/*": ["../../packages/shared-ui/src/components/*"],
+      "@/shared/components": [
+        "../../packages/shared-ui/src/components/index.ts"
+      ],
+      "@/shared/types/*": ["../../packages/shared-types/src/*"],
+      "@/shared/types": ["../../packages/shared-types/src/index.ts"],
+      "@/shared/utils/*": ["../../packages/shared-ui/src/utils/*"],
+      "@/shared/utils": ["../../packages/shared-ui/src/utils/index.ts"],
+      "@/shared/mcp/*": ["../../packages/shared-auth/src/*"],
+      "@/bounded-contexts/investment/*": ["./src/bounded-contexts/investment/*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    "../../packages/shared-ui/src/**/*.ts",
+    "../../packages/shared-ui/src/**/*.tsx"
+  ],
   "exclude": ["node_modules"]
 }

@@ -1,11 +1,11 @@
 // 실시간 연결 시스템 통합 export
-export { useRealtimeConnection } from "@/shared/hooks/use-realtime-connection";
+export { useRealtimeConnection } from "@posmul/shared-ui/use-realtime-connection";
 export type {
   RealtimeConnectionConfig,
   RealtimeConnectionState,
   RealtimeMessage,
   UseRealtimeConnectionReturn,
-} from "@/shared/hooks/use-realtime-connection";
+} from "@posmul/shared-ui/use-realtime-connection";
 
 // 실시간 데이터 스토어
 export {
@@ -17,7 +17,7 @@ export {
   useRealtimeMoneyWave,
   useRealtimeNotifications,
   useRealtimePredictionGames,
-} from "@/shared/stores/realtime-data-store";
+} from "@posmul/shared-ui/stores/realtime-data-store";
 export type {
   RealtimeDataState,
   RealtimeEconomicData,
@@ -25,7 +25,7 @@ export type {
   RealtimeMoneyWave,
   RealtimeNotification,
   RealtimePredictionGame,
-} from "@/shared/stores/realtime-data-store";
+} from "@posmul/shared-ui/stores/realtime-data-store";
 
 // 실시간 프로바이더
 export {
@@ -33,7 +33,7 @@ export {
   useRealtimeActions,
   useRealtimeContext,
   useRealtimeStatus,
-} from "@/shared/providers/realtime-provider";
+} from "@posmul/shared-ui/providers/realtime-provider";
 
 // 실시간 알림 시스템
 export {
@@ -43,7 +43,7 @@ export {
   NotificationToasts,
   RealtimeNotificationSystem,
   RealtimeStatusIndicator,
-} from "@/shared/components/realtime/notification-system";
+} from "@posmul/shared-ui/realtime/notification-system";
 
 // 실시간 차트 시스템
 export {
@@ -52,7 +52,7 @@ export {
   RealtimeMarketDataChart,
   RealtimeMoneyWaveChart,
   RealtimePredictionGamesChart,
-} from "@/shared/components/realtime/realtime-charts";
+} from "@posmul/shared-ui/realtime/realtime-charts";
 
 // 실시간 시스템 설정
 export const REALTIME_CONFIG = {

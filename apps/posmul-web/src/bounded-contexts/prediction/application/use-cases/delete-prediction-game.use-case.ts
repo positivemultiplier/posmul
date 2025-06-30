@@ -10,12 +10,13 @@
  * @since 2024-12
  */
 
-import { UseCaseError } from "../../../../shared/errors";
 import {
   PredictionGameId,
+  Result,
+  UseCaseError,
   UserId,
+  isFailure,
 } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**
@@ -56,7 +57,7 @@ export class DeletePredictionGameUseCase {
         request.gameId
       );
 
-      if (!gameResult.success) {
+      if (isFailure(gameResult)) {
         return {
           success: false,
           error: new UseCaseError(
@@ -107,7 +108,7 @@ export class DeletePredictionGameUseCase {
         request.reason || "User requested deletion"
       );
 
-      if (!deleteResult.success) {
+      if (isFailure(deleteResult)) {
         return {
           success: false,
           error: new UseCaseError(
@@ -119,7 +120,7 @@ export class DeletePredictionGameUseCase {
 
       // 5. 변경사항 저장
       const saveResult = await this.predictionGameRepository.save(game);
-      if (!saveResult.success) {
+      if (isFailure(saveResult)) {
         return {
           success: false,
           error: new UseCaseError(

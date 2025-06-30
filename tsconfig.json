@@ -16,9 +16,16 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@posmul/shared-types": ["packages/shared-types/src/index.ts"],
-      "@posmul/shared-ui": ["packages/shared-ui/src/index.ts"],
-      "@posmul/shared-auth": ["packages/shared-auth/src/index.ts"]
+      "@posmul/*": ["packages/*/src"],
+      "@/shared/components/*": ["packages/shared-ui/src/components/*"],
+      "@/shared/components": ["packages/shared-ui/src/components/index.ts"],
+      "@/shared/types/*": ["packages/shared-types/src/*"],
+      "@/shared/types": ["packages/shared-types/src/index.ts"],
+      "@/shared/utils/*": ["packages/shared-ui/src/utils/*"],
+      "@/shared/utils": ["packages/shared-ui/src/utils/index.ts"],
+      "@/shared/mcp/*": ["packages/shared-auth/src/*"],
+      "../../shared/types/*": ["packages/shared-types/src/*"],
+      "../../shared/components/*": ["packages/shared-ui/src/components/*"]
     }
   },
   "exclude": ["node_modules"]

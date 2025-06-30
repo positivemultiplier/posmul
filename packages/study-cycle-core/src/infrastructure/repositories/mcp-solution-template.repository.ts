@@ -11,6 +11,7 @@ import {
   failure,
   success,
 } from "@posmul/shared-types";
+import { QuestionType } from "../../domain/entities/assessment.entity";
 import {
   ISolutionTemplateProps,
   SolutionTemplate,
@@ -35,6 +36,7 @@ interface SolutionTemplateRow {
   version: number;
   created_at: string;
   updated_at: string;
+  // question_type, template 등은 DB에 없음 (Entity만 존재, 필요시 확장)
 }
 
 export class McpSolutionTemplateRepository
@@ -53,9 +55,7 @@ export class McpSolutionTemplateRepository
     try {
       const templateData = this.mapTemplateToRow(template);
 
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -88,9 +88,7 @@ export class McpSolutionTemplateRepository
     id: SolutionTemplateId
   ): Promise<Result<SolutionTemplate | null, RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -111,9 +109,7 @@ export class McpSolutionTemplateRepository
 
   async findAll(): Promise<Result<SolutionTemplate[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -133,9 +129,7 @@ export class McpSolutionTemplateRepository
 
   async delete(id: SolutionTemplateId): Promise<Result<void, RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -152,9 +146,7 @@ export class McpSolutionTemplateRepository
     templateType: TemplateType
   ): Promise<Result<SolutionTemplate[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -176,9 +168,7 @@ export class McpSolutionTemplateRepository
     Result<SolutionTemplate[], RepositoryError>
   > {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -201,9 +191,7 @@ export class McpSolutionTemplateRepository
     title: string
   ): Promise<Result<SolutionTemplate[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -225,9 +213,7 @@ export class McpSolutionTemplateRepository
     searchTerm: string
   ): Promise<Result<SolutionTemplate[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -249,9 +235,7 @@ export class McpSolutionTemplateRepository
     templateId: SolutionTemplateId
   ): Promise<Result<TemplateUsageStats, RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -302,9 +286,7 @@ export class McpSolutionTemplateRepository
     limit: number = 10
   ): Promise<Result<SolutionTemplate[], RepositoryError>> {
     try {
-      const { mcp_supabase_execute_sql } = await import(
-        "@/shared/mcp/supabase-client"
-      );
+      const { mcp_supabase_execute_sql } = await import("@posmul/shared-auth");
 
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -342,13 +324,17 @@ export class McpSolutionTemplateRepository
       version: template.version,
       created_at: template.createdAt.toISOString(),
       updated_at: template.updatedAt.toISOString(),
+      // questionType, template 등은 DB에 없음
     };
   }
 
   private mapRowToTemplate(row: SolutionTemplateRow): SolutionTemplate {
     const props: ISolutionTemplateProps = {
-      title: row.title,
+      id: row.id as SolutionTemplateId,
+      name: row.title,
+      questionType: "multiple-choice" as QuestionType,
       templateType: row.template_type as TemplateType,
+      template: {},
       content: row.content,
       variables: row.variables || {},
       isActive: row.is_active,

@@ -5,10 +5,15 @@
  * presentation layer to display a detailed analysis of a user's performance.
  */
 
-import { QuestionType } from "../../domain/entities/assessment.entity.js";
-import { QuestionOption } from "../../domain/entities/question.entity";
-import { AssessmentId } from "../../domain/value-objects/assessment-id.value-object";
+import {
+  AssessmentId,
+  QuestionOption,
+  QuestionType,
+} from "../../domain/entities/assessment.entity";
 import { QuestionId } from "../../domain/value-objects/question-id.value-object";
+
+// Re-export QuestionType for external use
+export { QuestionType };
 
 /**
  * Represents the type of a user's answer for a question. It can be a single

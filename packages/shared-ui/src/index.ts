@@ -29,44 +29,20 @@ export * from "./realtime/index";
 // Utils
 export * from "./utils/index";
 
-// Economy Kernel Services - actual classes and functions
-export {
-  EconomyKernel,
-  EconomyKernelError,
-  getEconomyKernel,
-} from "../../../apps/posmul-web/src/shared/economy-kernel/services/economy-kernel.service";
-
-export { MoneyWaveCalculatorService } from "../../../apps/posmul-web/src/shared/economy-kernel/services/money-wave-calculator.service";
-
-// Economy Kernel Types - interfaces only
-export type {
-  EconomySystemStats,
-  IEconomyKernelRepository,
-  PmcAccount,
-  PmpAccount,
-} from "../../../apps/posmul-web/src/shared/economy-kernel/services/economy-kernel.service";
-
-// Events Services - actual classes and functions
-export {
-  InMemoryEventPublisher,
-  SupabaseEventPublisher,
-  globalEventPublisher,
-} from "../../../apps/posmul-web/src/shared/events/event-publisher";
-
-export {
-  globalEventBus,
-  publishEvent,
-  subscribeToEvent,
-} from "../../../apps/posmul-web/src/shared/events/domain-events";
-
-// Events Types - interfaces only
-export type {
-  IDomainEventPublisher,
-  IDomainEventSubscriber,
-  IEventStore,
-} from "../../../apps/posmul-web/src/shared/events/event-publisher";
-
-export type { DomainEvent } from "@posmul/shared-types";
-
 // MCP Services
 export { SupabaseProjectService } from "../../../apps/posmul-web/src/shared/mcp/supabase-project.service";
+
+export { BaseSkeleton } from "./components/loading/BaseSkeleton";
+export { default as Navbar } from "./components/navigation/Navbar";
+
+export { Button as Button } from "./components/ui/button";
+
+// Event Publisher (임시 export - 추후 @posmul/shared-types로 이동 예정)
+export type { IDomainEventPublisher } from "@posmul/shared-types";
+export { InMemoryEventPublisher } from "../../../apps/posmul-web/src/shared/events/event-publisher";
+
+// Economic Services (임시 export - 추후 경제 패키지로 이동 예정)
+export { MoneyWaveCalculatorService } from "../../../apps/posmul-web/src/shared/economy-kernel/services/money-wave-calculator.service";
+
+// Default export
+export { default } from "./components/forms/PredictionGameForm";

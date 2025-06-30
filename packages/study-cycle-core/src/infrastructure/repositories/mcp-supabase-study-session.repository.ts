@@ -2,6 +2,7 @@ import {
   RepositoryError,
   Result,
   failure,
+  isFailure,
   success,
 } from "@posmul/shared-types";
 import {
@@ -12,9 +13,19 @@ import {
 } from "../../domain/entities/study-session.entity";
 import { TextbookId } from "../../domain/entities/textbook.entity";
 import { IStudySessionRepository } from "../../domain/repositories/study-session.repository";
-import { Tables } from "../../types/supabase-study_cycle";
+// import { Tables } from "../../types/supabase-study_cycle"; // 임시 제거
 
-type StudySessionRow = Tables<{ schema: "study_cycle" }, "sc_study_sessions">;
+// 임시 타입 정의
+type StudySessionRow = {
+  id: string;
+  user_id: string;
+  textbook_id: string;
+  chapter_id?: string | null;
+  start_time: string;
+  end_time?: string | null;
+  duration_seconds?: number | null;
+  created_at: string;
+};
 
 declare global {
   function mcp_supabase_execute_sql(params: {
@@ -45,14 +56,14 @@ export class McpSupabaseStudySessionRepository
       const existingResult = await this.findById(session.id);
       if (!existingResult.success) {
         if (isFailure(existingResult)) {
-  if (isFailure(existingResult)) {
-  return failure(existingResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+          if (isFailure(existingResult)) {
+            return failure(existingResult.error);
+          } else {
+            return failure(new Error("Unknown error"));
+          }
+        } else {
+          return failure(new Error("Unknown error"));
+        }
       }
 
       const insertData = session.toInsert();

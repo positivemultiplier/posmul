@@ -87,10 +87,21 @@ export type SupabaseProjectId = string & {
   readonly brand: "SupabaseProjectId";
 };
 
+// Email Value Object
+export type Email = Brand<string, "Email">;
+
+// User Role Value Object
+export type UserRole = "citizen" | "merchant" | "admin";
+
 /**
  * 브랜드 타입 생성자 함수들
  */
-export const createUserId = (value: string): UserId => value as UserId;
+export const createUserId = (value: string): UserId => {
+  if (!value || value.trim().length === 0) {
+    throw new Error("UserId cannot be empty");
+  }
+  return value as UserId;
+};
 export const createPredictionGameId = (value: string): PredictionGameId =>
   value as PredictionGameId;
 export const createPredictionId = (value: string): PredictionId =>
@@ -135,6 +146,18 @@ export const createRiskAversionCoefficient = (
   if (value < 0 || value > 1)
     throw new Error("RiskAversionCoefficient must be between 0 and 1");
   return value as RiskAversionCoefficient;
+};
+
+export const createEmail = (email: string): Email => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    throw new Error("Invalid email format");
+  }
+  return email.toLowerCase() as Email;
+};
+
+export const createUserRole = (role: UserRole): UserRole => {
+  return role;
 };
 
 /**

@@ -47,7 +47,7 @@ export type { DomainEvent } from "@posmul/shared-types";
  *
  * 1. 읽기 전용 접근:
  * ```typescript
- * import { getEconomyKernel } from "@/shared/economy-kernel";
+ * import { getEconomyKernel } from "@posmul/shared-ui/economy-kernel";
  *
  * const economyKernel = getEconomyKernel();
  * const balance = await economyKernel.getPmpBalance(userId);
@@ -55,7 +55,7 @@ export type { DomainEvent } from "@posmul/shared-types";
  *
  * 2. 경제 데이터 변경 (이벤트를 통해서만):
  * ```typescript
- * import { PmpSpentEvent } from "@/shared/economy-kernel";
+ * import { PmpSpentEvent } from "@posmul/shared-ui/economy-kernel";
  *
  * const event = new PmpSpentEvent(
  *   userId,
