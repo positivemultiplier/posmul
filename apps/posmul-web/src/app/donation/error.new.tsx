@@ -1,15 +1,27 @@
 "use client";
 
+<<<<<<< HEAD:apps/posmul-web/src/app/donation/error.new.tsx
 import { BaseErrorUI } from "@posmul/shared-ui";
+=======
+import { BaseErrorUI } from "@/shared/components/error";
+>>>>>>> main:src/app/donation/error.new.tsx
 import {
   AuthenticationError,
   BusinessLogicError,
   InsufficientPointsError,
+<<<<<<< HEAD:apps/posmul-web/src/app/donation/error.new.tsx
   NetworkError
 } from "@posmul/shared-ui";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ValidationError } from "@posmul/shared-types";
+=======
+  NetworkError,
+  ValidationError,
+} from "@/shared/utils/errors";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+>>>>>>> main:src/app/donation/error.new.tsx
 
 interface DonationErrorProps {
   error: Error & { digest?: string };

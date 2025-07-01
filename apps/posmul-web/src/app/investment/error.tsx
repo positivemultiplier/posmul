@@ -1,13 +1,21 @@
 "use client";
 
+<<<<<<< HEAD:apps/posmul-web/src/app/investment/error.tsx
+=======
+import { BaseErrorUI } from "@/shared/components/error";
+>>>>>>> main:src/app/investment/error.tsx
 import {
   AuthenticationError,
   BusinessLogicError,
   InsufficientPointsError,
   NetworkError,
   ValidationError,
+<<<<<<< HEAD:apps/posmul-web/src/app/investment/error.tsx
 } from "@posmul/shared-types";
 import { BaseErrorUI } from "@posmul/shared-ui";
+=======
+} from "@/shared/utils/errors";
+>>>>>>> main:src/app/investment/error.tsx
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -77,8 +85,12 @@ export default function InvestmentError({
 
     if (message.includes("validation") || message.includes("invalid")) {
       return new ValidationError(
+<<<<<<< HEAD:apps/posmul-web/src/app/investment/error.tsx
         "입력하신 투자 정보가 올바르지 않습니다.",
         "validation_error"
+=======
+        "입력하신 투자 정보가 올바르지 않습니다. 다시 확인해주세요."
+>>>>>>> main:src/app/investment/error.tsx
       );
     }
 

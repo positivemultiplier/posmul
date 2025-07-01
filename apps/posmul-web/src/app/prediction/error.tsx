@@ -1,11 +1,19 @@
 "use client";
 
+<<<<<<< HEAD:apps/posmul-web/src/app/prediction/error.tsx
+=======
+import { BaseErrorUI } from "@/shared/components/error";
+>>>>>>> main:src/app/prediction/error.tsx
 import {
   AuthenticationError,
   BusinessLogicError,
   NetworkError,
+<<<<<<< HEAD:apps/posmul-web/src/app/prediction/error.tsx
 } from "@posmul/shared-types";
 import { BaseErrorUI } from "@posmul/shared-ui";
+=======
+} from "@/shared/utils/errors";
+>>>>>>> main:src/app/prediction/error.tsx
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 

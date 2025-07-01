@@ -9,7 +9,51 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never;
+      monorepo_migration_status: {
+        Row: {
+          assignee: string | null;
+          completion_percentage: number | null;
+          created_at: string | null;
+          id: string;
+          issues_found: string[] | null;
+          migration_phase: string;
+          next_actions: string[] | null;
+          notes: string | null;
+          scripts_executed: string[] | null;
+          status: string;
+          typescript_errors_count: number | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          assignee?: string | null;
+          completion_percentage?: number | null;
+          created_at?: string | null;
+          id?: string;
+          issues_found?: string[] | null;
+          migration_phase: string;
+          next_actions?: string[] | null;
+          notes?: string | null;
+          scripts_executed?: string[] | null;
+          status: string;
+          typescript_errors_count?: number | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          assignee?: string | null;
+          completion_percentage?: number | null;
+          created_at?: string | null;
+          id?: string;
+          issues_found?: string[] | null;
+          migration_phase?: string;
+          next_actions?: string[] | null;
+          notes?: string | null;
+          scripts_executed?: string[] | null;
+          status?: string;
+          typescript_errors_count?: number | null;
+          updated_at?: string | null;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

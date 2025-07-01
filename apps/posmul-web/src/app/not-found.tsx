@@ -1,6 +1,10 @@
 "use client";
 
+<<<<<<< HEAD:apps/posmul-web/src/app/not-found.tsx
 import { Button } from "@posmul/shared-ui";
+=======
+import Button from "@/shared/components/Button";
+>>>>>>> main:src/app/not-found.tsx
 import {
   ArrowLeft,
   Gamepad2,

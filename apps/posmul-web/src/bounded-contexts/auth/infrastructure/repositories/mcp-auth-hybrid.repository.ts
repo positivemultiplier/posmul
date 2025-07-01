@@ -7,11 +7,19 @@
  * 하이브리드 접근법으로 안전한 MCP 전환 달성
  */
 
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/auth/infrastructure/repositories/mcp-auth-hybrid.repository.ts
 import { mcp_supabase_execute_sql } from "@posmul/shared-auth";
 import { SupabaseProjectService } from "@posmul/shared-auth";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import type { Result } from "@posmul/shared-types";
 import { ExternalServiceError } from "@posmul/shared-ui";
+=======
+import { mcp_supabase_execute_sql } from "@/shared/mcp/supabase-client";
+import { SupabaseProjectService } from "@/shared/mcp/supabase-project.service";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import type { Result } from "../../../../shared/types/common";
+import { ExternalServiceError } from "../../../../shared/utils/errors";
+>>>>>>> main:src/bounded-contexts/auth/infrastructure/repositories/mcp-auth-hybrid.repository.ts
 import { User } from "../../domain/entities/user.entity";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {

@@ -1,15 +1,32 @@
 /**
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+ * MCP-based Donation Repository Implementation
+ * Supabase MCP를 사용한 기부 리포지토리 구현체
+ */
+
+import { UserId } from "@/bounded-contexts/auth/domain/value-objects/user-value-objects";
+import { MCPError, handleMCPError } from "@/shared/mcp/mcp-errors";
+import { mcp_supabase_execute_sql } from "@/shared/mcp/supabase-client";
+import { SupabaseProjectService } from "@/shared/mcp/supabase-project.service";
+=======
  * Supabase Donation Repository Implementation
  * Supabase를 사용한 기부 리포지토리 구현
  */
 
 import { UserId } from "@/bounded-contexts/auth/domain/value-objects/user-value-objects";
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
 import {
   PaginatedResult,
   PaginationParams,
   Result,
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  failure,
+  success,
+} from "@/shared/types/common";
+=======
 } from "@/shared/types/common";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
 import { Donation } from "../../domain/entities/donation.entity";
 import {
   DonationSearchCriteria,
@@ -48,6 +65,16 @@ interface DonationRecord {
 }
 
 /**
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+ * MCPDonationRepository
+ * MCP를 사용한 기부 리포지토리 구현체
+ */
+export class MCPDonationRepository implements IDonationRepository {
+  private readonly projectId: string;
+
+  constructor() {
+    this.projectId = SupabaseProjectService.getInstance().getProjectId();
+=======
  * SupabaseDonationRepository
  * Supabase를 사용한 기부 리포지토리 구현
  */
@@ -59,11 +86,44 @@ export class SupabaseDonationRepository implements IDonationRepository {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
   }
 
   /**
    * 기부 저장
    */
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  async save(donation: Donation): Promise<Result<void, MCPError>> {
+    try {
+      const record = this.mapDonationToRecord(donation);
+
+      const query = `
+        INSERT INTO donations (
+          id, donor_id, type, status, amount, category, description, frequency,
+          target_amount, institute_id, opinion_leader_id, metadata, beneficiary_info,
+          processing_info, scheduled_at, completed_at, cancelled_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          status = EXCLUDED.status,
+          amount = EXCLUDED.amount,
+          metadata = EXCLUDED.metadata,
+          processing_info = EXCLUDED.processing_info,
+          completed_at = EXCLUDED.completed_at,
+          cancelled_at = EXCLUDED.cancelled_at,
+          updated_at = NOW();
+      `;
+
+      await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      return success(undefined);
+    } catch (error) {
+      return failure(handleMCPError(error, "save_donation"));
+=======
   async save(donation: Donation): Promise<Result<void>> {
     try {
       const record = this.mapDonationToRecord(donation);
@@ -80,12 +140,32 @@ export class SupabaseDonationRepository implements IDonationRepository {
       return { success: true, data: undefined };
     } catch (error) {
       return { success: false, error: error as Error };
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     }
   }
 
   /**
    * ID로 기부 조회
    */
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  async findById(id: DonationId): Promise<Result<Donation | null, MCPError>> {
+    try {
+      const query = `SELECT * FROM donations WHERE id = '${id.getValue()}'`;
+
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      if (!result?.data || result.data.length === 0) {
+        return success(null);
+      }
+
+      const donation = this.mapRecordToDonation(result.data[0]);
+      return success(donation);
+    } catch (error) {
+      return failure(handleMCPError(error, "find_donation_by_id"));
+=======
   async findById(id: DonationId): Promise<Result<Donation | null>> {
     try {
       const { data, error } = await this.supabase
@@ -110,6 +190,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
       return { success: true, data: donation };
     } catch (error) {
       return { success: false, error: error as Error };
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     }
   }
 
@@ -119,6 +200,58 @@ export class SupabaseDonationRepository implements IDonationRepository {
   async findByDonorId(
     donorId: UserId,
     pagination: PaginationParams
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
+    try {
+      const offset = (pagination.page - 1) * pagination.limit;
+      const sortBy = pagination.sortBy || "created_at";
+      const sortOrder = pagination.sortOrder === "asc" ? "ASC" : "DESC";
+
+      const dataQuery = `
+        SELECT * FROM donations 
+        WHERE donor_id = '${donorId}'
+        ORDER BY ${sortBy} ${sortOrder}
+        LIMIT ${pagination.limit} OFFSET ${offset}
+      `;
+
+      const countQuery = `
+        SELECT COUNT(*) as total FROM donations 
+        WHERE donor_id = '${donorId}'
+      `;
+
+      const [dataResult, countResult] = await Promise.all([
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: dataQuery,
+        }),
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: countQuery,
+        }),
+      ]);
+
+      const donations =
+        dataResult.data?.map((record: any) =>
+          this.mapRecordToDonation(record)
+        ) || [];
+
+      const total = countResult.data?.[0]?.total || 0;
+      const totalPages = Math.ceil(total / pagination.limit);
+
+      return success({
+        data: donations,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          totalPages,
+          hasNext: pagination.page < totalPages,
+          hasPrev: pagination.page > 1,
+        },
+      });
+    } catch (error) {
+      return failure(handleMCPError(error, "find_donations_by_donor"));
+=======
   ): Promise<Result<PaginatedResult<Donation>>> {
     try {
       const { data, error, count } = await this.supabase
@@ -160,6 +293,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
       };
     } catch (error) {
       return { success: false, error: error as Error };
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     }
   }
 
@@ -169,6 +303,58 @@ export class SupabaseDonationRepository implements IDonationRepository {
   async findByStatus(
     status: DonationStatus,
     pagination: PaginationParams
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
+    try {
+      const offset = (pagination.page - 1) * pagination.limit;
+      const sortBy = pagination.sortBy || "created_at";
+      const sortOrder = pagination.sortOrder === "asc" ? "ASC" : "DESC";
+
+      const dataQuery = `
+        SELECT * FROM donations 
+        WHERE status = '${status}'
+        ORDER BY ${sortBy} ${sortOrder}
+        LIMIT ${pagination.limit} OFFSET ${offset}
+      `;
+
+      const countQuery = `
+        SELECT COUNT(*) as total FROM donations 
+        WHERE status = '${status}'
+      `;
+
+      const [dataResult, countResult] = await Promise.all([
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: dataQuery,
+        }),
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: countQuery,
+        }),
+      ]);
+
+      const donations =
+        dataResult.data?.map((record: any) =>
+          this.mapRecordToDonation(record)
+        ) || [];
+
+      const total = countResult.data?.[0]?.total || 0;
+      const totalPages = Math.ceil(total / pagination.limit);
+
+      return success({
+        data: donations,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          totalPages,
+          hasNext: pagination.page < totalPages,
+          hasPrev: pagination.page > 1,
+        },
+      });
+    } catch (error) {
+      return failure(handleMCPError(error, "find_donations_by_status"));
+=======
   ): Promise<Result<PaginatedResult<Donation>>> {
     try {
       const { data, error, count } = await this.supabase
@@ -210,6 +396,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
       };
     } catch (error) {
       return { success: false, error: error as Error };
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     }
   }
 
@@ -219,6 +406,88 @@ export class SupabaseDonationRepository implements IDonationRepository {
   async search(
     criteria: DonationSearchCriteria,
     pagination: PaginationParams
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
+    try {
+      let query = `SELECT * FROM donations WHERE 1 = 1`;
+
+      // 검색 조건 적용
+      if (criteria.donorId) {
+        query += ` AND donor_id = '${criteria.donorId}'`;
+      }
+      if (criteria.status) {
+        query += ` AND status = '${criteria.status}'`;
+      }
+      if (criteria.type) {
+        query += ` AND type = '${criteria.type}'`;
+      }
+      if (criteria.category) {
+        query += ` AND category = '${criteria.category}'`;
+      }
+      if (criteria.frequency) {
+        query += ` AND frequency = '${criteria.frequency}'`;
+      }
+      if (criteria.startDate) {
+        query += ` AND created_at >= '${criteria.startDate.toISOString()}'`;
+      }
+      if (criteria.endDate) {
+        query += ` AND created_at <= '${criteria.endDate.toISOString()}'`;
+      }
+      if (criteria.minAmount) {
+        query += ` AND amount >= ${criteria.minAmount}`;
+      }
+      if (criteria.maxAmount) {
+        query += ` AND amount <= ${criteria.maxAmount}`;
+      }
+
+      const offset = (pagination.page - 1) * pagination.limit;
+      const sortBy = pagination.sortBy || "created_at";
+      const sortOrder = pagination.sortOrder === "asc" ? "ASC" : "DESC";
+
+      const dataQuery = `
+        ${query}
+        ORDER BY ${sortBy} ${sortOrder}
+        LIMIT ${pagination.limit} OFFSET ${offset}
+      `;
+
+      const countQuery = `
+        SELECT COUNT(*) as total FROM donations 
+        WHERE ${query.split("WHERE")[1]}
+      `;
+
+      const [dataResult, countResult] = await Promise.all([
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: dataQuery,
+        }),
+        mcp_supabase_execute_sql({
+          project_id: this.projectId,
+          query: countQuery,
+        }),
+      ]);
+
+      const donations =
+        dataResult.data?.map((record: any) =>
+          this.mapRecordToDonation(record)
+        ) || [];
+
+      const total = countResult.data?.[0]?.total || 0;
+      const totalPages = Math.ceil(total / pagination.limit);
+
+      return success({
+        data: donations,
+        pagination: {
+          page: pagination.page,
+          limit: pagination.limit,
+          total,
+          totalPages,
+          hasNext: pagination.page < totalPages,
+          hasPrev: pagination.page > 1,
+        },
+      });
+    } catch (error) {
+      return failure(handleMCPError(error, "search_donations"));
+=======
   ): Promise<Result<PaginatedResult<Donation>>> {
     try {
       let query = this.supabase
@@ -290,6 +559,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
       };
     } catch (error) {
       return { success: false, error: error as Error };
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     }
   }
 
@@ -297,6 +567,50 @@ export class SupabaseDonationRepository implements IDonationRepository {
    * 기부 통계 조회
    */
   async getStats(donorId?: UserId): Promise<
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+    Result<
+      {
+        totalDonations: number;
+        totalAmount: number;
+        averageAmount: number;
+        donationsByCategory: Record<DonationCategory, number>;
+        donationsByType: Record<DonationType, number>;
+      },
+      MCPError
+    >
+  > {
+    try {
+      let query = `SELECT amount, category, type FROM donations`;
+
+      if (donorId) {
+        query += ` WHERE donor_id = '${donorId}'`;
+      }
+
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      if (!result?.data || result.data.length === 0) {
+        return success({
+          totalDonations: 0,
+          totalAmount: 0,
+          averageAmount: 0,
+          donationsByCategory: {} as Record<DonationCategory, number>,
+          donationsByType: {} as Record<DonationType, number>,
+        });
+      }
+
+      const totalDonations = result.data.length;
+      const totalAmount = result.data.reduce(
+        (sum, record) => sum + record.amount,
+        0
+      );
+      const averageAmount =
+        totalDonations > 0 ? totalAmount / totalDonations : 0;
+
+      const donationsByCategory = result.data.reduce((acc, record) => {
+=======
     Result<{
       totalDonations: number;
       totalAmount: number;
@@ -329,17 +643,33 @@ export class SupabaseDonationRepository implements IDonationRepository {
         totalDonations > 0 ? totalAmount / totalDonations : 0;
 
       const donationsByCategory = data.reduce((acc, record) => {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
         acc[record.category as DonationCategory] =
           (acc[record.category as DonationCategory] || 0) + 1;
         return acc;
       }, {} as Record<DonationCategory, number>);
 
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      const donationsByType = result.data.reduce((acc, record) => {
+=======
       const donationsByType = data.reduce((acc, record) => {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
         acc[record.type as DonationType] =
           (acc[record.type as DonationType] || 0) + 1;
         return acc;
       }, {} as Record<DonationType, number>);
 
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      return success({
+        totalDonations,
+        totalAmount,
+        averageAmount,
+        donationsByCategory,
+        donationsByType,
+      });
+    } catch (error) {
+      return failure(handleMCPError(error, "get_stats"));
+=======
       return {
         success: true,
         data: {
@@ -352,6 +682,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
       };
     } catch (error) {
       return { success: false, error: error as Error };
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     }
   }
 
@@ -367,6 +698,30 @@ export class SupabaseDonationRepository implements IDonationRepository {
         month: number;
         totalDonations: number;
         totalAmount: number;
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      }>,
+      MCPError
+    >
+  > {
+    try {
+      let query = `SELECT amount, created_at FROM donations`;
+
+      if (donorId) {
+        query += ` WHERE donor_id = '${donorId}'`;
+      }
+
+      query += ` AND created_at >= '${year}-01-01T00:00:00Z' AND created_at < '${
+        year + 1
+      }-01-01T00:00:00Z'`;
+
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      if (!result?.data || result.data.length === 0) {
+        return success([]);
+=======
       }>
     >
   > {
@@ -388,6 +743,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
           success: false,
           error: new Error(`Failed to get monthly stats: ${error.message}`),
         };
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
       }
 
       const monthlyStats = Array.from({ length: 12 }, (_, index) => ({
@@ -396,15 +752,25 @@ export class SupabaseDonationRepository implements IDonationRepository {
         totalAmount: 0,
       }));
 
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      result.data.forEach((record: any) => {
+=======
       data.forEach((record) => {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
         const month = new Date(record.created_at).getMonth();
         monthlyStats[month].totalDonations++;
         monthlyStats[month].totalAmount += record.amount;
       });
 
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      return success(monthlyStats);
+    } catch (error) {
+      return failure(handleMCPError(error, "get_monthly_stats"));
+=======
       return { success: true, data: monthlyStats };
     } catch (error) {
       return { success: false, error: error as Error };
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     }
   }
 
@@ -417,6 +783,26 @@ export class SupabaseDonationRepository implements IDonationRepository {
         year: number;
         totalDonations: number;
         totalAmount: number;
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      }>,
+      MCPError
+    >
+  > {
+    try {
+      let query = `SELECT amount, created_at FROM donations`;
+
+      if (donorId) {
+        query += ` WHERE donor_id = '${donorId}'`;
+      }
+
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      if (!result?.data || result.data.length === 0) {
+        return success([]);
+=======
       }>
     >
   > {
@@ -434,6 +820,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
           success: false,
           error: new Error(`Failed to get yearly stats: ${error.message}`),
         };
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
       }
 
       const yearlyStatsMap = new Map<
@@ -441,7 +828,11 @@ export class SupabaseDonationRepository implements IDonationRepository {
         { totalDonations: number; totalAmount: number }
       >();
 
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      result.data.forEach((record: any) => {
+=======
       data.forEach((record) => {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
         const year = new Date(record.created_at).getFullYear();
         const existing = yearlyStatsMap.get(year) || {
           totalDonations: 0,
@@ -460,9 +851,15 @@ export class SupabaseDonationRepository implements IDonationRepository {
         }))
         .sort((a, b) => b.year - a.year);
 
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      return success(yearlyStats);
+    } catch (error) {
+      return failure(handleMCPError(error, "get_yearly_stats"));
+=======
       return { success: true, data: yearlyStats };
     } catch (error) {
       return { success: false, error: error as Error };
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     }
   }
 
@@ -470,6 +867,51 @@ export class SupabaseDonationRepository implements IDonationRepository {
    * 대시보드 요약 정보 조회
    */
   async getDashboardSummary(donorId: UserId): Promise<
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+    Result<
+      {
+        totalDonated: number;
+        donationCount: number;
+        lastDonationDate?: Date;
+        favoriteCategory: DonationCategory;
+        yearlyTotal: number;
+        monthlyAverage: number;
+        rewardPointsEarned: number;
+      },
+      MCPError
+    >
+  > {
+    try {
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: `
+          SELECT amount, category, created_at FROM donations
+          WHERE donor_id = '${donorId}'
+          ORDER BY created_at DESC
+          LIMIT 1
+        `,
+      });
+
+      if (!result?.data || result.data.length === 0) {
+        return success({
+          totalDonated: 0,
+          donationCount: 0,
+          favoriteCategory: DonationCategory.EDUCATION,
+          yearlyTotal: 0,
+          monthlyAverage: 0,
+          rewardPointsEarned: 0,
+        });
+      }
+
+      const totalDonated = result.data?.[0]?.amount || 0;
+      const donationCount = 1;
+      const lastDonationDate = result.data?.[0]?.created_at
+        ? new Date(result.data[0].created_at)
+        : undefined;
+
+      // 가장 많이 기부한 카테고리 찾기
+      const categoryCount = (result.data || []).reduce((acc, record) => {
+=======
     Result<{
       totalDonated: number;
       donationCount: number;
@@ -514,6 +956,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
 
       // 가장 많이 기부한 카테고리 찾기
       const categoryCount = data.reduce((acc, record) => {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
         acc[record.category as DonationCategory] =
           (acc[record.category as DonationCategory] || 0) + 1;
         return acc;
@@ -528,9 +971,16 @@ export class SupabaseDonationRepository implements IDonationRepository {
 
       // 올해 기부 총액
       const currentYear = new Date().getFullYear();
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      const yearlyTotal = (result.data || [])
+        .filter(
+          (record: any) =>
+            new Date(record.created_at).getFullYear() === currentYear
+=======
       const yearlyTotal = data
         .filter(
           (record) => new Date(record.created_at).getFullYear() === currentYear
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
         )
         .reduce((sum, record) => sum + record.amount, 0);
 
@@ -542,6 +992,19 @@ export class SupabaseDonationRepository implements IDonationRepository {
       // 보상 포인트 (임시 계산)
       const rewardPointsEarned = Math.floor(totalDonated * 0.01); // 1% 포인트 적립
 
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      return success({
+        totalDonated,
+        donationCount,
+        lastDonationDate,
+        favoriteCategory,
+        yearlyTotal,
+        monthlyAverage,
+        rewardPointsEarned,
+      });
+    } catch (error) {
+      return failure(handleMCPError(error, "get_dashboard_summary"));
+=======
       return {
         success: true,
         data: {
@@ -556,12 +1019,36 @@ export class SupabaseDonationRepository implements IDonationRepository {
       };
     } catch (error) {
       return { success: false, error: error as Error };
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     }
   }
 
   /**
    * 기부 삭제
    */
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  async delete(id: DonationId): Promise<Result<void, MCPError>> {
+    try {
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: `DELETE FROM donations WHERE id = '${id.getValue()}'`,
+      });
+
+      if (!result?.data || result.data.length === 0) {
+        return success(undefined);
+      }
+
+      return success(undefined);
+    } catch (error) {
+      return failure(handleMCPError(error, "delete_donation"));
+    }
+  }
+
+  /**
+   * 레코드를 엔티티로 변환
+   */
+  private mapRecordToDonation(record: any): Donation {
+=======
   async delete(id: DonationId): Promise<Result<void>> {
     try {
       const { error } = await this.supabase
@@ -586,6 +1073,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
    */
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private mapRecordToDonation(_record: DonationRecord): Donation {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     // TODO: 실제 Donation 엔티티 생성자에 맞게 구현
     // 현재는 임시 구현
     throw new Error("mapRecordToDonation not implemented yet");
@@ -618,40 +1106,69 @@ export class SupabaseDonationRepository implements IDonationRepository {
       updated_at: donation.getUpdatedAt().toISOString(),
     };
   }
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+
+  // TODO: 누락된 Repository 메서드들 구현
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async update(_donation: Donation): Promise<Result<void, MCPError>> {
+=======
   // TODO: 누락된 Repository 메서드들 구현
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async update(_donation: Donation): Promise<Result<void>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("update method not implemented yet");
   }
 
   async findByType(
     _type: DonationType,
     _pagination: PaginationParams
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
+=======
   ): Promise<Result<PaginatedResult<Donation>>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("findByType method not implemented yet");
   }
 
   async findByInstituteId(
     _instituteId: InstituteId,
     _pagination?: PaginationParams
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
+=======
   ): Promise<Result<PaginatedResult<Donation>>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("findByInstituteId method not implemented yet");
   }
 
   async findByOpinionLeaderId(
     _leaderId: OpinionLeaderId,
     _pagination?: PaginationParams
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
+=======
   ): Promise<Result<PaginatedResult<Donation>>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("findByOpinionLeaderId method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  async findRecurring(
+    _donorId?: UserId
+  ): Promise<Result<Donation[], MCPError>> {
+=======
   async findRecurring(_donorId?: UserId): Promise<Result<Donation[]>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("findRecurring method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  async findScheduled(_date: Date): Promise<Result<Donation[], MCPError>> {
+=======
   async findScheduled(_date: Date): Promise<Result<Donation[]>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("findScheduled method not implemented yet");
   }
 
@@ -659,7 +1176,11 @@ export class SupabaseDonationRepository implements IDonationRepository {
     _startDate: Date,
     _endDate: Date,
     _pagination: PaginationParams
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
+=======
   ): Promise<Result<PaginatedResult<Donation>>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("findByDateRange method not implemented yet");
   }
 
@@ -667,7 +1188,11 @@ export class SupabaseDonationRepository implements IDonationRepository {
     _donorId: UserId,
     _startDate?: Date,
     _endDate?: Date
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<number, MCPError>> {
+=======
   ): Promise<Result<number>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("getTotalByDonor method not implemented yet");
   }
 
@@ -681,7 +1206,12 @@ export class SupabaseDonationRepository implements IDonationRepository {
         totalAmount: number;
         donationCount: number;
         rank: number;
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      }>,
+      MCPError
+=======
       }>
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     >
   > {
     throw new Error("getTopDonors method not implemented yet");
@@ -691,7 +1221,14 @@ export class SupabaseDonationRepository implements IDonationRepository {
     _startDate?: Date,
     _endDate?: Date
   ): Promise<
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+    Result<
+      Record<DonationCategory, { count: number; totalAmount: number }>,
+      MCPError
+    >
+=======
     Result<Record<DonationCategory, { count: number; totalAmount: number }>>
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
   > {
     throw new Error("getCategoryStats method not implemented yet");
   }
@@ -699,11 +1236,19 @@ export class SupabaseDonationRepository implements IDonationRepository {
   async getRecentActivity(
     _donorId: UserId,
     _limit: number
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<Donation[], MCPError>> {
+    throw new Error("getRecentActivity method not implemented yet");
+  }
+
+  async findPendingProcessing(): Promise<Result<Donation[], MCPError>> {
+=======
   ): Promise<Result<Donation[]>> {
     throw new Error("getRecentActivity method not implemented yet");
   }
 
   async findPendingProcessing(): Promise<Result<Donation[]>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("findPendingProcessing method not implemented yet");
   }
 
@@ -711,17 +1256,32 @@ export class SupabaseDonationRepository implements IDonationRepository {
     _donorId?: UserId,
     _startDate?: Date,
     _endDate?: Date
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<number, MCPError>> {
+=======
   ): Promise<Result<number>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("getCompletionRate method not implemented yet");
   }
 
   async getAverageAmount(
     _donorId?: UserId,
     _category?: DonationCategory
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<number, MCPError>> {
+    throw new Error("getAverageAmount method not implemented yet");
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async findExpiredScheduled(
+    _date: Date
+  ): Promise<Result<Donation[], MCPError>> {
+=======
   ): Promise<Result<number>> {
     throw new Error("getAverageAmount method not implemented yet");
   } // eslint-disable-next-line @typescript-eslint/no-unused-vars
   async findExpiredScheduled(_date: Date): Promise<Result<Donation[]>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("findExpiredScheduled method not implemented yet");
   }
 
@@ -730,45 +1290,83 @@ export class SupabaseDonationRepository implements IDonationRepository {
   async findByCriteria(
     _criteria: DonationSearchCriteria,
     _pagination?: PaginationParams
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
+=======
   ): Promise<Result<PaginatedResult<Donation>>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("findByCriteria method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  async countByStatus(
+    _status: DonationStatus
+  ): Promise<Result<number, MCPError>> {
+=======
   async countByStatus(_status: DonationStatus): Promise<Result<number>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("countByStatus method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  async countByDonor(_donorId: UserId): Promise<Result<number, MCPError>> {
+=======
   async countByDonor(_donorId: UserId): Promise<Result<number>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("countByDonor method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  async getTotalAmountByDonor(
+    _donorId: UserId
+  ): Promise<Result<number, MCPError>> {
+=======
   async getTotalAmountByDonor(_donorId: UserId): Promise<Result<number>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("getTotalAmountByDonor method not implemented yet");
   }
 
   async getTotalAmountByInstitute(
     _instituteId: InstituteId
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<number, MCPError>> {
+=======
   ): Promise<Result<number>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("getTotalAmountByInstitute method not implemented yet");
   }
 
   async getTotalAmountByOpinionLeader(
     _leaderId: OpinionLeaderId
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<number, MCPError>> {
+=======
   ): Promise<Result<number>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("getTotalAmountByOpinionLeader method not implemented yet");
   }
 
   async findRecurringDonations(
     _pagination?: PaginationParams
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  ): Promise<Result<PaginatedResult<Donation>, MCPError>> {
+=======
   ): Promise<Result<PaginatedResult<Donation>>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("findRecurringDonations method not implemented yet");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+  async findDueRecurringDonations(
+    _dueDate: Date
+  ): Promise<Result<Donation[], MCPError>> {
+=======
   async findDueRecurringDonations(_dueDate: Date): Promise<Result<Donation[]>> {
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     throw new Error("findDueRecurringDonations method not implemented yet");
   }
 
@@ -777,6 +1375,18 @@ export class SupabaseDonationRepository implements IDonationRepository {
     _endDate: Date,
     _donorId?: UserId
   ): Promise<
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+    Result<
+      {
+        totalDonations: number;
+        totalAmount: number;
+        averageAmount: number;
+        donationsByCategory: Record<DonationCategory, number>;
+        donationsByType: Record<DonationType, number>;
+      },
+      MCPError
+    >
+=======
     Result<{
       totalDonations: number;
       totalAmount: number;
@@ -784,6 +1394,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
       donationsByCategory: Record<DonationCategory, number>;
       donationsByType: Record<DonationType, number>;
     }>
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
   > {
     throw new Error("getDonationStatsInPeriod method not implemented yet");
   }
@@ -798,7 +1409,12 @@ export class SupabaseDonationRepository implements IDonationRepository {
         totalAmount: number;
         donorCount: number;
         donationCount: number;
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      }[],
+      MCPError
+=======
       }[]
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     >
   > {
     throw new Error("getPopularInstitutes method not implemented yet");
@@ -814,7 +1430,12 @@ export class SupabaseDonationRepository implements IDonationRepository {
         totalAmount: number;
         supporterCount: number;
         supportCount: number;
+<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
+      }[],
+      MCPError
+=======
       }[]
+>>>>>>> main:src/bounded-contexts/donation/infrastructure/repositories/supabase-donation.repository.ts.backup
     >
   > {
     throw new Error("getPopularOpinionLeaders method not implemented yet");
