@@ -37,7 +37,7 @@ const nextConfig = {
   },
   // Windows 환경에서 .nft.json 파일 접근 오류 회피
   experimental: {
-    outputFileTracing: false,
+    // outputFileTracing: false, // Next.js 15에서 제거됨
   },
 };
 

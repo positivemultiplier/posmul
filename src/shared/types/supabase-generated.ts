@@ -35,266 +35,50 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      sc_assessments: {
+      monorepo_migration_status: {
         Row: {
-          completed_at: string | null
+          assignee: string | null
+          completion_percentage: number | null
+          created_at: string | null
           id: string
-          started_at: string
+          issues_found: string[] | null
+          migration_phase: string
+          next_actions: string[] | null
+          notes: string | null
+          scripts_executed: string[] | null
           status: string
-          title: string
-          user_id: string
+          typescript_errors_count: number | null
+          updated_at: string | null
         }
         Insert: {
-          completed_at?: string | null
+          assignee?: string | null
+          completion_percentage?: number | null
+          created_at?: string | null
           id?: string
-          started_at?: string
-          status?: string
-          title: string
-          user_id: string
+          issues_found?: string[] | null
+          migration_phase: string
+          next_actions?: string[] | null
+          notes?: string | null
+          scripts_executed?: string[] | null
+          status: string
+          typescript_errors_count?: number | null
+          updated_at?: string | null
         }
         Update: {
-          completed_at?: string | null
+          assignee?: string | null
+          completion_percentage?: number | null
+          created_at?: string | null
           id?: string
-          started_at?: string
+          issues_found?: string[] | null
+          migration_phase?: string
+          next_actions?: string[] | null
+          notes?: string | null
+          scripts_executed?: string[] | null
           status?: string
-          title?: string
-          user_id?: string
+          typescript_errors_count?: number | null
+          updated_at?: string | null
         }
         Relationships: []
-      }
-      sc_chapters: {
-        Row: {
-          created_at: string
-          id: string
-          order: number
-          textbook_id: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          order: number
-          textbook_id: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          order?: number
-          textbook_id?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sc_chapters_textbook_id_fkey"
-            columns: ["textbook_id"]
-            isOneToOne: false
-            referencedRelation: "sc_textbooks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sc_questions: {
-        Row: {
-          chapter_id: string
-          created_at: string
-          id: string
-          options: Json | null
-          question_text: string
-          question_type: string
-          solution_template: string | null
-          updated_at: string
-        }
-        Insert: {
-          chapter_id: string
-          created_at?: string
-          id?: string
-          options?: Json | null
-          question_text: string
-          question_type: string
-          solution_template?: string | null
-          updated_at?: string
-        }
-        Update: {
-          chapter_id?: string
-          created_at?: string
-          id?: string
-          options?: Json | null
-          question_text?: string
-          question_type?: string
-          solution_template?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sc_questions_chapter_id_fkey"
-            columns: ["chapter_id"]
-            isOneToOne: false
-            referencedRelation: "sc_chapters"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sc_study_sessions: {
-        Row: {
-          chapter_id: string | null
-          created_at: string
-          duration_seconds: number | null
-          end_time: string | null
-          id: string
-          start_time: string
-          textbook_id: string
-          user_id: string
-        }
-        Insert: {
-          chapter_id?: string | null
-          created_at?: string
-          duration_seconds?: number | null
-          end_time?: string | null
-          id?: string
-          start_time: string
-          textbook_id: string
-          user_id: string
-        }
-        Update: {
-          chapter_id?: string | null
-          created_at?: string
-          duration_seconds?: number | null
-          end_time?: string | null
-          id?: string
-          start_time?: string
-          textbook_id?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sc_study_sessions_chapter_id_fkey"
-            columns: ["chapter_id"]
-            isOneToOne: false
-            referencedRelation: "sc_chapters"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sc_study_sessions_textbook_id_fkey"
-            columns: ["textbook_id"]
-            isOneToOne: false
-            referencedRelation: "sc_textbooks"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sc_textbooks: {
-        Row: {
-          cover_image_url: string | null
-          created_at: string
-          creator_id: string | null
-          description: string | null
-          id: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          cover_image_url?: string | null
-          created_at?: string
-          creator_id?: string | null
-          description?: string | null
-          id?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          cover_image_url?: string | null
-          created_at?: string
-          creator_id?: string | null
-          description?: string | null
-          id?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      sc_user_answers: {
-        Row: {
-          assessment_id: string
-          id: string
-          is_correct: boolean | null
-          question_id: string
-          score: number | null
-          submitted_at: string
-          user_answer: string | null
-          user_id: string
-        }
-        Insert: {
-          assessment_id: string
-          id?: string
-          is_correct?: boolean | null
-          question_id: string
-          score?: number | null
-          submitted_at?: string
-          user_answer?: string | null
-          user_id: string
-        }
-        Update: {
-          assessment_id?: string
-          id?: string
-          is_correct?: boolean | null
-          question_id?: string
-          score?: number | null
-          submitted_at?: string
-          user_answer?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sc_user_answers_assessment_id_fkey"
-            columns: ["assessment_id"]
-            isOneToOne: false
-            referencedRelation: "sc_assessments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "sc_user_answers_question_id_fkey"
-            columns: ["question_id"]
-            isOneToOne: false
-            referencedRelation: "sc_questions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      sc_user_textbook_progress: {
-        Row: {
-          read_count: number
-          textbook_id: string
-          total_study_duration_seconds: number
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          read_count?: number
-          textbook_id: string
-          total_study_duration_seconds?: number
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          read_count?: number
-          textbook_id?: string
-          total_study_duration_seconds?: number
-          updated_at?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "sc_user_textbook_progress_textbook_id_fkey"
-            columns: ["textbook_id"]
-            isOneToOne: false
-            referencedRelation: "sc_textbooks"
-            referencedColumns: ["id"]
-          },
-        ]
       }
     }
     Views: {
@@ -471,7 +255,7 @@ export type CompositeTypes<
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof Database
   }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]][ "CompositeTypes"]
+    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
     : never = never,
 > = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
   ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
