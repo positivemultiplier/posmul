@@ -60,31 +60,47 @@ pnpm build
 - **테스트**: Jest, React Testing Library, Playwright
 - **개발도구**: ESLint, Prettier, Husky
 
-## 📁 모노레포 구조
+## 📁 모노레포 실제 구조
 
 ```
 /
 ├── apps/
 │   ├── posmul-web/        # Next.js 웹 애플리케이션
-│   └── android/           # React Native 안드로이드 앱 (예정)
+│   └── android/           # React Native 안드로이드 앱
 ├── packages/
 │   ├── shared-auth/       # 인증 관련 공통 로직
 │   ├── shared-types/      # 공유 타입 (DDD 엔티티, 값 객체 등)
 │   ├── shared-ui/         # 공유 리액트 컴포넌트
-│   └── study-cycle-core/  # 핵심 학습 사이클 도메인 로직
-└── docs/                  # 프로젝트 문서
+│   └── study-cycle-core/  # 학습 사이클 도메인 로직
+├── docs/                  # 프로젝트 문서 (튜토리얼, 레퍼런스, 분석 등)
+└── ...
 ```
 
-### Bounded Contexts
+### Bounded Contexts (실제 도메인 구조)
 
 DDD에 따라 각 도메인은 `apps/posmul-web/src/bounded-contexts` 내에서 관리됩니다.
 
-- **Economy**: PMP/PMC 토큰 시스템, Agency Theory, 최적화 엔진
-- **Prediction**: 예측 게임 로직, 게임 관리
-- **Investment**: 시간과 화폐 투자를 통한 PMP/PMC 획득
-- **Donation**: PMC 소비
-- **Forum**: 포럼 및 커뮤니티
-- **User & Auth**: 사용자 프로필, 인증 및 권한 관리
+- **economy**: 경제(PMP/PMC, Agency Theory)
+- **prediction**: 예측 게임
+- **investment**: 투자/리그
+- **donation**: 기부/PMC 소비
+- **forum**: 포럼/커뮤니티
+- **user**: 사용자 관리
+- **auth**: 인증/권한
+- **study_cycle**: 학습 사이클
+- **community**: 커뮤니티
+- **payment**: 결제/포인트
+- **public, posmul, shared**: 기타 공용/플랫폼/공유 모듈
+
+## 📚 문서 구조
+
+- `docs/tutorials/` # 튜토리얼
+- `docs/how-to/` # 실무 가이드
+- `docs/reference/` # API/구성 참조
+- `docs/explanation/` # 개념 설명
+- `docs/reports/` # 분석 보고서
+- `docs/task-reports/` # 작업 목록/진행 현황
+- `docs/start/`, `docs/init/` 등 기타 문서
 
 ## 🌟 주요 특징
 
