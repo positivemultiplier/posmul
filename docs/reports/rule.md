@@ -266,36 +266,41 @@ graph TD
 To prevent rendering errors and ensure consistency, all Mermaid diagrams must adhere to the following principles.
 
 **1. Simplicity First (단순성 최우선)**
-   - Instead of large, complex diagrams, break down concepts into multiple, simpler charts.
-   - This improves readability and reduces the chance of syntax errors.
-   - **Good**: Use several simple `flowchart`, `graph TD`, or `sequenceDiagram` charts.
-   - **Bad**: A single, monolithic diagram trying to show everything.
+
+- Instead of large, complex diagrams, break down concepts into multiple, simpler charts.
+- This improves readability and reduces the chance of syntax errors.
+- **Good**: Use several simple `flowchart`, `graph TD`, or `sequenceDiagram` charts.
+- **Bad**: A single, monolithic diagram trying to show everything.
 
 **2. Safe Chart-Type Usage (안전한 차트 유형 사용)**
-   - To avoid rendering issues, strictly use the following chart types:
-     - `flowchart`
-     - `graph TD` (and its variations like `LR`)
-     - `sequenceDiagram`
-     - `pie`
-   - These types are well-supported and handle various content gracefully.
+
+- To avoid rendering issues, strictly use the following chart types:
+  - `flowchart`
+  - `graph TD` (and its variations like `LR`)
+  - `sequenceDiagram`
+  - `pie`
+- These types are well-supported and handle various content gracefully.
 
 **3. Korean Character Handling (한국어 처리 원칙)**
-   - Use English or kebab-case for node IDs.
-   - Use Korean freely within the node labels (the text in quotes).
-   - **Good**: `graph TD; A["데이터베이스 설계"] --> B["API 구현"];`
-   - **Bad**: `graph TD; [데이터베이스 설계] --> [API 구현];`
+
+- Use English or kebab-case for node IDs.
+- Use Korean freely within the node labels (the text in quotes).
+- **Good**: `graph TD; A["데이터베이스 설계"] --> B["API 구현"];`
+- **Bad**: `graph TD; [데이터베이스 설계] --> [API 구현];`
 
 **4. Minimal Styling (최소한의 스타일링)**
-   - Use Mermaid's default styling.
-   - Avoid colors unless absolutely necessary for distinction. If needed, use low-saturation, muted colors.
-   - **Good**: `graph TD; A --> B;`
-   - **Bad**: `graph TD; A --> B; style A fill:#ff0000,stroke:#333,stroke-width:4px`
+
+- Use Mermaid's default styling.
+- Avoid colors unless absolutely necessary for distinction. If needed, use low-saturation, muted colors.
+- **Good**: `graph TD; A --> B;`
+- **Bad**: `graph TD; A --> B; style A fill:#ff0000,stroke:#333,stroke-width:4px`
 
 **5. Prohibited Patterns (금지 패턴)**
-   - **`quadrantChart`**: Do not use. It has complex syntax and frequent rendering issues.
-   - **Complex `gantt` and `timeline` charts**: High risk of error with Korean text. Use simpler alternatives like tables or lists.
-   - **Unverified code**: All diagrams must be tested in the [Mermaid Live Editor](https://mermaid.live) before being included.
-   - **Long sections without visuals**: No more than 2 consecutive text-heavy sections without a supporting diagram.
+
+- **`quadrantChart`**: Do not use. It has complex syntax and frequent rendering issues.
+- **Complex `gantt` and `timeline` charts**: High risk of error with Korean text. Use simpler alternatives like tables or lists.
+- **Unverified code**: All diagrams must be tested in the [Mermaid Live Editor](https://mermaid.live) before being included.
+- **Long sections without visuals**: No more than 2 consecutive text-heavy sections without a supporting diagram.
 
 #### 🎨 **Minimal Styling Guidelines**
 

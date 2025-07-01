@@ -3,7 +3,7 @@
  * Server Actions를 활용한 폼 처리 예시
  */
 
-import PredictionGameForm from "@posmul/shared-ui";
+import PredictionGameForm from "@/shared/components/forms/PredictionGameForm";
 
 export default function CreatePredictionPage() {
   return (

@@ -4,7 +4,11 @@
  * BaseSkeleton을 활용하여 토론 주제 카드와 브레인스토밍 세션의 스켈레톤 UI를 제공합니다.
  */
 
+<<<<<<< HEAD:apps/posmul-web/src/app/forum/loading.tsx
 import { BaseSkeleton } from "@posmul/shared-ui";
+=======
+import { BaseSkeleton } from "@/shared/components/loading";
+>>>>>>> main:src/app/forum/loading.tsx
 
 export default function ForumLoading() {
   return (
