@@ -44,5 +44,5 @@ export { InMemoryEventPublisher } from "../../../apps/posmul-web/src/shared/even
 // Economic Services (임시 export - 추후 경제 패키지로 이동 예정)
 export { MoneyWaveCalculatorService } from "../../../apps/posmul-web/src/shared/economy-kernel/services/money-wave-calculator.service";
 
-// Default export
-export { default } from "./components/forms/PredictionGameForm";
+// Forms
+export { default as PredictionGameForm } from "./components/forms/PredictionGameForm";

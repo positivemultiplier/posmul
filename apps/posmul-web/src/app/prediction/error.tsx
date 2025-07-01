@@ -1,19 +1,12 @@
 "use client";
 
-<<<<<<< HEAD:apps/posmul-web/src/app/prediction/error.tsx
-=======
-import { BaseErrorUI } from "@/shared/components/error";
->>>>>>> main:src/app/prediction/error.tsx
 import {
   AuthenticationError,
   BusinessLogicError,
   NetworkError,
-<<<<<<< HEAD:apps/posmul-web/src/app/prediction/error.tsx
+  ValidationError,
 } from "@posmul/shared-types";
 import { BaseErrorUI } from "@posmul/shared-ui";
-=======
-} from "@/shared/utils/errors";
->>>>>>> main:src/app/prediction/error.tsx
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -24,6 +17,8 @@ interface PredictionErrorProps {
 
 /**
  * 예측 게임 페이지 에러 처리 컴포넌트
+ *
+ * BaseErrorUI를 활용하여 예측 게임 특화 에러 처리를 제공합니다.
  */
 export default function PredictionError({
   error,
@@ -35,26 +30,46 @@ export default function PredictionError({
   const enhancedError = (() => {
     const message = error.message.toLowerCase();
 
+    // 예측 게임 관련 에러들
     if (
       message.includes("unauthorized") ||
       message.includes("authentication")
     ) {
       return new AuthenticationError(
-        "예측 게임 참여를 위해 로그인이 필요합니다."
+        "예측 게임에 참여하려면 로그인이 필요합니다."
       );
     }
 
-    if (message.includes("insufficient") || message.includes("balance")) {
+    if (
+      message.includes("closed") ||
+      message.includes("ended") ||
+      message.includes("deadline")
+    ) {
       return new BusinessLogicError(
-        "PMP 잔액이 부족합니다. 경제 활동을 통해 포인트를 충전해주세요.",
-        "INSUFFICIENT_BALANCE"
+        "예측 게임이 종료되었습니다. 다른 진행 중인 게임에 참여해보세요.",
+        "GAME_CLOSED"
       );
     }
 
-    if (message.includes("game") || message.includes("prediction")) {
+    if (
+      message.includes("full") ||
+      message.includes("capacity") ||
+      message.includes("limit")
+    ) {
       return new BusinessLogicError(
-        "예측 게임 데이터를 불러오는 중 오류가 발생했습니다.",
-        "GAME_DATA_ERROR"
+        "예측 게임 참여 인원이 가득 찼습니다. 다른 게임을 찾아보세요.",
+        "GAME_FULL"
+      );
+    }
+
+    if (
+      message.includes("prediction") ||
+      message.includes("invalid") ||
+      message.includes("validation")
+    ) {
+      return new ValidationError(
+        "예측 내용이 올바르지 않습니다. 다시 확인해주세요.",
+        "prediction_validation"
       );
     }
 
@@ -64,11 +79,13 @@ export default function PredictionError({
       );
     }
 
+    // 기본적으로 비즈니스 로직 에러로 처리
     return new BusinessLogicError(
-      error.message || "예측 게임 로딩 중 오류가 발생했습니다."
+      error.message || "예측 게임 처리 중 오류가 발생했습니다."
     );
   })();
 
+  // 에러 로깅
   useEffect(() => {
     if (process.env.NODE_ENV === "development") {
       console.error("Prediction page error:", error);
@@ -76,7 +93,7 @@ export default function PredictionError({
   }, [error]);
 
   const handleGoHome = () => {
-    router.push("/");
+    router.push("/dashboard");
   };
 
   const handleGoBack = () => {
@@ -84,7 +101,13 @@ export default function PredictionError({
   };
 
   const handleRetry = () => {
-    reset();
+    if (enhancedError instanceof NetworkError) {
+      setTimeout(() => {
+        reset();
+      }, 1000);
+    } else {
+      reset();
+    }
   };
 
   return (
@@ -102,16 +125,6 @@ export default function PredictionError({
                 {
                   label: "로그인하기",
                   action: () => router.push("/auth/login"),
-                  variant: "primary" as const,
-                },
-              ]
-            : []),
-          ...(enhancedError instanceof BusinessLogicError &&
-          enhancedError.code === "INSUFFICIENT_BALANCE"
-            ? [
-                {
-                  label: "포인트 충전하기",
-                  action: () => router.push("/investment"),
                   variant: "outline" as const,
                 },
               ]
