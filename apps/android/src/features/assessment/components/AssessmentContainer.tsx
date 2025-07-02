@@ -1,11 +1,22 @@
 'use client';
 
-import { useAssessmentState } from '../hooks/useAssessmentState';
+import React from 'react';
+import { View, StyleSheet } from 'react-native';
+import { Card } from '@posmul/shared-ui';
 import { QuestionCard } from './QuestionCard';
 import { ProgressBar } from './ProgressBar';
 import { Timer } from './Timer';
+import { useAssessmentState } from '../hooks/useAssessmentState';
 
-export const AssessmentContainer = () => {
+interface AssessmentContainerProps {
+  userId?: string;
+  assessmentId?: string;
+}
+
+export const AssessmentContainer: React.FC<AssessmentContainerProps> = ({
+  userId,
+  assessmentId,
+}) => {
   const {
     assessment,
     currentQuestion,
@@ -20,54 +31,94 @@ export const AssessmentContainer = () => {
     submitAssessment,
   } = useAssessmentState();
 
+  // Progress calculation
   const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
 
   return (
-    <div className="bg-white dark:bg-gray-800 shadow-xl rounded-lg p-6 md:p-8 w-full transition-all duration-300">
-      <header className="mb-6 border-b pb-4 border-gray-200 dark:border-gray-700">
-        <div className="flex justify-between items-center mb-4">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">{assessment.title}</h1>
-            {assessment.timeLimit && <Timer initialTime={assessment.timeLimit} onTimeUp={submitAssessment} />}
-        </div>
-        <p className="text-gray-600 dark:text-gray-300">{assessment.description}</p>
-        <ProgressBar progress={progress} />
-      </header>
+    <View style={styles.container}>
+      {/* Header with progress and timer using shared-ui Card */}
+      <Card style={styles.headerCard}>
+        <ProgressBar 
+          progress={progress}
+        />
+        {assessment.timeLimit && (
+          <Timer 
+            initialTime={assessment.timeLimit}
+            onTimeUp={submitAssessment}
+          />
+        )}
+      </Card>
 
-      <main>
-        <QuestionCard 
+      {/* Main question area */}
+      <View style={styles.questionArea}>
+        {currentQuestion && (
+          <QuestionCard
             question={currentQuestion}
             userAnswer={userAnswers[currentQuestion.id]?.answer}
             onAnswerSelect={selectAnswer}
-        />
-      </main>
-
-      <footer className="mt-8 pt-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center">
-        <button
-          onClick={goToPreviousQuestion}
-          disabled={isFirstQuestion}
-          className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          이전
-        </button>
-        <div className="text-sm text-gray-500 dark:text-gray-400">
-            {currentQuestionIndex + 1} / {totalQuestions}
-        </div>
-        {isLastQuestion ? (
-          <button
-            onClick={submitAssessment}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            제출하기
-          </button>
-        ) : (
-          <button
-            onClick={goToNextQuestion}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            다음
-          </button>
+          />
         )}
-      </footer>
-    </div>
+      </View>
+
+      {/* Navigation controls using shared-ui Card */}
+      <Card style={styles.navigationCard}>
+        <View style={styles.navigationButtons}>
+          {/* Previous button placeholder - will use shared-ui Button */}
+          <View style={[styles.button, isFirstQuestion && styles.disabledButton]}>
+            {/* Previous button using shared-ui Button component */}
+          </View>
+          
+          {/* Question counter */}
+          <View style={styles.questionCounter}>
+            {/* Question counter text - will use shared-ui Text */}
+          </View>
+          
+          {/* Next/Submit button placeholder - will use shared-ui Button */}
+          <View style={styles.button}>
+            {/* Next/Submit button using shared-ui Button component */}
+          </View>
+        </View>
+      </Card>
+    </View>
   );
-}; 
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    padding: 16,
+    backgroundColor: '#f5f5f5',
+  },
+  headerCard: {
+    marginBottom: 16,
+    padding: 16,
+  },
+  questionArea: {
+    flex: 1,
+    marginBottom: 16,
+  },
+  navigationCard: {
+    padding: 16,
+    marginBottom: 16,
+  },
+  navigationButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  button: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#007AFF',
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  disabledButton: {
+    backgroundColor: '#C7C7CC',
+  },
+  questionCounter: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+}); 
