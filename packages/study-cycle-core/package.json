@@ -7,7 +7,8 @@
   "scripts": {
     "build": "echo \"Skipping study-cycle-core build\"",
     "_dev": "tsc -w",
-    "gen:types": "cmd /c \"chcp 65001 > nul && C:/G/posmul/node_modules/.bin/tsx C:/G/mcp-automation/universal-mcp-automation.ts batch study_cycle,assessment --outdir ./src/types\""
+    "gen:types": "cmd /c \"chcp 65001 > nul && C:/G/posmul/node_modules/.bin/tsx C:/G/mcp-automation/universal-mcp-automation.ts batch study_cycle,assessment --outdir ./src/types\"",
+    "test": "jest"
   },
   "dependencies": {
     "@posmul/shared-auth": "workspace:*",
@@ -15,7 +16,10 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/uuid": "^10.0.0",
+    "jest": "^30.0.3",
+    "ts-jest": "^29.4.0",
     "typescript": "^5.4.5"
   }
 }

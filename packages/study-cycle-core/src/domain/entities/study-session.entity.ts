@@ -412,10 +412,11 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
    * Check if session targets are met
    */
   public areTargetsMet(): boolean {
+    const currentMinutes = this.getCurrentSessionMinutes();
+    
     const timeTargetMet =
       !this.props.config?.targetTimeMinutes ||
-      Math.floor((this.props.durationSeconds || 0) / 60) >=
-        this.props.config.targetTimeMinutes;
+      currentMinutes >= this.props.config.targetTimeMinutes;
     const pageTargetMet =
       !this.props.config?.targetPages ||
       this.props.pagesCompleted >= this.props.config.targetPages;
@@ -445,7 +446,7 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     }
 
     if (this.props.config?.targetTimeMinutes) {
-      const currentMinutes = Math.floor((this.props.durationSeconds || 0) / 60);
+      const currentMinutes = this.getCurrentSessionMinutes();
       progressSum +=
         Math.min(currentMinutes / this.props.config.targetTimeMinutes, 1) * 100;
       targetCount++;
@@ -455,9 +456,9 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
   }
 
   /**
-   * Get session duration in minutes
+   * Get current session total minutes including active time
    */
-  public getSessionDurationMinutes(): number {
+  private getCurrentSessionMinutes(): number {
     if (this.props.status === StudySessionStatus.ACTIVE) {
       const now = new Date();
       const currentSessionSeconds = Math.floor(
@@ -469,6 +470,13 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     }
 
     return Math.floor((this.props.durationSeconds || 0) / 60);
+  }
+
+  /**
+   * Get session duration in minutes
+   */
+  public getSessionDurationMinutes(): number {
+    return this.getCurrentSessionMinutes();
   }
 
   public calculateAverageRating(ratings: number[]): number {

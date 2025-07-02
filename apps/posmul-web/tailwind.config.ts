@@ -7,6 +7,8 @@ export default {
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/shared/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/bounded-contexts/**/*.{js,ts,jsx,tsx,mdx}",
+    "../../packages/shared-ui/src/**/*.{js,ts,jsx,tsx,mdx}",
+    "../../packages/shared-ui/dist/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
