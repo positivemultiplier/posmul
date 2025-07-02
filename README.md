@@ -36,6 +36,7 @@ pnpm dev
 ```
 
 서버가 실행되면 다음 URL에서 접근 가능합니다:
+
 - **로컬**: http://localhost:3000
 - **네트워크**: http://192.168.x.x:3000
 
@@ -102,7 +103,7 @@ graph TD
     A --> D["❤️ Donation Domain<br/>(기부 시스템)"]
     A --> E["💬 Forum Domain<br/>(커뮤니티)"]
     A --> F["👤 User Domain<br/>(사용자 관리)"]
-    
+
     style A fill:#e1f5fe
     style B fill:#f3e5f5
     style C fill:#e8f5e8
@@ -112,6 +113,7 @@ graph TD
 ```
 
 **실제 데이터베이스 구조**:
+
 - **Economy 스키마**: 12개 테이블 (PMP/PMC 계정, 거래 내역, MoneyWave)
 - **Prediction 스키마**: 5개 테이블 (게임, 예측, 정산, 통계)
 - **Investment 스키마**: 4개 테이블 (투자 기회, 참여 내역)
@@ -122,18 +124,21 @@ graph TD
 ## 🔧 기술 스택
 
 ### **Frontend**
+
 - **Framework**: Next.js 15 (App Router)
 - **UI**: React 19, TypeScript, Tailwind CSS
 - **State**: Zustand, React Query
 - **Charts**: Recharts, Mermaid
 
 ### **Backend & Database**
+
 - **Database**: Supabase (PostgreSQL)
 - **Auth**: Supabase Auth
 - **Storage**: Supabase Storage
 - **Integration**: MCP (Model Context Protocol)
 
 ### **Development Tools**
+
 - **Package Manager**: pnpm (Workspaces)
 - **Build**: Turborepo
 - **Testing**: Jest, React Testing Library, Playwright
@@ -180,7 +185,7 @@ sequenceDiagram
 ```
 docs/
 ├── tutorials/              # 🎓 학습 중심 가이드
-├── guides/                 # 🛠️ 문제 해결 중심 가이드  
+├── guides/                 # 🛠️ 문제 해결 중심 가이드
 ├── reference/              # 📖 정보 중심 레퍼런스
 ├── explanation/            # 💡 이해 중심 설명
 ├── reports/               # 📊 분석 보고서
@@ -202,13 +207,13 @@ docs/
 graph LR
     A["🏛️ PMP<br/>(Point Major Policy)"] --> B["📊 예측 게임 참여"]
     A --> C["💬 포럼 토론"]
-    
+
     D["🏘️ PMC<br/>(Point Minor Community)"] --> E["❤️ 지역 기부"]
     D --> F["💰 로컬 리그 투자"]
-    
+
     B --> G["🎯 성공 시 PMC 획득"]
     C --> H["🏆 기여도에 따라 PMP 획득"]
-    
+
     style A fill:#1976d2,color:#fff
     style D fill:#388e3c,color:#fff
 ```
@@ -236,7 +241,7 @@ flowchart TD
     B --> C["🧪 테스트 실행<br/>pnpm test"]
     C --> D["🏗️ 빌드<br/>pnpm build"]
     D --> E["🚀 배포"]
-    
+
     style A fill:#e3f2fd
     style B fill:#f3e5f5
     style C fill:#e8f5e8
@@ -261,17 +266,20 @@ flowchart TD
 ## 🚀 배포
 
 ### **개발 환경**
+
 ```powershell
 pnpm dev
 ```
 
 ### **프로덕션 빌드**
+
 ```powershell
 pnpm build
 pnpm start
 ```
 
 ### **타입 동기화**
+
 ```powershell
 # 데이터베이스 스키마 변경 후 실행
 pnpm generate-types
