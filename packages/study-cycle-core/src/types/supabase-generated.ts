@@ -6,211 +6,382 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type Database = {
-  public: {
+export interface StudyCycleDatabase {
+  study_cycle: {
     Tables: {
-      [_ in never]: never;
-    };
+      sc_textbooks: {
+        Row: {
+          id: string
+          creator_id: string | null
+          title: string
+          description: string | null
+          cover_image_url: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          creator_id?: string | null
+          title: string
+          description?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          creator_id?: string | null
+          title?: string
+          description?: string | null
+          cover_image_url?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      sc_chapters: {
+        Row: {
+          id: string
+          textbook_id: string
+          title: string
+          order: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          textbook_id: string
+          title: string
+          order: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          textbook_id?: string
+          title?: string
+          order?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      sc_questions: {
+        Row: {
+          id: string
+          chapter_id: string
+          question_text: string
+          question_type: 'multiple_choice' | 'short_answer' | 'template_based'
+          options: Json | null
+          solution_template: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          chapter_id: string
+          question_text: string
+          question_type: 'multiple_choice' | 'short_answer' | 'template_based'
+          options?: Json | null
+          solution_template?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          chapter_id?: string
+          question_text?: string
+          question_type?: 'multiple_choice' | 'short_answer' | 'template_based'
+          options?: Json | null
+          solution_template?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      sc_assessments: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          status: 'in_progress' | 'completed'
+          started_at: string
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          status?: 'in_progress' | 'completed'
+          started_at?: string
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          status?: 'in_progress' | 'completed'
+          started_at?: string
+          completed_at?: string | null
+        }
+      }
+      sc_user_answers: {
+        Row: {
+          id: string
+          assessment_id: string
+          user_id: string
+          question_id: string
+          user_answer: string | null
+          is_correct: boolean | null
+          score: number | null
+          submitted_at: string
+        }
+        Insert: {
+          id?: string
+          assessment_id: string
+          user_id: string
+          question_id: string
+          user_answer?: string | null
+          is_correct?: boolean | null
+          score?: number | null
+          submitted_at?: string
+        }
+        Update: {
+          id?: string
+          assessment_id?: string
+          user_id?: string
+          question_id?: string
+          user_answer?: string | null
+          is_correct?: boolean | null
+          score?: number | null
+          submitted_at?: string
+        }
+      }
+      sc_user_textbook_progress: {
+        Row: {
+          user_id: string
+          textbook_id: string
+          read_count: number
+          total_study_duration_seconds: number
+          updated_at: string
+        }
+        Insert: {
+          user_id: string
+          textbook_id: string
+          read_count?: number
+          total_study_duration_seconds?: number
+          updated_at?: string
+        }
+        Update: {
+          user_id?: string
+          textbook_id?: string
+          read_count?: number
+          total_study_duration_seconds?: number
+          updated_at?: string
+        }
+      }
+      sc_study_sessions: {
+        Row: {
+          id: string
+          user_id: string
+          textbook_id: string
+          chapter_id: string | null
+          start_time: string
+          end_time: string | null
+          duration_seconds: number | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          textbook_id: string
+          chapter_id?: string | null
+          start_time: string
+          end_time?: string | null
+          duration_seconds?: number | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          textbook_id?: string
+          chapter_id?: string | null
+          start_time?: string
+          end_time?: string | null
+          duration_seconds?: number | null
+          created_at?: string
+        }
+      }
+      sc_readings: {
+        Row: {
+          id: string
+          user_id: string
+          textbook_id: string
+          round: number
+          status: 'not_started' | 'in_progress' | 'completed' | 'paused' | 'abandoned'
+          started_at: string | null
+          completed_at: string | null
+          last_accessed_at: string | null
+          daily_pages_target: number | null
+          weekly_hours_target: number | null
+          completion_deadline: string | null
+          total_time_minutes: number
+          total_pages_read: number
+          notes: string | null
+          created_at: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          textbook_id: string
+          round: number
+          status?: 'not_started' | 'in_progress' | 'completed' | 'paused' | 'abandoned'
+          started_at?: string | null
+          completed_at?: string | null
+          last_accessed_at?: string | null
+          daily_pages_target?: number | null
+          weekly_hours_target?: number | null
+          completion_deadline?: string | null
+          total_time_minutes?: number
+          total_pages_read?: number
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          textbook_id?: string
+          round?: number
+          status?: 'not_started' | 'in_progress' | 'completed' | 'paused' | 'abandoned'
+          started_at?: string | null
+          completed_at?: string | null
+          last_accessed_at?: string | null
+          daily_pages_target?: number | null
+          weekly_hours_target?: number | null
+          completion_deadline?: string | null
+          total_time_minutes?: number
+          total_pages_read?: number
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+          version?: number
+        }
+      }
+      sc_reading_progress: {
+        Row: {
+          id: string
+          reading_id: string
+          chapter_id: string
+          pages_read: number
+          time_spent_minutes: number
+          comprehension_rating: number | null
+          difficulty_rating: number | null
+          notes: string | null
+          is_completed: boolean
+          completed_at: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          reading_id: string
+          chapter_id: string
+          pages_read?: number
+          time_spent_minutes?: number
+          comprehension_rating?: number | null
+          difficulty_rating?: number | null
+          notes?: string | null
+          is_completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          reading_id?: string
+          chapter_id?: string
+          pages_read?: number
+          time_spent_minutes?: number
+          comprehension_rating?: number | null
+          difficulty_rating?: number | null
+          notes?: string | null
+          is_completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      [_ in never]: never
+    }
     Functions: {
-      auto_update_game_status: {
-        Args: Record<PropertyKey, never>;
-        Returns: undefined;
-      };
-      calculate_current_odds: {
-        Args: { p_game_id: string };
-        Returns: {
-          option_id: string;
-          odds: number;
-          probability: number;
-        }[];
-      };
-      calculate_prediction_accuracy: {
-        Args: { p_user_id: string };
-        Returns: number;
-      };
-      calculate_reward_amount: {
-        Args: { p_prediction_id: string; p_game_outcome: Json };
-        Returns: number;
-      };
-      get_active_games: {
-        Args: { p_limit?: number };
-        Returns: {
-          id: string;
-          title: string;
-          description: string;
-          prediction_type: string;
-          status: string;
-          participant_count: number;
-          total_stake: number;
-          end_time: string;
-        }[];
-      };
-      get_user_prediction_history: {
-        Args: { p_user_id: string; p_limit?: number };
-        Returns: {
-          prediction_id: string;
-          game_title: string;
-          prediction_data: Json;
-          stake: number;
-          confidence_level: number;
-          is_settled: boolean;
-          is_correct: boolean;
-          reward_amount: number;
-          created_at: string;
-        }[];
-      };
-      validate_pmp_balance: {
-        Args: { p_user_id: string; p_required_amount: number };
-        Returns: boolean;
-      };
-    };
+      [_ in never]: never
+    }
     Enums: {
-      game_status: "DRAFT" | "ACTIVE" | "CLOSED" | "SETTLED" | "CANCELLED";
-      prediction_category:
-        | "INVEST"
-        | "SPORTS"
-        | "ENTERTAINMENT"
-        | "POLITICS"
-        | "USER_PROPOSED";
-      prediction_type: "BINARY" | "WIN_DRAW_LOSE" | "RANKING";
-      settlement_type:
-        | "WINNER_TAKE_ALL"
-        | "PROPORTIONAL"
-        | "CONFIDENCE_WEIGHTED"
-        | "HYBRID";
-    };
+      reading_status: 'not_started' | 'in_progress' | 'completed' | 'paused' | 'abandoned'
+      question_type: 'multiple_choice' | 'short_answer' | 'template_based'
+      assessment_status: 'in_progress' | 'completed'
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
-
-type DefaultSchema = Database[Extract<keyof Database, "public">];
-
-export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database;
-  }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R;
+      [_ in never]: never
     }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R;
-      }
-      ? R
-      : never
-    : never;
-
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database;
   }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I;
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I;
-      }
-      ? I
-      : never
-    : never;
+}
 
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database;
-  }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U;
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U;
-      }
-      ? U
-      : never
-    : never;
+// Type helpers for easier usage
+export type StudyCycleSchema = StudyCycleDatabase['study_cycle']
+export type StudyCycleTables = StudyCycleSchema['Tables']
+export type StudyCycleEnums = StudyCycleSchema['Enums']
 
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database;
-  }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never;
+// Table type shortcuts
+export type Textbook = StudyCycleTables['sc_textbooks']['Row']
+export type TextbookInsert = StudyCycleTables['sc_textbooks']['Insert']
+export type TextbookUpdate = StudyCycleTables['sc_textbooks']['Update']
 
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database;
-  }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never;
+export type Chapter = StudyCycleTables['sc_chapters']['Row']
+export type ChapterInsert = StudyCycleTables['sc_chapters']['Insert']
+export type ChapterUpdate = StudyCycleTables['sc_chapters']['Update']
 
-export const Constants = {
-  public: {
-    Enums: {
-      game_status: ["DRAFT", "ACTIVE", "CLOSED", "SETTLED", "CANCELLED"],
-      prediction_category: [
-        "INVEST",
-        "SPORTS",
-        "ENTERTAINMENT",
-        "POLITICS",
-        "USER_PROPOSED",
-      ],
-      prediction_type: ["BINARY", "WIN_DRAW_LOSE", "RANKING"],
-      settlement_type: [
-        "WINNER_TAKE_ALL",
-        "PROPORTIONAL",
-        "CONFIDENCE_WEIGHTED",
-        "HYBRID",
-      ],
-    },
-  },
-} as const;
+export type Question = StudyCycleTables['sc_questions']['Row']
+export type QuestionInsert = StudyCycleTables['sc_questions']['Insert']
+export type QuestionUpdate = StudyCycleTables['sc_questions']['Update']
+
+export type Assessment = StudyCycleTables['sc_assessments']['Row']
+export type AssessmentInsert = StudyCycleTables['sc_assessments']['Insert']
+export type AssessmentUpdate = StudyCycleTables['sc_assessments']['Update']
+
+export type UserAnswer = StudyCycleTables['sc_user_answers']['Row']
+export type UserAnswerInsert = StudyCycleTables['sc_user_answers']['Insert']
+export type UserAnswerUpdate = StudyCycleTables['sc_user_answers']['Update']
+
+export type UserTextbookProgress = StudyCycleTables['sc_user_textbook_progress']['Row']
+export type UserTextbookProgressInsert = StudyCycleTables['sc_user_textbook_progress']['Insert']
+export type UserTextbookProgressUpdate = StudyCycleTables['sc_user_textbook_progress']['Update']
+
+export type StudySession = StudyCycleTables['sc_study_sessions']['Row']
+export type StudySessionInsert = StudyCycleTables['sc_study_sessions']['Insert']
+export type StudySessionUpdate = StudyCycleTables['sc_study_sessions']['Update']
+
+export type Reading = StudyCycleTables['sc_readings']['Row']
+export type ReadingInsert = StudyCycleTables['sc_readings']['Insert']
+export type ReadingUpdate = StudyCycleTables['sc_readings']['Update']
+
+export type ReadingProgress = StudyCycleTables['sc_reading_progress']['Row']
+export type ReadingProgressInsert = StudyCycleTables['sc_reading_progress']['Insert']
+export type ReadingProgressUpdate = StudyCycleTables['sc_reading_progress']['Update']
+
+// Enum type shortcuts
+export type ReadingStatus = StudyCycleEnums['reading_status']
+export type QuestionType = StudyCycleEnums['question_type']
+export type AssessmentStatus = StudyCycleEnums['assessment_status']
+
+// Branded types for type safety
+export type TextbookId = string & { readonly __brand: 'TextbookId' }
+export type ChapterId = string & { readonly __brand: 'ChapterId' }
+export type QuestionId = string & { readonly __brand: 'QuestionId' }
+export type AssessmentId = string & { readonly __brand: 'AssessmentId' }
+export type ReadingId = string & { readonly __brand: 'ReadingId' }
+export type StudySessionId = string & { readonly __brand: 'StudySessionId' }
+export type UserId = string & { readonly __brand: 'UserId' }

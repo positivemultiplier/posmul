@@ -2,11 +2,77 @@
 applyTo: "**"
 ---
 
-# AI Agent Collaboration Guidelines (Enhanced Visualization Edition)
+# AI Agent Collaboration Guidelines (Enhanced Monorepo Edition)
 
-> **Purpose**: General AI Agent collaboration principles independent of specific projects  
-> **Scope**: Communication methods, code quality, documentation, debugging, and other universal guidelines  
-> **Application**: All projects and domains
+> **Purpose**: AI Agent collaboration principles for monorepo + DDD + Clean Architecture projects  
+> **Scope**: Communication methods, code quality, documentation, debugging, and monorepo-specific guidelines  
+> **Application**: Monorepo projects with pnpm + turbo + Next.js 15 + React 19  
+> **Last Updated**: 2025-07-03
+
+## 🚨 **CRITICAL: Monorepo-First Development Rules**
+
+### 🏗️ **Monorepo Environment Standards**
+
+**❌ Single-repo commands are absolutely prohibited in monorepo environment!**
+
+#### 📦 **Package Manager & Build System Requirements**
+
+```mermaid
+graph TD
+    A["Development Commands"] --> B["pnpm (Package Manager)"]
+    A --> C["turbo (Build System)"]
+    A --> D["Workspace Commands"]
+    
+    B --> E["pnpm install"]
+    B --> F["pnpm -F [workspace]"]
+    B --> G["pnpm -r (recursive)"]
+    
+    C --> H["turbo build"]
+    C --> I["turbo dev"]
+    C --> J["turbo test"]
+    
+    D --> K["Root Level Commands"]
+    D --> L["Package Level Commands"]
+```
+
+#### ✅ **Monorepo Command Standards (Mandatory)**
+
+1. **Root Level Commands**: Use `turbo` for orchestration
+2. **Package Level Commands**: Use `pnpm -F [workspace]` for specific packages
+3. **Recursive Commands**: Use `pnpm -r` for all packages
+4. **Build Optimization**: Always use turbo cache
+5. **Dependency Management**: Use workspace protocols
+
+#### ❌ **Absolutely Prohibited Commands**
+
+- `npm install` (use `pnpm install`)
+- `npm run build` (use `turbo build`)
+- `yarn` commands (use `pnpm`)
+- Direct package commands without workspace context
+- Commands that bypass turbo cache
+
+### 🔧 **Monorepo Development Workflow**
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant Root as Root Workspace
+    participant Turbo as Turbo Build
+    participant Apps as Apps
+    participant Packages as Packages
+
+    Dev->>Root: pnpm install
+    Root->>Packages: Install dependencies
+    Root->>Apps: Install dependencies
+    
+    Dev->>Turbo: turbo dev
+    Turbo->>Packages: Build shared packages
+    Turbo->>Apps: Start development servers
+    
+    Dev->>Turbo: turbo build
+    Turbo->>Packages: Build packages (cached)
+    Turbo->>Apps: Build applications
+```
 
 ## 🚨 **CRITICAL: Mandatory Visualization Rules**
 
@@ -17,7 +83,7 @@ applyTo: "**"
 #### 📊 **Minimum Visualization Requirements by Document Type**
 
 1. **Analysis Report**: Minimum 5 charts required
-2. **Task List**: Minimum 4 charts required
+2. **Task List**: Minimum 4 charts required  
 3. **Tutorial**: Minimum 2 charts required
 4. **How-to Guide**: Minimum 2 charts required
 5. **Reference**: Minimum 1 chart required
@@ -27,20 +93,20 @@ applyTo: "**"
 
 ```mermaid
 graph TD
-    A[Document Creation Start] --> B{Visualization Planning}
-    B --> C[Check Required Chart Count]
-    C --> D[Generate Mermaid Diagrams]
-    D --> E[Apply Minimal Styling]
-    E --> F[English-First Writing]
-    F --> G{Quality Standards Met?}
-    G -->|Yes| H[Document Complete]
-    G -->|No| D
+    A["Document Creation Start"] --> B{"Visualization Planning"}
+    B --> C["Check Required Chart Count"]
+    C --> D["Generate Mermaid Diagrams"]
+    D --> E["Apply Minimal Styling"]
+    E --> F["English-First Writing"]
+    F --> G{"Quality Standards Met?"}
+    G --Yes--> H["Document Complete"]
+    G --No--> D
 ```
 
 #### ✅ **Mandatory Compliance Items (Non-negotiable)**
 
 1. **Minimal Styling**: Avoid colors unless absolutely necessary (use only low saturation/brightness colors for special cases)
-2. **Mermaid v11.x Usage**: Ensure Next.js 15 compatibility
+2. **Mermaid v11.6.0 Usage**: Ensure Next.js 15 compatibility
 3. **Complex Structure Encouraged**: Visualization should help understand complex concepts and relationships
 4. **Rendering Verification**: Complete validation in Mermaid Live Editor
 
@@ -58,7 +124,7 @@ graph TD
 🔥 Critical (All items mandatory):
 □ Document type minimum visualization count met
 □ Minimal styling applied (avoid colors unless necessary)
-□ Mermaid v11.x syntax compliance
+□ Mermaid v11.6.0 syntax compliance
 □ Complex structures allowed to explain difficult concepts
 □ Rendering test completed
 
@@ -72,18 +138,18 @@ graph TD
 
 ## 📚 Table of Contents
 
-- [1. Basic Communication & Environment Setup](#1-basic-communication--environment-setup)
-- [2. Code Quality & Development Principles](#2-code-quality--development-principles)
-- [3. Refactoring & Code Improvement](#3-refactoring--code-improvement)
-- [4. Debugging & Problem Solving](#4-debugging--problem-solving)
+- [1. Monorepo Communication & Environment Setup](#1-monorepo-communication--environment-setup)
+- [2. Code Quality & Monorepo Development Principles](#2-code-quality--monorepo-development-principles)
+- [3. Monorepo Refactoring & Code Improvement](#3-monorepo-refactoring--code-improvement)
+- [4. Debugging & Problem Solving in Monorepo](#4-debugging--problem-solving-in-monorepo)
 - [5. Documentation & Communication](#5-documentation--communication)
-- [6. Collaboration & Quality Management](#6-collaboration--quality-management)
+- [6. Monorepo Collaboration & Quality Management](#6-monorepo-collaboration--quality-management)
 - [7. Enhanced Visualization Guidelines](#7-enhanced-visualization-guidelines)
 - [8. Final Checklist](#8-final-checklist)
 
 ---
 
-## 1. Basic Communication & Environment Setup
+## 1. Monorepo Communication & Environment Setup
 
 ### 📝 **Communication Principles**
 
@@ -91,132 +157,231 @@ graph TD
 - **Encoding**: Use UTF-8 encoding to prevent Korean character corruption
 - **Clarity**: Provide specific and clear explanations rather than ambiguous ones
 - **🔥 Visualization Priority**: Include appropriate visualization in all explanations
+- **🔥 Monorepo Context**: Always consider workspace relationships and dependencies
+
+### 🏗️ **Monorepo Environment Setup**
+
+#### **Required Tools & Versions**
+
+```mermaid
+graph LR
+    A["Development Environment"] --> B["pnpm@ 10.12.4"]
+    A --> C["turbo@ 2.0.4"]
+    A --> D["Next.js 15.3.4"]
+    A --> E["React 19.0.0"]
+    A --> F["TypeScript 5.4.5"]
+    
+    B --> G["Package Manager"]
+    C --> H["Build System"]
+    D --> I["App Router"]
+    E --> J["Server Components"]
+    F --> K["Type Safety"]
+```
+
+#### **Workspace Structure Understanding**
+
+- **Root Level**: `pnpm install`, `turbo build`, `turbo dev`
+- **App Level**: `pnpm -F posmul-web dev`, `pnpm -F android build`
+- **Package Level**: `pnpm -F shared-types build`, `pnpm -F shared-ui test`
+- **Cross-Package**: Use workspace protocols (`workspace:*`)
 
 ### 🔧 **Environment Considerations**
 
-- **Path Specification**: Write code or scripts with direct paths for execution
-- **Environment Assumptions**: Consider user's development environment when suggesting commands or scripts
-- **Compatibility**: Consider cross-platform compatibility, but optimize for specific environments when specified
-- **🔥 Visualization Integration**: Include visualization steps in all workflows
+- **Path Specification**: Use monorepo-aware paths (e.g., `apps/posmul-web/src/...`)
+- **Dependency Management**: Always consider workspace dependencies
+- **Build Order**: Understand package build dependencies
+- **🔥 Workspace Integration**: Include workspace context in all workflows
 
-### 🚀 **Workflow**
+### 🚀 **Monorepo Workflow**
+
+```mermaid
+flowchart TD
+    A["Development Start"] --> B["pnpm install"]
+    B --> C["turbo dev"]
+    C --> D["Parallel Development"]
+    
+    D --> E["Apps Development"]
+    D --> F["Packages Development"]
+    
+    E --> G["posmul-web"]
+    E --> H["android"]
+    
+    F --> I["shared-types"]
+    F --> J["shared-ui"]
+    F --> K["shared-auth"]
+    F --> L["study-cycle-core"]
+```
 
 - **MCP Utilization**: Actively use MCP (Model Context Protocol) tools
-- **Direct Execution**: Write code or scripts with direct paths for execution (e.g., explicitly include `C:\E\posmul` path when executing from that location)
+- **Monorepo Execution**: Execute commands with workspace context
+- **Build Optimization**: Leverage turbo cache for faster builds
 
 ---
 
-## 2. Code Quality & Development Principles
+## 2. Code Quality & Monorepo Development Principles
 
 ### 🏗️ **General Development Principles**
 
 - **Context7 MCP Integration**: Search and apply best practices
-- **Simplicity (KISS)**: Prioritize simple and clear solutions over complex ones
-- **DRY Principle**: Avoid code duplication and actively suggest reusable functions or modules
-- **Mock Data Limitation (Guardrail)**: Generate code without mock data in development or production environments (except testing)
-- **Readability**: Write code as concisely as possible without compromising clarity, minimize unnecessary comments and complex logic
+- **Monorepo-First Thinking**: Always consider cross-package impacts
+- **Workspace Dependencies**: Use workspace protocols for internal dependencies
+- **Build Optimization**: Leverage turbo cache and parallelization
+- **Package Boundaries**: Respect package boundaries and interfaces
 - **🔥 Visualization Documentation**: Include architecture diagrams in all code explanations
 
-### 🎯 **Code Structure Principles**
+### 🎯 **Monorepo Code Structure Principles**
 
-- **Modularity**: Design code to be modular and reusable
-- **Separation of Concerns**: Clearly separate different responsibilities and functions
-- **Interface Design**: Design clear interfaces between different layers or modules
-- **Error Handling**: Implement appropriate error handling and validation
+```mermaid
+graph TD
+    A["Code Structure"] --> B["Package Boundaries"]
+    A --> C["Dependency Direction"]
+    A --> D["Shared Interfaces"]
+    
+    B --> E["Clear Responsibilities"]
+    B --> F["Minimal Coupling"]
+    
+    C --> G["Apps → Packages"]
+    C --> H["Packages → Packages"]
+    
+    D --> I["Type Definitions"]
+    D --> J["Common Interfaces"]
+```
 
-### 📊 **Performance & Security**
+- **Package Modularity**: Design packages to be independently testable and buildable
+- **Dependency Flow**: Apps depend on packages, packages can depend on other packages
+- **Interface Contracts**: Use shared-types for interface definitions
+- **Build Dependencies**: Consider build order and optimization
 
-- **Performance Consideration**: Consider performance impact when suggesting code changes
-- **Security Best Practices**: Follow security best practices and validate all inputs
-- **Resource Management**: Properly manage resources like memory, file handles, network connections
+### 📊 **Monorepo Performance & Security**
+
+- **Build Performance**: Use turbo cache effectively
+- **Bundle Optimization**: Avoid duplicate dependencies across packages
+- **Security Consistency**: Apply security standards across all packages
+- **Resource Management**: Share resources efficiently across packages
 
 ---
 
-## 3. Refactoring & Code Improvement
+## 3. Monorepo Refactoring & Code Improvement
 
-### 🔄 **Refactoring Guidelines**
+### 🔄 **Monorepo Refactoring Guidelines**
+
+```mermaid
+graph TD
+    A["Refactoring Decision"] --> B["Single Package"]
+    A --> C["Cross-Package"]
+    A --> D["Workspace Level"]
+    
+    B --> E["Local Changes"]
+    C --> F["Interface Changes"]
+    D --> G["Structure Changes"]
+    
+    E --> H["Independent Testing"]
+    F --> I["Dependency Updates"]
+    G --> J["Build System Updates"]
+```
 
 - **Context7 MCP Integration**: Search and apply best practices
-- **Refactoring Suggestions**: When suggesting refactoring for code structure improvement, explain code before/after and clear reasons (e.g., readability improvement, duplication removal, performance improvement)
-- **Minimize Functional Changes**: Aim to improve internal code structure without changing existing functionality
-- **Test Compatibility**: Suggest code that allows all related tests to pass normally after refactoring (actual test execution by developer)
-- **🔥 Visual Impact Analysis**: Visualize refactoring impact with charts
+- **Impact Analysis**: Analyze cross-package impacts before refactoring
+- **Package Boundaries**: Respect package boundaries during refactoring
+- **Build Verification**: Ensure all packages build after refactoring
+- **🔥 Visual Impact Analysis**: Visualize refactoring impact with dependency graphs
 
-### 📈 **Improvement Strategy**
+### 📈 **Monorepo Improvement Strategy**
 
-- **Gradual Improvement**: Suggest small incremental improvements rather than large changes at once
-- **Backward Compatibility**: Maintain backward compatibility when possible
-- **Documentation Updates**: Update documentation for structural changes
+- **Incremental Changes**: Make small changes across multiple packages
+- **Dependency Updates**: Update workspace dependencies systematically
+- **Build Optimization**: Continuously improve build performance
 
 ---
 
-## 4. Debugging & Problem Solving
+## 4. Debugging & Problem Solving in Monorepo
 
-### 🐛 **Debugging Support**
+### 🐛 **Monorepo Debugging Support**
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant Root as Root Workspace
+    participant Target as Target Package
+    participant Deps as Dependencies
+
+    Dev->>Root: Identify issue
+    Root->>Target: Isolate to specific package
+    Target->>Deps: Check dependencies
+    Deps->>Target: Verify interfaces
+    Target->>Dev: Debug locally
+    Dev->>Root: Test integration
+```
 
 - **Context7 MCP Integration**: Search and apply best practices
-- **Debugging Suggestions**: When suggesting code changes for error fixing or debugging, clearly explain expected problem causes and proposed solutions
-- **Normal Operation Priority**: Prioritize normal operation of suggested code
-- **Log Addition Suggestions**: When problem causes are unclear and analysis is needed, suggest adding detailed logs to code for debugging assistance
-- **🔥 Debugging Flow Visualization**: Visualize debugging process with flowcharts
+- **Package Isolation**: Debug issues within specific packages first
+- **Dependency Tracing**: Trace issues across package boundaries
+- **Build Debugging**: Use turbo verbose mode for build issues
+- **🔥 Debugging Flow Visualization**: Visualize debugging process with dependency flows
 
-### 🔍 **Problem Analysis**
+### 🔍 **Monorepo Problem Analysis**
 
-- **Root Cause Analysis**: Focus on solving root causes rather than symptoms
-- **Systematic Approach**: Use systematic approaches for problem solving
-- **Alternative Suggestions**: Provide multiple solution methods when possible
-
-### 📋 **Error Handling**
-
-- **Graceful Degradation**: Implement graceful degradation and fallback mechanisms
-- **User-Friendly Messages**: Provide clear and user-friendly error messages
-- **Logging Strategy**: Implement comprehensive logging strategy for debugging
+- **Package-Level Issues**: Isolate problems to specific packages
+- **Integration Issues**: Focus on package interface mismatches
+- **Build Issues**: Use turbo logs for build problem analysis
 
 ---
 
 ## 5. Documentation & Communication
 
-### 📚 **Documentation Standards**
+### 📚 **Monorepo Documentation Standards**
 
-- **Resource Descriptions**: Write descriptions for cloud resources (e.g., AWS, Azure, GCP) or important code resources in English
-- **Terminology**: Use original terms for technical terms, library names, framework names (e.g., "React" not "리액트")
-- **Diagrams**: When simple flows or structures need explanation, generate diagrams using Mermaid syntax. For complex architecture diagrams, assume separate SVG file management and provide guidance to reference them
+```mermaid
+graph TD
+    A["Documentation Strategy"] --> B["Package Level"]
+    A --> C["App Level"]
+    A --> D["Root Level"]
+    
+    B --> E["API Documentation"]
+    B --> F["Usage Examples"]
+    
+    C --> G["Feature Documentation"]
+    C --> H["User Guides"]
+    
+    D --> I["Architecture Overview"]
+    D --> J["Workspace Guide"]
+```
+
+- **Package Documentation**: Each package must have clear README and API docs
+- **Workspace Documentation**: Root-level documentation for overall architecture
+- **Cross-Package Documentation**: Document package relationships and dependencies
 - **🔥 Mandatory Visualization**: Include required visualization in all documents
 
-### 🎨 **Documentation Style**
+### 🎨 **Monorepo Documentation Style**
 
-- **Consistency**: Maintain consistent documentation style throughout the project
-- **Completeness**: Ensure documents are complete and up-to-date
-- **Accessibility**: Make documents accessible to team members with various expertise levels
-- **🔥 Visual Hierarchy**: Convey information through visual hierarchy
-
-### 💬 **Communication Best Practices**
-
-- **Clear Explanations**: Provide clear, step-by-step explanations for complex processes
-- **Visual Aids**: Use diagrams, code examples, and other visual materials when helpful
-- **Sufficient Context**: Provide sufficient context to understand decisions and changes
+- **Consistency**: Maintain consistent documentation style across all packages
+- **Completeness**: Ensure all packages have adequate documentation
+- **Workspace Awareness**: Include workspace context in all documentation
+- **🔥 Visual Hierarchy**: Use dependency graphs and architecture diagrams
 
 ---
 
-## 6. Collaboration & Quality Management
+## 6. Monorepo Collaboration & Quality Management
 
-### 🤝 **Team Collaboration**
+### 🤝 **Monorepo Team Collaboration**
 
-- **Code Review Culture**: Encourage thorough code reviews and constructive feedback
-- **Knowledge Sharing**: Promote knowledge sharing among team members
-- **Best Practice Documentation**: Document and share best practices within the team
+```mermaid
+pie title Team Responsibility Distribution
+    "Apps Teams" : 30
+    "Packages Teams" : 40
+    "Infrastructure Teams" : 20
+    "QA Teams" : 10
+```
 
-### 🎯 **Quality Assurance**
+- **Package Ownership**: Clear ownership of packages and their interfaces
+- **Integration Testing**: Comprehensive testing across package boundaries
+- **Build Pipeline**: Shared build pipeline with package-specific optimizations
 
-- **Testing Strategy**: Implement comprehensive testing strategy
-- **Continuous Integration**: Support continuous integration and deployment methods
-- **Quality Metrics**: Track and improve code quality metrics
+### 🎯 **Monorepo Quality Assurance**
 
-### 📊 **Process Improvement**
-
-- **Feedback Loops**: Build feedback loops for continuous improvement
-- **Process Documentation**: Document development processes and workflows
-- **Tool Optimization**: Optimize development tools and workflows for efficiency
+- **Package Testing**: Independent testing of each package
+- **Integration Testing**: Testing across package boundaries
+- **Build Verification**: Continuous integration with turbo cache
 
 ---
 
@@ -224,83 +389,25 @@ graph TD
 
 ### 🎨 **Essential Visualization Principles**
 
-#### 📊 **Visualization First Principle**
-
-```mermaid
-pie title Documentation Composition
-    "Visualization" : 40
-    "Text Explanation" : 35
-    "Code Examples" : 15
-    "Metadata" : 10
-```
-
-All documents must adhere to the following ratio:
-
-- **Visualization**: 40% (charts, diagrams, graphs)
-- **Text Explanation**: 35% (core explanations)
-- **Code Examples**: 15% (actual implementation)
-- **Metadata**: 10% (table of contents, links, etc.)
-
-#### 🎯 **Required Visualization Types**
+#### 📊 **Monorepo Visualization Requirements**
 
 ```mermaid
 graph TD
-    A[Documentation Type] --> B[Analysis Report]
-    A --> C[Task List]
-    A --> D[Tutorial]
-    A --> E[How-to Guide]
-
-    B --> F[5+ Charts Required]
-    C --> G[4+ Charts Required]
-    D --> H[2+ Charts Required]
-    E --> I[2+ Charts Required]
-
-    F --> J[Pie + Graph + Matrix + Flow + Timeline]
-    G --> K[Matrix + Dependencies + Gantt + Completion]
-    H --> L[Learning Flow + Progress]
-    I --> M[Problem Flow + Comparison]
+    A["Monorepo Visualization"] --> B["Package Dependencies"]
+    A --> C["Build Flows"]
+    A --> D["Data Flows"]
+    
+    B --> E["Dependency Graphs"]
+    C --> F["Build Sequences"]
+    D --> G["Interface Flows"]
 ```
 
-#### 🔧 **Mermaid Usage Standards**
+All monorepo documents must include:
 
-**✅ Recommended Chart Types:**
-
-1. **Pie Chart** - Show ratios and distributions
-
-```mermaid
-pie title Implementation Status
-    "Complete" : 30
-    "In Progress" : 25
-    "Not Started" : 45
-```
-
-2. **Flowchart** - Process and workflow
-
-```mermaid
-flowchart TD
-    A[Start] --> B[Process]
-    B --> C{Decision}
-    C -->|Yes| D[Success]
-    C -->|No| E[Retry]
-```
-
-3. **Graph TD** - Priority visualization
-
-```mermaid
-graph TD
-    A[High Impact<br/>Low Difficulty] --> B[Quick Wins]
-    C[High Impact<br/>High Difficulty] --> D[Major Projects]
-    E[Low Impact<br/>Low Difficulty] --> F[Fill-ins]
-    G[Low Impact<br/>High Difficulty] --> H[Avoid]
-
-
-```
-
-**❌ Prohibited Patterns:**
-
-- Complex Korean-heavy diagrams
-- High saturation/brightness colors (only muted colors for special cases)
-- Charts without rendering verification
+- **Package Dependency Graphs**: Show relationships between packages
+- **Build Flow Diagrams**: Visualize build order and optimization
+- **Interface Documentation**: Show package interfaces and contracts
+- **Architecture Overviews**: High-level system architecture
 
 #### 🎨 **Minimal Styling Guidelines**
 
@@ -311,148 +418,131 @@ graph TD
 - **Accessibility**: Ensure color-blind friendly when colors are used
 - **Consistency**: Maintain consistent minimal styling across documents
 
-### 📋 **Visualization Quality Verification Process**
+### 📋 **Monorepo Visualization Quality Verification Process**
 
-#### Stage 1: Planning
+#### Stage 1: Monorepo Planning
 
 ```
 □ Confirm required visualization count per document type
-□ Define visualization types and purposes
-□ Plan minimal styling approach
-□ Plan Korean-friendly chart types
+□ Define package relationships and dependencies
+□ Plan build flow documentation
+□ Plan interface documentation
 ```
 
 #### Stage 2: Creation
 
 ```
-□ Generate charts in Mermaid Live Editor
-□ Apply minimal styling (if needed)
-□ Use Korean text freely (avoid quadrantChart)
-□ Allow complex structures for better understanding
+□ Generate package dependency graphs
+□ Create build flow diagrams
+□ Document interface contracts
+□ Apply minimal styling
 ```
 
 #### Stage 3: Validation
 
 ```
+□ Verify dependency accuracy
+□ Test build flow correctness
+□ Validate interface documentation
 □ Complete rendering test
-□ Review accessibility (color-blind support when colors are used)
-□ Confirm mobile compatibility
-□ Review performance optimization
-```
-
-#### Stage 4: Integration
-
-```
-□ Place in appropriate document positions
-□ Balance text and visualization
-□ Include visualization sections in table of contents
-□ Add cross-reference links
 ```
 
 ---
 
 ## 8. Final Checklist
 
-### ✅ **Code Quality Check**
+### ✅ **Monorepo Code Quality Check**
 
-- [ ] **Simplicity**: Is the solution as simple as possible while maintaining functionality?
-- [ ] **DRY Principle**: Have code duplications been eliminated?
-- [ ] **Mock Data**: Is mock data avoided in non-test environments?
-- [ ] **Error Handling**: Is proper error handling implemented?
-- [ ] **🔥 Visualization**: Are architectural diagrams included for code explanations?
+- [ ] **Package Boundaries**: Are package boundaries respected?
+- [ ] **Workspace Dependencies**: Are workspace protocols used correctly?
+- [ ] **Build Optimization**: Is turbo cache utilized effectively?
+- [ ] **Cross-Package Impact**: Are cross-package impacts considered?
+- [ ] **🔥 Monorepo Visualization**: Are package dependencies visualized?
 
-### ✅ **Documentation Check**
+### ✅ **Monorepo Documentation Check**
 
-- [ ] **Clarity**: Are explanations clear and understandable?
-- [ ] **Completeness**: Is all necessary information provided?
-- [ ] **Consistency**: Is terminology and style consistent?
-- [ ] **Accessibility**: Is documentation accessible to the target audience?
-- [ ] **🔥 Mandatory Visualization**: Are required number of charts included per document type?
-- [ ] **🎨 Minimal Styling**: Is minimal styling applied (colors avoided unless necessary)?
-- [ ] **🌐 Korean Friendly**: Are Korean-friendly chart types used (no quadrantChart)?
+- [ ] **Package Documentation**: Does each package have adequate documentation?
+- [ ] **Workspace Documentation**: Is overall architecture documented?
+- [ ] **Dependency Documentation**: Are package relationships documented?
+- [ ] **🔥 Mandatory Visualization**: Are required charts included per document type?
+- [ ] **🎨 Minimal Styling**: Is minimal styling applied?
 
-### ✅ **Collaboration Check**
+### ✅ **Monorepo Collaboration Check**
 
-- [ ] **Communication**: Are explanations clear and helpful?
-- [ ] **Context**: Is sufficient context provided for understanding?
-- [ ] **Best Practices**: Are industry best practices followed?
-- [ ] **Team Alignment**: Does the approach align with team standards?
-- [ ] **🔥 Visual Communication**: Are complex concepts explained with diagrams?
+- [ ] **Package Ownership**: Are package responsibilities clear?
+- [ ] **Integration Testing**: Are cross-package tests adequate?
+- [ ] **Build Pipeline**: Is build pipeline optimized?
+- [ ] **🔥 Visual Communication**: Are complex relationships visualized?
 
-### ✅ **Enhanced Visualization Check**
+### ✅ **Enhanced Monorepo Visualization Check**
 
 ```mermaid
 graph TD
-    A[Document Ready?] --> B{Visualization Check}
-    B -->|Pass| C[Quality Review]
-    B -->|Fail| D[Add Required Charts]
+    A["Monorepo Document Ready?"] --> B{"Package Visualization Check"}
+    B -->|Pass| C["Build Flow Check"]
+    B -->|Fail| D["Add Package Diagrams"]
     D --> B
-    C --> E{Minimal Styling Check}
-    E -->|Pass| F[Final Approval]
-    E -->|Fail| G[Apply Minimal Styling]
+    C --> E{"Interface Documentation Check"}
+    E -->|Pass| F["Final Approval"]
+    E -->|Fail| G["Add Interface Diagrams"]
     G --> E
 ```
 
-**🔥 Critical Visualization Checks:**
+**🔥 Critical Monorepo Visualization Checks:**
 
-- [ ] Minimum chart count met for document type
-- [ ] Minimal styling applied (colors avoided unless necessary)
-- [ ] Korean text used freely (no quadrantChart restrictions)
-- [ ] Mermaid v11.x syntax compliance
-- [ ] Rendering test completed
-- [ ] Complex structures encouraged for better understanding
-- [ ] Visual hierarchy established
-- [ ] Charts support main narrative
+- [ ] Package dependency graphs included
+- [ ] Build flow diagrams present
+- [ ] Interface contracts documented
+- [ ] Architecture overviews provided
+- [ ] Minimal styling applied
+- [ ] Rendering tests completed
 
 ---
 
-## 📋 **Usage Guidelines**
+## 📋 **Monorepo Usage Guidelines**
 
-### **When to Use**
+### **When to Use Monorepo Guidelines**
 
-- Setting up AI Agent collaboration workflows
-- Establishing code quality standards
-- Writing documentation guidelines
-- Building debugging procedures
-- Training team members on AI collaboration methods
-- **🔥 Ensuring mandatory visualization compliance**
+- Setting up monorepo development workflows
+- Managing cross-package dependencies
+- Optimizing build performance with turbo
+- Coordinating multi-package development
+- **🔥 Ensuring monorepo visualization compliance**
 
-### **Integration with Project-Specific Rules**
-
-This document provides general guidelines that should complement project-specific rules and requirements. For specialized project requirements, refer to the respective project documentation.
-
-### **Continuous Improvement**
-
-These guidelines should be regularly reviewed and updated based on:
-
-- Team feedback and experience
-- Evolution of industry best practices
-- Updates to tools and technologies
-- Changes in project requirements
-- **🔥 Visualization effectiveness metrics**
-
-### **Visualization Compliance Monitoring**
+### **Monorepo Command Quick Reference**
 
 ```mermaid
-pie title Compliance Monitoring Areas
-    "Chart Quantity" : 30
-    "Minimal Styling" : 25
-    "Language Balance" : 20
-    "Rendering Quality" : 15
-    "User Experience" : 10
+graph LR
+    A["Common Commands"] --> B["pnpm install"]
+    A --> C["turbo dev"]
+    A --> D["turbo build"]
+    A --> E["turbo test"]
+    A --> F["pnpm -F [workspace]"]
+    A --> G["pnpm -r [command]"]
 ```
 
-**Regular Review Items:**
+**PowerShell Commands (Monorepo Edition):**
 
-- Visualization count compliance rate per document
-- Minimal styling usage rate (colors avoided unless necessary)
-- Korean-friendly chart usage rate (no quadrantChart)
-- Complex structure utilization for understanding
-- Rendering error occurrence rate
-- User satisfaction scores
+```powershell
+# Root level development
+pnpm install
+turbo dev
+turbo build
+turbo test
+
+# Specific package commands
+pnpm -F posmul-web dev
+pnpm -F shared-types build
+pnpm -F shared-ui test
+
+# Cross-package commands
+pnpm -r build
+pnpm -r test
+pnpm -r lint
+```
 
 ---
 
-**Note**: For project-specific specialized rules, please refer to the respective project's separate documentation files.
+**Note**: These enhanced guidelines are specifically designed for monorepo environments with pnpm + turbo + Next.js 15 + React 19. For single-repo projects, refer to separate documentation.
 
-**🎯 Enhanced Note**: These enhanced guidelines are designed to ensure all documents are visualization-centric to maximize information delivery and comprehension. Visualization requirements are mandatory, not optional.
+**🎯 Enhanced Monorepo Note**: These guidelines ensure optimal monorepo development workflows with proper visualization and documentation standards. All commands and workflows are optimized for the monorepo environment.
