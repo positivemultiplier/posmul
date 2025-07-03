@@ -43,6 +43,10 @@
     "typescript": "^5.4.5",
     "uuid": "^11.1.0",
     "zod": "^3.25.67",
+    "eslint": "^8.57.1",
+    "@typescript-eslint/parser": "^7.8.0",
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@eslint/js": "^8.57.0",
     "zustand": "^5.0.6"
   },
   "optionalDependencies": {
@@ -50,5 +54,10 @@
     "@next/swc-darwin-x64": "15.3.4",
     "@next/swc-linux-x64-gnu": "15.3.4",
     "@next/swc-win32-x64-msvc": "15.3.4"
+  },
+  "pnpm": {
+    "overrides": {
+      "eslint": "^8.57.1"
+    }
   }
 }
