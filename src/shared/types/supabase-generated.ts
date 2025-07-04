@@ -1,24 +1,3 @@
-/**
- * PosMul Platform - Supabase 자동 생성 타입
- * 생성 시간: 2025-07-03T06:35:00.000Z
- * 프로젝트: fabyagohqqnusmnwekuc
- * 
- * 🔥 수동 편집 금지! 이 파일은 MCP로 자동 생성됩니다.
- * 🚀 mcp_supabase_generate_typescript_types 결과 기반
- */
-
-
-// 📊 도메인별 테이블 통계:
-//   public: 28개 관련 테이블
-//   prediction: 62개 관련 테이블
-//   economy: 2개 관련 테이블
-//   investment: 33개 관련 테이블
-//   donation: 28개 관련 테이블
-//   forum: 27개 관련 테이블
-//   user: 82개 관련 테이블
-//
-// 🔄 자동 업데이트: npx tsx C:\G\mcp-automation\universal-mcp-automation.ts generate public
-// 🛠️ 수동 적용: 프로젝트별 스크립트 실행
 export type Json =
   | string
   | number

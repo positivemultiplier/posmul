@@ -5,3 +5,13 @@ export * from "./application/index.js";
 export * from "./domain/index.js";
 
 // TODO: Add infrastructure exports when index.js is created
+
+// Domain exports
+export * from './domain'
+
+// Application exports  
+export * from './application'
+
+// Infrastructure exports (새로 추가)
+export * from './infrastructure/services'
+export * from './infrastructure/repositories'

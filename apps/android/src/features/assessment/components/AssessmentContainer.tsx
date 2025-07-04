@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { Card } from '@posmul/shared-ui';
+// React Native 환경에서는 HTML 기반 Card 대신 View 사용
+// import { Card } from '@posmul/shared-ui';
 import { QuestionCard } from './QuestionCard';
 import { ProgressBar } from './ProgressBar';
 import { Timer } from './Timer';
@@ -37,7 +38,7 @@ export const AssessmentContainer: React.FC<AssessmentContainerProps> = ({
   return (
     <View style={styles.container}>
       {/* Header with progress and timer using shared-ui Card */}
-      <Card style={styles.headerCard}>
+      <View style={styles.headerCard}>
         <ProgressBar 
           progress={progress}
         />
@@ -47,7 +48,7 @@ export const AssessmentContainer: React.FC<AssessmentContainerProps> = ({
             onTimeUp={submitAssessment}
           />
         )}
-      </Card>
+      </View>
 
       {/* Main question area */}
       <View style={styles.questionArea}>
@@ -61,7 +62,7 @@ export const AssessmentContainer: React.FC<AssessmentContainerProps> = ({
       </View>
 
       {/* Navigation controls using shared-ui Card */}
-      <Card style={styles.navigationCard}>
+      <View style={styles.navigationCard}>
         <View style={styles.navigationButtons}>
           {/* Previous button placeholder - will use shared-ui Button */}
           <View style={[styles.button, isFirstQuestion && styles.disabledButton]}>
@@ -78,7 +79,7 @@ export const AssessmentContainer: React.FC<AssessmentContainerProps> = ({
             {/* Next/Submit button using shared-ui Button component */}
           </View>
         </View>
-      </Card>
+      </View>
     </View>
   );
 };

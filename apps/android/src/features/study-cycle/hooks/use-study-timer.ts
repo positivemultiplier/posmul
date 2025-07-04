@@ -3,13 +3,13 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Result } from "@posmul/shared-types";
 import { DomainError } from "@posmul/shared-types";
-import { StudySessionId, StudySessionStatus } from "../../domain/entities/study-session.entity";
+import { StudySessionId, StudySessionStatus } from "@posmul/study-cycle-core";
 import { 
   StudyTimeTrackerService, 
   TimerState, 
   TimerConfig, 
   TimerCallbacks 
-} from "../../infrastructure/services/study-time-tracker.service";
+} from "@posmul/study-cycle-core";
 
 export interface UseStudyTimerOptions {
   config?: TimerConfig;
