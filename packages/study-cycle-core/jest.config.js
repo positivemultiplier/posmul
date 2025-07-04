@@ -4,7 +4,7 @@ export default {
   moduleFileExtensions: ['ts', 'js', 'json', 'node'],
   roots: ['<rootDir>/__tests__', '<rootDir>/src'],
   transform: {
-    '^.+\.ts: ': ['ts-jest', {
+    '^.+\.ts$': ['ts-jest', {
       tsconfig: {
         module: 'CommonJS',
       },
