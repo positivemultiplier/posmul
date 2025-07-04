@@ -90,6 +90,28 @@ export interface IStudySessionProps {
   updatedAt: Date;
 }
 
+let getUUID: () => string;
+
+if (typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function') {
+  getUUID = () => globalThis.crypto.randomUUID();
+} else if (typeof globalThis.process !== 'undefined' && globalThis.process.versions && globalThis.process.versions.node) {
+  // Node.js 환경
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let nodeCrypto: any;
+    nodeCrypto = eval('require("crypto")');
+    if (nodeCrypto && typeof nodeCrypto.randomUUID === 'function') {
+      getUUID = () => nodeCrypto.randomUUID();
+    } else {
+      getUUID = () => Math.random().toString(36).substring(2, 10) + Date.now();
+    }
+  } catch {
+    getUUID = () => Math.random().toString(36).substring(2, 10) + Date.now();
+  }
+} else {
+  getUUID = () => Math.random().toString(36).substring(2, 10) + Date.now();
+}
+
 export class StudySession extends BaseEntity<IStudySessionProps> {
   private constructor(props: IStudySessionProps) {
     super(props);
@@ -110,7 +132,7 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     const now = new Date();
 
     const studySessionProps: IStudySessionProps = {
-      id: id || createStudySessionId(crypto.randomUUID()),
+      id: id || createStudySessionId(getUUID()),
       userId: props.userId,
       textbookId: props.textbookId,
       chapterId: props.chapterId,

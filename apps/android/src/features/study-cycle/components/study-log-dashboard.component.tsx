@@ -1,17 +1,15 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { UserId, StudySessionSummary } from "../../domain/entities/study-session.entity";
-import { TextbookId } from "../../domain/entities/textbook.entity";
-import { Card } from "@posmul/shared-ui/components";
-import { LoadingSpinner } from "@posmul/shared-ui/components";
+import { View, Text, ActivityIndicator, StyleSheet } from "react-native";
+import { UserId, StudySessionSummary } from "@posmul/study-cycle-core";
+import { TextbookId } from "@posmul/study-cycle-core";
 import { StudyTimer } from "./study-timer.component";
 import { useStudyLogData } from "../hooks/use-study-log-data";
 
 export interface StudyLogDashboardProps {
   userId: UserId;
   currentTextbookId?: TextbookId;
-  className?: string;
 }
 
 /**
@@ -26,8 +24,7 @@ export interface StudyLogDashboardProps {
  */
 export function StudyLogDashboard({
   userId,
-  currentTextbookId,
-  className = "",
+  currentTextbookId
 }: StudyLogDashboardProps) {
   const {
     studyHistory,
@@ -80,192 +77,110 @@ export function StudyLogDashboard({
 
   if (isLoading) {
     return (
-      <div className={`flex justify-center items-center p-8 ${className}`}>
-        <LoadingSpinner size="lg" />
-      </div>
+      <View style={[styles.loadingContainer, { padding: 32 }]}>
+        <ActivityIndicator size="large" />
+      </View>
     );
   }
 
   if (error) {
     return (
-      <div className={`bg-red-50 border border-red-200 rounded-lg p-4 ${className}`}>
-        <div className="flex items-center">
-          <div className="text-red-600 mr-2">⚠️</div>
-          <div className="text-red-700">
-            학습 기록을 불러오는 중 오류가 발생했습니다: {error.message}
-          </div>
-        </div>
-        <button
-          onClick={refreshData}
-          className="mt-2 text-red-600 hover:text-red-800 underline"
-        >
-          다시 시도
-        </button>
-      </div>
+      <View style={[styles.errorContainer, { padding: 16 }]}> 
+        <View style={styles.errorRow}>
+          <View style={styles.errorIcon}><Text>⚠️</Text></View>
+          <View style={styles.errorText}><Text>학습 기록을 불러오는 중 오류가 발생했습니다: {error.message}</Text></View>
+        </View>
+        <View style={styles.retryButton}>
+          <Text onPress={refreshData} style={styles.retryText}>다시 시도</Text>
+        </View>
+      </View>
     );
   }
 
   return (
-    <div className={`space-y-6 ${className}`}>
+    <View style={styles.container}>
       {/* 헤더 */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold text-gray-800">학습 대시보드</h2>
-        <button
-          onClick={refreshData}
-          className="text-blue-600 hover:text-blue-800 flex items-center space-x-1"
-        >
-          <span>🔄</span>
-          <span>새로고침</span>
-        </button>
-      </div>
+      <View style={styles.headerRow}>
+        <Text style={styles.headerTitle}>학습 대시보드</Text>
+        <Text onPress={refreshData} style={styles.refreshButton}>🔄 새로고침</Text>
+      </View>
 
       {/* 학습 통계 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-blue-600">
-              {Math.floor(totalStudyTime / 60)}h {totalStudyTime % 60}m
-            </div>
-            <div className="text-sm text-gray-600 mt-1">총 학습 시간</div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-green-600">{studyStreak}</div>
-            <div className="text-sm text-gray-600 mt-1">연속 학습 일수</div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-purple-600">
-              {Math.round(averageSessionTime)}m
-            </div>
-            <div className="text-sm text-gray-600 mt-1">평균 세션 시간</div>
-          </div>
-        </Card>
-
-        <Card>
-          <div className="text-center">
-            <div className="text-3xl font-bold text-orange-600">
-              {studyHistory?.length || 0}
-            </div>
-            <div className="text-sm text-gray-600 mt-1">완료된 세션</div>
-          </div>
-        </Card>
-      </div>
+      <View style={styles.statsRow}>
+        <View style={styles.card}><Text style={styles.cardValue}>{Math.floor(totalStudyTime / 60)}h {totalStudyTime % 60}m</Text><Text style={styles.cardLabel}>총 학습 시간</Text></View>
+        <View style={styles.card}><Text style={styles.cardValue}>{studyStreak}</Text><Text style={styles.cardLabel}>연속 학습 일수</Text></View>
+        <View style={styles.card}><Text style={styles.cardValue}>{Math.round(averageSessionTime)}m</Text><Text style={styles.cardLabel}>평균 세션 시간</Text></View>
+        <View style={styles.card}><Text style={styles.cardValue}>{studyHistory?.length || 0}</Text><Text style={styles.cardLabel}>완료된 세션</Text></View>
+      </View>
 
       {/* 현재 학습 세션 타이머 */}
-      <Card>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">현재 학습 세션</h3>
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>현재 학습 세션</Text>
         <StudyTimer
           onAutoSave={handleTimerAutoSave}
           onTimerError={handleTimerError}
           showControls={true}
           compact={false}
         />
-      </Card>
+      </View>
 
       {/* 진도 현황 */}
       {readingProgress && (
-        <Card>
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">진도 현황</h3>
-          <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-600">전체 진도율</span>
-              <span className="font-semibold">
-                {Math.round(readingProgress.completionPercentage)}%
-              </span>
-            </div>
-            
-            <div className="w-full bg-gray-200 rounded-full h-2">
-              <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${readingProgress.completionPercentage}%` }}
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="text-gray-600">읽은 페이지:</span>
-                <span className="ml-1 font-medium">
-                  {readingProgress.totalPagesRead}페이지
-                </span>
-              </div>
-              <div>
-                <span className="text-gray-600">평균 이해도:</span>
-                <span className="ml-1 font-medium">{readingProgress.averageComprehension.toFixed(1)}/5.0</span>
-              </div>
-            </div>
-
-            <div className="text-sm text-gray-600">
-              총 학습 시간: {Math.floor(readingProgress.totalTimeMinutes / 60)}시간 {readingProgress.totalTimeMinutes % 60}분
-            </div>
-          </div>
-        </Card>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>진도 현황</Text>
+          <View style={styles.progressRow}>
+            <Text>전체 진도율</Text>
+            <Text style={styles.bold}>{Math.round(readingProgress.completionPercentage)}%</Text>
+          </View>
+          <View style={styles.progressBarBg}>
+            <View style={[styles.progressBarFill, { width: `${readingProgress.completionPercentage}%` }]} />
+          </View>
+          <View style={styles.progressStatsRow}>
+            <Text>읽은 페이지: {readingProgress.totalPagesRead}페이지</Text>
+            <Text>평균 이해도: {readingProgress.averageComprehension.toFixed(1)}/5.0</Text>
+          </View>
+          <Text>총 학습 시간: {Math.floor(readingProgress.totalTimeMinutes / 60)}시간 {readingProgress.totalTimeMinutes % 60}분</Text>
+        </View>
       )}
 
       {/* 최근 학습 세션 */}
-      <Card>
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">최근 학습 세션</h3>
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>최근 학습 세션</Text>
         {studyHistory && studyHistory.length > 0 ? (
-          <div className="space-y-3">
-            {studyHistory.slice(0, 5).map((session) => (
-              <div
-                key={session.sessionId}
-                className="flex justify-between items-center p-3 bg-gray-50 rounded-lg"
-              >
-                <div>
-                  <div className="font-medium text-gray-800">
-                    {session.chapterId ? `챕터 ${session.chapterId}` : "전체 교재"}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    {new Date(session.completedAt).toLocaleDateString('ko-KR')} • 
-                    {session.totalTimeMinutes}분 학습
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm text-gray-600">
-                    페이지: {session.pagesCompleted}
-                  </div>
-                  <div className="text-sm text-gray-600">
-                    이해도: {session.averageComprehension}/5
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          studyHistory.slice(0, 5).map((session) => (
+            <View key={session.sessionId} style={styles.sessionRow}>
+              <View>
+                <Text style={styles.sessionChapter}>{session.chapterId ? `챕터 ${session.chapterId}` : "전체 교재"}</Text>
+                <Text style={styles.sessionMeta}>{new Date(session.completedAt).toLocaleDateString('ko-KR')} • {session.totalTimeMinutes}분 학습</Text>
+              </View>
+              <View style={styles.sessionStats}>
+                <Text>페이지: {session.pagesCompleted}</Text>
+                <Text>이해도: {session.averageComprehension}/5</Text>
+              </View>
+            </View>
+          ))
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            아직 완료된 학습 세션이 없습니다.
-            <br />
-            첫 번째 학습을 시작해보세요!
-          </div>
+          <Text style={styles.emptyText}>아직 완료된 학습 세션이 없습니다.\n첫 번째 학습을 시작해보세요!</Text>
         )}
-      </Card>
+      </View>
 
       {/* 학습 패턴 분석 */}
       {studyHistory && studyHistory.length >= 3 && (
-        <Card>
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">학습 패턴 분석</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">선호 학습 시간대</h4>
-              <div className="text-sm text-gray-600">
-                {getMostActiveTimeRange(studyHistory)}
-              </div>
-            </div>
-            <div>
-              <h4 className="font-medium text-gray-700 mb-2">평균 집중도</h4>
-              <div className="text-sm text-gray-600">
-                이해도 평균: {getAverageComprehension(studyHistory).toFixed(1)}/5.0
-              </div>
-            </div>
-          </div>
-        </Card>
+        <View style={styles.card}>
+          <Text style={styles.sectionTitle}>학습 패턴 분석</Text>
+          <View style={styles.patternRow}>
+            <View style={styles.patternCol}>
+              <Text>선호 학습 시간대</Text>
+              <Text>{getMostActiveTimeRange(studyHistory)}</Text>
+            </View>
+            <View style={styles.patternCol}>
+              <Text>평균 집중도</Text>
+              <Text>이해도 평균: {getAverageComprehension(studyHistory).toFixed(1)}/5.0</Text>
+            </View>
+          </View>
+        </View>
       )}
-    </div>
+    </View>
   );
 }
 
@@ -291,4 +206,35 @@ function getMostActiveTimeRange(sessions: StudySessionSummary[]): string {
 function getAverageComprehension(sessions: StudySessionSummary[]): number {
   const total = sessions.reduce((sum: number, session: StudySessionSummary) => sum + session.averageComprehension, 0);
   return total / sessions.length;
-} 
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, padding: 16 },
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  errorContainer: { backgroundColor: '#fee2e2', borderColor: '#fecaca', borderWidth: 1, borderRadius: 8 },
+  errorRow: { flexDirection: 'row', alignItems: 'center' },
+  errorIcon: { marginRight: 8 },
+  errorText: { flex: 1, color: '#b91c1c' },
+  retryButton: { marginTop: 8 },
+  retryText: { color: '#b91c1c', textDecorationLine: 'underline' },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
+  headerTitle: { fontSize: 24, fontWeight: 'bold', color: '#1e293b' },
+  refreshButton: { color: '#2563eb', fontWeight: 'bold' },
+  statsRow: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginBottom: 16 },
+  card: { backgroundColor: '#fff', borderRadius: 8, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  cardValue: { fontSize: 28, fontWeight: 'bold', textAlign: 'center' },
+  cardLabel: { fontSize: 14, color: '#64748b', textAlign: 'center', marginTop: 4 },
+  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#1e293b', marginBottom: 8 },
+  progressRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  bold: { fontWeight: 'bold' },
+  progressBarBg: { width: '100%', height: 8, backgroundColor: '#e5e7eb', borderRadius: 4, marginBottom: 8 },
+  progressBarFill: { height: 8, backgroundColor: '#2563eb', borderRadius: 4 },
+  progressStatsRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  sessionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#f1f5f9', borderRadius: 8, padding: 12, marginBottom: 6 },
+  sessionChapter: { fontWeight: 'bold', color: '#334155' },
+  sessionMeta: { fontSize: 12, color: '#64748b' },
+  sessionStats: { alignItems: 'flex-end' },
+  emptyText: { textAlign: 'center', color: '#64748b', marginTop: 24 },
+  patternRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 8 },
+  patternCol: { flex: 1, marginRight: 8 },
+}); 
