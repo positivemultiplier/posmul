@@ -14,8 +14,8 @@ interface AssessmentContainerProps {
 }
 
 export const AssessmentContainer: React.FC<AssessmentContainerProps> = ({
-  userId,
-  assessmentId,
+  userId: _userId,
+  assessmentId: _assessmentId,
 }) => {
   const {
     assessment,
@@ -24,9 +24,9 @@ export const AssessmentContainer: React.FC<AssessmentContainerProps> = ({
     totalQuestions,
     userAnswers,
     isFirstQuestion,
-    isLastQuestion,
-    goToNextQuestion,
-    goToPreviousQuestion,
+    isLastQuestion: _isLastQuestion,
+    goToNextQuestion: _goToNextQuestion,
+    goToPreviousQuestion: _goToPreviousQuestion,
     selectAnswer,
     submitAssessment,
   } = useAssessmentState();

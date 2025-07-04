@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { UserId, StudySessionSummary } from "../../domain/entities/study-session.entity";
 import { TextbookId } from "../../domain/entities/textbook.entity";
-import { ReadingMetrics } from "../../domain/entities/reading.entity";
 import { Card } from "@posmul/shared-ui/components";
 import { LoadingSpinner } from "@posmul/shared-ui/components";
 import { StudyTimer } from "./study-timer.component";

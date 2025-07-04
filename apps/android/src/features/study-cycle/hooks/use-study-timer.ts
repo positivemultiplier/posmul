@@ -78,11 +78,11 @@ export function useStudyTimer(options: UseStudyTimerOptions = {}): UseStudyTimer
       }
     }, [options]),
     
-    onPause: useCallback((reason: 'manual' | 'visibility' | 'beforeunload') => {
+    onPause: useCallback((_reason: 'manual' | 'visibility' | 'beforeunload') => {
       // 일시정지 시 상태 업데이트는 onTick에서 처리됨
     }, []),
     
-    onResume: useCallback((reason: 'manual' | 'visibility') => {
+    onResume: useCallback((_reason: 'manual' | 'visibility') => {
       // 재개 시 상태 업데이트는 onTick에서 처리됨
     }, []),
     

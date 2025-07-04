@@ -53,9 +53,9 @@ export function useStudyLogData(options: UseStudyLogDataOptions): UseStudyLogDat
       // Mock 데이터 (실제 구현에서는 Use Case 사용)
       const mockHistory: StudySessionSummary[] = [
         {
-          sessionId: "session-1" as any,
-          textbookId: textbookId || ("textbook-1" as any),
-          chapterId: "chapter-1" as any,
+          sessionId: "session-1" as UserId,
+          textbookId: textbookId || ("textbook-1" as TextbookId),
+          chapterId: "chapter-1" as TextbookId,
           totalTimeMinutes: 45,
           pagesCompleted: 12,
           averageDifficulty: 3.5,
@@ -64,9 +64,9 @@ export function useStudyLogData(options: UseStudyLogDataOptions): UseStudyLogDat
           completedAt: new Date(Date.now() - 86400000 + 2700000), // 45분 후
         },
         {
-          sessionId: "session-2" as any,
-          textbookId: textbookId || ("textbook-1" as any),
-          chapterId: "chapter-2" as any,
+          sessionId: "session-2" as UserId,
+          textbookId: textbookId || ("textbook-1" as TextbookId),
+          chapterId: "chapter-2" as TextbookId,
           totalTimeMinutes: 60,
           pagesCompleted: 15,
           averageDifficulty: 4.0,
