@@ -5,12 +5,13 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
-    "build": "echo \"Skipping study-cycle-core build\"",
+    "build": "tsc --project tsconfig.json",
     "_dev": "tsc -w",
     "gen:types": "cmd /c \"chcp 65001 > nul && C:/G/posmul/node_modules/.bin/tsx C:/G/mcp-automation/universal-mcp-automation.ts batch study_cycle,assessment --outdir ./src/types\"",
     "test": "jest"
   },
   "dependencies": {
+    "@paralleldrive/cuid2": "^2.2.2",
     "@posmul/shared-auth": "workspace:*",
     "@posmul/shared-types": "workspace:*",
     "uuid": "^11.1.0"
