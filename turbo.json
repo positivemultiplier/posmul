@@ -3,7 +3,7 @@
   "tasks": {
     "gen:types": {},
     "build": {
-      "dependsOn": [],
+      "dependsOn": ["^build"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "lint": {},
