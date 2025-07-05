@@ -5,7 +5,7 @@ import {
   BusinessLogicError,
   ExternalServiceError,
   NetworkError,
-} from "@posmul/shared-types/src/errors";
+} from "@posmul/shared-types";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { BaseErrorUI } from "./BaseErrorUI";

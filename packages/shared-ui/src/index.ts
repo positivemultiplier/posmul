@@ -29,8 +29,8 @@ export * from "./realtime/index";
 // Utils
 export * from "./utils/index";
 
-// MCP Services
-export { SupabaseProjectService } from "../../../apps/posmul-web/src/shared/mcp/supabase-project.service";
+// TODO: MCP Services - move to shared-auth or separate package
+// export { SupabaseProjectService } from "../../../apps/posmul-web/src/shared/mcp/supabase-project.service";
 
 export { BaseSkeleton } from "./components/loading/BaseSkeleton";
 export { default as Navbar } from "./components/navigation/Navbar";
@@ -39,10 +39,11 @@ export { Button as Button } from "./components/ui/button";
 
 // Event Publisher (임시 export - 추후 @posmul/shared-types로 이동 예정)
 export type { IDomainEventPublisher } from "@posmul/shared-types";
-export { InMemoryEventPublisher } from "../../../apps/posmul-web/src/shared/events/event-publisher";
+// TODO: Move to shared-types or separate event package
+// export { InMemoryEventPublisher } from "../../../apps/posmul-web/src/shared/events/event-publisher";
 
-// Economic Services (임시 export - 추후 경제 패키지로 이동 예정)
-export { MoneyWaveCalculatorService } from "../../../apps/posmul-web/src/shared/economy-kernel/services/money-wave-calculator.service";
+// TODO: Economic Services - move to economy package
+// export { MoneyWaveCalculatorService } from "../../../apps/posmul-web/src/shared/economy-kernel/services/money-wave-calculator.service";
 
 // Forms
 export { default as PredictionGameForm } from "./components/forms/PredictionGameForm";
