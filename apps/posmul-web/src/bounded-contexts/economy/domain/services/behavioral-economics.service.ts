@@ -156,22 +156,41 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
 
     for (const [accountType, baseRatio] of defaultAllocation.entries()) {
       let pmpRatio = baseRatio.pmpRatio;
-      let pmcRatio = baseRatio.pmcRatio; // 리스크 조정
+      let pmcRatio = baseRatio.pmcRatio;
+
+      // 리스크 조정
       if (accountType === MentalAccountType.INVESTMENT_PMP) {
         pmcRatio += riskAdjustment * 0.3; // 위험 선호 시 투자 계정에 PMC 더 배분
         pmpRatio -= riskAdjustment * 0.1;
       }
+
+      // 음수 방지
+      pmpRatio = Math.max(0, pmpRatio);
+      pmcRatio = Math.max(0, pmcRatio);
 
       const allocatedPMP = Math.max(0, totalPMP * pmpRatio);
       const allocatedPMC = Math.max(0, totalPMC * pmcRatio);
 
       recommendedAllocation.set(accountType, {
         pmp: createPMP(Math.round(allocatedPMP)),
-        pmc: createPMC(allocatedPMC),
+        pmc: createPMC(Math.round(allocatedPMC)),
       });
 
       totalAllocatedPMP += allocatedPMP;
       totalAllocatedPMC += allocatedPMC;
+    }
+
+    // 모든 계정 타입에 대해 할당이 생성되었는지 확인
+    if (recommendedAllocation.size === 0) {
+      // 기본 할당 생성
+      recommendedAllocation.set(MentalAccountType.INVESTMENT_PMP, {
+        pmp: createPMP(Math.round(totalPMP * 0.5)),
+        pmc: createPMC(Math.round(totalPMC * 0.3)),
+      });
+      recommendedAllocation.set(MentalAccountType.PREDICTION_PMP, {
+        pmp: createPMP(Math.round(totalPMP * 0.5)),
+        pmc: createPMC(Math.round(totalPMC * 0.7)),
+      });
     }
 
     // 현재 배분과 비교하여 리밸런싱 필요성 판단

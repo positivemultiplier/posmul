@@ -225,8 +225,8 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     if (this.props.status === StudySessionStatus.ACTIVE) {
       return failure(
         new DomainError(
-          "Study session is already active",
-          "SESSION_ALREADY_ACTIVE"
+          "SESSION_ALREADY_ACTIVE",
+          "Study session is already active"
         )
       );
     }
@@ -234,8 +234,8 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     if (this.props.status === StudySessionStatus.COMPLETED) {
       return failure(
         new DomainError(
-          "Cannot restart a completed study session",
-          "SESSION_COMPLETED"
+          "SESSION_COMPLETED",
+          "Cannot restart a completed study session"
         )
       );
     }
@@ -257,8 +257,8 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     if (this.props.status !== StudySessionStatus.ACTIVE) {
       return failure(
         new DomainError(
-          "Can only end an active study session",
-          "SESSION_NOT_ACTIVE"
+          "SESSION_NOT_ACTIVE",
+          "Can only end an active study session"
         )
       );
     }
@@ -302,8 +302,8 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     if (this.props.status !== StudySessionStatus.ACTIVE) {
       return failure(
         new DomainError(
-          "Can only pause an active study session",
-          "SESSION_NOT_ACTIVE"
+          "SESSION_NOT_ACTIVE",
+          "Can only pause an active study session"
         )
       );
     }
@@ -328,8 +328,8 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     if (this.props.status !== StudySessionStatus.PAUSED) {
       return failure(
         new DomainError(
-          "Can only resume a paused study session",
-          "SESSION_NOT_PAUSED"
+          "SESSION_NOT_PAUSED",
+          "Can only resume a paused study session"
         )
       );
     }
@@ -348,8 +348,8 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     if (this.props.status === StudySessionStatus.COMPLETED) {
       return failure(
         new DomainError(
-          "Cannot cancel a completed study session",
-          "SESSION_COMPLETED"
+          "SESSION_COMPLETED",
+          "Cannot cancel a completed study session"
         )
       );
     }
@@ -368,8 +368,8 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     if (this.props.status !== StudySessionStatus.ACTIVE) {
       return failure(
         new DomainError(
-          "Can only record progress during an active study session",
-          "SESSION_NOT_ACTIVE"
+          "SESSION_NOT_ACTIVE",
+          "Can only record progress during an active study session"
         )
       );
     }
@@ -382,8 +382,8 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
       ) {
         return failure(
           new DomainError(
-            "Difficulty rating must be between 1 and 5",
-            "INVALID_DIFFICULTY_RATING"
+            "INVALID_DIFFICULTY_RATING",
+            "Difficulty rating must be between 1 and 5"
           )
         );
       }
@@ -393,8 +393,8 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
       ) {
         return failure(
           new DomainError(
-            "Comprehension rating must be between 1 and 5",
-            "INVALID_COMPREHENSION_RATING"
+            "INVALID_COMPREHENSION_RATING",
+            "Comprehension rating must be between 1 and 5"
           )
         );
       }
@@ -405,8 +405,8 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
       ) {
         return failure(
           new DomainError(
-            "Progress values cannot be negative",
-            "INVALID_PROGRESS_VALUES"
+            "INVALID_PROGRESS_VALUES",
+            "Progress values cannot be negative"
           )
         );
       }
@@ -423,8 +423,8 @@ export class StudySession extends BaseEntity<IStudySessionProps> {
     } catch (error) {
       return failure(
         new DomainError(
-          error instanceof Error ? error.message : "Invalid progress data",
-          "PROGRESS_VALIDATION_ERROR"
+          "PROGRESS_VALIDATION_ERROR",
+          error instanceof Error ? error.message : "Invalid progress data"
         )
       );
     }

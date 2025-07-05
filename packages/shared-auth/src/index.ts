@@ -1,7 +1,9 @@
 // This file serves as the entry point for the @posmul/shared-auth package.
 // Authentication-related exports will be added here.
 
-export * from "./middleware";
+// Middleware exports
+export { updateSession } from "./middleware";
+
 // NOTE: `createSupabaseServerClient` is server-only (uses `next/headers`).
 // To avoid bundling this into client/runtime, import from
 // `@posmul/shared-auth/server` explicitly where needed.
@@ -16,8 +18,18 @@ export * from "./middleware";
 // export * from "../../../apps/posmul-web/src/shared/mcp/supabase-project.service";
 
 // MCP helper functions - now located in this package
-export * from "./supabase-client";
-export * from "./supabase-project.service";
+export { 
+  SupabaseMCPClient,
+  createSupabaseMCPClient,
+  mcp_supabase_apply_migration,
+  mcp_supabase_execute_sql,
+  mcp_supabase_get_advisors,
+  mcp_supabase_list_tables
+} from "./supabase-client";
+
+export { 
+  SupabaseProjectService
+} from "./supabase-project.service";
 
 // MCP Error helpers
 export {
@@ -25,4 +37,5 @@ export {
   handleMCPError,
 } from "./mcp-errors";
 
+// React Native client (includes supabaseNative and SupabaseNativeClient)
 export * from "./react-native-client";

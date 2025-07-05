@@ -23,3 +23,6 @@ export class SupabaseProjectService {
     return this.projectId;
   }
 }
+
+export const supabaseNative = SupabaseProjectService.getInstance();
+export const SupabaseNativeClient = SupabaseProjectService;

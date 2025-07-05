@@ -114,7 +114,7 @@ export class UtilityFunctionEstimationService {
           success: false,
           error: new DomainError(
             "INSUFFICIENT_DATA",
-            "At least 3 observations required for utility estimation"
+            "3 observations required for utility estimation"
           ),
         };
       }
@@ -204,7 +204,7 @@ export class UtilityFunctionEstimationService {
           success: false,
           error: new DomainError(
             "NO_PARTICIPANTS",
-            "At least one participant required for social welfare calculation"
+            "participant required for social welfare calculation"
           ),
         };
       }

@@ -24,7 +24,7 @@ export class ValidationError extends BaseError {
 }
 
 export class DomainError extends BaseError {
-  constructor(message: string, code: string = "DOMAIN_ERROR") {
+  constructor(code: string, message: string = "Domain error occurred") {
     super(message, code, 400);
   }
 }
