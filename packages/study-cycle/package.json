@@ -1,5 +1,5 @@
 {
-  "name": "@posmul/study-cycle-core",
+  "name": "@posmul/study-cycle",
   "version": "1.0.0",
   "type": "module",
   "main": "./dist/index.js",

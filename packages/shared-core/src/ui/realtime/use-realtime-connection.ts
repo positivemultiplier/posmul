@@ -1,0 +1,3 @@
+// copied from apps/posmul-web/src/shared/hooks/use-realtime-connection.ts
+// TODO: refactor if needed
+// ... existing code ...
