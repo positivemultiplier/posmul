@@ -1,21 +1,27 @@
-// This file serves as the entry point for the @posmul/shared-auth package.
-// Authentication-related exports will be added here.
+// PosMul Shared Authentication Package
+// Clean Architecture + DDD implementation for universal auth
 
+// === Core Services ===
+export { AuthenticationService } from './services/authentication.service';
+
+// === Domain Layer ===
+export { UserDomainService } from './domain/user-domain.service';
+
+// === Use Cases ===
+export {
+  SignUpUseCase,
+  SignInUseCase,
+  UpdateProfileUseCase,
+  GetCurrentUserUseCase,
+  SignOutUseCase,
+} from './use-cases/auth.use-cases';
+
+// === Repository ===
+export { SupabaseUserRepository } from './repository/supabase-user.repository';
+
+// === Legacy Exports (for backward compatibility) ===
 // Middleware exports
 export { updateSession } from "./middleware";
-
-// NOTE: `createSupabaseServerClient` is server-only (uses `next/headers`).
-// To avoid bundling this into client/runtime, import from
-// `@posmul/shared-auth/server` explicitly where needed.
-// export * from "./server"; // removed from root barrel to prevent build errors
-
-// TODO: Migrate these files from apps/posmul-web to shared-auth package
-// TEMPORARY DISABLED to fix build dependency issues
-// Re-export Supabase MCP helper functions located in web app until they are migrated
-// export * from "../../../apps/posmul-web/src/shared/mcp/supabase-client";
-
-// Temporary re-export from web app
-// export * from "../../../apps/posmul-web/src/shared/mcp/supabase-project.service";
 
 // MCP helper functions - now located in this package
 export { 

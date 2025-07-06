@@ -1,19 +1,13 @@
-var BaseEntity = /** @class */ (function () {
-    function BaseEntity(props) {
+export class BaseEntity {
+    constructor(props) {
         this.props = props;
     }
-    BaseEntity.prototype.touch = function () {
+    touch() {
         if (this.props.updatedAt instanceof Date) {
             this.props.updatedAt = new Date();
         }
-    };
-    Object.defineProperty(BaseEntity.prototype, "propsAsJson", {
-        get: function () {
-            return this.props;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    return BaseEntity;
-}());
-export { BaseEntity };
+    }
+    get propsAsJson() {
+        return this.props;
+    }
+}

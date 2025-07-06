@@ -41,7 +41,7 @@ export default function PredictionGameForm({
   });
 
   const handleFormSubmit: SubmitHandler<PredictionGameFormData> = async (
-    data
+    data: PredictionGameFormData
   ) => {
     await onSubmit(data);
   };

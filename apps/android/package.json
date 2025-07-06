@@ -6,6 +6,8 @@
     "android": "echo 'To be implemented: react-native run-android'",
     "ios": "echo 'To be implemented: react-native run-ios'",
     "start": "echo 'To be implemented: react-native start'",
+    "dev": "echo 'Android dev mode not yet implemented'",
+    "build": "echo 'Android build not yet implemented'",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",

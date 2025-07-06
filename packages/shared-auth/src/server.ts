@@ -1,8 +1,12 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { cookies } from "next/headers";
 
-export const createSupabaseServerClient = async () => {
-  const cookieStore = await cookies();
+// Cookie store 타입 정의
+type CookieStore = {
+  get: (name: string) => { value: string } | undefined;
+  set: (options: { name: string; value: string } & Record<string, unknown>) => void;
+};
+
+export const createSupabaseServerClient = (cookieStore: CookieStore) => {
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

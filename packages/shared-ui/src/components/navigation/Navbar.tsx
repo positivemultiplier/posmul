@@ -1,16 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { memo, useMemo, useCallback } from "react";
+import { useMemo, useCallback } from "react";
 
-interface EconomicBalance {
+// Next.js navigation hooks를 optional로 처리
+interface NavigationHooks {
+  usePathname?: () => string;
+  useRouter?: () => {
+    push: (url: string) => void;
+    back: () => void;
+    forward: () => void;
+    refresh: () => void;
+  };
+}
+
+interface EconomicBalanceProps {
   pmp: number;
   pmc: number;
 }
 
 interface NavbarProps {
-  economicBalance: EconomicBalance;
+  economicBalance: EconomicBalanceProps;
   isAuthenticated: boolean;
 }
 
@@ -44,7 +54,7 @@ const mainDomains: MainDomain[] = [
 ];
 
 // 카테고리 데이터 (상수로 메모이제이션)
-const categoryData = {
+const categoryData: Record<string, readonly Category[]> = {
   prediction: [
     { id: "all", label: "📊 All", count: 342 },
     { id: "hot", label: "🔥 Hot", count: 23, isHot: true },
@@ -74,10 +84,10 @@ const categoryData = {
     { id: "debate", label: "🗣️ 토론", count: 92 },
     { id: "common", label: "⚙️ 공통 기능", count: 64 },
   ],
-} as const;
+};
 
 // 서브카테고리 데이터 (상수로 메모이제이션)
-const subCategoryData = {
+const subCategoryData: Record<string, readonly SubCategory[]> = {
   "prediction/sports": [
     { id: "all", label: "⚽ All", count: 89 },
     { id: "esports", label: "🎮 esports", count: 13 },
@@ -100,10 +110,10 @@ const subCategoryData = {
     { id: "healthcare", label: "🏥 헬스케어", count: 12 },
     { id: "energy", label: "⚡ 에너지", count: 12 },
   ],
-} as const;
+};
 
-// 메모이제이션된 컴포넌트들
-const EconomicBalance = memo(({ pmp, pmc }: { pmp: number; pmc: number }) => (
+// 서브 컴포넌트들
+const EconomicBalance = ({ pmp, pmc }: EconomicBalanceProps) => (
   <div className="hidden sm:flex items-center space-x-3 px-3 py-1 bg-gray-50 rounded-lg">
     <div className="flex items-center space-x-1">
       <span className="text-sm">🪙</span>
@@ -114,10 +124,9 @@ const EconomicBalance = memo(({ pmp, pmc }: { pmp: number; pmc: number }) => (
       <span className="text-xs font-medium">{pmc.toLocaleString()}</span>
     </div>
   </div>
-));
-EconomicBalance.displayName = "EconomicBalance";
+);
 
-const AuthActions = memo(({ isAuthenticated }: { isAuthenticated: boolean }) => (
+const AuthActions = ({ isAuthenticated }: { isAuthenticated: boolean }) => (
   <div className="flex items-center space-x-2">
     {isAuthenticated ? (
       <button className="p-1 text-gray-600 hover:text-gray-900 rounded-md hover:bg-gray-100">
@@ -140,25 +149,31 @@ const AuthActions = memo(({ isAuthenticated }: { isAuthenticated: boolean }) => 
       </div>
     )}
   </div>
-));
-AuthActions.displayName = "AuthActions";
+);
 
-function Navbar({ economicBalance, isAuthenticated }: NavbarProps) {
-  const pathname = usePathname();
-  const router = useRouter();
+// 메인 컴포넌트 - React 19 호환
+function Navbar({ economicBalance, isAuthenticated, pathname = "", router }: NavbarProps & {
+  pathname?: string;
+  router?: {
+    push: (url: string) => void;
+  };
+}) {
 
   // 현재 도메인 계산 (메모이제이션)
   const currentDomain = useMemo(() => {
-    return mainDomains.find((domain) => pathname.startsWith(domain.href))?.id || "prediction";
+    return (
+      mainDomains.find((domain) => pathname.startsWith(domain.href))?.id ||
+      "prediction"
+    );
   }, [pathname]);
 
   // 현재 카테고리 계산 (메모이제이션)
   const activeCategory = useMemo(() => {
     const pathParts = pathname.split("/");
     if (pathParts.length >= 3) {
-      const category = pathParts[2];
-      const currentCategories = categoryData[currentDomain as keyof typeof categoryData] || [];
-      return currentCategories.find((cat) => cat.id === category)?.id || "all";
+      const categoryId = pathParts[2];
+      const categories = categoryData[currentDomain] || [];
+      return categories.find((cat) => cat.id === categoryId)?.id || "all";
     }
     return "all";
   }, [pathname, currentDomain]);
@@ -167,47 +182,54 @@ function Navbar({ economicBalance, isAuthenticated }: NavbarProps) {
   const activeSubCategory = useMemo(() => {
     const pathParts = pathname.split("/");
     if (pathParts.length >= 4) {
-      const subCategory = pathParts[3];
-      const key = `${currentDomain}/${activeCategory}` as keyof typeof subCategoryData;
+      const subCategoryId = pathParts[3];
+      const key = `${currentDomain}/${activeCategory}`;
       const subCategories = subCategoryData[key] || [];
-      return subCategories.find((sub) => sub.id === subCategory)?.id || "all";
+      return (
+        subCategories.find((sub) => sub.id === subCategoryId)?.id || "all"
+      );
     }
     return "all";
   }, [pathname, currentDomain, activeCategory]);
 
   // 현재 카테고리 데이터 (메모이제이션)
-  const currentCategories = useMemo(() => {
-    return categoryData[currentDomain as keyof typeof categoryData] || [];
-  }, [currentDomain]);
+  const currentCategories = useMemo(
+    () => categoryData[currentDomain] || [],
+    [currentDomain]
+  );
 
   // 현재 서브카테고리 데이터 (메모이제이션)
-  const currentSubCategories = useMemo(() => {
-    const key = `${currentDomain}/${activeCategory}` as keyof typeof subCategoryData;
-    return subCategoryData[key] || [];
-  }, [currentDomain, activeCategory]);
+  const currentSubCategories = useMemo(
+    () => subCategoryData[`${currentDomain}/${activeCategory}`] || [],
+    [currentDomain, activeCategory]
+  );
 
   // 표시 여부 계산 (메모이제이션)
-  const shouldShowCategories = useMemo(() => currentCategories.length > 0, [currentCategories]);
-  const shouldShowSubCategories = useMemo(() => currentSubCategories.length > 0, [currentSubCategories]);
+  const shouldShowCategories = useMemo(
+    () => currentCategories.length > 0,
+    [currentCategories]
+  );
+  const shouldShowSubCategories = useMemo(
+    () => currentSubCategories.length > 0,
+    [currentSubCategories]
+  );
 
   // 이벤트 핸들러 (useCallback으로 메모이제이션)
-  const handleCategoryClick = useCallback((categoryId: string) => {
-    const domainPath = `/${currentDomain}`;
-    if (categoryId === "all") {
-      router.push(domainPath);
-    } else {
-      router.push(`${domainPath}/${categoryId}`);
-    }
-  }, [currentDomain, router]);
+  const handleCategoryClick = useCallback(
+    (categoryId: string) => {
+      const domainPath = `/${currentDomain}`;
+      router?.push(categoryId === "all" ? domainPath : `${domainPath}/${categoryId}`);
+    },
+    [currentDomain, router]
+  );
 
-  const handleSubCategoryClick = useCallback((subCategoryId: string) => {
-    const basePath = `/${currentDomain}/${activeCategory}`;
-    if (subCategoryId === "all") {
-      router.push(basePath);
-    } else {
-      router.push(`${basePath}/${subCategoryId}`);
-    }
-  }, [currentDomain, activeCategory, router]);
+  const handleSubCategoryClick = useCallback(
+    (subCategoryId: string) => {
+      const basePath = `/${currentDomain}/${activeCategory}`;
+      router?.push(subCategoryId === "all" ? basePath : `${basePath}/${subCategoryId}`);
+    },
+    [currentDomain, activeCategory, router]
+  );
 
   return (
     <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
@@ -220,18 +242,19 @@ function Navbar({ economicBalance, isAuthenticated }: NavbarProps) {
             <span className="text-lg font-bold text-gray-900">PosMul</span>
           </Link>
 
-          <nav className="hidden md:flex items-center space-x-4">
+          {/* Main Domain Navigation */}
+          <nav className="flex items-center space-x-1">
             {mainDomains.map((domain) => (
               <Link
                 key={domain.id}
                 href={domain.href}
-                className={`flex items-center space-x-1 px-2 py-1 rounded-md text-sm font-medium transition-colors ${
+                className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                   currentDomain === domain.id
                     ? "bg-blue-100 text-blue-700"
                     : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
               >
-                <span className="text-sm">{domain.icon}</span>
+                <span>{domain.icon}</span>
                 <span>{domain.label}</span>
               </Link>
             ))}
@@ -240,7 +263,10 @@ function Navbar({ economicBalance, isAuthenticated }: NavbarProps) {
 
         {/* Right: Economic Info + User Actions */}
         <div className="flex items-center space-x-3">
-          <EconomicBalance pmp={economicBalance.pmp} pmc={economicBalance.pmc} />
+          <EconomicBalance
+            pmp={economicBalance.pmp}
+            pmc={economicBalance.pmc}
+          />
           <AuthActions isAuthenticated={isAuthenticated} />
         </div>
       </div>
@@ -294,5 +320,5 @@ function Navbar({ economicBalance, isAuthenticated }: NavbarProps) {
   );
 }
 
-// 메인 컴포넌트 메모이제이션
-export default memo(Navbar);
+// 메인 컴포넌트 (메모이제이션 제거하여 타입 문제 해결)
+export default Navbar;

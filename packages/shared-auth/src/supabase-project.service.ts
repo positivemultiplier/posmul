@@ -1,5 +1,3 @@
-export * from "@posmul/shared-auth";
-
 export class SupabaseProjectService {
   private static instance: SupabaseProjectService;
   private readonly projectId: string;

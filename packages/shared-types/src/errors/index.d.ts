@@ -11,7 +11,7 @@ export declare class ValidationError extends BaseError {
     constructor(message: string, field: string);
 }
 export declare class DomainError extends BaseError {
-    constructor(message: string, code?: string);
+    constructor(code: string, message?: string);
 }
 export declare class NotFoundError extends BaseError {
     constructor(message: string);

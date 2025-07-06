@@ -115,8 +115,8 @@ export class McpSupabaseAssessmentRepository implements IAssessmentRepository {
 
       const submissions = data
         .map((row: any) => Submission.create(row))
-        .filter((result) => result.success)
-        .map((result) => result.data as Submission);
+        .filter((result: any) => result.success)
+        .map((result: any) => result.data as Submission);
 
       return success(submissions);
     } catch (e) {

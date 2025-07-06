@@ -385,7 +385,7 @@ export class UtilityFunctionEstimationService {
       );
 
       if (!currentUtilityResult.success) {
-        return currentUtilityResult;
+        return { success: false, error: (currentUtilityResult as { success: false; error: any }).error };
       }
 
       // 제안된 포트폴리오의 효용 계산
@@ -398,7 +398,7 @@ export class UtilityFunctionEstimationService {
       );
 
       if (!proposedUtilityResult.success) {
-        return proposedUtilityResult;
+        return { success: false, error: (proposedUtilityResult as { success: false; error: any }).error };
       }
 
       const expectedUtilityChange =

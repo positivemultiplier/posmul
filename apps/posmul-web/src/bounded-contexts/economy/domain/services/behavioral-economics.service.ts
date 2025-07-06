@@ -154,7 +154,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
     let totalAllocatedPMP = 0;
     let totalAllocatedPMC = 0;
 
-    for (const [accountType, baseRatio] of defaultAllocation.entries()) {
+    defaultAllocation.forEach((baseRatio, accountType) => {
       let pmpRatio = baseRatio.pmpRatio;
       let pmcRatio = baseRatio.pmcRatio;
 
@@ -178,7 +178,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
 
       totalAllocatedPMP += allocatedPMP;
       totalAllocatedPMC += allocatedPMC;
-    }
+    });
 
     // 모든 계정 타입에 대해 할당이 생성되었는지 확인
     if (recommendedAllocation.size === 0) {
@@ -612,14 +612,14 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
     let bestTimeSlot: string | undefined;
     let bestSuccessRate = 0;
 
-    for (const [slot, data] of timeAnalysis.entries()) {
+    timeAnalysis.forEach((data, slot) => {
       const successRate = data.total > 0 ? data.success / data.total : 0;
       if (successRate > bestSuccessRate && data.total >= 3) {
         // 최소 3번 이상 데이터
         bestSuccessRate = successRate;
         bestTimeSlot = slot;
       }
-    }
+    });
 
     return { bestTimeSlot, successRate: bestSuccessRate };
   }
@@ -661,13 +661,13 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
     let optimalRange: string | undefined;
     let bestSuccessRate = 0;
 
-    for (const [range, data] of rangeAnalysis.entries()) {
+    rangeAnalysis.forEach((data, range) => {
       const successRate = data.total > 0 ? data.success / data.total : 0;
       if (successRate > bestSuccessRate && data.total >= 3) {
         bestSuccessRate = successRate;
         optimalRange = range;
       }
-    }
+    });
 
     return { optimalRange, successRate: bestSuccessRate };
   }

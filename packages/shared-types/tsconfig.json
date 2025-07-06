@@ -8,5 +8,10 @@
     "noEmit": false
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.tsx", "node_modules", "dist"]
+  "exclude": ["src/**/*.tsx", "node_modules", "dist"],
+  "references": [
+    {
+      "path": "../universal-mcp-types"
+    }
+  ]
 }

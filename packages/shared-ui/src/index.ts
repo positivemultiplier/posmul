@@ -46,4 +46,7 @@ export type { IDomainEventPublisher } from "@posmul/shared-types";
 // export { MoneyWaveCalculatorService } from "../../../apps/posmul-web/src/shared/economy-kernel/services/money-wave-calculator.service";
 
 // Forms
+
 export { default as PredictionGameForm } from "./components/forms/PredictionGameForm";
+export { default as LoginForm, type LoginFormData } from "./components/forms/LoginForm";
+export { default as SignUpForm } from "./components/forms/SignUpForm";

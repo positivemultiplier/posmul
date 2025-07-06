@@ -7,8 +7,8 @@
  * @since 2024-12
  */
 // Sidebar specific types
-export var SIDEBAR_ICON_SIZE = 24;
-export var ROUTE_PATTERNS = [
+export const SIDEBAR_ICON_SIZE = 24;
+export const ROUTE_PATTERNS = [
     {
         domain: "prediction",
         pattern: "/prediction/[category]/[subcategory]/[slug]?",

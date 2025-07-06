@@ -45,7 +45,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen`}
       >
         <div className="flex flex-col min-h-screen">
-          {/* 새로운 네비게이션바 */}
+          {/* 네비게이션바 */}
           <Navbar
             economicBalance={mockEconomicBalance}
             isAuthenticated={false}

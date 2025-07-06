@@ -2,32 +2,32 @@
   "name": "@posmul/shared-types",
   "version": "1.0.0",
   "private": true,
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
     },
     "./errors": {
-      "types": "./dist/errors/index.d.ts",
-      "default": "./dist/errors/index.js"
+      "types": "./dist/src/errors/index.d.ts",
+      "default": "./dist/src/errors/index.js"
     },
     "./errors/*": {
-      "types": "./dist/errors/*.d.ts",
-      "default": "./dist/errors/*.js"
+      "types": "./dist/src/errors/*.d.ts",
+      "default": "./dist/src/errors/*.js"
     },
     "./src/*": {
-      "types": "./dist/*.d.ts",
-      "default": "./dist/*.js"
+      "types": "./dist/src/*.d.ts",
+      "default": "./dist/src/*.js"
     },
     "./src/errors/*": {
-      "types": "./dist/errors/*.d.ts",
-      "default": "./dist/errors/*.js"
+      "types": "./dist/src/errors/*.d.ts",
+      "default": "./dist/src/errors/*.js"
     },
     "./*": {
-      "types": "./dist/*.d.ts",
-      "default": "./dist/*.js"
+      "types": "./dist/src/*.d.ts",
+      "default": "./dist/src/*.js"
     },
     "./src/errors": {
       "types": "./dist/errors/index.d.ts",
@@ -39,6 +39,10 @@
   },
   "scripts": {
     "test": "jest --config jest.config.js --passWithNoTests",
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch"
+  },
+  "dependencies": {
+    "@posmul/universal-mcp-types": "workspace:*"
   }
 }

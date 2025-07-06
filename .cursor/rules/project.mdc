@@ -85,6 +85,78 @@ Shared Economy Kernel ← All Domains (read-only access)
 - **All domains can READ from Economy Kernel, but WRITE through Domain Events**
 - **Use `workspace:*` protocol for internal package dependencies**
 
+## DDD Database Schema Architecture (CRITICAL)
+
+### Schema-per-Bounded-Context Principle
+
+**NEVER create tables in the `public` schema for domain logic!** Each Bounded Context has its own database schema to ensure proper isolation and maintainability.
+
+#### Current Schema Structure:
+
+```
+Supabase Database Schemas:
+├── assessment/          # Assessment Context (evaluations, tests)
+├── donation/           # Donation Context (charitable giving)
+├── economy/            # Economy Context (PMP/PMC system) - Shared Kernel
+├── forum/              # Forum Context (discussions, debates)
+├── investment/         # Investment Context (local/major leagues)
+├── prediction/         # Prediction Context (prediction games)
+├── study_cycle/        # Study-Cycle Context (learning management)
+├── user/               # User Context (user management)
+└── public/             # System tables only (NOT domain logic)
+```
+
+#### Schema Design Rules:
+
+1. **One Schema per Bounded Context**: Each domain gets its own schema
+2. **Cross-Schema References**: Use foreign keys across schemas when needed
+3. **Shared Tables**: Only `economy` schema contains shared kernel tables
+4. **Naming Convention**: `[context]_[entity]` (e.g., `sc_textbooks`, `pred_games`)
+5. **RLS Policies**: Each schema has its own Row Level Security policies
+
+#### Study-Cycle Schema Structure:
+
+```sql
+-- study_cycle schema tables:
+study_cycle.sc_textbooks            -- 교재 관리
+study_cycle.sc_chapters             -- 챕터 구조
+study_cycle.sc_questions            -- 문제 및 풀이 템플릿
+study_cycle.sc_assessments          -- 평가 마스터
+study_cycle.sc_user_answers         -- 사용자 답안
+study_cycle.sc_user_textbook_progress -- 사용자별 교재 진도
+study_cycle.sc_study_sessions       -- 학습 세션 로그
+study_cycle.sc_readings             -- 회독 관리 (집계근)
+study_cycle.sc_reading_progress     -- 회독별 챕터 진도
+```
+
+#### Migration Pattern for Bounded Contexts:
+
+```typescript
+// Always specify schema in migrations
+await mcp_supabase_apply_migration({
+  project_id: projectId,
+  name: "create_prediction_tables",
+  query: `
+    -- Create tables in prediction schema (NOT public)
+    CREATE TABLE prediction.pred_games (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      creator_id UUID NOT NULL REFERENCES auth.users(id),
+      title TEXT NOT NULL,
+      -- ... other fields
+    );
+    
+    -- Cross-schema reference to economy (Shared Kernel)
+    CREATE TABLE prediction.pred_stakes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id UUID NOT NULL REFERENCES prediction.pred_games(id),
+      user_id UUID NOT NULL REFERENCES auth.users(id),
+      pmp_amount DECIMAL(15,2) REFERENCES economy.pmp_accounts(balance),
+      -- ... other fields
+    );
+  `,
+});
+```
+
 ## Monorepo Development Commands (CRITICAL)
 
 ### Root Level Commands (Use these for development)
@@ -156,6 +228,7 @@ pnpm -r lint
 - **Use `mcp_supabase_list_tables`** to inspect schema
 - **Use `mcp_supabase_get_advisors`** for security and performance checks
 - **Use `mcp_supabase_generate_typescript_types`** for type generation
+- **ALWAYS specify schema name** in queries and migrations
 
 ### GitHub MCP - Project Management
 
@@ -228,11 +301,23 @@ packages/
       utils/
     package.json
     
-  study-cycle-core/
+  study-cycle-core/           # Study-Cycle Domain Package
     src/
       domain/
+        entities/             # StudySession, Reading, Textbook
+        value-objects/        # StudyMetrics, ReadingRound
+        repositories/         # IStudySessionRepository
+        services/             # StudyTimeTracker
+        events/               # StudyCompletedEvent
       application/
+        use-cases/            # StartStudySession, CompleteReading
+        dto/                  # StudyQueryDto, ReadingResponseDto
+        event-handlers/       # EconomicEventHandlers
       infrastructure/
+        repositories/         # MCPStudySessionRepository
+        services/             # StudyTimeTrackerService
+      types/
+        supabase-generated.ts # Generated from study_cycle schema
     package.json
 ```
 
@@ -291,84 +376,81 @@ import { Button, Card } from 'shared-ui';
 
 ## MCP-Specific Development Patterns
 
-### Database Schema Creation (With Monorepo Context)
+### Database Schema Creation (With DDD Context)
 
 ```typescript
-// Use MCP for all schema operations
+// Use MCP for schema-specific operations
 // File: apps/posmul-web/src/shared/mcp/migrations.ts
-export const createPredictionTables = async (projectId: string) => {
+export const createStudyCycleExtensions = async (projectId: string) => {
   await mcp_supabase_apply_migration({
     project_id: projectId,
-    name: "create_prediction_tables",
+    name: "extend_study_cycle_schema",
     query: `
-      CREATE TABLE prediction_games (
+      -- Add new tables to study_cycle schema (NOT public)
+      CREATE TABLE study_cycle.sc_solution_templates (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        creator_id UUID NOT NULL,
-        title TEXT NOT NULL,
-        description TEXT,
-        prediction_type TEXT NOT NULL,
-        options JSONB NOT NULL,
-        start_time TIMESTAMPTZ NOT NULL,
-        end_time TIMESTAMPTZ NOT NULL,
-        settlement_time TIMESTAMPTZ NOT NULL,
-        minimum_stake DECIMAL(15,2) NOT NULL DEFAULT 0,
-        maximum_stake DECIMAL(15,2) NOT NULL DEFAULT 1000,
-        max_participants INTEGER,
-        status TEXT NOT NULL DEFAULT 'PENDING',
-        money_wave_id UUID,
-        game_importance_score DECIMAL(3,2) DEFAULT 1.0,
-        allocated_prize_pool DECIMAL(15,2) DEFAULT 0,
-        created_at TIMESTAMPTZ DEFAULT NOW(),
-        updated_at TIMESTAMPTZ DEFAULT NOW(),
-        version INTEGER DEFAULT 1,
-        
-        CONSTRAINT valid_status CHECK (status IN ('PENDING', 'ACTIVE', 'ENDED', 'SETTLED', 'CANCELLED', 'DELETED')),
-        CONSTRAINT valid_prediction_type CHECK (prediction_type IN ('binary', 'wdl', 'ranking')),
-        CONSTRAINT positive_stakes CHECK (minimum_stake >= 0 AND maximum_stake > minimum_stake),
-        CONSTRAINT valid_importance CHECK (game_importance_score BETWEEN 0.1 AND 3.0),
-        CONSTRAINT valid_times CHECK (start_time < end_time AND end_time < settlement_time)
+        textbook_id UUID NOT NULL REFERENCES study_cycle.sc_textbooks(id),
+        template_name TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        problem_type TEXT NOT NULL,
+        template_structure JSONB NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
       );
 
-      -- Create indexes
-      CREATE INDEX idx_prediction_games_creator ON prediction_games(creator_id);
-      CREATE INDEX idx_prediction_games_status ON prediction_games(status);
-      CREATE INDEX idx_prediction_games_start_time ON prediction_games(start_time);
-      CREATE INDEX idx_prediction_games_money_wave ON prediction_games(money_wave_id);
+      -- Cross-schema reference to economy (Shared Kernel)
+      CREATE TABLE study_cycle.sc_learning_rewards (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES auth.users(id),
+        reading_id UUID NOT NULL REFERENCES study_cycle.sc_readings(id),
+        pmc_earned DECIMAL(15,2) DEFAULT 0.00,
+        reason TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
 
-      -- Enable RLS
-      ALTER TABLE prediction_games ENABLE ROW LEVEL SECURITY;
-
-      -- RLS Policies
-      CREATE POLICY "Users can view all games" ON prediction_games
-        FOR SELECT USING (true);
-
-      CREATE POLICY "Users can create games" ON prediction_games
-        FOR INSERT WITH CHECK (auth.uid() = creator_id);
-
-      CREATE POLICY "Creators can update their games" ON prediction_games
-        FOR UPDATE USING (auth.uid() = creator_id);
+      -- Reference economy schema for reward calculation
+      CREATE OR REPLACE FUNCTION study_cycle.calculate_reading_reward(
+        p_user_id UUID,
+        p_reading_id UUID
+      ) RETURNS DECIMAL(15,2) AS $$
+      DECLARE
+        reward_amount DECIMAL(15,2);
+      BEGIN
+        -- Calculate based on economy.reward_rates
+        SELECT base_rate INTO reward_amount
+        FROM economy.reward_rates
+        WHERE activity_type = 'reading_completion';
+        
+        RETURN COALESCE(reward_amount, 0.00);
+      END;
+      $$ LANGUAGE plpgsql;
     `,
   });
 };
 ```
 
-### Repository Implementation with MCP (Monorepo)
+### Repository Implementation with Schema Context
 
 ```typescript
-// File: apps/posmul-web/src/bounded-contexts/prediction/infrastructure/repositories/mcp-prediction-game.repository.ts
+// File: packages/study-cycle-core/src/infrastructure/repositories/mcp-study-session.repository.ts
 import { Result } from 'shared-types';
-import { IPredictionGameRepository } from '../../domain/repositories/prediction-game.repository';
-import { PredictionGame } from '../../domain/entities/prediction-game.entity';
+import { IStudySessionRepository } from '../../domain/repositories/study-session.repository';
+import { StudySession } from '../../domain/entities/study-session.entity';
 
-export class MCPPredictionGameRepository implements IPredictionGameRepository {
+export class MCPStudySessionRepository implements IStudySessionRepository {
   constructor(private readonly projectId: string) {}
 
-  async save(game: PredictionGame): Promise<Result<void, RepositoryError>> {
+  async save(session: StudySession): Promise<Result<void, RepositoryError>> {
     try {
       const query = `
-        INSERT INTO prediction_games (id, creator_id, title, ...)
-        VALUES ($1, $2, $3, ...)
-        ON CONFLICT (id) DO UPDATE SET ...
+        INSERT INTO study_cycle.sc_study_sessions (
+          id, user_id, textbook_id, chapter_id, 
+          start_time, end_time, duration_seconds
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (id) DO UPDATE SET
+          end_time = EXCLUDED.end_time,
+          duration_seconds = EXCLUDED.duration_seconds,
+          updated_at = NOW()
       `;
 
       await mcp_supabase_execute_sql({
@@ -381,29 +463,126 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
       return { success: false, error: new RepositoryError("Save failed", error) };
     }
   }
+
+  async findActiveSessionsByUser(userId: string): Promise<Result<StudySession[], RepositoryError>> {
+    try {
+      const query = `
+        SELECT 
+          ss.*,
+          st.title as textbook_title,
+          sc.title as chapter_title
+        FROM study_cycle.sc_study_sessions ss
+        LEFT JOIN study_cycle.sc_textbooks st ON ss.textbook_id = st.id
+        LEFT JOIN study_cycle.sc_chapters sc ON ss.chapter_id = sc.id
+        WHERE ss.user_id = $1 
+        AND ss.end_time IS NULL
+        ORDER BY ss.start_time DESC
+      `;
+
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      const sessions = result.data.map(row => this.mapRowToDomain(row));
+      return { success: true, data: sessions };
+    } catch (error) {
+      return { success: false, error: new RepositoryError("Query failed", error) };
+    }
+  }
 }
 ```
 
-## TypeScript Standards (Monorepo + MCP)
+### Cross-Schema Query Patterns
+
+```typescript
+// Example: Getting study statistics with economic rewards
+export class StudyAnalyticsService {
+  async getStudyStatisticsWithRewards(userId: string): Promise<StudyStatistics> {
+    const query = `
+      SELECT 
+        sr.id,
+        sr.round,
+        sr.total_time_minutes,
+        sr.total_pages_read,
+        st.title as textbook_title,
+        -- Cross-schema reference to economy
+        COALESCE(er.total_pmc_earned, 0) as total_rewards
+      FROM study_cycle.sc_readings sr
+      JOIN study_cycle.sc_textbooks st ON sr.textbook_id = st.id
+      LEFT JOIN (
+        SELECT 
+          reading_id,
+          SUM(pmc_earned) as total_pmc_earned
+        FROM study_cycle.sc_learning_rewards
+        WHERE user_id = $1
+        GROUP BY reading_id
+      ) er ON sr.id = er.reading_id
+      WHERE sr.user_id = $1
+      ORDER BY sr.updated_at DESC
+    `;
+
+    const result = await mcp_supabase_execute_sql({
+      project_id: this.projectId,
+      query: query,
+    });
+
+    return this.mapToStatistics(result.data);
+  }
+}
+```
+
+## TypeScript Standards (Monorepo + MCP + Schema)
 
 ### Use shared-types package for common types:
 
 ```typescript
 // packages/shared-types/src/branded-types.ts
 export type UserId = string & { readonly brand: unique symbol };
-export type PredictionId = string & { readonly brand: unique symbol };
-export type PmpAmount = number & { readonly brand: unique symbol };
-export type PmcAmount = number & { readonly brand: unique symbol };
+export type TextbookId = string & { readonly brand: unique symbol };
+export type StudySessionId = string & { readonly brand: unique symbol };
+export type ReadingId = string & { readonly brand: unique symbol };
+export type ChapterId = string & { readonly brand: unique symbol };
 export type SupabaseProjectId = string & { readonly brand: unique symbol };
 ```
 
-### Result/Either pattern in shared-types:
+### Schema-specific type generation:
 
 ```typescript
-// packages/shared-types/src/common.ts
-export type Result<T, E = Error> =
-  | { success: true; data: T }
-  | { success: false; error: E };
+// packages/study-cycle-core/src/types/supabase-generated.ts
+// Generated from study_cycle schema only
+export interface StudyCycleTables {
+  sc_textbooks: {
+    Row: {
+      id: string;
+      creator_id: string | null;
+      title: string;
+      description: string | null;
+      cover_image_url: string | null;
+      created_at: string;
+      updated_at: string;
+    };
+    Insert: {
+      id?: string;
+      creator_id?: string | null;
+      title: string;
+      description?: string | null;
+      cover_image_url?: string | null;
+      created_at?: string;
+      updated_at?: string;
+    };
+    Update: {
+      id?: string;
+      creator_id?: string | null;
+      title?: string;
+      description?: string | null;
+      cover_image_url?: string | null;
+      created_at?: string;
+      updated_at?: string;
+    };
+  };
+  // ... other study_cycle tables
+}
 ```
 
 ## React Components (Next.js 15 + React 19)
@@ -529,34 +708,50 @@ New-Item -ItemType Directory -Path "packages\shared-domain"
 - **Package Isolation**: Maintain security boundaries between packages
 - **Regular Security Audits**: Run `mcp_supabase_get_advisors` for security checks
 
-## CRITICAL REMINDERS (Monorepo Edition)
+## CRITICAL REMINDERS (Monorepo + DDD Database Edition)
 
 1. **NEVER violate Clean Architecture dependency rules**
 2. **NEVER use npm or yarn** - always use pnpm
 3. **NEVER bypass turbo** - use turbo for builds and tests
-4. **Use workspace protocols** for internal dependencies
-5. **Respect package boundaries** - don't directly import across packages
-6. **Use PowerShell commands** - never bash/zsh
-7. **Always implement Result pattern** for error handling
-8. **Repository interfaces in Domain** - implementations in Infrastructure
-9. **Server Components by default** - Client only when needed
-10. **🔥 USE MCP TOOLS FOR ALL DATABASE AND PROJECT OPERATIONS**
-11. **🔥 ECONOMIC INTEGRATION IS CRITICAL** - All domains must integrate with PMP/PMC system
-12. **Use Domain Events for cross-domain economic transactions**
-13. **Shared Economy Kernel for read access, Events for write access**
-14. **Always display economic balance in relevant UI components**
-15. **🔥 ALWAYS run security advisors after schema changes**
+4. **NEVER create domain tables in public schema** - use schema-per-context
+5. **ALWAYS specify schema name** in all SQL queries and migrations
+6. **Use workspace protocols** for internal dependencies
+7. **Respect package boundaries** - don't directly import across packages
+8. **Use PowerShell commands** - never bash/zsh
+9. **Always implement Result pattern** for error handling
+10. **Repository interfaces in Domain** - implementations in Infrastructure
+11. **Server Components by default** - Client only when needed
+12. **🔥 USE MCP TOOLS FOR ALL DATABASE AND PROJECT OPERATIONS**
+13. **🔥 ECONOMIC INTEGRATION IS CRITICAL** - All domains must integrate with PMP/PMC system
+14. **Use Domain Events for cross-domain economic transactions**
+15. **Shared Economy Kernel for read access, Events for write access**
+16. **Always display economic balance in relevant UI components**
+17. **🔥 ALWAYS run security advisors after schema changes**
+18. **🔥 RESPECT SCHEMA BOUNDARIES** - Each Bounded Context has its own schema
 
 ## MCP Tool Priority (CRITICAL)
 
 ### Supabase MCP Tools (Database Operations)
 
 1. **`mcp_supabase_list_projects`** - Get project information
-2. **`mcp_supabase_list_tables`** - Inspect current schema
-3. **`mcp_supabase_apply_migration`** - Apply schema changes
-4. **`mcp_supabase_execute_sql`** - Run queries and DML
+2. **`mcp_supabase_list_tables`** - Inspect current schema (specify schema parameter)
+3. **`mcp_supabase_apply_migration`** - Apply schema changes (with schema specification)
+4. **`mcp_supabase_execute_sql`** - Run queries and DML (with schema-qualified table names)
 5. **`mcp_supabase_get_advisors`** - Check security/performance
-6. **`mcp_supabase_generate_typescript_types`** - Generate types
+6. **`mcp_supabase_generate_typescript_types`** - Generate types (schema-specific)
+
+### Schema-Aware Query Examples:
+
+```sql
+-- ✅ CORRECT: Schema-qualified table names
+SELECT * FROM study_cycle.sc_readings WHERE user_id = $1;
+SELECT * FROM prediction.pred_games WHERE status = 'active';
+SELECT * FROM economy.pmp_accounts WHERE user_id = $1;
+
+-- ❌ WRONG: Unqualified table names
+SELECT * FROM sc_readings WHERE user_id = $1;
+SELECT * FROM pred_games WHERE status = 'active';
+```
 
 ### GitHub MCP Tools (Project Management)
 
@@ -575,31 +770,7 @@ New-Item -ItemType Directory -Path "packages\shared-domain"
 - Direct SQL file execution
 - Manual schema management
 - Commands that bypass turbo cache
+- Unqualified table names in queries
+- Domain logic in public schema
 
-## Monorepo + Dual MCP Workflow Integration
-
-### Complete Development Cycle
-
-1. **Issue Creation** → `mcp_Github_create_issue` (with monorepo context)
-2. **Package Development** → Use turbo for builds
-3. **Database Design** → `mcp_supabase_apply_migration`
-4. **Cross-Package Integration** → Use workspace protocols
-5. **Testing** → `turbo test` (all packages)
-6. **Pull Request** → `mcp_Github_create_pull_request`
-7. **Security Check** → `mcp_supabase_get_advisors`
-8. **Type Generation** → `mcp_supabase_generate_typescript_types`
-
-### Quality Assurance Integration
-
-- **GitHub MCP**: DDD architecture compliance, PowerShell compatibility
-- **Supabase MCP**: RLS policies, performance optimization
-- **Turbo**: Build optimization, cache management
-- **pnpm**: Dependency management, workspace integrity
-- **Economic System**: Agency Theory logic verification, PMP/PMC integrity
-
-When in doubt, ask yourself: "Does this follow DDD principles, Clean Architecture rules, respect monorepo boundaries, use pnpm + turbo, use DUAL MCP tools (Supabase + GitHub), AND properly integrate with the economic system?"
-
-- **Supabase MCP**: RLS 정책, 성능 최적화 권장사항
-- **Economic System**: Agency Theory 로직 검증, PMP/PMC 무결성
-
-When in doubt, ask yourself: "Does this follow DDD principles, Clean Architecture rules, use DUAL MCP tools (Supabase + GitHub), AND properly integrate with the economic system?"
+When in doubt, ask yourself: "Does this follow DDD principles, Clean Architecture rules, respect monorepo boundaries, use schema-per-bounded-context, use pnpm + turbo, use DUAL MCP tools (Supabase + GitHub), AND properly integrate with the economic system?"

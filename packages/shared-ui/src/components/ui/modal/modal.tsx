@@ -3,7 +3,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-import { ReactNode } from "react";
+import React, { ReactNode } from "react";
 import { cn } from "../../../utils/cn";
 
 // Modal 크기 정의
@@ -88,7 +88,7 @@ export function Modal({
                   modalSizes[size],
                   className
                 )}
-                onKeyDown={(e) => {
+                onKeyDown={(e: React.KeyboardEvent) => {
                   if (closeOnEsc && e.key === "Escape") {
                     onClose();
                   }

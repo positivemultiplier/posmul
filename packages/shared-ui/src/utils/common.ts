@@ -23,7 +23,7 @@ export const ResultUtils = {
     if (result.success) {
       return ResultUtils.success(mapper(result.data));
     }
-    return result;
+    return result as ResultType<U>;
   },
 
   flatMap: <T, U>(
@@ -33,7 +33,7 @@ export const ResultUtils = {
     if (result.success) {
       return mapper(result.data);
     }
-    return result;
+    return result as ResultType<U>;
   },
 };
 

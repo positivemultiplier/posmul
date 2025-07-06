@@ -11,7 +11,7 @@
  *
  * 🚀 Universal MCP Automation System (Standalone)으로 생성됨
  */
-export var Constants = {
+export const Constants = {
     public: {
         Enums: {
             game_status: ["DRAFT", "ACTIVE", "CLOSED", "SETTLED", "CANCELLED"],

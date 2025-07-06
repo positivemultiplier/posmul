@@ -9,7 +9,7 @@ export class UseCaseError extends BaseError {
   constructor(message: string, cause?: Error) {
     super(message, "USE_CASE_ERROR", 400);
     if (cause) {
-      (this as any).cause = cause;
+      this.cause = cause;
     }
   }
 }
@@ -48,6 +48,7 @@ export * from "./store.error";
 export * from "./user.error";
 export * from "./validation.error";
 
+// 기존 Result 타입 유지 (호환성)
 export type Result<T, E = BaseError> =
   | { success: true; data: T }
   | { success: false; error: E };

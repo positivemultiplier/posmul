@@ -286,18 +286,32 @@ importers:
         version: 5.8.3
 
   packages/shared-auth:
-    devDependencies:
+    dependencies:
+      '@posmul/shared-types':
+        specifier: workspace:*
+        version: link:../shared-types
       '@supabase/supabase-js':
         specifier: ^2.43.2
         version: 2.50.2
+    devDependencies:
+      '@types/node':
+        specifier: ^20.0.0
+        version: 20.19.2
       eslint:
         specifier: ^8.57.1
         version: 8.57.1
+      next:
+        specifier: ^15.3.4
+        version: 15.3.4(@babel/core@7.27.7)(@playwright/test@1.53.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       typescript:
         specifier: ^5.4.5
         version: 5.8.3
 
   packages/shared-types:
+    dependencies:
+      '@posmul/universal-mcp-types':
+        specifier: workspace:*
+        version: link:../universal-mcp-types
     devDependencies:
       typescript:
         specifier: ^5.4.5
@@ -329,6 +343,12 @@ importers:
       next:
         specifier: 15.3.4
         version: 15.3.4(@babel/core@7.27.7)(@playwright/test@1.53.1)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      react:
+        specifier: ^19.0.0
+        version: 19.1.0
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.1.0(react@19.1.0)
       react-hook-form:
         specifier: ^7.52.1
         version: 7.59.0(react@19.1.0)
@@ -348,9 +368,6 @@ importers:
       '@types/react-dom':
         specifier: ^19.1.6
         version: 19.1.6(@types/react@19.1.8)
-      react:
-        specifier: ^19.0.0
-        version: 19.1.0
       typescript:
         specifier: ^5
         version: 5.8.3
@@ -384,6 +401,27 @@ importers:
         version: 29.4.0(@babel/core@7.27.7)(@jest/transform@30.0.2)(@jest/types@30.0.1)(babel-jest@30.0.2(@babel/core@7.27.7))(jest-util@30.0.2)(jest@30.0.3(@types/node@20.19.2)(ts-node@10.9.2(@types/node@20.19.2)(typescript@5.8.3)))(typescript@5.8.3)
       typescript:
         specifier: ^5.4.5
+        version: 5.8.3
+
+  packages/universal-mcp-types:
+    devDependencies:
+      '@types/jest':
+        specifier: ^29.5.14
+        version: 29.5.14
+      '@types/node':
+        specifier: ^20.17.9
+        version: 20.19.2
+      jest:
+        specifier: ^29.7.0
+        version: 29.7.0(@types/node@20.19.2)(ts-node@10.9.2(@types/node@20.19.2)(typescript@5.8.3))
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      ts-jest:
+        specifier: ^29.2.5
+        version: 29.4.0(@babel/core@7.27.7)(@jest/transform@30.0.2)(@jest/types@30.0.1)(babel-jest@30.0.2(@babel/core@7.27.7))(jest-util@30.0.2)(jest@29.7.0(@types/node@20.19.2)(ts-node@10.9.2(@types/node@20.19.2)(typescript@5.8.3)))(typescript@5.8.3)
+      typescript:
+        specifier: ^5.7.2
         version: 5.8.3
 
 packages:
@@ -5777,6 +5815,11 @@ packages:
   rimraf@3.0.2:
     resolution: {integrity: sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA==}
     deprecated: Rimraf versions prior to v4 are no longer supported
+    hasBin: true
+
+  rimraf@6.0.1:
+    resolution: {integrity: sha512-9dkvaxAsk/xNXSJzMgFqqMCuFgt2+KsOFek3TMLfo8NCPfWpBmqwyNn5Y+NX56QUYfCtsyhF3ayiboEoUmJk/A==}
+    engines: {node: 20 || >=22}
     hasBin: true
 
   robust-predicates@3.0.2:
@@ -13408,6 +13451,11 @@ snapshots:
   rimraf@3.0.2:
     dependencies:
       glob: 7.2.3
+
+  rimraf@6.0.1:
+    dependencies:
+      glob: 11.0.3
+      package-json-from-dist: 1.0.1
 
   robust-predicates@3.0.2: {}
 

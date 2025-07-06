@@ -1,3 +1,4 @@
+export * from "./auth-domain";
 export * from "./base-entity";
 export * from "./branded-types";
 export * from "./common";
@@ -10,3 +11,4 @@ export * from "./navigation";
 export * from "./prediction";
 export * from "./supabase-generated";
 export * from "./use-case.interface";
+export * from "./universal";
