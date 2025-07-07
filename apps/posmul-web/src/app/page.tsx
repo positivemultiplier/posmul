@@ -1,127 +1,172 @@
-import { Card } from "@posmul/shared-ui";
+import { Card, Badge } from "../shared/ui";
 import Link from "next/link";
 
-export default function Home() {
+export default function HomePage() {
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
       {/* Hero Section */}
-      <section className="text-center py-20">
-        <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-          AI 시대 <span className="text-blue-600">직접민주주의</span> 플랫폼
-        </h1>
-        <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-          예측 게임과 지역 경제 연동을 통해 시민이 직접 참여하는 새로운
-          민주주의를 경험해보세요.
-        </p>
-        <div className="flex justify-center space-x-4">
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 px-6 py-3 text-lg bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
-          >
-            지금 시작하기
-          </Link>
-          <Link
-            href="/about"
-            className="inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 px-6 py-3 text-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500"
-          >
-            더 알아보기
-          </Link>
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        <div className="text-center">
+          <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
+            🚀 <span className="text-blue-600">PosMul</span>
+          </h1>
+          <p className="text-2xl md:text-3xl text-gray-700 mb-4">
+            AI 시대 직접민주주의 플랫폼
+          </p>
+          <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-12">
+            예측 게임과 지역 경제 연동을 통한 혁신적인 직접민주주의 실험 플랫폼입니다.
+            PMP와 PMC를 활용하여 더 나은 사회를 만들어가세요.
+          </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+            <Link 
+              href="/prediction" 
+              className="px-8 py-4 bg-blue-600 text-white text-lg font-semibold rounded-lg hover:bg-blue-700 transition-colors shadow-lg"
+            >
+              🎯 예측 게임 시작하기
+            </Link>
+            <Link 
+              href="/investment" 
+              className="px-8 py-4 bg-green-600 text-white text-lg font-semibold rounded-lg hover:bg-green-700 transition-colors shadow-lg"
+            >
+              💰 투자 참여하기
+            </Link>
+          </div>
         </div>
       </section>
 
       {/* Features Section */}
-      <section className="py-20">
-        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-          주요 기능
-        </h2>
-        <div className="grid md:grid-cols-3 gap-8">
-          <Card className="text-center hover:shadow-lg transition-shadow">
-            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <div className="w-8 h-8 bg-blue-600 rounded"></div>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
-              예측 게임
-            </h3>
-            <p className="text-gray-600">
-              다양한 사회적 이슈에 대한 예측에 참여하고, 정확도에 따라 포인트를
-              획득하세요.
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            ✨ 주요 기능
+          </h2>
+          <p className="text-xl text-gray-600">
+            PosMul이 제공하는 혁신적인 기능들을 경험해보세요
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {/* 예측 게임 */}
+          <Card className="p-8 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="text-6xl mb-6 text-center">🎯</div>
+            <h3 className="text-2xl font-bold mb-4 text-center">예측 게임</h3>
+            <p className="text-gray-600 mb-6 text-center">
+              스포츠, 정치, 경제 등 다양한 분야의 예측 게임에 참여하고 PMP를 획득하세요.
             </p>
+            <div className="flex justify-center gap-2 mb-4">
+              <Badge variant="secondary">스포츠</Badge>
+              <Badge variant="secondary">정치</Badge>
+              <Badge variant="secondary">경제</Badge>
+            </div>
+            <Link 
+              href="/prediction"
+              className="block w-full text-center py-3 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+            >
+              게임 둘러보기 →
+            </Link>
           </Card>
 
-          <Card className="text-center hover:shadow-lg transition-shadow">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <div className="w-8 h-8 bg-green-600 rounded"></div>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
-              Local League
-            </h3>
-            <p className="text-gray-600">
-              지역 소상공인과의 거래를 통해 PMC 포인트를 적립하고 지역 경제에
-              기여하세요.
+          {/* 투자 시스템 */}
+          <Card className="p-8 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="text-6xl mb-6 text-center">💰</div>
+            <h3 className="text-2xl font-bold mb-4 text-center">투자 시스템</h3>
+            <p className="text-gray-600 mb-6 text-center">
+              지역 경제와 연동된 투자 시스템으로 실제 가치를 창출하세요.
             </p>
+            <div className="flex justify-center gap-2 mb-4">
+              <Badge variant="secondary">PMP</Badge>
+              <Badge variant="secondary">PMC</Badge>
+              <Badge variant="secondary">지역경제</Badge>
+            </div>
+            <Link 
+              href="/investment"
+              className="block w-full text-center py-3 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors"
+            >
+              투자 시작하기 →
+            </Link>
           </Card>
 
-          <Card className="text-center hover:shadow-lg transition-shadow">
-            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <div className="w-8 h-8 bg-purple-600 rounded"></div>
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">
-              Major League
-            </h3>
-            <p className="text-gray-600">
-              기업 광고를 시청하고 참여하여 PMP 포인트를 획득하고 의견을
-              제시하세요.
+          {/* 포럼 & 토론 */}
+          <Card className="p-8 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="text-6xl mb-6 text-center">💬</div>
+            <h3 className="text-2xl font-bold mb-4 text-center">포럼 & 토론</h3>
+            <p className="text-gray-600 mb-6 text-center">
+              직접민주주의의 핵심인 토론과 의견 교환을 통해 더 나은 결정을 내리세요.
             </p>
+            <div className="flex justify-center gap-2 mb-4">
+              <Badge variant="secondary">토론</Badge>
+              <Badge variant="secondary">투표</Badge>
+              <Badge variant="secondary">의견수렴</Badge>
+            </div>
+            <Link 
+              href="/forum"
+              className="block w-full text-center py-3 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors"
+            >
+              포럼 참여하기 →
+            </Link>
           </Card>
         </div>
       </section>
 
-      {/* Point System Section */}
-      <section className="py-20 bg-gray-900 text-white rounded-2xl">
-        <div className="max-w-4xl mx-auto px-8 text-center">
-          <h2 className="text-3xl font-bold mb-6">포인트 시스템</h2>
-          <p className="text-xl text-gray-300 mb-12">
-            PMC와 PMP 두 가지 포인트로 다양한 활동에 참여하고 보상을 받으세요.
-          </p>
+      {/* Economy Stats Section */}
+      <section className="bg-white py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+              📊 경제 현황
+            </h2>
+            <p className="text-xl text-gray-600">
+              실시간 PosMul 경제 생태계 현황
+            </p>
+          </div>
 
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-gray-800 rounded-lg p-8">
-              <h3 className="text-2xl font-bold text-blue-400 mb-4">PMC</h3>
-              <p className="text-gray-300 mb-4">Posmul Coin</p>
-              <ul className="text-left space-y-2 text-gray-300">
-                <li>• Local League 거래 시 적립</li>
-                <li>• 리뷰 작성 시 보너스</li>
-                <li>• 월 구독자 특별 혜택</li>
-              </ul>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            <div className="text-center">
+              <div className="text-3xl font-bold text-blue-600 mb-2">12,500</div>
+              <div className="text-gray-600">총 PMP 발행량</div>
             </div>
-
-            <div className="bg-gray-800 rounded-lg p-8">
-              <h3 className="text-2xl font-bold text-green-400 mb-4">PMP</h3>
-              <p className="text-gray-300 mb-4">Posmul Point</p>
-              <ul className="text-left space-y-2 text-gray-300">
-                <li>• Major League 광고 시청</li>
-                <li>• 설문조사 참여</li>
-                <li>• 완전 시청 보너스</li>
-              </ul>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-green-600 mb-2">8,750</div>
+              <div className="text-gray-600">총 PMC 보유량</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-purple-600 mb-2">247</div>
+              <div className="text-gray-600">활성 예측 게임</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold text-orange-600 mb-2">1,523</div>
+              <div className="text-gray-600">참여 사용자</div>
             </div>
           </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="py-20 text-center">
-        <h2 className="text-3xl font-bold text-gray-900 mb-6">
-          지금 바로 시작하세요
-        </h2>
-        <p className="text-xl text-gray-600 mb-8">
-          새로운 형태의 민주주의 참여를 경험해보세요.
-        </p>
-        <Link
-          href="/auth/register"
-          className="inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 text-lg px-8 py-4 bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
-        >
-          회원가입하기
-        </Link>
+      <section className="bg-gradient-to-r from-blue-600 to-purple-600 py-16">
+        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+          <h2 className="text-4xl font-bold text-white mb-6">
+            🌟 지금 시작하세요!
+          </h2>
+          <p className="text-xl text-blue-100 mb-8">
+            AI 시대 직접민주주의의 새로운 경험을 시작해보세요.
+            당신의 참여가 더 나은 미래를 만들어갑니다.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link 
+              href="/auth/signup"
+              className="px-8 py-4 bg-white text-blue-600 text-lg font-semibold rounded-lg hover:bg-gray-100 transition-colors shadow-lg"
+            >
+              회원가입하기
+            </Link>
+            <Link 
+              href="/auth/login"
+              className="px-8 py-4 border-2 border-white text-white text-lg font-semibold rounded-lg hover:bg-white hover:text-blue-600 transition-colors"
+            >
+              로그인하기
+            </Link>
+          </div>
+        </div>
       </section>
     </div>
   );

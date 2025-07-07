@@ -1,32 +1,62 @@
 /**
  * 공용 에러 클래스들
  */
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 import { BaseError } from "./base.error";
 import { RepositoryError } from "./repository.error";
-export class UseCaseError extends BaseError {
-    constructor(message, cause) {
-        super(message, "USE_CASE_ERROR", 400);
+var UseCaseError = /** @class */ (function (_super) {
+    __extends(UseCaseError, _super);
+    function UseCaseError(message, cause) {
+        var _this = _super.call(this, message, "USE_CASE_ERROR", 400) || this;
         if (cause) {
-            this.cause = cause;
+            _this.cause = cause;
         }
+        return _this;
     }
-}
-export class ValidationError extends BaseError {
-    constructor(message, field) {
-        super(message, "VALIDATION_ERROR", 400);
-        this.field = field;
+    return UseCaseError;
+}(BaseError));
+export { UseCaseError };
+var ValidationError = /** @class */ (function (_super) {
+    __extends(ValidationError, _super);
+    function ValidationError(message, field) {
+        var _this = _super.call(this, message, "VALIDATION_ERROR", 400) || this;
+        _this.field = field;
+        return _this;
     }
-}
-export class DomainError extends BaseError {
-    constructor(code, message = "Domain error occurred") {
-        super(message, code, 400);
+    return ValidationError;
+}(BaseError));
+export { ValidationError };
+var DomainError = /** @class */ (function (_super) {
+    __extends(DomainError, _super);
+    function DomainError(code, message) {
+        if (message === void 0) { message = "Domain error occurred"; }
+        return _super.call(this, message, code, 400) || this;
     }
-}
-export class NotFoundError extends BaseError {
-    constructor(message) {
-        super(message, "NOT_FOUND", 404, false);
+    return DomainError;
+}(BaseError));
+export { DomainError };
+var NotFoundError = /** @class */ (function (_super) {
+    __extends(NotFoundError, _super);
+    function NotFoundError(message) {
+        return _super.call(this, message, "NOT_FOUND", 404, false) || this;
     }
-}
+    return NotFoundError;
+}(BaseError));
+export { NotFoundError };
 export * from "./authentication.error";
 export * from "./authorization.error";
 export * from "./base.error";
@@ -40,10 +70,10 @@ export * from "./store.error";
 export * from "./user.error";
 export * from "./validation.error";
 export function success(data) {
-    return { success: true, data };
+    return { success: true, data: data };
 }
 export function failure(error) {
-    return { success: false, error };
+    return { success: false, error: error };
 }
 export function isSuccess(result) {
     return result.success === true;
@@ -70,3 +100,4 @@ export { RepositoryError };
 export * from "./business-rule.error";
 export * from "./repository.error";
 export * from "./use-case.error";
+//# sourceMappingURL=index.js.map

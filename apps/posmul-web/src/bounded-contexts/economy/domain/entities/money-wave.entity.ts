@@ -7,7 +7,7 @@
  * MoneyWave3: 기업가 생태계 구축
  */
 
-import { DomainError, Result } from "@posmul/shared-types";
+import { Result, DomainError } from "@posmul/auth-economy-sdk";
 import { MoneyWaveId, PMC, createPMC, unwrapPMC } from "../value-objects";
 
 export interface EBITData {
@@ -67,7 +67,7 @@ export class MoneyWave {
           success: false,
           error: new DomainError(
             "INVALID_EBIT",
-            "Expected EBIT must be positive"
+            { message: "Expected EBIT must be positive" }
           ),
         };
       } // 일일 PMC 발행량 계산 (Agency Theory 기반)
@@ -93,7 +93,7 @@ export class MoneyWave {
         success: false,
         error: new DomainError(
           "MONEY_WAVE_CREATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          { originalError: error instanceof Error ? error : new Error("Unknown error") }
         ),
       };
     }
@@ -121,7 +121,7 @@ export class MoneyWave {
         success: false,
         error: new DomainError(
           "AGENCY_COST_CALCULATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          { originalError: error instanceof Error ? error : new Error("Unknown error") }
         ),
       };
     }
@@ -159,7 +159,7 @@ export class MoneyWave {
         success: false,
         error: new DomainError(
           "CONVERSION_RATE_CALCULATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          { originalError: error instanceof Error ? error : new Error("Unknown error") }
         ),
       };
     }
@@ -183,7 +183,7 @@ export class MoneyWave {
         success: false,
         error: new DomainError(
           "NETWORK_VALUE_CALCULATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          { originalError: error instanceof Error ? error : new Error("Unknown error") }
         ),
       };
     }
@@ -219,7 +219,7 @@ export class MoneyWave {
         success: false,
         error: new DomainError(
           "IRON_TRIANGLE_CALCULATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          { originalError: error instanceof Error ? error : new Error("Unknown error") }
         ),
       };
     }
@@ -232,7 +232,7 @@ export class MoneyWave {
         success: false,
         error: new DomainError(
           "INVALID_STATUS_TRANSITION",
-          "Can only activate from CALCULATING status"
+          { message: "Can only activate from CALCULATING status" }
         ),
       };
     }
@@ -249,7 +249,7 @@ export class MoneyWave {
         success: false,
         error: new DomainError(
           "INVALID_STATUS_TRANSITION",
-          "Can only complete from ACTIVE status"
+          { message: "Can only complete from ACTIVE status" }
         ),
       };
     }

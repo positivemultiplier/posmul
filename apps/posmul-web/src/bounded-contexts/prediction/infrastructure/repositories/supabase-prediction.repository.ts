@@ -10,20 +10,11 @@
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import {
-  AccuracyScore,
-  createPredictionGameId,
-  createUserId,
-  PMC,
-  PMP,
-  PredictionGameId,
-  PredictionId,
-  UserId, isFailure } from "@posmul/shared-types";
-import {
-  failure,
-  Result,
-  success,
-} from "@posmul/shared-types";
+import { PredictionGameId, PredictionId, UserId, isFailure } from "@posmul/auth-economy-sdk";
+import { AccuracyScore, PMC, PMP } from "@posmul/auth-economy-sdk";
+import { Result } from "@posmul/auth-economy-sdk";
+import { failure, success } from "@posmul/auth-economy-sdk";
+
 import { Prediction } from "../../domain/entities/prediction-game.aggregate";
 import {
   PaginatedResult,

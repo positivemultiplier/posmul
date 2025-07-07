@@ -2,8 +2,7 @@
  * Supabase Auth 서비스 구현
  */
 
-import type { Result } from "@posmul/shared-types";
-import { AuthenticationError, ExternalServiceError } from "@posmul/shared-ui";
+import type { Result, AuthError } from "@posmul/auth-economy-sdk";
 import { SupabaseClient, createClient } from "@supabase/supabase-js";
 import { IExternalAuthService } from "../../application/use-cases/sign-up.use-case";
 import { SignUpData } from "../../domain/services/auth-domain.service";

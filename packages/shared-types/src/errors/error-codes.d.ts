@@ -22,3 +22,4 @@ export declare const ERROR_CODES: {
     BUSINESS_LOGIC_ERROR: string;
     EXTERNAL_SERVICE_ERROR: string;
 };
+//# sourceMappingURL=error-codes.d.ts.map

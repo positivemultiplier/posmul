@@ -5,8 +5,10 @@
  * Fisher의 실험설계이론과 Neyman-Pearson 가설검정을 적용
  */
 
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   ABTestConfiguration,
   IEconomicAnalyticsRepository,

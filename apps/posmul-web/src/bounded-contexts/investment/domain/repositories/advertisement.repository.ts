@@ -1,5 +1,7 @@
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
 import { Advertisement } from "../entities/advertisement.entity";
 import { AdvertisementId } from "../value-objects/investment-value-objects";
 

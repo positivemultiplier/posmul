@@ -3,12 +3,11 @@ import {
   PredictionGameId,
   UserId,
   isFailure,
-} from "@posmul/shared-types";
-import {
-  IDomainEventPublisher as EconomicEventPublisher,
-  InMemoryEventPublisher,
-  MoneyWaveCalculatorService,
-} from "@posmul/shared-ui";
+  Result,
+} from "@posmul/auth-economy-sdk/types";
+import { IDomainEventPublisher as EconomicEventPublisher, PublishError } from "@posmul/auth-economy-sdk";
+import { InMemoryEventPublisher } from "../../../../../../shared/events/event-publisher";
+import { MoneyWaveCalculatorService } from "../../../../../../shared/economy-kernel/services/money-wave-calculator.service";
 import { NextRequest, NextResponse } from "next/server";
 import { SettlePredictionGameUseCase } from "../../../../../../bounded-contexts/prediction/application/use-cases/settle-prediction-game.use-case";
 import { PredictionEconomicService } from "../../../../../../bounded-contexts/prediction/domain/services/prediction-economic.service";
@@ -19,18 +18,16 @@ import { SupabasePredictionRepository } from "../../../../../../bounded-contexts
 class EventPublisherAdapter implements EconomicEventPublisher {
   constructor(private readonly publisher: InMemoryEventPublisher) {}
 
-  async publish(event: DomainEvent): Promise<void> {
-    const result = await this.publisher.publish(event);
-    if (!result.success) {
-      throw new Error(`Event publishing failed: ${result.error.message}`);
-    }
+  async publish(event: DomainEvent): Promise<Result<void, PublishError>> {
+    return await this.publisher.publish(event);
   }
 
-  async publishBatch(events: DomainEvent[]): Promise<void> {
-    const result = await this.publisher.publishBatch(events);
-    if (!result.success) {
-      throw new Error(`Batch event publishing failed: ${result.error.message}`);
-    }
+  async publishBatch(events: DomainEvent[]): Promise<Result<void, PublishError>> {
+    return await this.publisher.publishBatch(events);
+  }
+
+  async isHealthy(): Promise<boolean> {
+    return await this.publisher.isHealthy();
   }
 }
 

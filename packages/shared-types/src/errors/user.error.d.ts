@@ -10,3 +10,4 @@ export declare class InsufficientPointsError extends BaseError {
     readonly requiredPoints: number;
     constructor(currentPoints: number, requiredPoints: number, message?: string);
 }
+//# sourceMappingURL=user.error.d.ts.map

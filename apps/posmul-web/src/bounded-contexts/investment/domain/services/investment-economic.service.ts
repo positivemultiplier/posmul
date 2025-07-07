@@ -1,12 +1,6 @@
-import {
-  EconomicError,
-  IDomainEventPublisher,
-  PmcSpentEvent,
-  PmpSpentEvent,
-  Result,
-  failure,
-  success,
-} from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+import { failure, success } from "@posmul/auth-economy-sdk";
+import { EconomyError as EconomicError, IDomainEventPublisher, PmcSpentEvent, PmpSpentEvent } from "@posmul/auth-economy-sdk";
 import { EconomyKernel } from "../../../../shared/economy-kernel/services/economy-kernel.service";
 import { InvestmentParticipation } from "../entities/investment-participation.entity";
 import { IInvestmentOpportunityRepository } from "../repositories/investment-opportunity.repository";

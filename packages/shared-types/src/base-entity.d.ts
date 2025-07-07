@@ -6,3 +6,4 @@ export declare abstract class BaseEntity<T extends {
     protected touch(): void;
     get propsAsJson(): T;
 }
+//# sourceMappingURL=base-entity.d.ts.map

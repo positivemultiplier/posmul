@@ -8,12 +8,8 @@
  * @since 2024-12
  */
 
-import {
-  DomainEvent,
-  PredictionGameId,
-  PredictionId,
-  UserId,
-} from "@posmul/shared-types";
+import { PredictionGameId, PredictionId, UserId } from "@posmul/auth-economy-sdk";
+import { DomainEvent } from "@posmul/auth-economy-sdk";
 
 /**
  * 경제 도메인 이벤트 인터페이스

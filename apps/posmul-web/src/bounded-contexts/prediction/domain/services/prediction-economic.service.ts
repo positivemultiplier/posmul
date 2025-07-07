@@ -8,13 +8,9 @@
  * @since 2024-12
  */
 
-import {
-  PredictionGameId,
-  PredictionId,
-  Result,
-  UserId,
-  failure,
-  success, isFailure } from "@posmul/shared-types";
+import { PredictionGameId, PredictionId, Result, UserId, isFailure } from "@posmul/auth-economy-sdk";
+import { failure, success } from "@posmul/auth-economy-sdk";
+ // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import {
   PmcEarnedEvent,
   PmpSpentEvent,

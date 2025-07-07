@@ -1,9 +1,7 @@
 "use client";
 
-import { Badge } from "@posmul/shared-ui";
-import { Button } from "@posmul/shared-ui";
-import { Card } from "@posmul/shared-ui";
 import React, { useState } from "react";
+import { Badge, Button, Card } from "../../../../shared/ui/components/base";
 
 // Types (matching PredictionGameList)
 interface PredictionGame {

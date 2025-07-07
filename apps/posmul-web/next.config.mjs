@@ -6,9 +6,8 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: [
-    "@posmul/shared-ui",
     "@posmul/shared-types",
-    "@posmul/shared-auth",
+    "@posmul/auth-economy-sdk",
     "@posmul/study-cycle-core",
   ],
   eslint: {

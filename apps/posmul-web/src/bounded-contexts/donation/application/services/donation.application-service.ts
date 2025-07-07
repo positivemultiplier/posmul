@@ -3,13 +3,8 @@
  * 기부 애플리케이션 서비스
  */
 
-import {
-  PaginatedResult,
-  PaginationParams,
-  Result,
-  UserId,
-  createUserId,
-} from "@posmul/shared-types";
+import { Result, UserId, createUserId } from "@posmul/auth-economy-sdk";
+import { PaginatedResult, PaginationParams } from "@posmul/auth-economy-sdk";
 import { Donation } from "../../domain/entities/donation.entity";
 import { Institute } from "../../domain/entities/institute.entity";
 import { OpinionLeader } from "../../domain/entities/opinion-leader.entity";

@@ -11,7 +11,7 @@
  *
  * 🚀 Universal MCP Automation System (Standalone)으로 생성됨
  */
-export const Constants = {
+export var Constants = {
     public: {
         Enums: {
             game_status: ["DRAFT", "ACTIVE", "CLOSED", "SETTLED", "CANCELLED"],
@@ -32,3 +32,4 @@ export const Constants = {
         },
     },
 };
+//# sourceMappingURL=supabase-generated.js.map

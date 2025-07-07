@@ -1,7 +1,14 @@
-import { UserId } from "@posmul/shared-types";
-import { MCPError, handleMCPError } from "@posmul/shared-auth";
-import { mcp_supabase_execute_sql } from "@posmul/shared-auth";
-import { Result, failure, success } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { 
+  MCPError, 
+  adaptErrorToBaseError,
+  createDefaultMCPAdapter,
+  Result,
+  CompatibleBaseError,
+  success,
+  failure
+} from "../../../../shared/legacy-compatibility";
 import { InvestmentOpportunity } from "../../domain/entities/investment-opportunity.entity";
 import { IInvestmentOpportunityRepository } from "../../domain/repositories/investment-opportunity.repository";
 import {
@@ -13,7 +20,7 @@ import {
 
 /**
  * MCP-based Investment Opportunity Repository Implementation
- * Supabase MCP를 사용한 투자 기회 리포지토리 구현체
+ * Supabase MCP�??�용???�자 기회 리포지?�리 구현�?
  */
 export class MCPInvestmentOpportunityRepository
   implements IInvestmentOpportunityRepository
@@ -22,7 +29,7 @@ export class MCPInvestmentOpportunityRepository
 
   async save(
     opportunity: InvestmentOpportunity
-  ): Promise<Result<void, MCPError>> {
+  ): Promise<Result<void, CompatibleBaseError>> {
     const props = (opportunity as any).props;
     const query = `
       INSERT INTO investment_opportunities (
@@ -50,13 +57,13 @@ export class MCPInvestmentOpportunityRepository
       });
       return success(undefined);
     } catch (error) {
-      return failure(handleMCPError(error, "save_investment_opportunity"));
+      return failure(adaptErrorToBaseError(error, "save_investment_opportunity"));
     }
   }
 
   async findById(
     id: InvestmentOpportunityId
-  ): Promise<Result<InvestmentOpportunity | null, MCPError>> {
+  ): Promise<Result<InvestmentOpportunity | null, CompatibleBaseError>> {
     const query = `SELECT * FROM investment_opportunities WHERE id = '${id.toString()}'`;
     try {
       const result = await mcp_supabase_execute_sql({
@@ -70,7 +77,7 @@ export class MCPInvestmentOpportunityRepository
 
       return success(this.mapDatabaseToDomain(result.data[0]));
     } catch (error) {
-      return failure(handleMCPError(error, "find_opportunity_by_id"));
+      return failure(adaptErrorToBaseError(error, "find_opportunity_by_id"));
     }
   }
 
@@ -79,7 +86,7 @@ export class MCPInvestmentOpportunityRepository
     limit: number,
     offset: number
   ): Promise<
-    Result<{ opportunities: InvestmentOpportunity[]; total: number }, MCPError>
+    Result<{ opportunities: InvestmentOpportunity[]; total: number }, CompatibleBaseError>
   > {
     const dataQuery = `
       SELECT * FROM investment_opportunities 
@@ -106,7 +113,7 @@ export class MCPInvestmentOpportunityRepository
 
       return success({ opportunities, total });
     } catch (error) {
-      return failure(handleMCPError(error, "findAndCount"));
+      return failure(adaptErrorToBaseError(error, "findAndCount"));
     }
   }
 
@@ -168,13 +175,13 @@ export class MCPInvestmentOpportunityRepository
     return this.findAndCount(where, limit, offset);
   }
 
-  async delete(id: InvestmentOpportunityId): Promise<Result<void, MCPError>> {
+  async delete(id: InvestmentOpportunityId): Promise<Result<void, CompatibleBaseError>> {
     const query = `UPDATE investment_opportunities SET status = 'CANCELLED', updated_at = NOW() WHERE id = '${id.toString()}'`;
     try {
       await mcp_supabase_execute_sql({ project_id: this.projectId, query });
       return success(undefined);
     } catch (error) {
-      return failure(handleMCPError(error, "delete_opportunity"));
+      return failure(adaptErrorToBaseError(error, "delete_opportunity"));
     }
   }
 
@@ -193,7 +200,7 @@ export class MCPInvestmentOpportunityRepository
   async findEndingSoon(
     daysRemaining: number,
     limit = 10
-  ): Promise<Result<InvestmentOpportunity[], MCPError>> {
+  ): Promise<Result<InvestmentOpportunity[], CompatibleBaseError>> {
     const query = `
       SELECT * FROM investment_opportunities 
       WHERE status = 'ACTIVE' 
@@ -211,7 +218,7 @@ export class MCPInvestmentOpportunityRepository
         result.data?.map((row: any) => this.mapDatabaseToDomain(row)) || [];
       return success(opportunities);
     } catch (error) {
-      return failure(handleMCPError(error, "findEndingSoon"));
+      return failure(adaptErrorToBaseError(error, "findEndingSoon"));
     }
   }
 

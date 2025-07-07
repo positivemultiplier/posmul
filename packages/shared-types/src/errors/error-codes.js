@@ -3,7 +3,7 @@
  * @description This file should be moved to @posmul/shared-types package.
  */
 // TODO: 이 상수들을 @posmul/shared-types 패키지로 옮겨야 합니다.
-export const ERROR_CODES = {
+export var ERROR_CODES = {
     AUTH_UNAUTHORIZED: "AUTH_UNAUTHORIZED",
     AUTH_INVALID_CREDENTIALS: "AUTH_INVALID_CREDENTIALS",
     AUTH_TOKEN_EXPIRED: "AUTH_TOKEN_EXPIRED",
@@ -23,3 +23,4 @@ export const ERROR_CODES = {
     BUSINESS_LOGIC_ERROR: "BUSINESS_LOGIC_ERROR",
     EXTERNAL_SERVICE_ERROR: "EXTERNAL_SERVICE_ERROR",
 };
+//# sourceMappingURL=error-codes.js.map

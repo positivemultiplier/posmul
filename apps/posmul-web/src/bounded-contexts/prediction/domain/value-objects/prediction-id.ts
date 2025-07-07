@@ -8,14 +8,10 @@
  * @since 2024-12
  */
 
-import {
-  PredictionGameId as BasePredictionGameId,
-  PredictionId as BasePredictionId,
-} from "@posmul/shared-types";
-import {
-  Result,
-  ValidationError,
-} from "@posmul/shared-types";
+import { PredictionGameId as BasePredictionGameId, PredictionId as BasePredictionId } from "@posmul/auth-economy-sdk";
+import { Result } from "@posmul/auth-economy-sdk";
+import { ValidationError } from "@posmul/auth-economy-sdk";
+
 
 /**
  * 예측 ID Value Object
@@ -33,7 +29,7 @@ export class PredictionId {
         success: false,
         error: new ValidationError(
           "Prediction ID cannot be empty",
-          "predictionId"
+          { field: "predictionId" }
         ),
       };
     }
@@ -46,7 +42,7 @@ export class PredictionId {
         success: false,
         error: new ValidationError(
           "Prediction ID must be a valid UUID format",
-          "predictionId"
+          { field: "predictionId" }
         ),
       };
     }
@@ -128,7 +124,7 @@ export class PredictionGameId {
         success: false,
         error: new ValidationError(
           "Prediction Game ID cannot be empty",
-          "predictionGameId"
+          { field: "predictionGameId" }
         ),
       };
     }
@@ -141,7 +137,7 @@ export class PredictionGameId {
         success: false,
         error: new ValidationError(
           "Prediction Game ID must be a valid UUID format",
-          "predictionGameId"
+          { field: "predictionGameId" }
         ),
       };
     }

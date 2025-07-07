@@ -6,8 +6,10 @@
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
 import { PMC, PMP } from "../../domain/value-objects";
 
 /**

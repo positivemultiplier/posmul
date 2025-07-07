@@ -9,18 +9,12 @@
  * @task PD-006
  */
 
-import { SupabaseProjectService } from "@posmul/shared-auth";
-import {
-  PMP,
-  PredictionGameId,
-  PredictionId,
-  UserId, isFailure } from "@posmul/shared-types";
-import {
-  Result,
-  Timestamps,
-  failure,
-  success,
-} from "@posmul/shared-types";
+import { PredictionGameId, PredictionId, UserId, isFailure } from "@posmul/auth-economy-sdk";
+import { PMP } from "@posmul/auth-economy-sdk";
+ // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
+import { Result } from "@posmul/auth-economy-sdk";
+import { failure, success } from "@posmul/auth-economy-sdk";
+import { Timestamps } from "@posmul/shared-types"; // TODO: SDK로 마이그레이션 필요 - Timestamps SDK에 없음
 import type { Database } from "../../../bounded-contexts/prediction/types/supabase-prediction";
 import {
   GameConfiguration,
@@ -50,7 +44,7 @@ export class SupabasePredictionGameRepository
   private readonly projectId: string;
 
   constructor() {
-    this.projectId = SupabaseProjectService.getInstance().getProjectId();
+    this.projectId = process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID || 'default';
   }
 
   private mapToDomain(

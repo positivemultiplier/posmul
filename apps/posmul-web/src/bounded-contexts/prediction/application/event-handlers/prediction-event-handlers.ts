@@ -8,17 +8,9 @@
  * @since 2024-12
  */
 
-import {
-  PmcEarnedEvent,
-  PmcSpentEvent,
-  PmpEarnedEvent,
-  PmpSpentEvent,
-} from "@posmul/shared-ui";
-import {
-  HandlerError,
-  IDomainEventSubscriber,
-} from "@posmul/shared-ui";
-import { Result } from "@posmul/shared-types";
+import { PmcEarnedEvent, PmcSpentEvent, PmpEarnedEvent, PmpSpentEvent, IDomainEventSubscriber, BusinessLogicError, HandlerError } from "@posmul/auth-economy-sdk";
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   MoneyWaveDistributionCompletedEvent,
   PmcEarnedFromPredictionEvent,

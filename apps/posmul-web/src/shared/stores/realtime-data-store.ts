@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+import { getEconomicBalance } from "../adapters/simple-economy.adapter";
 
 // 실시간 데이터 타입 정의
 export interface RealtimePredictionGame {

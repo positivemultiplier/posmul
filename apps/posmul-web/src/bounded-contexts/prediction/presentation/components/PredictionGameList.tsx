@@ -1,6 +1,5 @@
-import { Badge } from "@posmul/shared-ui";
-import { Button } from "@posmul/shared-ui";
 import React from "react";
+import { Badge, Button } from "../../../../shared/ui/components/base";
 import { PredictionGameCard } from "./PredictionGameCard";
 
 // Types

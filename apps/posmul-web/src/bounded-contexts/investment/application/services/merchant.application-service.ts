@@ -1,5 +1,7 @@
-import { Result } from '@posmul/shared-types';
-import { UserId } from '@posmul/shared-types';
+import { Result } from "@posmul/auth-economy-sdk";
+
+import { UserId } from "@posmul/auth-economy-sdk";
+
 import { IMerchantRepository } from '../../domain/repositories/merchant.repository';
 import { CreateMerchantUseCase } from '../use-cases/create-merchant.use-case';
 import { CreateMerchantRequest, MerchantListRequest, MerchantResponse, MerchantListResponse } from '../dto/merchant.dto';

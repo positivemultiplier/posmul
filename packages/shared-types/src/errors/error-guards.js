@@ -11,3 +11,4 @@ export function isValidationError(error) {
 export function isAuthenticationError(error) {
     return error instanceof AuthenticationError;
 }
+//# sourceMappingURL=error-guards.js.map

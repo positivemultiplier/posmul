@@ -10,7 +10,7 @@
  * @since 2024-12
  */
 
-import { Result, UseCaseError, isFailure } from "@posmul/shared-types";
+import { Result, isFailure, UseCaseError } from "@posmul/auth-economy-sdk";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**
@@ -92,7 +92,7 @@ export class GetPredictionGamesUseCase {
           success: false,
           error: new UseCaseError(
             "Failed to fetch prediction games",
-            gamesResult.error
+            { originalError: gamesResult.error }
           ),
         };
       }
@@ -105,7 +105,7 @@ export class GetPredictionGamesUseCase {
           success: false,
           error: new UseCaseError(
             "Failed to count prediction games",
-            countResult.error
+            { originalError: countResult.error }
           ),
         };
       }
@@ -150,7 +150,7 @@ export class GetPredictionGamesUseCase {
         success: false,
         error: new UseCaseError(
           "Unexpected error in GetPredictionGamesUseCase",
-          error as Error
+          { originalError: error as Error }
         ),
       };
     }

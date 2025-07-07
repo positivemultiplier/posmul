@@ -4,20 +4,44 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 // Economy Kernel Error
-export class EconomyKernelError extends Error {
-    constructor(message, code, cause) {
-        super(message);
-        this.code = code;
-        this.cause = cause;
-        this.name = "EconomyKernelError";
+var EconomyKernelError = /** @class */ (function (_super) {
+    __extends(EconomyKernelError, _super);
+    function EconomyKernelError(message, code, cause) {
+        var _this = _super.call(this, message) || this;
+        _this.code = code;
+        _this.cause = cause;
+        _this.name = "EconomyKernelError";
+        return _this;
     }
-}
+    return EconomyKernelError;
+}(Error));
+export { EconomyKernelError };
 // Economic Error
-export class EconomicError extends Error {
-    constructor(message, economicType) {
-        super(message);
-        this.economicType = economicType;
-        this.name = "EconomicError";
+var EconomicError = /** @class */ (function (_super) {
+    __extends(EconomicError, _super);
+    function EconomicError(message, economicType) {
+        var _this = _super.call(this, message) || this;
+        _this.economicType = economicType;
+        _this.name = "EconomicError";
+        return _this;
     }
-}
+    return EconomicError;
+}(Error));
+export { EconomicError };
+//# sourceMappingURL=economy-kernel.js.map

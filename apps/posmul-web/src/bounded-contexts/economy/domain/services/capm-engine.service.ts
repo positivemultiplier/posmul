@@ -10,7 +10,8 @@
  * - Portfolio Variance: Σ(wi² × σi²) + ΣΣ(wi × wj × σij)
  */
 
-import { Result } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   BetaCoefficient,
   ExpectedReturn,

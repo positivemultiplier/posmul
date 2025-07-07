@@ -3,12 +3,11 @@
  * 오피니언 리더 리포지토리 인터페이스
  */
 
-import { UserId } from "@posmul/shared-types";
-import {
-  PaginatedResult,
-  PaginationParams,
-  Result,
-} from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+import { PaginatedResult, PaginationParams } from "@posmul/auth-economy-sdk";
+
 import {
   OpinionLeader,
   OpinionLeaderStatus,

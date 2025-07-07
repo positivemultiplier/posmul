@@ -13,8 +13,9 @@
  * - Sen's Capability Approach
  */
 
-import { UserId } from "@posmul/shared-types";
-import { DomainError, Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result, DomainError } from "@posmul/auth-economy-sdk";
 import { PMC, PMP, unwrapPMC, unwrapPMP } from "../value-objects";
 
 /**
@@ -114,7 +115,7 @@ export class UtilityFunctionEstimationService {
           success: false,
           error: new DomainError(
             "INSUFFICIENT_DATA",
-            "3 observations required for utility estimation"
+            { message: "3 observations required for utility estimation" }
           ),
         };
       }
@@ -127,7 +128,7 @@ export class UtilityFunctionEstimationService {
           success: false,
           error: new DomainError(
             "INVALID_PARAMETERS",
-            "Estimated parameters are outside valid range"
+            { message: "Estimated parameters are outside valid range" }
           ),
         };
       }
@@ -142,7 +143,7 @@ export class UtilityFunctionEstimationService {
           success: false,
           error: new DomainError(
             "INVALID_PORTFOLIO",
-            "PMP and PMC values must be positive for utility calculation"
+            { message: "PMP and PMC values must be positive for utility calculation" }
           ),
         };
       }
@@ -183,7 +184,7 @@ export class UtilityFunctionEstimationService {
         success: false,
         error: new DomainError(
           "UTILITY_ESTIMATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          { message: error instanceof Error ? error.message : "Unknown error" }
         ),
       };
     }
@@ -204,7 +205,7 @@ export class UtilityFunctionEstimationService {
           success: false,
           error: new DomainError(
             "NO_PARTICIPANTS",
-            "participant required for social welfare calculation"
+            { message: "participant required for social welfare calculation" }
           ),
         };
       }
@@ -214,7 +215,7 @@ export class UtilityFunctionEstimationService {
           success: false,
           error: new DomainError(
             "INVALID_LAMBDA",
-            "Lambda (inequality aversion) must be between 0 and 5"
+            { message: "Lambda (inequality aversion) must be between 0 and 5" }
           ),
         };
       }
@@ -266,7 +267,7 @@ export class UtilityFunctionEstimationService {
         success: false,
         error: new DomainError(
           "SOCIAL_WELFARE_CALCULATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          { message: error instanceof Error ? error.message : "Unknown error" }
         ),
       };
     }
@@ -287,7 +288,7 @@ export class UtilityFunctionEstimationService {
           success: false,
           error: new DomainError(
             "INVALID_LEARNING_RATE",
-            "Learning rate must be between 0 and 1"
+            { message: "Learning rate must be between 0 and 1" }
           ),
         };
       }
@@ -351,7 +352,7 @@ export class UtilityFunctionEstimationService {
         success: false,
         error: new DomainError(
           "PARAMETER_UPDATE_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          { message: error instanceof Error ? error.message : "Unknown error" }
         ),
       };
     }
@@ -431,7 +432,7 @@ export class UtilityFunctionEstimationService {
         success: false,
         error: new DomainError(
           "UTILITY_PREDICTION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          { message: error instanceof Error ? error.message : "Unknown error" }
         ),
       };
     }

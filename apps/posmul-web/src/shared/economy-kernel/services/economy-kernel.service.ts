@@ -9,13 +9,9 @@
  * @since 2024-12
  */
 
-import {
-  Result,
-  UserId,
-  failure,
-  isFailure,
-  success,
-} from "@posmul/shared-types";
+import { Result, UserId, isFailure } from "@posmul/auth-economy-sdk";
+import { failure, success } from "@posmul/auth-economy-sdk";
+
 
 /**
  * Economy Kernel 오류 타입

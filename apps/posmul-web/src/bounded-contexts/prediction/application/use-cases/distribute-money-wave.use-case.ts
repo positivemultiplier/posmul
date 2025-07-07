@@ -10,7 +10,7 @@
  * @since 2024-12
  */
 
-import { Result, UseCaseError, UserId } from "@posmul/shared-types";
+import { Result, UserId, UseCaseError } from "@posmul/auth-economy-sdk";
 import { EconomyKernel } from "../../../../shared/economy-kernel/services/economy-kernel.service";
 import { MoneyWaveCalculatorService } from "../../../../shared/economy-kernel/services/money-wave-calculator.service";
 import {

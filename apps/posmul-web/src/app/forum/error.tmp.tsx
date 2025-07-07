@@ -1,27 +1,16 @@
 "use client";
 
-<<<<<<< HEAD:apps/posmul-web/src/app/forum/error.tmp.tsx
-import { BaseErrorUI } from "@posmul/shared-ui";
-=======
-import { BaseErrorUI } from "@/shared/components/error";
->>>>>>> main:src/app/forum/error.tmp.tsx
+import { BaseErrorUI } from "../../shared/ui";
 import {
   AuthenticationError,
   BusinessLogicError,
   ForbiddenError,
-<<<<<<< HEAD:apps/posmul-web/src/app/forum/error.tmp.tsx
   NetworkError
-} from "@posmul/shared-ui";
+} from "../../shared/ui";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { ValidationError } from "@posmul/shared-types";
-=======
-  NetworkError,
-  ValidationError,
-} from "@/shared/utils/errors";
-import { useRouter } from "next/navigation";
-import { useEffect } from "react";
->>>>>>> main:src/app/forum/error.tmp.tsx
+import { ValidationError } from "@posmul/auth-economy-sdk";
+
 
 interface ForumErrorProps {
   error: Error & { digest?: string };

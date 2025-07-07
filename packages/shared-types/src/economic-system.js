@@ -30,3 +30,4 @@ export var LeagueType;
     LeagueType["LOCAL"] = "LOCAL";
     LeagueType["CLOUD"] = "CLOUD";
 })(LeagueType || (LeagueType = {}));
+//# sourceMappingURL=economic-system.js.map

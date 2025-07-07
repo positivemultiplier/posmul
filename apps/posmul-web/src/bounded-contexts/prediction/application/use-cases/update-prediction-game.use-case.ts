@@ -10,14 +10,7 @@
  * @since 2024-12
  */
 
-import {
-  PmpAmount,
-  PredictionGameId,
-  Result,
-  UseCaseError,
-  UserId,
-  isFailure,
-} from "@posmul/shared-types";
+import { PredictionGameId, Result, UserId, isFailure, PmpAmount, UseCaseError } from "@posmul/auth-economy-sdk";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**

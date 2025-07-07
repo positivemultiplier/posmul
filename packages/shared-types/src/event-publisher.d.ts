@@ -73,3 +73,4 @@ export interface IEventStore {
      */
     getEventsByType(eventType: string, limit?: number): Promise<Result<DomainEvent[], Error>>;
 }
+//# sourceMappingURL=event-publisher.d.ts.map

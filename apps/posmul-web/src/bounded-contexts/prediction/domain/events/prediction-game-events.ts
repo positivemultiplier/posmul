@@ -8,12 +8,9 @@
  * @since 2024-12
  */
 
-import { BaseDomainEvent } from "@posmul/shared-ui";
-import {
-  PredictionGameId,
-  PredictionId,
-  UserId,
-} from "@posmul/shared-types";
+import { BaseDomainEvent } from "@posmul/auth-economy-sdk";
+import { PredictionGameId, PredictionId, UserId } from "@posmul/auth-economy-sdk";
+
 import { GameStatus } from "../value-objects/game-status";
 import { PredictionType } from "../value-objects/prediction-types";
 

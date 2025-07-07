@@ -43,6 +43,6 @@
     "dev": "tsc -p tsconfig.json --watch"
   },
   "dependencies": {
-    "@posmul/universal-mcp-types": "workspace:*"
+    "@posmul/auth-economy-sdk": "workspace:*"
   }
 }

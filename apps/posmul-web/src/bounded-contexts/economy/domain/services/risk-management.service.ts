@@ -12,7 +12,8 @@
  * 6. 버블 형성 방지 메커니즘
  */
 
-import { Result } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+
 import { EBIT, PMC, PMP } from "../value-objects/economic-types";
 import { unwrapPMP } from "../value-objects/economic-value-objects";
 

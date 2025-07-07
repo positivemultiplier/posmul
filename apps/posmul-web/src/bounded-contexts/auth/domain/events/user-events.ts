@@ -8,8 +8,9 @@
  * @since 2024-12
  */
 
-import { BaseDomainEvent } from "@posmul/shared-ui";
-import { UserId } from "@posmul/shared-types";
+import { BaseDomainEvent } from "@posmul/auth-economy-sdk";
+import { UserId } from "@posmul/auth-economy-sdk";
+
 
 /**
  * 사용자 생성 이벤트

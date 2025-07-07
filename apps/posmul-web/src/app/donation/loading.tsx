@@ -4,7 +4,7 @@
  * BaseSkeleton을 활용하여 기부 프로젝트와 머니 웨이브의 스켈레톤 UI를 제공합니다.
  */
 
-import { BaseSkeleton } from "@posmul/shared-ui";
+import { BaseSkeleton } from "../../shared/ui";
 
 export default function DonationLoading() {
   return (

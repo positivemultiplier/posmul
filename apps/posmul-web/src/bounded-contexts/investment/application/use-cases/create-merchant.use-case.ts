@@ -1,4 +1,6 @@
-import { Result, UserId, ValidationError } from "@posmul/shared-types";
+import { Result, UserId } from "@posmul/auth-economy-sdk";
+import { ValidationError } from "@posmul/auth-economy-sdk";
+ // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import {
   BusinessHours,
   ContactInfo,

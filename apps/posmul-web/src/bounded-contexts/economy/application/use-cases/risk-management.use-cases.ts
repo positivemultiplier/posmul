@@ -3,7 +3,8 @@
  * 리스크 관리 관련 Use Case들
  */
 
-import { Result, isFailure } from "@posmul/shared-types";
+import { Result, isFailure } from "@posmul/auth-economy-sdk";
+
 import {
   EconomicSystemState,
   RiskAssessment,

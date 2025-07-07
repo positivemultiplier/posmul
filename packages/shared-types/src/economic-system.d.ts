@@ -222,3 +222,4 @@ export interface OptimizationTarget {
     enhanceEfficiency: boolean;
     improveTrustLevel: boolean;
 }
+//# sourceMappingURL=economic-system.d.ts.map

@@ -1,6 +1,5 @@
-import { Badge } from "@posmul/shared-ui";
-import { Card } from "@posmul/shared-ui";
 import React from "react";
+import { Badge, Card } from "@/shared/ui/components/base";
 
 interface UserEconomicBalanceProps {
   userId: string;

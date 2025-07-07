@@ -6,7 +6,8 @@
  * Public Choice Theory(Buchanan) 적용
  */
 
-import { UserId } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
 import {
   AccountBalance,
   IPMPPMCAccountRepository,

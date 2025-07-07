@@ -8,3 +8,4 @@ export interface PredictionGame {
     description: string;
     status: "PENDING" | "ACTIVE" | "ENDED" | "SETTLED" | "CANCELLED";
 }
+//# sourceMappingURL=prediction.d.ts.map

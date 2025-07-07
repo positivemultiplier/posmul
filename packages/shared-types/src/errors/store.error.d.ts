@@ -5,3 +5,4 @@ export declare class StoreNotFoundError extends BaseError {
 export declare class StoreNotActiveError extends BaseError {
     constructor(message?: string);
 }
+//# sourceMappingURL=store.error.d.ts.map

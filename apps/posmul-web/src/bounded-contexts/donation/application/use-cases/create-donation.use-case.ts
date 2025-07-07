@@ -3,7 +3,9 @@
  * 기부 생성 유스케이스
  */
 
-import { Result, ValidationError, isFailure } from "@posmul/shared-types";
+import { Result, isFailure } from "@posmul/auth-economy-sdk";
+import { ValidationError } from "@posmul/auth-economy-sdk";
+ // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import { Donation } from "../../domain/entities/donation.entity";
 import { Institute } from "../../domain/entities/institute.entity";
 import { OpinionLeader } from "../../domain/entities/opinion-leader.entity";

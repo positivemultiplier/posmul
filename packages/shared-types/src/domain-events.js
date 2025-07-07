@@ -4,9 +4,25 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
+var __extends = (this && this.__extends) || (function () {
+    var extendStatics = function (d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+    return function (d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    };
+})();
 // 기본 도메인 이벤트 추상 클래스
-export class BaseDomainEvent {
-    constructor(type, aggregateId, data, version = 1) {
+var BaseDomainEvent = /** @class */ (function () {
+    function BaseDomainEvent(type, aggregateId, data, version) {
+        if (version === void 0) { version = 1; }
         this.id = crypto.randomUUID();
         this.type = type;
         this.aggregateId = aggregateId;
@@ -14,9 +30,11 @@ export class BaseDomainEvent {
         this.version = version;
         this.timestamp = new Date();
     }
-}
+    return BaseDomainEvent;
+}());
+export { BaseDomainEvent };
 // 일반적인 도메인 이벤트 타입들
-export const EventTypes = {
+export var EventTypes = {
     USER_CREATED: "USER_CREATED",
     USER_UPDATED: "USER_UPDATED",
     USER_DELETED: "USER_DELETED",
@@ -34,75 +52,101 @@ export const EventTypes = {
     STORE_UPDATED: "STORE_UPDATED",
 };
 // 구체적인 도메인 이벤트 예시들
-export class UserCreatedEvent extends BaseDomainEvent {
-    constructor(userId, userData) {
-        super(EventTypes.USER_CREATED, userId, userData);
+var UserCreatedEvent = /** @class */ (function (_super) {
+    __extends(UserCreatedEvent, _super);
+    function UserCreatedEvent(userId, userData) {
+        return _super.call(this, EventTypes.USER_CREATED, userId, userData) || this;
     }
-}
-export class PointsEarnedEvent extends BaseDomainEvent {
-    constructor(userId, pointData) {
-        super(EventTypes.POINTS_EARNED, userId, pointData);
+    return UserCreatedEvent;
+}(BaseDomainEvent));
+export { UserCreatedEvent };
+var PointsEarnedEvent = /** @class */ (function (_super) {
+    __extends(PointsEarnedEvent, _super);
+    function PointsEarnedEvent(userId, pointData) {
+        return _super.call(this, EventTypes.POINTS_EARNED, userId, pointData) || this;
     }
-}
-export class PredictionGameCreatedEvent extends BaseDomainEvent {
-    constructor(gameId, gameData) {
-        super(EventTypes.PREDICTION_GAME_CREATED, gameId, gameData);
+    return PointsEarnedEvent;
+}(BaseDomainEvent));
+export { PointsEarnedEvent };
+var PredictionGameCreatedEvent = /** @class */ (function (_super) {
+    __extends(PredictionGameCreatedEvent, _super);
+    function PredictionGameCreatedEvent(gameId, gameData) {
+        return _super.call(this, EventTypes.PREDICTION_GAME_CREATED, gameId, gameData) || this;
     }
-}
+    return PredictionGameCreatedEvent;
+}(BaseDomainEvent));
+export { PredictionGameCreatedEvent };
 // Economic Domain Events
-export class PmpEarnedEvent extends BaseDomainEvent {
-    constructor(userId, amount, source, sourceId) {
-        super(EventTypes.POINTS_EARNED, userId, {
-            amount,
+var PmpEarnedEvent = /** @class */ (function (_super) {
+    __extends(PmpEarnedEvent, _super);
+    function PmpEarnedEvent(userId, amount, source, sourceId) {
+        var _this = _super.call(this, EventTypes.POINTS_EARNED, userId, {
+            amount: amount,
             type: "PMP",
-            source,
-            sourceId,
-        });
-        this.userId = userId;
-        this.amount = amount;
-        this.source = source;
-        this.sourceId = sourceId;
+            source: source,
+            sourceId: sourceId,
+        }) || this;
+        _this.userId = userId;
+        _this.amount = amount;
+        _this.source = source;
+        _this.sourceId = sourceId;
+        return _this;
     }
-}
-export class PmcEarnedEvent extends BaseDomainEvent {
-    constructor(userId, amount, source, sourceId) {
-        super(EventTypes.POINTS_EARNED, userId, {
-            amount,
+    return PmpEarnedEvent;
+}(BaseDomainEvent));
+export { PmpEarnedEvent };
+var PmcEarnedEvent = /** @class */ (function (_super) {
+    __extends(PmcEarnedEvent, _super);
+    function PmcEarnedEvent(userId, amount, source, sourceId) {
+        var _this = _super.call(this, EventTypes.POINTS_EARNED, userId, {
+            amount: amount,
             type: "PMC",
-            source,
-            sourceId,
-        });
-        this.userId = userId;
-        this.amount = amount;
-        this.source = source;
-        this.sourceId = sourceId;
+            source: source,
+            sourceId: sourceId,
+        }) || this;
+        _this.userId = userId;
+        _this.amount = amount;
+        _this.source = source;
+        _this.sourceId = sourceId;
+        return _this;
     }
-}
-export class PmpSpentEvent extends BaseDomainEvent {
-    constructor(userId, amount, purpose, targetId) {
-        super(EventTypes.POINTS_SPENT, userId, {
-            amount,
+    return PmcEarnedEvent;
+}(BaseDomainEvent));
+export { PmcEarnedEvent };
+var PmpSpentEvent = /** @class */ (function (_super) {
+    __extends(PmpSpentEvent, _super);
+    function PmpSpentEvent(userId, amount, purpose, targetId) {
+        var _this = _super.call(this, EventTypes.POINTS_SPENT, userId, {
+            amount: amount,
             type: "PMP",
-            purpose,
-            targetId,
-        });
-        this.userId = userId;
-        this.amount = amount;
-        this.purpose = purpose;
-        this.targetId = targetId;
+            purpose: purpose,
+            targetId: targetId,
+        }) || this;
+        _this.userId = userId;
+        _this.amount = amount;
+        _this.purpose = purpose;
+        _this.targetId = targetId;
+        return _this;
     }
-}
-export class PmcSpentEvent extends BaseDomainEvent {
-    constructor(userId, amount, purpose, targetId) {
-        super(EventTypes.POINTS_SPENT, userId, {
-            amount,
+    return PmpSpentEvent;
+}(BaseDomainEvent));
+export { PmpSpentEvent };
+var PmcSpentEvent = /** @class */ (function (_super) {
+    __extends(PmcSpentEvent, _super);
+    function PmcSpentEvent(userId, amount, purpose, targetId) {
+        var _this = _super.call(this, EventTypes.POINTS_SPENT, userId, {
+            amount: amount,
             type: "PMC",
-            purpose,
-            targetId,
-        });
-        this.userId = userId;
-        this.amount = amount;
-        this.purpose = purpose;
-        this.targetId = targetId;
+            purpose: purpose,
+            targetId: targetId,
+        }) || this;
+        _this.userId = userId;
+        _this.amount = amount;
+        _this.purpose = purpose;
+        _this.targetId = targetId;
+        return _this;
     }
-}
+    return PmcSpentEvent;
+}(BaseDomainEvent));
+export { PmcSpentEvent };
+//# sourceMappingURL=domain-events.js.map

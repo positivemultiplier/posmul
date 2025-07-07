@@ -1,13 +1,20 @@
 /**
  * MCP Auth Repository Implementation
  *
- * Clean Architecture Infrastructure 계층의 Repository 구현체
- * IAuthRepository 인터페이스를 MCP Supabase로 구현
+ * Clean Architecture Infrastructure 계층??Repository 구현�?
+ * IAuthRepository ?�터?�이?��? MCP Supabase�?구현
  */
 
-import { mcp_supabase_execute_sql } from "@posmul/shared-auth";
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { 
+  MCPError, 
+  handleMCPError,
+  createDefaultMCPAdapter,
+  Result,
+  CompatibleBaseError,
+  adaptErrorToBaseError
+} from "../../../../shared/legacy-compatibility";
+import { UserId } from "@posmul/auth-economy-sdk";
+
 import {
   AuthSession,
   Permission,
@@ -20,24 +27,23 @@ import { IAuthRepository } from "../../domain/repositories";
  * MCP 기반 Auth Repository 구현
  */
 export class MCPAuthRepository implements IAuthRepository {
+  private readonly mcpAdapter = createDefaultMCPAdapter();
+
   constructor(private readonly projectId: string) {}
 
   /**
-   * 사용자 인증 세션 조회
+   * ?�용???�증 ?�션 조회
    */
   async getSession(
     sessionId: string
-  ): Promise<Result<AuthSession | null, Error>> {
+  ): Promise<Result<AuthSession | null, CompatibleBaseError>> {
     try {
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          SELECT s.*, u.email, u.email_confirmed_at, u.last_sign_in_at
-          FROM auth.sessions s
-          JOIN auth.users u ON s.user_id = u.id
-          WHERE s.id = $1 AND s.not_after > NOW()
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(`
+        SELECT s.*, u.email, u.email_confirmed_at, u.last_sign_in_at
+        FROM auth.sessions s
+        JOIN auth.users u ON s.user_id = u.id
+        WHERE s.id = '${sessionId}' AND s.not_after > NOW()
+      `);
 
       if (!result.data || result.data.length === 0) {
         return { success: true, data: null };
@@ -47,30 +53,28 @@ export class MCPAuthRepository implements IAuthRepository {
       const session = this.mapDatabaseToAuthSession(sessionData);
       return { success: true, data: session };
     } catch (error) {
-      return { success: false, error: error as Error };
+      const compatibleError = adaptErrorToBaseError(error, 'getSession');
+      return { success: false, error: compatibleError };
     }
   }
 
   /**
-   * 사용자 인증 정보 조회
+   * ?�용???�증 ?�보 조회
    */
   async getUserCredentials(
     userId: UserId
-  ): Promise<Result<UserCredentials | null, Error>> {
+  ): Promise<Result<UserCredentials | null, CompatibleBaseError>> {
     try {
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          SELECT u.*, 
-                 i.provider, i.provider_id, i.identity_data,
-                 COUNT(s.id) as active_sessions
-          FROM auth.users u
-          LEFT JOIN auth.identities i ON u.id = i.user_id
-          LEFT JOIN auth.sessions s ON u.id = s.user_id AND s.not_after > NOW()
-          WHERE u.id = $1
-          GROUP BY u.id, i.provider, i.provider_id, i.identity_data
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(`
+        SELECT u.*, 
+               i.provider, i.provider_id, i.identity_data,
+               COUNT(s.id) as active_sessions
+        FROM auth.users u
+        LEFT JOIN auth.identities i ON u.id = i.user_id
+        LEFT JOIN auth.sessions s ON u.id = s.user_id AND s.not_after > NOW()
+        WHERE u.id = '${userId}'
+        GROUP BY u.id, i.provider, i.provider_id, i.identity_data
+      `);
 
       if (!result.data || result.data.length === 0) {
         return { success: true, data: null };
@@ -80,27 +84,25 @@ export class MCPAuthRepository implements IAuthRepository {
       const credentials = this.mapDatabaseToUserCredentials(credentialsData);
       return { success: true, data: credentials };
     } catch (error) {
-      return { success: false, error: error as Error };
+      const compatibleError = adaptErrorToBaseError(error, 'getUserCredentials');
+      return { success: false, error: compatibleError };
     }
   }
 
   /**
-   * 활성 세션 목록 조회
+   * ?�성 ?�션 목록 조회
    */
   async getActiveSessions(
     userId: UserId
-  ): Promise<Result<AuthSession[], Error>> {
+  ): Promise<Result<AuthSession[], CompatibleBaseError>> {
     try {
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          SELECT s.*, u.email, u.email_confirmed_at, u.last_sign_in_at
-          FROM auth.sessions s
-          JOIN auth.users u ON s.user_id = u.id
-          WHERE s.user_id = $1 AND s.not_after > NOW()
-          ORDER BY s.created_at DESC
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(`
+        SELECT s.*, u.email, u.email_confirmed_at, u.last_sign_in_at
+        FROM auth.sessions s
+        JOIN auth.users u ON s.user_id = u.id
+        WHERE s.user_id = '${userId}' AND s.not_after > NOW()
+        ORDER BY s.created_at DESC
+      `);
 
       const sessions =
         result.data?.map((sessionData) =>
@@ -108,27 +110,25 @@ export class MCPAuthRepository implements IAuthRepository {
         ) || [];
       return { success: true, data: sessions };
     } catch (error) {
-      return { success: false, error: error as Error };
+      const compatibleError = adaptErrorToBaseError(error, 'getActiveSessions');
+      return { success: false, error: compatibleError };
     }
   }
 
   /**
-   * 사용자 권한 조회
+   * ?�용??권한 조회
    */
   async getUserPermissions(
     userId: UserId
-  ): Promise<Result<Permission[], Error>> {
+  ): Promise<Result<Permission[], CompatibleBaseError>> {
     try {
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          SELECT DISTINCT p.permission_name, p.resource, p.action
-          FROM user_roles ur
-          JOIN role_permissions rp ON ur.role_id = rp.role_id
-          JOIN permissions p ON rp.permission_id = p.id
-          WHERE ur.user_id = $1 AND ur.is_active = true
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(`
+        SELECT DISTINCT p.permission_name, p.resource, p.action
+        FROM user_roles ur
+        JOIN role_permissions rp ON ur.role_id = rp.role_id
+        JOIN permissions p ON rp.permission_id = p.id
+        WHERE ur.user_id = '${userId}' AND ur.is_active = true
+      `);
 
       const permissions =
         result.data?.map((permData) =>
@@ -136,101 +136,94 @@ export class MCPAuthRepository implements IAuthRepository {
         ) || [];
       return { success: true, data: permissions };
     } catch (error) {
-      return { success: false, error: error as Error };
+      const compatibleError = adaptErrorToBaseError(error, 'getUserPermissions');
+      return { success: false, error: compatibleError };
     }
   }
 
   /**
-   * 사용자 역할 조회
+   * ?�용????�� 조회
    */
-  async getUserRoles(userId: UserId): Promise<Result<Role[], Error>> {
+  async getUserRoles(userId: UserId): Promise<Result<Role[], CompatibleBaseError>> {
     try {
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          SELECT r.*, ur.assigned_at, ur.assigned_by
-          FROM user_roles ur
-          JOIN roles r ON ur.role_id = r.id
-          WHERE ur.user_id = $1 AND ur.is_active = true
-          ORDER BY r.hierarchy_level DESC
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(`
+        SELECT r.*, ur.assigned_at, ur.assigned_by
+        FROM user_roles ur
+        JOIN roles r ON ur.role_id = r.id
+        WHERE ur.user_id = '${userId}' AND ur.is_active = true
+        ORDER BY r.hierarchy_level DESC
+      `);
 
       const roles =
         result.data?.map((roleData) => this.mapDatabaseToRole(roleData)) || [];
       return { success: true, data: roles };
     } catch (error) {
-      return { success: false, error: error as Error };
+      const compatibleError = adaptErrorToBaseError(error, 'getUserRoles');
+      return { success: false, error: compatibleError };
     }
   }
 
   /**
-   * 세션 무효화
+   * ?�션 무효??
    */
-  async invalidateSession(sessionId: string): Promise<Result<void, Error>> {
+  async invalidateSession(sessionId: string): Promise<Result<void, CompatibleBaseError>> {
     try {
-      await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          UPDATE auth.sessions 
-          SET not_after = NOW() 
-          WHERE id = $1
-        `,
-      });
+      await this.mcpAdapter.executeSQL(`
+        UPDATE auth.sessions 
+        SET not_after = NOW() 
+        WHERE id = '${sessionId}'
+      `);
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: error as Error };
+      const compatibleError = adaptErrorToBaseError(error, 'invalidateSession');
+      return { success: false, error: compatibleError };
     }
   }
 
   /**
-   * 모든 사용자 세션 무효화
+   * 모든 ?�용???�션 무효??
    */
   async invalidateAllUserSessions(
     userId: UserId
-  ): Promise<Result<void, Error>> {
+  ): Promise<Result<void, CompatibleBaseError>> {
     try {
-      await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          UPDATE auth.sessions 
-          SET not_after = NOW() 
-          WHERE user_id = $1 AND not_after > NOW()
-        `,
-      });
+      await this.mcpAdapter.executeSQL(`
+        UPDATE auth.sessions 
+        SET not_after = NOW() 
+        WHERE user_id = '${userId}' AND not_after > NOW()
+      `);
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: error as Error };
+      const compatibleError = adaptErrorToBaseError(error, 'invalidateAllUserSessions');
+      return { success: false, error: compatibleError };
     }
   }
 
   /**
-   * 인증 활동 로그 기록
+   * ?�증 ?�동 로그 기록
    */
   async logAuthActivity(
     userId: UserId,
     activity: string,
     metadata?: Record<string, any>
-  ): Promise<Result<void, Error>> {
+  ): Promise<Result<void, CompatibleBaseError>> {
     try {
-      await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          INSERT INTO auth_activity_logs (user_id, activity_type, metadata, created_at)
-          VALUES ($1, $2, $3, NOW())
-        `,
-      });
+      await this.mcpAdapter.executeSQL(`
+        INSERT INTO auth_activity_logs (user_id, activity_type, metadata, created_at)
+        VALUES ('${userId}', '${activity}', '${JSON.stringify(metadata || {})}', NOW())
+      `);
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: error as Error };
+      const compatibleError = adaptErrorToBaseError(error, 'logAuthActivity');
+      return { success: false, error: compatibleError };
     }
   }
 
   /**
-   * 데이터베이스 결과를 AuthSession으로 매핑
+   * ?�이?�베?�스 결과�?AuthSession?�로 매핑
    */
   private mapDatabaseToAuthSession(data: any): AuthSession {
     return {
@@ -254,7 +247,7 @@ export class MCPAuthRepository implements IAuthRepository {
   }
 
   /**
-   * 데이터베이스 결과를 UserCredentials로 매핑
+   * ?�이?�베?�스 결과�?UserCredentials�?매핑
    */
   private mapDatabaseToUserCredentials(data: any): UserCredentials {
     return {
@@ -274,7 +267,7 @@ export class MCPAuthRepository implements IAuthRepository {
   }
 
   /**
-   * 데이터베이스 결과를 Permission으로 매핑
+   * ?�이?�베?�스 결과�?Permission?�로 매핑
    */
   private mapDatabaseToPermission(data: any): Permission {
     return {
@@ -286,7 +279,7 @@ export class MCPAuthRepository implements IAuthRepository {
   }
 
   /**
-   * 데이터베이스 결과를 Role로 매핑
+   * ?�이?�베?�스 결과�?Role�?매핑
    */
   private mapDatabaseToRole(data: any): Role {
     return {

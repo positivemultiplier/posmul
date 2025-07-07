@@ -1,8 +1,9 @@
-import { ParticipatePredictionUseCase } from "@/bounded-contexts/prediction/application/use-cases/participate-prediction.use-case";
-import { PredictionEconomicService } from "@/bounded-contexts/prediction/domain/services/prediction-economic.service";
-import { SupabasePredictionGameRepository } from "@/bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
-import { InMemoryEventPublisher } from "@/shared/events/event-publisher";
-import { PredictionGameId, UserId, isFailure } from "@posmul/shared-types";
+import { ParticipatePredictionUseCase } from "../../../../../../bounded-contexts/prediction/application/use-cases/participate-prediction.use-case";
+import { PredictionEconomicService } from "../../../../../../bounded-contexts/prediction/domain/services/prediction-economic.service";
+import { SupabasePredictionGameRepository } from "../../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
+import { InMemoryEventPublisher } from "../../../../../../shared/events/event-publisher";
+import { PredictionGameId, UserId, isFailure } from "@posmul/auth-economy-sdk";
+import { toLegacyUserId, toLegacyPredictionGameId } from "../../../../../../shared/type-bridge";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -88,8 +89,8 @@ export async function POST(
 
     // 요청 DTO 생성
     const participationRequest = {
-      userId: body.userId as UserId,
-      gameId: gameId as PredictionGameId,
+      userId: toLegacyUserId(body.userId as UserId),
+      gameId: toLegacyPredictionGameId(gameId as PredictionGameId),
       selectedOptionId: body.selectedOptionId,
       stakeAmount: body.stakeAmount,
       confidence: body.confidence,

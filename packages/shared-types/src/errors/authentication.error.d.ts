@@ -8,3 +8,4 @@ export declare class InvalidCredentialsError extends BaseError {
 export declare class TokenExpiredError extends BaseError {
     constructor(message?: string);
 }
+//# sourceMappingURL=authentication.error.d.ts.map

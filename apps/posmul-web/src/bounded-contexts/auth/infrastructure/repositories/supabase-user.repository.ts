@@ -1,9 +1,10 @@
 /**
- * Supabase 사용자 리포지토리 구현
+ * Supabase ?�용??리포지?�리 구현
  */
 
-import type { Result } from "@posmul/shared-types";
-import { ExternalServiceError } from "@posmul/shared-types";
+import type { Result } from "@posmul/auth-economy-sdk";
+import { DomainError } from "@posmul/auth-economy-sdk"; // ExternalServiceError�?SDK??DomainError�??��?
+
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { User } from "../../domain/entities/user.entity";
 import { IUserRepository } from "../../domain/repositories/user.repository";
@@ -35,7 +36,7 @@ export class SupabaseUserRepository implements IUserRepository {
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error("Supabase URL 또는 API 키가 설정되지 않았습니다.");
+      throw new Error("Supabase URL ?�는 API ?��? ?�정?��? ?�았?�니??");
     }
 
     this.supabase = createClient(supabaseUrl, supabaseKey);
@@ -62,7 +63,7 @@ export class SupabaseUserRepository implements IUserRepository {
       if (error) {
         return {
           success: false,
-          error: new ExternalServiceError("Supabase", error.message),
+          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
         };
       }
 
@@ -71,11 +72,11 @@ export class SupabaseUserRepository implements IUserRepository {
     } catch (error) {
       return {
         success: false,
-        error: new ExternalServiceError(
-          "Supabase",
+        error: new DomainError(
           error instanceof Error
             ? error.message
-            : "사용자 저장 중 오류가 발생했습니다."
+            : "?�용???�??�??�류가 발생?�습?�다.",
+          { code: "SUPABASE_ERROR", service: "Supabase" }
         ),
       };
     }
@@ -96,7 +97,7 @@ export class SupabaseUserRepository implements IUserRepository {
         }
         return {
           success: false,
-          error: new ExternalServiceError("Supabase", error.message),
+          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
         };
       }
 
@@ -109,7 +110,7 @@ export class SupabaseUserRepository implements IUserRepository {
           "Supabase",
           error instanceof Error
             ? error.message
-            : "사용자 조회 중 오류가 발생했습니다."
+            : "?�용??조회 �??�류가 발생?�습?�다."
         ),
       };
     }
@@ -130,7 +131,7 @@ export class SupabaseUserRepository implements IUserRepository {
         }
         return {
           success: false,
-          error: new ExternalServiceError("Supabase", error.message),
+          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
         };
       }
 
@@ -143,7 +144,7 @@ export class SupabaseUserRepository implements IUserRepository {
           "Supabase",
           error instanceof Error
             ? error.message
-            : "사용자 조회 중 오류가 발생했습니다."
+            : "?�용??조회 �??�류가 발생?�습?�다."
         ),
       };
     }
@@ -171,7 +172,7 @@ export class SupabaseUserRepository implements IUserRepository {
       if (error) {
         return {
           success: false,
-          error: new ExternalServiceError("Supabase", error.message),
+          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
         };
       }
 
@@ -184,7 +185,7 @@ export class SupabaseUserRepository implements IUserRepository {
           "Supabase",
           error instanceof Error
             ? error.message
-            : "사용자 업데이트 중 오류가 발생했습니다."
+            : "?�용???�데?�트 �??�류가 발생?�습?�다."
         ),
       };
     }
@@ -201,7 +202,7 @@ export class SupabaseUserRepository implements IUserRepository {
       if (error) {
         return {
           success: false,
-          error: new ExternalServiceError("Supabase", error.message),
+          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
         };
       }
 
@@ -213,7 +214,7 @@ export class SupabaseUserRepository implements IUserRepository {
           "Supabase",
           error instanceof Error
             ? error.message
-            : "이메일 중복 확인 중 오류가 발생했습니다."
+            : "?�메??중복 ?�인 �??�류가 발생?�습?�다."
         ),
       };
     }
@@ -235,7 +236,7 @@ export class SupabaseUserRepository implements IUserRepository {
       if (error) {
         return {
           success: false,
-          error: new ExternalServiceError("Supabase", error.message),
+          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
         };
       }
 
@@ -248,7 +249,7 @@ export class SupabaseUserRepository implements IUserRepository {
           "Supabase",
           error instanceof Error
             ? error.message
-            : "사용자 목록 조회 중 오류가 발생했습니다."
+            : "?�용??목록 조회 �??�류가 발생?�습?�다."
         ),
       };
     }
@@ -256,7 +257,7 @@ export class SupabaseUserRepository implements IUserRepository {
 
   async delete(id: UserId): Promise<Result<void, Error>> {
     try {
-      // 소프트 삭제 구현
+      // ?�프????�� 구현
       const { error } = await this.supabase
         .from("users")
         .update({
@@ -268,7 +269,7 @@ export class SupabaseUserRepository implements IUserRepository {
       if (error) {
         return {
           success: false,
-          error: new ExternalServiceError("Supabase", error.message),
+          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
         };
       }
 
@@ -280,7 +281,7 @@ export class SupabaseUserRepository implements IUserRepository {
           "Supabase",
           error instanceof Error
             ? error.message
-            : "사용자 삭제 중 오류가 발생했습니다."
+            : "?�용????�� �??�류가 발생?�습?�다."
         ),
       };
     }

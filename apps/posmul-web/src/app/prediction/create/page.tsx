@@ -1,11 +1,18 @@
+"use client";
+
 /**
  * 예측 게임 생성 페이지
  * Server Actions를 활용한 폼 처리 예시
  */
 
-import { PredictionGameForm } from "@posmul/shared-ui";
+import { PredictionGameForm } from "../../../shared/ui";
 
 export default function CreatePredictionPage() {
+  const handleSubmit = async (data: any) => {
+    console.log('Form submitted:', data);
+    // TODO: 실제 게임 생성 로직 구현
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,7 +27,7 @@ export default function CreatePredictionPage() {
           </p>
         </div>
 
-        <PredictionGameForm />
+        <PredictionGameForm onSubmit={handleSubmit} />
 
         {/* 도움말 섹션 */}
         <div className="mt-12 max-w-4xl mx-auto">
@@ -56,10 +63,3 @@ export default function CreatePredictionPage() {
     </div>
   );
 }
-
-// 메타데이터 설정
-export const metadata = {
-  title: "예측 게임 생성 | PosMul",
-  description:
-    "새로운 예측 게임을 만들고 참여자들과 함께 예측의 재미를 느껴보세요.",
-};

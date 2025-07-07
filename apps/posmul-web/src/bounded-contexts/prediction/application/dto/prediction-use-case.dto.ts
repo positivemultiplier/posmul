@@ -8,11 +8,8 @@
  * @since 2024-12
  */
 
-import {
-  PredictionGameId,
-  PredictionId,
-  UserId,
-} from "@posmul/shared-types";
+import { PredictionGameId, PredictionId, UserId } from "@posmul/auth-economy-sdk";
+
 
 /**
  * 예측 게임 생성 요청 DTO

@@ -5,8 +5,10 @@
  * IUtilityFunctionRepository 인터페이스를 Supabase로 구현
  */
 
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   BehavioralBiasProfile,
   IUtilityFunctionRepository,

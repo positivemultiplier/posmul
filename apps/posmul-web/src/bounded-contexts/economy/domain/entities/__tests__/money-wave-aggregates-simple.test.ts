@@ -2,7 +2,7 @@
  * MoneyWave Aggregates 기본 테스트
  */
 
-import { DomainError } from "@posmul/shared-types";
+import { DomainError } from "@posmul/auth-economy-sdk";
 import {
   createMoneyWaveId,
   createPMC,

@@ -1,11 +1,11 @@
 // 실시간 연결 시스템 통합 export
-export { useRealtimeConnection } from "@posmul/shared-ui/use-realtime-connection";
+export { useRealtimeConnection } from "../hooks/use-realtime-connection";
 export type {
   RealtimeConnectionConfig,
   RealtimeConnectionState,
   RealtimeMessage,
   UseRealtimeConnectionReturn,
-} from "@posmul/shared-ui/use-realtime-connection";
+} from "../hooks/use-realtime-connection";
 
 // 실시간 데이터 스토어
 export {
@@ -17,7 +17,7 @@ export {
   useRealtimeMoneyWave,
   useRealtimeNotifications,
   useRealtimePredictionGames,
-} from "@posmul/shared-ui/stores/realtime-data-store";
+} from "../stores/realtime-data-store";
 export type {
   RealtimeDataState,
   RealtimeEconomicData,
@@ -25,7 +25,7 @@ export type {
   RealtimeMoneyWave,
   RealtimeNotification,
   RealtimePredictionGame,
-} from "@posmul/shared-ui/stores/realtime-data-store";
+} from "../stores/realtime-data-store";
 
 // 실시간 프로바이더
 export {
@@ -33,26 +33,28 @@ export {
   useRealtimeActions,
   useRealtimeContext,
   useRealtimeStatus,
-} from "@posmul/shared-ui/providers/realtime-provider";
+} from "../providers/realtime-provider";
 
-// 실시간 알림 시스템
-export {
-  NotificationBadge,
-  NotificationCenter,
-  NotificationToast,
-  NotificationToasts,
-  RealtimeNotificationSystem,
-  RealtimeStatusIndicator,
-} from "@posmul/shared-ui/realtime/notification-system";
+// TODO: 실시간 알림 시스템 - 아직 마이그레이션 필요
+// 현재 packages/shared-ui에 있는 컴포넌트들입니다.
+// export {
+//   NotificationBadge,
+//   NotificationCenter,
+//   NotificationToast,
+//   NotificationToasts,
+//   RealtimeNotificationSystem,
+//   RealtimeStatusIndicator,
+// } from "@posmul/shared-ui/realtime/notification-system";
 
-// 실시간 차트 시스템
-export {
-  RealtimeDashboard,
-  RealtimeEconomicTrendChart,
-  RealtimeMarketDataChart,
-  RealtimeMoneyWaveChart,
-  RealtimePredictionGamesChart,
-} from "@posmul/shared-ui/realtime/realtime-charts";
+// TODO: 실시간 차트 시스템 - 아직 마이그레이션 필요
+// 현재 packages/shared-ui에 있는 컴포넌트들입니다.
+// export {
+//   RealtimeDashboard,
+//   RealtimeEconomicTrendChart,
+//   RealtimeMarketDataChart,
+//   RealtimeMoneyWaveChart,
+//   RealtimePredictionGamesChart,
+// } from "@posmul/shared-ui/realtime/realtime-charts";
 
 // 실시간 시스템 설정
 export const REALTIME_CONFIG = {

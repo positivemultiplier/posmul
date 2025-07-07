@@ -7,8 +7,8 @@
  * @since 2024-12
  */
 // Sidebar specific types
-export const SIDEBAR_ICON_SIZE = 24;
-export const ROUTE_PATTERNS = [
+export var SIDEBAR_ICON_SIZE = 24;
+export var ROUTE_PATTERNS = [
     {
         domain: "prediction",
         pattern: "/prediction/[category]/[subcategory]/[slug]?",
@@ -30,3 +30,4 @@ export const ROUTE_PATTERNS = [
         example: "/forum/debate/nation/healthcare-policy",
     },
 ];
+//# sourceMappingURL=navigation.js.map

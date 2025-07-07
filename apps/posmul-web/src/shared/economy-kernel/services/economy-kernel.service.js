@@ -59,7 +59,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { failure, isFailure, success, } from "@posmul/shared-types";
+import { failure, isFailure, success, } from "@posmul/auth-economy-sdk";
 /**
  * Economy Kernel 오류 타입
  */

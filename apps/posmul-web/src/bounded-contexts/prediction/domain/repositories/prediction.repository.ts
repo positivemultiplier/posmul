@@ -9,12 +9,10 @@
  * @task PD-003
  */
 
-import {
-  PredictionGameId,
-  PredictionId,
-  UserId,
-} from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { PredictionGameId, PredictionId, UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
 import { Prediction } from "../entities/prediction-game.aggregate";
 import {
   PaginatedResult,

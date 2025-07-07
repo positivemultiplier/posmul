@@ -11,8 +11,10 @@
  * - 벤처 실패율을 고려한 리스크 관리
  */
 
-import { UserId } from "@posmul/shared-types";
-import { DomainError, Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+import { DomainError } from "@posmul/auth-economy-sdk"; // SDK로 마이그레이션 완료
 import { MoneyWaveId, PMC, createPMC, unwrapPMC } from "../value-objects";
 
 export interface EntrepreneurProfile {
@@ -67,7 +69,7 @@ export interface VentureMilestone {
 export interface InvestmentAllocation {
   readonly proposalId: string;
   readonly allocatedAmount: PMC;
-  readonly allocationRatio: number; // 전체 투자 대비 비율
+  readonly allocationRatio: number; // ?�체 ?�자 ?��?비율
   readonly expectedReturn: number;
   readonly riskWeighting: number;
   readonly diversificationScore: number;
@@ -79,7 +81,7 @@ export interface EcosystemMetrics {
   readonly totalInvestment: PMC;
   readonly averageROI: number;
   readonly successRate: number;
-  readonly innovationIndex: number; // Schumpeter 지수
+  readonly innovationIndex: number; // Schumpeter 지??
   readonly networkDensity: number;
   readonly creativeDestructionLevel: number;
 }
@@ -139,8 +141,8 @@ export class MoneyWave3Aggregate {
         return {
           success: false,
           error: new DomainError(
-            "INVALID_INVESTMENT_POOL",
-            "Investment pool must be positive"
+            "Investment pool must be positive",
+            { code: "INVALID_INVESTMENT_POOL" }
           ),
         };
       }

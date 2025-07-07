@@ -194,36 +194,47 @@ cp -r packages/shared-ui/src/* packages/shared-core/src/ui/
 pnpm -F shared-core add react@^19.0.0 react-dom@^19.0.0
 ```
 
-### 🔧 Task 1.3: study-cycle 패키지 정리 (2일)
+### 🔧 Task 1.3: study-cycle 패키지 정리 ❌ **방향 전환**
 
-#### 1.3.1 패키지 이름 변경 및 구조 정리
-```bash
-# 패키지 이름 변경
-mv packages/study-cycle-core packages/study-cycle
+#### ⚠️ **중요: 전략 재검토 결과**
 
-# package.json 업데이트
-sed -i 's|"name": "@posmul/study-cycle-core"|"name": "@posmul/study-cycle"|' \
-packages/study-cycle/package.json
+**2025-07-06 업데이트**: 실제 요구사항 분석 결과, 통합 패키지 접근법에서 **Economy SDK 중심 접근법**으로 전면 전환합니다.
 
-# 의존성 단순화
-cat > packages/study-cycle/package.json << 'EOF'
-{
-  "name": "@posmul/study-cycle",
-  "version": "1.0.0",
-  "dependencies": {
-    "@posmul/shared-core": "workspace:*"
-  }
-}
-EOF
+#### 🎯 **새로운 방향: Economy SDK 중심**
+
+```mermaid
+graph TD
+    A[기존 계획: 통합 패키지] --> B[❌ 부적합한 가정]
+    B --> C["단일 긴밀한 앱"]
+    
+    D[실제 요구사항] --> E[✅ 적합한 접근]
+    E --> F["경제만 공유하는 독립 앱들"]
+    
+    G[새로운 방향] --> H[@posmul/economy-sdk]
+    G --> I[각 앱 독립 배포]
+    
+    style A fill:#ffebee
+    style D fill:#e8f5e9
+    style G fill:#e3f2fd
 ```
 
-#### 1.3.2 DDD 구조 정리
+#### 📋 **새로운 실행 계획**
+
+**자세한 내용**: [Economy SDK 재설계 전략](./economy-sdk-redesign-strategy.md) 문서 참조
+
 ```bash
-# 도메인 레이어 구조 검증
-ls -la packages/study-cycle/src/
-# ├── domain/         # ✅ 순수 도메인 로직
-# ├── application/    # ✅ 유즈케이스
-# └── infrastructure/ # ✅ MCP 구현체
+# Phase 1: Economy SDK 생성
+mv packages/shared-core packages/economy-sdk
+
+# Phase 2: 경제 로직만 추출
+# - PMP/PMC 토큰 시스템
+# - 경제 트랜잭션  
+# - 보상 계산 로직
+
+# Phase 3: 앱별 독립 의존성 설정
+# PosMul Web: economy-sdk + 전체 기능
+# Android App: economy-sdk만
+# StudyCycle: economy-sdk만
 ```
 
 ---

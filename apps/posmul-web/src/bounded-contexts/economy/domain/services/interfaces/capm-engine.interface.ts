@@ -9,7 +9,8 @@
  * - 포트폴리오 최적화: 리스크-수익 트레이드오프
  */
 
-import { Result } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   BetaCoefficient,
   ExpectedReturn,

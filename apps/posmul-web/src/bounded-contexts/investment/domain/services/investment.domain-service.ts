@@ -1,5 +1,6 @@
-import { Result } from "@posmul/shared-types";
-import { BusinessLogicError } from "@posmul/shared-ui";
+import { Result } from "@posmul/auth-economy-sdk";
+
+import { BusinessLogicError } from "@posmul/auth-economy-sdk";
 import { Advertisement } from "../entities/advertisement.entity";
 import { CrowdFunding } from "../entities/crowdfunding.entity";
 import { Investment } from "../entities/investment.entity";

@@ -87,3 +87,4 @@ export declare class PmcSpentEvent extends BaseDomainEvent {
     readonly targetId: string;
     constructor(userId: string, amount: number, purpose: "donation" | "local-investment" | "investment-participation", targetId: string);
 }
+//# sourceMappingURL=domain-events.d.ts.map

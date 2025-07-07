@@ -9,7 +9,8 @@
  * - 해결책: 예측 게임을 통한 집단지성 활용
  */
 
-import { Result } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   PMC,
   PMP,

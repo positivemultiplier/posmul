@@ -2,7 +2,8 @@
 // UTF-8 인코딩
 
 import { z } from "zod";
-import type { Result } from "@posmul/shared-types";
+import type { Result } from "@posmul/auth-economy-sdk";
+
 
 // Investment 서비스 타입
 export enum InvestmentType {

@@ -2,11 +2,8 @@
  * 로그인 유스케이스
  */
 
-import type { Result } from "@posmul/shared-types";
-import {
-  InvalidCredentialsError,
-  UserNotFoundError,
-} from "@posmul/shared-types";
+import type { Result } from "@posmul/auth-economy-sdk";
+import { AuthError } from "@posmul/auth-economy-sdk";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {
   AuthResult,
@@ -51,7 +48,7 @@ export class SignInUseCase implements ISignInUseCase {
       if (!userResult.data) {
         return {
           success: false,
-          error: new UserNotFoundError("존재하지 않는 사용자입니다."),
+          error: new AuthError("존재하지 않는 사용자입니다.", { code: "USER_NOT_FOUND" }),
         };
       }
 
@@ -61,7 +58,7 @@ export class SignInUseCase implements ISignInUseCase {
       if (!user.isActive) {
         return {
           success: false,
-          error: new InvalidCredentialsError("비활성화된 계정입니다."),
+          error: new AuthError("비활성화된 계정입니다.", { code: "ACCOUNT_DISABLED" }),
         };
       }
 
@@ -70,8 +67,9 @@ export class SignInUseCase implements ISignInUseCase {
       if (!authResult.success) {
         return {
           success: false,
-          error: new InvalidCredentialsError(
-            "이메일 또는 비밀번호가 올바르지 않습니다."
+          error: new AuthError(
+            "이메일 또는 비밀번호가 올바르지 않습니다.",
+            { code: "INVALID_CREDENTIALS" }
           ),
         };
       }

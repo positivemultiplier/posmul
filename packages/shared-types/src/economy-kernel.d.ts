@@ -80,3 +80,4 @@ export interface IEconomyKernelRepository {
      */
     canSpendPmc(userId: UserId, amount: number): Promise<Result<boolean, EconomyKernelError>>;
 }
+//# sourceMappingURL=economy-kernel.d.ts.map

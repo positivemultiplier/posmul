@@ -4,3 +4,4 @@ export declare class ValidationError extends BaseError {
     readonly validationErrors?: Record<string, string[]>;
     constructor(message?: string, field?: string, validationErrors?: Record<string, string[]>);
 }
+//# sourceMappingURL=validation.error.d.ts.map

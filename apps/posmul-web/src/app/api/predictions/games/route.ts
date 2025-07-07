@@ -1,4 +1,4 @@
-import { UserId, isFailure } from "@posmul/shared-types";
+import { UserId, isFailure } from "../../../../shared/legacy-compatibility";
 import { NextRequest, NextResponse } from "next/server";
 import { CreatePredictionGameUseCase } from "../../../../bounded-contexts/prediction/application/use-cases/create-prediction-game.use-case";
 import { GetPredictionGamesUseCase } from "../../../../bounded-contexts/prediction/application/use-cases/get-prediction-games.use-case";

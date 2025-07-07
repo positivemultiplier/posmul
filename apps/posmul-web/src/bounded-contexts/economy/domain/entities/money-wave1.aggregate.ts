@@ -11,7 +11,7 @@
  * - Agency Cost 최소화 원칙 준수
  */
 
-import { DomainError, Result } from "@posmul/shared-types";
+import { Result, DomainError } from "@posmul/auth-economy-sdk";
 import { MoneyWaveId, PMC, createPMC, unwrapPMC } from "../value-objects";
 
 export interface EBITCalculation {

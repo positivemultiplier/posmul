@@ -1,13 +1,13 @@
 "use client";
 
-import { Badge } from "@posmul/shared-ui";
-import {
-  Card,
+import { 
+  Badge,
+  CardBase as Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@posmul/shared-ui";
+} from "@posmul/auth-economy-sdk";
 import React from "react";
 
 interface UserEconomicDashboardProps {

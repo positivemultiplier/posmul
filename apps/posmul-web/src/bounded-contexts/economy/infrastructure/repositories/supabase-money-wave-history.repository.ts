@@ -5,7 +5,9 @@
  * IMoneyWaveHistoryRepository 인터페이스를 MCP 패턴으로 구현
  */
 
-import { Result, failure, success } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+import { failure, success } from "@posmul/auth-economy-sdk";
+ // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import {
   IMoneyWaveHistoryRepository,
   MoneyWave1Record,

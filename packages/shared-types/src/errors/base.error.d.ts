@@ -5,3 +5,4 @@ export declare abstract class BaseError extends Error {
     cause?: Error;
     constructor(message: string, code?: string, statusCode?: number, isOperational?: boolean);
 }
+//# sourceMappingURL=base.error.d.ts.map

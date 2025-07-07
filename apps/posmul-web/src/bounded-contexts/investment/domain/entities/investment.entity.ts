@@ -1,8 +1,9 @@
 // Investment Entity - 사용자의 투자/참여 기록
 // UTF-8 인코딩
 
-import type { Result } from '@posmul/shared-types';
-import type { DomainEvent } from '@posmul/shared-types';
+import type { Result } from "@posmul/auth-economy-sdk";
+
+import type { DomainEvent } from "@posmul/auth-economy-sdk";
 import {
   InvestmentId,
   InvestmentType,
@@ -11,7 +12,7 @@ import {
   AdvertisementId,
   CrowdFundingId
 } from '../value-objects/investment-value-objects';
-import type { UserId } from '../../../auth/domain/value-objects/user-value-objects';
+import type { UserId } from "@posmul/auth-economy-sdk";
 
 // Investment 도메인 이벤트
 export class InvestmentCreatedEvent implements DomainEvent {

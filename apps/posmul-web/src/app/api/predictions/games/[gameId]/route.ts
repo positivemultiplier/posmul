@@ -1,5 +1,6 @@
-import { PredictionGameId, UserId, isFailure } from "@posmul/shared-types";
+import { PredictionGameId, UserId, isFailure } from "@posmul/auth-economy-sdk";
 import { NextRequest, NextResponse } from "next/server";
+import { toLegacyUserId } from "../../../../../shared/type-bridge";
 import { DeletePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/delete-prediction-game.use-case";
 import { GetPredictionGameByIdUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/get-prediction-game-by-id.use-case";
 import { UpdatePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/update-prediction-game.use-case";
@@ -137,7 +138,7 @@ export async function PUT(
     // UseCase 실행
     const result = await useCase.execute({
       gameId: gameId as PredictionGameId,
-      updatedBy: body.updatedBy as UserId,
+      updatedBy: toLegacyUserId(body.updatedBy as UserId),
       updates: {
         title: body.title,
         description: body.description,
@@ -260,7 +261,7 @@ export async function DELETE(
     // UseCase 실행
     const result = await useCase.execute({
       gameId: gameId as PredictionGameId,
-      deletedBy: deletedBy as UserId,
+      deletedBy: toLegacyUserId(deletedBy as UserId),
       reason,
     });
 

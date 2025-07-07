@@ -1,15 +1,16 @@
 // CrowdFunding Aggregate Root - 크라우드 펀딩 관리 (Cloud Funding)
 // UTF-8 인코딩
 
-import type { Result, isSuccess } from '@posmul/shared-types';
-import type { DomainEvent } from '@posmul/shared-types';
+import type { Result } from "@posmul/auth-economy-sdk";
+import type { isSuccess } from "@posmul/auth-economy-sdk";
+import type { DomainEvent } from "@posmul/auth-economy-sdk";
 import {
   CrowdFundingId,
   FundingCategory,
   FundingStatus,
   FundingGoal
 } from '../value-objects/investment-value-objects';
-import type { UserId } from '../../../auth/domain/value-objects/user-value-objects';
+import type { UserId } from "@posmul/auth-economy-sdk";
 
 // CrowdFunding 도메인 이벤트
 export class CrowdFundingCreatedEvent implements DomainEvent {

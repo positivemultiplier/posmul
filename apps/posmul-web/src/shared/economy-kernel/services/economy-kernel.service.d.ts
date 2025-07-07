@@ -8,7 +8,8 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-import { Result, UserId } from "@posmul/shared-types";
+import { Result, UserId } from "@posmul/auth-economy-sdk";
+
 /**
  * Economy Kernel 오류 타입
  */

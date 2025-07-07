@@ -1,0 +1,1 @@
+{"version":3,"file":"game.error.d.ts","sourceRoot":"","sources":["game.error.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,SAAS,EAAE,MAAM,cAAc,CAAC;AAIzC,qBAAa,iBAAkB,SAAQ,SAAS;gBAClC,OAAO,GAAE,MAAyB;CAG/C;AAED,qBAAa,qBAAsB,SAAQ,SAAS;gBACtC,OAAO,GAAE,MAAwB;CAG9C;AAED,qBAAa,6BAA8B,SAAQ,SAAS;gBAC9C,OAAO,GAAE,MAA2B;CAGjD"}

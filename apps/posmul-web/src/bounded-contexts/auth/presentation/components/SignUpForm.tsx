@@ -4,8 +4,9 @@
 
 "use client";
 
-import { Button, Card, Input } from "@posmul/shared-ui";
 import { useState } from "react";
+import { Button, Card } from "../../../../shared/ui/components/base";
+import { Input } from "../../../../shared/ui/components/forms";
 
 interface SignUpFormProps {
   onSubmit?: (data: {

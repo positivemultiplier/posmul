@@ -4,7 +4,8 @@
  * 예측 도메인의 타입 정의
  */
 
-import { UserId } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
 
 /**
  * 예측 타입

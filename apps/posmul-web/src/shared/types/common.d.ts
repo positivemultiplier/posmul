@@ -1,1 +1,1 @@
-export * from "@posmul/shared-types";
+export * from "@posmul/auth-economy-sdk/types";

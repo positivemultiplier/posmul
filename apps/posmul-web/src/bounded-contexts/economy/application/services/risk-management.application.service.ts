@@ -3,7 +3,8 @@
  * 리스크 관리 관련 애플리케이션 서비스
  */
 
-import { Result } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   EconomicSystemState,
   RiskAssessment,

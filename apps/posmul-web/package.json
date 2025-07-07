@@ -11,9 +11,8 @@
     "gen:types": "cmd /c \"chcp 65001 > nul && C:/G/posmul/node_modules/.bin/tsx C:/G/mcp-automation/universal-mcp-automation.ts batch public,prediction,economy,investment,donation,forum,user\""
   },
   "dependencies": {
-    "@posmul/shared-auth": "workspace:*",
-    "@posmul/shared-types": "workspace:*",
-    "@posmul/shared-ui": "workspace:*",
+    "@hookform/resolvers": "^5.1.1",
+    "@posmul/auth-economy-sdk": "workspace:*",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-portal": "^1.1.9",
     "@supabase/auth-helpers-nextjs": "^0.10.0",
@@ -27,6 +26,7 @@
     "next": "15.3.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-hook-form": "^7.60.0",
     "recharts": "^3.0.0",
     "uuid": "^11.1.0",
     "zod": "^3.25.67",

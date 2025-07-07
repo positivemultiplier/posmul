@@ -11,13 +11,7 @@
  * @since 2024-12
  */
 
-import {
-  PredictionGameId,
-  PredictionId,
-  Result,
-  UseCaseError,
-  UserId,
-} from "@posmul/shared-types";
+import { PredictionGameId, PredictionId, Result, UserId, UseCaseError } from "@posmul/auth-economy-sdk";
 import { MoneyWaveCalculatorService } from "../../../../shared/economy-kernel/services/money-wave-calculator.service";
 import {
   BaseDomainEvent,

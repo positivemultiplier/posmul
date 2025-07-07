@@ -5,7 +5,8 @@
  * @version 1.0.0
  */
 
-import { Result } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+
 
 /**
  * 경제지표 타입 정의

@@ -1,0 +1,55 @@
+{
+  "name": "@posmul/study-cycle",
+  "version": "0.1.0",
+  "private": true,
+  "description": "React Native StudyCycle App with Auth-Economy SDK Integration",
+  "keywords": ["react-native", "study-cycle", "pomp", "pmc", "learning"],
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "start": "react-native start",
+    "dev": "react-native start",
+    "build": "tsc --noEmit",
+    "build:android": "cd android && .\\gradlew assembleDebug",
+    "build:android:release": "cd android && .\\gradlew assembleRelease",
+    "clean": "react-native clean",
+    "clean:all": "react-native clean && cd android && .\\gradlew clean",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "lint": "eslint src --max-warnings 0",
+    "lint:fix": "eslint src --fix",
+    "type-check": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "@posmul/auth-economy-sdk": "workspace:*",
+    "react": "18.2.0",
+    "react-native": "^0.73.0"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.20.0",
+    "@babel/preset-env": "^7.20.0",
+    "@babel/runtime": "^7.20.0",
+    "@react-native/babel-preset": "^0.73.0",
+    "@react-native/eslint-config": "^0.73.0",
+    "@react-native/metro-config": "^0.73.0",
+    "@react-native/typescript-config": "^0.73.0",
+    "@testing-library/jest-native": "^5.4.3",
+    "@testing-library/react-native": "^13.2.0",
+    "@types/jest": "^30.0.0",
+    "@types/react": "~18.2.6",
+    "@types/react-test-renderer": "^18.0.0",
+    "babel-jest": "^29.6.3",
+    "eslint": "^8.57.0",
+    "jest": "^30.0.3",
+    "prettier": "^2.8.8",
+    "react-test-renderer": "18.2.0",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  }
+}

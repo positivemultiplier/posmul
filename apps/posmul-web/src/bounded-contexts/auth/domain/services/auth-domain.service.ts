@@ -2,7 +2,8 @@
  * 사용자 인증 도메인 서비스
  */
 
-import type { Result, ValidationError } from "@posmul/shared-types";
+import type { Result, ValidationError } from "@posmul/auth-economy-sdk";
+
 import { User } from "../entities/user.entity";
 import {
   createEmail,

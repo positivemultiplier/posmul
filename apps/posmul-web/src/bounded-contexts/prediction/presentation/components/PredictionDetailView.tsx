@@ -10,14 +10,7 @@
 
 "use client";
 
-import { Badge } from "@posmul/shared-ui";
-import { Button } from "@posmul/shared-ui";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@posmul/shared-ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/components/base";
 import { useEffect, useState } from "react";
 
 // Types

@@ -1,8 +1,9 @@
 // Advertisement Aggregate Root - 광고 관리 (Major League)
 // UTF-8 인코딩
 
-import type { Result } from '@posmul/shared-types';
-import type { DomainEvent } from '@posmul/shared-types';
+import type { Result } from "@posmul/auth-economy-sdk";
+
+import type { DomainEvent } from "@posmul/auth-economy-sdk";
 import {
   AdvertisementId,
   AdvertisementCategory,
@@ -10,7 +11,7 @@ import {
   ViewingDuration,
   RewardRate
 } from '../value-objects/investment-value-objects';
-import type { UserId } from '../../../auth/domain/value-objects/user-value-objects';
+import type { UserId } from "@posmul/auth-economy-sdk";
 
 // Advertisement 도메인 이벤트
 export class AdvertisementCreatedEvent implements DomainEvent {

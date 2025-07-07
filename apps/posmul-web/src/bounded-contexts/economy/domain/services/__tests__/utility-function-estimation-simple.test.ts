@@ -2,7 +2,7 @@
  * Utility Function Estimation Service Tests (Simplified)
  */
 
-import { createUserId } from "@posmul/shared-types";
+import { createUserId } from "@posmul/auth-economy-sdk";
 import { createPMC, createPMP } from "../../value-objects";
 import {
   BehaviorObservation,

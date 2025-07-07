@@ -3,8 +3,10 @@
  * 기부 기관 엔티티
  */
 
-import { UserId } from "@posmul/shared-types";
-import { DomainEvent, Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+import { DomainEvent } from "@posmul/auth-economy-sdk";
 import {
   InstituteCategory,
   InstituteId,

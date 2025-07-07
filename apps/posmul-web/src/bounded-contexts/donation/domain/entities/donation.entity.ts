@@ -3,8 +3,10 @@
  * 기부 엔티티 - 모든 기부 활동의 루트 애그리거트
  */
 
-import { UserId } from "@posmul/shared-types";
-import { DomainEvent, Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+import { DomainEvent } from "@posmul/auth-economy-sdk";
 import {
   BeneficiaryInfo,
   DonationAmount,

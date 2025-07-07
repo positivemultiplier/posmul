@@ -3,11 +3,9 @@
  * 기관 리포지토리 인터페이스
  */
 
-import {
-  PaginatedResult,
-  PaginationParams,
-  Result,
-} from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+import { PaginatedResult, PaginationParams } from "@posmul/auth-economy-sdk";
+
 import {
   Institute,
   InstituteStatus,

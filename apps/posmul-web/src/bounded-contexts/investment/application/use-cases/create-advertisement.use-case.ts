@@ -1,5 +1,8 @@
-import { UserId } from "@posmul/shared-types";
-import { Result, ValidationError } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+import { ValidationError } from "@posmul/auth-economy-sdk";
+ // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import { Advertisement } from "../../domain/entities/advertisement.entity";
 import { IAdvertisementRepository } from "../../domain/repositories/advertisement.repository";
 import {

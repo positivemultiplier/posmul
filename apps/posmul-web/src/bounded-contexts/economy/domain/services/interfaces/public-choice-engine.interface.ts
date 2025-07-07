@@ -9,7 +9,8 @@
  * - Constitutional Economics
  */
 
-import { Result } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   BudgetTransparencyScore,
   CitizenParticipationRate,

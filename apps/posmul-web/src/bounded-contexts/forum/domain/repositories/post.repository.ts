@@ -3,11 +3,9 @@
  * 게시물 저장소 인터페이스
  */
 
-import {
-  PaginatedResult,
-  PaginationParams,
-  Result,
-} from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+import { PaginatedResult, PaginationParams } from "@posmul/auth-economy-sdk";
+
 import { UserId } from "../../../auth/domain/value-objects/user-value-objects";
 import { Post } from "../entities/post.entity";
 import {

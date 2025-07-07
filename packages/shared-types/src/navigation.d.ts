@@ -61,3 +61,4 @@ export interface RoutePattern {
     example: string;
 }
 export declare const ROUTE_PATTERNS: RoutePattern[];
+//# sourceMappingURL=navigation.d.ts.map

@@ -1,13 +1,13 @@
 "use client";
 
-import { useRealtimeConnection } from "@posmul/shared-ui";
+import { useRealtimeConnection } from "../hooks/use-realtime-connection";
 import type {
   RealtimeEconomicData,
   RealtimeMarketData,
   RealtimeMoneyWave,
   RealtimePredictionGame,
-} from "@posmul/shared-ui";
-import { useRealtimeDataStore } from "@posmul/shared-ui";
+} from "../stores/realtime-data-store";
+import { useRealtimeDataStore } from "../stores/realtime-data-store";
 import React, { createContext, useContext, useEffect, useRef } from "react";
 
 interface RealtimeProviderProps {

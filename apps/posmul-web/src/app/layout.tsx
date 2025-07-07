@@ -1,4 +1,4 @@
-import { Navbar } from "@posmul/shared-ui";
+import { Navbar } from "../shared/ui";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";

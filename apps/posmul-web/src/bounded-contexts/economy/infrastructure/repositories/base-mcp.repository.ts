@@ -1,13 +1,9 @@
+// @deprecated - 추후 Auth-Economy SDK로 완전 교체 예정
 import {
   mcp_supabase_apply_migration,
   mcp_supabase_execute_sql,
-<<<<<<< HEAD:apps/posmul-web/src/bounded-contexts/economy/infrastructure/repositories/base-mcp.repository.ts
-} from "@posmul/shared-auth";
-import { SupabaseProjectService } from "@posmul/shared-auth";
-=======
-} from "@/shared/mcp/supabase-client";
-import { SupabaseProjectService } from "@/shared/mcp/supabase-project.service";
->>>>>>> main:src/bounded-contexts/economy/infrastructure/repositories/base-mcp.repository.ts
+} from "../../../../shared/mcp/supabase-client";
+import { SupabaseProjectService } from "../../../../shared/mcp/supabase-project.service";
 
 export abstract class BaseMCPRepository {
   protected readonly projectId: string;

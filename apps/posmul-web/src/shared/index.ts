@@ -1,20 +1,26 @@
 /**
- * Legacy shared index shim
+ * PosMul Web Shared Module - 모놀리식 아키텍처 전환
  *
- * 웹 애플리케이션의 기존 `@/shared/*` import를 끊김 없이 유지하기 위해,
- * 새로운 모노레포 패키지(`@posmul/*`)로 모든 export 를 재전달합니다.
- * 최종 목표는 해당 디렉터리를 제거하고 각 소스를 직접 패키지로 참조하는 것이지만,
- * 단계적 마이그레이션을 위해 호환 레이어를 유지합니다.
+ * 웹 애플리케이션의 공유 모듈들을 중앙 집중식으로 관리.
+ * packages/shared-ui 해체 후 내부 UI 시스템으로 전환.
  */
 
-// Public types – 통합 타입은 shared-types 패키지로 이동
-export * from "@posmul/shared-types";
+// Auth & Economy - 통합 SDK 사용
+export * from "@posmul/auth-economy-sdk";
 
-// UI / util – shared-ui 패키지로부터 re-export
-export * from "@posmul/shared-ui";
+// UI Components - 내부 shared UI 시스템 사용
+export * from "./ui";
 
-// Auth / Supabase helpers – shared-auth 패키지로부터 re-export
-export * from "@posmul/shared-auth";
+// Economy Kernel - 도메인 공통 로직
+export * from "./economy-kernel";
 
-// NOTE: Economy Kernel, Domain Events 등은 향후 @posmul/shared-domain 으로 이동 예정.
-// 일단 기존 경로를 사용하는 코드는 shared-types 내 정의를 사용하도록 안내.
+// Events - 도메인 이벤트 시스템 (명시적 export로 중복 해결)
+export {
+  InMemoryEventPublisher,
+  PublishError,
+  HandlerError,
+} from "./events/event-publisher";
+
+// TODO: Realtime 시스템 마이그레이션 (일부 완료)
+// 기본 realtime 기능은 복구되었지만, chart/notification 시스템은 아직 마이그레이션 중입니다.
+export * from "./realtime";

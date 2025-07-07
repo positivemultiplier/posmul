@@ -1,6 +1,6 @@
 "use client";
 // 로그인 페이지 (Next.js 15 App Router)
-import { LoginForm } from '@posmul/shared-ui';
+import { LoginForm } from '../../../shared/ui';
 
 export default function LoginPage() {
   // 임시: 실제 인증 로직 연결 전까지 noop

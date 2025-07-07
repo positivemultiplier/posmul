@@ -11,8 +11,9 @@
  * - Pigou Tax 원리에 따른 외부효과 교정
  */
 
-import { UserId } from "@posmul/shared-types";
-import { DomainError, Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result, DomainError } from "@posmul/auth-economy-sdk";
 import { MoneyWaveId, PMC, createPMC, unwrapPMC } from "../value-objects";
 
 export interface UnusedPMCData {

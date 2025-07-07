@@ -1,13 +1,7 @@
 "use client";
 
-import {
-  AuthenticationError,
-  BusinessLogicError,
-  InsufficientPointsError,
-  NetworkError,
-  ValidationError,
-} from "@posmul/shared-types";
-import { BaseErrorUI } from "@posmul/shared-ui";
+import { AuthError, BusinessLogicError, EconomyError, NetworkError, ValidationError } from "@posmul/auth-economy-sdk";
+import { BaseErrorUI } from "../../shared/ui/components/feedback";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -34,10 +28,13 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
       message.includes("balance") ||
       message.includes("pmc")
     ) {
-      return new InsufficientPointsError(
-        0, // currentPoints - 실제 값은 서버에서 받아야 함
-        100, // requiredPoints - 실제 값은 서버에서 받아야 함
-        "PMC 포인트가 부족합니다. 예측 게임이나 투자로 PMC를 획득하세요."
+      return new EconomyError(
+        "PMC 포인트가 부족합니다. 예측 게임이나 투자로 PMC를 획득하세요.",
+        {
+          code: 'INSUFFICIENT_POINTS',
+          currentPoints: 0, // 실제 값은 서버에서 받아야 함
+          requiredPoints: 100, // 실제 값은 서버에서 받아야 함
+        }
       );
     }
 
@@ -45,7 +42,7 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
       message.includes("unauthorized") ||
       message.includes("authentication")
     ) {
-      return new AuthenticationError(
+      return new AuthError(
         "기부 기능을 이용하려면 로그인이 필요합니다."
       );
     }
@@ -58,7 +55,7 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
     ) {
       return new ValidationError(
         "기부 금액이 유효하지 않습니다. 최소/최대 기부 금액을 확인해주세요.",
-        "donation_amount"
+        { field: "donation_amount" }
       );
     }
 
@@ -69,7 +66,7 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
     ) {
       return new ValidationError(
         "기부 대상이 올바르지 않습니다. 기부 대상을 다시 확인해주세요.",
-        "donation_target"
+        { field: "donation_target" }
       );
     }
 
@@ -80,14 +77,14 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
     ) {
       return new BusinessLogicError(
         "기부 모집이 종료되었습니다. 다른 진행 중인 기부에 참여해보세요.",
-        "DONATION_CLOSED"
+        { code: "DONATION_CLOSED" }
       );
     }
 
     if (message.includes("money wave") || message.includes("distribution")) {
       return new BusinessLogicError(
         "머니 웨이브 시스템 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-        "MONEY_WAVE_ERROR"
+        { code: "MONEY_WAVE_ERROR" }
       );
     }
 
@@ -138,7 +135,7 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
         showDetails={process.env.NODE_ENV === "development"}
         className="max-w-lg"
         customActions={[
-          ...(enhancedError instanceof InsufficientPointsError
+          ...(enhancedError instanceof EconomyError && enhancedError.details?.code === 'INSUFFICIENT_POINTS'
             ? [
                 {
                   label: "PMC 획득하기",
@@ -147,7 +144,7 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
                 },
               ]
             : []),
-          ...(enhancedError instanceof AuthenticationError
+          ...(enhancedError instanceof AuthError
             ? [
                 {
                   label: "로그인하기",

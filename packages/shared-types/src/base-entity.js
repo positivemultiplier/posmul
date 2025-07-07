@@ -1,13 +1,20 @@
-export class BaseEntity {
-    constructor(props) {
+var BaseEntity = /** @class */ (function () {
+    function BaseEntity(props) {
         this.props = props;
     }
-    touch() {
+    BaseEntity.prototype.touch = function () {
         if (this.props.updatedAt instanceof Date) {
             this.props.updatedAt = new Date();
         }
-    }
-    get propsAsJson() {
-        return this.props;
-    }
-}
+    };
+    Object.defineProperty(BaseEntity.prototype, "propsAsJson", {
+        get: function () {
+            return this.props;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    return BaseEntity;
+}());
+export { BaseEntity };
+//# sourceMappingURL=base-entity.js.map

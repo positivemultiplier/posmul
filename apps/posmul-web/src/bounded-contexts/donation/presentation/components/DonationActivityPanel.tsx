@@ -1,14 +1,7 @@
 "use client";
 
-import { Badge } from "@posmul/shared-ui";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@posmul/shared-ui";
 import React from "react";
+import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../shared/ui/components/base";
 
 interface DonationActivityPanelProps {
   userId: string;

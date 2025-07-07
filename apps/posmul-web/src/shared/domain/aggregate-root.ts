@@ -1,4 +1,4 @@
-import { DomainEvent } from "@posmul/shared-types";
+import { DomainEvent } from "@posmul/auth-economy-sdk";
 import { publishEvent } from "../events/domain-events";
 import { Entity } from "./entity";
 

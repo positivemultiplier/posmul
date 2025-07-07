@@ -1,13 +1,6 @@
 "use client";
 
-import { Badge } from "@posmul/shared-ui";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@posmul/shared-ui";
+import { Badge, Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/shared/ui/components/base";
 import React from "react";
 
 interface PredictionHistoryPanelProps {

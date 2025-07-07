@@ -5,8 +5,10 @@
  * 시계열 예측, 클러스터링, 분류 및 이상 탐지 알고리즘 구현
  */
 
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   IEconomicAnalyticsRepository,
   PanelDataObservation,

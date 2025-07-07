@@ -5,8 +5,8 @@
  * IPMPPMCAccountRepository 인터페이스를 Supabase MCP로 구현
  */
 
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+// 레거시 타입 유지 - 점진적 마이그레이션 계획
+import { UserId, Result } from "@posmul/auth-economy-sdk";
 import {
   AccountActivity,
   AccountBalance,

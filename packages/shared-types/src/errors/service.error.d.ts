@@ -7,3 +7,4 @@ export declare class ExternalServiceError extends BaseError {
 export declare class NetworkError extends BaseError {
     constructor(message?: string);
 }
+//# sourceMappingURL=service.error.d.ts.map

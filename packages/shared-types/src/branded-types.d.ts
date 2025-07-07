@@ -115,3 +115,4 @@ export declare const unwrapInformationTransparency: (transparency: InformationTr
 export declare const unwrapAgencyCostScore: (score: AgencyCostScore) => number;
 export declare const unwrapRiskAversionCoefficient: (coefficient: RiskAversionCoefficient) => number;
 export {};
+//# sourceMappingURL=branded-types.d.ts.map

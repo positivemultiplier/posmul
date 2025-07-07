@@ -5,8 +5,10 @@
  * Behavioral Economics와 Welfare Economics 이론 기반 실시간 효용 추정 시스템
  */
 
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
 import { PMC, PMP } from "../value-objects";
 
 /**

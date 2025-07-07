@@ -8,15 +8,11 @@
  * @since 2024-12
  */
 
-import {
-  AccuracyScore,
-  PMC,
-  createPMC,
-} from "@posmul/shared-types";
-import {
-  Result,
-  ValidationError,
-} from "@posmul/shared-types";
+import { AccuracyScore } from "@posmul/auth-economy-sdk";
+import { PmcAmount, createPmcAmount } from "@posmul/auth-economy-sdk/economy";
+import { Result } from "@posmul/auth-economy-sdk";
+import { ValidationError } from "@posmul/auth-economy-sdk";
+
 
 /**
  * 예측 결과 열거형
@@ -57,7 +53,7 @@ export class PredictionResult {
         success: false,
         error: new ValidationError(
           `Accuracy score must be between 0 and 1, got: ${score}`,
-          "accuracyScore"
+          { field: "accuracyScore" }
         ),
       };
     }
@@ -67,7 +63,7 @@ export class PredictionResult {
         success: false,
         error: new ValidationError(
           "Accuracy score must be a valid finite number",
-          "accuracyScore"
+          { field: "accuracyScore" }
         ),
       };
     }
@@ -104,7 +100,7 @@ export class PredictionResult {
         success: false,
         error: new ValidationError(
           `Accuracy score must be between 0 and 1, got: ${accuracyScore}`,
-          "accuracyScore"
+          { field: "accuracyScore" }
         ),
       };
     }
@@ -207,10 +203,10 @@ export class PredictionResult {
   /**
    * 보상 금액 계산
    */
-  public calculateReward(baseReward: PMC): PMC {
+  public calculateReward(baseReward: PmcAmount): PmcAmount {
     const multiplier = this.getRewardMultiplier();
     const amount = (baseReward as number) * multiplier;
-    return createPMC(Math.floor(amount));
+    return createPmcAmount(Math.floor(amount));
   }
 
   /**

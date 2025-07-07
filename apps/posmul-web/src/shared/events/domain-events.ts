@@ -8,14 +8,37 @@ import {
   EventBus,
   EventHandler,
   EventTypes,
-  PmcEarnedEvent,
-  PmcSpentEvent,
-  PmpEarnedEvent,
-  PmpSpentEvent,
-  PointsEarnedEvent,
-  PredictionGameCreatedEvent,
-  UserCreatedEvent,
-} from "@posmul/shared-types";
+} from "@posmul/auth-economy-sdk/types";
+
+// 특정 이벤트 타입들 (아직 SDK에 없는 것들)
+// TODO: 이후 SDK로 이관 예정
+export interface PmcEarnedEvent extends DomainEvent {
+  type: typeof EventTypes.PMC_EARNED;
+}
+
+export interface PmcSpentEvent extends DomainEvent {
+  type: typeof EventTypes.PMC_SPENT;
+}
+
+export interface PmpEarnedEvent extends DomainEvent {
+  type: typeof EventTypes.PMP_EARNED;
+}
+
+export interface PmpSpentEvent extends DomainEvent {
+  type: typeof EventTypes.PMP_SPENT;
+}
+
+export interface PointsEarnedEvent extends DomainEvent {
+  type: typeof EventTypes.POINTS_EARNED;
+}
+
+export interface PredictionGameCreatedEvent extends DomainEvent {
+  type: typeof EventTypes.PREDICTION_GAME_CREATED;
+}
+
+export interface UserCreatedEvent extends DomainEvent {
+  type: typeof EventTypes.USER_CREATED;
+}
 
 // 메모리 기반 이벤트 버스 구현 (앱 전용)
 export class InMemoryEventBus implements EventBus {
@@ -38,6 +61,19 @@ export class InMemoryEventBus implements EventBus {
       .get(eventType)!
       .push(handler as unknown as EventHandler<DomainEvent>);
   }
+
+  unsubscribe<T extends DomainEvent>(
+    eventType: string,
+    handler: EventHandler<T>
+  ): void {
+    const handlers = this.handlers.get(eventType);
+    if (handlers) {
+      const index = handlers.indexOf(handler as unknown as EventHandler<DomainEvent>);
+      if (index > -1) {
+        handlers.splice(index, 1);
+      }
+    }
+  }
 }
 
 // 글로벌 이벤트 버스 인스턴스 (앱 전용 편의 API)
@@ -52,16 +88,10 @@ export const subscribeToEvent = <T extends DomainEvent>(
   globalEventBus.subscribe(eventType, handler);
 };
 
-export type { DomainEvent, EventBus, EventHandler };
+// 공통 타입 재수출
+export type { DomainEvent, EventBus, EventHandler } from "@posmul/auth-economy-sdk/types";
 
 export {
   BaseDomainEvent,
   EventTypes,
-  PmcEarnedEvent,
-  PmcSpentEvent,
-  PmpEarnedEvent,
-  PmpSpentEvent,
-  PointsEarnedEvent,
-  PredictionGameCreatedEvent,
-  UserCreatedEvent,
-};
+} from "@posmul/auth-economy-sdk/types";
