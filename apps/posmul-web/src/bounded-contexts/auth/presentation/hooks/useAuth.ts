@@ -30,6 +30,7 @@ interface AuthState {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  error: string | null;
 }
 
 interface AuthActions {
@@ -41,6 +42,7 @@ interface AuthActions {
   }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshToken: () => Promise<void>;
+  clearError: () => void;
 }
 
 export function useAuth(): AuthState & AuthActions {
@@ -48,6 +50,7 @@ export function useAuth(): AuthState & AuthActions {
     user: null,
     isLoading: true,
     isAuthenticated: false,
+    error: null,
   });
 
   const [error, setError] = useState<string | null>(null);
@@ -65,6 +68,11 @@ export function useAuth(): AuthState & AuthActions {
     checkAuthStatus();
   }, []);
 
+  const clearError = () => {
+    setError(null);
+    setAuthState((prev) => ({ ...prev, error: null }));
+  };
+
   const checkAuthStatus = async () => {
     try {
       // SDK를 통한 현재 사용자 확인
@@ -78,12 +86,14 @@ export function useAuth(): AuthState & AuthActions {
           user: domainUser,
           isLoading: false,
           isAuthenticated: true,
+          error: null,
         });
       } else {
         setAuthState({
           user: null,
           isLoading: false,
           isAuthenticated: false,
+          error: null,
         });
       }
     } catch (error) {
@@ -92,6 +102,7 @@ export function useAuth(): AuthState & AuthActions {
         user: null,
         isLoading: false,
         isAuthenticated: false,
+        error: null,
       });
     }
   };
@@ -99,7 +110,7 @@ export function useAuth(): AuthState & AuthActions {
   const signIn = async (credentials: { email: string; password: string }) => {
     try {
       setError(null);
-      setAuthState((prev) => ({ ...prev, isLoading: true }));
+      setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       // SDK를 통한 로그인
       const result = await authClient.auth.signIn(
@@ -113,6 +124,7 @@ export function useAuth(): AuthState & AuthActions {
           user: domainUser,
           isLoading: false,
           isAuthenticated: true,
+          error: null,
         });
       } else {
         const errorMessage = isFailure(result)
@@ -123,12 +135,16 @@ export function useAuth(): AuthState & AuthActions {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      setError(
+      const errorMessage =
         error instanceof Error
           ? error.message
-          : "로그인 중 오류가 발생했습니다."
-      );
-      setAuthState((prev) => ({ ...prev, isLoading: false }));
+          : "로그인 중 오류가 발생했습니다.";
+      setError(errorMessage);
+      setAuthState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
+      }));
       throw error;
     }
   };
@@ -140,7 +156,7 @@ export function useAuth(): AuthState & AuthActions {
   }) => {
     try {
       setError(null);
-      setAuthState((prev) => ({ ...prev, isLoading: true }));
+      setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       // SDK를 통한 회원가입
       const result = await authClient.auth.signUp(
@@ -155,6 +171,7 @@ export function useAuth(): AuthState & AuthActions {
           user: domainUser,
           isLoading: false,
           isAuthenticated: true,
+          error: null,
         });
       } else {
         const errorMessage = isFailure(result)
@@ -165,12 +182,16 @@ export function useAuth(): AuthState & AuthActions {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      setError(
+      const errorMessage =
         error instanceof Error
           ? error.message
-          : "회원가입 중 오류가 발생했습니다."
-      );
-      setAuthState((prev) => ({ ...prev, isLoading: false }));
+          : "회원가입 중 오류가 발생했습니다.";
+      setError(errorMessage);
+      setAuthState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
+      }));
       throw error;
     }
   };
@@ -178,7 +199,7 @@ export function useAuth(): AuthState & AuthActions {
   const signOut = async () => {
     try {
       setError(null);
-      setAuthState((prev) => ({ ...prev, isLoading: true }));
+      setAuthState((prev) => ({ ...prev, isLoading: true, error: null }));
 
       // SDK를 통한 로그아웃
       const result = await authClient.auth.signOut();
@@ -188,6 +209,7 @@ export function useAuth(): AuthState & AuthActions {
           user: null,
           isLoading: false,
           isAuthenticated: false,
+          error: null,
         });
       } else {
         const errorMessage = isFailure(result)
@@ -198,12 +220,16 @@ export function useAuth(): AuthState & AuthActions {
         throw new Error(errorMessage);
       }
     } catch (error) {
-      setError(
+      const errorMessage =
         error instanceof Error
           ? error.message
-          : "로그아웃 중 오류가 발생했습니다."
-      );
-      setAuthState((prev) => ({ ...prev, isLoading: false }));
+          : "로그아웃 중 오류가 발생했습니다.";
+      setError(errorMessage);
+      setAuthState((prev) => ({
+        ...prev,
+        isLoading: false,
+        error: errorMessage,
+      }));
       throw error;
     }
   };
@@ -241,5 +267,6 @@ export function useAuth(): AuthState & AuthActions {
     signUp,
     signOut,
     refreshToken,
+    clearError,
   };
 }

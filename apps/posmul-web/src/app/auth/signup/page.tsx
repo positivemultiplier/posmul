@@ -1,64 +1,50 @@
 "use client";
 // 회원가입 페이지 (Next.js 15 App Router)
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { SignUpForm } from '../../../shared/ui';
-import { createAuthEconomyClient, createEmail, isFailure } from '@posmul/auth-economy-sdk';
-import type { SignUpFormData } from '../../../shared/ui/components/forms/SignUpForm';
+import { SignUpForm, type SignUpFormData } from '../../../shared/ui';
+import { useAuth } from '../../../bounded-contexts/auth/presentation/hooks/useAuth';
 
 export default function SignUpPage() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { signUp, isLoading, error, clearError } = useAuth();
   const router = useRouter();
-
-  // Auth-Economy SDK 초기화
-  const sdk = createAuthEconomyClient({
-    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  });
 
   const handleSignUp = async (data: SignUpFormData) => {
     if (data.password !== data.confirmPassword) {
-      setError('비밀번호가 일치하지 않습니다.');
+      alert('비밀번호가 일치하지 않습니다.');
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
-
     try {
-      const email = createEmail(data.email.toLowerCase());
-      const result = await sdk.auth.signUp(email, data.password);
+      clearError(); // 이전 에러 초기화
+      await signUp({ email: data.email.toLowerCase(), password: data.password });
 
-      if (isFailure(result)) {
-        setError(result.error.message || '회원가입 중 오류가 발생했습니다.');
-      } else {
-        // 회원가입 성공 - 이메일 확인 안내 또는 대시보드로 이동
-        alert('회원가입이 완료되었습니다! 이메일을 확인해주세요.');
-        router.push('/dashboard');
-      }
-    } catch (err) {
-      console.error('SignUp error:', err);
-      setError('회원가입 중 오류가 발생했습니다.');
-    } finally {
-      setIsLoading(false);
+      // 회원가입 성공 - 이메일 확인 안내
+      alert('회원가입이 완료되었습니다! 이메일을 확인해주세요.');
+      router.push('/auth/login'); // 로그인 페이지로 이동
+    } catch (error) {
+      // 에러는 useAuth에서 처리되므로 여기서는 로깅만
+      console.error('SignUp failed:', error);
     }
   };
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold mb-4">회원가입</h1>
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-            {error}
-          </div>
-        )}
+    <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-md">
         <SignUpForm
           onSubmit={handleSignUp}
           isLoading={isLoading}
           error={error}
         />
+
+        {/* 추가 네비게이션 */}
+        <div className="mt-4 text-center">
+          <button
+            onClick={() => router.push('/auth/login')}
+            className="text-blue-600 hover:text-blue-800 font-medium"
+          >
+            이미 계정이 있으신가요? 로그인하기
+          </button>
+        </div>
       </div>
     </main>
   );
