@@ -90,10 +90,7 @@ export class GetPredictionGamesUseCase {
       if (isFailure(gamesResult)) {
         return {
           success: false,
-          error: new UseCaseError(
-            "Failed to fetch prediction games",
-            { originalError: gamesResult.error }
-          ),
+          error: new UseCaseError("Failed to fetch prediction games"),
         };
       }
 
@@ -103,10 +100,7 @@ export class GetPredictionGamesUseCase {
       if (isFailure(countResult)) {
         return {
           success: false,
-          error: new UseCaseError(
-            "Failed to count prediction games",
-            { originalError: countResult.error }
-          ),
+          error: new UseCaseError("Failed to count prediction games"),
         };
       }
 
@@ -150,7 +144,7 @@ export class GetPredictionGamesUseCase {
         success: false,
         error: new UseCaseError(
           "Unexpected error in GetPredictionGamesUseCase",
-          { originalError: error as Error }
+          { originalError: (error as any)?.message || "Unknown error" }
         ),
       };
     }

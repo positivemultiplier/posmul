@@ -22,14 +22,14 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
   const enhancedError = (() => {
     const message = error.message.toLowerCase();
 
-    // 기부 관련 특수 에러들 (PMC 사용)
+    // 기부 관련 특수 에러들 (PmcAmount 사용)
     if (
       message.includes("insufficient") ||
       message.includes("balance") ||
       message.includes("pmc")
     ) {
       return new EconomyError(
-        "PMC 포인트가 부족합니다. 예측 게임이나 투자로 PMC를 획득하세요.",
+        "PmcAmount 포인트가 부족합니다. 예측 게임이나 투자로 PmcAmount를 획득하세요.",
         {
           code: 'INSUFFICIENT_POINTS',
           currentPoints: 0, // 실제 값은 서버에서 받아야 함
@@ -138,7 +138,7 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
           ...(enhancedError instanceof EconomyError && enhancedError.details?.code === 'INSUFFICIENT_POINTS'
             ? [
                 {
-                  label: "PMC 획득하기",
+                  label: "PmcAmount 획득하기",
                   action: () => router.push("/prediction"),
                   variant: "outline" as const,
                 },

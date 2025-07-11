@@ -13,8 +13,8 @@ const formSchema = z.object({
   options: z.array(z.string()).min(2, "최소 2개의 선택지가 필요합니다."),
   endTime: z.string().min(1, "종료 시간을 선택해주세요."),
   settlementTime: z.string().min(1, "정산 시간을 선택해주세요."),
-  minimumStake: z.number().min(1, "최소 참여 금액은 1 PMP 이상이어야 합니다."),
-  maximumStake: z.number().min(1, "최대 참여 금액은 1 PMP 이상이어야 합니다."),
+  minimumStake: z.number().min(1, "최소 참여 금액은 1 PmpAmount 이상이어야 합니다."),
+  maximumStake: z.number().min(1, "최대 참여 금액은 1 PmpAmount 이상이어야 합니다."),
 });
 
 type PredictionGameFormData = z.infer<typeof formSchema>;
@@ -142,7 +142,7 @@ export default function PredictionGameForm({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label htmlFor="minimumStake" className="block text-sm font-medium text-gray-700 mb-2">
-              최소 참여 금액 (PMP) *
+              최소 참여 금액 (PmpAmount) *
             </label>
             <input
               {...register("minimumStake", { valueAsNumber: true })}
@@ -156,7 +156,7 @@ export default function PredictionGameForm({
           </div>
           <div>
             <label htmlFor="maximumStake" className="block text-sm font-medium text-gray-700 mb-2">
-              최대 참여 금액 (PMP) *
+              최대 참여 금액 (PmpAmount) *
             </label>
             <input
               {...register("maximumStake", { valueAsNumber: true })}
@@ -174,7 +174,7 @@ export default function PredictionGameForm({
         <div className="flex justify-end space-x-4">
           <Button
             type="button"
-            variant="outline"
+            variant="default"
             onClick={() => window.history.back()}
           >
             취소

@@ -10,8 +10,15 @@
  * @since 2024-12
  */
 
-import { PredictionGameId, Result, UserId, isFailure, UseCaseError } from "@posmul/auth-economy-sdk";
+import {
+  PredictionGameId,
+  Result,
+  UserId,
+  isFailure,
+  UseCaseError,
+} from "@posmul/auth-economy-sdk";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
+import { GameStatusUtil } from "../../domain/value-objects/prediction-types";
 
 /**
  * 게임 삭제 요청 DTO
@@ -54,10 +61,7 @@ export class DeletePredictionGameUseCase {
       if (isFailure(gameResult)) {
         return {
           success: false,
-          error: new UseCaseError(
-            "Failed to fetch prediction game",
-            { originalError: gameResult.error }
-          ),
+          error: new UseCaseError("Failed to fetch prediction game"),
         };
       }
 
@@ -69,7 +73,6 @@ export class DeletePredictionGameUseCase {
         };
       }
 
-      // 2. 권한 확인 (생성자 또는 관리자만 삭제 가능)
       const canDelete = this.canDeleteGame(game, request.deletedBy);
       if (!canDelete) {
         return {
@@ -78,8 +81,9 @@ export class DeletePredictionGameUseCase {
             "Only the game creator or admin can delete this game"
           ),
         };
-      } // 3. 게임 상태 확인 (활성화된 게임은 삭제 불가)
-      const currentStatus = game.status;
+      }
+
+      const currentStatus = new GameStatusUtil(game.status.value);
       if (currentStatus.isActive() && this.hasParticipants(game)) {
         return {
           success: false,
@@ -89,27 +93,21 @@ export class DeletePredictionGameUseCase {
         };
       }
 
-      if (currentStatus.isSettled()) {
+      if (currentStatus.isCompleted() || currentStatus.isCancelled()) {
         return {
           success: false,
           error: new UseCaseError("Cannot delete completed or cancelled games"),
         };
       }
-
-      // 4. 게임 삭제 처리 (소프트 삭제)
       try {
         // TODO: game.markAsDeleted 메서드 구현 필요
         // game.markAsDeleted(request.deletedBy, request.reason || "User requested deletion");
-        
         // 임시로 상태 변경으로 처리
         // game.changeStatus('DELETED');
       } catch (error) {
         return {
           success: false,
-          error: new UseCaseError(
-            "Failed to mark game as deleted",
-            { originalError: error as Error }
-          ),
+          error: new UseCaseError("Failed to mark game as deleted"),
         };
       }
 
@@ -118,10 +116,7 @@ export class DeletePredictionGameUseCase {
       if (isFailure(saveResult)) {
         return {
           success: false,
-          error: new UseCaseError(
-            "Failed to save deleted game",
-            { originalError: saveResult.error }
-          ),
+          error: new UseCaseError("Failed to save deleted game"),
         };
       }
 
@@ -137,8 +132,7 @@ export class DeletePredictionGameUseCase {
       return {
         success: false,
         error: new UseCaseError(
-          "Unexpected error in DeletePredictionGameUseCase",
-          { originalError: error as Error }
+          "Unexpected error in DeletePredictionGameUseCase"
         ),
       };
     }

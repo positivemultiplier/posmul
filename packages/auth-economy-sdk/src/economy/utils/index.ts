@@ -5,29 +5,29 @@
 import { PmpAmount, PmcAmount } from '../types';
 
 /**
- * PMP 금액 포맷팅
+ * PmpAmount 금액 포맷팅
  */
-export function formatPMP(amount: number | PmpAmount): string {
-  return `${Number(amount).toLocaleString()} PMP`;
+export function formatPmpAmount(amount: number | PmpAmount): string {
+  return `${Number(amount).toLocaleString()} PmpAmount`;
 }
 
 /**
- * PMC 금액 포맷팅
+ * PmcAmount 금액 포맷팅
  */
-export function formatPMC(amount: number | PmcAmount): string {
-  return `${Number(amount).toLocaleString()} PMC`;
+export function formatPmcAmount(amount: number | PmcAmount): string {
+  return `${Number(amount).toLocaleString()} PmcAmount`;
 }
 
 /**
  * 금액 계산 유틸리티
  */
 export function calculateConversionRate(pmpAmount: PmpAmount): PmcAmount {
-  // 1 PMP = 10 PMC 변환 비율 (예시)
+  // 1 PmpAmount = 10 PmcAmount 변환 비율 (예시)
   return (Number(pmpAmount) * 10) as PmcAmount;
 }
 
 export function calculatePmpFromPmc(pmcAmount: PmcAmount): PmpAmount {
-  // 10 PMC = 1 PMP 변환 비율 (예시)
+  // 10 PmcAmount = 1 PmpAmount 변환 비율 (예시)
   return (Number(pmcAmount) / 10) as PmpAmount;
 }
 
@@ -58,8 +58,8 @@ export function getTransactionDescription(
   _metadata?: Record<string, unknown>
 ): string {
   const formattedAmount = typeof amount === 'number' && amount % 1 === 0 && amount >= 10 
-    ? formatPMC(amount as PmcAmount)
-    : formatPMP(amount as PmpAmount);
+    ? formatPmcAmount(amount as PmcAmount)
+    : formatPmpAmount(amount as PmpAmount);
     
   switch (type) {
     case 'pmp_earned':
@@ -67,9 +67,9 @@ export function getTransactionDescription(
     case 'pmc_spent':
       return `${formattedAmount} 사용`;
     case 'pmp_to_pmc_conversion':
-      return `${formattedAmount} PMP를 PMC로 변환`;
+      return `${formattedAmount} PmpAmount를 PmcAmount로 변환`;
     case 'pmc_to_pmp_conversion':
-      return `${formattedAmount} PMC를 PMP로 변환`;
+      return `${formattedAmount} PmcAmount를 PmpAmount로 변환`;
     case 'donation_received':
       return `기부 수령: ${formattedAmount}`;
     case 'investment_return':

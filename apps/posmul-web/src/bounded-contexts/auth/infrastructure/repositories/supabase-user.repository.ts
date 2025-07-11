@@ -1,9 +1,9 @@
 /**
- * Supabase ?�용??리포지?�리 구현
+ * Supabase 사용자 리포지토리 구현
  */
 
 import type { Result } from "@posmul/auth-economy-sdk";
-import { DomainError } from "@posmul/auth-economy-sdk"; // ExternalServiceError�?SDK??DomainError�??��?
+import { DomainError } from "@posmul/auth-economy-sdk"; // DomainError는 SDK의 DomainError를 사용
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { User } from "../../domain/entities/user.entity";
@@ -36,19 +36,21 @@ export class SupabaseUserRepository implements IUserRepository {
     const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      throw new Error("Supabase URL ?�는 API ?��? ?�정?��? ?�았?�니??");
+      throw new Error("Supabase URL 또는 API 키가 설정되지 않았습니다");
     }
 
     this.supabase = createClient(supabaseUrl, supabaseKey);
   }
 
+  
+
   async save(user: User): Promise<Result<User, Error>> {
     try {
       const userData: Omit<UserTable, "created_at" | "updated_at"> = {
         id: user.id,
-        email: user.email.value,
+        email: user.email.valueOf(),
         display_name: user.displayName,
-        role: user.role.value,
+        role: user.role.valueOf() as "citizen" | "merchant" | "admin",
         pmc_balance: user.pmcBalance,
         pmp_balance: user.pmpBalance,
         is_active: user.isActive,
@@ -63,7 +65,10 @@ export class SupabaseUserRepository implements IUserRepository {
       if (error) {
         return {
           success: false,
-          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
+          error: new DomainError(error.message, {
+            code: "SUPABASE_ERROR",
+            service: "Supabase",
+          }),
         };
       }
 
@@ -75,12 +80,14 @@ export class SupabaseUserRepository implements IUserRepository {
         error: new DomainError(
           error instanceof Error
             ? error.message
-            : "?�용???�??�??�류가 발생?�습?�다.",
-          { code: "SUPABASE_ERROR", service: "Supabase" }
+            : "사용자 저장 중 오류가 발생했습니다.",
+          { code: "USER_SAVE_ERROR" }
         ),
       };
     }
   }
+
+  
 
   async findById(id: UserId): Promise<Result<User | null, Error>> {
     try {
@@ -97,7 +104,10 @@ export class SupabaseUserRepository implements IUserRepository {
         }
         return {
           success: false,
-          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
+          error: new DomainError(error.message, {
+            code: "SUPABASE_ERROR",
+            service: "Supabase",
+          }),
         };
       }
 
@@ -106,22 +116,24 @@ export class SupabaseUserRepository implements IUserRepository {
     } catch (error) {
       return {
         success: false,
-        error: new ExternalServiceError(
-          "Supabase",
+        error: new DomainError(
           error instanceof Error
             ? error.message
-            : "?�용??조회 �??�류가 발생?�습?�다."
+            : "사용자 조회 중 오류가 발생했습니다.",
+          { code: "USER_FETCH_ERROR" }
         ),
       };
     }
   }
+
+  
 
   async findByEmail(email: Email): Promise<Result<User | null, Error>> {
     try {
       const { data, error } = await this.supabase
         .from("users")
         .select("*")
-        .eq("email", email.value)
+        .eq("email", email.valueOf())
         .single();
 
       if (error) {
@@ -131,7 +143,10 @@ export class SupabaseUserRepository implements IUserRepository {
         }
         return {
           success: false,
-          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
+          error: new DomainError(error.message, {
+            code: "SUPABASE_ERROR",
+            service: "Supabase",
+          }),
         };
       }
 
@@ -140,22 +155,24 @@ export class SupabaseUserRepository implements IUserRepository {
     } catch (error) {
       return {
         success: false,
-        error: new ExternalServiceError(
-          "Supabase",
+        error: new DomainError(
           error instanceof Error
             ? error.message
-            : "?�용??조회 �??�류가 발생?�습?�다."
+            : "사용자 조회 중 오류가 발생했습니다.",
+          { code: "USER_FETCH_ERROR" }
         ),
       };
     }
   }
 
+  
+
   async update(user: User): Promise<Result<User, Error>> {
     try {
       const userData = {
-        email: user.email.value,
+        email: user.email.valueOf(),
         display_name: user.displayName,
-        role: user.role.value,
+        role: user.role.valueOf(),
         pmc_balance: user.pmcBalance,
         pmp_balance: user.pmpBalance,
         is_active: user.isActive,
@@ -172,7 +189,10 @@ export class SupabaseUserRepository implements IUserRepository {
       if (error) {
         return {
           success: false,
-          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
+          error: new DomainError(error.message, {
+            code: "SUPABASE_ERROR",
+            service: "Supabase",
+          }),
         };
       }
 
@@ -181,28 +201,33 @@ export class SupabaseUserRepository implements IUserRepository {
     } catch (error) {
       return {
         success: false,
-        error: new ExternalServiceError(
-          "Supabase",
+        error: new DomainError(
           error instanceof Error
             ? error.message
-            : "?�용???�데?�트 �??�류가 발생?�습?�다."
+            : "사용자 업데이트 중 오류가 발생했습니다.",
+          { code: "USER_UPDATE_ERROR" }
         ),
       };
     }
   }
+
+  
 
   async existsByEmail(email: Email): Promise<Result<boolean, Error>> {
     try {
       const { data, error } = await this.supabase
         .from("users")
         .select("id")
-        .eq("email", email.value)
+        .eq("email", email.valueOf())
         .limit(1);
 
       if (error) {
         return {
           success: false,
-          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
+          error: new DomainError(error.message, {
+            code: "SUPABASE_ERROR",
+            service: "Supabase",
+          }),
         };
       }
 
@@ -210,15 +235,17 @@ export class SupabaseUserRepository implements IUserRepository {
     } catch (error) {
       return {
         success: false,
-        error: new ExternalServiceError(
-          "Supabase",
+        error: new DomainError(
           error instanceof Error
             ? error.message
-            : "?�메??중복 ?�인 �??�류가 발생?�습?�다."
+            : "이메일 중복 확인 중 오류가 발생했습니다.",
+          { code: "EMAIL_CHECK_ERROR" }
         ),
       };
     }
   }
+
+  
 
   async findAll(
     page: number = 1,
@@ -236,7 +263,10 @@ export class SupabaseUserRepository implements IUserRepository {
       if (error) {
         return {
           success: false,
-          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
+          error: new DomainError(error.message, {
+            code: "SUPABASE_ERROR",
+            service: "Supabase",
+          }),
         };
       }
 
@@ -245,19 +275,21 @@ export class SupabaseUserRepository implements IUserRepository {
     } catch (error) {
       return {
         success: false,
-        error: new ExternalServiceError(
-          "Supabase",
+        error: new DomainError(
           error instanceof Error
             ? error.message
-            : "?�용??목록 조회 �??�류가 발생?�습?�다."
+            : "사용자 목록 조회 중 오류가 발생했습니다.",
+          { code: "USER_LIST_ERROR" }
         ),
       };
     }
   }
 
+  
+
   async delete(id: UserId): Promise<Result<void, Error>> {
     try {
-      // ?�프????�� 구현
+      // 소프트 딜리트 구현
       const { error } = await this.supabase
         .from("users")
         .update({
@@ -269,7 +301,10 @@ export class SupabaseUserRepository implements IUserRepository {
       if (error) {
         return {
           success: false,
-          error: new DomainError(error.message, { code: "SUPABASE_ERROR", service: "Supabase" }),
+          error: new DomainError(error.message, {
+            code: "SUPABASE_ERROR",
+            service: "Supabase",
+          }),
         };
       }
 
@@ -277,11 +312,11 @@ export class SupabaseUserRepository implements IUserRepository {
     } catch (error) {
       return {
         success: false,
-        error: new ExternalServiceError(
-          "Supabase",
+        error: new DomainError(
           error instanceof Error
             ? error.message
-            : "?�용????�� �??�류가 발생?�습?�다."
+            : "사용자 삭제 중 오류가 발생했습니다.",
+          { code: "USER_DELETE_ERROR" }
         ),
       };
     }

@@ -85,7 +85,7 @@ export function LoginForm({
           value={formData.email}
           onChange={handleInputChange("email")}
           error={validationErrors.email}
-          fullWidth
+          className="w-full"
           disabled={loading}
           placeholder="your@email.com"
         />
@@ -96,7 +96,7 @@ export function LoginForm({
           value={formData.password}
           onChange={handleInputChange("password")}
           error={validationErrors.password}
-          fullWidth
+          className="w-full"
           disabled={loading}
           placeholder="비밀번호를 입력하세요"
         />

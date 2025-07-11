@@ -6,7 +6,7 @@ export const CreateMerchantRequestSchema = z.object({
   name: z.string().min(1, '상점명은 필수입니다').max(100, '상점명은 100자 이하여야 합니다'),
   description: z.string().min(1, '상점 설명은 필수입니다').max(500, '상점 설명은 500자 이하여야 합니다'),
   category: z.nativeEnum(MerchantCategory, { 
-    errorMap: () => ({ message: '유효한 카테고리를 선택해주세요' }) 
+    errorMap: () => (new Error('유효한 카테고리를 선택해주세요' )) 
   }),
   location: z.object({
     region: z.string().min(1, '지역은 필수입니다'),

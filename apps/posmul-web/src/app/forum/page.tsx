@@ -20,8 +20,8 @@ export default function ForumPage() {
       subtitle: "혁신, 창업, 기술, 사회문제 해결",
       color: "from-blue-500 to-indigo-600",
       stats: "342개 세션 • 평균 참여자 12명",
-      features: ["PMP 수익 창출", "아이디어 공유", "협업 기회"],
-      reward: "아이디어 제안 시 PMP 획득",
+      features: ["PmpAmount 수익 창출", "아이디어 공유", "협업 기회"],
+      reward: "아이디어 제안 시 PmpAmount 획득",
     },
     {
       slug: "debate",
@@ -30,8 +30,8 @@ export default function ForumPage() {
       subtitle: "정치, 경제, 사회, 문화, 기술",
       color: "from-purple-500 to-pink-600",
       stats: "178개 토론 • 평균 참여자 24명",
-      features: ["PMP 수익 창출", "논리적 사고", "다양한 관점"],
-      reward: "고품질 토론 참여 시 PMP 획득",
+      features: ["PmpAmount 수익 창출", "논리적 사고", "다양한 관점"],
+      reward: "고품질 토론 참여 시 PmpAmount 획득",
     },
   ];
 
@@ -41,7 +41,7 @@ export default function ForumPage() {
       <div className="text-center">
         <h1 className="text-4xl font-bold text-gray-900 mb-4">💬 Forum</h1>
         <p className="text-xl text-gray-600 mb-8">
-          PosMul 커뮤니티에서 아이디어를 나누고 토론하며 PMP를 획득하세요
+          PosMul 커뮤니티에서 아이디어를 나누고 토론하며 PmpAmount를 획득하세요
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
           <div className="bg-white p-6 rounded-lg shadow-sm border">
@@ -54,7 +54,7 @@ export default function ForumPage() {
           </div>
           <div className="bg-white p-6 rounded-lg shadow-sm border">
             <div className="text-2xl font-bold text-green-600">₱2.8M</div>
-            <div className="text-gray-600">총 PMP 보상</div>
+            <div className="text-gray-600">총 PmpAmount 보상</div>
           </div>
         </div>
       </div>
@@ -132,9 +132,9 @@ export default function ForumPage() {
             <div className="w-12 h-12 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-xl">4️⃣</span>
             </div>
-            <h3 className="font-semibold mb-2">PMP 획득</h3>
+            <h3 className="font-semibold mb-2">PmpAmount 획득</h3>
             <p className="text-sm text-gray-600">
-              고품질 기여에 대해 PMP(안전자산) 보상을 받습니다
+              고품질 기여에 대해 PmpAmount(안전자산) 보상을 받습니다
             </p>
           </div>
         </div>
@@ -167,7 +167,7 @@ export default function ForumPage() {
                 ⚖️ 인센티브 설계
               </h3>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li>• 고품질 기여에 대한 PMP 보상</li>
+                <li>• 고품질 기여에 대한 PmpAmount 보상</li>
                 <li>• 평판 시스템을 통한 신뢰 구축</li>
                 <li>• 건설적 토론 문화 조성</li>
               </ul>
@@ -199,7 +199,7 @@ export default function ForumPage() {
             className="text-center p-4 bg-white rounded-lg hover:shadow-md transition-shadow"
           >
             <div className="text-2xl mb-2">🏆</div>
-            <div className="text-sm font-medium">PMP 보상 내역</div>
+            <div className="text-sm font-medium">PmpAmount 보상 내역</div>
           </Link>
           <Link
             href="/forum/common/settings"

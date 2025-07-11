@@ -3,11 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port 3000",
     "build": "next build",
-    "start": "next start",
-    "lint": "echo 'skip lint'",
-    "test": "jest --passWithNoTests || true",
+    "start": "next start --port 3000",
+    "lint": "next lint",
+    "test": "jest --passWithNoTests",
+    "type-check": "tsc --noEmit",
+    "clean": "rimraf .next",
     "gen:types": "cmd /c \"chcp 65001 > nul && C:/G/posmul/node_modules/.bin/tsx C:/G/mcp-automation/universal-mcp-automation.ts batch public,prediction,economy,investment,donation,forum,user\""
   },
   "dependencies": {

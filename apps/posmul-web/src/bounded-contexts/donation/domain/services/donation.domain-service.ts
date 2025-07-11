@@ -74,7 +74,7 @@ export class DonationDomainService {
     // 잔액 확인
     if (donorBalance < donation.getAmount().getValue()) {
       isEligible = false;
-      reasons.push('Insufficient PMC balance');
+      reasons.push('Insufficient PmcAmount balance');
     }
 
     // 기부 대상 상태 확인

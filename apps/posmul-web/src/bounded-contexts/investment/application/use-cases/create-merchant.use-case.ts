@@ -1,6 +1,5 @@
-import { Result, UserId } from "@posmul/auth-economy-sdk";
+import { Result, UserId, isFailure } from "@posmul/auth-economy-sdk";
 import { ValidationError } from "@posmul/auth-economy-sdk";
- // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import {
   BusinessHours,
   ContactInfo,
@@ -27,18 +26,17 @@ export class CreateMerchantUseCase {
   async execute(
     ownerId: UserId,
     request: CreateMerchantRequest
-  ): Promise<Result<{ merchantId: string }>> {
+  ): Promise<Result<{ merchantId: string } | any>> {
     try {
       // 요청 데이터 검증
       const validationResult = CreateMerchantRequestSchema.safeParse(request);
       if (!validationResult.success) {
         return {
           success: false,
-          error: new ValidationError(
-            "입력 데이터가 유효하지 않습니다.",
-            undefined,
-            validationResult.error.flatten().fieldErrors
-          ),
+          error: new ValidationError("입력 데이터가 유효하지 않습니다.", {
+            validationErrors:
+              validationResult.error?.flatten()?.fieldErrors || {},
+          }),
         };
       }
 
@@ -47,7 +45,10 @@ export class CreateMerchantUseCase {
       // Value Objects 생성
       const merchantIdResult = MerchantId.create(crypto.randomUUID());
       if (!merchantIdResult.success) {
-        return merchantIdResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 임시로 위도/경도는 0으로 설정 (실제로는 주소 기반 지오코딩 필요)
@@ -59,14 +60,20 @@ export class CreateMerchantUseCase {
         validData.location.district
       );
       if (!locationResult.success) {
-        return locationResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const rewardRateResult = RewardRate.createPercentage(
         validData.rewardRate
       );
       if (!rewardRateResult.success) {
-        return rewardRateResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 임시 BusinessHours와 ContactInfo (실제로는 DTO에서 변환 필요)
@@ -118,7 +125,10 @@ export class CreateMerchantUseCase {
       );
 
       if (!merchantResult.success) {
-        return merchantResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 데이터베이스에 저장
@@ -126,7 +136,10 @@ export class CreateMerchantUseCase {
         merchantResult.data
       );
       if (!saveResult.success) {
-        return saveResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       return {

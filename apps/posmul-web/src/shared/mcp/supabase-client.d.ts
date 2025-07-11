@@ -2,7 +2,7 @@
  * Supabase MCP Client
  *
  * PosMul Platform Supabase 통합을 위한 MCP 클라이언트
- * MoneyWave 시스템과 PMP/PMC 경제 연동 지원
+ * MoneyWave 시스템과 PmpAmount/PmcAmount 경제 연동 지원
  */
 
 // SDK MCP 유틸리티 import (메인 패키지에서)
@@ -75,7 +75,7 @@ export declare class SupabaseMCPClient {
     }): Promise<any[]>;
 
     /**
-     * 💰 PMP/PMC 계정 잔액 조회
+     * 💰 PmpAmount/PmcAmount 계정 잔액 조회
      */
     getEconomicBalance(userId: string): Promise<{
         pmpBalance: number;

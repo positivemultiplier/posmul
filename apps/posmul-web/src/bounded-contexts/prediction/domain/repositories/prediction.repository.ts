@@ -9,7 +9,7 @@
  * @task PD-003
  */
 
-import { PredictionGameId, PredictionId, UserId } from "@posmul/auth-economy-sdk";
+import { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
 
 import { Result } from "@posmul/auth-economy-sdk";
 
@@ -71,7 +71,7 @@ export interface IPredictionRepository {
    * @returns 성공 시 예측 객체 또는 null, 실패 시 RepositoryError
    */
   findById(
-    id: PredictionId
+    id: string
   ): Promise<Result<Prediction | null, RepositoryError>>;
 
   /**
@@ -81,8 +81,8 @@ export interface IPredictionRepository {
    * @returns 성공 시 예측 객체 맵, 실패 시 RepositoryError
    */
   findByIds(
-    ids: PredictionId[]
-  ): Promise<Result<Map<PredictionId, Prediction>, RepositoryError>>;
+    ids: string[]
+  ): Promise<Result<Map<string, Prediction>, RepositoryError>>;
 
   /**
    * 게임별 예측 조회
@@ -183,7 +183,7 @@ export interface IPredictionRepository {
    * @param id 확인할 예측 ID
    * @returns 성공 시 존재 여부, 실패 시 RepositoryError
    */
-  exists(id: PredictionId): Promise<Result<boolean, RepositoryError>>;
+  exists(id: string): Promise<Result<boolean, RepositoryError>>;
 
   /**
    * 사용자가 게임에 이미 참여했는지 확인
@@ -203,7 +203,7 @@ export interface IPredictionRepository {
    * @param id 삭제할 예측 ID
    * @returns 성공 시 void, 실패 시 RepositoryError
    */
-  delete(id: PredictionId): Promise<Result<void, RepositoryError>>;
+  delete(id: string): Promise<Result<void, RepositoryError>>;
 
   /**
    * 벌크 예측 결과 업데이트 (정산 배치 작업용)

@@ -29,8 +29,8 @@ export class SimpleEconomyAdapter {
     try {
       // 현재 SDK에는 getCombinedBalance가 제대로 구현되지 않았으므로
       // 개별 잔액 조회 후 결합
-      const pmpResult = await this.client.economy.getPMPBalance(userId as any);
-      const pmcResult = await this.client.economy.getPMCBalance(userId as any);
+      const pmpResult = await this.client.economy.getPmpAmountBalance(userId as any);
+      const pmcResult = await this.client.economy.getPmcAmountBalance(userId as any);
 
       return {
         pmpBalance: pmpResult.success ? Number(pmpResult.data) : 0,
@@ -70,8 +70,8 @@ export const recordEconomicTransaction = async (transaction: any) => {
 export const getSystemStats = async () => {
   console.warn('getSystemStats not implemented in SDK yet');
   return {
-    totalPMP: 0,
-    totalPMC: 0,
+    totalPmpAmount: 0,
+    totalPmcAmount: 0,
     activeUsers: 0,
     totalTransactions: 0,
     lastUpdate: new Date().toISOString(),

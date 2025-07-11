@@ -42,7 +42,10 @@ export class MerchantApplicationService {
       );
 
       if (!result.success) {
-        return result;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const merchants: MerchantResponse[] = result.data.merchants.map(merchant => ({
@@ -103,13 +106,19 @@ export class MerchantApplicationService {
         .then(module => module.MerchantId.create(merchantId));
       
       if (!merchantIdResult.success) {
-        return merchantIdResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const result = await this.merchantRepository.findById(merchantIdResult.data);
 
       if (!result.success) {
-        return result;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       if (!result.data) {
@@ -168,7 +177,10 @@ export class MerchantApplicationService {
       const result = await this.merchantRepository.search(query, limit, offset);
 
       if (!result.success) {
-        return result;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const merchants: MerchantResponse[] = result.data.merchants.map(merchant => ({

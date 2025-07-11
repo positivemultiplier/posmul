@@ -17,6 +17,8 @@ import {
 export class MonitorSystemStabilityUseCase {
   constructor(private readonly riskManagementService: RiskManagementService) {}
 
+  
+
   async execute(systemState: EconomicSystemState): Promise<
     Result<{
       riskAssessment: RiskAssessment;
@@ -74,6 +76,8 @@ export class MonitorSystemStabilityUseCase {
  */
 export class AutoEconomicPolicyAdjustmentUseCase {
   constructor(private readonly riskManagementService: RiskManagementService) {}
+
+  
 
   async execute(systemState: EconomicSystemState): Promise<
     Result<{
@@ -160,6 +164,8 @@ export class AutoEconomicPolicyAdjustmentUseCase {
 export class EmergencyCircuitBreakerUseCase {
   constructor(private readonly riskManagementService: RiskManagementService) {}
 
+  
+
   async execute(systemState: EconomicSystemState): Promise<
     Result<{
       circuitBreakerActivated: boolean;
@@ -193,8 +199,8 @@ export class EmergencyCircuitBreakerUseCase {
 
       // 긴급 액션 목록
       const emergencyActions = [
-        "모든 신규 PMP 발행 중단",
-        "대량 PMC 전환 요청 보류",
+        "모든 신규 PmpAmount 발행 중단",
+        "대량 PmcAmount 전환 요청 보류",
         "시스템 관리자 긴급 알림",
         "사용자 공지사항 발송",
         "백업 시스템 준비",
@@ -264,6 +270,8 @@ export class EmergencyCircuitBreakerUseCase {
  */
 export class OptimizeIncentiveMechanismUseCase {
   constructor(private readonly riskManagementService: RiskManagementService) {}
+
+  
 
   async execute(
     systemState: EconomicSystemState,

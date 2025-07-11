@@ -1,6 +1,8 @@
 "use client";
 
 import { useRealtimeConnection } from "../hooks/use-realtime-connection";
+import { isFailure } from '@posmul/auth-economy-sdk';
+
 import type {
   RealtimeEconomicData,
   RealtimeMarketData,

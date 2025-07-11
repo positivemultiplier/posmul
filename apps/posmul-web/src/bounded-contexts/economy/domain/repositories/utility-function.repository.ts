@@ -9,16 +9,16 @@ import { UserId } from "@posmul/auth-economy-sdk";
 
 import { Result } from "@posmul/auth-economy-sdk";
 
-import { PMC, PMP } from "../value-objects";
+import { PmcAmount, PmpAmount } from "../value-objects";
 
 /**
  * 개인 효용함수 매개변수
- * U(x) = α·ln(PMP) + β·ln(PMC) + γ·S(Donate) + δ·Risk_Aversion + ε·Social_Preference
+ * U(x) = α·ln(PmpAmount) + β·ln(PmcAmount) + γ·S(Donate) + δ·Risk_Aversion + ε·Social_Preference
  */
 export interface IndividualUtilityParameters {
   readonly userId: UserId;
-  readonly alpha: number; // PMP 효용 계수 (위험회피 자산)
-  readonly beta: number; // PMC 효용 계수 (위험자산)
+  readonly alpha: number; // PmpAmount 효용 계수 (위험회피 자산)
+  readonly beta: number; // PmcAmount 효용 계수 (위험자산)
   readonly gamma: number; // 사회적 기여(기부) 효용 계수
   readonly delta: number; // 위험회피 성향
   readonly epsilon: number; // 사회적 선호도
@@ -55,15 +55,15 @@ export interface UtilityEstimationInput {
   readonly inputId: string;
   readonly userId: UserId;
   readonly actionType:
-    | "PMP_EARN"
-    | "PMC_CONVERT"
+    | "PmpAmount_EARN"
+    | "PmcAmount_CONVERT"
     | "DONATION"
     | "PREDICTION"
     | "INVESTMENT";
   readonly actionValue: number;
   readonly contextData: {
-    readonly pmpBalance: PMP;
-    readonly pmcBalance: PMC;
+    readonly pmpBalance: PmpAmount;
+    readonly pmcBalance: PmcAmount;
     readonly marketCondition: "BULL" | "BEAR" | "NEUTRAL";
     readonly socialContext: "INDIVIDUAL" | "GROUP" | "COMMUNITY";
     readonly timeOfDay: "MORNING" | "AFTERNOON" | "EVENING" | "NIGHT";
@@ -100,9 +100,9 @@ export interface UtilityPrediction {
   readonly predictionId: string;
   readonly userId: UserId;
   readonly scenario: {
-    readonly pmpAmount: PMP;
-    readonly pmcAmount: PMC;
-    readonly donationAmount?: PMC;
+    readonly pmpAmount: PmpAmount;
+    readonly pmcAmount: PmcAmount;
+    readonly donationAmount?: PmcAmount;
     readonly riskLevel: number;
   };
   readonly predictedUtility: number;
@@ -318,7 +318,7 @@ export interface IUtilityFunctionRepository {
    */
   getSegmentUtilityAnalysis(segmentCriteria: {
     ageRange?: [number, number];
-    pmcBalanceRange?: [PMC, PMC];
+    pmcBalanceRange?: [PmcAmount, PmcAmount];
     activityLevel?: "HIGH" | "MEDIUM" | "LOW";
     behavioralType?: string;
   }): Promise<

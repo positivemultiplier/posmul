@@ -7,7 +7,7 @@
  * 핵심 불변성:
  * - 기업가 등록은 혁신성과 실행가능성 검증 필수
  * - 투자 배분은 포트폴리오 다양화 원칙 준수
- * - 성과 기반 PMC 보상 시스템
+ * - 성과 기반 PmcAmount 보상 시스템
  * - 벤처 실패율을 고려한 리스크 관리
  */
 
@@ -15,7 +15,7 @@ import { UserId } from "@posmul/auth-economy-sdk";
 
 import { Result } from "@posmul/auth-economy-sdk";
 import { DomainError } from "@posmul/auth-economy-sdk"; // SDK로 마이그레이션 완료
-import { MoneyWaveId, PMC, createPMC, unwrapPMC } from "../value-objects";
+import { MoneyWaveId, PmcAmount, createPmcAmount, unwrapPmcAmount } from "../value-objects";
 
 export interface EntrepreneurProfile {
   readonly userId: UserId;
@@ -47,7 +47,7 @@ export interface VentureProposal {
   readonly entrepreneurId: UserId;
   readonly title: string;
   readonly description: string;
-  readonly requiredInvestment: PMC;
+  readonly requiredInvestment: PmcAmount;
   readonly expectedROI: number;
   readonly timeHorizon: number; // 예상 실행 기간 (개월)
   readonly innovationLevel: number; // Schumpeter 파괴도
@@ -63,12 +63,12 @@ export interface VentureMilestone {
   readonly description: string;
   readonly targetDate: Date;
   readonly successCriteria: string[];
-  readonly pmcReward: PMC;
+  readonly pmcReward: PmcAmount;
 }
 
 export interface InvestmentAllocation {
   readonly proposalId: string;
-  readonly allocatedAmount: PMC;
+  readonly allocatedAmount: PmcAmount;
   readonly allocationRatio: number; // ?�체 ?�자 ?��?비율
   readonly expectedReturn: number;
   readonly riskWeighting: number;
@@ -78,7 +78,7 @@ export interface InvestmentAllocation {
 export interface EcosystemMetrics {
   readonly totalEntrepreneurs: number;
   readonly activeVentures: number;
-  readonly totalInvestment: PMC;
+  readonly totalInvestment: PmcAmount;
   readonly averageROI: number;
   readonly successRate: number;
   readonly innovationIndex: number; // Schumpeter 지??
@@ -91,7 +91,7 @@ export interface VentureEvent {
   readonly ventureProposalId: string;
   readonly eventType: VentureEventType;
   readonly milestone: VentureMilestone | null;
-  readonly pmcRewarded: PMC;
+  readonly pmcRewarded: PmcAmount;
   readonly innovationContribution: number;
   readonly executedAt: Date;
   readonly impact: string;
@@ -126,7 +126,7 @@ export class MoneyWave3Aggregate {
     private ventureProposals: VentureProposal[],
     private investmentAllocations: InvestmentAllocation[],
     private ventureEvents: VentureEvent[],
-    private totalInvestmentPool: PMC,
+    private totalInvestmentPool: PmcAmount,
     private ecosystemMetrics: EcosystemMetrics,
     private readonly createdAt: Date,
     private updatedAt: Date
@@ -134,16 +134,13 @@ export class MoneyWave3Aggregate {
 
   static create(
     id: MoneyWaveId,
-    initialInvestmentPool: PMC
+    initialInvestmentPool: PmcAmount
   ): Result<MoneyWave3Aggregate> {
     try {
-      if (unwrapPMC(initialInvestmentPool) <= 0) {
+      if (unwrapPmcAmount(initialInvestmentPool) <= 0) {
         return {
           success: false,
-          error: new DomainError(
-            "Investment pool must be positive",
-            { code: "INVALID_INVESTMENT_POOL" }
-          ),
+          error: new DomainError("INVALID_INVESTMENT_POOL"),
         };
       }
 
@@ -175,10 +172,7 @@ export class MoneyWave3Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError(
-          "MONEY_WAVE3_CREATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
-        ),
+        error: new DomainError("error instanceof Error ? error.message : Unknown error"),
       };
     }
   }
@@ -192,20 +186,14 @@ export class MoneyWave3Aggregate {
       if (profile.innovationScore < 0 || profile.innovationScore > 1) {
         return {
           success: false,
-          error: new DomainError(
-            "INVALID_INNOVATION_SCORE",
-            "Innovation score must be between 0 and 1"
-          ),
+          error: new DomainError("INVALID_INNOVATION_SCORE"),
         };
       }
 
       if (profile.executionCapability < 0 || profile.executionCapability > 1) {
         return {
           success: false,
-          error: new DomainError(
-            "INVALID_EXECUTION_CAPABILITY",
-            "Execution capability must be between 0 and 1"
-          ),
+          error: new DomainError("INVALID_EXECUTION_CAPABILITY"),
         };
       }
 
@@ -217,10 +205,7 @@ export class MoneyWave3Aggregate {
       if (existingEntrepreneur) {
         return {
           success: false,
-          error: new DomainError(
-            "ENTREPRENEUR_ALREADY_REGISTERED",
-            "Entrepreneur is already registered"
-          ),
+          error: new DomainError("ENTREPRENEUR_ALREADY_REGISTERED"),
         };
       }
 
@@ -232,10 +217,7 @@ export class MoneyWave3Aggregate {
         // 최소 기준
         return {
           success: false,
-          error: new DomainError(
-            "INSUFFICIENT_ENTREPRENEURIAL_POTENTIAL",
-            "Entrepreneurial potential below minimum threshold"
-          ),
+          error: new DomainError("INSUFFICIENT_ENTREPRENEURIAL_POTENTIAL"),
         };
       }
 
@@ -249,10 +231,7 @@ export class MoneyWave3Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError(
-          "ENTREPRENEUR_REGISTRATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
-        ),
+        error: new DomainError("error instanceof Error ? error.message : Unknown error"),
       };
     }
   }
@@ -270,41 +249,29 @@ export class MoneyWave3Aggregate {
       if (!entrepreneur) {
         return {
           success: false,
-          error: new DomainError(
-            "ENTREPRENEUR_NOT_FOUND",
-            "Entrepreneur must be registered first"
-          ),
+          error: new DomainError("ENTREPRENEUR_NOT_FOUND"),
         };
       }
 
       // 제안서 검증
-      if (unwrapPMC(proposal.requiredInvestment) <= 0) {
+      if (unwrapPmcAmount(proposal.requiredInvestment) <= 0) {
         return {
           success: false,
-          error: new DomainError(
-            "INVALID_INVESTMENT_AMOUNT",
-            "Required investment must be positive"
-          ),
+          error: new DomainError("INVALID_INVESTMENT_AMOUNT"),
         };
       }
 
       if (proposal.expectedROI <= 0) {
         return {
           success: false,
-          error: new DomainError(
-            "INVALID_EXPECTED_ROI",
-            "Expected ROI must be positive"
-          ),
+          error: new DomainError("INVALID_EXPECTED_ROI"),
         };
       }
 
       if (proposal.innovationLevel < 0 || proposal.innovationLevel > 1) {
         return {
           success: false,
-          error: new DomainError(
-            "INVALID_INNOVATION_LEVEL",
-            "Innovation level must be between 0 and 1"
-          ),
+          error: new DomainError("INVALID_INNOVATION_LEVEL"),
         };
       }
 
@@ -316,10 +283,7 @@ export class MoneyWave3Aggregate {
         // 최소 파괴력 기준
         return {
           success: false,
-          error: new DomainError(
-            "INSUFFICIENT_CREATIVE_DESTRUCTION",
-            "Proposal lacks sufficient creative destruction potential"
-          ),
+          error: new DomainError("INSUFFICIENT_CREATIVE_DESTRUCTION"),
         };
       }
 
@@ -336,7 +300,7 @@ export class MoneyWave3Aggregate {
         ventureProposalId: proposal.proposalId,
         eventType: VentureEventType.PROPOSAL_SUBMITTED,
         milestone: null,
-        pmcRewarded: createPMC(0),
+        pmcRewarded: createPmcAmount(0),
         innovationContribution: destructivePotential,
         executedAt: new Date(),
         impact: `New venture proposal: ${proposal.title}`,
@@ -348,10 +312,7 @@ export class MoneyWave3Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError(
-          "PROPOSAL_SUBMISSION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
-        ),
+        error: new DomainError("error instanceof Error ? error.message : Unknown error"),
       };
     }
   }
@@ -364,15 +325,12 @@ export class MoneyWave3Aggregate {
       if (this.ventureProposals.length === 0) {
         return {
           success: false,
-          error: new DomainError(
-            "NO_PROPOSALS",
-            "No venture proposals available for allocation"
-          ),
+          error: new DomainError("NO_PROPOSALS"),
         };
       }
 
       // 총 투자 가능 금액 계산
-      const availableInvestment = unwrapPMC(this.totalInvestmentPool);
+      const availableInvestment = unwrapPmcAmount(this.totalInvestmentPool);
 
       // 포트폴리오 최적화 (Modern Portfolio Theory 적용)
       const allocations = this.optimizePortfolioAllocation(availableInvestment);
@@ -380,7 +338,10 @@ export class MoneyWave3Aggregate {
       // 다양화 검증
       const diversificationResult = this.validateDiversification(allocations);
       if (!diversificationResult.success) {
-        return diversificationResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 배분 실행
@@ -397,12 +358,12 @@ export class MoneyWave3Aggregate {
           ventureProposalId: allocation.proposalId,
           eventType: VentureEventType.INVESTMENT_APPROVED,
           milestone: null,
-          pmcRewarded: createPMC(0),
+          pmcRewarded: createPmcAmount(0),
           innovationContribution: allocation.riskWeighting,
           executedAt: new Date(),
-          impact: `Investment allocated: ${unwrapPMC(
+          impact: `Investment allocated: ${unwrapPmcAmount(
             allocation.allocatedAmount
-          )} PMC`,
+          )} PmcAmount`,
         };
 
         this.ventureEvents.push(approvalEvent);
@@ -414,16 +375,13 @@ export class MoneyWave3Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError(
-          "INVESTMENT_ALLOCATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
-        ),
+        error: new DomainError("error instanceof Error ? error.message : Unknown error"),
       };
     }
   }
 
   /**
-   * 마일스톤 달성 시 PMC 보상
+   * 마일스톤 달성 시 PmcAmount 보상
    */
   rewardMilestoneAchievement(
     proposalId: string,
@@ -438,10 +396,7 @@ export class MoneyWave3Aggregate {
       if (!proposal) {
         return {
           success: false,
-          error: new DomainError(
-            "PROPOSAL_NOT_FOUND",
-            "Venture proposal not found"
-          ),
+          error: new DomainError("PROPOSAL_NOT_FOUND"),
         };
       }
 
@@ -452,14 +407,14 @@ export class MoneyWave3Aggregate {
       if (!milestone) {
         return {
           success: false,
-          error: new DomainError("MILESTONE_NOT_FOUND", "Milestone not found"),
+          error: new DomainError("MILESTONE_NOT_FOUND"),
         };
       }
 
       // 실제 임팩트 기반 보상 계산 (성과 기반)
-      const baseReward = unwrapPMC(milestone.pmcReward);
+      const baseReward = unwrapPmcAmount(milestone.pmcReward);
       const impactMultiplier = Math.min(2.0, Math.max(0.5, actualImpact)); // 0.5x ~ 2.0x
-      const finalReward = createPMC(baseReward * impactMultiplier);
+      const finalReward = createPmcAmount(baseReward * impactMultiplier);
 
       // 보상 이벤트 생성
       const rewardEvent: VentureEvent = {
@@ -484,10 +439,7 @@ export class MoneyWave3Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError(
-          "MILESTONE_REWARD_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
-        ),
+        error: new DomainError("error instanceof Error ? error.message : Unknown error"),
       };
     }
   }
@@ -556,7 +508,7 @@ export class MoneyWave3Aggregate {
       // 리스크-수익 기반 배분
       const riskWeight = (1 - proposal.expectedROI) / totalRisk;
       const allocationRatio = Math.min(0.25, riskWeight); // 최대 25% 제한 (다양화)
-      const allocatedAmount = createPMC(totalInvestment * allocationRatio);
+      const allocatedAmount = createPmcAmount(totalInvestment * allocationRatio);
 
       allocations.push({
         proposalId: proposal.proposalId,
@@ -582,10 +534,7 @@ export class MoneyWave3Aggregate {
       if (allocation.allocationRatio > 0.25) {
         return {
           success: false,
-          error: new DomainError(
-            "CONCENTRATION_RISK",
-            "Single investment exceeds 25% allocation limit"
-          ),
+          error: new DomainError("CONCENTRATION_RISK"),
         };
       }
     }
@@ -594,10 +543,7 @@ export class MoneyWave3Aggregate {
     if (allocations.length < 3) {
       return {
         success: false,
-        error: new DomainError(
-          "INSUFFICIENT_DIVERSIFICATION",
-          "Minimum 3 ventures required for diversification"
-        ),
+        error: new DomainError("INSUFFICIENT_DIVERSIFICATION"),
       };
     }
 
@@ -672,10 +618,7 @@ export class MoneyWave3Aggregate {
     if (this.status === MoneyWave3Status.COMPLETED) {
       return {
         success: false,
-        error: new DomainError(
-          "ALREADY_COMPLETED",
-          "MoneyWave3 is already completed"
-        ),
+        error: new DomainError("ALREADY_COMPLETED"),
       };
     }
 
@@ -692,10 +635,7 @@ export class MoneyWave3Aggregate {
     if (this.status === MoneyWave3Status.COMPLETED) {
       return {
         success: false,
-        error: new DomainError(
-          "CANNOT_SUSPEND_COMPLETED",
-          "Cannot suspend completed MoneyWave3"
-        ),
+        error: new DomainError("CANNOT_SUSPEND_COMPLETED"),
       };
     }
 
@@ -730,7 +670,7 @@ export class MoneyWave3Aggregate {
     return [...this.ventureEvents];
   }
 
-  getTotalInvestmentPool(): PMC {
+  getTotalInvestmentPool(): PmcAmount {
     return this.totalInvestmentPool;
   }
 
@@ -751,13 +691,10 @@ export class MoneyWave3Aggregate {
    */
   validateInvariants(): Result<void> {
     // 1. 투자 풀 양수 제약
-    if (unwrapPMC(this.totalInvestmentPool) < 0) {
+    if (unwrapPmcAmount(this.totalInvestmentPool) < 0) {
       return {
         success: false,
-        error: new DomainError(
-          "INVARIANT_VIOLATION",
-          "Investment pool cannot be negative"
-        ),
+        error: new DomainError("INVARIANT_VIOLATION"),
       };
     }
 
@@ -769,10 +706,7 @@ export class MoneyWave3Aggregate {
       ) {
         return {
           success: false,
-          error: new DomainError(
-            "INVARIANT_VIOLATION",
-            "Innovation score out of range"
-          ),
+          error: new DomainError("INVARIANT_VIOLATION"),
         };
       }
 
@@ -782,10 +716,7 @@ export class MoneyWave3Aggregate {
       ) {
         return {
           success: false,
-          error: new DomainError(
-            "INVARIANT_VIOLATION",
-            "Execution capability out of range"
-          ),
+          error: new DomainError("INVARIANT_VIOLATION"),
         };
       }
     }
@@ -795,10 +726,7 @@ export class MoneyWave3Aggregate {
       if (allocation.allocationRatio > 0.25) {
         return {
           success: false,
-          error: new DomainError(
-            "INVARIANT_VIOLATION",
-            "Single investment concentration too high"
-          ),
+          error: new DomainError("INVARIANT_VIOLATION"),
         };
       }
     }

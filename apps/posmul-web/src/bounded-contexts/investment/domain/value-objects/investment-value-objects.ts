@@ -119,8 +119,8 @@ export enum ParticipationStatus {
 }
 
 export enum CurrencyType {
-  PMP = "PMP", // PMP 토큰
-  PMC = "PMC", // PMC 토큰
+  PmpAmount = "PmpAmount", // PmpAmount 토큰
+  PmcAmount = "PmcAmount", // PmcAmount 토큰
   MIXED = "MIXED", // 혼합
 }
 
@@ -524,13 +524,13 @@ export class RewardRate {
 export class FundingGoal {
   private constructor(
     private readonly targetAmount: number,
-    private readonly currency: "KRW" | "PMC" | "PMP",
+    private readonly currency: "KRW" | "PmcAmount" | "PmpAmount",
     private readonly deadline: Date
   ) {}
 
   static create(
     targetAmount: number,
-    currency: "KRW" | "PMC" | "PMP",
+    currency: "KRW" | "PmcAmount" | "PmpAmount",
     deadline: Date
   ): Result<FundingGoal> {
     if (targetAmount <= 0) {
@@ -557,7 +557,7 @@ export class FundingGoal {
     return this.targetAmount;
   }
 
-  getCurrency(): "KRW" | "PMC" | "PMP" {
+  getCurrency(): "KRW" | "PmcAmount" | "PmpAmount" {
     return this.currency;
   }
 
@@ -598,10 +598,10 @@ export class FundingGoal {
     switch (this.currency) {
       case "KRW":
         return `${amount}원`;
-      case "PMC":
-        return `${amount} PMC`;
-      case "PMP":
-        return `${amount} PMP`;
+      case "PmcAmount":
+        return `${amount} PmcAmount`;
+      case "PmpAmount":
+        return `${amount} PmpAmount`;
       default:
         return `${amount} ${this.currency}`;
     }
@@ -683,9 +683,7 @@ export class ViewingDuration {
   toString(): string {
     const minutes = Math.floor(this.totalSeconds / 60);
     const seconds = this.totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, "0")} (${
-      this.completionPercentage
-    }%)`;
+    return "Invalid state";
   }
 }
 

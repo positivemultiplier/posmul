@@ -265,39 +265,39 @@ function loadMigrationConfig(): MigrationConfig {
 /**
  * CLI에서 직접 실행 시
  */
-if (require.main === module) {
-  async function main() {
-    try {
-      console.log("🎯 PosMul Prediction Domain Migration");
-      console.log("📈 Economic Theory Database Schema Deployment");
-      console.log("=".repeat(50));
+async function main() {
+  try {
+    console.log("🎯 PosMul Prediction Domain Migration");
+    console.log("📈 Economic Theory Database Schema Deployment");
+    console.log("=".repeat(50));
 
-      const config = loadMigrationConfig();
-      const migrationRunner = new PredictionMigrationRunner(config);
+    const config = loadMigrationConfig();
+    const migrationRunner = new PredictionMigrationRunner(config);
 
-      // 마이그레이션 실행
-      await migrationRunner.runAllMigrations();
+    // 마이그레이션 실행
+    await migrationRunner.runAllMigrations();
 
-      // 검증
-      const isValid = await migrationRunner.verifyTables();
+    // 검증
+    const isValid = await migrationRunner.verifyTables();
 
-      if (isValid) {
-        console.log("");
-        console.log("🎉 Prediction Domain Migration Complete!");
-        console.log("💰 PMP/PMC economic integration ready");
-        console.log("🏆 Agency Theory & CAPM models deployed");
-        console.log("📊 Ready for prediction game UI development");
-        process.exit(0);
-      } else {
-        console.error("❌ Migration verification failed");
-        process.exit(1);
-      }
-    } catch (error) {
-      console.error("💥 Migration failed:", error);
+    if (isValid) {
+      console.log("");
+      console.log("🎉 Prediction Domain Migration Complete!");
+      console.log("💰 PmpAmount/PmcAmount economic integration ready");
+      console.log("🏆 Agency Theory & CAPM models deployed");
+      console.log("📊 Ready for prediction game UI development");
+      process.exit(0);
+    } else {
+      console.error("❌ Migration verification failed");
       process.exit(1);
     }
+  } catch (error) {
+    console.error("💥 Migration failed:", error);
+    process.exit(1);
   }
+}
 
+if (require.main === module) {
   main();
 }
 

@@ -1,4 +1,11 @@
-import { PredictionGameId, Result, UserId, isFailure, PmpAmount, UseCaseError } from "@posmul/auth-economy-sdk";
+import {
+  PredictionGameId,
+  Result,
+  UserId,
+  isFailure,
+  UseCaseError,
+} from "@posmul/auth-economy-sdk";
+import { PmpAmount } from "@posmul/auth-economy-sdk/economy";
 import { PredictionGame } from "../../domain/entities/prediction-game.aggregate";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 import {
@@ -52,9 +59,7 @@ export class CreatePredictionGameUseCase {
         return {
           success: false,
           error: new UseCaseError(
-            "Failed to create prediction game",
-            predictionGameResult.error
-          ),
+            "Failed to create prediction game"),
         };
       }
 
@@ -67,9 +72,7 @@ export class CreatePredictionGameUseCase {
         return {
           success: false,
           error: new UseCaseError(
-            "Failed to save prediction game",
-            saveResult.error
-          ),
+            "Failed to save prediction game"),
         };
       }
 
@@ -85,8 +88,7 @@ export class CreatePredictionGameUseCase {
       return {
         success: false,
         error: new UseCaseError(
-          "Unexpected error in CreatePredictionGameUseCase",
-          error as Error
+          "Unexpected error in CreatePredictionGameUseCase"
         ),
       };
     }

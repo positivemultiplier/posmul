@@ -2,11 +2,11 @@ import {
   ActiveUserCount,
   MetcalfeValue,
   NetworkDensity,
-  PMC,
-  PMP,
+  PmcAmount,
+  PmpAmount,
   ReedValue,
 } from "../value-objects/economic-types";
-import { createPMC, createPMP } from "../value-objects/economic-value-objects";
+import { createPmcAmount, createPmpAmount } from "../value-objects/economic-value-objects";
 import {
   CrossNetworkEffect,
   INetworkEconomicsEngine,
@@ -39,7 +39,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
    */
   calculateMetcalfeValue(
     userCount: ActiveUserCount,
-    valuePerConnection: PMP
+    valuePerConnection: PmpAmount
   ): MetcalfeValue {
     const n = Number(userCount);
     const connectionValue = Number(valuePerConnection);
@@ -92,7 +92,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     networks: Array<{
       type: NetworkType;
       state: NetworkState;
-      value: PMP;
+      value: PmpAmount;
     }>
   ): CrossNetworkEffect[] {
     const effects: CrossNetworkEffect[] = [];
@@ -112,7 +112,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
           network2.state
         );
 
-        const expectedValueIncrease = createPMP(
+        const expectedValueIncrease = createPmpAmount(
           Math.round(
             (Number(network1.value) + Number(network2.value)) *
               interactionStrength *
@@ -143,13 +143,13 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     constraints: {
       maxConnections: number;
       qualityThreshold: number;
-      maintenanceCost: PMC;
+      maintenanceCost: PmcAmount;
     }
   ): {
     optimalDensity: NetworkDensity;
     recommendedActions: string[];
-    expectedValueIncrease: PMP;
-    implementationCost: PMC;
+    expectedValueIncrease: PmpAmount;
+    implementationCost: PmcAmount;
   } {
     const currentUsers = Number(currentState.activeUsers);
     const targetUsers = Number(targetUserCount);
@@ -186,11 +186,11 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     }
 
     const densityImprovement = Math.abs(optimalDensity - currentDensity);
-    const expectedValueIncrease = createPMP(
+    const expectedValueIncrease = createPmpAmount(
       Math.round(targetUsers * targetUsers * densityImprovement * 10)
     );
 
-    const implementationCost = createPMC(
+    const implementationCost = createPmcAmount(
       Math.round(Number(constraints.maintenanceCost) * (1 + densityImprovement))
     );
 
@@ -207,7 +207,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
    */
   measureNetworkEffects(
     networkState: NetworkState,
-    actualValue: PMP,
+    actualValue: PmpAmount,
     userEngagement: {
       averageSessionTime: number;
       monthlyActiveUsers: number;
@@ -220,7 +220,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     // 이론적 Metcalfe 가치 계산
     const metcalfeValue = this.calculateMetcalfeValue(
       networkState.activeUsers,
-      createPMP(10) // 기본 연결당 가치
+      createPmpAmount(10) // 기본 연결당 가치
     );
 
     // 이론적 Reed 가치 계산
@@ -263,7 +263,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     historicalGrowth: Array<{
       timestamp: Date;
       userCount: number;
-      value: PMP;
+      value: PmpAmount;
       engagementMetrics: any;
     }>
   ): {
@@ -332,7 +332,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
         priority: 9,
         expectedImpact: {
           userGrowth: 0.5,
-          valueIncrease: createPMP(Math.round(currentUserCount * 100)),
+          valueIncrease: createPmpAmount(Math.round(currentUserCount * 100)),
           engagementBoost: 0.3,
         },
         implementationComplexity: 6,
@@ -343,7 +343,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
         priority: 8,
         expectedImpact: {
           userGrowth: 0.3,
-          valueIncrease: createPMP(Math.round(currentUserCount * 150)),
+          valueIncrease: createPmpAmount(Math.round(currentUserCount * 150)),
           engagementBoost: 0.4,
         },
         implementationComplexity: 4,
@@ -354,7 +354,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
         priority: 10,
         expectedImpact: {
           userGrowth: 0.2,
-          valueIncrease: createPMP(Math.round(currentUserCount * 200)),
+          valueIncrease: createPmpAmount(Math.round(currentUserCount * 200)),
           engagementBoost: 0.6,
         },
         implementationComplexity: 7,
@@ -379,7 +379,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
       userGrowthRate: number;
       valueGrowthRate: number;
       churnRate: number;
-      acquisitionCost: PMC;
+      acquisitionCost: PmcAmount;
     }
   ): {
     currentStage: NetworkLifecycleStage;
@@ -486,35 +486,35 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
       name: string;
       userCount: number;
       connections: number;
-      value: PMP;
+      value: PmpAmount;
       characteristics: Record<string, any>;
     }>
   ): {
-    segmentValues: Map<string, PMP>;
+    segmentValues: Map<string, PmpAmount>;
     crossSegmentSynergies: Array<{
       segment1: string;
       segment2: string;
-      synergyValue: PMP;
+      synergyValue: PmpAmount;
     }>;
     optimizationOpportunities: Array<{
       segment: string;
       recommendation: NetworkOptimizationRecommendation;
     }>;
   } {
-    const segmentValues = new Map<string, PMP>();
+    const segmentValues = new Map<string, PmpAmount>();
     const crossSegmentSynergies: Array<{
       segment1: string;
       segment2: string;
-      synergyValue: PMP;
+      synergyValue: PmpAmount;
     }> = [];
 
     // 각 세그먼트의 가치 계산
     segments.forEach((segment) => {
       const metcalfeValue = this.calculateMetcalfeValue(
         segment.userCount as ActiveUserCount,
-        createPMP(Number(segment.value) / Math.max(1, segment.connections))
+        createPmpAmount(Number(segment.value) / Math.max(1, segment.connections))
       );
-      segmentValues.set(segment.id, createPMP(Number(metcalfeValue)));
+      segmentValues.set(segment.id, createPmpAmount(Number(metcalfeValue)));
     });
 
     // 세그먼트 간 시너지 분석
@@ -526,7 +526,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
         // 시너지 가치 계산 (단순화된 버전)
         const crossConnections =
           Math.min(seg1.connections, seg2.connections) * 0.1;
-        const synergyValue = createPMP(
+        const synergyValue = createPmpAmount(
           Math.round(
             crossConnections *
               ((Number(seg1.value) + Number(seg2.value)) / 2) *
@@ -564,7 +564,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
           priority: efficiency < 50 ? 8 : 6,
           expectedImpact: {
             userGrowth: potentialGrowth / segment.userCount,
-            valueIncrease: createPMP(Math.round(segment.userCount * 50)),
+            valueIncrease: createPmpAmount(Math.round(segment.userCount * 50)),
             engagementBoost: efficiency < 50 ? 0.4 : 0.2,
           },
           implementationComplexity: efficiency < 50 ? 4 : 6,
@@ -662,12 +662,12 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
    * 동적 가격 책정 모델
    */
   calculateDynamicPricing(
-    basePrice: PMC,
+    basePrice: PmcAmount,
     networkState: NetworkState,
     demandSignals: {
       currentDemand: number;
       priceElasticity: number;
-      competitorPricing: PMC[];
+      competitorPricing: PmcAmount[];
     },
     objectives: {
       prioritizeGrowth: boolean;
@@ -675,10 +675,10 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
       marketShare: number;
     }
   ): {
-    recommendedPrice: PMC;
+    recommendedPrice: PmcAmount;
     priceJustification: string;
     expectedDemandChange: number;
-    revenueImpact: PMP;
+    revenueImpact: PmpAmount;
   } {
     const basePriceNum = Number(basePrice);
     const userCount = Number(networkState.activeUsers);
@@ -722,7 +722,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     const minimumPrice = basePriceNum * (1 + targetMargin);
     recommendedPriceNum = Math.max(recommendedPriceNum, minimumPrice);
 
-    const recommendedPrice = createPMC(Math.round(recommendedPriceNum));
+    const recommendedPrice = createPmcAmount(Math.round(recommendedPriceNum));
 
     // 수요 변화 예측
     const priceChange = (recommendedPriceNum - basePriceNum) / basePriceNum;
@@ -732,7 +732,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     const currentRevenue = basePriceNum * currentDemand;
     const newRevenue =
       recommendedPriceNum * currentDemand * (1 + expectedDemandChange);
-    const revenueImpact = createPMP(Math.round(newRevenue - currentRevenue));
+    const revenueImpact = createPmpAmount(Math.round(newRevenue - currentRevenue));
 
     // 가격 정당화
     const priceJustification = this.generatePriceJustification(
@@ -766,13 +766,13 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
   ): Array<{
     scenario: string;
     projectedStates: NetworkState[];
-    projectedValues: PMP[];
+    projectedValues: PmpAmount[];
     riskFactors: string[];
     confidence: number;
   }> {
     return scenarios.map((scenario) => {
       const projectedStates: NetworkState[] = [];
-      const projectedValues: PMP[] = [];
+      const projectedValues: PmpAmount[] = [];
 
       let currentUsers = Number(currentState.activeUsers);
       let currentDensity = Number(currentState.density);
@@ -812,9 +812,9 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
         // 가치 계산
         const metcalfeValue = this.calculateMetcalfeValue(
           projectedState.activeUsers,
-          createPMP(10)
+          createPmpAmount(10)
         );
-        projectedValues.push(createPMP(Number(metcalfeValue)));
+        projectedValues.push(createPmpAmount(Number(metcalfeValue)));
       }
 
       // 리스크 요인 식별
@@ -904,7 +904,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
             priority: 10,
             expectedImpact: {
               userGrowth: 0.8,
-              valueIncrease: createPMP(baseValue * 2),
+              valueIncrease: createPmpAmount(baseValue * 2),
               engagementBoost: 0.6,
             },
             implementationComplexity: 8,
@@ -919,7 +919,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
             priority: 9,
             expectedImpact: {
               userGrowth: 0.6,
-              valueIncrease: createPMP(baseValue * 3),
+              valueIncrease: createPmpAmount(baseValue * 3),
               engagementBoost: 0.4,
             },
             implementationComplexity: 6,
@@ -934,7 +934,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
             priority: 8,
             expectedImpact: {
               userGrowth: 0.3,
-              valueIncrease: createPMP(baseValue * 1.5),
+              valueIncrease: createPmpAmount(baseValue * 1.5),
               engagementBoost: 0.5,
             },
             implementationComplexity: 7,
@@ -949,7 +949,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
             priority: 7,
             expectedImpact: {
               userGrowth: 0.4,
-              valueIncrease: createPMP(baseValue),
+              valueIncrease: createPmpAmount(baseValue),
               engagementBoost: 0.3,
             },
             implementationComplexity: 9,

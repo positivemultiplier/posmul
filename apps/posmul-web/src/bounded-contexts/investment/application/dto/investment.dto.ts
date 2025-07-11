@@ -4,7 +4,7 @@ import { InvestmentType } from '../../domain/value-objects/investment-value-obje
 // Investment 관련 DTO
 export const CreateInvestmentRequestSchema = z.object({
   type: z.nativeEnum(InvestmentType, { 
-    errorMap: () => ({ message: '유효한 투자 타입을 선택해주세요' }) 
+    errorMap: () => (new Error('유효한 투자 타입을 선택해주세요' )) 
   }),
   targetId: z.string().min(1, '투자 대상 ID는 필수입니다'),
   amount: z.number().min(1000, '최소 투자 금액은 1,000원입니다').max(10000000, '최대 투자 금액은 1,000만원입니다'),

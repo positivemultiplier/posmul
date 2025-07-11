@@ -31,7 +31,7 @@ export async function GET(
     }
 
     // Repository 및 UseCase 초기화
-    const repository = new SupabasePredictionGameRepository();
+    const repository = new SupabasePredictionGameRepository(process.env.SUPABASE_PROJECT_ID!);
     const useCase = new GetPredictionGameByIdUseCase(repository);
 
     // UseCase 실행
@@ -132,7 +132,7 @@ export async function PUT(
     }
 
     // Repository 및 UseCase 초기화
-    const repository = new SupabasePredictionGameRepository();
+    const repository = new SupabasePredictionGameRepository(process.env.SUPABASE_PROJECT_ID!);
     const useCase = new UpdatePredictionGameUseCase(repository);
 
     // UseCase 실행
@@ -255,7 +255,7 @@ export async function DELETE(
     }
 
     // Repository 및 UseCase 초기화
-    const repository = new SupabasePredictionGameRepository();
+    const repository = new SupabasePredictionGameRepository(process.env.SUPABASE_PROJECT_ID!);
     const useCase = new DeletePredictionGameUseCase(repository);
 
     // UseCase 실행

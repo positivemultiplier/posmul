@@ -6,16 +6,23 @@ import React from 'react';
 import { Card } from '../base';
 
 export interface CategoryStatistics {
-  totalGames: number;
-  activeGames: number;
-  totalParticipants: number;
-  totalStaked: number;
+  totalGames?: number;
+  activeGames?: number;
+  totalParticipants?: number;
+  totalStaked?: number;
+  totalRewardPool?: number;
+  subcategoryCount?: number; // 추가 필드
 }
 
 export interface PopularSubcategory {
-  name: string;
-  slug: string;
-  gameCount: number;
+  id?: string;
+  name?: string;
+  title?: string; // 추가 필드
+  slug?: string;
+  icon?: string; // 추가 필드
+  gameCount?: number;
+  participantCount?: number; // 추가 필드
+  rank?: number; // 추가 필드
   description?: string;
 }
 
@@ -25,9 +32,36 @@ export interface GameCardProps {
   description: string;
   category: string;
   endTime: string;
-  totalStaked: number;
+  totalStaked?: number;
   participants: number;
-  options: { id: string; title: string; percentage: number }[];
+  options: {
+    id: string;
+    title?: string;
+    label?: string;
+    percentage?: number;
+    probability?: number;
+    odds?: number;
+  }[];
+  // 추가 필드들도 선택적으로 지원
+  gameType?: string;
+  status?: string;
+  difficulty?: string;
+  maxParticipants?: number;
+  totalStake?: number;
+  minStake?: number;
+  maxStake?: number;
+  expectedReturn?: number;
+  href?: string;
+  moneyWave?: {
+    allocatedPool?: number;
+    currentPool?: number;
+    waveMultiplier?: number;
+    distributionDate?: string;
+  };
+  imagePlaceholder?: string;
+  tags?: string[];
+  isHot?: boolean;
+  isFeatured?: boolean;
 }
 
 interface CategoryOverviewLayoutProps {
@@ -123,14 +157,14 @@ export function CategoryOverviewLayout({
   );
 }
 
-export function GameCard({ 
-  id, 
-  title, 
-  description, 
-  category, 
-  endTime, 
-  totalStaked, 
-  participants, 
+export function GameCard({
+  id,
+  title,
+  description,
+  category,
+  endTime,
+  totalStaked,
+  participants,
   options,
   LinkComponent = ({ href, children }) => <a href={href}>{children}</a>
 }: GameCardProps & { LinkComponent?: React.ComponentType<{ href: string; children: React.ReactNode }> }) {
@@ -139,7 +173,7 @@ export function GameCard({
       <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">{title}</h3>
         <p className="text-gray-600 text-sm mb-4 line-clamp-2">{description}</p>
-        
+
         <div className="space-y-2 mb-4">
           {options.slice(0, 2).map((option) => (
             <div key={option.id} className="flex justify-between items-center">
@@ -151,9 +185,9 @@ export function GameCard({
 
         <div className="flex justify-between items-center text-sm text-gray-500">
           <div>참여자 {participants}명</div>
-          <div>{totalStaked} PMP</div>
+          <div>{totalStaked} PmpAmount</div>
         </div>
-        
+
         <div className="mt-2 text-xs text-gray-400">
           종료: {new Date(endTime).toLocaleDateString()}
         </div>

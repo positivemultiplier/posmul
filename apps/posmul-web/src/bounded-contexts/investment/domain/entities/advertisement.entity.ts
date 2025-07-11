@@ -231,7 +231,7 @@ export class Advertisement {
       return { success: false, error: new Error('Advertisement is not published') };
     }
 
-    // PMC 계산
+    // PmcAmount 계산
     const basePmc = this.calculateBasePmc(actualDuration);
     let totalPmc = basePmc;
 
@@ -242,12 +242,12 @@ export class Advertisement {
 
     // 평가 보너스 (평점 제공 시 추가 포인트)
     if (rating && rating >= 1 && rating <= 5) {
-      totalPmc += 5; // 평점 제공 시 5 PMC 추가
+      totalPmc += 5; // 평점 제공 시 5 PmcAmount 추가
     }
 
     // 피드백 보너스 (댓글 작성 시 추가 포인트)
     if (feedback && feedback.trim().length >= 10) {
-      totalPmc += 10; // 10자 이상 피드백 시 10 PMC 추가
+      totalPmc += 10; // 10자 이상 피드백 시 10 PmcAmount 추가
     }
 
     // 시청 기록 추가
@@ -269,7 +269,7 @@ export class Advertisement {
         this.id.getValue(),
         viewerId,
         actualDuration.getSeconds(),
-        totalPmc - basePmc // 보너스 PMC
+        totalPmc - basePmc // 보너스 PmcAmount
       ));
     } else {
       this.addDomainEvent(new AdvertisementViewedEvent(
@@ -295,14 +295,14 @@ export class Advertisement {
     return { success: true, data: undefined };
   }
 
-  // PMC 계산 (1분당 10 PMC)
+  // PmcAmount 계산 (1분당 10 PmcAmount)
   private calculateBasePmc(duration: ViewingDuration): number {
     const minutes = Math.floor(duration.getSeconds() / 60);
     const remainingSeconds = duration.getSeconds() % 60;
     
-    let pmc = minutes * 10; // 완전한 분에 대해 10 PMC
+    let pmc = minutes * 10; // 완전한 분에 대해 10 PmcAmount
     
-    // 30초 이상의 나머지 시간에 대해 5 PMC
+    // 30초 이상의 나머지 시간에 대해 5 PmcAmount
     if (remainingSeconds >= 30) {
       pmc += 5;
     }

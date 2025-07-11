@@ -15,7 +15,7 @@ export type Result<T, E = Error> =
 // Common value objects
 export interface Money {
   amount: number;
-  currency: 'PMP' | 'PMC' | 'KRW';
+  currency: 'PmpAmount' | 'PmcAmount' | 'KRW';
 }
 
 // Economic context

@@ -8,9 +8,14 @@
  * @since 2024-12
  */
 
-import { PredictionGameId, PredictionId, Result, UserId, isFailure } from "@posmul/auth-economy-sdk";
+import {
+  PredictionGameId,
+  Result,
+  UserId,
+  isFailure,
+  IDomainEventPublisher,
+} from "@posmul/auth-economy-sdk";
 import { failure, success } from "@posmul/auth-economy-sdk";
- // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import {
   PmcEarnedEvent,
   PmpSpentEvent,
@@ -20,7 +25,6 @@ import {
   EconomyKernel,
   getEconomyKernel,
 } from "../../../../shared/economy-kernel/services/economy-kernel.service";
-import { IDomainEventPublisher } from "../../../../shared/events/event-publisher";
 
 /**
  * 예측 경제 서비스 에러
@@ -29,8 +33,8 @@ export class PredictionEconomicError extends Error {
   constructor(
     message: string,
     public readonly code:
-      | "INSUFFICIENT_PMP_BALANCE"
-      | "INSUFFICIENT_PMC_BALANCE"
+      | "INSUFFICIENT_PmpAmount_BALANCE"
+      | "INSUFFICIENT_PmcAmount_BALANCE"
       | "ECONOMY_KERNEL_ERROR"
       | "EVENT_PUBLISHING_FAILED"
       | "INVALID_STAKE_AMOUNT"
@@ -44,7 +48,7 @@ export class PredictionEconomicError extends Error {
 }
 
 /**
- * PMP 참여 전 검증 결과
+ * PmpAmount 참여 전 검증 결과
  */
 export interface PmpParticipationCheck {
   readonly canParticipate: boolean;
@@ -59,7 +63,7 @@ export interface PmpParticipationCheck {
 }
 
 /**
- * PMC 보상 계산 결과
+ * PmcAmount 보상 계산 결과
  */
 export interface PmcRewardCalculation {
   readonly baseReward: number;
@@ -100,24 +104,24 @@ export class PredictionEconomicService {
    * 예측 참여 가능 여부 및 위험 평가
    *
    * @param userId 사용자 ID
-   * @param requiredPmp 필요한 PMP 금액
-   * @returns PMP 참여 검증 결과
+   * @param requiredPmp 필요한 PmpAmount 금액
+   * @returns PmpAmount 참여 검증 결과
    */
   async checkPmpParticipationEligibility(
     userId: UserId,
     requiredPmp: number
   ): Promise<Result<PmpParticipationCheck, PredictionEconomicError>> {
     try {
-      // PMP 잔액 조회
+      // PmpAmount 잔액 조회
       const balanceResult = await this.economyKernel.getPmpBalance(userId);
       if (!balanceResult.success) {
-        return failure(
-          new PredictionEconomicError(
-            `Failed to check PMP balance: ${balanceResult.error.message}`,
-            "ECONOMY_KERNEL_ERROR",
-            balanceResult.error
-          )
-        );
+        return {
+          success: false,
+          error: new PredictionEconomicError(
+            `Failed to check PmpAmount balance`,
+            "ECONOMY_KERNEL_ERROR"
+          ),
+        };
       }
 
       const currentBalance = balanceResult.data;
@@ -143,21 +147,21 @@ export class PredictionEconomicService {
     } catch (error) {
       return failure(
         new PredictionEconomicError(
-          "Failed to check PMP participation eligibility",
+          "Failed to check PmpAmount participation eligibility",
           "SERVICE_UNAVAILABLE",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
   }
 
   /**
-   * 예측 참여시 PMP 소비 처리
+   * 예측 참여시 PmpAmount 소비 처리
    *
    * @param userId 사용자 ID
    * @param gameId 예측 게임 ID
    * @param predictionId 예측 ID
-   * @param stakeAmount PMP 스테이크 금액
+   * @param stakeAmount PmpAmount 스테이크 금액
    * @param confidence 신뢰도 (0-1)
    * @param selectedOptionId 선택한 옵션 ID
    * @returns 처리 결과
@@ -165,7 +169,7 @@ export class PredictionEconomicService {
   async processParticipation(
     userId: UserId,
     gameId: PredictionGameId,
-    predictionId: PredictionId,
+    predictionId: string,
     stakeAmount: number,
     confidence: number,
     selectedOptionId: string
@@ -190,42 +194,40 @@ export class PredictionEconomicService {
         );
       }
 
-      // PMP 잔액 확인
+      // PmpAmount 잔액 확인
       const eligibilityResult = await this.checkPmpParticipationEligibility(
         userId,
         stakeAmount
       );
 
       if (!eligibilityResult.success) {
-        if (isFailure(eligibilityResult)) {
-  if (isFailure(eligibilityResult)) {
-  return failure(eligibilityResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+        return {
+          success: false,
+          error: new PredictionEconomicError(
+            "Eligibility check failed",
+            "SERVICE_UNAVAILABLE"
+          ),
+        };
       }
 
       if (!eligibilityResult.data.canParticipate) {
         return failure(
           new PredictionEconomicError(
-            `Insufficient PMP balance. Required: ${stakeAmount}, Available: ${eligibilityResult.data.currentBalance}`,
-            "INSUFFICIENT_PMP_BALANCE"
+            `Insufficient PmpAmount balance. Required: ${stakeAmount}, Available: ${eligibilityResult.data.currentBalance}`,
+            "INSUFFICIENT_PmpAmount_BALANCE"
           )
         );
       }
 
       // 경제 이벤트 발행
       const events = [
-        // PMP 소비 이벤트
+        // PmpAmount 소비 이벤트
         new PmpSpentEvent(
           userId,
           stakeAmount,
           "prediction-participation",
           gameId,
-          `Participated in prediction game ${gameId} with stake ${stakeAmount} PMP`
+          `Participated in prediction game ${gameId} with stake ${stakeAmount} PmpAmount`
         ),
         // 예측 참여 복합 이벤트
         new PredictionParticipationEvent(
@@ -246,14 +248,14 @@ export class PredictionEconomicService {
         new PredictionEconomicError(
           "Failed to process prediction participation",
           "EVENT_PUBLISHING_FAILED",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
   }
 
   /**
-   * 예측 성공시 PMC 보상 계산
+   * 예측 성공시 PmcAmount 보상 계산
    *
    * Agency Theory와 CAPM 모델을 적용한 보상 계산
    *
@@ -264,7 +266,7 @@ export class PredictionEconomicService {
    * @param gameImportance 게임 중요도 (1-5)
    * @param totalParticipants 전체 참여자 수
    * @param totalCorrectPredictions 정답 예측자 수
-   * @returns PMC 보상 계산 결과
+   * @returns PmcAmount 보상 계산 결과
    */
   calculatePmcReward(
     userId: UserId,
@@ -319,7 +321,7 @@ export class PredictionEconomicService {
   }
 
   /**
-   * 예측 성공시 PMC 보상 지급
+   * 예측 성공시 PmcAmount 보상 지급
    *
    * @param userId 사용자 ID
    * @param gameId 게임 ID
@@ -330,7 +332,7 @@ export class PredictionEconomicService {
   async processPmcReward(
     userId: UserId,
     gameId: PredictionGameId,
-    predictionId: PredictionId,
+    predictionId: string,
     rewardCalculation: PmcRewardCalculation
   ): Promise<Result<void, PredictionEconomicError>> {
     try {
@@ -343,13 +345,13 @@ export class PredictionEconomicService {
         );
       }
 
-      // PMC 획득 이벤트 발행
+      // PmcAmount 획득 이벤트 발행
       const pmcEarnedEvent = new PmcEarnedEvent(
         userId,
         rewardCalculation.finalReward,
         "prediction-success",
         predictionId,
-        `Earned ${rewardCalculation.finalReward} PMC from successful prediction in game ${gameId}`
+        `Earned ${rewardCalculation.finalReward} PmcAmount from successful prediction in game ${gameId}`
       );
 
       await this.eventPublisher.publish(pmcEarnedEvent);
@@ -358,9 +360,9 @@ export class PredictionEconomicService {
     } catch (error) {
       return failure(
         new PredictionEconomicError(
-          "Failed to process PMC reward",
+          "Failed to process PmcAmount reward",
           "EVENT_PUBLISHING_FAILED",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -394,7 +396,7 @@ export class PredictionEconomicService {
         new PredictionEconomicError(
           "Failed to get user prediction economic stats",
           "SERVICE_UNAVAILABLE",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -418,7 +420,7 @@ export class PredictionEconomicService {
       riskLevel = "LOW";
       riskScore = riskRatio * 5; // 0-0.5 범위
       recommendation =
-        "Safe participation level. Low impact on your PMP portfolio.";
+        "Safe participation level. Low impact on your PmpAmount portfolio.";
     } else if (riskRatio <= 0.3) {
       riskLevel = "MEDIUM";
       riskScore = 0.5 + (riskRatio - 0.1) * 2.5; // 0.5-1.0 범위

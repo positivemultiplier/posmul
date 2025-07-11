@@ -2,7 +2,8 @@
  * 사용자 인증 도메인 서비스
  */
 
-import type { Result, ValidationError } from "@posmul/auth-economy-sdk";
+import { Result, ValidationError } from "@posmul/auth-economy-sdk";
+import { createValidationError } from "../helpers/result-helpers";
 
 import { User } from "../entities/user.entity";
 import {
@@ -45,10 +46,9 @@ export class AuthDomainService implements IAuthDomainService {
       if (!data.password || data.password.length < 8) {
         return {
           success: false,
-          error: new ValidationError(
-            "비밀번호는 최소 8자 이상이어야 합니다.",
-            "password"
-          ),
+          error: new ValidationError("password", {
+            code: "비밀번호는 최소 8자 이상이어야 합니다.",
+          }),
         };
       }
 
@@ -57,10 +57,9 @@ export class AuthDomainService implements IAuthDomainService {
       if (!passwordRegex.test(data.password)) {
         return {
           success: false,
-          error: new ValidationError(
-            "비밀번호는 대문자, 소문자, 숫자를 각각 하나 이상 포함해야 합니다.",
-            "password"
-          ),
+          error: new ValidationError("password", {
+            code: "비밀번호는 대문자, 소문자, 숫자를 각각 하나 이상 포함해야 합니다.",
+          }),
         };
       }
 
@@ -68,10 +67,9 @@ export class AuthDomainService implements IAuthDomainService {
       if (data.displayName && data.displayName.trim().length === 0) {
         return {
           success: false,
-          error: new ValidationError(
-            "표시 이름은 공백일 수 없습니다.",
-            "displayName"
-          ),
+          error: new ValidationError("displayName", {
+            code: "표시 이름은 공백일 수 없습니다.",
+          }),
         };
       }
 
@@ -80,12 +78,17 @@ export class AuthDomainService implements IAuthDomainService {
       if (error instanceof Error) {
         return {
           success: false,
-          error: new ValidationError(error.message, "email"),
+          error: new ValidationError("이메일이 유효하지 않습니다.", {
+            code: "invalid-email",
+            field: "email",
+          }),
         };
       }
       return {
         success: false,
-        error: new ValidationError("유효하지 않은 회원가입 데이터입니다."),
+        error: new ValidationError("유효하지 않은 회원가입 데이터입니다.", {
+          code: "validation-failed",
+        }),
       };
     }
   }
@@ -101,7 +104,9 @@ export class AuthDomainService implements IAuthDomainService {
       if (!credentials.password || credentials.password.trim().length === 0) {
         return {
           success: false,
-          error: new ValidationError("비밀번호를 입력해주세요.", "password"),
+          error: new ValidationError("password", {
+            code: "비밀번호를 입력해주세요.",
+          }),
         };
       }
 
@@ -110,7 +115,7 @@ export class AuthDomainService implements IAuthDomainService {
       if (error instanceof Error) {
         return {
           success: false,
-          error: new ValidationError(error.message, "email"),
+          error: createValidationError(error.message, "email"),
         };
       }
       return {

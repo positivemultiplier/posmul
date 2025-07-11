@@ -1,7 +1,22 @@
-import { PredictionGameId, PredictionId, Result, UserId } from "@posmul/auth-economy-sdk";
-import { AccuracyScore, ValidationError, failure, success, DomainError } from "@posmul/auth-economy-sdk";
+import {
+  PredictionGameId,
+  Result,
+  UserId,
+  createPmpAmount,
+} from "@posmul/auth-economy-sdk";
+import {
+  AccuracyScore,
+  ValidationError,
+  failure,
+  success,
+  DomainError,
+} from "@posmul/auth-economy-sdk";
 import { PmpAmount } from "@posmul/auth-economy-sdk/economy";
-import { Timestamps, createPredictionGameId, PredictionResult as PredictionResultEnum } from "../types/common";
+import {
+  Timestamps,
+  createPredictionGameId,
+  PredictionResult as PredictionResultEnum,
+} from "../types/common";
 import { AggregateRoot } from "../../../../shared/domain/aggregate-root";
 import {
   GameOptions,
@@ -61,12 +76,13 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
     this._startTime = props.startTime;
     this._endTime = props.endTime;
     this._settlementTime = props.settlementTime;
-    this._minimumStake = props.minimumStake ?? (0 as PmpAmount);
-    this._maximumStake = props.maximumStake ?? (1000 as PmpAmount);
+    this._minimumStake = props.minimumStake ?? (createPmpAmount(0) as any);
+    this._maximumStake = props.maximumStake ?? (createPmpAmount(1000) as any);
     this._maxParticipants = props.maxParticipants ?? null;
     this._status = props.status ?? "CREATED";
     this._gameImportanceScore = props.gameImportanceScore ?? 1.0;
-    this._allocatedPrizePool = props.allocatedPrizePool ?? (0 as PmpAmount);
+    this._allocatedPrizePool =
+      props.allocatedPrizePool ?? (createPmpAmount(0) as any);
     this._timestamps = props.timestamps ?? {
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -92,13 +108,17 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
     if (props.title.length < 5) {
       return {
         success: false,
-        error: new ValidationError("Title must be at least 5 characters", { field: "title" }),
+        error: new ValidationError("Title must be at least 5 characters", {
+          field: "title",
+        }),
       };
     }
     if (props.startTime >= props.endTime) {
       return {
         success: false,
-        error: new ValidationError("Start time must be before end time", { field: "startTime" }),
+        error: new ValidationError("Start time must be before end time", {
+          field: "startTime",
+        }),
       };
     }
 
@@ -114,23 +134,19 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
 
   public addPrediction(prediction: Prediction): Result<void, DomainError> {
     if (this._status !== "ACTIVE") {
-      return failure(
-        new DomainError("Predictions can only be added to active games", { code: "GAME_NOT_ACTIVE" })
-      );
+      return failure(new DomainError("GAME_NOT_ACTIVE"));
     }
     if (
       this._maxParticipants &&
       this._predictions.length >= this._maxParticipants
     ) {
-      return failure(
-        new DomainError("Game has reached max participants", { code: "MAX_PARTICIPANTS" })
-      );
+      return failure(new DomainError("MAX_PARTICIPANTS"));
     }
     this._predictions.push(prediction);
     return success(undefined);
   }
 
-  public getPrediction(predictionId: PredictionId): Prediction | undefined {
+  public getPrediction(predictionId: string): Prediction | undefined {
     return this._predictions.find((p) => p.id === predictionId);
   }
 
@@ -139,9 +155,7 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
     // IUserRepository is not actually used, removing for now to reduce dependencies
   ): Result<void, DomainError> {
     if (this._status !== "ENDED") {
-      return failure(
-        new DomainError("Game must be in 'ENDED' state to be settled", { code: "SETTLEMENT_INVALID_STATE" })
-      );
+      return failure(new DomainError("SETTLEMENT_INVALID_STATE"));
     }
 
     const winningPredictions = this._predictions.filter(
@@ -163,7 +177,7 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
         prediction.setResult({
           result: PredictionResultEnum.CORRECT,
           accuracyScore: 1 as AccuracyScore, // Simplified
-          reward: reward as PmpAmount,
+          reward: createPmpAmount(Math.floor(reward)) as any,
         });
       }
     }
@@ -172,7 +186,7 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
       prediction.setResult({
         result: PredictionResultEnum.INCORRECT,
         accuracyScore: 0 as AccuracyScore,
-        reward: 0 as PmpAmount,
+        reward: createPmpAmount(0) as any,
       });
     }
 
@@ -190,10 +204,7 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
     optionDistribution: Map<string, number>;
   } {
     const totalParticipants = this._predictions.length;
-    const totalStake = this._predictions.reduce(
-      (sum, p) => sum + p.stake,
-      0 as PmpAmount
-    );
+    const totalStake = this._predictions.reduce((sum, p) => sum + p.stake, 0);
 
     const totalConfidence = this._predictions.reduce(
       (sum, p) => sum + p.confidence,
@@ -280,14 +291,10 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
   /** Title / Description 변경 (게임이 아직 시작 전 상태에서만) */
   public updateTitle(newTitle: string): Result<void, DomainError> {
     if (this._status !== "CREATED") {
-      return failure(
-        new DomainError("Cannot update title after game has started", { code: "GAME_ALREADY_STARTED" })
-      );
+      return failure(new DomainError("GAME_ALREADY_STARTED"));
     }
     if (newTitle.length < 5) {
-      return failure(
-        new DomainError("Title must be at least 5 characters", { code: "TITLE_TOO_SHORT" })
-      );
+      return failure(new DomainError("TITLE_TOO_SHORT"));
     }
     this._title = newTitle;
     this.touch();
@@ -296,14 +303,10 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
 
   public updateDescription(newDescription: string): Result<void, DomainError> {
     if (this._status !== "CREATED") {
-      return failure(
-        new DomainError("Cannot update description after game has started", { code: "GAME_ALREADY_STARTED" })
-      );
+      return failure(new DomainError("GAME_ALREADY_STARTED"));
     }
     if (newDescription.length < 10) {
-      return failure(
-        new DomainError("Description must be at least 10 characters", { code: "DESCRIPTION_TOO_SHORT" })
-      );
+      return failure(new DomainError("DESCRIPTION_TOO_SHORT"));
     }
     this._description = newDescription;
     this.touch();
@@ -312,12 +315,10 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
 
   public updateEndTime(newEndTime: Date): Result<void, DomainError> {
     if (this._status !== "CREATED") {
-      return failure(new DomainError("Cannot update end time after start", { code: "GAME_ALREADY_STARTED" }));
+      return failure(new DomainError("GAME_ALREADY_STARTED"));
     }
     if (newEndTime <= this._startTime) {
-      return failure(
-        new DomainError("End time must be after start time", { code: "INVALID_END_TIME" })
-      );
+      return failure(new DomainError("INVALID_END_TIME"));
     }
     this._endTime = newEndTime;
     this.touch();
@@ -328,14 +329,10 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
     newSettlementTime: Date
   ): Result<void, DomainError> {
     if (this._status !== "CREATED") {
-      return failure(
-        new DomainError("Cannot update settlement time after start", { code: "GAME_ALREADY_STARTED" })
-      );
+      return failure(new DomainError("GAME_ALREADY_STARTED"));
     }
     if (newSettlementTime <= this._endTime) {
-      return failure(
-        new DomainError("Settlement time must be after end time", { code: "INVALID_SETTLEMENT_TIME" })
-      );
+      return failure(new DomainError("INVALID_SETTLEMENT_TIME"));
     }
     this._settlementTime = newSettlementTime;
     this.touch();
@@ -344,12 +341,10 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
 
   public updateMinimumStake(newMin: PmpAmount): Result<void, DomainError> {
     if (this._status !== "CREATED") {
-      return failure(new DomainError("Cannot change stake after start", { code: "GAME_ALREADY_STARTED" }));
+      return failure(new DomainError("GAME_ALREADY_STARTED"));
     }
     if (newMin < 0) {
-      return failure(
-        new DomainError("Minimum stake cannot be negative", { code: "NEGATIVE_STAKE" })
-      );
+      return failure(new DomainError("NEGATIVE_STAKE"));
     }
     this._minimumStake = newMin;
     this.touch();
@@ -358,12 +353,10 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
 
   public updateMaximumStake(newMax: PmpAmount): Result<void, DomainError> {
     if (this._status !== "CREATED") {
-      return failure(new DomainError("Cannot change stake after start", { code: "GAME_ALREADY_STARTED" }));
+      return failure(new DomainError("GAME_ALREADY_STARTED"));
     }
     if (newMax <= this._minimumStake) {
-      return failure(
-        new DomainError("Maximum stake must be greater than minimum stake", { code: "INVALID_MAX_STAKE" })
-      );
+      return failure(new DomainError("INVALID_MAX_STAKE"));
     }
     this._maximumStake = newMax;
     this.touch();
@@ -372,12 +365,10 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
 
   public updateMaxParticipants(newMax: number): Result<void, DomainError> {
     if (this._status !== "CREATED") {
-      return failure(new DomainError("Cannot change participants after start", { code: "GAME_ALREADY_STARTED" }));
+      return failure(new DomainError("GAME_ALREADY_STARTED"));
     }
     if (newMax <= 0) {
-      return failure(
-        new DomainError("Max participants must be positive", { code: "INVALID_MAX_PARTICIPANTS" })
-      );
+      return failure(new DomainError("INVALID_MAX_PARTICIPANTS"));
     }
     this._maxParticipants = newMax;
     this.touch();

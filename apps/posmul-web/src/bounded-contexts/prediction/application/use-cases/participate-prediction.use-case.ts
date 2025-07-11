@@ -2,7 +2,7 @@
  * Participate in Prediction Game Use Case
  *
  * 예측 게임 참여 비즈니스 로직을 처리합니다.
- * - PMP 잔액 확인
+ * - PmpAmount 잔액 확인
  * - 예측 참여 처리
  * - 경제 이벤트 발행
  *
@@ -10,10 +10,18 @@
  * @since 2024-12
  */
 
-import { PredictionGameId, PredictionId, Result, UserId, PmpAmount, UseCaseError } from "@posmul/auth-economy-sdk";
+import {
+  PredictionGameId,
+  Result,
+  UserId,
+  PmpAmount,
+  UseCaseError,
+  isFailure,
+} from "@posmul/auth-economy-sdk";
 import { Prediction } from "../../domain/entities/prediction.entity";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 import { PredictionEconomicService } from "../../domain/services/prediction-economic.service";
+import { success, failure } from "../../../auth/domain/helpers/result-helpers";
 
 /**
  * 예측 참여 요청 DTO
@@ -31,7 +39,7 @@ export interface ParticipatePredictionRequest {
  * 예측 참여 응답 DTO
  */
 export interface ParticipatePredictionResponse {
-  readonly predictionId: PredictionId;
+  readonly predictionId: string;
 }
 
 /**
@@ -42,12 +50,11 @@ export class ParticipatePredictionUseCase {
     private readonly predictionGameRepository: IPredictionGameRepository,
     private readonly predictionEconomicService: PredictionEconomicService
   ) {}
-
   async execute(
     request: ParticipatePredictionRequest
   ): Promise<Result<ParticipatePredictionResponse, UseCaseError>> {
     try {
-      // 1. PMP 참여 자격 및 위험 평가
+      // 1. PmpAmount 참여 자격 및 위험 평가
       const eligibilityResult =
         await this.predictionEconomicService.checkPmpParticipationEligibility(
           request.userId,
@@ -57,17 +64,22 @@ export class ParticipatePredictionUseCase {
       if (!eligibilityResult.success) {
         return failure(
           new UseCaseError(
-            "Failed to check PMP participation eligibility",
-            eligibilityResult.error
+            "Failed to check PmpAmount participation eligibility",
+            {
+              message: isFailure(eligibilityResult)
+                ? "eligibility check failed"
+                : "unknown error",
+            }
           )
         );
       }
       if (!eligibilityResult.data.canParticipate) {
-        return failure(
-          new UseCaseError(
-            `Insufficient PMP balance. Required: ${eligibilityResult.data.requiredAmount}, Available: ${eligibilityResult.data.currentBalance}`
-          )
-        );
+        return {
+          success: false,
+          error: new UseCaseError(
+            `Insufficient PmpAmount balance. Required: ${eligibilityResult.data.requiredAmount}`
+          ),
+        };
       }
 
       // 2. 예측 게임 조회
@@ -75,15 +87,16 @@ export class ParticipatePredictionUseCase {
         request.gameId
       );
       if (!gameResult.success) {
-        return failure(
-          new UseCaseError(
-            "Failed to retrieve prediction game",
-            gameResult.error
-          )
-        );
+        return {
+          success: false,
+          error: new UseCaseError("Failed to retrieve prediction game"),
+        };
       }
       if (!gameResult.data) {
-        return failure(new UseCaseError("Prediction game not found"));
+        return {
+          success: false,
+          error: new UseCaseError("Prediction game not found"),
+        };
       }
       const predictionGame = gameResult.data;
 
@@ -92,17 +105,17 @@ export class ParticipatePredictionUseCase {
         userId: request.userId,
         gameId: request.gameId,
         selectedOptionId: request.selectedOptionId,
-        stake: request.stakeAmount,
-        confidence: request.confidence,
-        reasoning: request.reasoning,
+        stake: request.stakeAmount as any,
+        confidence: request.confidence || 0.5,
       });
 
       if (!predictionResult.success) {
         return failure(
-          new UseCaseError(
-            "Failed to create prediction entity",
-            predictionResult.error
-          )
+          new UseCaseError("Failed to create prediction entity", {
+            message: isFailure(predictionResult)
+              ? "prediction creation failed"
+              : "unknown error",
+          })
         );
       }
       const prediction = predictionResult.data;
@@ -112,10 +125,11 @@ export class ParticipatePredictionUseCase {
 
       if (!participationResult.success) {
         return failure(
-          new UseCaseError(
-            "Failed to add prediction to game",
-            participationResult.error
-          )
+          new UseCaseError("Failed to add prediction to game", {
+            message: isFailure(participationResult)
+              ? "participation failed"
+              : "unknown error",
+          })
         );
       }
 
@@ -124,14 +138,13 @@ export class ParticipatePredictionUseCase {
         await this.predictionGameRepository.save(predictionGame);
       if (!saveResult.success) {
         return failure(
-          new UseCaseError(
-            "Failed to save prediction game state",
-            saveResult.error
-          )
+          new UseCaseError("Failed to save prediction game state", {
+            message: isFailure(saveResult) ? "save failed" : "unknown error",
+          })
         );
       }
 
-      // 6. 경제 시스템에서 예측 참여 처리 (PMP 차감 + 이벤트 발행)
+      // 6. 경제 시스템에서 예측 참여 처리 (PmpAmount 차감 + 이벤트 발행)
       const economicProcessResult =
         await this.predictionEconomicService.processParticipation(
           request.userId,
@@ -146,12 +159,10 @@ export class ParticipatePredictionUseCase {
         // NOTE: Here we have a problem. The game is saved, but the economic part failed.
         // This requires a compensation transaction (Saga pattern, etc.).
         // For now, we just return an error.
-        return failure(
-          new UseCaseError(
-            "Game saved, but failed to process economic participation. Please check system.",
-            economicProcessResult.error
-          )
-        );
+        return {
+          success: false,
+          error: new UseCaseError("Economic process failed"),
+        };
       }
 
       // 7. 응답 생성
@@ -159,12 +170,13 @@ export class ParticipatePredictionUseCase {
         predictionId: prediction.id,
       });
     } catch (error) {
-      return failure(
-        new UseCaseError(
+      return {
+        success: false,
+        error: new UseCaseError(
           "Unexpected error in ParticipatePredictionUseCase",
-          error as Error
-        )
-      );
+          { originalError: (error as any)?.message || "Unknown error" }
+        ),
+      };
     }
   }
 }

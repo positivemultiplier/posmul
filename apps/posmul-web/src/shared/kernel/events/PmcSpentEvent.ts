@@ -1,9 +1,9 @@
 import { DomainEvent } from './DomainEvent';
 
 /**
- * PMC Spent Event
+ * PmcAmount Spent Event
  * 
- * Fired when a user spends PMC (PosMul Currency) on platform activities
+ * Fired when a user spends PmcAmount (PosMul Currency) on platform activities
  * (predictions, donations, investments, etc.)
  * 
  * @author PosMul Development Team

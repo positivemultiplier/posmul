@@ -152,7 +152,10 @@ export class InvestmentDomainService {
         Math.min(finalRate, 50)
       );
       if (!rewardRateResult.success) {
-        return rewardRateResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       return {

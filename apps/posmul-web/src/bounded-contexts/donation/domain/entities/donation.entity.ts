@@ -337,7 +337,7 @@ export class Donation {
 
     return { success: true, data: undefined };
   }
-  // 기부 가능 여부 확인 (PMC 잔액 기준)
+  // 기부 가능 여부 확인 (PmcAmount 잔액 기준)
   canProcess(pmcBalance: number): boolean {
     return (
       this.status === DonationStatus.PENDING &&
@@ -480,7 +480,10 @@ export class Donation {
 
     const validationResult = donation.validateTarget();
     if (!validationResult.success) {
-      return validationResult;
+      return {
+        success: false,
+        error: new Error("기부 검증 실패"),
+      };
     }
 
     return { success: true, data: donation };
@@ -516,7 +519,10 @@ export class Donation {
 
     const validationResult = donation.validateTarget();
     if (!validationResult.success) {
-      return validationResult;
+      return {
+        success: false,
+        error: new Error("기부 검증 실패"),
+      };
     }
 
     return { success: true, data: donation };
@@ -552,7 +558,10 @@ export class Donation {
 
     const validationResult = donation.validateTarget();
     if (!validationResult.success) {
-      return validationResult;
+      return {
+        success: false,
+        error: new Error("기부 검증 실패"),
+      };
     }
 
     return { success: true, data: donation };

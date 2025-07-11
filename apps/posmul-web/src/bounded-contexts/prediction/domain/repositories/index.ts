@@ -50,7 +50,7 @@ export type {
   PredictionId,
   UserId,
 } from "../../../../shared/types/branded-types";
-export type { Result } from "../../../../shared/types/economic-system";
+export type { Result } from "@posmul/auth-economy-sdk";
 
 /**
  * Repository 패턴의 주요 원칙:

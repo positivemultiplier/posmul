@@ -1,11 +1,86 @@
 /**
  * MCP Adapter for Supabase Operations
- * 
+ *
  * MCP 도구들과 SDK 사이의 어댑터
  * 실제 MCP 함수 호출을 래핑하여 SDK의 인터페이스에 맞춤
  */
 
-import type { MCPQueryResult, MCPAdvisor } from './mcp';
+import type { MCPQueryResult, MCPAdvisor } from "./mcp";
+import { Result, success, failure } from "../types";
+
+/**
+ * Supabase MCP 응답 타입
+ */
+export interface SupabaseMCPResponse<T = any> {
+  data: T | null;
+  error: any | null;
+}
+
+/**
+ * Supabase MCP 응답을 Result 타입으로 변환
+ * @param response - Supabase MCP 응답
+ * @returns Result 타입
+ */
+export function toResult<T>(response: SupabaseMCPResponse<T>): Result<T> {
+  if (response.error) {
+    return failure(response.error);
+  }
+  return success(response.data as T);
+}
+
+/**
+ * Supabase MCP 응답을 Result 타입으로 변환 (null 데이터 허용)
+ * @param response - Supabase MCP 응답
+ * @returns Result 타입
+ */
+export function toResultWithNull<T>(
+  response: SupabaseMCPResponse<T>
+): Result<T | null> {
+  if (response.error) {
+    return failure(response.error);
+  }
+  return success(response.data);
+}
+
+/**
+ * Supabase MCP 응답이 성공인지 확인
+ * @param response - Supabase MCP 응답
+ * @returns 성공 여부
+ */
+export function isSuccessResponse<T>(
+  response: SupabaseMCPResponse<T>
+): boolean {
+  return !response.error;
+}
+
+/**
+ * Supabase MCP 응답이 실패인지 확인
+ * @param response - Supabase MCP 응답
+ * @returns 실패 여부
+ */
+export function isErrorResponse<T>(response: SupabaseMCPResponse<T>): boolean {
+  return !!response.error;
+}
+
+/**
+ * Legacy 호환성을 위한 isFailure 함수
+ * Supabase MCP 응답과 Result 타입 모두 지원
+ */
+export function isFailureSafe(
+  result: Result<any, any> | SupabaseMCPResponse<any>
+): boolean {
+  // Result 타입인 경우
+  if ("success" in result) {
+    return !result.success;
+  }
+
+  // Supabase MCP 응답인 경우
+  if ("data" in result && "error" in result) {
+    return !!result.error;
+  }
+
+  return false;
+}
 
 // MCP 도구들의 타입 정의 (실제 구현체는 각 앱에서 주입)
 declare const mcp_supabase_execute_sql: (config: {
@@ -26,13 +101,15 @@ declare const mcp_supabase_list_tables: (config: {
 
 declare const mcp_supabase_get_advisors: (config: {
   project_id: string;
-  type: 'security' | 'performance';
-}) => Promise<Array<{
-  type?: string;
-  severity?: string;
-  message?: string;
-  remediation?: string;
-}>>;
+  type: "security" | "performance";
+}) => Promise<
+  Array<{
+    type?: string;
+    severity?: string;
+    message?: string;
+    remediation?: string;
+  }>
+>;
 
 /**
  * MCP Supabase 어댑터 클래스
@@ -43,7 +120,9 @@ export class MCPSupabaseAdapter {
   /**
    * SQL 쿼리 실행
    */
-  async executeSQL<T = Record<string, unknown>>(query: string): Promise<MCPQueryResult<T>> {
+  async executeSQL<T = Record<string, unknown>>(
+    query: string
+  ): Promise<MCPQueryResult<T>> {
     try {
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -58,7 +137,7 @@ export class MCPSupabaseAdapter {
     } catch (error) {
       return {
         data: [],
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
         count: 0,
       };
     }
@@ -88,7 +167,7 @@ export class MCPSupabaseAdapter {
   /**
    * 어드바이저 조회
    */
-  async getAdvisors(type: 'security' | 'performance'): Promise<MCPAdvisor[]> {
+  async getAdvisors(type: "security" | "performance"): Promise<MCPAdvisor[]> {
     const advisors = await mcp_supabase_get_advisors({
       project_id: this.projectId,
       type,
@@ -96,9 +175,11 @@ export class MCPSupabaseAdapter {
 
     // 형식 정규화
     return advisors.map((advisor) => ({
-      type: (advisor.type as 'security' | 'performance') || type,
-      severity: (advisor.severity as 'low' | 'medium' | 'high' | 'critical') || 'medium',
-      message: advisor.message || 'No message',
+      type: (advisor.type as "security" | "performance") || type,
+      severity:
+        (advisor.severity as "low" | "medium" | "high" | "critical") ||
+        "medium",
+      message: advisor.message || "No message",
       remediation: advisor.remediation,
     }));
   }
@@ -114,9 +195,11 @@ export const createMCPAdapter = (projectId: string): MCPSupabaseAdapter => {
 /**
  * 프로젝트 ID를 받아 기본 어댑터를 생성
  */
-export const createDefaultMCPAdapter = (projectId?: string): MCPSupabaseAdapter => {
+export const createDefaultMCPAdapter = (
+  projectId?: string
+): MCPSupabaseAdapter => {
   if (!projectId) {
-    throw new Error('Project ID is required for MCP operations');
+    throw new Error("Project ID is required for MCP operations");
   }
   return createMCPAdapter(projectId);
 };

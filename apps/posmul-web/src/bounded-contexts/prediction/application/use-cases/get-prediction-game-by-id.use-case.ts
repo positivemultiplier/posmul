@@ -10,7 +10,12 @@
  * @since 2024-12
  */
 
-import { PredictionGameId, Result, UseCaseError, isFailure } from "@posmul/auth-economy-sdk";
+import {
+  PredictionGameId,
+  Result,
+  UseCaseError,
+  isFailure,
+} from "@posmul/auth-economy-sdk";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**
@@ -29,50 +34,36 @@ export interface GetPredictionGameByIdResponse {
   readonly id: string;
   readonly title: string;
   readonly description: string;
-  readonly predictionType: string;
-  readonly options: Array<{
-    readonly id: string;
-    readonly label: string;
-    readonly description?: string;
-  }>;
+  readonly creatorId: string;
   readonly status: string;
+  readonly options: Array<{
+    id: string;
+    title: string;
+    description?: string;
+  }>;
   readonly startTime: Date;
   readonly endTime: Date;
   readonly settlementTime: Date;
-  readonly createdBy: string;
-  readonly importance: string;
-  readonly difficulty: string;
-  readonly configuration: {
-    readonly minimumStake: number;
-    readonly maximumStake: number;
-    readonly maxParticipants?: number;
-  };
-  readonly moneyWaveId?: string;
-  readonly gameImportanceScore: number;
-  readonly allocatedPrizePool: number;
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-  readonly version: number;
+  readonly minimumStake: number;
+  readonly maximumStake: number;
+  readonly maxParticipants?: number;
   readonly participations?: Array<{
-    readonly id: string;
-    readonly userId: string;
-    readonly selectedOptionId: string;
-    readonly stakeAmount: number;
-    readonly confidence: number;
-    readonly reasoning?: string;
-    readonly participatedAt: Date;
+    userId: string;
+    selectedOptionId: string;
+    stake: number;
+    confidence: number;
+    createdAt: Date;
   }>;
   readonly statistics?: {
-    readonly totalParticipants: number;
-    readonly totalStake: number;
-    readonly averageStake: number;
-    readonly averageConfidence: number;
-    readonly optionDistribution: Record<string, number>;
+    totalParticipants: number;
+    totalStake: number;
+    averageConfidence: number;
+    optionDistribution: Record<string, number>;
   };
 }
 
 /**
- * 예측 게임 상세 조회 Use Case
+ * 예측 게임 상세 조회 유스케이스
  */
 export class GetPredictionGameByIdUseCase {
   constructor(
@@ -80,24 +71,28 @@ export class GetPredictionGameByIdUseCase {
   ) {}
 
   /**
-   * Use Case 실행
+   * 예측 게임 상세 정보 조회 실행
    */
   async execute(
     request: GetPredictionGameByIdRequest
   ): Promise<Result<GetPredictionGameByIdResponse, UseCaseError>> {
     try {
-      // 1. 게임 조회
+      // 1. 입력 검증
+      if (!request.gameId) {
+        return {
+          success: false,
+          error: new UseCaseError("Game ID is required"),
+        };
+      }
+
+      // 2. 게임 조회
       const gameResult = await this.predictionGameRepository.findById(
         request.gameId
       );
-
       if (isFailure(gameResult)) {
         return {
           success: false,
-          error: new UseCaseError(
-            "Failed to fetch prediction game",
-            { originalError: gameResult.error }
-          ),
+          error: new UseCaseError("Failed to fetch prediction game"),
         };
       }
 
@@ -109,73 +104,63 @@ export class GetPredictionGameByIdUseCase {
         };
       }
 
-      // 2. 기본 응답 데이터 구성
-      const response: GetPredictionGameByIdResponse = {
+      // 3. 기본 응답 구성
+      let response: GetPredictionGameByIdResponse = {
         id: game.id,
-        title: game.getTitle(),
-        description: game.getDescription(),
-        predictionType: game.getPredictionType(),
-        options: game.getOptions(),
+        title: game.title,
+        description: game.description,
+        creatorId: game.creatorId,
         status: game.status.toString(),
-        startTime: game.getStartTime(),
-        endTime: game.getEndTime(),
-        settlementTime: game.getSettlementTime(),
-        createdBy: game.getCreatedBy(),
-        importance: "medium", // 임시값
-        difficulty: "medium", // 임시값
-        configuration: game.configuration,
-        moneyWaveId: undefined, // 임시값
-        gameImportanceScore: 1.0, // 임시값
-        allocatedPrizePool: 0, // 임시값
-        createdAt: game.getCreatedAt(),
-        updatedAt: game.getUpdatedAt(),
-        version: game.getVersion(),
+        options: game.options.map((option) => ({
+          id: option.id,
+          title: option.id, // GameOption에 title 속성이 없으므로 id 사용
+          description: option.description,
+        })),
+        startTime: game.startTime,
+        endTime: game.endTime,
+        settlementTime: game.settlementTime,
+        minimumStake: game.minimumStake,
+        maximumStake: game.maximumStake,
+        maxParticipants: game.maxParticipants ?? undefined,
       };
 
-      // 3. 참여자 정보 포함 (선택적)
-      let finalResponse = response;
+      // 4. 선택적 정보 추가
       if (request.includeParticipations) {
         const predictions = Array.from(game.predictions.values());
         const participations = predictions.map((prediction) => ({
-          id: prediction.id,
           userId: prediction.userId,
           selectedOptionId: prediction.selectedOptionId,
-          stakeAmount: prediction.stake,
+          stake: prediction.stake,
           confidence: prediction.confidence,
-          reasoning: prediction.reasoning,
-          participatedAt: prediction.timestamps.createdAt,
+          createdAt: new Date(), // 실제 생성 시간이 없으므로 현재 시간 사용
         }));
 
-        finalResponse = { ...response, participations };
+        response = { ...response, participations };
       }
 
-      // 4. 통계 정보 포함 (선택적)
       if (request.includeStatistics) {
-        const stats = game.getStatistics();
+        const gameStats = game.getStatistics();
         const statistics = {
-          totalParticipants: stats.totalParticipants,
-          totalStake: stats.totalStake,
-          averageStake:
-            stats.totalParticipants > 0
-              ? stats.totalStake / stats.totalParticipants
-              : 0,
-          averageConfidence: stats.averageConfidence,
-          optionDistribution: Object.fromEntries(stats.optionDistribution),
+          totalParticipants: gameStats.totalParticipants,
+          totalStake: gameStats.totalStake,
+          averageConfidence: gameStats.averageConfidence,
+          optionDistribution: Object.fromEntries(gameStats.optionDistribution),
         };
 
-        finalResponse = { ...finalResponse, statistics };
+        response = { ...response, statistics };
       }
 
+      // 5. 성공 응답 반환
       return {
         success: true,
-        data: finalResponse,
+        data: response,
       };
     } catch (error) {
       return {
         success: false,
         error: new UseCaseError(
           "Unexpected error in GetPredictionGameByIdUseCase",
-          { originalError: error as Error }
+          { originalError: (error as any)?.message || "Unknown error" }
         ),
       };
     }

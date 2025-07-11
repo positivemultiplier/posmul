@@ -18,6 +18,8 @@ import {
   unwrapBetaCoefficient,
   unwrapExpectedReturn,
 } from "../../value-objects";
+import { isFailure } from '@posmul/auth-economy-sdk';
+
 import { CAPMEngine, CAPMEngineConfig } from "../capm-engine.service";
 import {
   IAsset,
@@ -46,7 +48,7 @@ describe("CAPMEngine", () => {
   // Helper functions for test data creation
   const createMockAsset = (overrides: Partial<IAsset> = {}): IAsset => ({
     assetId: "asset-test",
-    assetType: "PMC",
+    assetType: "PmcAmount",
     amount: 10000,
     expectedReturn: createExpectedReturn(0.12), // 12% 기대수익률
     beta: createBetaCoefficient(1.2), // 베타 1.2
@@ -61,13 +63,13 @@ describe("CAPMEngine", () => {
         : [
             createMockAsset({
               assetId: "pmp-asset",
-              assetType: "PMP",
+              assetType: "PmpAmount",
               weight: 0.4,
               beta: createBetaCoefficient(0.1),
             }),
             createMockAsset({
               assetId: "pmc-asset",
-              assetType: "PMC",
+              assetType: "PmcAmount",
               weight: 0.6,
               beta: createBetaCoefficient(1.5),
             }),
@@ -446,7 +448,7 @@ describe("CAPMEngine", () => {
     });
   });
 
-  describe("optimal PMP-PMC allocation", () => {
+  describe("optimal PmpAmount-PmcAmount allocation", () => {
     it("should_calculate_optimal_allocation_based_on_risk_tolerance", async () => {
       // Arrange
       const totalAmount = 100000;
@@ -466,7 +468,7 @@ describe("CAPMEngine", () => {
       if (result.success) {
         const allocation = result.data;
 
-        // PMP + PMC = 총 금액
+        // PmpAmount + PmcAmount = 총 금액
         const pmpValue = allocation.pmpAllocation as number;
         const pmcValue = allocation.pmcAllocation as number;
         expect(pmpValue + pmcValue).toBeCloseTo(totalAmount, 0);
@@ -503,7 +505,7 @@ describe("CAPMEngine", () => {
         const bearPmpAllocation = bearResult.data.pmpAllocation as number;
         const bullPmpAllocation = bullResult.data.pmpAllocation as number;
 
-        // 베어 마켓에서는 PMP(안전자산) 비중 증가
+        // 베어 마켓에서는 PmpAmount(안전자산) 비중 증가
         expect(bearPmpAllocation).toBeGreaterThan(bullPmpAllocation);
       }
     });
@@ -542,7 +544,7 @@ describe("CAPMEngine", () => {
       // Assert
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.message).toContain("Insufficient data");
+        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("Insufficient data");
       }
     });
 
@@ -557,7 +559,7 @@ describe("CAPMEngine", () => {
       // Assert
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.message).toContain("same length");
+        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("same length");
       }
     });
   });
@@ -629,7 +631,7 @@ describe("CAPMEngine", () => {
       const result = await engine.analyzeMarketConditions(insufficientData); // Assert
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.message).toContain("Insufficient data");
+        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("Insufficient data");
       }
     });
   });

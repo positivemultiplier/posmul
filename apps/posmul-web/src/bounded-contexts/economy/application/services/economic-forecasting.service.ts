@@ -7,7 +7,6 @@
 
 import { Result } from "@posmul/auth-economy-sdk";
 
-
 /**
  * 경제지표 타입 정의
  */
@@ -403,8 +402,13 @@ export class EconomicForecastingService {
       // 데이터 전처리
       const preprocessedData = await this.preprocessData(data, config);
       if (!preprocessedData.success) {
-        return preprocessedData;
+        return {
+          success: false,
+          error: new Error("데이터 전처리에 실패했습니다."),
+        };
       }
+
+      const cleanedData = preprocessedData.data;
 
       // 모델 추정
       const modelResult = await this.estimateModel(
@@ -412,13 +416,25 @@ export class EconomicForecastingService {
         config
       );
       if (!modelResult.success) {
-        return modelResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다."),
+        };
+      }
+      if (!modelResult.success) {
+        return {
+          success: false,
+          error: new Error("모델 추정에 실패했습니다."),
+        };
       }
 
       // 예측 생성
       const forecasts = await this.generateForecasts(modelResult.data, config);
       if (!forecasts.success) {
-        return forecasts;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다."),
+        };
       }
 
       // 모델 진단
@@ -487,7 +503,10 @@ export class EconomicForecastingService {
       // VAR 시스템 추정
       const varSystem = await this.estimateVARSystem(data, config);
       if (!varSystem.success) {
-        return varSystem;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다."),
+        };
       }
 
       // 각 지표별 예측 생성
@@ -530,7 +549,10 @@ export class EconomicForecastingService {
       // 기준 시나리오 예측
       const baselineResult = await this.forecastIndicator(data, forecastConfig);
       if (!baselineResult.success) {
-        return baselineResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다."),
+        };
       }
 
       // 대안 시나리오 분석

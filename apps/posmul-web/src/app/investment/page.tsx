@@ -21,7 +21,7 @@ export default function InvestmentPage() {
       subtitle: "의류, 식품, 건강, 생활용품",
       color: "from-blue-500 to-blue-600",
       stats: "234개 매장 • 평균 수익률 15.2%",
-      features: ["지역 경제 활성화", "소상공인 직접 지원", "PMC 수익 창출"],
+      features: ["지역 경제 활성화", "소상공인 직접 지원", "PmcAmount 수익 창출"],
     },
     {
       slug: "major-league",
@@ -30,7 +30,7 @@ export default function InvestmentPage() {
       subtitle: "제품, 서비스, 브랜드",
       color: "from-purple-500 to-purple-600",
       stats: "89개 캠페인 • 평균 수익률 8.7%",
-      features: ["광고 시청 보상", "브랜드 참여", "PMP 수익 창출"],
+      features: ["광고 시청 보상", "브랜드 참여", "PmpAmount 수익 창출"],
     },
     {
       slug: "cloud-funding",
@@ -39,7 +39,7 @@ export default function InvestmentPage() {
       subtitle: "액세서리, 도서, 영화, 공연",
       color: "from-green-500 to-green-600",
       stats: "156개 프로젝트 • 평균 수익률 22.8%",
-      features: ["창작자 지원", "얼리버드 혜택", "PMC 수익 창출"],
+      features: ["창작자 지원", "얼리버드 혜택", "PmcAmount 수익 창출"],
     },
   ];
 
@@ -121,9 +121,9 @@ export default function InvestmentPage() {
             <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <span className="text-xl">2️⃣</span>
             </div>
-            <h3 className="font-semibold mb-2">PMP/PMC 투자</h3>
+            <h3 className="font-semibold mb-2">PmpAmount/PmcAmount 투자</h3>
             <p className="text-sm text-gray-600">
-              안전자산(PMP) 또는 위험자산(PMC)으로 투자 참여
+              안전자산(PmpAmount) 또는 위험자산(PmcAmount)으로 투자 참여
             </p>
           </div>
           <div className="text-center">

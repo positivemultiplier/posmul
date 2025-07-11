@@ -2,7 +2,11 @@
  * Prediction Domain Value Objects
  */
 
-import { PmcAmount, PmpAmount, createPmcAmount, createPmpAmount } from "@posmul/auth-economy-sdk";
+import {
+  createPmcAmount,
+  createPmpAmount,
+} from "@posmul/auth-economy-sdk/economy";
+import { PmcAmount, PmpAmount } from "@posmul/auth-economy-sdk/economy";
 import { Result } from "@posmul/auth-economy-sdk";
 import { ValidationError } from "@posmul/auth-economy-sdk";
 import { GameStatus as BaseGameStatus } from "./game-status";
@@ -89,7 +93,7 @@ export class StakeAmount {
       return {
         success: false,
         error: new ValidationError(
-          "Stake amount must be at least 1 PMP",
+          "Stake amount must be at least 1 PmpAmount",
           { field: "stakeAmount", value: pmpAmount }
         ),
       };
@@ -99,7 +103,7 @@ export class StakeAmount {
       return {
         success: false,
         error: new ValidationError(
-          "Stake amount cannot exceed 10,000 PMP",
+          "Stake amount cannot exceed 10,000 PmpAmount",
           { field: "stakeAmount", value: pmpAmount }
         ),
       };
@@ -115,7 +119,10 @@ export class StakeAmount {
     return createPmpAmount(Math.floor(baseAmount * multiplier));
   }
 
-  public calculateExpectedReward(totalPool: PmpAmount, winnerCount: number): PmcAmount {
+  public calculateExpectedReward(
+    totalPool: PmpAmount,
+    winnerCount: number
+  ): PmcAmount {
     if (winnerCount === 0) return createPmcAmount(0);
 
     const poolAmount = totalPool as number;
@@ -142,7 +149,7 @@ export class StakeAmount {
   }
 
   public toString(): string {
-    return `${this._pmpAmount} PMP (${this._confidenceLevel.toString()})`;
+    return `${this._pmpAmount} PmpAmount (${this._confidenceLevel.toString()})`;
   }
 
   public equals(other: StakeAmount): boolean {
@@ -171,20 +178,20 @@ export class PredictionOption {
     if (!id || id.trim().length === 0) {
       return {
         success: false,
-        error: new ValidationError(
-          "Prediction option ID cannot be empty",
-          { field: "optionId", value: id }
-        ),
+        error: new ValidationError("Prediction option ID cannot be empty", {
+          field: "optionId",
+          value: id,
+        }),
       };
     }
 
     if (!label || label.trim().length === 0) {
       return {
         success: false,
-        error: new ValidationError(
-          "Prediction option label cannot be empty",
-          { field: "optionLabel", value: label }
-        ),
+        error: new ValidationError("Prediction option label cannot be empty", {
+          field: "optionLabel",
+          value: label,
+        }),
       };
     }
 
@@ -287,9 +294,7 @@ export const isValidGameStatus = (value: string): boolean => {
 };
 
 // TODO: BasePredictionResult을 SDK로 마이그레이션한 후 복원 필요
-export const isValidPredictionResult = (
-  value: string
-): boolean => {
+export const isValidPredictionResult = (value: string): boolean => {
   // 임시로 기본적인 결과값만 검증
-  return ['win', 'lose', 'draw', 'cancelled'].includes(value);
+  return ["win", "lose", "draw", "cancelled"].includes(value);
 };

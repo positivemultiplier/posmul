@@ -10,7 +10,7 @@ export { BaseMCPRepository } from "./repositories/base-mcp.repository";
 
 // Repository 구현체들 (MCP 패턴)
 export { SupabaseMoneyWaveHistoryRepository } from "./repositories/supabase-money-wave-history.repository";
-export { SupabasePMPPMCAccountRepository } from "./repositories/supabase-pmp-pmc-account.repository";
+export { SupabasePmpPmcAccountRepository } from "./repositories/supabase-pmp-pmc-account.repository";
 export { SupabaseUtilityFunctionRepository } from "./repositories/supabase-utility-function.repository";
 
 // 실시간 이벤트 시스템

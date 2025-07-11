@@ -6,7 +6,6 @@
 
 import { UserId } from "@posmul/auth-economy-sdk";
 
-
 /**
  * 예측 타입
  */
@@ -50,6 +49,41 @@ export type GameStatus =
   | "ENDED"
   | "COMPLETED"
   | "CANCELLED";
+
+/**
+ * GameStatus 유틸리티 클래스
+ */
+export class GameStatusUtil {
+  constructor(public readonly value: GameStatus) {}
+
+  isActive(): boolean {
+    return this.value === "ACTIVE";
+  }
+
+  isEnded(): boolean {
+    return this.value === "ENDED";
+  }
+
+  isSettled(): boolean {
+    return this.value === "COMPLETED" || this.value === "CANCELLED";
+  }
+
+  isCreated(): boolean {
+    return this.value === "CREATED";
+  }
+
+  isCompleted(): boolean {
+    return this.value === "COMPLETED";
+  }
+
+  isCancelled(): boolean {
+    return this.value === "CANCELLED";
+  }
+
+  toString(): GameStatus {
+    return this.value;
+  }
+}
 
 /**
  * 예측 상태

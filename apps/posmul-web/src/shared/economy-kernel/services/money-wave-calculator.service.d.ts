@@ -28,13 +28,13 @@ export declare class MoneyWaveCalculatorService {
      */
     private calculateBaseAllocationRatio;
     /**
-     * MoneyWave2: 미소비 PMC 재분배 금액 계산
-     * 실제 구현에서는 DB에서 일정 기간 미사용 PMC 조회
+     * MoneyWave2: 미소비 PmcAmount 재분배 금액 계산
+     * 실제 구현에서는 DB에서 일정 기간 미사용 PmcAmount 조회
      */
     private calculateRedistributedPmc;
     /**
-     * MoneyWave3: 기업가 제공 PMC 계산
-     * 실제 구현에서는 DB에서 기업가가 제공한 PMC 조회
+     * MoneyWave3: 기업가 제공 PmcAmount 계산
+     * 실제 구현에서는 DB에서 기업가가 제공한 PmcAmount 조회
      */
     private calculateEnterprisePmc;
     /**

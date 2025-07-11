@@ -27,7 +27,7 @@ export default function DonationPage() {
       color: "from-blue-500 to-blue-600",
       hoverColor: "from-blue-600 to-blue-700",
       stats: "1,234건 기부 • 평균 금액 25,000원",
-      features: ["투명한 기부 내역", "직접적인 도움", "PMC 활용"],
+      features: ["투명한 기부 내역", "직접적인 도움", "PmcAmount 활용"],
       impact: "지난 달 578명이 도움을 받았습니다",
     },
     {
@@ -38,7 +38,7 @@ export default function DonationPage() {
       color: "from-green-500 to-green-600",
       hoverColor: "from-green-600 to-green-700",
       stats: "89개 기관 • 평균 금액 50,000원",
-      features: ["검증된 기관", "체계적 지원", "PMC 활용"],
+      features: ["검증된 기관", "체계적 지원", "PmcAmount 활용"],
       impact: "전국 156개 지역에서 활동 중입니다",
     },
     {
@@ -49,7 +49,7 @@ export default function DonationPage() {
       color: "from-purple-500 to-purple-600",
       hoverColor: "from-purple-600 to-purple-700",
       stats: "156명 리더 • 평균 금액 75,000원",
-      features: ["사회적 영향력", "전문성 기반", "PMC 활용"],
+      features: ["사회적 영향력", "전문성 기반", "PmcAmount 활용"],
       impact: "12개 분야의 전문가가 참여하고 있습니다",
     },
   ];
@@ -229,8 +229,8 @@ export default function DonationPage() {
             {[
               {
                 step: "1️⃣",
-                title: "PMC 기부 결정",
-                description: "보유한 PMC(위험자산)로 기부할 금액을 결정합니다",
+                title: "PmcAmount 기부 결정",
+                description: "보유한 PmcAmount(위험자산)로 기부할 금액을 결정합니다",
                 color: "red",
               },
               {
@@ -244,7 +244,7 @@ export default function DonationPage() {
                 step: "3️⃣",
                 title: "Money Wave 활성화",
                 description:
-                  "기부를 통해 Money Wave가 활성화되어 PMC 재분배가 시작됩니다",
+                  "기부를 통해 Money Wave가 활성화되어 PmcAmount 재분배가 시작됩니다",
                 color: "green",
               },
               {

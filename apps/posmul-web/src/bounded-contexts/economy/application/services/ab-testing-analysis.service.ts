@@ -209,13 +209,18 @@ export class ABTestingAnalysisService {
         });
 
       if (!configResult.success) {
-        return configResult;
+        return {
+          success: false,
+          error: new Error("A/B 테스트 설정 저장에 실패했습니다."),
+        };
       }
+
+      const savedConfiguration = configResult.data;
 
       return {
         success: true,
         data: {
-          configuration: configResult.data,
+          configuration: savedConfiguration,
           powerAnalysis: powerAnalysisResult,
           experimentalDesign,
           recommendedSampleSizes:
@@ -227,11 +232,7 @@ export class ABTestingAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          `Experiment design failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -367,11 +368,7 @@ export class ABTestingAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          `A/B test analysis failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }

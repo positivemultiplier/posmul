@@ -15,7 +15,7 @@ export default function HomePage() {
           </p>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto mb-12">
             예측 게임과 지역 경제 연동을 통한 혁신적인 직접민주주의 실험 플랫폼입니다.
-            PMP와 PMC를 활용하여 더 나은 사회를 만들어가세요.
+            PmpAmount와 PmcAmount를 활용하여 더 나은 사회를 만들어가세요.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
@@ -52,7 +52,7 @@ export default function HomePage() {
             <div className="text-6xl mb-6 text-center">🎯</div>
             <h3 className="text-2xl font-bold mb-4 text-center">예측 게임</h3>
             <p className="text-gray-600 mb-6 text-center">
-              스포츠, 정치, 경제 등 다양한 분야의 예측 게임에 참여하고 PMP를 획득하세요.
+              스포츠, 정치, 경제 등 다양한 분야의 예측 게임에 참여하고 PmpAmount를 획득하세요.
             </p>
             <div className="flex justify-center gap-2 mb-4">
               <Badge variant="secondary">스포츠</Badge>
@@ -75,8 +75,8 @@ export default function HomePage() {
               지역 경제와 연동된 투자 시스템으로 실제 가치를 창출하세요.
             </p>
             <div className="flex justify-center gap-2 mb-4">
-              <Badge variant="secondary">PMP</Badge>
-              <Badge variant="secondary">PMC</Badge>
+              <Badge variant="secondary">PmpAmount</Badge>
+              <Badge variant="secondary">PmcAmount</Badge>
               <Badge variant="secondary">지역경제</Badge>
             </div>
             <Link 
@@ -124,11 +124,11 @@ export default function HomePage() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="text-center">
               <div className="text-3xl font-bold text-blue-600 mb-2">12,500</div>
-              <div className="text-gray-600">총 PMP 발행량</div>
+              <div className="text-gray-600">총 PmpAmount 발행량</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-green-600 mb-2">8,750</div>
-              <div className="text-gray-600">총 PMC 보유량</div>
+              <div className="text-gray-600">총 PmcAmount 보유량</div>
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-purple-600 mb-2">247</div>

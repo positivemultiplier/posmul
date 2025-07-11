@@ -377,20 +377,20 @@ export class Post {
     
     switch (this.section) {
       case ForumSection.NEWS:
-        basePoints = 15; // 뉴스 작성은 15 PMP
+        basePoints = 15; // 뉴스 작성은 15 PmpAmount
         break;
       case ForumSection.DEBATE:
-        basePoints = 20; // 토론 주제 제기는 20 PMP
+        basePoints = 20; // 토론 주제 제기는 20 PmpAmount
         break;
       case ForumSection.BRAINSTORMING:
-        basePoints = 25; // 아이디어 제안은 25 PMP
+        basePoints = 25; // 아이디어 제안은 25 PmpAmount
         break;
       case ForumSection.BUDGET:
-        basePoints = 30; // 예산 분석은 30 PMP
+        basePoints = 30; // 예산 분석은 30 PmpAmount
         break;
     }
 
-    return createActivityPoints(basePoints, 'PMP');
+    return createActivityPoints(basePoints, 'PmpAmount');
   }
 
   /**

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * 🎯 우선순위 2.1: PMP → PMC 전환 시뮬레이션 (수동 테스트)
+ * 🎯 우선순위 2.1: PmpAmount → PmcAmount 전환 시뮬레이션 (수동 테스트)
  * 실제 데이터 기반 시뮬레이션
  */
 
@@ -108,7 +108,7 @@ function simulateSystemValidation() {
 
   console.log("\n🎰 === 2.1: 예측 게임 시스템 검증 ===");
 
-  // PMP → PMC 전환 시뮬레이션 (70% 성공률)
+  // PmpAmount → PmcAmount 전환 시뮬레이션 (70% 성공률)
   let totalPmpBet = 0;
   let totalPmcGenerated = 0;
   let successfulPredictions = 0;
@@ -118,7 +118,7 @@ function simulateSystemValidation() {
     const isSuccess = Math.random() < 0.7; // 70% 성공률
     const pmpBet = pred.betAmount;
     const confidenceRatio = pred.confidence / 100;
-    const pmcGenerated = isSuccess ? pmpBet * confidenceRatio * 1.5 : 0; // 성공시 1.5배 PMC 생성
+    const pmcGenerated = isSuccess ? pmpBet * confidenceRatio * 1.5 : 0; // 성공시 1.5배 PmcAmount 생성
 
     totalPmpBet += pmpBet;
     totalPmcGenerated += pmcGenerated;
@@ -128,9 +128,9 @@ function simulateSystemValidation() {
     console.log(
       `${index + 1}. ${status} | ${
         pred.title
-      } | ${pmpBet.toLocaleString()} PMP → ${pmcGenerated.toFixed(
+      } | ${pmpBet.toLocaleString()} PmpAmount → ${pmcGenerated.toFixed(
         0
-      )} PMC | 신뢰도: ${pred.confidence}%`
+      )} PmcAmount | 신뢰도: ${pred.confidence}%`
     );
   });
 
@@ -139,8 +139,8 @@ function simulateSystemValidation() {
     totalPmcGenerated > 0 ? (totalPmcGenerated / totalPmpBet) * 100 : 0;
 
   console.log("\n📈 예측 게임 시스템 결과:");
-  console.log(`🎯 총 베팅: ${totalPmpBet.toLocaleString()} PMP`);
-  console.log(`💎 총 PMC 생성: ${totalPmcGenerated.toFixed(0)} PMC`);
+  console.log(`🎯 총 베팅: ${totalPmpBet.toLocaleString()} PmpAmount`);
+  console.log(`💎 총 PmcAmount 생성: ${totalPmcGenerated.toFixed(0)} PmcAmount`);
   console.log(`📊 성공률: ${successRate.toFixed(1)}%`);
   console.log(`⚡ 전환 효율성: ${conversionEfficiency.toFixed(1)}%`);
 
@@ -210,7 +210,7 @@ function simulateSystemValidation() {
   );
   console.log(`✅ 투자 시스템 다양성: 우수 (3개 카테고리 균형)`);
   console.log(
-    `✅ PMP → PMC 전환: ${conversionEfficiency > 50 ? "정상" : "개선 필요"}`
+    `✅ PmpAmount → PmcAmount 전환: ${conversionEfficiency > 50 ? "정상" : "개선 필요"}`
   );
 
   // 권장사항
@@ -228,9 +228,9 @@ function simulateSystemValidation() {
   }
 
   if (conversionEfficiency < 50) {
-    console.log("⚠️  PMP → PMC 전환 효율성 개선 필요");
+    console.log("⚠️  PmpAmount → PmcAmount 전환 효율성 개선 필요");
   } else {
-    console.log("✅ PMP → PMC 전환 효율성 양호");
+    console.log("✅ PmpAmount → PmcAmount 전환 효율성 양호");
   }
 
   console.log("\n🎉 우선순위 2: 핵심 기능 검증 완료!");

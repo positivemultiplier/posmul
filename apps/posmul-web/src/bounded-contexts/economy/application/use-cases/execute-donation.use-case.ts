@@ -1,7 +1,7 @@
 /**
  * 기부 실행 Use Case
  *
- * 사용자가 PMP/PMC를 활용한 기부를 통해 사회적 가치를 창출하는 핵심 비즈니스 로직
+ * 사용자가 PmpAmount/PmcAmount를 활용한 기부를 통해 사회적 가치를 창출하는 핵심 비즈니스 로직
  * Behavioral Economics(Kahneman-Tversky Prospect Theory)와
  * Public Choice Theory(Buchanan) 적용
  */
@@ -10,7 +10,7 @@ import { UserId } from "@posmul/auth-economy-sdk";
 
 import {
   AccountBalance,
-  IPMPPMCAccountRepository,
+  IPmpAmountPmcAmountAccountRepository,
   Transaction,
 } from "../../domain/repositories/pmp-pmc-account.repository";
 import {
@@ -23,13 +23,13 @@ import {
   PublicChoiceEngine,
   UtilityFunctionEstimationService,
 } from "../../domain/services";
-import { PMC, PMP, createPMC, createPMP } from "../../domain/value-objects";
+import { PmcAmount, PmpAmount, createPmcAmount, createPmpAmount } from "../../domain/value-objects";
 
 export interface DonationRequest {
   readonly userId: UserId;
   readonly donationType: DonationType;
-  readonly amount: PMP | PMC;
-  readonly currencyType: "PMP" | "PMC";
+  readonly amount: PmpAmount | PmcAmount;
+  readonly currencyType: "PmpAmount" | "PmcAmount";
   readonly recipient: DonationRecipient;
   readonly publicGoodCategory: PublicGoodCategory;
   readonly isAnonymous: boolean;
@@ -40,14 +40,14 @@ export interface DonationRequest {
 export interface DonationResult {
   readonly success: boolean;
   readonly donationId: string;
-  readonly actualAmount: PMP | PMC;
+  readonly actualAmount: PmpAmount | PmcAmount;
   readonly socialImpactScore: number;
   readonly utilityGain: number;
   readonly prospectValue: number; // Kahneman-Tversky 기반
   readonly publicChoiceEffect: number; // Buchanan 이론 기반
   readonly updatedBalance: AccountBalance;
   readonly taxIncentive?: number;
-  readonly matchingBonus?: PMP;
+  readonly matchingBonus?: PmpAmount;
   readonly message: string;
 }
 
@@ -86,12 +86,14 @@ export type PublicGoodCategory =
  */
 export class ExecuteDonationUseCase {
   constructor(
-    private readonly accountRepository: IPMPPMCAccountRepository,
+    private readonly accountRepository: IPmpAmountPmcAmountAccountRepository,
     private readonly utilityRepository: IUtilityFunctionRepository,
     private readonly behavioralEngine: BehavioralEconomicsEngine,
     private readonly publicChoiceEngine: PublicChoiceEngine,
     private readonly utilityService: UtilityFunctionEstimationService
   ) {}
+
+  
 
   async execute(request: DonationRequest): Promise<DonationResult> {
     try {
@@ -167,9 +169,9 @@ export class ExecuteDonationUseCase {
       ) {
         const bonusTransaction: Omit<Transaction, "transactionId"> = {
           userId: request.userId,
-          type: "PMP_EARN",
+          type: "PmpAmount_EARN",
           amount: incentives.matchingBonus as number,
-          currencyType: "PMP",
+          currencyType: "PmpAmount",
           description: `Donation matching bonus for ${donationId}`,
           timestamp: request.timestamp,
         };
@@ -210,19 +212,19 @@ export class ExecuteDonationUseCase {
         success: false,
         donationId: "",
         actualAmount:
-          request.currencyType === "PMP" ? createPMP(0) : createPMC(0),
+          request.currencyType === "PmpAmount" ? createPmpAmount(0) : createPmcAmount(0),
         socialImpactScore: 0,
         utilityGain: 0,
         prospectValue: 0,
         publicChoiceEffect: 0,
         updatedBalance: {
           userId: request.userId,
-          pmpBalance: createPMP(0),
-          pmcBalance: createPMC(0),
-          totalPMPEarned: createPMP(0),
-          totalPMCEarned: createPMC(0),
-          totalPMPSpent: createPMP(0),
-          totalPMCSpent: createPMC(0),
+          pmpBalance: createPmpAmount(0),
+          pmcBalance: createPmcAmount(0),
+          totalPmpAmountEarned: createPmpAmount(0),
+          totalPmcAmountEarned: createPmcAmount(0),
+          totalPmpAmountSpent: createPmpAmount(0),
+          totalPmcAmountSpent: createPmcAmount(0),
           accountStatus: "active",
           lastActivityAt: new Date(),
           agencyScore: 0,
@@ -230,9 +232,7 @@ export class ExecuteDonationUseCase {
           createdAt: new Date(),
           updatedAt: new Date(),
         },
-        message: `Donation failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        message: "Invalid state",
       };
     }
   }
@@ -246,18 +246,18 @@ export class ExecuteDonationUseCase {
   ): Promise<void> {
     const requestedAmount = request.amount as number;
 
-    if (request.currencyType === "PMP") {
-      const currentPMP = balance.pmpBalance as number;
-      if (currentPMP < requestedAmount) {
+    if (request.currencyType === "PmpAmount") {
+      const currentPmpAmount = balance.pmpBalance as number;
+      if (currentPmpAmount < requestedAmount) {
         throw new Error(
-          `Insufficient PMP balance: ${currentPMP} < ${requestedAmount}`
+          `Insufficient PmpAmount balance: ${currentPmpAmount} < ${requestedAmount}`
         );
       }
     } else {
-      const currentPMC = balance.pmcBalance as number;
-      if (currentPMC < requestedAmount) {
+      const currentPmcAmount = balance.pmcBalance as number;
+      if (currentPmcAmount < requestedAmount) {
         throw new Error(
-          `Insufficient PMC balance: ${currentPMC} < ${requestedAmount}`
+          `Insufficient PmcAmount balance: ${currentPmcAmount} < ${requestedAmount}`
         );
       }
     }
@@ -383,12 +383,12 @@ export class ExecuteDonationUseCase {
     request: DonationRequest,
     socialImpactScore: number,
     currentBalance: AccountBalance
-  ): Promise<{ matchingBonus?: PMP; taxIncentive?: number }> {
+  ): Promise<{ matchingBonus?: PmpAmount; taxIncentive?: number }> {
     const amount = request.amount as number;
 
     // 매칭 보너스 계산 (사회적 임팩트에 비례)
     const matchingRate = Math.min(socialImpactScore / 100, 0.1); // 최대 10% 매칭
-    const matchingBonus = createPMP(Math.floor(amount * matchingRate));
+    const matchingBonus = createPmpAmount(Math.floor(amount * matchingRate));
 
     // 세제 혜택 (기부 금액의 일정 비율)
     const taxIncentiveRate = this.getTaxIncentiveRate(
@@ -404,7 +404,7 @@ export class ExecuteDonationUseCase {
 
   /**
    * 개인 효용 증가 계산
-   * U(x) = α·ln(PMP) + β·ln(PMC) + γ·S(Donate)
+   * U(x) = α·ln(PmpAmount) + β·ln(PmcAmount) + γ·S(Donate)
    */
   private async calculateUtilityGain(
     utilityParams: IndividualUtilityParameters | null,

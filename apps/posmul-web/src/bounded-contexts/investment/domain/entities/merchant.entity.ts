@@ -235,8 +235,11 @@ export class Merchant {
 
     const qrCodeResult = QRCode.create(this.id.getValue(), expiresAt);
     if (!qrCodeResult.success) {
-      return qrCodeResult;
-    }
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
+      }
 
     this.currentQRCode = qrCodeResult.data;
     this.updatedAt = new Date();

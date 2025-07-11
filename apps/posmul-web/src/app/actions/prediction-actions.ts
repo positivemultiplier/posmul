@@ -12,10 +12,10 @@ const createPredictionGameSchema = z.object({
   options: z.string().min(1, "예측 옵션을 입력해주세요"),
   minimumStake: z
     .number()
-    .min(100, "최소 베팅 금액은 100 PMP 이상이어야 합니다"),
+    .min(100, "최소 베팅 금액은 100 PmpAmount 이상이어야 합니다"),
   maximumStake: z
     .number()
-    .max(10000, "최대 베팅 금액은 10,000 PMP 이하여야 합니다"),
+    .max(10000, "최대 베팅 금액은 10,000 PmpAmount 이하여야 합니다"),
   maxParticipants: z.number().optional(),
   endTime: z.string().min(1, "종료 시간을 설정해주세요"),
   settlementTime: z.string().min(1, "정산 시간을 설정해주세요"),
@@ -78,13 +78,13 @@ export async function participateInPrediction(formData: FormData) {
     }
 
     if (stakeAmount < 100 || stakeAmount > 10000) {
-      throw new Error("베팅 금액은 100~10,000 PMP 사이여야 합니다.");
+      throw new Error("베팅 금액은 100~10,000 PmpAmount 사이여야 합니다.");
     }
 
     // TODO: MCP를 통한 데이터베이스 처리
-    // 1. 사용자 PMP 잔액 확인
+    // 1. 사용자 PmpAmount 잔액 확인
     // 2. 예측 참여 기록 저장
-    // 3. PMP 차감 처리
+    // 3. PmpAmount 차감 처리
     console.log("Participating in prediction:", {
       gameId,
       selectedOption,

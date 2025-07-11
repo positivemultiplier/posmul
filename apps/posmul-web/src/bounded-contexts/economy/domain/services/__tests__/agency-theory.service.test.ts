@@ -10,9 +10,9 @@
  */
 
 import {
-  createPMP,
+  createPmpAmount,
   createPredictionAccuracy,
-  unwrapPMC,
+  unwrapPmcAmount,
 } from "../../value-objects";
 import {
   AgencyTheoryConfig,
@@ -104,7 +104,7 @@ describe("AgencyTheoryEngine", () => {
     });
   });
 
-  describe("PMP to PMC conversion", () => {
+  describe("PmpAmount to PmcAmount conversion", () => {
     const createMockPredictionData = (
       overrides: Partial<IPredictionData> = {}
     ): IPredictionData => ({
@@ -125,9 +125,9 @@ describe("AgencyTheoryEngine", () => {
       ...overrides,
     });
 
-    it("should_convert_PMP_to_PMC_when_high_quality_prediction_data_provided", async () => {
+    it("should_convert_PmpAmount_to_PmcAmount_when_high_quality_prediction_data_provided", async () => {
       // Arrange
-      const pmpInput = createPMP(100);
+      const pmpInput = createPmpAmount(100);
       const predictionData = createMockPredictionData({
         predictionAccuracy: createPredictionAccuracy(0.9),
         socialLearningIndex: 0.8,
@@ -143,7 +143,7 @@ describe("AgencyTheoryEngine", () => {
       ];
 
       // Act
-      const result = await engine.convertPMPToPMC(
+      const result = await engine.convertPmpAmountToPmcAmount(
         pmpInput,
         predictionData,
         participants
@@ -155,7 +155,7 @@ describe("AgencyTheoryEngine", () => {
       if (result.success) {
         const conversion = result.data;
         expect(conversion.pmpInput).toBe(pmpInput);
-        expect(unwrapPMC(conversion.pmcOutput)).toBeGreaterThan(50); // 기본 전환율 이상
+        expect(unwrapPmcAmount(conversion.pmcOutput)).toBeGreaterThan(50); // 기본 전환율 이상
         expect(conversion.conversionRate).toBeGreaterThan(0.5);
         expect(conversion.bonusMultiplier).toBeGreaterThan(1.0);
         expect(conversion.agencyMetrics).toBeDefined();
@@ -165,7 +165,7 @@ describe("AgencyTheoryEngine", () => {
 
     it("should_apply_lower_conversion_rate_when_poor_agency_metrics", async () => {
       // Arrange
-      const pmpInput = createPMP(100);
+      const pmpInput = createPmpAmount(100);
       const predictionData = createMockPredictionData({
         predictionAccuracy: createPredictionAccuracy(0.3), // 낮은 정확도
         socialLearningIndex: 0.2, // 낮은 사회적 학습
@@ -179,7 +179,7 @@ describe("AgencyTheoryEngine", () => {
       ];
 
       // Act
-      const result = await engine.convertPMPToPMC(
+      const result = await engine.convertPmpAmountToPmcAmount(
         pmpInput,
         predictionData,
         participants
@@ -201,7 +201,7 @@ describe("AgencyTheoryEngine", () => {
 
     it("should_calculate_social_learning_bonus_based_on_participant_quality", async () => {
       // Arrange
-      const pmpInput = createPMP(100);
+      const pmpInput = createPmpAmount(100);
       const predictionData = createMockPredictionData();
 
       const highQualityParticipants = Array.from({ length: 10 }, (_, i) =>
@@ -220,12 +220,12 @@ describe("AgencyTheoryEngine", () => {
       ];
 
       // Act
-      const highQualityResult = await engine.convertPMPToPMC(
+      const highQualityResult = await engine.convertPmpAmountToPmcAmount(
         pmpInput,
         predictionData,
         highQualityParticipants
       );
-      const lowQualityResult = await engine.convertPMPToPMC(
+      const lowQualityResult = await engine.convertPmpAmountToPmcAmount(
         pmpInput,
         predictionData,
         lowQualityParticipants
@@ -245,7 +245,7 @@ describe("AgencyTheoryEngine", () => {
   describe("agency metrics calculation", () => {
     it("should_calculate_correct_agency_metrics_when_given_prediction_data", async () => {
       // Arrange
-      const pmpInput = createPMP(100);
+      const pmpInput = createPmpAmount(100);
       const predictionData = createMockPredictionData({
         predictionAccuracy: createPredictionAccuracy(0.8),
         socialLearningIndex: 0.7,
@@ -258,7 +258,7 @@ describe("AgencyTheoryEngine", () => {
       ];
 
       // Act
-      const result = await engine.convertPMPToPMC(
+      const result = await engine.convertPmpAmountToPmcAmount(
         pmpInput,
         predictionData,
         participants
@@ -287,7 +287,7 @@ describe("AgencyTheoryEngine", () => {
 
     it("should_have_lower_information_asymmetry_when_high_transparency_and_accuracy", async () => {
       // Arrange
-      const pmpInput = createPMP(100);
+      const pmpInput = createPmpAmount(100);
       const highTransparencyData = createMockPredictionData({
         predictionAccuracy: createPredictionAccuracy(0.9),
         informationTransparency: 0.9,
@@ -299,12 +299,12 @@ describe("AgencyTheoryEngine", () => {
       const participants = [createMockParticipant()];
 
       // Act
-      const highResult = await engine.convertPMPToPMC(
+      const highResult = await engine.convertPmpAmountToPmcAmount(
         pmpInput,
         highTransparencyData,
         participants
       );
-      const lowResult = await engine.convertPMPToPMC(
+      const lowResult = await engine.convertPmpAmountToPmcAmount(
         pmpInput,
         lowTransparencyData,
         participants

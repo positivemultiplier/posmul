@@ -1,13 +1,13 @@
 "use client";
 
-import { 
+import {
   Badge,
-  CardBase as Card,
+  Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@posmul/auth-economy-sdk";
+} from "../../../../shared/ui";
 import React from "react";
 
 interface UserRankingPanelProps {
@@ -36,7 +36,7 @@ const mockRankingData = {
     {
       id: "social-hero",
       title: "사회적 영웅",
-      description: "1000 PMC 이상 기부",
+      description: "1000 PmcAmount 이상 기부",
       icon: "🦸",
       earned: true,
       earnedDate: "2024-01-10",
@@ -233,13 +233,13 @@ export const UserRankingPanel: React.FC<UserRankingPanelProps> = ({
               <div className="text-lg font-bold text-blue-600">
                 {data.weeklyProgress.pmpEarned}
               </div>
-              <div className="text-xs text-blue-600">PMP 획득</div>
+              <div className="text-xs text-blue-600">PmpAmount 획득</div>
             </div>
             <div className="text-center p-3 bg-purple-50 rounded-lg border border-purple-200">
               <div className="text-lg font-bold text-purple-600">
                 {data.weeklyProgress.pmcEarned}
               </div>
-              <div className="text-xs text-purple-600">PMC 획득</div>
+              <div className="text-xs text-purple-600">PmcAmount 획득</div>
             </div>
             <div className="text-center p-3 bg-green-50 rounded-lg border border-green-200">
               <div className="text-lg font-bold text-green-600">

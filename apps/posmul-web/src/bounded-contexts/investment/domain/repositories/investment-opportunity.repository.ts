@@ -1,6 +1,9 @@
 import { UserId } from "@posmul/auth-economy-sdk";
 
-import { Result, CompatibleBaseError } from "../../../../shared/legacy-compatibility";
+import {
+  Result,
+  CompatibleBaseError,
+} from "../../../../shared/legacy-compatibility";
 import { InvestmentOpportunity } from "../entities/investment-opportunity.entity";
 import {
   InvestmentCategory,
@@ -17,14 +20,16 @@ export interface IInvestmentOpportunityRepository {
   /**
    * ?�자 기회 ?�??
    */
-  save(opportunity: InvestmentOpportunity): Promise<Result<void, CompatibleBaseError, CompatibleBaseError>>;
+  save(
+    opportunity: InvestmentOpportunity
+  ): Promise<Result<void, CompatibleBaseError>>;
 
   /**
    * ID�??�자 기회 조회
    */
   findById(
     id: InvestmentOpportunityId
-  ): Promise<Result<InvestmentOpportunity | null, CompatibleBaseError, CompatibleBaseError>>;
+  ): Promise<Result<InvestmentOpportunity | null, CompatibleBaseError>>;
 
   /**
    * ?�성 ?�자 기회 목록 조회
@@ -164,7 +169,9 @@ export interface IInvestmentOpportunityRepository {
   /**
    * ?�자 기회 ??�� (?�프????��)
    */
-  delete(id: InvestmentOpportunityId): Promise<Result<void, CompatibleBaseError>>;
+  delete(
+    id: InvestmentOpportunityId
+  ): Promise<Result<void, CompatibleBaseError>>;
 
   /**
    * ?�자 기회 ?�계 조회

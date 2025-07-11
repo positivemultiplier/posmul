@@ -1,13 +1,13 @@
 "use client";
 
-import { 
+import {
   Badge,
-  CardBase as Card,
+  Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@posmul/auth-economy-sdk";
+} from "../../../../shared/ui";
 import React from "react";
 
 interface UserEconomicDashboardProps {
@@ -91,19 +91,19 @@ export const UserEconomicDashboard: React.FC<UserEconomicDashboardProps> = ({
           <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-blue-700">
-                PMP (Risk-Free Asset)
+                PmpAmount (Risk-Free Asset)
               </h3>
               <span className="text-2xl">🔒</span>
             </div>
             <div className="space-y-2">
               <div className="text-3xl font-bold text-blue-600">
-                {data.pmpBalance.toLocaleString()} PMP
+                {data.pmpBalance.toLocaleString()} PmpAmount
               </div>
               <div className="text-sm text-blue-600">
-                총 획득: {data.totalEarned.pmp.toLocaleString()} PMP
+                총 획득: {data.totalEarned.pmp.toLocaleString()} PmpAmount
               </div>
               <div className="text-sm text-blue-600">
-                총 사용: {data.totalSpent.pmp.toLocaleString()} PMP
+                총 사용: {data.totalSpent.pmp.toLocaleString()} PmpAmount
               </div>
             </div>
           </div>
@@ -111,19 +111,19 @@ export const UserEconomicDashboard: React.FC<UserEconomicDashboardProps> = ({
           <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-purple-700">
-                PMC (Risky Asset)
+                PmcAmount (Risky Asset)
               </h3>
               <span className="text-2xl">💎</span>
             </div>
             <div className="space-y-2">
               <div className="text-3xl font-bold text-purple-600">
-                {data.pmcBalance.toLocaleString()} PMC
+                {data.pmcBalance.toLocaleString()} PmcAmount
               </div>
               <div className="text-sm text-purple-600">
-                총 획득: {data.totalEarned.pmc.toLocaleString()} PMC
+                총 획득: {data.totalEarned.pmc.toLocaleString()} PmcAmount
               </div>
               <div className="text-sm text-purple-600">
-                총 기부: {data.totalSpent.pmc.toLocaleString()} PMC
+                총 기부: {data.totalSpent.pmc.toLocaleString()} PmcAmount
               </div>
             </div>
           </div>
@@ -171,7 +171,7 @@ export const UserEconomicDashboard: React.FC<UserEconomicDashboardProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-blue-700 font-medium">PMP 배분</span>
+                  <span className="text-blue-700 font-medium">PmpAmount 배분</span>
                   <span className="text-blue-600 font-bold">
                     {(data.capMAnalysis.optimalAllocation.pmp * 100).toFixed(0)}
                     %
@@ -190,7 +190,7 @@ export const UserEconomicDashboard: React.FC<UserEconomicDashboardProps> = ({
               </div>
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-purple-700 font-medium">PMC 배분</span>
+                  <span className="text-purple-700 font-medium">PmcAmount 배분</span>
                   <span className="text-purple-600 font-bold">
                     {(data.capMAnalysis.optimalAllocation.pmc * 100).toFixed(0)}
                     %
@@ -273,7 +273,7 @@ export const UserEconomicDashboard: React.FC<UserEconomicDashboardProps> = ({
                 💡 Loss Aversion 분석
               </div>
               <div className="text-indigo-600">
-                현재 PMC 보유량({data.pmcBalance} PMC)을 고려할 때, 향후 7일 내
+                현재 PmcAmount 보유량({data.pmcBalance} PmcAmount)을 고려할 때, 향후 7일 내
                 기부를 권장합니다. (MoneyWave2 재분배 방지)
               </div>
             </div>
@@ -282,7 +282,7 @@ export const UserEconomicDashboard: React.FC<UserEconomicDashboardProps> = ({
                 ⚖️ Prospect Theory 적용
               </div>
               <div className="text-indigo-600">
-                현재 위험 성향(중도적)에 맞춘 PMP:PMC 비율 6:4가 최적의 효용을
+                현재 위험 성향(중도적)에 맞춘 PmpAmount:PmcAmount 비율 6:4가 최적의 효용을
                 제공할 것으로 예상됩니다.
               </div>
             </div>

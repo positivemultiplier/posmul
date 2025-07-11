@@ -1,5 +1,5 @@
 import React from "react";
-import { Badge, Card } from "@/shared/ui/components/base";
+import { Badge, Card } from '../../../../shared/ui/components/base';
 
 interface UserEconomicBalanceProps {
   userId: string;
@@ -77,21 +77,21 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
 
         {/* Economic Balance Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 flex-1">
-          {/* PMP Balance */}
+          {/* PmpAmount Balance */}
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
               {formatCurrency(economicStats.pmpBalance)}
             </div>
-            <div className="text-xs text-gray-500">PMP (위험프리자산)</div>
+            <div className="text-xs text-gray-500">PmpAmount (위험프리자산)</div>
             <div className="text-xs text-blue-600 mt-1">💰 예측 참여 가능</div>
           </div>
 
-          {/* PMC Balance */}
+          {/* PmcAmount Balance */}
           <div className="text-center">
             <div className="text-2xl font-bold text-purple-600">
               {formatCurrency(economicStats.pmcBalance)}
             </div>
-            <div className="text-xs text-gray-500">PMC (위험자산)</div>
+            <div className="text-xs text-gray-500">PmcAmount (위험자산)</div>
             <div className="text-xs text-purple-600 mt-1">💎 기부 전용</div>
           </div>
 
@@ -139,17 +139,17 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
             <span className="text-gray-600">💡 추천:</span>
             <span className="text-blue-700 font-medium">
               {economicStats.riskLevel === "LOW"
-                ? "PMP 비중 증가 권장 (안정성 우선)"
+                ? "PmpAmount 비중 증가 권장 (안정성 우선)"
                 : economicStats.riskLevel === "HIGH"
-                ? "PMC 전환 적극 권장 (고수익 추구)"
-                : "PMP/PMC 균형 유지 권장 (최적 배분)"}
+                ? "PmcAmount 전환 적극 권장 (고수익 추구)"
+                : "PmpAmount/PmcAmount 균형 유지 권장 (최적 배분)"}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-gray-600">🎯 다음 목표:</span>
             <span className="text-purple-700 font-medium">
-              PMC {formatCurrency(2000 - economicStats.pmcBalance)} 추가 획득
+              PmcAmount {formatCurrency(2000 - economicStats.pmcBalance)} 추가 획득
             </span>
           </div>
 

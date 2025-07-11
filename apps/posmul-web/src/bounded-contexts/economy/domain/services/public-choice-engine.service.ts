@@ -139,11 +139,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          `Median voter analysis failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -220,11 +216,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          `Iron Triangle analysis failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -303,11 +295,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          `Direct democracy simulation failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -386,11 +374,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          `Public goods allocation optimization failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -407,7 +391,9 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
       const detectedActivities: IRentSeekingActivity[] = [];
 
       // 각 이해관계자의 행동 패턴 분석
-      for (const [stakeholderId, behaviors] of stakeholderBehaviors.entries()) {
+      for (const [stakeholderId, behaviors] of Array.from(
+        stakeholderBehaviors.entries()
+      )) {
         const activities = this.analyzeStakeholderBehavior(
           stakeholderId,
           behaviors,
@@ -446,11 +432,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          `Rent-seeking detection failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -493,11 +475,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          `Constitutional framework design failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -541,11 +519,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          `System health evaluation failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }

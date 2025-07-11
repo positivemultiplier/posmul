@@ -9,7 +9,7 @@ export default function PredictionPage() {
           🎯 예측 게임
         </h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          다양한 분야의 예측 게임에 참여하고 PMP를 획득하세요.
+          다양한 분야의 예측 게임에 참여하고 PmpAmount를 획득하세요.
         </p>
       </div>
 

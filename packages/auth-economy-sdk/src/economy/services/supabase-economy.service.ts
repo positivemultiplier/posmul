@@ -18,8 +18,8 @@ import {
 export class SupabaseEconomyService implements EconomyService {
   constructor(private supabase: SupabaseClient) {}
 
-  // 💰 PMP 잔액 조회
-  async getPMPBalance(userId: UserId): Promise<Result<PmpAmount, EconomyError>> {
+  // 💰 PmpAmount 잔액 조회
+  async getPmpAmountBalance(userId: UserId): Promise<Result<PmpAmount, EconomyError>> {
     try {
       const { data, error } = await this.supabase
         .from('user_profiles')
@@ -28,20 +28,20 @@ export class SupabaseEconomyService implements EconomyService {
         .single();
 
       if (error) {
-        return { success: false, error: new EconomyError(`PMP 잔액 조회 실패: ${error.message}`) };
+        return { success: false, error: new EconomyError(`PmpAmount 잔액 조회 실패: ${error.message}`) };
       }
 
       return { success: true, data: data.pmp_balance as PmpAmount };
     } catch (error) {
       return { 
         success: false, 
-        error: new EconomyError(error instanceof Error ? error.message : 'PMP 잔액 조회 중 오류가 발생했습니다.') 
+        error: new EconomyError(error instanceof Error ? error.message : 'PmpAmount 잔액 조회 중 오류가 발생했습니다.') 
       };
     }
   }
 
-  // 💰 PMC 잔액 조회
-  async getPMCBalance(userId: UserId): Promise<Result<PmcAmount, EconomyError>> {
+  // 💰 PmcAmount 잔액 조회
+  async getPmcAmountBalance(userId: UserId): Promise<Result<PmcAmount, EconomyError>> {
     try {
       const { data, error } = await this.supabase
         .from('user_profiles')
@@ -50,14 +50,14 @@ export class SupabaseEconomyService implements EconomyService {
         .single();
 
       if (error) {
-        return { success: false, error: new EconomyError(`PMC 잔액 조회 실패: ${error.message}`) };
+        return { success: false, error: new EconomyError(`PmcAmount 잔액 조회 실패: ${error.message}`) };
       }
 
       return { success: true, data: data.pmc_balance as PmcAmount };
     } catch (error) {
       return { 
         success: false, 
-        error: new EconomyError(error instanceof Error ? error.message : 'PMC 잔액 조회 중 오류가 발생했습니다.') 
+        error: new EconomyError(error instanceof Error ? error.message : 'PmcAmount 잔액 조회 중 오류가 발생했습니다.') 
       };
     }
   }
@@ -90,8 +90,8 @@ export class SupabaseEconomyService implements EconomyService {
     }
   }
 
-  // 💸 PMP 전송
-  async transferPMP(fromUserId: UserId, toUserId: UserId, amount: PmpAmount): Promise<Result<TransactionResult, EconomyError>> {
+  // 💸 PmpAmount 전송
+  async transferPmpAmount(fromUserId: UserId, toUserId: UserId, amount: PmpAmount): Promise<Result<TransactionResult, EconomyError>> {
     try {
       const { data, error } = await this.supabase.rpc('transfer_pmp', {
         from_user_id: fromUserId,
@@ -100,7 +100,7 @@ export class SupabaseEconomyService implements EconomyService {
       });
 
       if (error) {
-        return { success: false, error: new EconomyError(`PMP 전송 실패: ${error.message}`) };
+        return { success: false, error: new EconomyError(`PmpAmount 전송 실패: ${error.message}`) };
       }
 
       const transaction: TransactionResult = {
@@ -108,7 +108,7 @@ export class SupabaseEconomyService implements EconomyService {
         fromUserId,
         toUserId,
         amount,
-        type: 'PMP',
+        type: 'PmpAmount',
         status: 'completed',
         createdAt: new Date()
       };
@@ -117,13 +117,13 @@ export class SupabaseEconomyService implements EconomyService {
     } catch (error) {
       return { 
         success: false, 
-        error: new EconomyError(error instanceof Error ? error.message : 'PMP 전송 중 오류가 발생했습니다.') 
+        error: new EconomyError(error instanceof Error ? error.message : 'PmpAmount 전송 중 오류가 발생했습니다.') 
       };
     }
   }
 
-  // 💸 PMC 전송  
-  async transferPMC(fromUserId: UserId, toUserId: UserId, amount: PmcAmount): Promise<Result<TransactionResult, EconomyError>> {
+  // 💸 PmcAmount 전송  
+  async transferPmcAmount(fromUserId: UserId, toUserId: UserId, amount: PmcAmount): Promise<Result<TransactionResult, EconomyError>> {
     try {
       const { data, error } = await this.supabase.rpc('transfer_pmc', {
         from_user_id: fromUserId,
@@ -132,7 +132,7 @@ export class SupabaseEconomyService implements EconomyService {
       });
 
       if (error) {
-        return { success: false, error: new EconomyError(`PMC 전송 실패: ${error.message}`) };
+        return { success: false, error: new EconomyError(`PmcAmount 전송 실패: ${error.message}`) };
       }
 
       const transaction: TransactionResult = {
@@ -140,7 +140,7 @@ export class SupabaseEconomyService implements EconomyService {
         fromUserId,
         toUserId,
         amount,
-        type: 'PMC',
+        type: 'PmcAmount',
         status: 'completed',
         createdAt: new Date()
       };
@@ -149,7 +149,7 @@ export class SupabaseEconomyService implements EconomyService {
     } catch (error) {
       return { 
         success: false, 
-        error: new EconomyError(error instanceof Error ? error.message : 'PMC 전송 중 오류가 발생했습니다.') 
+        error: new EconomyError(error instanceof Error ? error.message : 'PmcAmount 전송 중 오류가 발생했습니다.') 
       };
     }
   }
@@ -173,7 +173,7 @@ export class SupabaseEconomyService implements EconomyService {
         fromUserId: row.from_user_id as UserId,
         toUserId: row.to_user_id as UserId,
         amount: row.amount as PmpAmount | PmcAmount,
-        type: row.currency_type as 'PMP' | 'PMC',
+        type: row.currency_type as 'PmpAmount' | 'PmcAmount',
         status: row.status as 'pending' | 'completed' | 'failed',
         createdAt: new Date(row.created_at)
       }));
@@ -187,8 +187,8 @@ export class SupabaseEconomyService implements EconomyService {
     }
   }
 
-  // 🎯 예측 게임에 PMP 스테이킹
-  async stakePMPOnPrediction(userId: UserId, predictionId: string, amount: PmpAmount): Promise<Result<TransactionResult, EconomyError>> {
+  // 🎯 예측 게임에 PmpAmount 스테이킹
+  async stakePmpAmountOnPrediction(userId: UserId, predictionId: string, amount: PmpAmount): Promise<Result<TransactionResult, EconomyError>> {
     try {
       const { data, error } = await this.supabase.rpc('stake_pmp_on_prediction', {
         user_id: userId,
@@ -205,7 +205,7 @@ export class SupabaseEconomyService implements EconomyService {
         fromUserId: userId,
         toUserId: 'PREDICTION_POOL' as UserId, // 예측 풀
         amount,
-        type: 'PMP',
+        type: 'PmpAmount',
         status: 'completed',
         createdAt: new Date()
       };
@@ -219,8 +219,8 @@ export class SupabaseEconomyService implements EconomyService {
     }
   }
 
-  // 🎯 정답 예측 PMC 보상
-  async rewardPMCForCorrectPrediction(userId: UserId, predictionId: string, amount: PmcAmount): Promise<Result<TransactionResult, EconomyError>> {
+  // 🎯 정답 예측 PmcAmount 보상
+  async rewardPmcAmountForCorrectPrediction(userId: UserId, predictionId: string, amount: PmcAmount): Promise<Result<TransactionResult, EconomyError>> {
     try {
       const { data, error } = await this.supabase.rpc('reward_pmc_for_prediction', {
         user_id: userId,
@@ -237,7 +237,7 @@ export class SupabaseEconomyService implements EconomyService {
         fromUserId: 'PREDICTION_REWARD' as UserId, // 예측 보상 풀
         toUserId: userId,
         amount,
-        type: 'PMC',
+        type: 'PmcAmount',
         status: 'completed',
         createdAt: new Date()
       };
@@ -281,7 +281,7 @@ export class SupabaseEconomyService implements EconomyService {
   // 🎓 스터디 완료 보상 (StudyCycle 연동)
   async awardStudyReward(userId: UserId, studyMinutes: number): Promise<Result<TransactionResult, EconomyError>> {
     try {
-      // 스터디 시간에 따른 PMP 보상 계산 (1분당 1 PMP)
+      // 스터디 시간에 따른 PmpAmount 보상 계산 (1분당 1 PmpAmount)
       const rewardAmount = Math.floor(studyMinutes) as PmpAmount;
 
       const { data, error } = await this.supabase.rpc('award_study_reward', {
@@ -299,7 +299,7 @@ export class SupabaseEconomyService implements EconomyService {
         fromUserId: 'STUDY_REWARD' as UserId, // 스터디 보상 풀
         toUserId: userId,
         amount: rewardAmount,
-        type: 'PMP',
+        type: 'PmpAmount',
         status: 'completed',
         createdAt: new Date()
       };

@@ -725,12 +725,10 @@ export type SuccessResponse = z.infer<typeof SuccessResponseSchema>;
 /**
  * 페이지네이션 요청 DTO
  */
-export const PaginationRequestSchema = z.object({
-  page: z.number().int().positive().default(1),
-  limit: z.number().int().positive().max(100).default(20),
+export const PaginationRequestSchema = z.object({ page: z.number().int().positive().default(1), pageSize: z.number().int().positive().max(100).default(20),
   sortBy: z.string().optional(),
   sortOrder: z.enum(["asc", "desc"]).default("desc"),
-});
+ });
 
 export type PaginationRequest = z.infer<typeof PaginationRequestSchema>;
 

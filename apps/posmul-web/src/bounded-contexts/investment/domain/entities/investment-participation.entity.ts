@@ -56,22 +56,22 @@ export class InvestmentParticipation {
         pmpAmount: z.number().nonnegative().optional(),
         pmcAmount: z.number().nonnegative().optional(),
       })
-      .refine(
-        (data) => {
-          if (data.currencyType === CurrencyType.PMP)
-            return (data.pmpAmount ?? 0) > 0 && !data.pmcAmount;
-          if (data.currencyType === CurrencyType.PMC)
-            return (data.pmcAmount ?? 0) > 0 && !data.pmpAmount;
-          if (data.currencyType === CurrencyType.MIXED)
-            return (data.pmpAmount ?? 0) > 0 && (data.pmcAmount ?? 0) > 0;
-          return false;
-        },
-        { message: "Invalid PMP/PMC amount for the given currency type" }
-      );
+      .refine((data) => {
+        if (data.currencyType === CurrencyType.PmpAmount)
+          return (data.pmpAmount ?? 0) > 0 && !data.pmcAmount;
+        if (data.currencyType === CurrencyType.PmcAmount)
+          return (data.pmcAmount ?? 0) > 0 && !data.pmpAmount;
+        if (data.currencyType === CurrencyType.MIXED)
+          return (data.pmpAmount ?? 0) > 0 && (data.pmcAmount ?? 0) > 0;
+        return false;
+      }, new Error("Invalid PmpAmount/PmcAmount amount for the given currency type"));
 
     const validationResult = schema.safeParse(props);
     if (!validationResult.success) {
-      return validationResult;
+      return {
+        success: false,
+        error: validationResult.error,
+      };
     }
 
     const newProps: InvestmentParticipationProps = {

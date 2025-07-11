@@ -1,12 +1,12 @@
 /**
  * 공통 유틸리티 함수
- * 
+ *
  * 도메인별 유틸리티는 각각 auth/utils, economy/utils에 정의됩니다.
  */
 
 // === MCP 유틸리티 ===
-export * from './mcp';
-export * from './mcp-adapter';
+export * from "./mcp";
+export * from "./mcp-adapter";
 
 /**
  * 깊은 객체 병합
@@ -16,14 +16,14 @@ export function deepMerge<T extends Record<string, unknown>>(
   source: Partial<T>
 ): T {
   const result = { ...target };
-  
+
   for (const key in source) {
     if (source[key] !== undefined) {
       if (
-        typeof source[key] === 'object' &&
+        typeof source[key] === "object" &&
         source[key] !== null &&
         !Array.isArray(source[key]) &&
-        typeof target[key] === 'object' &&
+        typeof target[key] === "object" &&
         target[key] !== null &&
         !Array.isArray(target[key])
       ) {
@@ -36,7 +36,7 @@ export function deepMerge<T extends Record<string, unknown>>(
       }
     }
   }
-  
+
   return result;
 }
 

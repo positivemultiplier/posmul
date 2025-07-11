@@ -17,7 +17,7 @@ const createBrainstormingSchema = z.object({
     .min(3, "최소 3명 이상의 참여자가 필요합니다")
     .max(50, "최대 50명까지 참여 가능합니다"),
   requiredExpertise: z.string().optional(),
-  rewardPool: z.number().min(1000, "최소 보상 풀은 1,000 PMP입니다"),
+  rewardPool: z.number().min(1000, "최소 보상 풀은 1,000 PmpAmount입니다"),
 });
 
 // 토론 주제 생성 스키마
@@ -36,7 +36,7 @@ const createDebateSchema = z.object({
     .number()
     .min(2, "최소 2명 이상의 참여자가 필요합니다")
     .max(100, "최대 100명까지 참여 가능합니다"),
-  rewardPool: z.number().min(2000, "토론 최소 보상 풀은 2,000 PMP입니다"),
+  rewardPool: z.number().min(2000, "토론 최소 보상 풀은 2,000 PmpAmount입니다"),
 });
 
 // 의견/댓글 작성 스키마
@@ -67,9 +67,9 @@ export async function createBrainstormingSession(formData: FormData) {
     const validatedData = createBrainstormingSchema.parse(rawData);
 
     // TODO: MCP를 통한 처리
-    // 1. 사용자 PMP 잔액 확인 (보상 풀 설정)
+    // 1. 사용자 PmpAmount 잔액 확인 (보상 풀 설정)
     // 2. 브레인스토밍 세션 생성
-    // 3. PMP 예치 처리
+    // 3. PmpAmount 예치 처리
     console.log("Creating brainstorming session:", validatedData);
 
     return {
@@ -163,7 +163,7 @@ export async function createComment(formData: FormData) {
     // 1. 세션 유효성 확인
     // 2. 의견 저장
     // 3. 품질 평가 시스템 트리거
-    // 4. PMP 보상 계산 (추후)
+    // 4. PmpAmount 보상 계산 (추후)
     console.log("Creating comment:", validatedData);
 
     return {

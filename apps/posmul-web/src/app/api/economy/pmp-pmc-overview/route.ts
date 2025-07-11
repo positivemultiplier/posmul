@@ -3,7 +3,7 @@ import { getEconomicBalance } from "../../../../shared/adapters/simple-economy.a
 
 /**
  * GET /api/economy/pmp-pmc-overview
- * PMP/PMC 경제 시스템 개요 조회 (Auth-Economy SDK 기반)
+ * PmpAmount/PmcAmount 경제 시스템 개요 조회 (Auth-Economy SDK 기반)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
 
     // 시스템 통계 조회 (현재 SDK에서 지원하지 않으므로 기본값)
     const systemStats = {
-      totalPMP: 1000000,
-      totalPMC: 500000,
+      totalPmpAmount: 1000000,
+      totalPmcAmount: 500000,
       activeUsers: 100,
       totalTransactions: 10000,
     };
@@ -48,8 +48,8 @@ export async function GET(request: NextRequest) {
           stats: userStats,
         },
         systemEconomy: {
-          totalPmpInCirculation: systemStats.totalPMP,
-          totalPmcInCirculation: systemStats.totalPMC,
+          totalPmpInCirculation: systemStats.totalPmpAmount,
+          totalPmcInCirculation: systemStats.totalPmcAmount,
           activeUsers: systemStats.activeUsers,
           dailyTransactionVolume: systemStats.totalTransactions,
         },
@@ -119,19 +119,19 @@ async function calculateUserEconomicStats(userId: string): Promise<{
 }
 
 /**
- * PMP 수요 계산
+ * PmpAmount 수요 계산
  */
 function calculatePmpDemand(systemStats: any): number {
-  if (!systemStats.totalPMP) return 0;
-  const demandRatio = systemStats.totalTransactions / systemStats.totalPMP;
+  if (!systemStats.totalPmpAmount) return 0;
+  const demandRatio = systemStats.totalTransactions / systemStats.totalPmpAmount;
   return Math.min(demandRatio * 100, 100);
 }
 
 /**
- * PMC 변동성 계산
+ * PmcAmount 변동성 계산
  */
 function calculatePmcVolatility(systemStats: any): number {
-  if (!systemStats.totalPMC) return 0;
+  if (!systemStats.totalPmcAmount) return 0;
   return 25; // 기본 변동성
 }
 
@@ -141,8 +141,8 @@ function calculatePmcVolatility(systemStats: any): number {
 function calculateEconomicHealth(systemStats: any): number {
   const factors = [
     systemStats.activeUsers > 0 ? 25 : 0,
-    systemStats.totalPMP > 0 ? 25 : 0,
-    systemStats.totalPMC > 0 ? 25 : 0,
+    systemStats.totalPmpAmount > 0 ? 25 : 0,
+    systemStats.totalPmcAmount > 0 ? 25 : 0,
     systemStats.totalTransactions > 0 ? 25 : 0,
   ];
   return factors.reduce((sum, factor) => sum + factor, 0);

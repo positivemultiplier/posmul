@@ -9,7 +9,7 @@ import { UserId } from "@posmul/auth-economy-sdk";
 
 import { Result } from "@posmul/auth-economy-sdk";
 
-import { PMC, PMP } from "../value-objects";
+import { PmcAmount, PmpAmount } from "../value-objects";
 
 /**
  * 거시경제 지표
@@ -17,8 +17,8 @@ import { PMC, PMP } from "../value-objects";
 export interface MacroeconomicIndicators {
   readonly indicatorId: string;
   readonly measurementDate: Date;
-  readonly pmpCirculation: PMP;
-  readonly pmcCirculation: PMC;
+  readonly pmpCirculation: PmpAmount;
+  readonly pmcCirculation: PmcAmount;
   readonly velocityOfMoney: number;
   readonly inflationRate: number;
   readonly giniCoefficient: number;
@@ -186,7 +186,7 @@ export interface MarketFailureDetection {
   readonly recommendedActions: {
     readonly action: string;
     readonly priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-    readonly estimatedCost: PMC;
+    readonly estimatedCost: PmcAmount;
     readonly expectedBenefit: number;
   }[];
   readonly automaticResponses: string[];

@@ -1,7 +1,7 @@
 import {
   MentalAccountType,
-  PMC,
-  PMP,
+  PmcAmount,
+  PmpAmount,
 } from "../../value-objects/economic-types";
 
 /**
@@ -23,14 +23,14 @@ export interface ProspectValueFunction {
  */
 export interface MentalAccount {
   type: MentalAccountType;
-  pmpBalance: PMP;
-  pmcBalance: PMC;
+  pmpBalance: PmpAmount;
+  pmcBalance: PmcAmount;
   /** 계정별 예산 한도 */
-  budgetLimit: PMP;
+  budgetLimit: PmpAmount;
   /** 이번 달 지출 */
-  monthlySpent: PMP;
+  monthlySpent: PmpAmount;
   /** 평균 지출 패턴 */
-  averageMonthlySpending: PMP;
+  averageMonthlySpending: PmpAmount;
 }
 
 /**
@@ -39,8 +39,8 @@ export interface MentalAccount {
 export interface DecisionContext {
   /** 현재 사용자 상태 */
   currentWealth: {
-    totalPMP: PMP;
-    totalPMC: PMC;
+    totalPmpAmount: PmpAmount;
+    totalPmcAmount: PmcAmount;
   };
   /** 의사결정 프레이밍 */
   framing: "gain" | "loss";
@@ -50,7 +50,7 @@ export interface DecisionContext {
   socialInfluence: number;
   /** 최근 손실 경험 */
   recentLossExperience?: {
-    amount: PMP | PMC;
+    amount: PmpAmount | PmcAmount;
     daysAgo: number;
   };
 }
@@ -78,9 +78,9 @@ export interface EndowmentAnalysis {
   /** 현재 보유 자산에 대한 과대평가 정도 */
   overvaluationBias: number;
   /** 매도 의향 가격 */
-  willingnessToAccept: PMP | PMC;
+  willingnessToAccept: PmpAmount | PmcAmount;
   /** 구매 의향 가격 */
-  willingnessToPay: PMP | PMC;
+  willingnessToPay: PmpAmount | PmcAmount;
   /** WTA/WTP 비율 */
   endowmentRatio: number;
 }
@@ -97,8 +97,8 @@ export interface IBehavioralEconomicsEngine {
    * v(x) = x^α (x ≥ 0), -λ(-x)^β (x < 0)
    */
   calculateProspectValue(
-    amount: PMP | PMC,
-    referencePoint: PMP | PMC,
+    amount: PmpAmount | PmcAmount,
+    referencePoint: PmpAmount | PmcAmount,
     valueFunction: ProspectValueFunction
   ): number;
 
@@ -108,7 +108,7 @@ export interface IBehavioralEconomicsEngine {
    */
   calculateLossAversionRatio(user: {
     recentTransactions: Array<{
-      amount: PMP | PMC;
+      amount: PmpAmount | PmcAmount;
       type: "gain" | "loss";
       timestamp: Date;
     }>;
@@ -119,8 +119,8 @@ export interface IBehavioralEconomicsEngine {
    * 보유 효과로 인한 비합리적 의사결정 탐지
    */
   analyzeEndowmentEffect(
-    currentHoldings: { pmp: PMP; pmc: PMC },
-    marketValue: { pmp: PMP; pmc: PMC }
+    currentHoldings: { pmp: PmpAmount; pmc: PmcAmount },
+    marketValue: { pmp: PmpAmount; pmc: PmcAmount }
   ): EndowmentAnalysis;
 
   /**
@@ -128,15 +128,18 @@ export interface IBehavioralEconomicsEngine {
    * 계정별 최적 자금 배분 추천
    */
   optimizeMentalAccounting(
-    totalWealth: { pmp: PMP; pmc: PMC },
+    totalWealth: { pmp: PmpAmount; pmc: PmcAmount },
     accounts: MentalAccount[],
     userPreferences: {
       riskTolerance: number; // 0-1
-      savingsGoal: PMP;
-      donationTarget: PMP;
+      savingsGoal: PmpAmount;
+      donationTarget: PmpAmount;
     }
   ): {
-    recommendedAllocation: Map<MentalAccountType, { pmp: PMP; pmc: PMC }>;
+    recommendedAllocation: Map<
+      MentalAccountType,
+      { pmp: PmpAmount; pmc: PmcAmount }
+    >;
     rebalancingNeeded: boolean;
     warnings: string[];
   };
@@ -169,7 +172,7 @@ export interface IBehavioralEconomicsEngine {
   analyzeBehaviorPattern(
     userHistory: Array<{
       action: string;
-      amount: PMP | PMC;
+      amount: PmpAmount | PmcAmount;
       context: DecisionContext;
       outcome: "positive" | "negative" | "neutral";
       timestamp: Date;
@@ -181,8 +184,8 @@ export interface IBehavioralEconomicsEngine {
    * 시간 선호의 비일관성을 고려한 장기 계획 최적화
    */
   correctHyperbolicDiscounting(
-    immediateReward: PMP | PMC,
-    delayedReward: PMP | PMC,
+    immediateReward: PmpAmount | PmcAmount,
+    delayedReward: PmpAmount | PmcAmount,
     delayDays: number,
     userDiscountRate: number
   ): {
@@ -196,8 +199,12 @@ export interface IBehavioralEconomicsEngine {
    * 동료 집단의 행동을 활용한 사회적 영향 최적화
    */
   calculateSocialProof(
-    userAction: { type: string; amount: PMP | PMC },
-    peerGroup: Array<{ type: string; amount: PMP | PMC; success: boolean }>
+    userAction: { type: string; amount: PmpAmount | PmcAmount },
+    peerGroup: Array<{
+      type: string;
+      amount: PmpAmount | PmcAmount;
+      success: boolean;
+    }>
   ): {
     peerComparison: "above_average" | "average" | "below_average";
     socialPressure: number; // 0-1
@@ -212,8 +219,8 @@ export interface IBehavioralEconomicsEngine {
     availableOptions: Array<{
       id: string;
       description: string;
-      pmpCost: PMP;
-      pmcCost: PMC;
+      pmpCost: PmpAmount;
+      pmcCost: PmcAmount;
       expectedUtility: number;
     }>,
     userBehaviorProfile: {

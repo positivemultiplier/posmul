@@ -308,12 +308,7 @@ export class RepositoryHelpers {
    * 기본 페이지네이션 설정
    */
   static getDefaultPagination(): PaginationRequest {
-    return {
-      page: 1,
-      limit: 20,
-      sortBy: "createdAt",
-      sortOrder: "desc",
-    };
+    return { page: 1, limit: 20, sortBy: "createdAt", sortOrder: "desc" };
   }
 
   /**

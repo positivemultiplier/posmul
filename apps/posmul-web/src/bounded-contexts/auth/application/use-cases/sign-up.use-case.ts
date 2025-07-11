@@ -4,7 +4,7 @@
 
 import { UserCreatedEvent, publishEvent } from "../../../../shared/events";
 import { Result, AuthError, isFailure } from "@posmul/auth-economy-sdk";
-import { createEmail } from "@posmul/auth-economy-sdk/auth";
+import { createEmail } from "@posmul/auth-economy-sdk";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {
   AuthResult,
@@ -23,11 +23,16 @@ export class SignUpUseCase implements ISignUpUseCase {
     private authService: IExternalAuthService // Supabase Auth 서비스
   ) {}
 
+  
+
   async execute(data: SignUpData): Promise<Result<AuthResult, Error>> {
     // 1. 입력 데이터 검증
     const validationResult = this.authDomainService.validateSignUpData(data);
     if (isFailure(validationResult)) {
-      return validationResult;
+      return {
+            success: false,
+            error: new Error('처리에 실패했습니다.')
+          };
     }
 
     try {
@@ -43,7 +48,9 @@ export class SignUpUseCase implements ISignUpUseCase {
       if (emailExists.data) {
         return {
           success: false,
-          error: new AuthError("이미 사용 중인 이메일입니다.", { code: 'USER_ALREADY_EXISTS' }),
+          error: new AuthError("이미 사용 중인 이메일입니다.", {
+            code: "USER_ALREADY_EXISTS",
+          }),
         };
       }
 
@@ -76,8 +83,8 @@ export class SignUpUseCase implements ISignUpUseCase {
       await publishEvent(
         new UserCreatedEvent(
           saveResult.data.id as any,
-          saveResult.data.email.value,
-          saveResult.data.email.value, // username으로 email 사용
+          saveResult.data.email.valueOf(),
+          saveResult.data.email.valueOf(), // username으로 email 사용
           false, // profileComplete
           undefined, // referredBy
           saveResult.data.createdAt

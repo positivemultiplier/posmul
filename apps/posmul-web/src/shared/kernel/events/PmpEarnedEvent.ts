@@ -1,9 +1,9 @@
 import { DomainEvent } from './DomainEvent';
 
 /**
- * PMP Earned Event
+ * PmpAmount Earned Event
  * 
- * Fired when a user earns PMP (PosMul Points) from any activity
+ * Fired when a user earns PmpAmount (PosMul Points) from any activity
  * across the platform (predictions, donations, investments, etc.)
  * 
  * @author PosMul Development Team

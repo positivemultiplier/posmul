@@ -1,5 +1,0 @@
-/**
- * 공통 도메인 타입 정의
- */
-export {};
-//# sourceMappingURL=common.js.map

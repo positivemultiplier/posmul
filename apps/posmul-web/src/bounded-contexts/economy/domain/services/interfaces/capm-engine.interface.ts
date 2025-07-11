@@ -3,8 +3,8 @@
  * Harry Markowitz (1952) 포트폴리오 이론과 William Sharpe (1964) CAPM 구현
  *
  * 핵심 개념:
- * - PMP: 무위험자산 (Risk-Free Asset)
- * - PMC: 위험자산 (Risky Asset)
+ * - PmpAmount: 무위험자산 (Risk-Free Asset)
+ * - PmcAmount: 위험자산 (Risky Asset)
  * - CAPM 공식: E[R] = Rf + β(Rm - Rf)
  * - 포트폴리오 최적화: 리스크-수익 트레이드오프
  */
@@ -15,8 +15,8 @@ import {
   BetaCoefficient,
   ExpectedReturn,
   MarketRiskPremium,
-  PMC,
-  PMP,
+  PmcAmount,
+  PmpAmount,
   RiskFreeRate,
   RiskTolerance,
 } from "../../value-objects";
@@ -26,7 +26,7 @@ import {
  */
 export interface IAsset {
   readonly assetId: string;
-  readonly assetType: "PMP" | "PMC";
+  readonly assetType: "PmpAmount" | "PmcAmount";
   readonly amount: number;
   readonly expectedReturn: ExpectedReturn;
   readonly beta: BetaCoefficient;
@@ -88,7 +88,7 @@ export interface IRebalancingRecommendation {
 /**
  * CAPM 기반 가격 책정 결과
  */
-export interface ICAPMPricingResult {
+export interface ICAPmpAmountricingResult {
   readonly assetId: string;
   readonly fairValue: number;
   readonly currentPrice: number;
@@ -132,7 +132,7 @@ export interface ICAPMEngine {
     riskFreeRate: RiskFreeRate,
     marketRiskPremium: MarketRiskPremium,
     currentPrice: number
-  ): Promise<Result<ICAPMPricingResult>>;
+  ): Promise<Result<ICAPmpAmountricingResult>>;
 
   /**
    * 포트폴리오 리스크-수익 분석
@@ -157,7 +157,7 @@ export interface ICAPMEngine {
   ): Promise<Result<IOptimizationResult>>;
 
   /**
-   * PMP-PMC 최적 배분 계산
+   * PmpAmount-PmcAmount 최적 배분 계산
    * @param totalAmount 총 투자 금액
    * @param riskTolerance 위험 허용도
    * @param marketConditions 시장 상황
@@ -166,7 +166,7 @@ export interface ICAPMEngine {
     totalAmount: number,
     riskTolerance: RiskTolerance,
     marketConditions: IMarketConditionAnalysis
-  ): Promise<Result<{ pmpAllocation: PMP; pmcAllocation: PMC }>>;
+  ): Promise<Result<{ pmpAllocation: PmpAmount; pmcAllocation: PmcAmount }>>;
 
   /**
    * 시장 상황 분석

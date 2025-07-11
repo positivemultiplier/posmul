@@ -37,7 +37,7 @@ const mockGames: PredictionGame[] = [
     id: "1",
     title: "2024년 한국 GDP 성장률 예측",
     description:
-      "올해 한국의 실질 GDP 성장률이 몇 %가 될지 예측해보세요. 정확한 예측으로 PMC를 획득하고 경제 전문성을 키워보세요!",
+      "올해 한국의 실질 GDP 성장률이 몇 %가 될지 예측해보세요. 정확한 예측으로 PmcAmount를 획득하고 경제 전문성을 키워보세요!",
     predictionType: "ranking",
     options: [
       { id: "1", text: "2.0% 미만", currentOdds: 0.25 },
@@ -154,12 +154,12 @@ const PredictionGameList: React.FC<PredictionGameListProps> = async ({
         <div>
           <h2 className="text-2xl font-bold text-gray-900">🔮 예측 게임</h2>
           <p className="text-gray-600 mt-1">
-            사회적 이슈를 예측하며 PMC를 획득하고 집단지성에 기여하세요
+            사회적 이슈를 예측하며 PmcAmount를 획득하고 집단지성에 기여하세요
           </p>
         </div>
 
         <div className="flex gap-2">
-          <Button variant="outline" size="sm">
+          <Button variant="default" size="sm">
             📊 내 예측 이력
           </Button>
           <Button size="sm">➕ 새 게임 제안</Button>
@@ -190,7 +190,7 @@ const PredictionGameList: React.FC<PredictionGameListProps> = async ({
 
       {/* Load More */}
       <div className="text-center pt-6">
-        <Button variant="outline" size="lg">
+        <Button variant="default" size="lg">
           더 많은 게임 보기
         </Button>
       </div>

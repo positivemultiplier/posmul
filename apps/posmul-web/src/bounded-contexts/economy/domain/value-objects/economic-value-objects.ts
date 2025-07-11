@@ -37,9 +37,9 @@ import {
   MultiplierEffect,
   // Network Economics
   NetworkDensity,
-  PMC,
+  PmcAmount,
   // 핵심 화폐 시스템
-  PMP,
+  PmpAmount,
   // 예측 정확도
   PredictionAccuracy,
   ProspectValue,
@@ -59,31 +59,31 @@ import {
 // ===== 핵심 화폐 시스템 생성자 =====
 
 /**
- * PMP 생성 (위험프리 자산)
- * @param value - PMP 값 (0 이상)
+ * PmpAmount 생성 (위험프리 자산)
+ * @param value - PmpAmount 값 (0 이상)
  */
-export const createPMP = (value: number): PMP => {
+export const createPmpAmount = (value: number): PmpAmount => {
   if (value < 0) {
-    throw new Error("PMP cannot be negative");
+    throw new Error("PmpAmount cannot be negative");
   }
   if (!Number.isInteger(value)) {
-    throw new Error("PMP must be an integer");
+    throw new Error("PmpAmount must be an integer");
   }
-  return value as PMP;
+  return value as PmpAmount;
 };
 
 /**
- * PMC 생성 (위험자산)
- * @param value - PMC 값 (0 이상)
+ * PmcAmount 생성 (위험자산)
+ * @param value - PmcAmount 값 (0 이상)
  */
-export const createPMC = (value: number): PMC => {
+export const createPmcAmount = (value: number): PmcAmount => {
   if (value < 0) {
-    throw new Error("PMC cannot be negative");
+    throw new Error("PmcAmount cannot be negative");
   }
   if (!Number.isFinite(value)) {
-    throw new Error("PMC must be a finite number");
+    throw new Error("PmcAmount must be a finite number");
   }
-  return value as PMC;
+  return value as PmcAmount;
 };
 
 /**
@@ -427,11 +427,11 @@ export const createUtilityGamma = (value: number): UtilityGamma => {
 
 /**
  * 개인 효용 계산
- * U(x) = α·ln(PMP) + β·ln(PMC) + γ·S(Donate)
+ * U(x) = α·ln(PmpAmount) + β·ln(PmcAmount) + γ·S(Donate)
  */
 export const calculateIndividualUtility = (
-  pmp: PMP,
-  pmc: PMC,
+  pmp: PmpAmount,
+  pmc: PmcAmount,
   donationUtility: number,
   alpha: UtilityAlpha,
   beta: UtilityBeta,
@@ -524,8 +524,8 @@ export const createEffectSize = (value: number): EffectSize => {
 /**
  * 브랜드 타입에서 원시 값 추출
  */
-export const unwrapPMP = (pmp: PMP): number => pmp as number;
-export const unwrapPMC = (pmc: PMC): number => pmc as number;
+export const unwrapPmpAmount = (pmp: PmpAmount): number => pmp as number;
+export const unwrapPmcAmount = (pmc: PmcAmount): number => pmc as number;
 export const unwrapEBIT = (ebit: EBIT): number => ebit as number;
 export const unwrapMoneyWaveAmount = (amount: MoneyWaveAmount): number =>
   amount as number;

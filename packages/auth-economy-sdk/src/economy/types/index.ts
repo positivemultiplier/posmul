@@ -1,27 +1,53 @@
 /**
  * 경제 시스템 타입 정의
+ * 모든 핵심 타입은 ../../types에서 통일되게 관리됩니다.
  */
 
-import { Result, UserId, TransactionId } from '../../types';
-import { EconomyError } from '../../errors';
+import {
+  Result,
+  UserId,
+  TransactionId,
+  PmpAmount,
+  PmcAmount,
+  createUserId,
+  unwrapPmpAmount,
+  unwrapPmcAmount,
+} from "../../types";
+import { EconomyError } from "../../errors";
 
 // === 공통 타입 재수출 ===
-export type { UserId, TransactionId, Result } from '../../types';
-export { EconomyError } from '../../errors';
+export type {
+  UserId,
+  TransactionId,
+  Result,
+  PmpAmount,
+  PmcAmount,
+} from "../../types";
 
-// === 경제 브랜드 타입 ===
-export type PmpAmount = number & { readonly brand: unique symbol };
-export type PmcAmount = number & { readonly brand: unique symbol };
+export {
+  createPmpAmount,
+  createPmcAmount,
+  createUserId,
+  createTransactionId,
+  unwrapPmpAmount,
+  unwrapPmcAmount,
+  isFailure,
+  isSuccess,
+  success,
+  failure,
+} from "../../types";
+
+export { EconomyError } from "../../errors";
 
 // === 거래 타입 ===
-export type TransactionType = 
-  | 'pmp_earned'
-  | 'pmc_spent'
-  | 'pmp_to_pmc_conversion'
-  | 'pmc_to_pmp_conversion'
-  | 'donation_received'
-  | 'investment_return'
-  | 'prediction_reward';
+export type TransactionType =
+  | "pmp_earned"
+  | "pmc_spent"
+  | "pmp_to_pmc_conversion"
+  | "pmc_to_pmp_conversion"
+  | "donation_received"
+  | "investment_return"
+  | "prediction_reward";
 
 // === 경제 상태 ===
 export interface EconomicBalance {
@@ -47,43 +73,29 @@ export interface TransactionResult {
   fromUserId: UserId;
   toUserId: UserId;
   amount: PmpAmount | PmcAmount;
-  type: 'PMP' | 'PMC';
-  status: 'completed' | 'pending' | 'failed';
+  type: "PmpAmount" | "PmcAmount";
+  status: "completed" | "pending" | "failed";
   createdAt: Date;
 }
 
 // === 경제 서비스 인터페이스 ===
 export interface EconomyService {
-  getPMPBalance(userId: UserId): Promise<Result<PmpAmount, EconomyError>>;
-  getPMCBalance(userId: UserId): Promise<Result<PmcAmount, EconomyError>>;
-  getCombinedBalance(userId: UserId): Promise<Result<EconomicBalance, EconomyError>>;
-  transferPMP(fromUserId: UserId, toUserId: UserId, amount: PmpAmount): Promise<Result<TransactionResult, EconomyError>>;
-  transferPMC(fromUserId: UserId, toUserId: UserId, amount: PmcAmount): Promise<Result<TransactionResult, EconomyError>>;
+  getPmpAmountBalance(userId: UserId): Promise<Result<PmpAmount, EconomyError>>;
+  getPmcAmountBalance(userId: UserId): Promise<Result<PmcAmount, EconomyError>>;
+  getCombinedBalance(
+    userId: UserId
+  ): Promise<Result<EconomicBalance, EconomyError>>;
+  transferPmpAmount(
+    fromUserId: UserId,
+    toUserId: UserId,
+    amount: PmpAmount
+  ): Promise<Result<TransactionResult, EconomyError>>;
+  transferPmcAmount(
+    fromUserId: UserId,
+    toUserId: UserId,
+    amount: PmcAmount
+  ): Promise<Result<TransactionResult, EconomyError>>;
 }
 
-// === 유틸리티 함수 ===
-export function createPmpAmount(amount: number): PmpAmount {
-  if (amount < 0) {
-    throw new Error('PMP amount cannot be negative');
-  }
-  return amount as PmpAmount;
-}
-
-export function createPmcAmount(amount: number): PmcAmount {
-  if (amount < 0) {
-    throw new Error('PMC amount cannot be negative');
-  }
-  return amount as PmcAmount;
-}
-
-export function createTransactionId(id: string): TransactionId {
-  return id as TransactionId;
-}
-
-export function formatPmpAmount(amount: PmpAmount): string {
-  return `${amount.toLocaleString()} PMP`;
-}
-
-export function formatPmcAmount(amount: PmcAmount): string {
-  return `${amount.toLocaleString()} PMC`;
-}
+// === 유틸리티 함수 재수출 ===
+// 모든 유틸리티 함수는 ../../types에서 통일되게 관리됩니다.

@@ -35,10 +35,10 @@ export class MoneyWaveCalculatorService {
       const ebitBasedPool =
         netEbit * MoneyWaveCalculatorService.EBIT_DAILY_RATIO;
 
-      // MoneyWave2: 미소비 PMC 재분배 (실제로는 DB에서 조회)
+      // MoneyWave2: 미소비 PmcAmount 재분배 (실제로는 DB에서 조회)
       const redistributedPmc = await this.calculateRedistributedPmc();
 
-      // MoneyWave3: 기업가 제공 PMC (실제로는 DB에서 조회)
+      // MoneyWave3: 기업가 제공 PmcAmount (실제로는 DB에서 조회)
       const enterprisePmc = await this.calculateEnterprisePmc();
 
       const totalDailyPool = ebitBasedPool + redistributedPmc + enterprisePmc;
@@ -59,7 +59,7 @@ export class MoneyWaveCalculatorService {
         error: new EconomyKernelError(
           "Failed to calculate daily prize pool",
           "SERVICE_UNAVAILABLE",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error) )
         ),
       };
     }
@@ -114,21 +114,21 @@ export class MoneyWaveCalculatorService {
   }
 
   /**
-   * MoneyWave2: 미소비 PMC 재분배 금액 계산
-   * 실제 구현에서는 DB에서 일정 기간 미사용 PMC 조회
+   * MoneyWave2: 미소비 PmcAmount 재분배 금액 계산
+   * 실제 구현에서는 DB에서 일정 기간 미사용 PmcAmount 조회
    */
   private async calculateRedistributedPmc(): Promise<number> {
-    // TODO: 실제 DB에서 미소비 PMC 조회
+    // TODO: 실제 DB에서 미소비 PmcAmount 조회
     // 현재는 임시값 반환
     return 50000; // 5만원 상당
   }
 
   /**
-   * MoneyWave3: 기업가 제공 PMC 계산
-   * 실제 구현에서는 DB에서 기업가가 제공한 PMC 조회
+   * MoneyWave3: 기업가 제공 PmcAmount 계산
+   * 실제 구현에서는 DB에서 기업가가 제공한 PmcAmount 조회
    */
   private async calculateEnterprisePmc(): Promise<number> {
-    // TODO: 실제 DB에서 기업가 PMC 조회
+    // TODO: 실제 DB에서 기업가 PmcAmount 조회
     // 현재는 임시값 반환
     return 30000; // 3만원 상당
   }

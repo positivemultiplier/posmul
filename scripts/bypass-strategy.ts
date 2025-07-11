@@ -4,6 +4,13 @@
  * 2025-07-08
  */
 
+import type {
+  PredictionId,
+  PmpAmount,
+  PmcAmount,
+  Timestamps,
+} from "../apps/posmul-web/src_migrated/shared/migration-types";
+
 // tsconfig.json 임시 설정
 const BYPASS_TSCONFIG = {
   compilerOptions: {
@@ -20,23 +27,24 @@ const BYPASS_TSCONFIG = {
 
 // 타입 안전성을 런타임에서 검증하는 유틸리티
 class RuntimeTypeValidator {
-  static validatePredictionId(value: any): value is PredictionId {
+  static validatePredictionId(value: unknown): value is PredictionId {
     return typeof value === "string" && value.length > 0;
   }
 
-  static validatePmpAmount(value: any): value is PmpAmount {
+  static validatePmpAmount(value: unknown): value is PmpAmount {
     return typeof value === "number" && value >= 0;
   }
 
-  static validatePmcAmount(value: any): value is PmcAmount {
+  static validatePmcAmount(value: unknown): value is PmcAmount {
     return typeof value === "number" && value >= 0;
   }
 
-  static validateTimestamps(value: any): value is Timestamps {
+  static validateTimestamps(value: unknown): value is Timestamps {
     return (
-      value &&
-      value.createdAt instanceof Date &&
-      value.updatedAt instanceof Date
+      typeof value === "object" &&
+      value !== null &&
+      "createdAt" in value &&
+      "updatedAt" in value
     );
   }
 }
@@ -86,4 +94,4 @@ export const MIGRATION_CONFIG = {
   },
 };
 
-export { RuntimeTypeValidator, BYPASS_TSCONFIG };
+export default BYPASS_TSCONFIG;

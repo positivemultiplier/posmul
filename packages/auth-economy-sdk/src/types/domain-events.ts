@@ -76,10 +76,10 @@ export enum EventTypes {
   USER_UPDATED = 'user.updated',
   
   // 경제 시스템 관련
-  PMP_EARNED = 'economy.pmp.earned',
-  PMP_SPENT = 'economy.pmp.spent',
-  PMC_EARNED = 'economy.pmc.earned',
-  PMC_SPENT = 'economy.pmc.spent',
+  PmpAmount_EARNED = 'economy.pmp.earned',
+  PmpAmount_SPENT = 'economy.pmp.spent',
+  PmcAmount_EARNED = 'economy.pmc.earned',
+  PmcAmount_SPENT = 'economy.pmc.spent',
   POINTS_EARNED = 'economy.points.earned',
   
   // 예측 게임 관련
@@ -159,7 +159,7 @@ export class PmpEarnedEvent extends BaseDomainEvent {
     metadata?: Record<string, unknown>
   ) {
     super(
-      EventTypes.PMP_EARNED,
+      EventTypes.PmpAmount_EARNED,
       userId,
       { userId, amount, reason, ...metadata }
     );
@@ -174,7 +174,7 @@ export class PmpSpentEvent extends BaseDomainEvent {
     metadata?: Record<string, unknown>
   ) {
     super(
-      EventTypes.PMP_SPENT,
+      EventTypes.PmpAmount_SPENT,
       userId,
       { userId, amount, reason, ...metadata }
     );
@@ -189,7 +189,7 @@ export class PmcEarnedEvent extends BaseDomainEvent {
     metadata?: Record<string, unknown>
   ) {
     super(
-      EventTypes.PMC_EARNED,
+      EventTypes.PmcAmount_EARNED,
       userId,
       { userId, amount, reason, ...metadata }
     );
@@ -204,7 +204,7 @@ export class PmcSpentEvent extends BaseDomainEvent {
     metadata?: Record<string, unknown>
   ) {
     super(
-      EventTypes.PMC_SPENT,
+      EventTypes.PmcAmount_SPENT,
       userId,
       { userId, amount, reason, ...metadata }
     );

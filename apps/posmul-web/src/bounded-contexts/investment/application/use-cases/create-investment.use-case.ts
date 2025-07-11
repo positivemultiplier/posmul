@@ -1,6 +1,6 @@
-import { Result, UserId } from "@posmul/auth-economy-sdk";
+import { Result, UserId, isFailure } from "@posmul/auth-economy-sdk";
 import { ValidationError } from "@posmul/auth-economy-sdk";
- // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
+// TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import { Investment } from "../../domain/entities/investment.entity";
 import {
   IAdvertisementRepository,
@@ -35,18 +35,17 @@ export class CreateInvestmentUseCase {
   async execute(
     userId: UserId,
     request: CreateInvestmentRequest
-  ): Promise<Result<{ investmentId: string; estimatedReturn: number }>> {
+  ): Promise<Result<{ investmentId: string; estimatedReturn: number } | any>> {
     try {
       // 요청 데이터 검증
       const validationResult = CreateInvestmentRequestSchema.safeParse(request);
       if (!validationResult.success) {
         return {
           success: false,
-          error: new ValidationError(
-            "입력 데이터가 유효하지 않습니다.",
-            undefined,
-            validationResult.error.flatten().fieldErrors
-          ),
+          error: new ValidationError("입력 데이터가 유효하지 않습니다.", {
+            validationErrors:
+              validationResult.error?.flatten()?.fieldErrors || {},
+          }),
         };
       }
 
@@ -56,8 +55,11 @@ export class CreateInvestmentUseCase {
         case InvestmentType.LOCAL_LEAGUE:
           const merchantIdResult = MerchantId.create(validData.targetId);
           if (!merchantIdResult.success) {
-            return merchantIdResult;
-          }
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
+      }
           const merchantResult = await this.merchantRepository.findById(
             merchantIdResult.data
           );
@@ -75,8 +77,11 @@ export class CreateInvestmentUseCase {
             validData.targetId
           );
           if (!advertisementIdResult.success) {
-            return advertisementIdResult;
-          }
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
+      }
           const advertisementResult =
             await this.advertisementRepository.findById(
               advertisementIdResult.data
@@ -95,8 +100,11 @@ export class CreateInvestmentUseCase {
             validData.targetId
           );
           if (!crowdFundingIdResult.success) {
-            return crowdFundingIdResult;
-          }
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
+      }
           const crowdFundingResult = await this.crowdFundingRepository.findById(
             crowdFundingIdResult.data
           );
@@ -122,11 +130,14 @@ export class CreateInvestmentUseCase {
         validData.type,
         validData.targetId,
         validData.amount,
-        { message: validData.message || "" }
+        { message: validData.message || "Investment creation failed" }
       );
 
       if (!investmentResult.success) {
-        return investmentResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 도메인 서비스를 통한 투자 검증
@@ -137,7 +148,10 @@ export class CreateInvestmentUseCase {
         );
 
       if (!validationResult2.success) {
-        return validationResult2;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 보상률 계산
@@ -148,7 +162,10 @@ export class CreateInvestmentUseCase {
       );
 
       if (!rewardRateResult.success) {
-        return rewardRateResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 예상 수익 계산
@@ -159,7 +176,10 @@ export class CreateInvestmentUseCase {
         );
 
       if (!estimatedReturnResult.success) {
-        return estimatedReturnResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 데이터베이스에 저장
@@ -167,7 +187,10 @@ export class CreateInvestmentUseCase {
         investmentResult.data
       );
       if (!saveResult.success) {
-        return saveResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       return {

@@ -1,6 +1,6 @@
 /**
  * Agency Theory Engine 사용 예제
- * Jensen & Meckling (1976) Agency Theory 기반 PMP→PMC 전환 실제 사용법
+ * Jensen & Meckling (1976) Agency Theory 기반 PmpAmount→PmcAmount 전환 실제 사용법
  */
 
 import {
@@ -10,11 +10,13 @@ import {
   IPredictionData,
   IPredictionParticipant,
 } from "../services";
+import { isFailure } from '@posmul/auth-economy-sdk';
+
 import {
-  createPMP,
+  createPmpAmount,
   createPredictionAccuracy,
-  unwrapPMC,
-  unwrapPMP,
+  unwrapPmcAmount,
+  unwrapPmpAmount,
 } from "../value-objects";
 
 /**
@@ -41,8 +43,8 @@ async function example1_HighQualityPrediction() {
 
   const engine = createDefaultAgencyEngine();
 
-  // 투입할 PMP 양
-  const pmpInput = createPMP(1000);
+  // 투입할 PmpAmount 양
+  const pmpInput = createPmpAmount(1000);
 
   // 고품질 예측 데이터
   const predictionData: IPredictionData = {
@@ -76,8 +78,8 @@ async function example1_HighQualityPrediction() {
     },
   ];
 
-  // PMP → PMC 전환 실행
-  const result = await engine.convertPMPToPMC(
+  // PmpAmount → PmcAmount 전환 실행
+  const result = await engine.convertPmpAmountToPmcAmount(
     pmpInput,
     predictionData,
     participants
@@ -86,8 +88,8 @@ async function example1_HighQualityPrediction() {
   if (result.success) {
     const conversion = result.data;
 
-    console.log(`투입 PMP: ${unwrapPMP(conversion.pmpInput)}`);
-    console.log(`산출 PMC: ${unwrapPMC(conversion.pmcOutput).toFixed(2)}`);
+    console.log(`투입 PmpAmount: ${unwrapPmpAmount(conversion.pmpInput)}`);
+    console.log(`산출 PmcAmount: ${unwrapPmcAmount(conversion.pmcOutput).toFixed(2)}`);
     console.log(`전환율: ${(conversion.conversionRate * 100).toFixed(1)}%`);
     console.log(`보너스 배수: ${conversion.bonusMultiplier.toFixed(2)}`);
     console.log(
@@ -104,7 +106,7 @@ async function example1_HighQualityPrediction() {
       )}`
     );
   } else {
-    console.error("전환 실패:", result.error.message);
+    console.error("전환 실패:", isFailure(result) ? result.error.message : "Unknown error");
   }
 }
 
@@ -116,7 +118,7 @@ async function example2_LowQualityPrediction() {
 
   const engine = createDefaultAgencyEngine();
 
-  const pmpInput = createPMP(1000);
+  const pmpInput = createPmpAmount(1000);
 
   // 저품질 예측 데이터
   const predictionData: IPredictionData = {
@@ -143,7 +145,7 @@ async function example2_LowQualityPrediction() {
     },
   ];
 
-  const result = await engine.convertPMPToPMC(
+  const result = await engine.convertPmpAmountToPmcAmount(
     pmpInput,
     predictionData,
     participants
@@ -152,8 +154,8 @@ async function example2_LowQualityPrediction() {
   if (result.success) {
     const conversion = result.data;
 
-    console.log(`투입 PMP: ${unwrapPMP(conversion.pmpInput)}`);
-    console.log(`산출 PMC: ${unwrapPMC(conversion.pmcOutput).toFixed(2)}`);
+    console.log(`투입 PmpAmount: ${unwrapPmpAmount(conversion.pmpInput)}`);
+    console.log(`산출 PmcAmount: ${unwrapPmcAmount(conversion.pmcOutput).toFixed(2)}`);
     console.log(`전환율: ${(conversion.conversionRate * 100).toFixed(1)}%`);
     console.log(`보너스 배수: ${conversion.bonusMultiplier.toFixed(2)}`);
 
@@ -254,7 +256,7 @@ async function example4_PolicyPredictionGame() {
   const engine = createDefaultAgencyEngine();
 
   // 시나리오: 지역 교통 개선 정책의 효과 예측
-  const pmpInvestment = createPMP(5000); // 5,000 PMP 투자
+  const pmpInvestment = createPmpAmount(5000); // 5,000 PmpAmount 투자
 
   const policyPredictionData: IPredictionData = {
     predictionAccuracy: createPredictionAccuracy(0.72), // 정책 예측은 복잡
@@ -305,7 +307,7 @@ async function example4_PolicyPredictionGame() {
     },
   ];
 
-  const result = await engine.convertPMPToPMC(
+  const result = await engine.convertPmpAmountToPmcAmount(
     pmpInvestment,
     policyPredictionData,
     citizenParticipants
@@ -316,9 +318,9 @@ async function example4_PolicyPredictionGame() {
 
     console.log("\n📊 정책 예측 게임 결과:");
     console.log(
-      `투자된 PMP: ${unwrapPMP(conversion.pmpInput).toLocaleString()}`
+      `투자된 PmpAmount: ${unwrapPmpAmount(conversion.pmpInput).toLocaleString()}`
     );
-    console.log(`획득한 PMC: ${unwrapPMC(conversion.pmcOutput).toFixed(2)}`);
+    console.log(`획득한 PmcAmount: ${unwrapPmcAmount(conversion.pmcOutput).toFixed(2)}`);
     console.log(
       `실제 전환율: ${(conversion.conversionRate * 100).toFixed(1)}%`
     );
@@ -346,8 +348,8 @@ async function example4_PolicyPredictionGame() {
 
     // ROI 계산
     const roi =
-      ((unwrapPMC(conversion.pmcOutput) - unwrapPMP(conversion.pmpInput)) /
-        unwrapPMP(conversion.pmpInput)) *
+      ((unwrapPmcAmount(conversion.pmcOutput) - unwrapPmpAmount(conversion.pmpInput)) /
+        unwrapPmpAmount(conversion.pmpInput)) *
       100;
     console.log(`\n💰 투자 수익률 (ROI): ${roi.toFixed(1)}%`);
 

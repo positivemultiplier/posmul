@@ -42,7 +42,7 @@ export class User {
   get lastActiveAt(): Date { return this.props.lastActiveAt; }
 
   /**
-   * Earn PMP from platform activities
+   * Earn PmpAmount from platform activities
    */
   earnPmp(
     source: RewardSource, 
@@ -69,7 +69,7 @@ export class User {
   }
 
   /**
-   * Spend PMC on platform activities
+   * Spend PmcAmount on platform activities
    */
   spendPmc(
     amount: number,
@@ -114,7 +114,7 @@ export class User {
   }
 
   /**
-   * Convert PMP to PMC
+   * Convert PmpAmount to PmcAmount
    */
   convertPmpToPmc(
     pmpAmount: number,
@@ -144,7 +144,7 @@ export class User {
   }
 
   /**
-   * Level up user based on accumulated PMP
+   * Level up user based on accumulated PmpAmount
    */
   checkLevelUp(): DomainEvent[] {
     const newLevel = this.calculateLevel();
@@ -176,7 +176,7 @@ export class User {
   }
 
   private calculateLevel(): number {
-    // Simple level calculation based on total PMP earned
+    // Simple level calculation based on total PmpAmount earned
     // This could be more sophisticated
     const totalPmpEarned = this.pmpBalance + this.pmcBalance; // Simplified
     return Math.floor(totalPmpEarned / 1000) + 1;
@@ -195,7 +195,7 @@ export class User {
       email,
       username,
       pmpBalance: 0,
-      pmcBalance: 100, // Starting PMC
+      pmcBalance: 100, // Starting PmcAmount
       level: 1,
       reputation: 100, // Starting reputation
       createdAt: new Date(),

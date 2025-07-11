@@ -97,7 +97,7 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
     });
 
     alert(
-      `${game.title}에 ${formatCurrency(stakeAmount)} PMP로 참여하시겠습니까?`
+      `${game.title}에 ${formatCurrency(stakeAmount)} PmpAmount로 참여하시겠습니까?`
     );
   };
 
@@ -134,14 +134,14 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
           <div>
             <span className="text-gray-500">💰 상금 풀</span>
             <div className="font-medium text-purple-600">
-              {formatCurrency(game.allocatedPrizePool)} PMC
+              {formatCurrency(game.allocatedPrizePool)} PmcAmount
             </div>
           </div>
           <div>
             <span className="text-gray-500">🎯 참여 범위</span>
             <div className="font-medium text-blue-600">
               {formatCurrency(game.minimumStake)} -{" "}
-              {formatCurrency(game.maximumStake)} PMP
+              {formatCurrency(game.maximumStake)} PmpAmount
             </div>
           </div>
           <div>
@@ -154,7 +154,7 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
           <div>
             <span className="text-gray-500">📈 총 베팅액</span>
             <div className="font-medium text-green-600">
-              {formatCurrency(game.totalStake)} PMP
+              {formatCurrency(game.totalStake)} PmpAmount
             </div>
           </div>
         </div>
@@ -231,7 +231,7 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <label className="block text-xs text-gray-500 mb-1">
-                PMP 베팅액
+                PmpAmount 베팅액
               </label>
               <input
                 type="number"
@@ -254,9 +254,9 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
 
           {selectedOption && (
             <div className="mt-2 text-xs text-gray-600">
-              예상 PMC 수익:{" "}
+              예상 PmcAmount 수익:{" "}
               <span className="font-medium text-green-600">
-                {formatCurrency(stakeAmount * 1.5)} PMC
+                {formatCurrency(stakeAmount * 1.5)} PmcAmount
               </span>{" "}
               (정확도에 따라 변동)
             </div>
@@ -270,7 +270,7 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
           <p className="text-gray-500 text-sm mb-2">
             예측 게임 참여를 위해 로그인이 필요합니다
           </p>
-          <Button variant="outline" size="sm">
+          <Button variant="default" size="sm">
             로그인하기
           </Button>
         </div>

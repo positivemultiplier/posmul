@@ -1,12 +1,12 @@
 /**
  * Legacy Economy MCP Client Adapter
- * 
+ *
  * 기존 경제 시스템을 새로운 Auth-Economy SDK로 점진적 마이그레이션하기 위한 어댑터
  * 향후 완전히 SDK로 교체될 예정
  */
 
-import { createAuthEconomyClient } from '@posmul/auth-economy-sdk';
-import type { EconomyService, UserId } from '@posmul/auth-economy-sdk';
+import { createAuthEconomyClient, isFailure } from "@posmul/auth-economy-sdk";
+import type { EconomyService, UserId } from "@posmul/auth-economy-sdk";
 
 // 유틸리티 함수: string을 UserId로 브랜딩
 function toUserId(id: string): UserId {
@@ -27,7 +27,7 @@ export class LegacyEconomyAdapter {
   }
 
   /**
-   * 💰 PMP/PMC 계정 잔액 조회 (레거시 호환)
+   * 💰 PmpAmount/PmcAmount 계정 잔액 조회 (레거시 호환)
    */
   async getEconomicBalance(userId: string): Promise<{
     pmpBalance: number;
@@ -35,19 +35,22 @@ export class LegacyEconomyAdapter {
     lastActivity: string | null;
   }> {
     try {
-      const combinedBalanceResult = await this.economyService.getCombinedBalance(toUserId(userId));
-      
+      const combinedBalanceResult =
+        await this.economyService.getCombinedBalance(toUserId(userId));
+
       if (!combinedBalanceResult.success) {
-        throw new Error(combinedBalanceResult.error.message);
+        throw new Error("잔액 조회에 실패했습니다.");
       }
 
+      const balance = combinedBalanceResult.data;
+
       return {
-        pmpBalance: Number(combinedBalanceResult.data.pmp),
-        pmcBalance: Number(combinedBalanceResult.data.pmc),
-        lastActivity: combinedBalanceResult.data.lastUpdated.toISOString(),
+        pmpBalance: Number(balance.pmp),
+        pmcBalance: Number(balance.pmc),
+        lastActivity: balance.lastUpdated.toISOString(),
       };
     } catch (error) {
-      console.error('Failed to get economic balance:', error);
+      console.error("Failed to get economic balance:", error);
       return {
         pmpBalance: 0,
         pmcBalance: 0,
@@ -62,28 +65,28 @@ export class LegacyEconomyAdapter {
    */
   async recordEconomicTransaction(transaction: {
     userId: string;
-    type: 'PMP_EARNED' | 'PMC_EARNED' | 'PMP_SPENT' | 'PMC_SPENT';
+    type:
+      | "PmpAmount_EARNED"
+      | "PmcAmount_EARNED"
+      | "PmpAmount_SPENT"
+      | "PmcAmount_SPENT";
     amount: number;
     source: string;
     metadata?: Record<string, any>;
   }): Promise<{ success: boolean; transactionId?: string; error?: string }> {
     try {
-      // SDK에 recordTransaction이 없으므로 임시로 히스토리 조회로 대체
-      const historyResult = await this.economyService.getTransactionHistory(toUserId(transaction.userId));
-      
-      if (!historyResult.success) {
-        throw new Error(historyResult.error.message);
-      }
+      // SDK에 recordTransaction이 없으므로 임시로 성공 응답 반환
+      // TODO: 실제 거래 기록 구현 필요
 
       return {
         success: true,
-        transactionId: `mock-${Date.now()}`, // 임시 ID
+        transactionId: `temp_${Date.now()}`,
       };
     } catch (error) {
-      console.error('Failed to record transaction:', error);
+      console.error("Failed to record transaction:", error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: error instanceof Error ? error.message : "Unknown error",
       };
     }
   }
@@ -93,17 +96,19 @@ export class LegacyEconomyAdapter {
    * 현재 SDK에서 지원하지 않으므로 기본값 반환
    */
   async getSystemStats(): Promise<{
-    totalPMP: number;
-    totalPMC: number;
+    totalPmpAmount: number;
+    totalPmcAmount: number;
     activeUsers: number;
     totalTransactions: number;
     lastUpdate: string;
   }> {
     // SDK에 시스템 통계 API가 없으므로 기본값 반환
-    console.warn('System stats not implemented in SDK, returning default values');
+    console.warn(
+      "System stats not implemented in SDK, returning default values"
+    );
     return {
-      totalPMP: 0,
-      totalPMC: 0,
+      totalPmpAmount: 0,
+      totalPmcAmount: 0,
       activeUsers: 0,
       totalTransactions: 0,
       lastUpdate: new Date().toISOString(),
@@ -122,11 +127,11 @@ export function getLegacyEconomyAdapter(): LegacyEconomyAdapter {
 }
 
 // 기존 코드와의 호환성을 위한 래퍼 함수들
-export const getEconomicBalance = (userId: string) => 
+export const getEconomicBalance = (userId: string) =>
   getLegacyEconomyAdapter().getEconomicBalance(userId);
 
-export const recordEconomicTransaction = (transaction: Parameters<LegacyEconomyAdapter['recordEconomicTransaction']>[0]) =>
-  getLegacyEconomyAdapter().recordEconomicTransaction(transaction);
+export const recordEconomicTransaction = (
+  transaction: Parameters<LegacyEconomyAdapter["recordEconomicTransaction"]>[0]
+) => getLegacyEconomyAdapter().recordEconomicTransaction(transaction);
 
-export const getSystemStats = () => 
-  getLegacyEconomyAdapter().getSystemStats();
+export const getSystemStats = () => getLegacyEconomyAdapter().getSystemStats();

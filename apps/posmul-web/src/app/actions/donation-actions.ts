@@ -6,7 +6,7 @@ import { z } from "zod";
 const directDonationSchema = z.object({
   recipientType: z.enum(["individual", "family", "organization"]),
   category: z.enum(["의료", "교육", "주거", "식품", "의류"]),
-  amount: z.number().min(1000, "최소 기부 금액은 1,000 PMC입니다"),
+  amount: z.number().min(1000, "최소 기부 금액은 1,000 PmcAmount입니다"),
   message: z.string().optional(),
   isAnonymous: z.boolean().default(false),
   recipientInfo: z.string().min(1, "수혜자 정보를 입력해주세요"),
@@ -22,7 +22,7 @@ const instituteDonationSchema = z.object({
     "환경보호",
     "동물보호",
   ]),
-  amount: z.number().min(5000, "기관 기부 최소 금액은 5,000 PMC입니다"),
+  amount: z.number().min(5000, "기관 기부 최소 금액은 5,000 PmcAmount입니다"),
   message: z.string().optional(),
   isAnonymous: z.boolean().default(false),
   projectId: z.string().optional(),
@@ -34,7 +34,7 @@ const opinionLeaderDonationSchema = z.object({
   category: z.enum(["환경", "복지", "과학", "인권", "교육", "문화"]),
   amount: z
     .number()
-    .min(10000, "오피니언 리더 기부 최소 금액은 10,000 PMC입니다"),
+    .min(10000, "오피니언 리더 기부 최소 금액은 10,000 PmcAmount입니다"),
   message: z.string().optional(),
   isAnonymous: z.boolean().default(false),
   campaignId: z.string().optional(),
@@ -56,9 +56,9 @@ export async function createDirectDonation(formData: FormData) {
     const validatedData = directDonationSchema.parse(rawData);
 
     // TODO: MCP를 통한 처리
-    // 1. 사용자 PMC 잔액 확인
+    // 1. 사용자 PmcAmount 잔액 확인
     // 2. 기부 기록 저장
-    // 3. PMC 차감 및 Money Wave 처리
+    // 3. PmcAmount 차감 및 Money Wave 처리
     console.log("Creating direct donation:", validatedData);
 
     return {

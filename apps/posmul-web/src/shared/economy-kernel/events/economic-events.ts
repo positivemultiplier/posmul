@@ -8,7 +8,7 @@
  * @since 2024-12
  */
 
-import { PredictionGameId, PredictionId, UserId } from "@posmul/auth-economy-sdk";
+import { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
 import { DomainEvent } from "@posmul/auth-economy-sdk";
 
 /**
@@ -42,7 +42,7 @@ export abstract class BaseEconomicEvent implements DomainEvent {
 }
 
 /**
- * PMP 획득 이벤트
+ * PmpAmount 획득 이벤트
  */
 export class PmpEarnedEvent extends BaseEconomicEvent {
   constructor(
@@ -75,7 +75,7 @@ export class PmpEarnedEvent extends BaseEconomicEvent {
 }
 
 /**
- * PMP 소비 이벤트
+ * PmpAmount 소비 이벤트
  */
 export class PmpSpentEvent extends BaseEconomicEvent {
   constructor(
@@ -106,7 +106,7 @@ export class PmpSpentEvent extends BaseEconomicEvent {
 }
 
 /**
- * PMC 획득 이벤트
+ * PmcAmount 획득 이벤트
  */
 export class PmcEarnedEvent extends BaseEconomicEvent {
   constructor(
@@ -139,7 +139,7 @@ export class PmcEarnedEvent extends BaseEconomicEvent {
 }
 
 /**
- * PMC 소비 이벤트
+ * PmcAmount 소비 이벤트
  */
 export class PmcSpentEvent extends BaseEconomicEvent {
   constructor(
@@ -177,7 +177,7 @@ export class PredictionParticipationEvent extends BaseEconomicEvent {
   constructor(
     public readonly userId: UserId,
     public readonly gameId: PredictionGameId,
-    public readonly predictionId: PredictionId,
+    public readonly predictionId: string,
     public readonly stakeAmount: number,
     public readonly confidence: number,
     public readonly selectedOptionId: string,
@@ -210,7 +210,7 @@ export class PredictionSettlementEvent extends BaseEconomicEvent {
     public readonly winnerCount: number,
     public readonly settlementResults: Array<{
       userId: UserId;
-      predictionId: PredictionId;
+      predictionId: string;
       isWinner: boolean;
       stakeAmount: number;
       rewardAmount: number;
@@ -352,14 +352,14 @@ export interface IEventStore {
  */
 export class EconomicEventUtils {
   /**
-   * 이벤트가 PMP 관련인지 확인
+   * 이벤트가 PmpAmount 관련인지 확인
    */
   static isPmpEvent(event: DomainEvent): boolean {
     return event.type === "PmpEarnedEvent" || event.type === "PmpSpentEvent";
   }
 
   /**
-   * 이벤트가 PMC 관련인지 확인
+   * 이벤트가 PmcAmount 관련인지 확인
    */
   static isPmcEvent(event: DomainEvent): boolean {
     return event.type === "PmcEarnedEvent" || event.type === "PmcSpentEvent";

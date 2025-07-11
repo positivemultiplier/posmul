@@ -174,7 +174,7 @@ export class Investment {
       return { success: false, error: new Error('Investment is not in pending status') };
     }
 
-    // PMC 적립 계산 (결제 금액의 1%)
+    // PmcAmount 적립 계산 (결제 금액의 1%)
     this.pmcEarned = Math.floor(this.amount * pmcRate);
     this.status = InvestmentStatus.COMPLETED;
     this.completedAt = new Date();
@@ -225,7 +225,7 @@ export class Investment {
       return { success: false, error: new Error('Investment is not in pending status') };
     }
 
-    // 크라우드 펀딩은 실제 투자이므로 PMC/PMP 적립 없음
+    // 크라우드 펀딩은 실제 투자이므로 PmcAmount/PmpAmount 적립 없음
     this.status = InvestmentStatus.COMPLETED;
     this.completedAt = new Date();
     this.updatedAt = new Date();
@@ -276,14 +276,14 @@ export class Investment {
     return { success: true, data: undefined };
   }
 
-  // 이벤트 기간 추가 PMC 적립
+  // 이벤트 기간 추가 PmcAmount 적립
   addEventBonus(bonusPmc: number): Result<void> {
     if (this.status !== InvestmentStatus.COMPLETED) {
       return { success: false, error: new Error('Can only add bonus to completed investments') };
     }
 
     if (bonusPmc < 0) {
-      return { success: false, error: new Error('Bonus PMC cannot be negative') };
+      return { success: false, error: new Error('Bonus PmcAmount cannot be negative') };
     }
 
     this.pmcEarned += bonusPmc;

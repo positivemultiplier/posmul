@@ -16,22 +16,22 @@ import {
   BetaCoefficient,
   ExpectedReturn,
   MarketRiskPremium,
-  PMC,
-  PMP,
+  PmcAmount,
+  PmpAmount,
   RiskFreeRate,
   RiskTolerance,
   calculateCAPMReturn,
   createBetaCoefficient,
   createExpectedReturn,
-  createPMC,
-  createPMP,
+  createPmcAmount,
+  createPmpAmount,
   unwrapBetaCoefficient,
   unwrapExpectedReturn,
 } from "../value-objects";
 import {
   IAsset,
   ICAPMEngine,
-  ICAPMPricingResult,
+  ICAPmpAmountricingResult,
   IMarketConditionAnalysis,
   IOptimizationResult,
   IPortfolio,
@@ -73,7 +73,7 @@ export class CAPMEngine implements ICAPMEngine {
     riskFreeRate: RiskFreeRate,
     marketRiskPremium: MarketRiskPremium,
     currentPrice: number
-  ): Promise<Result<ICAPMPricingResult>> {
+  ): Promise<Result<ICAPmpAmountricingResult>> {
     try {
       // CAPM 공식으로 요구수익률 계산
       const requiredReturn = calculateCAPMReturn(
@@ -100,7 +100,7 @@ export class CAPMEngine implements ICAPMEngine {
       // 신뢰도 계산 (베타의 안정성과 시장 효율성 기반)
       const confidenceLevel = this.calculateConfidenceLevel(assetBeta);
 
-      const result: ICAPMPricingResult = {
+      const result: ICAPmpAmountricingResult = {
         assetId: `asset-${Date.now()}`,
         fairValue,
         currentPrice,
@@ -116,9 +116,7 @@ export class CAPMEngine implements ICAPMEngine {
       return {
         success: false,
         error: new Error(
-          `CAPM fair value calculation failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -182,9 +180,7 @@ export class CAPMEngine implements ICAPMEngine {
       return {
         success: false,
         error: new Error(
-          `Risk-return analysis failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -273,30 +269,28 @@ export class CAPMEngine implements ICAPMEngine {
       return {
         success: false,
         error: new Error(
-          `Portfolio optimization failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
   }
 
   /**
-   * PMP-PMC 최적 배분 계산
+   * PmpAmount-PmcAmount 최적 배분 계산
    * 위험 허용도와 시장 상황을 고려한 자산 배분
    */
   public async calculateOptimalAllocation(
     totalAmount: number,
     riskTolerance: RiskTolerance,
     marketConditions: IMarketConditionAnalysis
-  ): Promise<Result<{ pmpAllocation: PMP; pmcAllocation: PMC }>> {
+  ): Promise<Result<{ pmpAllocation: PmpAmount; pmcAllocation: PmcAmount }>> {
     try {
       // 위험 허용도에 따른 기본 배분 비율
       const riskLevel = riskTolerance as number;
 
-      // 보수적: PMP 70%, PMC 30%
-      // 중간: PMP 50%, PMC 50%
-      // 공격적: PMP 30%, PMC 70%
+      // 보수적: PmpAmount 70%, PmcAmount 30%
+      // 중간: PmpAmount 50%, PmcAmount 50%
+      // 공격적: PmpAmount 30%, PmcAmount 70%
       let pmpWeight: number;
       let pmcWeight: number;
 
@@ -329,8 +323,8 @@ export class CAPMEngine implements ICAPMEngine {
       const pmcAmount = totalAmount * pmcWeight;
 
       const result = {
-        pmpAllocation: createPMP(Math.floor(pmpAmount)),
-        pmcAllocation: createPMC(pmcAmount),
+        pmpAllocation: createPmpAmount(Math.floor(pmpAmount)),
+        pmcAllocation: createPmcAmount(pmcAmount),
       };
 
       return { success: true, data: result };
@@ -338,9 +332,7 @@ export class CAPMEngine implements ICAPMEngine {
       return {
         success: false,
         error: new Error(
-          `Optimal allocation calculation failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -404,9 +396,7 @@ export class CAPMEngine implements ICAPMEngine {
       return {
         success: false,
         error: new Error(
-          `Market condition analysis failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -455,9 +445,7 @@ export class CAPMEngine implements ICAPMEngine {
       return {
         success: false,
         error: new Error(
-          `Beta estimation failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -541,9 +529,7 @@ export class CAPMEngine implements ICAPMEngine {
       return {
         success: false,
         error: new Error(
-          `Rebalancing recommendations failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -807,9 +793,9 @@ export class CAPMEngine implements ICAPMEngine {
 
     // 시장 체제에 따른 조정
     if (marketConditions.marketRegime === "Bear") {
-      adjustment += 0.1; // PMP 비중 증가
+      adjustment += 0.1; // PmpAmount 비중 증가
     } else if (marketConditions.marketRegime === "Bull") {
-      adjustment -= 0.1; // PMC 비중 증가
+      adjustment -= 0.1; // PmcAmount 비중 증가
     }
 
     // 변동성에 따른 조정

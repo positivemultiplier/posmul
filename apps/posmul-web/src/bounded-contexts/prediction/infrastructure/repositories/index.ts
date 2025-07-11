@@ -14,8 +14,10 @@ import { SupabasePredictionRepository } from "./supabase-prediction.repository";
 export { SupabasePredictionGameRepository, SupabasePredictionRepository };
 
 // Repository 팩토리 함수들
-export const createPredictionGameRepository = () =>
-  new SupabasePredictionGameRepository();
+export const createPredictionGameRepository = () => {
+  const projectId = process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID || "default";
+  return new SupabasePredictionGameRepository(projectId);
+};
 export const createPredictionRepository = () =>
   new SupabasePredictionRepository();
 

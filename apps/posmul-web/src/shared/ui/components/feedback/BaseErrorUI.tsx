@@ -7,11 +7,12 @@
 import { AuthEconomyError } from "@posmul/auth-economy-sdk";
 import { ChevronDown, Home, RotateCw } from "lucide-react";
 import { Button } from "../base";
+import { BaseError } from "../../../types/base-error";
 
 interface CustomAction {
   label: string;
   action: () => void;
-  variant?: "primary" | "secondary" | "outline" | "danger";
+  variant?: "primary" | "secondary" | "default" | "danger" | "ghost" | "outline";
 }
 
 interface BaseErrorUIProps {
@@ -194,7 +195,7 @@ export function BaseErrorUI({
         {onGoBack && (
           <Button
             onClick={onGoBack}
-            variant="outline"
+            variant="default"
             className="border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center"
           >
             <ChevronDown className="w-4 h-4 mr-2" />
@@ -204,7 +205,7 @@ export function BaseErrorUI({
         {onGoHome && (
           <Button
             onClick={onGoHome}
-            variant="outline"
+            variant="default"
             className="border-gray-300 text-gray-700 hover:bg-gray-50 flex items-center justify-center"
           >
             <Home className="w-4 h-4 mr-2" />
@@ -216,7 +217,7 @@ export function BaseErrorUI({
           <Button
             key={index}
             onClick={action.action}
-            variant={action.variant || "outline"}
+            variant={action.variant || "default"}
             className="flex items-center justify-center"
           >
             {action.label}

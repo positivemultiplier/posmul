@@ -23,7 +23,7 @@ export default function CreatePredictionPage() {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Agency Theory를 활용한 PosMul 예측 게임을 생성하세요.
             <br />
-            참여자들이 PMP를 사용하여 예측에 참여할 수 있습니다.
+            참여자들이 PmpAmount를 사용하여 예측에 참여할 수 있습니다.
           </p>
         </div>
 
@@ -51,7 +51,7 @@ export default function CreatePredictionPage() {
                   💰 베팅 금액 설정
                 </h4>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• 최소 100 PMP ~ 최대 10,000 PMP</li>
+                  <li>• 최소 100 PmpAmount ~ 최대 10,000 PmpAmount</li>
                   <li>• 게임 난이도에 따라 조정</li>
                   <li>• 참여 장벽을 고려한 설정</li>
                 </ul>

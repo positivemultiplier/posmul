@@ -1,6 +1,6 @@
 /**
  * Agency Theory Engine - Domain Service
- * Jensen & Meckling (1976) Agency Theory 기반 PMP→PMC 전환 메커니즘
+ * Jensen & Meckling (1976) Agency Theory 기반 PmpAmount→PmcAmount 전환 메커니즘
  *
  * 핵심 개념:
  * - Principal: 국민/시민 (정보 요구자)
@@ -12,13 +12,13 @@
 import { Result } from "@posmul/auth-economy-sdk";
 
 import {
-  PMC,
-  PMP,
+  PmcAmount,
+  PmpAmount,
   createAgencyCostReduction,
   createAgentAlignmentRatio,
   createInformationAsymmetryScore,
-  createPMC,
-  unwrapPMP,
+  createPmcAmount,
+  unwrapPmpAmount,
 } from "../value-objects";
 import {
   IAgencyMetrics,
@@ -54,14 +54,14 @@ export class AgencyTheoryEngine implements IAgencyTheoryEngine {
   }
 
   /**
-   * PMP → PMC 전환 실행
+   * PmpAmount → PmcAmount 전환 실행
    * Agency Theory 기반 최적 전환율 계산
    *
-   * @param pmpAmount - 투입할 PMP 양
+   * @param pmpAmount - 투입할 PmpAmount 양
    * @param predictionData - 예측 관련 데이터
    * @param participantData - 참여자 데이터
-   */ public async convertPMPToPMC(
-    pmpAmount: PMP,
+   */ public async convertPmpAmountToPmcAmount(
+    pmpAmount: PmpAmount,
     predictionData: IPredictionData,
     participantData: IPredictionParticipant[]
   ): Promise<Result<IConversionResult>> {
@@ -81,8 +81,8 @@ export class AgencyTheoryEngine implements IAgencyTheoryEngine {
         participantData
       );
 
-      // 4. PMC 산출 계산
-      const pmcOutput = this.calculatePMCOutput(
+      // 4. PmcAmount 산출 계산
+      const pmcOutput = this.calculatePmcAmountOutput(
         pmpAmount,
         conversionRate,
         bonusMultiplier
@@ -102,9 +102,7 @@ export class AgencyTheoryEngine implements IAgencyTheoryEngine {
       return {
         success: false,
         error: new Error(
-          `Agency Theory conversion failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -230,17 +228,17 @@ export class AgencyTheoryEngine implements IAgencyTheoryEngine {
   }
 
   /**
-   * 최종 PMC 산출량 계산
+   * 최종 PmcAmount 산출량 계산
    */
-  private calculatePMCOutput(
-    pmpInput: PMP,
+  private calculatePmcAmountOutput(
+    pmpInput: PmpAmount,
     conversionRate: number,
     bonusMultiplier: number
-  ): PMC {
-    const inputAmount = unwrapPMP(pmpInput);
+  ): PmcAmount {
+    const inputAmount = unwrapPmpAmount(pmpInput);
     const outputAmount = inputAmount * conversionRate * bonusMultiplier;
 
-    return createPMC(outputAmount);
+    return createPmcAmount(outputAmount);
   }
 
   /**

@@ -13,19 +13,19 @@ import {
 // 특정 이벤트 타입들 (아직 SDK에 없는 것들)
 // TODO: 이후 SDK로 이관 예정
 export interface PmcEarnedEvent extends DomainEvent {
-  type: typeof EventTypes.PMC_EARNED;
+  type: typeof EventTypes.PmcAmount_EARNED;
 }
 
 export interface PmcSpentEvent extends DomainEvent {
-  type: typeof EventTypes.PMC_SPENT;
+  type: typeof EventTypes.PmcAmount_SPENT;
 }
 
 export interface PmpEarnedEvent extends DomainEvent {
-  type: typeof EventTypes.PMP_EARNED;
+  type: typeof EventTypes.PmpAmount_EARNED;
 }
 
 export interface PmpSpentEvent extends DomainEvent {
-  type: typeof EventTypes.PMP_SPENT;
+  type: typeof EventTypes.PmpAmount_SPENT;
 }
 
 export interface PointsEarnedEvent extends DomainEvent {
@@ -68,7 +68,9 @@ export class InMemoryEventBus implements EventBus {
   ): void {
     const handlers = this.handlers.get(eventType);
     if (handlers) {
-      const index = handlers.indexOf(handler as unknown as EventHandler<DomainEvent>);
+      const index = handlers.indexOf(
+        handler as unknown as EventHandler<DomainEvent>
+      );
       if (index > -1) {
         handlers.splice(index, 1);
       }
@@ -89,9 +91,10 @@ export const subscribeToEvent = <T extends DomainEvent>(
 };
 
 // 공통 타입 재수출
-export type { DomainEvent, EventBus, EventHandler } from "@posmul/auth-economy-sdk/types";
-
-export {
-  BaseDomainEvent,
-  EventTypes,
+export type {
+  DomainEvent,
+  EventBus,
+  EventHandler,
 } from "@posmul/auth-economy-sdk/types";
+
+export { BaseDomainEvent, EventTypes } from "@posmul/auth-economy-sdk/types";

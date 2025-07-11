@@ -1,9 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getEconomicBalance } from "../../../../shared/adapters/simple-economy.adapter";
+import { UserId } from "@posmul/auth-economy-sdk";
+import { EconomyKernel } from "../../../../shared/economy-kernel/services/economy-kernel.service";
+
+// 임시 변수들 (실제 구현으로 대체 필요)
+const pmpBalanceResult = { data: 1000 };
+const pmcBalanceResult = { data: 500 };
+const moneyWaveCalculator = {
+  calculateDailyPrizePool: async () => ({
+    success: true,
+    data: { totalDailyPool: 10000 },
+  }),
+};
+const economyKernel = {} as EconomyKernel; // 임시 처리
 
 /**
  * GET /api/economy/pmp-pmc-overview
- * PMP/PMC 경제 시스템 개요 조회 (SDK 기반)
+ * PmpAmount/PmcAmount 경제 시스템 개요 조회 (SDK 기반)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -28,8 +41,8 @@ export async function GET(request: NextRequest) {
 
     // 시스템 통계 조회 (현재 SDK에서 지원하지 않으므로 기본값)
     const systemStats = {
-      totalPMP: 0,
-      totalPMC: 0,
+      totalPmpAmount: 0,
+      totalPmcAmount: 0,
       activeUsers: 0,
       totalTransactions: 0,
     };
@@ -142,7 +155,7 @@ async function calculateUserEconomicStats(
 }
 
 /**
- * PMP 수요 계산
+ * PmpAmount 수요 계산
  */
 function calculatePmpDemand(systemOverview: any): number {
   // 간단한 수요 지수 계산
@@ -155,7 +168,7 @@ function calculatePmpDemand(systemOverview: any): number {
 }
 
 /**
- * PMC 변동성 계산
+ * PmcAmount 변동성 계산
  */
 function calculatePmcVolatility(systemOverview: any): number {
   // 간단한 변동성 지수 계산

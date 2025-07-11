@@ -1,13 +1,13 @@
 import { UserId } from "@posmul/auth-economy-sdk";
 
-import { 
-  MCPError, 
+import {
+  MCPError,
   adaptErrorToBaseError,
   createDefaultMCPAdapter,
   Result,
   CompatibleBaseError,
   success,
-  failure
+  failure,
 } from "../../../../shared/legacy-compatibility";
 import { InvestmentOpportunity } from "../../domain/entities/investment-opportunity.entity";
 import { IInvestmentOpportunityRepository } from "../../domain/repositories/investment-opportunity.repository";
@@ -33,13 +33,13 @@ export class MCPInvestmentOpportunityRepository
     const props = (opportunity as any).props;
     const query = `
       INSERT INTO investment_opportunities (
-        id, creator_id, title, description, investment_type, category, subcategory, 
-        target_amount, minimum_investment, maximum_investment, current_amount, 
-        funding_start_date, funding_end_date, expected_return_date, expected_return_rate, 
-        risk_level, status, pmp_required, pmc_reward_pool, money_wave_eligible, 
+        id, creator_id, title, description, investment_type, category, subcategory,
+        target_amount, minimum_investment, maximum_investment, current_amount,
+        funding_start_date, funding_end_date, expected_return_date, expected_return_rate,
+        risk_level, status, pmp_required, pmc_reward_pool, money_wave_eligible,
         performance_metrics, tags, external_links, documents, version
       ) VALUES (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
         $18, $19, $20, $21, $22, $23, $24, $25
       )
       ON CONFLICT (id) DO UPDATE SET
@@ -57,14 +57,16 @@ export class MCPInvestmentOpportunityRepository
       });
       return success(undefined);
     } catch (error) {
-      return failure(adaptErrorToBaseError(error, "save_investment_opportunity"));
+      return failure(
+        adaptErrorToBaseError(error, "save_investment_opportunity")
+      );
     }
   }
 
   async findById(
     id: InvestmentOpportunityId
   ): Promise<Result<InvestmentOpportunity | null, CompatibleBaseError>> {
-    const query = `SELECT * FROM investment_opportunities WHERE id = '${id.toString()}'`;
+    const query = `SELECT * FROM users}'`;
     try {
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -86,15 +88,15 @@ export class MCPInvestmentOpportunityRepository
     limit: number,
     offset: number
   ): Promise<
-    Result<{ opportunities: InvestmentOpportunity[]; total: number }, CompatibleBaseError>
+    Result<
+      { opportunities: InvestmentOpportunity[]; total: number },
+      CompatibleBaseError
+    >
   > {
     const dataQuery = `
-      SELECT * FROM investment_opportunities 
-      ${whereClause}
-      ORDER BY created_at DESC
-      LIMIT ${limit} OFFSET ${offset}
-    `;
-    const countQuery = `SELECT COUNT(*) as total FROM investment_opportunities ${whereClause}`;
+      SELECT * FROM investment_opportunities ${whereClause} LIMIT ${limit} OFFSET ${offset}`;
+    const countQuery = `
+      SELECT COUNT(*) as total FROM investment_opportunities ${whereClause}`;
     try {
       const [dataResult, countResult] = await Promise.all([
         mcp_supabase_execute_sql({
@@ -175,7 +177,9 @@ export class MCPInvestmentOpportunityRepository
     return this.findAndCount(where, limit, offset);
   }
 
-  async delete(id: InvestmentOpportunityId): Promise<Result<void, CompatibleBaseError>> {
+  async delete(
+    id: InvestmentOpportunityId
+  ): Promise<Result<void, CompatibleBaseError>> {
     const query = `UPDATE investment_opportunities SET status = 'CANCELLED', updated_at = NOW() WHERE id = '${id.toString()}'`;
     try {
       await mcp_supabase_execute_sql({ project_id: this.projectId, query });
@@ -202,10 +206,7 @@ export class MCPInvestmentOpportunityRepository
     limit = 10
   ): Promise<Result<InvestmentOpportunity[], CompatibleBaseError>> {
     const query = `
-      SELECT * FROM investment_opportunities 
-      WHERE status = 'ACTIVE' 
-      AND funding_end_date > NOW()
-      AND funding_end_date <= NOW() + INTERVAL '${daysRemaining} days'
+      SELECT * FROM usersAND funding_end_date <= NOW() + INTERVAL '${daysRemaining} days'
       ORDER BY funding_end_date ASC
       LIMIT ${limit}
     `;

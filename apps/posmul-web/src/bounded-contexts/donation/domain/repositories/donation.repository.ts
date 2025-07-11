@@ -6,7 +6,6 @@
 import { UserId } from "@posmul/auth-economy-sdk";
 
 import { PaginatedResult } from "@posmul/auth-economy-sdk";
- // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import { Result, CompatibleBaseError, ExtendedPaginationParams } from "../../../../shared/legacy-compatibility";
 import { Donation } from "../entities/donation.entity";
 import {

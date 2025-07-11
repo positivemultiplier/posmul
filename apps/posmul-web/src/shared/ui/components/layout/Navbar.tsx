@@ -47,8 +47,8 @@ export default function Navbar({
           <div className="flex items-center space-x-4">
             {isAuthenticated && (
               <div className="text-sm">
-                <span className="text-blue-600 font-medium">PMP: {economicBalance.pmp}</span>
-                <span className="text-green-600 font-medium ml-2">PMC: {economicBalance.pmc}</span>
+                <span className="text-blue-600 font-medium">PmpAmount: {economicBalance.pmp}</span>
+                <span className="text-green-600 font-medium ml-2">PmcAmount: {economicBalance.pmc}</span>
               </div>
             )}
             

@@ -17,6 +17,8 @@ import {
   PolicyCategory,
   RentSeekingType,
 } from "../interfaces/public-choice-engine.interface";
+import { isFailure } from '@posmul/auth-economy-sdk';
+
 import {
   PublicChoiceEngine,
   PublicChoiceEngineConfig,
@@ -195,7 +197,7 @@ describe("PublicChoiceEngine", () => {
       const result = await engine.analyzeMedianVoter(voterPreferences, policy);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.message).toContain(
+        expect(isFailure(result) ? result.error.message : "Unknown error").toContain(
           "Voter preferences cannot be empty"
         );
       }
@@ -452,7 +454,7 @@ describe("PublicChoiceEngine", () => {
       );
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error.message).toContain("Total budget must be positive");
+        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("Total budget must be positive");
       }
     });
   });

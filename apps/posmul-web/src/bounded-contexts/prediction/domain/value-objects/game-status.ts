@@ -8,7 +8,6 @@
 
 import { Result } from "@posmul/auth-economy-sdk";
 import { ValidationError } from "@posmul/auth-economy-sdk";
- // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import type { GameStatus as GameStatusLiteral } from "./prediction-types";
 
 export class GameStatus {
