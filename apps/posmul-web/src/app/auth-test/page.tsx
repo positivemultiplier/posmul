@@ -171,8 +171,4 @@ export default function AuthTestPage() {
       </div>
     </main>
   );
-<<<<<<< HEAD
 }
-=======
-}
->>>>>>> 2323c1ec02fc387e95345aa903316ac9d9ceee6d
