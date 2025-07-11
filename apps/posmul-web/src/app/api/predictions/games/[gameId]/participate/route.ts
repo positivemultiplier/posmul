@@ -1,9 +1,77 @@
-import { ParticipatePredictionUseCase } from "@/bounded-contexts/prediction/application/use-cases/participate-prediction.use-case";
-import { PredictionEconomicService } from "@/bounded-contexts/prediction/domain/services/prediction-economic.service";
-import { SupabasePredictionGameRepository } from "@/bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
-import { InMemoryEventPublisher } from "@/shared/events/event-publisher";
-import { PredictionGameId, UserId, isFailure } from "@posmul/shared-types";
+import { ParticipatePredictionUseCase } from "../../../../../../bounded-contexts/prediction/application/use-cases/participate-prediction.use-case";
+import { PredictionEconomicService } from "../../../../../../bounded-contexts/prediction/domain/services/prediction-economic.service";
+import { SupabasePredictionGameRepository } from "../../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
+import {
+  InMemoryEventPublisher,
+  PublishError as LocalPublishError,
+} from "../../../../../../shared/events/event-publisher";
+import {
+  PredictionGameId,
+  UserId,
+  isFailure,
+  DomainEvent,
+  Result,
+  IDomainEventPublisher,
+  PublishError as SdkPublishError,
+} from "@posmul/auth-economy-sdk";
+import {
+  toLegacyUserId,
+  toLegacyPredictionGameId,
+} from "../../../../../../shared/type-bridge";
 import { NextRequest, NextResponse } from "next/server";
+
+// EventPublisher 어댑터 클래스 - 타입 변환 처리
+class EventPublisherAdapter implements IDomainEventPublisher {
+  constructor(private readonly publisher: InMemoryEventPublisher) {}
+
+  async publish(event: DomainEvent): Promise<Result<void, SdkPublishError>> {
+    const result = await this.publisher.publish(event);
+    if (result.success) {
+      return { success: true, data: result.data };
+    }
+
+    // isFailure 타입 가드 사용 - LocalPublishError를 SdkPublishError로 변환
+    if (isFailure(result)) {
+      const localError = result.error as LocalPublishError;
+      const sdkError = new SdkPublishError(localError.message, {
+        cause: localError.cause,
+        eventType: localError.eventType,
+        originalCode: localError.code,
+      });
+      return { success: false, error: sdkError };
+    }
+
+    // 이 코드는 실행되지 않지만 TypeScript 만족을 위함
+    throw new Error("Unexpected result state");
+  }
+
+  async publishBatch(
+    events: DomainEvent[]
+  ): Promise<Result<void, SdkPublishError>> {
+    const result = await this.publisher.publishBatch(events);
+    if (result.success) {
+      return { success: true, data: result.data };
+    }
+
+    // isFailure 타입 가드 사용 - LocalPublishError를 SdkPublishError로 변환
+    if (isFailure(result)) {
+      const localError = result.error as LocalPublishError;
+      const sdkError = new SdkPublishError(localError.message, {
+        cause: localError.cause,
+        eventType: localError.eventType,
+        originalCode: localError.code,
+      });
+      return { success: false, error: sdkError };
+    }
+
+    // 이 코드는 실행되지 않지만 TypeScript 만족을 위함
+    throw new Error("Unexpected result state");
+  }
+
+  async isHealthy(): Promise<boolean> {
+    return await this.publisher.isHealthy();
+  }
+}
 
 /**
  * POST /api/predictions/games/[gameId]/participate
@@ -51,31 +119,14 @@ export async function POST(
     }
 
     // Repository 및 서비스 초기화
-    const gameRepository = new SupabasePredictionGameRepository();
+    const gameRepository = new SupabasePredictionGameRepository(
+      process.env.SUPABASE_PROJECT_ID!
+    );
     const eventPublisher = new InMemoryEventPublisher();
-    // EventPublisher 인터페이스 어댑터 생성
-    const eventPublisherAdapter = {
-      publish: async (event: any) => {
-        const result = await eventPublisher.publish(event);
-        if (!result.success) {
-          if (isFailure(result)) {
-            throw new Error(result.error.message);
-          } else {
-            throw new Error("Unknown error");
-          }
-        }
-      },
-      publishBatch: async (events: any[]) => {
-        const result = await eventPublisher.publishBatch(events);
-        if (!result.success) {
-          if (isFailure(result)) {
-            throw new Error(result.error.message);
-          } else {
-            throw new Error("Unknown error");
-          }
-        }
-      },
-    };
+
+    // EventPublisher 어댑터 생성 (타입 변환 처리)
+    const eventPublisherAdapter = new EventPublisherAdapter(eventPublisher);
+
     const economicService = new PredictionEconomicService(
       eventPublisherAdapter
     );
@@ -88,8 +139,8 @@ export async function POST(
 
     // 요청 DTO 생성
     const participationRequest = {
-      userId: body.userId as UserId,
-      gameId: gameId as PredictionGameId,
+      userId: toLegacyUserId(body.userId as UserId),
+      gameId: toLegacyPredictionGameId(gameId as PredictionGameId),
       selectedOptionId: body.selectedOptionId,
       stakeAmount: body.stakeAmount,
       confidence: body.confidence,
@@ -168,7 +219,9 @@ export async function GET(
     }
 
     // Repository 초기화
-    const gameRepository = new SupabasePredictionGameRepository();
+    const gameRepository = new SupabasePredictionGameRepository(
+      process.env.SUPABASE_PROJECT_ID!
+    );
 
     // 게임 정보 조회
     const gameResult = await gameRepository.findById(

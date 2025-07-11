@@ -3,7 +3,7 @@
  *
  * 경제학 효용함수 이론을 기반으로 개인 효용함수와 사회후생함수를 실시간 추정하는 시스템
  *
- * 개인 효용함수: U(x) = α·ln(PMP) + β·ln(PMC) + γ·S(Donate)
+ * 개인 효용함수: U(x) = α·ln(PmpAmount) + β·ln(PmcAmount) + γ·S(Donate)
  * 사회후생함수: W = Σᵢ Uᵢ(x) + λ·Gini(distribution)
  *
  * 이론적 기반:
@@ -13,17 +13,23 @@
  * - Sen's Capability Approach
  */
 
-import { UserId } from "@posmul/shared-types";
-import { DomainError, Result } from "@posmul/shared-types";
-import { PMC, PMP, unwrapPMC, unwrapPMP } from "../value-objects";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result, DomainError } from "@posmul/auth-economy-sdk";
+import {
+  PmcAmount,
+  PmpAmount,
+  unwrapPmcAmount,
+  unwrapPmpAmount,
+} from "../value-objects";
 
 /**
  * 개인 효용함수 파라미터
- * α, β, γ는 각각 PMP, PMC, 기부에 대한 선호도를 나타냄
+ * α, β, γ는 각각 PmpAmount, PmcAmount, 기부에 대한 선호도를 나타냄
  */
 export interface PersonalUtilityParameters {
-  readonly alpha: number; // PMP에 대한 선호도 (0 ≤ α ≤ 1)
-  readonly beta: number; // PMC에 대한 선호도 (0 ≤ β ≤ 1)
+  readonly alpha: number; // PmpAmount에 대한 선호도 (0 ≤ α ≤ 1)
+  readonly beta: number; // PmcAmount에 대한 선호도 (0 ≤ β ≤ 1)
   readonly gamma: number; // 기부에 대한 선호도 (0 ≤ γ ≤ 1)
   readonly confidenceLevel: number; // 추정 신뢰도 (0-1)
   readonly sampleSize: number; // 학습 데이터 수
@@ -50,13 +56,13 @@ export interface BehaviorObservation {
   readonly userId: UserId;
   readonly timestamp: Date;
   readonly actionType:
-    | "PMP_EARN"
-    | "PMC_CONVERT"
+    | "PmpAmount_EARN"
+    | "PmcAmount_CONVERT"
     | "DONATE"
     | "PREDICT"
     | "INVEST";
-  readonly pmpAmount?: PMP;
-  readonly pmcAmount?: PMC;
+  readonly pmpAmount?: PmpAmount;
+  readonly pmcAmount?: PmcAmount;
   readonly donationAmount?: number;
   readonly utilityRealized: number; // 실현된 효용 (만족도 점수)
   readonly contextFactors: {
@@ -72,12 +78,12 @@ export interface BehaviorObservation {
  */
 export interface UtilityEstimationResult {
   readonly personalUtility: number;
-  readonly marginalUtilityPMP: number; // ∂U/∂PMP
-  readonly marginalUtilityPMC: number; // ∂U/∂PMC
+  readonly marginalUtilityPmpAmount: number; // ∂U/∂PmpAmount
+  readonly marginalUtilityPmcAmount: number; // ∂U/∂PmcAmount
   readonly marginalUtilityDonation: number; // ∂U/∂Donation
   readonly elasticity: {
-    pmpElasticity: number; // PMP 탄력성
-    pmcElasticity: number; // PMC 탄력성
+    pmpElasticity: number; // PmpAmount 탄력성
+    pmcElasticity: number; // PmcAmount 탄력성
     donationElasticity: number; // 기부 탄력성
   };
   readonly confidence: number; // 추정 신뢰도
@@ -103,8 +109,8 @@ export class UtilityFunctionEstimationService {
    */
   estimatePersonalUtility(
     observations: BehaviorObservation[],
-    currentPMP: PMP,
-    currentPMC: PMC,
+    currentPmpAmount: PmpAmount,
+    currentPmcAmount: PmcAmount,
     currentDonations: number,
     priorParameters?: PersonalUtilityParameters
   ): Result<UtilityEstimationResult> {
@@ -113,8 +119,8 @@ export class UtilityFunctionEstimationService {
         return {
           success: false,
           error: new DomainError(
-            "INSUFFICIENT_DATA",
-            "3 observations required for utility estimation"
+            "3 observations required for utility estimation",
+            { code: "INSUFFICIENT_DATA" }
           ),
         };
       }
@@ -126,23 +132,23 @@ export class UtilityFunctionEstimationService {
         return {
           success: false,
           error: new DomainError(
-            "INVALID_PARAMETERS",
-            "Estimated parameters are outside valid range"
+            "Estimated parameters are outside valid range",
+            { code: "INVALID_PARAMETERS" }
           ),
         };
       }
 
       // Cobb-Douglas 효용함수 계산
-      // U(x) = α·ln(PMP) + β·ln(PMC) + γ·S(Donate)
-      const pmpValue = unwrapPMP(currentPMP);
-      const pmcValue = unwrapPMC(currentPMC);
+      // U(x) = α·ln(PmpAmount) + β·ln(PmcAmount) + γ·S(Donate)
+      const pmpValue = unwrapPmpAmount(currentPmpAmount);
+      const pmcValue = unwrapPmcAmount(currentPmcAmount);
 
       if (pmpValue <= 0 || pmcValue <= 0) {
         return {
           success: false,
           error: new DomainError(
-            "INVALID_PORTFOLIO",
-            "PMP and PMC values must be positive for utility calculation"
+            "PmpAmount and PmcAmount values must be positive for utility calculation",
+            { pmpValue, pmcValue }
           ),
         };
       }
@@ -153,8 +159,8 @@ export class UtilityFunctionEstimationService {
         parameters.gamma * this.calculateDonationUtility(currentDonations);
 
       // 한계효용 계산
-      const marginalUtilityPMP = parameters.alpha / pmpValue;
-      const marginalUtilityPMC = parameters.beta / pmcValue;
+      const marginalUtilityPmpAmount = parameters.alpha / pmpValue;
+      const marginalUtilityPmcAmount = parameters.beta / pmcValue;
       const marginalUtilityDonation = this.calculateMarginalDonationUtility(
         currentDonations,
         parameters.gamma
@@ -171,8 +177,8 @@ export class UtilityFunctionEstimationService {
         success: true,
         data: {
           personalUtility,
-          marginalUtilityPMP,
-          marginalUtilityPMC,
+          marginalUtilityPmpAmount,
+          marginalUtilityPmcAmount,
           marginalUtilityDonation,
           elasticity,
           confidence: parameters.confidenceLevel,
@@ -182,8 +188,8 @@ export class UtilityFunctionEstimationService {
       return {
         success: false,
         error: new DomainError(
-          "UTILITY_ESTIMATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : "Unknown error",
+          { operation: "utility_estimation", error: String(error) }
         ),
       };
     }
@@ -203,8 +209,8 @@ export class UtilityFunctionEstimationService {
         return {
           success: false,
           error: new DomainError(
-            "NO_PARTICIPANTS",
-            "participant required for social welfare calculation"
+            "participant required for social welfare calculation",
+            { participantCount: individualUtilities.length }
           ),
         };
       }
@@ -213,8 +219,8 @@ export class UtilityFunctionEstimationService {
         return {
           success: false,
           error: new DomainError(
-            "INVALID_LAMBDA",
-            "Lambda (inequality aversion) must be between 0 and 5"
+            "Lambda (inequality aversion) must be between 0 and 5",
+            { lambda, validRange: "0-5" }
           ),
         };
       }
@@ -265,8 +271,8 @@ export class UtilityFunctionEstimationService {
       return {
         success: false,
         error: new DomainError(
-          "SOCIAL_WELFARE_CALCULATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : "Unknown error",
+          { operation: "social_welfare_calculation", error: String(error) }
         ),
       };
     }
@@ -285,10 +291,10 @@ export class UtilityFunctionEstimationService {
       if (learningRate <= 0 || learningRate > 1) {
         return {
           success: false,
-          error: new DomainError(
-            "INVALID_LEARNING_RATE",
-            "Learning rate must be between 0 and 1"
-          ),
+          error: new DomainError("Learning rate must be between 0 and 1", {
+            learningRate,
+            validRange: "0-1",
+          }),
         };
       }
 
@@ -350,8 +356,8 @@ export class UtilityFunctionEstimationService {
       return {
         success: false,
         error: new DomainError(
-          "PARAMETER_UPDATE_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : "Unknown error",
+          { operation: "parameter_update", error: String(error) }
         ),
       };
     }
@@ -363,11 +369,11 @@ export class UtilityFunctionEstimationService {
    */
   predictUtilityChange(
     currentParameters: PersonalUtilityParameters,
-    currentPMP: PMP,
-    currentPMC: PMC,
+    currentPmpAmount: PmpAmount,
+    currentPmcAmount: PmcAmount,
     currentDonations: number,
-    proposedPMP: PMP,
-    proposedPMC: PMC,
+    proposedPmpAmount: PmpAmount,
+    proposedPmcAmount: PmcAmount,
     proposedDonations: number
   ): Result<{
     expectedUtilityChange: number;
@@ -378,27 +384,34 @@ export class UtilityFunctionEstimationService {
       // 현재 효용 계산
       const currentUtilityResult = this.estimatePersonalUtility(
         [],
-        currentPMP,
-        currentPMC,
+        currentPmpAmount,
+        currentPmcAmount,
         currentDonations,
         currentParameters
       );
 
       if (!currentUtilityResult.success) {
-        return currentUtilityResult;
+        return {
+          success: false,
+          error: (currentUtilityResult as { success: false; error: any }).error,
+        };
       }
 
       // 제안된 포트폴리오의 효용 계산
       const proposedUtilityResult = this.estimatePersonalUtility(
         [],
-        proposedPMP,
-        proposedPMC,
+        proposedPmpAmount,
+        proposedPmcAmount,
         proposedDonations,
         currentParameters
       );
 
       if (!proposedUtilityResult.success) {
-        return proposedUtilityResult;
+        return {
+          success: false,
+          error: (proposedUtilityResult as { success: false; error: any })
+            .error,
+        };
       }
 
       const expectedUtilityChange =
@@ -430,8 +443,8 @@ export class UtilityFunctionEstimationService {
       return {
         success: false,
         error: new DomainError(
-          "UTILITY_PREDICTION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
+          error instanceof Error ? error.message : "Unknown error",
+          { operation: "utility_prediction", error: String(error) }
         ),
       };
     }
@@ -463,9 +476,12 @@ export class UtilityFunctionEstimationService {
     for (const obs of observations) {
       const weight = 1 / observations.length;
 
-      if (obs.actionType === "PMP_EARN" && obs.utilityRealized > 0) {
+      if (obs.actionType === "PmpAmount_EARN" && obs.utilityRealized > 0) {
         alpha += weight * obs.utilityRealized * 0.1;
-      } else if (obs.actionType === "PMC_CONVERT" && obs.utilityRealized > 0) {
+      } else if (
+        obs.actionType === "PmcAmount_CONVERT" &&
+        obs.utilityRealized > 0
+      ) {
         beta += weight * obs.utilityRealized * 0.1;
       } else if (obs.actionType === "DONATE" && obs.utilityRealized > 0) {
         gamma += weight * obs.utilityRealized * 0.1;
@@ -578,12 +594,12 @@ export class UtilityFunctionEstimationService {
       alphaGradient:
         error *
         (observation.pmpAmount
-          ? Math.log(unwrapPMP(observation.pmpAmount))
+          ? Math.log(unwrapPmpAmount(observation.pmpAmount))
           : 0),
       betaGradient:
         error *
         (observation.pmcAmount
-          ? Math.log(unwrapPMC(observation.pmcAmount))
+          ? Math.log(unwrapPmcAmount(observation.pmcAmount))
           : 0),
       gammaGradient:
         error *
@@ -600,10 +616,12 @@ export class UtilityFunctionEstimationService {
     let utility = 0;
 
     if (observation.pmpAmount) {
-      utility += parameters.alpha * Math.log(unwrapPMP(observation.pmpAmount));
+      utility +=
+        parameters.alpha * Math.log(unwrapPmpAmount(observation.pmpAmount));
     }
     if (observation.pmcAmount) {
-      utility += parameters.beta * Math.log(unwrapPMC(observation.pmcAmount));
+      utility +=
+        parameters.beta * Math.log(unwrapPmcAmount(observation.pmcAmount));
     }
     if (observation.donationAmount) {
       utility += parameters.gamma * Math.log(1 + observation.donationAmount);

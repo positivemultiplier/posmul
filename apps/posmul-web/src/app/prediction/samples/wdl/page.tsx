@@ -8,7 +8,7 @@
  * @since 2024-12
  */
 
-import { PredictionDetailView } from "@/bounded-contexts/prediction/presentation/components/PredictionDetailView";
+import PredictionDetailView from "../../../../bounded-contexts/prediction/presentation/components/PredictionDetailView";
 
 export default function WDLPredictionSamplePage() {
   // Win-Draw-Lose prediction sample data
@@ -163,7 +163,7 @@ export default function WDLPredictionSamplePage() {
         </div>
 
         {/* Main Component */}
-        <PredictionDetailView
+        // <PredictionDetailView
           game={sampleGame}
           userBalance={userBalance}
           // onParticipate 제거하여 Server Component 오류 해결

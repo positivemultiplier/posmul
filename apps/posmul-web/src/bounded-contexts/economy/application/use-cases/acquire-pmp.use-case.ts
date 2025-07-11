@@ -1,14 +1,15 @@
 /**
- * PMP 획득 Use Case
+ * PmpAmount 획득 Use Case
  *
- * 사용자가 다양한 활동(기부, 예측 게임 참여, 사회 기여 등)을 통해 PMP를 획득하는 핵심 비즈니스 로직
+ * 사용자가 다양한 활동(기부, 예측 게임 참여, 사회 기여 등)을 통해 PmpAmount를 획득하는 핵심 비즈니스 로직
  * Agency Theory와 Behavioral Economics를 적용하여 인센티브 구조 최적화
  */
 
-import { UserId } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
 import {
   AccountBalance,
-  IPMPPMCAccountRepository,
+  IPmpAmountPmcAmountAccountRepository,
   Transaction,
 } from "../../domain/repositories/pmp-pmc-account.repository";
 import {
@@ -21,29 +22,29 @@ import {
   UtilityFunctionEstimationService,
 } from "../../domain/services";
 import {
-  PMP,
-  createPMC,
-  createPMP,
-  unwrapPMP,
+  PmpAmount,
+  createPmcAmount,
+  createPmpAmount,
+  unwrapPmpAmount,
 } from "../../domain/value-objects";
 
-export interface PMPAcquisitionRequest {
+export interface PmpAmountAcquisitionRequest {
   readonly userId: UserId;
-  readonly activityType: PMPActivityType;
+  readonly activityType: PmpAmountActivityType;
   readonly activityData: ActivityData;
   readonly timestamp: Date;
 }
 
-export interface PMPAcquisitionResult {
+export interface PmpAmountAcquisitionResult {
   readonly success: boolean;
-  readonly pmpAmount: PMP;
-  readonly behavioralBonus: PMP;
+  readonly pmpAmount: PmpAmount;
+  readonly behavioralBonus: PmpAmount;
   readonly updatedBalance: AccountBalance;
   readonly utilityIncrease: number;
   readonly message: string;
 }
 
-export type PMPActivityType =
+export type PmpAmountActivityType =
   | "donation"
   | "prediction_game"
   | "community_service"
@@ -59,22 +60,24 @@ export interface ActivityData {
 }
 
 /**
- * PMP 획득 Use Case
+ * PmpAmount 획득 Use Case
  *
- * Behavioral Economics 원리를 활용하여 사용자의 PMP 획득 과정을 최적화
+ * Behavioral Economics 원리를 활용하여 사용자의 PmpAmount 획득 과정을 최적화
  * - Loss Aversion: 기존 활동 패턴 보호
- * - Endowment Effect: 획득한 PMP에 대한 애착 증대
+ * - Endowment Effect: 획득한 PmpAmount에 대한 애착 증대
  * - Mental Accounting: 활동별 별도 보상 체계
  */
-export class AcquirePMPUseCase {
+export class AcquirePmpAmountUseCase {
   constructor(
-    private readonly accountRepository: IPMPPMCAccountRepository,
+    private readonly accountRepository: IPmpAmountPmcAmountAccountRepository,
     private readonly utilityRepository: IUtilityFunctionRepository,
     private readonly behavioralEngine: BehavioralEconomicsEngine,
     private readonly utilityService: UtilityFunctionEstimationService
   ) {}
 
-  async execute(request: PMPAcquisitionRequest): Promise<PMPAcquisitionResult> {
+  
+
+  async execute(request: PmpAmountAcquisitionRequest): Promise<PmpAmountAcquisitionResult> {
     try {
       // 1. 현재 계정 상태 조회
       const currentBalanceResult =
@@ -90,8 +93,8 @@ export class AcquirePMPUseCase {
       const utilityParamsResult =
         await this.utilityRepository.getUtilityParameters(request.userId);
 
-      // 3. 기본 PMP 계산 (활동 유형별 기준)
-      const basePMP = this.calculateBasePMP(
+      // 3. 기본 PmpAmount 계산 (활동 유형별 기준)
+      const basePmpAmount = this.calculateBasePmpAmount(
         request.activityType,
         request.activityData
       );
@@ -103,16 +106,16 @@ export class AcquirePMPUseCase {
         currentBalance
       );
 
-      // 5. 총 PMP 계산
-      const totalPMP = createPMP(
-        (basePMP as number) + (behavioralBonus as number)
+      // 5. 총 PmpAmount 계산
+      const totalPmpAmount = createPmpAmount(
+        (basePmpAmount as number) + (behavioralBonus as number)
       ); // 6. 거래 기록 생성
       const transactionData: Omit<Transaction, "transactionId"> = {
         userId: request.userId,
-        type: "PMP_EARN",
-        amount: unwrapPMP(totalPMP),
-        currencyType: "PMP",
-        description: `PMP acquired via ${request.activityType}: ${request.activityData.description}`,
+        type: "PmpAmount_EARN",
+        amount: unwrapPmpAmount(totalPmpAmount),
+        currencyType: "PmpAmount",
+        description: `PmpAmount acquired via ${request.activityType}: ${request.activityData.description}`,
         timestamp: request.timestamp,
       };
 
@@ -135,8 +138,8 @@ export class AcquirePMPUseCase {
       const utilityInput: UtilityEstimationInput = {
         inputId: `utility_${Date.now()}_${request.userId}`,
         userId: request.userId,
-        actionType: "PMP_EARN",
-        actionValue: totalPMP as number,
+        actionType: "PmpAmount_EARN",
+        actionValue: totalPmpAmount as number,
         contextData: {
           pmpBalance: updatedBalance.pmpBalance,
           pmcBalance: updatedBalance.pmcBalance,
@@ -146,7 +149,7 @@ export class AcquirePMPUseCase {
           weekday: this.isWeekday(request.timestamp),
         },
         satisfactionScore: this.estimateSatisfaction(
-          totalPMP,
+          totalPmpAmount,
           request.activityData
         ),
         regretLevel: 0,
@@ -159,31 +162,31 @@ export class AcquirePMPUseCase {
       // 9. 효용 증가 계산
       const utilityIncrease = await this.calculateUtilityIncrease(
         utilityParamsResult.success ? utilityParamsResult.data.alpha : 0.5,
-        basePMP as number,
-        totalPMP as number
+        basePmpAmount as number,
+        totalPmpAmount as number
       );
 
       return {
         success: true,
-        pmpAmount: totalPMP,
-        behavioralBonus: createPMP(behavioralBonus as number),
+        pmpAmount: totalPmpAmount,
+        behavioralBonus: createPmpAmount(behavioralBonus as number),
         updatedBalance,
         utilityIncrease,
-        message: `Successfully acquired ${totalPMP} PMP through ${request.activityType}`,
+        message: `Successfully acquired ${totalPmpAmount} PmpAmount through ${request.activityType}`,
       };
     } catch (error) {
       return {
         success: false,
-        pmpAmount: createPMP(0),
-        behavioralBonus: createPMP(0),
+        pmpAmount: createPmpAmount(0),
+        behavioralBonus: createPmpAmount(0),
         updatedBalance: {
           userId: request.userId,
-          pmpBalance: createPMP(0),
-          pmcBalance: createPMC(0),
-          totalPMPEarned: createPMP(0),
-          totalPMCEarned: createPMC(0),
-          totalPMPSpent: createPMP(0),
-          totalPMCSpent: createPMC(0),
+          pmpBalance: createPmpAmount(0),
+          pmcBalance: createPmcAmount(0),
+          totalPmpAmountEarned: createPmpAmount(0),
+          totalPmcAmountEarned: createPmcAmount(0),
+          totalPmpAmountSpent: createPmpAmount(0),
+          totalPmcAmountSpent: createPmcAmount(0),
           accountStatus: "active",
           lastActivityAt: new Date(),
           agencyScore: 0,
@@ -192,29 +195,27 @@ export class AcquirePMPUseCase {
           updatedAt: new Date(),
         },
         utilityIncrease: 0,
-        message: `Failed to acquire PMP: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        message: "Invalid state",
       };
     }
   }
 
   /**
-   * 활동 유형별 기본 PMP 계산
+   * 활동 유형별 기본 PmpAmount 계산
    *
-   * 각 활동의 사회적 가치와 난이도를 반영한 기준 PMP 산정
+   * 각 활동의 사회적 가치와 난이도를 반영한 기준 PmpAmount 산정
    */
-  private calculateBasePMP(
-    activityType: PMPActivityType,
+  private calculateBasePmpAmount(
+    activityType: PmpAmountActivityType,
     activityData: ActivityData
-  ): PMP {
-    const baseRates: Record<PMPActivityType, number> = {
-      donation: 100, // 기부액의 10% (1000원 기부 시 100 PMP)
-      prediction_game: 50, // 게임 참여당 50 PMP + 정확도 보너스
-      community_service: 200, // 지역사회 봉사 시간당 200 PMP
-      environmental_action: 150, // 환경 보호 활동당 150 PMP
-      educational_content: 75, // 교육 콘텐츠 생성/공유당 75 PMP
-      civic_participation: 300, // 시민 참여 활동당 300 PMP
+  ): PmpAmount {
+    const baseRates: Record<PmpAmountActivityType, number> = {
+      donation: 100, // 기부액의 10% (1000원 기부 시 100 PmpAmount)
+      prediction_game: 50, // 게임 참여당 50 PmpAmount + 정확도 보너스
+      community_service: 200, // 지역사회 봉사 시간당 200 PmpAmount
+      environmental_action: 150, // 환경 보호 활동당 150 PmpAmount
+      educational_content: 75, // 교육 콘텐츠 생성/공유당 75 PmpAmount
+      civic_participation: 300, // 시민 참여 활동당 300 PmpAmount
     };
 
     const baseRate = baseRates[activityType];
@@ -235,25 +236,25 @@ export class AcquirePMPUseCase {
         multiplier = 1 + (activityData.socialImpact || 0) / 100;
     }
 
-    return createPMP(Math.floor(baseRate * multiplier));
+    return createPmpAmount(Math.floor(baseRate * multiplier));
   }
 
   /**
    * Behavioral Economics 기반 보너스 계산
    *
-   * - Endowment Effect: 보유 PMP가 적을수록 획득 보너스 증가
+   * - Endowment Effect: 보유 PmpAmount가 적을수록 획득 보너스 증가
    * - Loss Aversion: 연속 활동 시 보너스 제공
    * - Mental Accounting: 활동 유형별 별도 보너스 시스템
    */
   private async calculateBehavioralBonus(
-    request: PMPAcquisitionRequest,
+    request: PmpAmountAcquisitionRequest,
     biasProfile: BehavioralBiasProfile | null,
     currentBalance: AccountBalance
-  ): Promise<PMP> {
+  ): Promise<PmpAmount> {
     let bonus = 0;
 
     if (!biasProfile) {
-      return createPMP(bonus);
+      return createPmpAmount(bonus);
     }
 
     // 1. Endowment Effect 보너스 (보유량이 적을수록 더 많은 보너스)
@@ -272,13 +273,13 @@ export class AcquirePMPUseCase {
 
     bonus = endowmentBonus + lossAversionBonus + mentalAccountingBonus;
 
-    return createPMP(Math.floor(bonus));
+    return createPmpAmount(Math.floor(bonus));
   }
 
-  private calculateEndowmentBonus(currentPMP: PMP): number {
-    // PMP가 적을수록 더 많은 보너스 (최대 50% 추가)
+  private calculateEndowmentBonus(currentPmpAmount: PmpAmount): number {
+    // PmpAmount가 적을수록 더 많은 보너스 (최대 50% 추가)
     const threshold = 1000;
-    const pmpValue = currentPMP as number;
+    const pmpValue = currentPmpAmount as number;
     if (pmpValue < threshold) {
       return ((threshold - pmpValue) / threshold) * 50;
     }
@@ -287,7 +288,7 @@ export class AcquirePMPUseCase {
 
   private async calculateLossAversionBonus(
     userId: UserId,
-    activityType: PMPActivityType
+    activityType: PmpAmountActivityType
   ): Promise<number> {
     // 최근 7일간 동일 활동 횟수 조회 (실제로는 repository를 통해 조회)
     // 연속 활동 시 손실 방지를 위한 보너스 제공
@@ -308,11 +309,11 @@ export class AcquirePMPUseCase {
   }
 
   private estimateSatisfaction(
-    totalPMP: PMP,
+    totalPmpAmount: PmpAmount,
     activityData: ActivityData
   ): number {
-    // 획득한 PMP와 활동의 사회적 영향을 기반으로 만족도 추정
-    const pmpValue = totalPMP as number;
+    // 획득한 PmpAmount와 활동의 사회적 영향을 기반으로 만족도 추정
+    const pmpValue = totalPmpAmount as number;
     const baseScore = Math.min(pmpValue / 100, 10);
     const impactScore = (activityData.socialImpact || 0) / 10;
     return Math.min(baseScore + impactScore, 10);
@@ -320,14 +321,14 @@ export class AcquirePMPUseCase {
 
   private async calculateUtilityIncrease(
     alpha: number,
-    basePMP: number,
-    totalPMP: number
+    basePmpAmount: number,
+    totalPmpAmount: number
   ): Promise<number> {
-    // 개인 효용함수 U(x) = α·ln(PMP) + β·ln(PMC) + γ·S(Donate)에서 PMP 증가분 효용
-    if (basePMP <= 0) return 0;
+    // 개인 효용함수 U(x) = α·ln(PmpAmount) + β·ln(PmcAmount) + γ·S(Donate)에서 PmpAmount 증가분 효용
+    if (basePmpAmount <= 0) return 0;
 
-    const beforeUtility = alpha * Math.log(basePMP);
-    const afterUtility = alpha * Math.log(totalPMP);
+    const beforeUtility = alpha * Math.log(basePmpAmount);
+    const afterUtility = alpha * Math.log(totalPmpAmount);
 
     return afterUtility - beforeUtility;
   }

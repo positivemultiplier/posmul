@@ -2,10 +2,29 @@
  * 인증 상태 관리 훅
  */
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { User } from '../../domain/entities/user.entity';
+import { useState, useEffect } from "react";
+import { createAuthEconomyClient, isFailure } from "@posmul/auth-economy-sdk";
+import type { User as SDKUser } from "@posmul/auth-economy-sdk";
+import { User } from "../../domain/entities/user.entity";
+
+// SDK User를 도메인 User 엔티티로 변환하는 유틸리티 함수
+const convertSDKUserToDomainUser = (sdkUser: SDKUser): User => {
+  // 임시로 기본값들을 사용하여 도메인 객체 생성
+  // 실제로는 경제 정보 등을 추가로 조회해야 할 수 있음
+  return User.fromDatabase({
+    id: sdkUser.id as any, // UserId로 캐스팅
+    email: { value: sdkUser.email } as any, // Email value object로 변환
+    displayName: sdkUser.displayName,
+    role: { value: "citizen" } as any, // 기본 역할로 설정
+    pmcBalance: 0, // 기본값
+    pmpBalance: 0, // 기본값
+    isActive: true,
+    createdAt: sdkUser.createdAt,
+    updatedAt: sdkUser.lastActiveAt,
+  });
+};
 
 interface AuthState {
   user: User | null;
@@ -15,7 +34,11 @@ interface AuthState {
 
 interface AuthActions {
   signIn: (credentials: { email: string; password: string }) => Promise<void>;
-  signUp: (data: { email: string; password: string; displayName?: string }) => Promise<void>;
+  signUp: (data: {
+    email: string;
+    password: string;
+    displayName?: string;
+  }) => Promise<void>;
   signOut: () => Promise<void>;
   refreshToken: () => Promise<void>;
 }
@@ -24,10 +47,18 @@ export function useAuth(): AuthState & AuthActions {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
     isLoading: true,
-    isAuthenticated: false
+    isAuthenticated: false,
   });
 
-  const [, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Auth-Economy SDK 클라이언트 초기화
+  const authClient = createAuthEconomyClient({
+    supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    supabaseAnonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    enableEconomy: true,
+    debug: process.env.NODE_ENV === "development",
+  });
 
   // 초기 인증 상태 확인
   useEffect(() => {
@@ -36,35 +67,31 @@ export function useAuth(): AuthState & AuthActions {
 
   const checkAuthStatus = async () => {
     try {
-      // TODO: Supabase 세션 확인 로직 구현
-      // const session = await supabase.auth.getSession();
-      // if (session.data.session) {
-      //   const userData = await fetchUserData(session.data.session.user.id);
-      //   setAuthState({
-      //     user: userData,
-      //     isLoading: false,
-      //     isAuthenticated: true
-      //   });
-      // } else {
-      //   setAuthState({
-      //     user: null,
-      //     isLoading: false,
-      //     isAuthenticated: false
-      //   });
-      // }
-      
-      // 임시 구현
-      setAuthState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false
-      });
+      // SDK를 통한 현재 사용자 확인
+      const userResult = await authClient.auth.getCurrentUser();
+
+      if (userResult.success && userResult.data) {
+        // SDK User를 도메인 User 엔티티로 변환
+        const domainUser = convertSDKUserToDomainUser(userResult.data);
+
+        setAuthState({
+          user: domainUser,
+          isLoading: false,
+          isAuthenticated: true,
+        });
+      } else {
+        setAuthState({
+          user: null,
+          isLoading: false,
+          isAuthenticated: false,
+        });
+      }
     } catch (error) {
-      console.error('Auth status check failed:', error);
+      console.error("Auth status check failed:", error);
       setAuthState({
         user: null,
         isLoading: false,
-        isAuthenticated: false
+        isAuthenticated: false,
       });
     }
   };
@@ -72,65 +99,78 @@ export function useAuth(): AuthState & AuthActions {
   const signIn = async (credentials: { email: string; password: string }) => {
     try {
       setError(null);
-      setAuthState(prev => ({ ...prev, isLoading: true }));
+      setAuthState((prev) => ({ ...prev, isLoading: true }));
 
-      // TODO: 실제 로그인 로직 구현
-      // const authService = new SupabaseAuthService();
-      // const userRepository = new SupabaseUserRepository();
-      // const authDomainService = new AuthDomainService();
-      // const signInUseCase = new SignInUseCase(userRepository, authDomainService, authService);
-      // 
-      // const result = await signInUseCase.execute(credentials);
-      // if (!result.success) {
-      //   throw result.error;
-      // }
-      // 
-      // setAuthState({
-      //   user: result.data.user,
-      //   isLoading: false,
-      //   isAuthenticated: true
-      // });
+      // SDK를 통한 로그인
+      const result = await authClient.auth.signIn(
+        credentials.email as any,
+        credentials.password
+      );
 
-      // 임시 구현
-      console.log('Sign in attempt:', credentials);
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-      
+      if (result.success) {
+        const domainUser = convertSDKUserToDomainUser(result.data.user);
+        setAuthState({
+          user: domainUser,
+          isLoading: false,
+          isAuthenticated: true,
+        });
+      } else {
+        const errorMessage = isFailure(result)
+          ? typeof result.error === "string"
+            ? result.error
+            : result.error?.message || "Unknown error"
+          : "로그인에 실패했습니다.";
+        throw new Error(errorMessage);
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : '로그인 중 오류가 발생했습니다.');
-      setAuthState(prev => ({ ...prev, isLoading: false }));
+      setError(
+        error instanceof Error
+          ? error.message
+          : "로그인 중 오류가 발생했습니다."
+      );
+      setAuthState((prev) => ({ ...prev, isLoading: false }));
       throw error;
     }
   };
 
-  const signUp = async (data: { email: string; password: string; displayName?: string }) => {
+  const signUp = async (data: {
+    email: string;
+    password: string;
+    displayName?: string;
+  }) => {
     try {
       setError(null);
-      setAuthState(prev => ({ ...prev, isLoading: true }));
+      setAuthState((prev) => ({ ...prev, isLoading: true }));
 
-      // TODO: 실제 회원가입 로직 구현
-      // const authService = new SupabaseAuthService();
-      // const userRepository = new SupabaseUserRepository();
-      // const authDomainService = new AuthDomainService();
-      // const signUpUseCase = new SignUpUseCase(userRepository, authDomainService, authService);
-      // 
-      // const result = await signUpUseCase.execute(data);
-      // if (!result.success) {
-      //   throw result.error;
-      // }
-      // 
-      // setAuthState({
-      //   user: result.data.user,
-      //   isLoading: false,
-      //   isAuthenticated: true
-      // });
+      // SDK를 통한 회원가입
+      const result = await authClient.auth.signUp(
+        data.email as any,
+        data.password,
+        data.displayName
+      );
 
-      // 임시 구현
-      console.log('Sign up attempt:', data);
-      setAuthState(prev => ({ ...prev, isLoading: false }));
-      
+      if (result.success) {
+        const domainUser = convertSDKUserToDomainUser(result.data.user);
+        setAuthState({
+          user: domainUser,
+          isLoading: false,
+          isAuthenticated: true,
+        });
+      } else {
+        const errorMessage = isFailure(result)
+          ? typeof result.error === "string"
+            ? result.error
+            : result.error?.message || "Unknown error"
+          : "회원가입에 실패했습니다.";
+        throw new Error(errorMessage);
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : '회원가입 중 오류가 발생했습니다.');
-      setAuthState(prev => ({ ...prev, isLoading: false }));
+      setError(
+        error instanceof Error
+          ? error.message
+          : "회원가입 중 오류가 발생했습니다."
+      );
+      setAuthState((prev) => ({ ...prev, isLoading: false }));
       throw error;
     }
   };
@@ -138,31 +178,59 @@ export function useAuth(): AuthState & AuthActions {
   const signOut = async () => {
     try {
       setError(null);
-      setAuthState(prev => ({ ...prev, isLoading: true }));
+      setAuthState((prev) => ({ ...prev, isLoading: true }));
 
-      // TODO: 실제 로그아웃 로직 구현
-      // const authService = new SupabaseAuthService();
-      // await authService.signOut();
-      
-      setAuthState({
-        user: null,
-        isLoading: false,
-        isAuthenticated: false
-      });
-      
+      // SDK를 통한 로그아웃
+      const result = await authClient.auth.signOut();
+
+      if (result.success) {
+        setAuthState({
+          user: null,
+          isLoading: false,
+          isAuthenticated: false,
+        });
+      } else {
+        const errorMessage = isFailure(result)
+          ? typeof result.error === "string"
+            ? result.error
+            : result.error?.message || "Unknown error"
+          : "로그아웃에 실패했습니다.";
+        throw new Error(errorMessage);
+      }
     } catch (error) {
-      setError(error instanceof Error ? error.message : '로그아웃 중 오류가 발생했습니다.');
-      setAuthState(prev => ({ ...prev, isLoading: false }));
+      setError(
+        error instanceof Error
+          ? error.message
+          : "로그아웃 중 오류가 발생했습니다."
+      );
+      setAuthState((prev) => ({ ...prev, isLoading: false }));
       throw error;
     }
   };
 
   const refreshToken = async () => {
     try {
-      // TODO: 토큰 갱신 로직 구현
-      console.log('Token refresh attempt');
+      // SDK를 통한 토큰 갱신
+      const result = await authClient.auth.refreshSession();
+
+      if (result.success) {
+        const domainUser = convertSDKUserToDomainUser(result.data.user);
+        setAuthState((prev) => ({
+          ...prev,
+          user: domainUser,
+          isAuthenticated: true,
+        }));
+      } else {
+        const errorMessage = isFailure(result)
+          ? typeof result.error === "string"
+            ? result.error
+            : result.error?.message || "Unknown error"
+          : "토큰 갱신에 실패했습니다.";
+        console.error("Token refresh failed:", errorMessage);
+        throw new Error(errorMessage);
+      }
     } catch (error) {
-      console.error('Token refresh failed:', error);
+      console.error("Token refresh failed:", error);
       throw error;
     }
   };
@@ -172,6 +240,6 @@ export function useAuth(): AuthState & AuthActions {
     signIn,
     signUp,
     signOut,
-    refreshToken
+    refreshToken,
   };
 }

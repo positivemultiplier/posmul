@@ -1,19 +1,23 @@
 /**
  * 로그인 유스케이스
+ * Supabase Auth + auth-economy-sdk 기반 인증
  */
 
-import type { Result } from "@posmul/shared-types";
 import {
-  InvalidCredentialsError,
-  UserNotFoundError,
-} from "@posmul/shared-types";
+  Result,
+  AuthError,
+  isFailure,
+  SupabaseAuthService,
+} from "@posmul/auth-economy-sdk";
+import { createEmail } from "@posmul/auth-economy-sdk";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {
   AuthResult,
-  AuthenticationCredentials,
   IAuthDomainService,
+  AuthenticationCredentials,
 } from "../../domain/services/auth-domain.service";
-import { IExternalAuthService } from "./sign-up.use-case";
+import { User } from "../../domain/entities/user.entity";
+import { UserLoggedInEvent, publishEvent } from "../../../../shared/events";
 
 export interface ISignInUseCase {
   execute(
@@ -25,65 +29,79 @@ export class SignInUseCase implements ISignInUseCase {
   constructor(
     private userRepository: IUserRepository,
     private authDomainService: IAuthDomainService,
-    private authService: IExternalAuthService
+    private supabaseAuthService: SupabaseAuthService // auth-economy-sdk의 SupabaseAuthService 사용
   ) {}
 
   async execute(
     credentials: AuthenticationCredentials
   ): Promise<Result<AuthResult, Error>> {
-    // 1. 입력 데이터 검증
-    const validationResult =
-      this.authDomainService.validateLoginData(credentials);
-    if (!validationResult.success) {
-      return validationResult;
-    }
-
     try {
-      // 2. 사용자 존재 여부 확인
-      const userResult = await this.userRepository.findByEmail({
-        value: credentials.email.toLowerCase(),
-      });
-
-      if (!userResult.success) {
-        return userResult;
-      }
-
-      if (!userResult.data) {
+      // 1. 입력 데이터 검증
+      const validationResult =
+        this.authDomainService.validateLoginData(credentials);
+      if (isFailure(validationResult)) {
         return {
           success: false,
-          error: new UserNotFoundError("존재하지 않는 사용자입니다."),
+          error: new Error("입력 데이터가 유효하지 않습니다."),
         };
       }
 
-      const user = userResult.data;
+      // 2. Supabase Auth로 로그인 시도
+      const userEmail = createEmail(credentials.email.toLowerCase());
+      const authResult = await this.supabaseAuthService.signIn(
+        userEmail,
+        credentials.password
+      );
 
-      // 3. 사용자 활성 상태 확인
-      if (!user.isActive) {
+      if (isFailure(authResult)) {
         return {
           success: false,
-          error: new InvalidCredentialsError("비활성화된 계정입니다."),
-        };
-      }
-
-      // 4. 외부 인증 서비스로 로그인
-      const authResult = await this.authService.signIn(credentials);
-      if (!authResult.success) {
-        return {
-          success: false,
-          error: new InvalidCredentialsError(
-            "이메일 또는 비밀번호가 올바르지 않습니다."
+          error: new Error(
+            "인증에 실패했습니다. 이메일과 비밀번호를 확인해주세요."
           ),
         };
       }
 
-      // 5. 인증 결과 반환
+      // 3. 사용자 정보 조회 (추가 검증을 위해)
+      const userResult = await this.userRepository.findByEmail(userEmail);
+
+      if (isFailure(userResult)) {
+        // 사용자 정보를 찾을 수 없어도 auth-economy-sdk에서 반환된 사용자 정보 사용
+        console.warn(
+          "Local user repository에서 사용자를 찾을 수 없습니다. auth-economy-sdk 정보를 사용합니다."
+        );
+      }
+
+      const user = userResult.success ? userResult.data : null;
+
+      // 4. 인증 성공 이벤트 발행
+      const signInEvent = new UserLoggedInEvent(
+        authResult.data.user.id,
+        "email",
+        undefined, // ipAddress
+        undefined, // userAgent
+        new Date()
+      );
+
+      await publishEvent(signInEvent);
+
+      // 5. 인증 결과 반환 - auth-economy-sdk의 AuthResult를 도메인 AuthResult로 변환
+      const domainAuthResult: AuthResult = {
+        user:
+          user ||
+          ({
+            id: authResult.data.user.id,
+            email: authResult.data.user.email,
+            displayName: authResult.data.user.displayName,
+            // 추가 속성들은 기본값으로 설정 (실제로는 사용자 등록 시 설정되어야 함)
+          } as any), // 임시로 any 사용
+        accessToken: authResult.data.session.access_token,
+        refreshToken: authResult.data.session.refresh_token,
+      };
+
       return {
         success: true,
-        data: {
-          user,
-          accessToken: authResult.data.accessToken,
-          refreshToken: authResult.data.refreshToken,
-        },
+        data: domainAuthResult,
       };
     } catch (error) {
       return {
@@ -91,7 +109,7 @@ export class SignInUseCase implements ISignInUseCase {
         error:
           error instanceof Error
             ? error
-            : new Error("로그인 중 오류가 발생했습니다."),
+            : new Error("로그인 중 예기치 않은 오류가 발생했습니다."),
       };
     }
   }

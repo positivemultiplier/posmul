@@ -1,14 +1,15 @@
 /**
- * PMC 전환 Use Case
+ * PmcAmount 전환 Use Case
  *
- * PMP를 PMC로 전환하는 핵심 비즈니스 로직
+ * PmpAmount를 PmcAmount로 전환하는 핵심 비즈니스 로직
  * Agency Theory 기반 Principal-Agent 문제 해결과 CAPM 모델 적용
  */
 
-import { UserId } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
 import {
   AccountBalance,
-  IPMPPMCAccountRepository,
+  IPmpAmountPmcAmountAccountRepository,
   Transaction,
 } from "../../domain/repositories/pmp-pmc-account.repository";
 import {
@@ -21,19 +22,19 @@ import {
   BehavioralEconomicsEngine,
   CAPMEngine,
 } from "../../domain/services";
-import { PMC, PMP, createPMC, createPMP } from "../../domain/value-objects";
+import { PmcAmount, PmpAmount, createPmcAmount, createPmpAmount } from "../../domain/value-objects";
 
-export interface PMCConversionRequest {
+export interface PmcAmountConversionRequest {
   readonly userId: UserId;
-  readonly pmpAmount: PMP;
+  readonly pmpAmount: PmpAmount;
   readonly conversionReason: ConversionReason;
   readonly riskTolerance: number; // 0-1 범위
   readonly timestamp: Date;
 }
 
-export interface PMCConversionResult {
+export interface PmcAmountConversionResult {
   readonly success: boolean;
-  readonly convertedPMC: PMC;
+  readonly convertedPmcAmount: PmcAmount;
   readonly conversionRate: number;
   readonly riskPremium: number;
   readonly agencyCostReduction: number;
@@ -50,23 +51,25 @@ export type ConversionReason =
   | "governance_participation";
 
 /**
- * PMC 전환 Use Case
+ * PmcAmount 전환 Use Case
  *
  * Jensen & Meckling Agency Theory와 CAPM 모델을 적용하여
- * PMP(Risk-Free Asset)를 PMC(Risky Asset)로 전환하는 최적화된 메커니즘
+ * PmpAmount(Risk-Free Asset)를 PmcAmount(Risky Asset)로 전환하는 최적화된 메커니즘
  */
-export class ConvertToPMCUseCase {
+export class ConvertToPmcAmountUseCase {
   constructor(
-    private readonly accountRepository: IPMPPMCAccountRepository,
+    private readonly accountRepository: IPmpAmountPmcAmountAccountRepository,
     private readonly utilityRepository: IUtilityFunctionRepository,
     private readonly agencyEngine: AgencyTheoryEngine,
     private readonly capmEngine: CAPMEngine,
     private readonly behavioralEngine: BehavioralEconomicsEngine
   ) {}
 
-  async execute(request: PMCConversionRequest): Promise<PMCConversionResult> {
+  
+
+  async execute(request: PmcAmountConversionRequest): Promise<PmcAmountConversionResult> {
     try {
-      // 1. 현재 계정 상태 및 PMP 잔액 확인
+      // 1. 현재 계정 상태 및 PmpAmount 잔액 확인
       const balanceResult = await this.accountRepository.getAccountBalance(
         request.userId
       );
@@ -75,11 +78,11 @@ export class ConvertToPMCUseCase {
       }
 
       const currentBalance = balanceResult.data;
-      const requestedPMP = request.pmpAmount as number;
-      const currentPMP = currentBalance.pmpBalance as number;
+      const requestedPmpAmount = request.pmpAmount as number;
+      const currentPmpAmount = currentBalance.pmpBalance as number;
 
-      if (currentPMP < requestedPMP) {
-        throw new Error("Insufficient PMP balance");
+      if (currentPmpAmount < requestedPmpAmount) {
+        throw new Error("Insufficient PmpAmount balance");
       }
 
       // 2. 사용자 행동 패턴 및 위험 선호도 조회
@@ -92,7 +95,7 @@ export class ConvertToPMCUseCase {
       const agencyCostReduction = await this.calculateAgencyCostReduction(
         request.userId,
         request.conversionReason,
-        requestedPMP
+        requestedPmpAmount
       );
 
       // 4. CAPM 기반 위험 프리미엄 및 기대 수익률 계산
@@ -109,14 +112,14 @@ export class ConvertToPMCUseCase {
         request.conversionReason
       );
 
-      // 6. PMC 수량 계산
-      const convertedPMC = createPMC(requestedPMP * conversionRate); // 7. 거래 기록 생성
+      // 6. PmcAmount 수량 계산
+      const convertedPmcAmount = createPmcAmount(requestedPmpAmount * conversionRate); // 7. 거래 기록 생성
       const transactionData: Omit<Transaction, "transactionId"> = {
         userId: request.userId,
-        type: "PMP_TO_PMC_CONVERT",
-        amount: requestedPMP,
-        currencyType: "PMP",
-        description: `PMP to PMC conversion: ${requestedPMP} PMP → ${convertedPMC} PMC (${request.conversionReason})`,
+        type: "PmpAmount_TO_PmcAmount_CONVERT",
+        amount: requestedPmpAmount,
+        currencyType: "PmpAmount",
+        description: `PmpAmount to PmcAmount conversion: ${requestedPmpAmount} PmpAmount → ${convertedPmcAmount} PmcAmount (${request.conversionReason})`,
         timestamp: request.timestamp,
       };
 
@@ -137,31 +140,31 @@ export class ConvertToPMCUseCase {
 
       return {
         success: true,
-        convertedPMC,
+        convertedPmcAmount,
         conversionRate,
         riskPremium: riskMetrics.riskPremium,
         agencyCostReduction,
         updatedBalance: updatedBalanceResult.data,
         expectedReturn: riskMetrics.expectedReturn,
-        message: `Successfully converted ${requestedPMP} PMP to ${convertedPMC} PMC at rate ${conversionRate.toFixed(
+        message: `Successfully converted ${requestedPmpAmount} PmpAmount to ${convertedPmcAmount} PmcAmount at rate ${conversionRate.toFixed(
           4
         )}`,
       };
     } catch (error) {
       return {
         success: false,
-        convertedPMC: createPMC(0),
+        convertedPmcAmount: createPmcAmount(0),
         conversionRate: 0,
         riskPremium: 0,
         agencyCostReduction: 0,
         updatedBalance: {
           userId: request.userId,
-          pmpBalance: createPMP(0),
-          pmcBalance: createPMC(0),
-          totalPMPEarned: createPMP(0),
-          totalPMCEarned: createPMC(0),
-          totalPMPSpent: createPMP(0),
-          totalPMCSpent: createPMC(0),
+          pmpBalance: createPmpAmount(0),
+          pmcBalance: createPmcAmount(0),
+          totalPmpAmountEarned: createPmpAmount(0),
+          totalPmcAmountEarned: createPmcAmount(0),
+          totalPmpAmountSpent: createPmpAmount(0),
+          totalPmcAmountSpent: createPmcAmount(0),
           accountStatus: "active",
           lastActivityAt: new Date(),
           agencyScore: 0,
@@ -170,9 +173,7 @@ export class ConvertToPMCUseCase {
           updatedAt: new Date(),
         },
         expectedReturn: 0,
-        message: `Conversion failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        message: "Invalid state",
       };
     }
   }
@@ -201,7 +202,7 @@ export class ConvertToPMCUseCase {
 
     const baseReduction = reasonMultipliers[reason];
 
-    // PMP 규모에 따른 조정 (규모가 클수록 더 큰 절감 효과)
+    // PmpAmount 규모에 따른 조정 (규모가 클수록 더 큰 절감 효과)
     const scaleAdjustment = Math.min(pmpAmount / 10000, 1.5); // 최대 50% 추가 혜택
 
     return baseReduction * scaleAdjustment;
@@ -211,8 +212,8 @@ export class ConvertToPMCUseCase {
    * CAPM 기반 위험 프리미엄 및 기대 수익률 계산
    *
    * E(R) = Rf + β(Rm - Rf)
-   * - Rf: PMP 수익률 (Risk-Free Rate)
-   * - β: PMC의 시장 베타
+   * - Rf: PmpAmount 수익률 (Risk-Free Rate)
+   * - β: PmcAmount의 시장 베타
    * - (Rm - Rf): 시장 위험 프리미엄
    */
   private async calculateRiskMetrics(
@@ -228,8 +229,8 @@ export class ConvertToPMCUseCase {
     const personalRiskAdjustment = utilityParams?.delta || 0.5;
     const behavioralAdjustment = biasProfile?.lossAversion || 0.5;
 
-    // PMC의 베타 계수 (시장 대비 위험도)
-    const baseBeta = 1.2; // PMC는 시장보다 20% 더 위험
+    // PmcAmount의 베타 계수 (시장 대비 위험도)
+    const baseBeta = 1.2; // PmcAmount는 시장보다 20% 더 위험
     const adjustedBeta = baseBeta * riskTolerance * (1 - behavioralAdjustment);
 
     // 위험 프리미엄 계산
@@ -246,7 +247,7 @@ export class ConvertToPMCUseCase {
   }
 
   /**
-   * PMP → PMC 전환율 계산
+   * PmpAmount → PmcAmount 전환율 계산
    *
    * 전환율 = 기준율 × (1 + AgencyCostReduction) × (1 + RiskPremiumAdjustment) × ReasonMultiplier
    */
@@ -255,7 +256,7 @@ export class ConvertToPMCUseCase {
     riskPremium: number,
     reason: ConversionReason
   ): number {
-    // 기준 전환율 (1 PMP = 0.9 PMC)
+    // 기준 전환율 (1 PmpAmount = 0.9 PmcAmount)
     const baseRate = 0.9;
 
     // Agency Cost 절감에 따른 전환율 혜택

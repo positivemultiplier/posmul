@@ -1,14 +1,15 @@
 /**
  * Economy Kernel Service
  *
- * PosMul 플랫폼의 공유 경제 커널로, 모든 도메인에서 읽기 전용으로 PMP/PMC 잔액을 조회할 수 있습니다.
+ * PosMul 플랫폼의 공유 경제 커널로, 모든 도메인에서 읽기 전용으로 PmpAmount/PmcAmount 잔액을 조회할 수 있습니다.
  * Shared Kernel 패턴을 구현하여 경제 시스템의 무결성을 보장하고,
  * Domain Events를 통해서만 경제 데이터의 변경을 허용합니다.
  *
  * @author PosMul Development Team
  * @since 2024-12
  */
-import { Result, UserId } from "@posmul/shared-types";
+import { Result, UserId } from "@posmul/auth-economy-sdk";
+
 /**
  * Economy Kernel 오류 타입
  */
@@ -18,7 +19,7 @@ export declare class EconomyKernelError extends Error {
     constructor(message: string, code: "USER_NOT_FOUND" | "INSUFFICIENT_BALANCE" | "INVALID_CURRENCY_TYPE" | "SERVICE_UNAVAILABLE" | "REPOSITORY_ERROR", cause?: Error | undefined);
 }
 /**
- * PMP 계정 인터페이스
+ * PmpAmount 계정 인터페이스
  */
 export interface PmpAccount {
     readonly userId: UserId;
@@ -29,7 +30,7 @@ export interface PmpAccount {
     readonly createdAt: Date;
 }
 /**
- * PMC 계정 인터페이스
+ * PmcAmount 계정 인터페이스
  */
 export interface PmcAccount {
     readonly userId: UserId;
@@ -55,19 +56,19 @@ export interface EconomySystemStats {
  */
 export interface IEconomyKernelRepository {
     /**
-     * PMP 잔액 조회
+     * PmpAmount 잔액 조회
      */
     getPmpBalance(userId: UserId): Promise<Result<number, EconomyKernelError>>;
     /**
-     * PMC 잔액 조회
+     * PmcAmount 잔액 조회
      */
     getPmcBalance(userId: UserId): Promise<Result<number, EconomyKernelError>>;
     /**
-     * PMP 계정 정보 조회
+     * PmpAmount 계정 정보 조회
      */
     getPmpAccount(userId: UserId): Promise<Result<PmpAccount, EconomyKernelError>>;
     /**
-     * PMC 계정 정보 조회
+     * PmcAmount 계정 정보 조회
      */
     getPmcAccount(userId: UserId): Promise<Result<PmcAccount, EconomyKernelError>>;
     /**
@@ -75,11 +76,11 @@ export interface IEconomyKernelRepository {
      */
     getSystemStats(): Promise<Result<EconomySystemStats, EconomyKernelError>>;
     /**
-     * 사용자 PMP 잔액이 특정 금액 이상인지 확인
+     * 사용자 PmpAmount 잔액이 특정 금액 이상인지 확인
      */
     hasSufficientPmp(userId: UserId, amount: number): Promise<Result<boolean, EconomyKernelError>>;
     /**
-     * 사용자 PMC 잔액이 특정 금액 이상인지 확인
+     * 사용자 PmcAmount 잔액이 특정 금액 이상인지 확인
      */
     hasSufficientPmc(userId: UserId, amount: number): Promise<Result<boolean, EconomyKernelError>>;
 }
@@ -112,46 +113,46 @@ export declare class EconomyKernel {
      */
     private ensureRepository;
     /**
-     * 사용자 PMP 잔액 조회
+     * 사용자 PmpAmount 잔액 조회
      *
      * @param userId 사용자 ID
-     * @returns PMP 잔액 (숫자)
+     * @returns PmpAmount 잔액 (숫자)
      */
     getPmpBalance(userId: UserId): Promise<Result<number, EconomyKernelError>>;
     /**
-     * 사용자 PMC 잔액 조회
+     * 사용자 PmcAmount 잔액 조회
      *
      * @param userId 사용자 ID
-     * @returns PMC 잔액 (숫자)
+     * @returns PmcAmount 잔액 (숫자)
      */
     getPmcBalance(userId: UserId): Promise<Result<number, EconomyKernelError>>;
     /**
-     * PMP 계정 정보 상세 조회
+     * PmpAmount 계정 정보 상세 조회
      *
      * @param userId 사용자 ID
-     * @returns PMP 계정 정보
+     * @returns PmpAmount 계정 정보
      */
     getPmpAccount(userId: UserId): Promise<Result<PmpAccount, EconomyKernelError>>;
     /**
-     * PMC 계정 정보 상세 조회
+     * PmcAmount 계정 정보 상세 조회
      *
      * @param userId 사용자 ID
-     * @returns PMC 계정 정보
+     * @returns PmcAmount 계정 정보
      */
     getPmcAccount(userId: UserId): Promise<Result<PmcAccount, EconomyKernelError>>;
     /**
-     * PMP 잔액 충분성 확인
+     * PmpAmount 잔액 충분성 확인
      *
      * @param userId 사용자 ID
-     * @param requiredAmount 필요한 PMP 금액
+     * @param requiredAmount 필요한 PmpAmount 금액
      * @returns 잔액 충분성 여부
      */
     canSpendPmp(userId: UserId, requiredAmount: number): Promise<Result<boolean, EconomyKernelError>>;
     /**
-     * PMC 잔액 충분성 확인
+     * PmcAmount 잔액 충분성 확인
      *
      * @param userId 사용자 ID
-     * @param requiredAmount 필요한 PMC 금액
+     * @param requiredAmount 필요한 PmcAmount 금액
      * @returns 잔액 충분성 여부
      */
     canSpendPmc(userId: UserId, requiredAmount: number): Promise<Result<boolean, EconomyKernelError>>;
@@ -162,17 +163,17 @@ export declare class EconomyKernel {
      */
     getSystemStats(): Promise<Result<EconomySystemStats, EconomyKernelError>>;
     /**
-     * 여러 사용자의 PMP 잔액을 일괄 조회
+     * 여러 사용자의 PmpAmount 잔액을 일괄 조회
      *
      * @param userIds 사용자 ID 배열
-     * @returns 사용자별 PMP 잔액 맵
+     * @returns 사용자별 PmpAmount 잔액 맵
      */
     getBulkPmpBalances(userIds: UserId[]): Promise<Result<Map<UserId, number>, EconomyKernelError>>;
     /**
-     * 여러 사용자의 PMC 잔액을 일괄 조회
+     * 여러 사용자의 PmcAmount 잔액을 일괄 조회
      *
      * @param userIds 사용자 ID 배열
-     * @returns 사용자별 PMC 잔액 맵
+     * @returns 사용자별 PmcAmount 잔액 맵
      */
     getBulkPmcBalances(userIds: UserId[]): Promise<Result<Map<UserId, number>, EconomyKernelError>>;
     /**

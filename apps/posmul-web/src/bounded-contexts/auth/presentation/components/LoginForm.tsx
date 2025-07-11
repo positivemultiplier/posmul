@@ -4,8 +4,9 @@
 
 "use client";
 
-import { Button, Card, Input } from "@posmul/shared-ui";
 import { useState } from "react";
+import { Button, Card } from "../../../../shared/ui/components/base";
+import { Input } from "../../../../shared/ui/components/forms";
 
 interface LoginFormProps {
   onSubmit?: (credentials: {
@@ -84,7 +85,7 @@ export function LoginForm({
           value={formData.email}
           onChange={handleInputChange("email")}
           error={validationErrors.email}
-          fullWidth
+          className="w-full"
           disabled={loading}
           placeholder="your@email.com"
         />
@@ -95,7 +96,7 @@ export function LoginForm({
           value={formData.password}
           onChange={handleInputChange("password")}
           error={validationErrors.password}
-          fullWidth
+          className="w-full"
           disabled={loading}
           placeholder="비밀번호를 입력하세요"
         />

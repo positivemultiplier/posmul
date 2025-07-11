@@ -39,9 +39,9 @@ export type {
   MoneyWaveId,
   // Network Economics
   NetworkDensity,
-  PMC,
+  PmcAmount,
   // 핵심 화폐
-  PMP,
+  PmpAmount,
   PredictionAccuracy,
   ProspectValue,
   PValue,
@@ -87,9 +87,9 @@ export {
   createMoneyWaveId,
   // Network Economics 생성자
   createNetworkDensity,
-  createPMC,
+  createPmcAmount,
   // 핵심 화폐 생성자
-  createPMP,
+  createPmpAmount,
   // 실증분석 생성자
   createPredictionAccuracy,
   createProspectValue,
@@ -111,9 +111,9 @@ export {
   unwrapMetcalfeValue,
   unwrapMoneyWaveAmount,
   unwrapNetworkDensity,
-  unwrapPMC,
+  unwrapPmcAmount,
   // 값 추출 함수들
-  unwrapPMP,
+  unwrapPmpAmount,
   // 실증분석 추출 함수들
   unwrapPredictionAccuracy,
   unwrapPValue,

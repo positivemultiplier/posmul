@@ -5,8 +5,9 @@
  * DDD 원칙에 따라 구현체와 인터페이스 분리
  */
 
-import { Result } from "@posmul/shared-types";
-import { PMC, PMP, PredictionAccuracy } from "../../value-objects";
+import { Result } from "@posmul/auth-economy-sdk";
+
+import { PmcAmount, PmpAmount, PredictionAccuracy } from "../../value-objects";
 
 /**
  * Agency Theory 메트릭 인터페이스
@@ -21,11 +22,11 @@ export interface IAgencyMetrics {
 }
 
 /**
- * PMP→PMC 전환 결과 인터페이스
+ * PmpAmount→PmcAmount 전환 결과 인터페이스
  */
 export interface IConversionResult {
-  readonly pmpInput: PMP;
-  readonly pmcOutput: PMC;
+  readonly pmpInput: PmpAmount;
+  readonly pmcOutput: PmcAmount;
   readonly conversionRate: number;
   readonly agencyMetrics: IAgencyMetrics;
   readonly bonusMultiplier: number;
@@ -66,20 +67,20 @@ export interface IEffectivenessResult {
  * Agency Theory Engine 도메인 서비스 인터페이스
  *
  * 책임:
- * - PMP → PMC 전환 메커니즘 제공
+ * - PmpAmount → PmcAmount 전환 메커니즘 제공
  * - Agency Cost 계산 및 최적화
  * - 정보 비대칭 극복 알고리즘
  * - 사회적 학습 효과 측정
  */
 export interface IAgencyTheoryEngine {
   /**
-   * PMP → PMC 전환 실행
-   * @param pmpAmount 투입할 PMP 양
+   * PmpAmount → PmcAmount 전환 실행
+   * @param pmpAmount 투입할 PmpAmount 양
    * @param predictionData 예측 관련 데이터
    * @param participantData 참여자 데이터
    */
-  convertPMPToPMC(
-    pmpAmount: PMP,
+  convertPmpAmountToPmcAmount(
+    pmpAmount: PmpAmount,
     predictionData: IPredictionData,
     participantData: IPredictionParticipant[]
   ): Promise<Result<IConversionResult>>;

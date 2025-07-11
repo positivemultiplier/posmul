@@ -8,12 +8,9 @@
  * @since 2024-12
  */
 
-import { BaseDomainEvent } from "@posmul/shared-ui";
-import {
-  PredictionGameId,
-  PredictionId,
-  UserId,
-} from "@posmul/shared-types";
+import { BaseDomainEvent } from "@posmul/auth-economy-sdk";
+import { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
+
 import { GameStatus } from "../value-objects/game-status";
 import { PredictionType } from "../value-objects/prediction-types";
 
@@ -84,7 +81,7 @@ export class PredictionGameEndedEvent extends BaseDomainEvent {
 export class PredictionParticipatedEvent extends BaseDomainEvent {
   constructor(
     public readonly gameId: PredictionGameId,
-    public readonly predictionId: PredictionId,
+    public readonly predictionId: string,
     public readonly userId: UserId,
     public readonly selectedOptionId: string,
     public readonly confidence: number,
@@ -104,7 +101,7 @@ export class PredictionParticipatedEvent extends BaseDomainEvent {
 }
 
 /**
- * PMP 예측 참여 지불 이벤트 (PD-004에서 생성)
+ * PmpAmount 예측 참여 지불 이벤트 (PD-004에서 생성)
  */
 export class PmpSpentForPredictionEvent extends BaseDomainEvent {
   constructor(
@@ -150,13 +147,13 @@ export class PredictionGameSettledEvent extends BaseDomainEvent {
 }
 
 /**
- * PMC 예측 보상 지급 이벤트 (PD-004에서 생성)
+ * PmcAmount 예측 보상 지급 이벤트 (PD-004에서 생성)
  */
 export class PmcEarnedFromPredictionEvent extends BaseDomainEvent {
   constructor(
     public readonly userId: UserId,
     public readonly gameId: PredictionGameId,
-    public readonly predictionId: PredictionId,
+    public readonly predictionId: string,
     public readonly amount: number,
     public readonly accuracyScore: number,
     public readonly transactionId: string,
@@ -252,7 +249,7 @@ export class PredictionAccuracyCalculatedEvent extends BaseDomainEvent {
   constructor(
     public readonly gameId: PredictionGameId,
     public readonly predictions: Array<{
-      predictionId: PredictionId;
+      predictionId: string;
       userId: UserId;
       accuracyScore: number;
       isWinner: boolean;
@@ -379,8 +376,8 @@ export const PredictionGameEventTypes = {
   PREDICTION_ACCURACY_CALCULATED: "PredictionAccuracyCalculated",
 
   // 경제 시스템 연동
-  PMP_SPENT_FOR_PREDICTION: "PmpSpentForPrediction",
-  PMC_EARNED_FROM_PREDICTION: "PmcEarnedFromPrediction",
+  PmpAmount_SPENT_FOR_PREDICTION: "PmpSpentForPrediction",
+  PmcAmount_EARNED_FROM_PREDICTION: "PmcEarnedFromPrediction",
 
   // MoneyWave 시스템
   MONEY_WAVE_DISTRIBUTION_STARTED: "MoneyWaveDistributionStarted",

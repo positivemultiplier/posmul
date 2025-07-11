@@ -1,11 +1,9 @@
-import { UserId } from "@posmul/shared-types";
 import { NextRequest, NextResponse } from "next/server";
-import { EconomyKernel } from "../../../../shared/economy-kernel/services/economy-kernel.service";
-import { MoneyWaveCalculatorService } from "../../../../shared/economy-kernel/services/money-wave-calculator.service";
+import { getEconomicBalance } from "../../../../shared/adapters/simple-economy.adapter";
 
 /**
  * GET /api/economy/pmp-pmc-overview
- * PMP/PMC 경제 시스템 개요 조회
+ * PmpAmount/PmcAmount 경제 시스템 개요 조회 (Auth-Economy SDK 기반)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -25,85 +23,53 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 서비스 초기화
-    const economyKernel = EconomyKernel.getInstance();
-    const moneyWaveCalculator = new MoneyWaveCalculatorService();
+    // 새로운 SDK 어댑터를 통한 잔액 조회
+    const balanceData = await getEconomicBalance(userId);
 
-    // 사용자 경제 현황 조회
-    const [pmpBalanceResult, pmcBalanceResult] = await Promise.all([
-      economyKernel.getPmpBalance(userId as UserId),
-      economyKernel.getPmcBalance(userId as UserId),
-    ]);
-
-    // 결과 확인
-    if (!pmpBalanceResult.success || !pmcBalanceResult.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "BALANCE_FETCH_FAILED",
-            message: "Failed to fetch user balance",
-          },
-        },
-        { status: 500 }
-      );
-    }
-
-    const pmpBalance = pmpBalanceResult.data;
-    const pmcBalance = pmcBalanceResult.data;
-
-    // 시스템 전체 현황 조회 (임시로 기본값 사용)
-    const systemOverview = {
-      totalPmpInCirculation: 1000000,
-      totalPmcInCirculation: 500000,
+    // 시스템 통계 조회 (현재 SDK에서 지원하지 않으므로 기본값)
+    const systemStats = {
+      totalPmpAmount: 1000000,
+      totalPmcAmount: 500000,
       activeUsers: 100,
-      dailyTransactionVolume: 10000,
+      totalTransactions: 10000,
     };
 
-    // MoneyWave 현황 조회
-    const dailyPrizePoolResult =
-      await moneyWaveCalculator.calculateDailyPrizePool();
-    const dailyPrizePool = dailyPrizePoolResult.success
-      ? dailyPrizePoolResult.data
-      : null;
-
-    // 사용자 경제 통계 계산
-    const userEconomicStats = await calculateUserEconomicStats(
-      userId as UserId,
-      economyKernel
-    );
+    // 사용자 경제 통계 (기본값으로 초기화)
+    const userStats = await calculateUserEconomicStats(userId);
 
     return NextResponse.json({
       success: true,
       data: {
         userEconomy: {
-          pmpBalance,
-          pmcBalance,
-          totalValue: pmpBalance + pmcBalance, // 간단한 합계
-          stats: userEconomicStats,
+          pmpBalance: balanceData.pmpBalance,
+          pmcBalance: balanceData.pmcBalance,
+          totalValue: balanceData.pmpBalance + balanceData.pmcBalance,
+          lastActivity: balanceData.lastActivity,
+          stats: userStats,
         },
         systemEconomy: {
-          totalPmpInCirculation: systemOverview.totalPmpInCirculation,
-          totalPmcInCirculation: systemOverview.totalPmcInCirculation,
-          activeUsers: systemOverview.activeUsers,
-          dailyTransactionVolume: systemOverview.dailyTransactionVolume,
+          totalPmpInCirculation: systemStats.totalPmpAmount,
+          totalPmcInCirculation: systemStats.totalPmcAmount,
+          activeUsers: systemStats.activeUsers,
+          dailyTransactionVolume: systemStats.totalTransactions,
         },
         moneyWave: {
-          currentWave: 1, // 기본값
-          dailyPrizePool: dailyPrizePool?.totalDailyPool || 0,
-          nextDistribution: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24시간 후
-          waveEfficiency: 0.85, // 기본 효율성
+          currentWave: 1,
+          dailyPrizePool: 5000, // 기본값
+          nextDistribution: new Date(Date.now() + 24 * 60 * 60 * 1000),
+          waveEfficiency: 0.85,
         },
         marketIndicators: {
-          pmpDemand: calculatePmpDemand(systemOverview),
-          pmcVolatility: calculatePmcVolatility(systemOverview),
-          economicHealth: calculateEconomicHealth(systemOverview),
+          pmpDemand: calculatePmpDemand(systemStats),
+          pmcVolatility: calculatePmcVolatility(systemStats),
+          economicHealth: calculateEconomicHealth(systemStats),
         },
       },
       metadata: {
         timestamp: new Date(),
-        version: "1.0.0",
-        refreshInterval: 300, // 5분마다 갱신 권장
+        version: "2.0.0-sdk", // SDK 기반 버전
+        refreshInterval: 300,
+        migrationStatus: "auth-economy-sdk-integrated",
       },
     });
   } catch (error) {
@@ -122,12 +88,9 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * 사용자 경제 통계 계산
+ * 사용자 경제 통계 계산 (SDK 기반)
  */
-async function calculateUserEconomicStats(
-  userId: UserId,
-  economyKernel: EconomyKernel
-): Promise<{
+async function calculateUserEconomicStats(userId: string): Promise<{
   weeklyPmpEarned: number;
   weeklyPmcEarned: number;
   totalTransactions: number;
@@ -135,14 +98,13 @@ async function calculateUserEconomicStats(
   riskScore: number;
 }> {
   try {
-    // 실제로는 transaction history를 조회해야 함
-    // 여기서는 기본값 반환
+    // SDK를 통한 트랜잭션 히스토리 조회 (현재 미구현이므로 기본값)
     return {
       weeklyPmpEarned: 0,
       weeklyPmcEarned: 0,
       totalTransactions: 0,
       averageTransactionSize: 0,
-      riskScore: 0.5, // 중간 위험도
+      riskScore: 0.5,
     };
   } catch (error) {
     console.error("Error calculating user economic stats:", error);
@@ -157,40 +119,31 @@ async function calculateUserEconomicStats(
 }
 
 /**
- * PMP 수요 계산
+ * PmpAmount 수요 계산
  */
-function calculatePmpDemand(systemOverview: any): number {
-  // 간단한 수요 지수 계산
-  if (!systemOverview.totalPmpInCirculation) return 0;
-
-  const demandRatio =
-    systemOverview.dailyTransactionVolume /
-    systemOverview.totalPmpInCirculation;
-  return Math.min(demandRatio * 100, 100); // 0-100 스케일
+function calculatePmpDemand(systemStats: any): number {
+  if (!systemStats.totalPmpAmount) return 0;
+  const demandRatio = systemStats.totalTransactions / systemStats.totalPmpAmount;
+  return Math.min(demandRatio * 100, 100);
 }
 
 /**
- * PMC 변동성 계산
+ * PmcAmount 변동성 계산
  */
-function calculatePmcVolatility(systemOverview: any): number {
-  // 간단한 변동성 지수 계산
-  if (!systemOverview.totalPmcInCirculation) return 0;
-
-  // 실제로는 가격 변동 이력을 분석해야 함
-  return 25; // 기본값 25% 변동성
+function calculatePmcVolatility(systemStats: any): number {
+  if (!systemStats.totalPmcAmount) return 0;
+  return 25; // 기본 변동성
 }
 
 /**
  * 경제 건강도 계산
  */
-function calculateEconomicHealth(systemOverview: any): number {
-  // 여러 지표를 종합한 건강도 점수 (0-100)
+function calculateEconomicHealth(systemStats: any): number {
   const factors = [
-    systemOverview.activeUsers > 0 ? 25 : 0,
-    systemOverview.totalPmpInCirculation > 0 ? 25 : 0,
-    systemOverview.totalPmcInCirculation > 0 ? 25 : 0,
-    systemOverview.dailyTransactionVolume > 0 ? 25 : 0,
+    systemStats.activeUsers > 0 ? 25 : 0,
+    systemStats.totalPmpAmount > 0 ? 25 : 0,
+    systemStats.totalPmcAmount > 0 ? 25 : 0,
+    systemStats.totalTransactions > 0 ? 25 : 0,
   ];
-
   return factors.reduce((sum, factor) => sum + factor, 0);
 }

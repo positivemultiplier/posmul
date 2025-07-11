@@ -4,8 +4,8 @@
 
 // 포인트 시스템 상수
 export const POINT_SYSTEM = {
-  PMC: {
-    NAME: 'PMC',
+  PmcAmount: {
+    NAME: 'PmcAmount',
     DISPLAY_NAME: 'Posmul Coin',
     // Local League 기본 적립률 (결제 금액의 1%)
     LOCAL_LEAGUE_BASE_RATE: 0.01,
@@ -16,8 +16,8 @@ export const POINT_SYSTEM = {
     // 월 구독자 보너스
     MONTHLY_SUBSCRIPTION_BONUS: 1000,
   },
-  PMP: {
-    NAME: 'PMP',
+  PmpAmount: {
+    NAME: 'PmpAmount',
     DISPLAY_NAME: 'Posmul Point',
     // Major League 시청 기본 적립 (1분당)
     MAJOR_LEAGUE_BASE_RATE: 10,

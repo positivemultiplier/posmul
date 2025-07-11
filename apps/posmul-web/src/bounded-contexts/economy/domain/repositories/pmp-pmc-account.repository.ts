@@ -1,25 +1,24 @@
 /**
- * PMP/PMC Account Repository Interface
+ * PmpAmount/PmcAmount Account Repository Interface
  *
- * PMP와 PMC 잔액 관리를 위한 리포지토리 인터페이스
+ * PmpAmount와 PmcAmount 잔액 관리를 위한 리포지토리 인터페이스
  * Clean Architecture 원칙에 따라 도메인 계층에서 인터페이스만 정의
  */
 
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
-import { PMC, PMP } from "../value-objects";
+import { UserId, Result } from "@posmul/auth-economy-sdk";
+import { PmcAmount, PmpAmount } from "../value-objects";
 
 /**
  * 계정 잔액 정보
  */
 export interface AccountBalance {
   readonly userId: UserId;
-  readonly pmpBalance: PMP;
-  readonly pmcBalance: PMC;
-  readonly totalPMPEarned: PMP;
-  readonly totalPMCEarned: PMC;
-  readonly totalPMPSpent: PMP;
-  readonly totalPMCSpent: PMC;
+  readonly pmpBalance: PmpAmount;
+  readonly pmcBalance: PmcAmount;
+  readonly totalPmpAmountEarned: PmpAmount;
+  readonly totalPmcAmountEarned: PmcAmount;
+  readonly totalPmpAmountSpent: PmpAmount;
+  readonly totalPmcAmountSpent: PmcAmount;
   readonly accountStatus: "active" | "frozen" | "suspended" | "dormant";
   readonly lastActivityAt: Date;
   readonly agencyScore: number;
@@ -35,12 +34,12 @@ export interface Transaction {
   readonly transactionId: string;
   readonly userId: UserId;
   readonly type:
-    | "PMP_EARN"
-    | "PMC_EARN"
-    | "PMP_SPEND"
-    | "PMC_SPEND"
-    | "PMP_TO_PMC_CONVERT"
-    | "PMC_TO_PMP_CONVERT"
+    | "PmpAmount_EARN"
+    | "PmcAmount_EARN"
+    | "PmpAmount_SPEND"
+    | "PmcAmount_SPEND"
+    | "PmpAmount_TO_PmcAmount_CONVERT"
+    | "PmcAmount_TO_PmpAmount_CONVERT"
     | "DONATION"
     | "PREDICTION_STAKE"
     | "PREDICTION_REWARD"
@@ -52,7 +51,7 @@ export interface Transaction {
     | "ADMIN_ADJUSTMENT"
     | "SYSTEM_REWARD";
   readonly amount: number;
-  readonly currencyType: "PMP" | "PMC";
+  readonly currencyType: "PmpAmount" | "PmcAmount";
   readonly description: string;
   readonly timestamp: Date;
   readonly referenceType?: string;
@@ -72,8 +71,8 @@ export interface AccountActivity {
   readonly lastLoginDate: Date;
   readonly lastTransactionDate: Date;
   readonly transactionCount: number;
-  readonly totalPMPEarned: PMP;
-  readonly totalPMCEarned: PMC;
+  readonly totalPmpAmountEarned: PmpAmount;
+  readonly totalPmcAmountEarned: PmcAmount;
   readonly averageActivityScore: number;
 }
 
@@ -81,10 +80,10 @@ export interface AccountActivity {
  * 검색 필터 조건
  */
 export interface AccountSearchFilter {
-  readonly minPMPBalance?: PMP;
-  readonly maxPMPBalance?: PMP;
-  readonly minPMCBalance?: PMC;
-  readonly maxPMCBalance?: PMC;
+  readonly minPmpAmountBalance?: PmpAmount;
+  readonly maxPmpAmountBalance?: PmpAmount;
+  readonly minPmcAmountBalance?: PmcAmount;
+  readonly maxPmcAmountBalance?: PmcAmount;
   readonly accountStatus?: "active" | "frozen" | "suspended" | "dormant";
   readonly lastActivityBefore?: Date;
   readonly lastActivityAfter?: Date;
@@ -93,9 +92,9 @@ export interface AccountSearchFilter {
 }
 
 /**
- * PMP/PMC 계정 리포지토리 인터페이스
+ * PmpAmount/PmcAmount 계정 리포지토리 인터페이스
  */
-export interface IPMPPMCAccountRepository {
+export interface IPmpAmountPmcAmountAccountRepository {
   /**
    * 사용자 계정 잔액 조회
    */
@@ -111,8 +110,8 @@ export interface IPMPPMCAccountRepository {
    */
   updateAccountBalance(
     userId: UserId,
-    pmpBalance: PMP,
-    pmcBalance: PMC
+    pmpBalance: PmpAmount,
+    pmcBalance: PmcAmount
   ): Promise<Result<AccountBalance>>;
 
   /**
@@ -146,7 +145,7 @@ export interface IPMPPMCAccountRepository {
    */
   findDormantAccounts(
     dormancyPeriodMonths: number,
-    minBalance?: PMC
+    minBalance?: PmcAmount
   ): Promise<Result<AccountBalance[]>>;
 
   /**
@@ -159,12 +158,12 @@ export interface IPMPPMCAccountRepository {
   ): Promise<Result<AccountBalance[]>>;
 
   /**
-   * 전체 PMP/PMC 통계
+   * 전체 PmpAmount/PmcAmount 통계
    */
   getSystemTotals(): Promise<
     Result<{
-      totalPMPSupply: PMP;
-      totalPMCSupply: PMC;
+      totalPmpAmountSupply: PmpAmount;
+      totalPmcAmountSupply: PmcAmount;
       activeAccountCount: number;
       totalTransactionCount: number;
     }>

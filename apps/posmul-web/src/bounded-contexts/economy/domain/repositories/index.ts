@@ -5,12 +5,12 @@
  * 이 인터페이스들은 Infrastructure 계층에서 구현되며, Application 계층에서 의존성 주입으로 사용
  */
 
-// PMP/PMC 계정 및 거래 관리
+// PmpAmount/PmcAmount 계정 및 거래 관리
 export type {
   AccountActivity,
   AccountBalance,
   AccountSearchFilter,
-  IPMPPMCAccountRepository,
+  IPmpAmountPmcAmountAccountRepository,
   Transaction,
 } from "./pmp-pmc-account.repository";
 

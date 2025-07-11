@@ -1,8 +1,8 @@
 /**
  * Prediction Domain Event Handlers
  *
- * 예측 도메인에서 발생하는 이벤트들을 처리하는 핸들러들을 정의합니다.
- * 경제 시스템과의 통신 및 다른 도메인과의 상호작용을 담당합니다.
+ * ?�측 ?�메?�에??발생?�는 ?�벤?�들??처리?�는 ?�들?�들???�의?�니??
+ * 경제 ?�스?�과???�신 �??�른 ?�메?�과???�호?�용???�당?�니??
  *
  * @author PosMul Development Team
  * @since 2024-12
@@ -13,12 +13,12 @@ import {
   PmcSpentEvent,
   PmpEarnedEvent,
   PmpSpentEvent,
-} from "@posmul/shared-ui";
-import {
-  HandlerError,
   IDomainEventSubscriber,
-} from "@posmul/shared-ui";
-import { Result } from "@posmul/shared-types";
+  BusinessLogicError,
+  HandlerError,
+} from "@posmul/auth-economy-sdk";
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   MoneyWaveDistributionCompletedEvent,
   PmcEarnedFromPredictionEvent,
@@ -28,8 +28,8 @@ import {
 } from "../../../prediction/domain/events/prediction-game-events";
 
 /**
- * 예측 참여 이벤트 핸들러
- * PMP 차감 이벤트를 경제 시스템으로 전파합니다.
+ * ?�측 참여 ?�벤???�들??
+ * PmpAmount 차감 ?�벤?��? 경제 ?�스?�으�??�파?�니??
  */
 export class PredictionParticipatedEventHandler
   implements IDomainEventSubscriber<PredictionParticipatedEvent>
@@ -45,13 +45,13 @@ export class PredictionParticipatedEventHandler
         `[PredictionParticipatedEventHandler] Processing event: ${event.id}`
       );
 
-      // 1. 통계 업데이트 (실제 구현에서는 통계 서비스 호출)
+      // 1. ?�계 ?�데?�트 (?�제 구현?�서???�계 ?�비???�출)
       await this.updateParticipationStats(event);
 
-      // 2. 실시간 알림 발송 (실제 구현에서는 알림 서비스 호출)
+      // 2. ?�시�??�림 발송 (?�제 구현?�서???�림 ?�비???�출)
       await this.sendParticipationNotification(event);
 
-      // 3. 게임 상태 업데이트 체크 (참여자 수 기반)
+      // 3. 게임 ?�태 ?�데?�트 체크 (참여????기반)
       await this.checkGameStateUpdate(event);
 
       console.log(
@@ -67,13 +67,9 @@ export class PredictionParticipatedEventHandler
 
       return {
         success: false,
-        error: new HandlerError(
-          `Failed to handle PredictionParticipated event: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
-          error instanceof Error ? error : undefined,
-          this.subscriberId
-        ),
+        error: new HandlerError("Invalid state", {
+          cause: error instanceof Error ? error.message : "unknown error",
+        }),
       };
     }
   }
@@ -81,7 +77,7 @@ export class PredictionParticipatedEventHandler
   private async updateParticipationStats(
     event: PredictionParticipatedEvent
   ): Promise<void> {
-    // TODO: 실제 통계 서비스와 연동
+    // TODO: ?�제 ?�계 ?�비?��? ?�동
     console.log(
       `[Stats] User ${event.userId} participated in game ${event.gameId} with stake ${event.stakeAmount}`
     );
@@ -90,7 +86,7 @@ export class PredictionParticipatedEventHandler
   private async sendParticipationNotification(
     event: PredictionParticipatedEvent
   ): Promise<void> {
-    // TODO: 실제 알림 서비스와 연동
+    // TODO: ?�제 ?�림 ?�비?��? ?�동
     console.log(
       `[Notification] Participation notification sent for user ${event.userId}`
     );
@@ -99,14 +95,14 @@ export class PredictionParticipatedEventHandler
   private async checkGameStateUpdate(
     event: PredictionParticipatedEvent
   ): Promise<void> {
-    // TODO: 게임 상태 업데이트 로직
+    // TODO: 게임 ?�태 ?�데?�트 로직
     console.log(`[GameState] Checking state update for game ${event.gameId}`);
   }
 }
 
 /**
- * PMP 지출 이벤트 핸들러
- * 경제 시스템의 PMP 지출을 처리합니다.
+ * PmpAmount 지�??�벤???�들??
+ * 경제 ?�스?�의 PmpAmount 지출을 처리?�니??
  */
 export class PmpSpentForPredictionEventHandler
   implements IDomainEventSubscriber<PmpSpentForPredictionEvent>
@@ -122,13 +118,13 @@ export class PmpSpentForPredictionEventHandler
         `[PmpSpentForPredictionEventHandler] Processing event: ${event.id}`
       );
 
-      // 1. 경제 시스템 트랜잭션 기록
+      // 1. 경제 ?�스???�랜??�� 기록
       await this.recordEconomicTransaction(event);
 
-      // 2. 사용자 잔액 업데이트 확인
+      // 2. ?�용???�액 ?�데?�트 ?�인
       await this.verifyBalanceUpdate(event);
 
-      // 3. 감사 로그 생성
+      // 3. 감사 로그 ?�성
       await this.createAuditLog(event);
 
       console.log(
@@ -144,13 +140,9 @@ export class PmpSpentForPredictionEventHandler
 
       return {
         success: false,
-        error: new HandlerError(
-          `Failed to handle PmpSpentForPrediction event: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
-          error instanceof Error ? error : undefined,
-          this.subscriberId
-        ),
+        error: new HandlerError("Invalid state", {
+          cause: error instanceof Error ? error.message : "unknown error",
+        }),
       };
     }
   }
@@ -158,16 +150,16 @@ export class PmpSpentForPredictionEventHandler
   private async recordEconomicTransaction(
     event: PmpSpentForPredictionEvent
   ): Promise<void> {
-    // TODO: 경제 시스템 트랜잭션 기록
+    // TODO: 경제 ?�스???�랜??�� 기록
     console.log(
-      `[EconomicTransaction] PMP spent recorded: ${event.amount} for user ${event.userId}`
+      `[EconomicTransaction] PmpAmount spent recorded: ${event.amount} for user ${event.userId}`
     );
   }
 
   private async verifyBalanceUpdate(
     event: PmpSpentForPredictionEvent
   ): Promise<void> {
-    // TODO: 잔액 업데이트 확인
+    // TODO: ?�액 ?�데?�트 ?�인
     console.log(
       `[BalanceVerification] Verifying balance update for user ${event.userId}`
     );
@@ -176,16 +168,16 @@ export class PmpSpentForPredictionEventHandler
   private async createAuditLog(
     event: PmpSpentForPredictionEvent
   ): Promise<void> {
-    // TODO: 감사 로그 생성
+    // TODO: 감사 로그 ?�성
     console.log(
-      `[AuditLog] PMP spending audit log created for transaction ${event.transactionId}`
+      `[AuditLog] PmpAmount spending audit log created for transaction ${event.transactionId}`
     );
   }
 }
 
 /**
- * 예측 게임 정산 이벤트 핸들러
- * 게임 정산 시 PMC 보상 분배를 처리합니다.
+ * ?�측 게임 ?�산 ?�벤???�들??
+ * 게임 ?�산 ??PmcAmount 보상 분배�?처리?�니??
  */
 export class PredictionGameSettledEventHandler
   implements IDomainEventSubscriber<PredictionGameSettledEvent>
@@ -201,16 +193,16 @@ export class PredictionGameSettledEventHandler
         `[PredictionGameSettledEventHandler] Processing event: ${event.id}`
       );
 
-      // 1. 게임 결과 통계 업데이트
+      // 1. 게임 결과 ?�계 ?�데?�트
       await this.updateGameResultStats(event);
 
-      // 2. 참여자 성과 기록 업데이트
+      // 2. 참여???�과 기록 ?�데?�트
       await this.updateParticipantPerformance(event);
 
-      // 3. 리더보드 업데이트
+      // 3. 리더보드 ?�데?�트
       await this.updateLeaderboard(event);
 
-      // 4. 정산 완료 알림 발송
+      // 4. ?�산 ?�료 ?�림 발송
       await this.sendSettlementNotifications(event);
 
       console.log(
@@ -226,13 +218,9 @@ export class PredictionGameSettledEventHandler
 
       return {
         success: false,
-        error: new HandlerError(
-          `Failed to handle PredictionGameSettled event: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
-          error instanceof Error ? error : undefined,
-          this.subscriberId
-        ),
+        error: new HandlerError("Invalid state", {
+          cause: error instanceof Error ? error.message : "unknown error",
+        }),
       };
     }
   }
@@ -271,8 +259,8 @@ export class PredictionGameSettledEventHandler
 }
 
 /**
- * PMC 획득 이벤트 핸들러
- * 예측 성공으로 인한 PMC 보상을 처리합니다.
+ * PmcAmount ?�득 ?�벤???�들??
+ * ?�측 ?�공?�로 ?�한 PmcAmount 보상??처리?�니??
  */
 export class PmcEarnedFromPredictionEventHandler
   implements IDomainEventSubscriber<PmcEarnedFromPredictionEvent>
@@ -288,16 +276,16 @@ export class PmcEarnedFromPredictionEventHandler
         `[PmcEarnedFromPredictionEventHandler] Processing event: ${event.id}`
       );
 
-      // 1. 경제 시스템 PMC 크레딧 기록
+      // 1. 경제 ?�스??PmcAmount ?�레??기록
       await this.recordPmcCredit(event);
 
-      // 2. 사용자 성과 기록 업데이트
+      // 2. ?�용???�과 기록 ?�데?�트
       await this.updateUserPerformance(event);
 
-      // 3. 보상 알림 발송
+      // 3. 보상 ?�림 발송
       await this.sendRewardNotification(event);
 
-      // 4. MoneyWave 재분배 트리거 체크
+      // 4. MoneyWave ?�분�??�리�?체크
       await this.checkMoneyWaveRedistribution(event);
 
       console.log(
@@ -313,13 +301,9 @@ export class PmcEarnedFromPredictionEventHandler
 
       return {
         success: false,
-        error: new HandlerError(
-          `Failed to handle PmcEarnedFromPrediction event: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
-          error instanceof Error ? error : undefined,
-          this.subscriberId
-        ),
+        error: new HandlerError("Invalid state", {
+          cause: error instanceof Error ? error.message : "unknown error",
+        }),
       };
     }
   }
@@ -328,7 +312,7 @@ export class PmcEarnedFromPredictionEventHandler
     event: PmcEarnedFromPredictionEvent
   ): Promise<void> {
     console.log(
-      `[PmcCredit] Recording PMC credit: ${event.amount} for user ${event.userId}`
+      `[PmcCredit] Recording PmcAmount credit: ${event.amount} for user ${event.userId}`
     );
   }
 
@@ -358,8 +342,8 @@ export class PmcEarnedFromPredictionEventHandler
 }
 
 /**
- * MoneyWave 분배 완료 이벤트 핸들러
- * MoneyWave 시스템의 분배 완료를 처리합니다.
+ * MoneyWave 분배 ?�료 ?�벤???�들??
+ * MoneyWave ?�스?�의 분배 ?�료�?처리?�니??
  */
 export class MoneyWaveDistributionCompletedEventHandler
   implements IDomainEventSubscriber<MoneyWaveDistributionCompletedEvent>
@@ -375,16 +359,16 @@ export class MoneyWaveDistributionCompletedEventHandler
         `[MoneyWaveDistributionCompletedEventHandler] Processing event: ${event.id}`
       );
 
-      // 1. 분배 통계 업데이트
+      // 1. 분배 ?�계 ?�데?�트
       await this.updateDistributionStats(event);
 
-      // 2. 게임별 분배 현황 업데이트
+      // 2. 게임�?분배 ?�황 ?�데?�트
       await this.updateGameDistributionStatus(event);
 
-      // 3. 경제 시스템 메트릭 업데이트
+      // 3. 경제 ?�스??메트�??�데?�트
       await this.updateEconomicMetrics(event);
 
-      // 4. 분배 완료 알림 발송
+      // 4. 분배 ?�료 ?�림 발송
       await this.sendDistributionNotifications(event);
 
       console.log(
@@ -400,13 +384,9 @@ export class MoneyWaveDistributionCompletedEventHandler
 
       return {
         success: false,
-        error: new HandlerError(
-          `Failed to handle MoneyWaveDistributionCompleted event: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
-          error instanceof Error ? error : undefined,
-          this.subscriberId
-        ),
+        error: new HandlerError("Invalid state", {
+          cause: error instanceof Error ? error.message : "unknown error",
+        }),
       };
     }
   }
@@ -445,8 +425,8 @@ export class MoneyWaveDistributionCompletedEventHandler
 }
 
 /**
- * 경제 시스템 이벤트 핸들러
- * Economy Kernel에서 발생하는 이벤트들을 처리합니다.
+ * 경제 ?�스???�벤???�들??
+ * Economy Kernel?�서 발생?�는 ?�벤?�들??처리?�니??
  */
 export class EconomicEventHandler
   implements
@@ -465,7 +445,7 @@ export class EconomicEventHandler
         `[EconomicEventHandler] Processing economic event: ${event.type}`
       );
 
-      // 이벤트 타입별 처리
+      // ?�벤???�?�별 처리
       switch (event.type) {
         case "PmpEarnedEvent":
           await this.handlePmpEarned(event as PmpEarnedEvent);
@@ -494,44 +474,32 @@ export class EconomicEventHandler
 
       return {
         success: false,
-        error: new HandlerError(
-          `Failed to handle economic event: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
-          error instanceof Error ? error : undefined,
-          this.subscriberId
-        ),
+        error: new HandlerError("Invalid state", {
+          cause: error instanceof Error ? error.message : "unknown error",
+        }),
       };
     }
   }
 
   private async handlePmpEarned(event: PmpEarnedEvent): Promise<void> {
-    console.log(
-      `[PmpEarned] User ${event.userId} earned ${event.amount} PMP from ${event.source}`
-    );
+    console.log(`[PmpEarned] Event received with type: ${event.type}`);
   }
 
   private async handlePmcEarned(event: PmcEarnedEvent): Promise<void> {
-    console.log(
-      `[PmcEarned] User ${event.userId} earned ${event.amount} PMC from ${event.source}`
-    );
+    console.log(`[PmcEarned] Event received with type: ${event.type}`);
   }
 
   private async handlePmpSpent(event: PmpSpentEvent): Promise<void> {
-    console.log(
-      `[PmpSpent] User ${event.userId} spent ${event.amount} PMP for ${event.purpose}`
-    );
+    console.log(`[PmpSpent] Event received with type: ${event.type}`);
   }
 
   private async handlePmcSpent(event: PmcSpentEvent): Promise<void> {
-    console.log(
-      `[PmcSpent] User ${event.userId} spent ${event.amount} PMC for ${event.purpose}`
-    );
+    console.log(`[PmcSpent] Event received with type: ${event.type}`);
   }
 }
 
 /**
- * 모든 이벤트 핸들러들을 내보내는 팩토리
+ * 모든 ?�벤???�들?�들???�보?�는 ?�토�?
  */
 export const createPredictionEventHandlers = () => {
   return [
@@ -545,7 +513,7 @@ export const createPredictionEventHandlers = () => {
 };
 
 /**
- * 이벤트 핸들러 등록 헬퍼
+ * ?�벤???�들???�록 ?�퍼
  */
 export const registerPredictionEventHandlers = (eventPublisher: any) => {
   const handlers = createPredictionEventHandlers();

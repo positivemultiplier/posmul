@@ -1,0 +1,462 @@
+/**
+ * Distribute Money Wave Use Case
+ *
+ * Money Wave 분배 시스템의 핵심 비즈니스 로직을 처리합니다.
+ * - Money Wave 1: 일일 EBIT 기반 상금 풀 분배
+ * - Money Wave 2: 미소비 PmcAmount 재분배
+ * - Money Wave 3: 기업가 맞춤형 예측 게임 요청 처리
+ *
+ * @author PosMul Development Team
+ * @since 2024-12
+ */
+
+import { Result, UserId, UseCaseError, isFailure } from '@posmul/auth-economy-sdk';
+import { EconomyKernel } from "../../../../shared/economy-kernel/services/economy-kernel.service";
+import { MoneyWaveCalculatorService } from "../../../../shared/economy-kernel/services/money-wave-calculator.service";
+import {
+  BaseDomainEvent,
+  publishEvent,
+} from "../../../../shared/events/domain-events";
+import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
+import {
+  DistributeMoneyWaveRequest,
+  DistributeMoneyWaveResponse,
+  MoneyWaveDistributionType,
+} from "../dto/prediction-use-case.dto";
+
+/**
+ * Money Wave 분배 완료 이벤트
+ */
+class MoneyWaveDistributedEvent extends BaseDomainEvent {
+  constructor(
+    waveId: string,
+    waveType: MoneyWaveDistributionType,
+    totalAmount: number,
+    recipientCount: number,
+    distributions: Array<{
+      userId: UserId;
+      amount: number;
+      reason: string;
+    }>
+  ) {
+    super("MONEY_WAVE_DISTRIBUTED", waveId, {
+      waveType,
+      totalAmount,
+      recipientCount,
+      distributions,
+    });
+  }
+}
+
+/**
+ * PMC 분배 완료 이벤트
+ */
+class PmcDistributedEvent extends BaseDomainEvent {
+  constructor(
+    userId: UserId,
+    amount: number,
+    reason: string
+  ) {
+    super("PMC_DISTRIBUTED", userId, {
+      amount,
+      reason,
+    });
+  }
+}
+
+/**
+ * DistributeMoneyWaveUseCase 
+ * Money Wave 분배 비즈니스 로직을 처리합니다.
+ */
+export class DistributeMoneyWaveUseCase {
+  constructor(
+    private readonly predictionGameRepository: IPredictionGameRepository,
+    private readonly economyKernel: EconomyKernel,
+    private readonly moneyWaveCalculator: MoneyWaveCalculatorService
+  ) {}
+
+  /**
+   * Money Wave 분배 실행
+   */
+  async execute(
+    request: DistributeMoneyWaveRequest
+  ): Promise<Result<DistributeMoneyWaveResponse, UseCaseError>> {
+    try {
+      // 1. 요청 검증
+      const validationResult = this.validateRequest(request);
+      if (isFailure(validationResult)) {
+        return {
+          success: false,
+          error: new UseCaseError(validationResult.error.message)
+        };
+      }
+
+      // 2. Wave 타입에 따른 분배 실행
+      let distributionResult: Result<DistributeMoneyWaveResponse, UseCaseError>;
+
+      switch (request.waveType) {
+        case MoneyWaveDistributionType.DAILY_EBIT_POOL:
+          distributionResult = await this.handleDailyEbitPool(request);
+          break;
+        case MoneyWaveDistributionType.UNUSED_PMC_REDISTRIBUTION:
+          distributionResult = await this.redistributeUnusedPmc(request);
+          break;
+        case MoneyWaveDistributionType.ENTREPRENEUR_REQUEST:
+          distributionResult = await this.handleEntrepreneurRequest(request);
+          break;
+        default:
+          return {
+            success: false,
+            error: new UseCaseError("Unsupported wave type")
+          };
+      }
+
+      if (isFailure(distributionResult)) {
+        return distributionResult;
+      }
+
+      // 3. Money Wave 분배 완료 이벤트 발행
+      const waveDistributedEvent = new MoneyWaveDistributedEvent(
+        distributionResult.data.waveId,
+        request.waveType,
+        distributionResult.data.totalAmountDistributed,
+        distributionResult.data.recipientCount,
+        distributionResult.data.distributionResults.map((r) => ({
+          userId: r.userId,
+          amount: r.amount,
+          reason: r.reason,
+        }))
+      );
+
+      await publishEvent(waveDistributedEvent);
+
+      return distributionResult;
+    } catch (error) {
+      return {
+        success: false,
+        error: new UseCaseError(
+          "Unexpected error in DistributeMoneyWaveUseCase",
+          error instanceof Error ? error : new Error(String(error))
+        ),
+      };
+    }
+  }
+
+  /**
+   * Money Wave 1: 일일 EBIT 기반 상금 풀 분배
+   */
+  private async handleDailyEbitPool(
+    request: DistributeMoneyWaveRequest
+  ): Promise<Result<DistributeMoneyWaveResponse, UseCaseError>> {
+    try {
+      const waveId = `wave1-${crypto.randomUUID()}`;
+      const distributionResults = [];
+
+      // EBIT 기반 풀 분배 로직
+      const poolAmount = 10000; // 임시 고정값
+      const targetGames = request.targetGameIds || [];
+
+      let totalDistributed = 0;
+      let recipientCount = 0;
+
+      // 게임별 분배
+      for (const gameId of targetGames) {
+        const gameResult = await this.predictionGameRepository.findById(gameId);
+        if (isFailure(gameResult)) {
+          continue;
+        }
+
+        const game = gameResult.data;
+        if (!game) {
+          continue;
+        }
+
+        const participants = Array.from(game.predictions.values());
+        
+        if (participants.length > 0) {
+          const gameImportance = this.calculateGameImportance(game);
+          const gamePoolAmount = poolAmount * gameImportance;
+          
+          const perParticipantAmount = gamePoolAmount / participants.length;
+
+          for (const participant of participants) {
+            const pmcDistributedEvent = new PmcDistributedEvent(
+              participant.userId,
+              perParticipantAmount,
+              "daily-ebit-pool"
+            );
+
+            await publishEvent(pmcDistributedEvent);
+
+            distributionResults.push({
+              userId: participant.userId,
+              amount: perParticipantAmount,
+              reason: "Daily EBIT pool distribution",
+            });
+
+            totalDistributed += perParticipantAmount;
+            recipientCount++;
+          }
+        }
+      }
+
+      const efficiency = this.calculateDistributionEfficiency(
+        totalDistributed,
+        poolAmount
+      );
+      const agencyCostReduction = this.calculateAgencyCostReduction(
+        recipientCount,
+        totalDistributed
+      );
+
+      return {
+        success: true,
+        data: {
+          waveId,
+          waveType: request.waveType,
+          totalAmountDistributed: totalDistributed,
+          recipientCount,
+          distributionResults,
+          efficiency,
+          agencyCostReduction,
+          metadata: {
+            poolAmount,
+            targetGames: targetGames.length,
+          },
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: new UseCaseError(
+          "Failed to handle daily EBIT pool distribution",
+          error instanceof Error ? error : new Error(String(error))
+        ),
+      };
+    }
+  }
+
+  /**
+   * Money Wave 2: 미소비 PMC 재분배
+   */
+  private async redistributeUnusedPmc(
+    request: DistributeMoneyWaveRequest
+  ): Promise<Result<DistributeMoneyWaveResponse, UseCaseError>> {
+    try {
+      const waveId = `wave2-${crypto.randomUUID()}`;
+      const distributionResults = [];
+
+      // 미소비 PMC 재분배 로직
+      const redistributionAmount = 1000; // 임시 고정값
+      const targetUsers = request.targetUserIds || [];
+
+      let totalDistributed = 0;
+      let recipientCount = 0;
+
+      // 사용자별 재분배
+      if (targetUsers.length > 0) {
+        const perUserAmount = redistributionAmount / targetUsers.length;
+
+        for (const userId of targetUsers) {
+          const pmcDistributedEvent = new PmcDistributedEvent(
+            userId,
+            perUserAmount,
+            "unused-pmc-redistribution"
+          );
+
+          await publishEvent(pmcDistributedEvent);
+
+          distributionResults.push({
+            userId,
+            amount: perUserAmount,
+            reason: "Unused PMC redistribution",
+          });
+
+          totalDistributed += perUserAmount;
+          recipientCount++;
+        }
+      }
+
+      const efficiency = 1.0;
+      const agencyCostReduction = this.calculateAgencyCostReduction(
+        recipientCount,
+        totalDistributed
+      );
+
+      return {
+        success: true,
+        data: {
+          waveId,
+          waveType: request.waveType,
+          totalAmountDistributed: totalDistributed,
+          recipientCount,
+          distributionResults,
+          efficiency,
+          agencyCostReduction,
+          metadata: {
+            redistributionAmount,
+            targetUsers: targetUsers.length,
+          },
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: new UseCaseError(
+          "Failed to redistribute unused PMC",
+          error instanceof Error ? error : new Error(String(error))
+        ),
+      };
+    }
+  }
+
+  /**
+   * Money Wave 3: 기업가 맞춤형 예측 게임 요청 처리
+   */
+  private async handleEntrepreneurRequest(
+    request: DistributeMoneyWaveRequest
+  ): Promise<Result<DistributeMoneyWaveResponse, UseCaseError>> {
+    try {
+      const waveId = `wave3-${crypto.randomUUID()}`;
+      const distributionResults = [];
+
+      // 기업가 인센티브 분배 로직
+      const incentiveAmount = 500; // 임시 고정값
+      const entrepreneurId = request.triggerUserId;
+
+      // 기업가에게 인센티브 지급
+      const pmcDistributedEvent = new PmcDistributedEvent(
+        entrepreneurId,
+        incentiveAmount,
+        "entrepreneur-incentive"
+      );
+
+      await publishEvent(pmcDistributedEvent);
+
+      distributionResults.push({
+        userId: entrepreneurId,
+        amount: incentiveAmount,
+        reason: "Entrepreneur request incentive",
+      });
+
+      const efficiency = 1.0;
+      const agencyCostReduction = this.calculateAgencyCostReduction(
+        1,
+        incentiveAmount
+      );
+
+      return {
+        success: true,
+        data: {
+          waveId,
+          waveType: request.waveType,
+          totalAmountDistributed: incentiveAmount,
+          recipientCount: 1,
+          distributionResults,
+          efficiency,
+          agencyCostReduction,
+          metadata: {
+            entrepreneurId,
+            incentiveAmount,
+          },
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: new UseCaseError(
+          "Failed to handle entrepreneur request",
+          error instanceof Error ? error : new Error(String(error))
+        ),
+      };
+    }
+  }
+
+  /**
+   * 게임 중요도 계산
+   */
+  private calculateGameImportance(game: any): number {
+    // 기본 중요도 1.0에서 시작
+    let importance = 1.0;
+    
+    // 참가자 수에 따른 가중치
+    if (game.predictions) {
+      const participantCount = game.predictions.size;
+      importance *= Math.log(participantCount + 1) / Math.log(10);
+    }
+    
+    return Math.min(importance, 3.0); // 최대 3배까지
+  }
+
+  /**
+   * 분배 효율성 계산
+   */
+  private calculateDistributionEfficiency(
+    distributed: number,
+    total: number
+  ): number {
+    if (total === 0) return 0;
+    return distributed / total;
+  }
+
+  /**
+   * Agency Theory 기반 대리인 비용 절감 계산
+   */
+  private calculateAgencyCostReduction(
+    recipientCount: number,
+    totalAmount: number
+  ): number {
+    // Agency Theory 공식: 참여자 수와 분배 금액에 따른 대리인 비용 절감
+    const baseCost = totalAmount * 0.1; // 기본 관리 비용 10%
+    const efficiencyGain = Math.log(recipientCount + 1) / Math.log(10);
+    return baseCost * efficiencyGain;
+  }
+
+  /**
+   * 요청 검증
+   */
+  private validateRequest(
+    request: DistributeMoneyWaveRequest
+  ): Result<void, Error> {
+    if (!request.waveType) {
+      return {
+        success: false,
+        error: new Error("Wave type is required")
+      };
+    }
+
+    if (!request.triggerUserId) {
+      return {
+        success: false,
+        error: new Error("Trigger user ID is required")
+      };
+    }
+
+    // Wave 타입별 추가 검증
+    switch (request.waveType) {
+      case MoneyWaveDistributionType.DAILY_EBIT_POOL:
+        if (!request.targetGameIds || request.targetGameIds.length === 0) {
+          return {
+            success: false,
+            error: new Error("Target game IDs are required for daily EBIT pool")
+          };
+        }
+        break;
+
+      case MoneyWaveDistributionType.UNUSED_PMC_REDISTRIBUTION:
+        if (!request.targetUserIds || request.targetUserIds.length === 0) {
+          return {
+            success: false,
+            error: new Error("Target user IDs are required for PMC redistribution")
+          };
+        }
+        break;
+
+      case MoneyWaveDistributionType.ENTREPRENEUR_REQUEST:
+        // 기업가 요청은 triggerUserId만 있으면 됨
+        break;
+    }
+
+    return { success: true, data: undefined };
+  }
+}

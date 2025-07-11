@@ -1,13 +1,6 @@
 "use client";
 
-import { Badge } from "@posmul/shared-ui";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@posmul/shared-ui";
+import { Badge, Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../shared/ui/components/base';
 import React from "react";
 
 interface PredictionHistoryPanelProps {
@@ -145,13 +138,13 @@ export const PredictionHistoryPanel: React.FC<PredictionHistoryPanelProps> = ({
         {/* 요약 통계 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 text-center">
-            <div className="text-sm text-blue-600 mb-1">총 투입 PMP</div>
+            <div className="text-sm text-blue-600 mb-1">총 투입 PmpAmount</div>
             <div className="text-xl font-bold text-blue-700">
               {totalPmpStaked.toLocaleString()}
             </div>
           </div>
           <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
-            <div className="text-sm text-purple-600 mb-1">총 획득 PMC</div>
+            <div className="text-sm text-purple-600 mb-1">총 획득 PmcAmount</div>
             <div className="text-xl font-bold text-purple-700">
               {totalPmcEarned.toLocaleString()}
             </div>
@@ -215,13 +208,13 @@ export const PredictionHistoryPanel: React.FC<PredictionHistoryPanelProps> = ({
                   <div className="text-gray-500 mb-1">수익/손실</div>
                   <div className="font-medium">
                     <span className="text-red-600">
-                      -{prediction.pmpStaked} PMP
+                      -{prediction.pmpStaked} PmpAmount
                     </span>
                     {prediction.pmcEarned > 0 && (
                       <>
                         <br />
                         <span className="text-green-600">
-                          +{prediction.pmcEarned} PMC
+                          +{prediction.pmcEarned} PmcAmount
                         </span>
                       </>
                     )}
@@ -257,7 +250,7 @@ export const PredictionHistoryPanel: React.FC<PredictionHistoryPanelProps> = ({
                 💰 수익성 분석
               </div>
               <div className="text-indigo-600">
-                PMP 대비 PMC 수익률:{" "}
+                PmpAmount 대비 PmcAmount 수익률:{" "}
                 {((totalPmcEarned / totalPmpStaked) * 100).toFixed(1)}%
                 {totalPmcEarned > totalPmpStaked ? " (수익)" : " (손실)"}
               </div>

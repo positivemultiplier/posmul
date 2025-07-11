@@ -2,8 +2,8 @@
  * Utility Function Estimation Service Tests (Simplified)
  */
 
-import { createUserId } from "@posmul/shared-types";
-import { createPMC, createPMP } from "../../value-objects";
+import { createUserId, isFailure } from '@posmul/auth-economy-sdk';
+import { createPmcAmount, createPmpAmount } from "../../value-objects";
 import {
   BehaviorObservation,
   PersonalUtilityParameters,
@@ -28,8 +28,8 @@ describe("UtilityFunctionEstimationService", () => {
         {
           userId: createUserId("user1"),
           timestamp: new Date(),
-          actionType: "PMP_EARN",
-          pmpAmount: createPMP(100),
+          actionType: "PmpAmount_EARN",
+          pmpAmount: createPmpAmount(100),
           utilityRealized: 0.8,
           contextFactors: {
             timeOfDay: 14,
@@ -41,8 +41,8 @@ describe("UtilityFunctionEstimationService", () => {
         {
           userId: createUserId("user2"),
           timestamp: new Date(),
-          actionType: "PMC_CONVERT",
-          pmcAmount: createPMC(50),
+          actionType: "PmcAmount_CONVERT",
+          pmcAmount: createPmcAmount(50),
           utilityRealized: 0.7,
           contextFactors: {
             timeOfDay: 10,
@@ -68,16 +68,16 @@ describe("UtilityFunctionEstimationService", () => {
 
       const result = service.estimatePersonalUtility(
         observations,
-        createPMP(200),
-        createPMC(100),
+        createPmpAmount(200),
+        createPmcAmount(100),
         50
       );
 
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.personalUtility).toBeGreaterThan(0);
-        expect(result.data.marginalUtilityPMP).toBeGreaterThan(0);
-        expect(result.data.marginalUtilityPMC).toBeGreaterThan(0);
+        expect(result.data.marginalUtilityPmpAmount).toBeGreaterThan(0);
+        expect(result.data.marginalUtilityPmcAmount).toBeGreaterThan(0);
         expect(result.data.confidence).toBeGreaterThan(0);
         expect(result.data.confidence).toBeLessThanOrEqual(1);
       }
@@ -88,8 +88,8 @@ describe("UtilityFunctionEstimationService", () => {
         {
           userId: createUserId("user1"),
           timestamp: new Date(),
-          actionType: "PMP_EARN",
-          pmpAmount: createPMP(100),
+          actionType: "PmpAmount_EARN",
+          pmpAmount: createPmpAmount(100),
           utilityRealized: 0.8,
           contextFactors: {
             timeOfDay: 14,
@@ -102,15 +102,15 @@ describe("UtilityFunctionEstimationService", () => {
 
       const result = service.estimatePersonalUtility(
         observations,
-        createPMP(200),
-        createPMC(100),
+        createPmpAmount(200),
+        createPmcAmount(100),
         50
       );
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toBeDefined();
-        expect(result.error.message).toContain("observations required");
+        expect(isFailure(result) ? result.error : undefined).toBeDefined();
+        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("observations required");
       }
     });
   });
@@ -120,8 +120,8 @@ describe("UtilityFunctionEstimationService", () => {
       const utilities: UtilityEstimationResult[] = [
         {
           personalUtility: 5.2,
-          marginalUtilityPMP: 0.01,
-          marginalUtilityPMC: 0.015,
+          marginalUtilityPmpAmount: 0.01,
+          marginalUtilityPmcAmount: 0.015,
           marginalUtilityDonation: 0.02,
           elasticity: {
             pmpElasticity: 0.33,
@@ -132,8 +132,8 @@ describe("UtilityFunctionEstimationService", () => {
         },
         {
           personalUtility: 4.8,
-          marginalUtilityPMP: 0.012,
-          marginalUtilityPMC: 0.014,
+          marginalUtilityPmpAmount: 0.012,
+          marginalUtilityPmcAmount: 0.014,
           marginalUtilityDonation: 0.018,
           elasticity: {
             pmpElasticity: 0.35,
@@ -166,8 +166,8 @@ describe("UtilityFunctionEstimationService", () => {
 
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toBeDefined();
-        expect(result.error.message).toContain("participant");
+        expect(isFailure(result) ? result.error : undefined).toBeDefined();
+        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("participant");
       }
     });
   });
@@ -185,8 +185,8 @@ describe("UtilityFunctionEstimationService", () => {
       const newObservation: BehaviorObservation = {
         userId: createUserId("user1"),
         timestamp: new Date(),
-        actionType: "PMP_EARN",
-        pmpAmount: createPMP(150),
+        actionType: "PmpAmount_EARN",
+        pmpAmount: createPmpAmount(150),
         utilityRealized: 0.85,
         contextFactors: {
           timeOfDay: 15,
@@ -231,8 +231,8 @@ describe("UtilityFunctionEstimationService", () => {
         {
           userId: createUserId("user1"),
           timestamp: new Date(),
-          actionType: "PMP_EARN",
-          pmpAmount: createPMP(100),
+          actionType: "PmpAmount_EARN",
+          pmpAmount: createPmpAmount(100),
           utilityRealized: 0.8,
           contextFactors: {
             timeOfDay: 14,
@@ -244,8 +244,8 @@ describe("UtilityFunctionEstimationService", () => {
         {
           userId: createUserId("user2"),
           timestamp: new Date(),
-          actionType: "PMC_CONVERT",
-          pmcAmount: createPMC(50),
+          actionType: "PmcAmount_CONVERT",
+          pmcAmount: createPmcAmount(50),
           utilityRealized: 0.7,
           contextFactors: {
             timeOfDay: 10,
@@ -271,8 +271,8 @@ describe("UtilityFunctionEstimationService", () => {
 
       const currentUtilityResult = service.estimatePersonalUtility(
         observations,
-        createPMP(100),
-        createPMC(50),
+        createPmpAmount(100),
+        createPmcAmount(50),
         25
       );
 

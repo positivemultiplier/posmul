@@ -13,7 +13,7 @@ import {
   type CategoryStatistics,
   type GameCardProps,
   type PopularSubcategory,
-} from "@posmul/shared-ui";
+} from "../../../shared/ui";
 
 // 실제 스포츠 예측 게임들 (EnhancedGameCard 형식)
 const sportsGames: GameCardProps[] = [
@@ -220,7 +220,7 @@ const sportsGames: GameCardProps[] = [
 
 // 스포츠 통계 데이터
 const sportsStatistics: CategoryStatistics = {
-  totalRewardPool: 2500000, // 250만 PMC
+  totalRewardPool: 2500000, // 250만 PmcAmount
   totalParticipants: 45678,
   activeGames: 89,
   subcategoryCount: 8,

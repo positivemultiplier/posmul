@@ -5,8 +5,10 @@
  * Fisher의 실험설계이론과 Neyman-Pearson 가설검정을 적용
  */
 
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   ABTestConfiguration,
   IEconomicAnalyticsRepository,
@@ -207,13 +209,18 @@ export class ABTestingAnalysisService {
         });
 
       if (!configResult.success) {
-        return configResult;
+        return {
+          success: false,
+          error: new Error("A/B 테스트 설정 저장에 실패했습니다."),
+        };
       }
+
+      const savedConfiguration = configResult.data;
 
       return {
         success: true,
         data: {
-          configuration: configResult.data,
+          configuration: savedConfiguration,
           powerAnalysis: powerAnalysisResult,
           experimentalDesign,
           recommendedSampleSizes:
@@ -225,11 +232,7 @@ export class ABTestingAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          `Experiment design failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -365,11 +368,7 @@ export class ABTestingAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          `A/B test analysis failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }

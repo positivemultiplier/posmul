@@ -5,8 +5,9 @@
  * 경제학적 실증 분석과 정책 효과성 측정을 위한 히스토리 데이터 관리
  */
 
-import { Result } from "@posmul/shared-types";
-import { EBIT, PMC } from "../value-objects";
+import { Result } from "@posmul/auth-economy-sdk";
+
+import { EBIT, PmcAmount } from "../value-objects";
 
 /**
  * MoneyWave 실행 타입
@@ -14,14 +15,14 @@ import { EBIT, PMC } from "../value-objects";
 export type MoneyWaveType = "MONEY_WAVE_1" | "MONEY_WAVE_2" | "MONEY_WAVE_3";
 
 /**
- * MoneyWave1 실행 기록 (EBIT 기반 PMC 발행)
+ * MoneyWave1 실행 기록 (EBIT 기반 PmcAmount 발행)
  */
 export interface MoneyWave1Record {
   readonly recordId: string;
   readonly companyId: string;
   readonly executionDate: Date;
   readonly ebitAmount: EBIT;
-  readonly pmcIssued: PMC;
+  readonly pmcIssued: PmcAmount;
   readonly conversionRate: number;
   readonly stakeholderCount: number;
   readonly economicImpact: {
@@ -37,7 +38,7 @@ export interface MoneyWave1Record {
 }
 
 /**
- * MoneyWave2 실행 기록 (미사용 PMC 재분배)
+ * MoneyWave2 실행 기록 (미사용 PmcAmount 재분배)
  */
 export interface MoneyWave2Record {
   readonly recordId: string;
@@ -45,12 +46,12 @@ export interface MoneyWave2Record {
   readonly eligibilitySnapshot: {
     readonly totalEligibleAccounts: number;
     readonly averageDormancyPeriod: number;
-    readonly totalRedistributablePMC: PMC;
+    readonly totalRedistributablePmcAmount: PmcAmount;
   };
   readonly redistributionResults: {
-    readonly redistributedAmount: PMC;
+    readonly redistributedAmount: PmcAmount;
     readonly beneficiaryCount: number;
-    readonly averageAllocation: PMC;
+    readonly averageAllocation: PmcAmount;
     readonly giniCoefficientBefore: number;
     readonly giniCoefficientAfter: number;
   };
@@ -79,8 +80,8 @@ export interface MoneyWave3Record {
     readonly competitiveDestruction: number;
   };
   readonly resourceAllocation: {
-    readonly totalPMCAllocated: PMC;
-    readonly ventureFundingAmount: PMC;
+    readonly totalPmcAmountAllocated: PmcAmount;
+    readonly ventureFundingAmount: PmcAmount;
     readonly successfulVentures: number;
     readonly failedVentures: number;
   };
@@ -91,7 +92,7 @@ export interface MoneyWave3Record {
   };
   readonly kirznerianDiscovery: {
     readonly opportunityRecognition: number;
-    readonly arbitrageProfit: PMC;
+    readonly arbitrageProfit: PmcAmount;
     readonly marketEfficiency: number;
   };
 }
@@ -102,7 +103,7 @@ export interface MoneyWave3Record {
 export interface MoneyWaveStatistics {
   readonly moneyWaveType: MoneyWaveType;
   readonly totalExecutions: number;
-  readonly totalPMCImpact: PMC;
+  readonly totalPmcAmountImpact: PmcAmount;
   readonly averageSuccessRate: number;
   readonly economicEfficiency: number;
   readonly socialWelfareChange: number;
@@ -223,7 +224,7 @@ export interface IMoneyWaveHistoryRepository {
       {
         period: string;
         executionCount: number;
-        totalPMCImpact: PMC;
+        totalPmcAmountImpact: PmcAmount;
       }[]
     >
   >;

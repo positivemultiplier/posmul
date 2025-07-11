@@ -1,14 +1,19 @@
 /**
  * Money Wave Aggregate Root
- * Jensen & Meckling Agency Theory 기반 PMP-PMC 경제 시스템의 핵심 애그리거트
+ * Jensen & Meckling Agency Theory 기반 PmpAmount-PmcAmount 경제 시스템의 핵심 애그리거트
  *
- * MoneyWave1: EBIT 기반 PMC 발행
- * MoneyWave2: 미사용 PMC 재분배
+ * MoneyWave1: EBIT 기반 PmcAmount 발행
+ * MoneyWave2: 미사용 PmcAmount 재분배
  * MoneyWave3: 기업가 생태계 구축
  */
 
-import { DomainError, Result } from "@posmul/shared-types";
-import { MoneyWaveId, PMC, createPMC, unwrapPMC } from "../value-objects";
+import { Result, DomainError } from "@posmul/auth-economy-sdk";
+import {
+  MoneyWaveId,
+  PmcAmount,
+  createPmcAmount,
+  unwrapPmcAmount,
+} from "../value-objects";
 
 export interface EBITData {
   expectedRevenue: number;
@@ -20,8 +25,8 @@ export interface EBITData {
 }
 
 export interface MoneyWaveMetrics {
-  totalPMCIssued: number;
-  totalPMPCirculating: number;
+  totalPmcAmountIssued: number;
+  totalPmpAmountCirculating: number;
   conversionRate: number;
   networkValue: number;
   agencyCostReduction: number;
@@ -46,7 +51,7 @@ export class MoneyWave {
     private readonly type: MoneyWaveType,
     private status: MoneyWaveStatus,
     private readonly ebitData: EBITData,
-    private dailyPMCEmission: PMC,
+    private dailyPmcAmountEmission: PmcAmount,
     private networkParticipants: number,
     private agencyCostScore: number,
     private readonly createdAt: Date,
@@ -65,15 +70,14 @@ export class MoneyWave {
       if (expectedEBIT <= 0) {
         return {
           success: false,
-          error: new DomainError(
-            "INVALID_EBIT",
-            "Expected EBIT must be positive"
-          ),
+          error: new DomainError("Expected EBIT must be positive", {
+            code: "INVALID_EBIT",
+          }),
         };
-      } // 일일 PMC 발행량 계산 (Agency Theory 기반)
+      } // 일일 PmcAmount 발행량 계산 (Agency Theory 기반)
       const netReturn =
         expectedEBIT - ebitData.expectedTax - ebitData.expectedInterest;
-      const dailyEmission = createPMC(Math.max(0, netReturn / 365));
+      const dailyEmission = createPmcAmount(Math.max(0, netReturn / 365));
 
       const moneyWave = new MoneyWave(
         id,
@@ -91,10 +95,10 @@ export class MoneyWave {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError(
-          "MONEY_WAVE_CREATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
-        ),
+        error: new DomainError("MONEY_WAVE_CREATION_FAILED", {
+          originalError:
+            error instanceof Error ? error : new Error("Unknown error"),
+        }),
       };
     }
   }
@@ -119,15 +123,15 @@ export class MoneyWave {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError(
-          "AGENCY_COST_CALCULATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
-        ),
+        error: new DomainError("AGENCY_COST_CALCULATION_FAILED", {
+          originalError:
+            error instanceof Error ? error : new Error("Unknown error"),
+        }),
       };
     }
   }
 
-  // CAPM 기반 PMP-PMC 전환율 계산
+  // CAPM 기반 PmpAmount-PmcAmount 전환율 계산
   calculateConversionRate(
     userRiskTolerance: number,
     predictionConfidence: number,
@@ -135,13 +139,13 @@ export class MoneyWave {
   ): Result<number> {
     try {
       // CAPM: E[R] = Rf + β(E[Rm] - Rf)
-      const riskFreeRate = 0.02; // PMP 기본 수익률
+      const riskFreeRate = 0.02; // PmpAmount 기본 수익률
       const beta = this.calculateNetworkBeta();
 
-      const expectedPMCReturn = riskFreeRate + beta * marketRiskPremium;
+      const expectedPmcAmountReturn = riskFreeRate + beta * marketRiskPremium;
 
       // 사용자 위험 선호도와 예측 확신도 반영
-      let conversionRate = expectedPMCReturn * this.agencyCostScore;
+      let conversionRate = expectedPmcAmountReturn * this.agencyCostScore;
 
       // 위험 회피도에 따른 조정
       if (userRiskTolerance < 0.3) {
@@ -157,10 +161,10 @@ export class MoneyWave {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError(
-          "CONVERSION_RATE_CALCULATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
-        ),
+        error: new DomainError("CONVERSION_RATE_CALCULATION_FAILED", {
+          originalError:
+            error instanceof Error ? error : new Error("Unknown error"),
+        }),
       };
     }
   }
@@ -181,10 +185,10 @@ export class MoneyWave {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError(
-          "NETWORK_VALUE_CALCULATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
-        ),
+        error: new DomainError("NETWORK_VALUE_CALCULATION_FAILED", {
+          originalError:
+            error instanceof Error ? error : new Error("Unknown error"),
+        }),
       };
     }
   }
@@ -217,10 +221,10 @@ export class MoneyWave {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError(
-          "IRON_TRIANGLE_CALCULATION_FAILED",
-          error instanceof Error ? error.message : "Unknown error"
-        ),
+        error: new DomainError("IRON_TRIANGLE_CALCULATION_FAILED", {
+          originalError:
+            error instanceof Error ? error : new Error("Unknown error"),
+        }),
       };
     }
   }
@@ -230,10 +234,9 @@ export class MoneyWave {
     if (this.status !== MoneyWaveStatus.CALCULATING) {
       return {
         success: false,
-        error: new DomainError(
-          "INVALID_STATUS_TRANSITION",
-          "Can only activate from CALCULATING status"
-        ),
+        error: new DomainError("Can only activate from CALCULATING status", {
+          code: "INVALID_STATUS_TRANSITION",
+        }),
       };
     }
 
@@ -247,10 +250,9 @@ export class MoneyWave {
     if (this.status !== MoneyWaveStatus.ACTIVE) {
       return {
         success: false,
-        error: new DomainError(
-          "INVALID_STATUS_TRANSITION",
-          "Can only complete from ACTIVE status"
-        ),
+        error: new DomainError("Can only complete from ACTIVE status", {
+          code: "INVALID_STATUS_TRANSITION",
+        }),
       };
     }
 
@@ -299,8 +301,8 @@ export class MoneyWave {
     return { ...this.ebitData };
   }
 
-  getDailyPMCEmission(): PMC {
-    return this.dailyPMCEmission;
+  getDailyPmcAmountEmission(): PmcAmount {
+    return this.dailyPmcAmountEmission;
   }
 
   getNetworkParticipants(): number {
@@ -322,9 +324,10 @@ export class MoneyWave {
   // 메트릭스 조회
   getMetrics(): MoneyWaveMetrics {
     return {
-      totalPMCIssued:
-        unwrapPMC(this.dailyPMCEmission) * this.getDaysSinceCreation(),
-      totalPMPCirculating: this.networkParticipants * 100, // 추정값
+      totalPmcAmountIssued:
+        unwrapPmcAmount(this.dailyPmcAmountEmission) *
+        this.getDaysSinceCreation(),
+      totalPmpAmountCirculating: this.networkParticipants * 100, // 추정값
       conversionRate: this.agencyCostScore,
       networkValue: this.networkParticipants ** 2,
       agencyCostReduction: this.agencyCostScore,

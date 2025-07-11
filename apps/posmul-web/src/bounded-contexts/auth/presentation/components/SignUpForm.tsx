@@ -4,8 +4,9 @@
 
 "use client";
 
-import { Button, Card, Input } from "@posmul/shared-ui";
 import { useState } from "react";
+import { Button, Card } from "../../../../shared/ui/components/base";
+import { Input } from "../../../../shared/ui/components/forms";
 
 interface SignUpFormProps {
   onSubmit?: (data: {
@@ -109,7 +110,7 @@ export function SignUpForm({
           value={formData.email}
           onChange={handleInputChange("email")}
           error={validationErrors.email}
-          fullWidth
+          className="w-full"
           disabled={loading}
           placeholder="your@email.com"
         />
@@ -120,10 +121,9 @@ export function SignUpForm({
           value={formData.displayName}
           onChange={handleInputChange("displayName")}
           error={validationErrors.displayName}
-          fullWidth
+          className="w-full"
           disabled={loading}
           placeholder="다른 사용자에게 표시될 이름"
-          helpText="비워두면 이메일의 아이디 부분이 사용됩니다."
         />
 
         <Input
@@ -132,10 +132,9 @@ export function SignUpForm({
           value={formData.password}
           onChange={handleInputChange("password")}
           error={validationErrors.password}
-          fullWidth
+          className="w-full"
           disabled={loading}
           placeholder="비밀번호를 입력하세요"
-          helpText="최소 8자, 대문자/소문자/숫자 포함"
         />
 
         <Input
@@ -144,7 +143,7 @@ export function SignUpForm({
           value={formData.confirmPassword}
           onChange={handleInputChange("confirmPassword")}
           error={validationErrors.confirmPassword}
-          fullWidth
+          className="w-full"
           disabled={loading}
           placeholder="비밀번호를 다시 입력하세요"
         />

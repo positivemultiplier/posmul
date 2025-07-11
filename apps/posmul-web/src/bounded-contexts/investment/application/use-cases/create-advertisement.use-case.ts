@@ -1,5 +1,7 @@
-import { UserId } from "@posmul/shared-types";
-import { Result, ValidationError } from "@posmul/shared-types";
+import { UserId, isFailure } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+import { ValidationError } from "@posmul/auth-economy-sdk";
 import { Advertisement } from "../../domain/entities/advertisement.entity";
 import { IAdvertisementRepository } from "../../domain/repositories/advertisement.repository";
 import {
@@ -24,7 +26,7 @@ export class CreateAdvertisementUseCase {
   async execute(
     advertiserId: UserId,
     request: CreateAdvertisementRequest
-  ): Promise<Result<{ advertisementId: string }>> {
+  ): Promise<Result<{ advertisementId: string } | any>> {
     try {
       // 요청 데이터 검증
       const validationResult =
@@ -32,11 +34,10 @@ export class CreateAdvertisementUseCase {
       if (!validationResult.success) {
         return {
           success: false,
-          error: new ValidationError(
-            "입력 데이터가 유효하지 않습니다.",
-            undefined,
-            validationResult.error.flatten().fieldErrors
-          ),
+          error: new ValidationError("입력 데이터가 유효하지 않습니다.", {
+            validationErrors:
+              validationResult.error?.flatten()?.fieldErrors || {},
+          }),
         };
       }
 
@@ -45,7 +46,10 @@ export class CreateAdvertisementUseCase {
       // Value Objects 생성
       const advertisementIdResult = AdvertisementId.create(crypto.randomUUID());
       if (!advertisementIdResult.success) {
-        return advertisementIdResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const viewingDurationResult = ViewingDuration.create(
@@ -53,14 +57,20 @@ export class CreateAdvertisementUseCase {
         80
       ); // 80% 완료율 기본값
       if (!viewingDurationResult.success) {
-        return viewingDurationResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const rewardRateResult = RewardRate.createPercentage(
         validData.rewardRate
       );
       if (!rewardRateResult.success) {
-        return rewardRateResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       } // Advertisement 엔티티 생성 (기존 create 메서드 시그니처에 맞춤)
       const advertisementResult = Advertisement.create(
         validData.title,
@@ -76,7 +86,10 @@ export class CreateAdvertisementUseCase {
       );
 
       if (!advertisementResult.success) {
-        return advertisementResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 데이터베이스에 저장
@@ -84,7 +97,10 @@ export class CreateAdvertisementUseCase {
         advertisementResult.data
       );
       if (!saveResult.success) {
-        return saveResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       return {

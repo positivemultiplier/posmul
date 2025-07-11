@@ -7,12 +7,12 @@
 
 import {
   IMoneyWaveHistoryRepository,
-  IPMPPMCAccountRepository,
+  IPmpAmountPmcAmountAccountRepository,
   IUtilityFunctionRepository,
 } from "../domain/repositories";
 import { EconomicRealtimeEventPublisher } from "./events/economic-realtime-publisher";
 import { SupabaseMoneyWaveHistoryRepository } from "./repositories/supabase-money-wave-history.repository";
-import { SupabasePMPPMCAccountRepository } from "./repositories/supabase-pmp-pmc-account.repository";
+import { SupabasePmpPmcAccountRepository } from "./repositories/supabase-pmp-pmc-account.repository";
 import { SupabaseUtilityFunctionRepository } from "./repositories/supabase-utility-function.repository";
 
 /**
@@ -20,7 +20,7 @@ import { SupabaseUtilityFunctionRepository } from "./repositories/supabase-utili
  */
 export interface EconomyInfrastructureContainer {
   repositories: {
-    pmpPmcAccountRepository: IPMPPMCAccountRepository;
+    pmpPmcAccountRepository: IPmpAmountPmcAmountAccountRepository;
     moneyWaveHistoryRepository: IMoneyWaveHistoryRepository;
     utilityFunctionRepository: IUtilityFunctionRepository;
   };
@@ -36,6 +36,7 @@ export interface InfrastructureConfig {
   supabase: {
     url: string;
     key: string;
+    projectId: string;
   };
   events: {
     enableRealtime: boolean;
@@ -53,6 +54,7 @@ export function createEconomyInfrastructure(
     supabase: {
       url: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
       key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+      projectId: process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID || "",
     },
     events: {
       enableRealtime: true,
@@ -60,17 +62,26 @@ export function createEconomyInfrastructure(
   };
 
   const finalConfig = { ...defaultConfig, ...config }; // Repository 인스턴스 생성
-  const pmpPmcAccountRepository = new SupabasePMPPMCAccountRepository();
-  const moneyWaveHistoryRepository = new SupabaseMoneyWaveHistoryRepository();
-  const utilityFunctionRepository = new SupabaseUtilityFunctionRepository();
+  const pmpPmcAccountRepository = new SupabasePmpPmcAccountRepository(
+    finalConfig.supabase.projectId
+  );
+  const moneyWaveHistoryRepository = new SupabaseMoneyWaveHistoryRepository(
+    finalConfig.supabase.projectId
+  );
+  const utilityFunctionRepository = new SupabaseUtilityFunctionRepository(
+    finalConfig.supabase.projectId
+  );
 
   // 이벤트 시스템 생성
   const realtimeEventPublisher = new EconomicRealtimeEventPublisher();
   return {
     repositories: {
-      pmpPmcAccountRepository,
-      moneyWaveHistoryRepository,
-      utilityFunctionRepository,
+      pmpPmcAccountRepository:
+        pmpPmcAccountRepository as unknown as IPmpAmountPmcAmountAccountRepository,
+      moneyWaveHistoryRepository:
+        moneyWaveHistoryRepository as unknown as IMoneyWaveHistoryRepository,
+      utilityFunctionRepository:
+        utilityFunctionRepository as unknown as IUtilityFunctionRepository,
     },
     events: {
       realtimeEventPublisher,

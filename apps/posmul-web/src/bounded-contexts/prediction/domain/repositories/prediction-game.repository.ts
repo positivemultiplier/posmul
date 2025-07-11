@@ -9,11 +9,10 @@
  * @task PD-003
  */
 
-import {
-  PredictionGameId,
-  UserId,
-} from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
 import { PredictionGame } from "../entities/prediction-game.aggregate";
 import { GameStatus } from "../value-objects/game-status";
 
@@ -309,12 +308,7 @@ export class RepositoryHelpers {
    * 기본 페이지네이션 설정
    */
   static getDefaultPagination(): PaginationRequest {
-    return {
-      page: 1,
-      limit: 20,
-      sortBy: "createdAt",
-      sortOrder: "desc",
-    };
+    return { page: 1, limit: 20, sortBy: "createdAt", sortOrder: "desc" };
   }
 
   /**

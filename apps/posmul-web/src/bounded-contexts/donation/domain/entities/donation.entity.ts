@@ -3,8 +3,10 @@
  * 기부 엔티티 - 모든 기부 활동의 루트 애그리거트
  */
 
-import { UserId } from "@posmul/shared-types";
-import { DomainEvent, Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+import { DomainEvent } from "@posmul/auth-economy-sdk";
 import {
   BeneficiaryInfo,
   DonationAmount,
@@ -335,7 +337,7 @@ export class Donation {
 
     return { success: true, data: undefined };
   }
-  // 기부 가능 여부 확인 (PMC 잔액 기준)
+  // 기부 가능 여부 확인 (PmcAmount 잔액 기준)
   canProcess(pmcBalance: number): boolean {
     return (
       this.status === DonationStatus.PENDING &&
@@ -478,7 +480,10 @@ export class Donation {
 
     const validationResult = donation.validateTarget();
     if (!validationResult.success) {
-      return validationResult;
+      return {
+        success: false,
+        error: new Error("기부 검증 실패"),
+      };
     }
 
     return { success: true, data: donation };
@@ -514,7 +519,10 @@ export class Donation {
 
     const validationResult = donation.validateTarget();
     if (!validationResult.success) {
-      return validationResult;
+      return {
+        success: false,
+        error: new Error("기부 검증 실패"),
+      };
     }
 
     return { success: true, data: donation };
@@ -550,7 +558,10 @@ export class Donation {
 
     const validationResult = donation.validateTarget();
     if (!validationResult.success) {
-      return validationResult;
+      return {
+        success: false,
+        error: new Error("기부 검증 실패"),
+      };
     }
 
     return { success: true, data: donation };

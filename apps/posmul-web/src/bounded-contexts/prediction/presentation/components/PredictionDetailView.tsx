@@ -10,14 +10,7 @@
 
 "use client";
 
-import { Badge } from "@posmul/shared-ui";
-import { Button } from "@posmul/shared-ui";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@posmul/shared-ui";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '../../../../shared/ui/components/base';
 import { useEffect, useState } from "react";
 
 // Types
@@ -123,7 +116,7 @@ export function PredictionDetailView({
                     </Badge>
                   </div>
                   <div className="text-sm text-gray-500 mt-1">
-                    {option.volume.toLocaleString()} PMP 거래량
+                    {option.volume.toLocaleString()} PmpAmount 거래량
                   </div>
                 </div>
                 <div className="text-right">
@@ -293,7 +286,7 @@ export function PredictionDetailView({
                 <div className="mt-6 space-y-4 border-t pt-6">
                   <div>
                     <label className="block text-sm font-medium mb-2">
-                      투자 금액 (PMP)
+                      투자 금액 (PmpAmount)
                     </label>
                     <input
                       type="number"
@@ -304,7 +297,7 @@ export function PredictionDetailView({
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     />
                     <div className="text-xs text-gray-500 mt-1">
-                      보유: {userBalance.pmp.toLocaleString()} PMP • 최소:{" "}
+                      보유: {userBalance.pmp.toLocaleString()} PmpAmount • 최소:{" "}
                       {game.minimumStake.toLocaleString()} • 최대:{" "}
                       {game.maximumStake.toLocaleString()}
                     </div>
@@ -316,7 +309,7 @@ export function PredictionDetailView({
                       예상 수익
                     </div>
                     <div className="text-xl font-bold text-green-900">
-                      {expectedReturn.toLocaleString()} PMP
+                      {expectedReturn.toLocaleString()} PmpAmount
                     </div>
                     <div className="text-xs text-green-600">
                       수익률: +
@@ -337,7 +330,7 @@ export function PredictionDetailView({
                       } else {
                         // Default behavior: show alert or handle locally
                         alert(
-                          `${selectedOption} 옵션에 ${stakeAmount} PMP로 참여하였습니다!`
+                          `${selectedOption} 옵션에 ${stakeAmount} PmpAmount로 참여하였습니다!`
                         );
                       }
                     }}
@@ -346,7 +339,7 @@ export function PredictionDetailView({
                       stakeAmount > userBalance.pmp
                     }
                   >
-                    {stakeAmount.toLocaleString()} PMP로 예측 참여
+                    {stakeAmount.toLocaleString()} PmpAmount로 예측 참여
                   </Button>
                 </div>
               )}
@@ -363,7 +356,7 @@ export function PredictionDetailView({
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-gray-600">PMP (Risk-free)</span>
+                <span className="text-gray-600">PmpAmount (Risk-free)</span>
                 <span className="font-bold">
                   {userBalance.pmp.toLocaleString()}
                 </span>
@@ -421,3 +414,5 @@ export function PredictionDetailView({
     </div>
   );
 }
+
+export default PredictionDetailView;

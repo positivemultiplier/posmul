@@ -40,8 +40,18 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
-import { SupabaseMCPError, handleMCPError, retryMCPOperation, } from "./mcp-errors";
-export * from "@posmul/shared-auth";
+
+// SDK MCP 유틸리티 import (메인 패키지에서)
+import { 
+    MCPError as SupabaseMCPError, 
+    handleMCPError, 
+    retryMCPOperation,
+    createMCPAdapter 
+} from "@posmul/auth-economy-sdk";
+
+// SDK MCP 유틸리티 re-export
+export * from "@posmul/auth-economy-sdk";
+
 /**
  * Supabase MCP 클라이언트 클래스
  */

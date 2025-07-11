@@ -37,8 +37,8 @@ export {
   type IEventStore,
 } from "./events/economic-events";
 
-// Re-export DomainEvent from shared types
-export type { DomainEvent } from "@posmul/shared-types";
+// Re-export DomainEvent from SDK
+export type { DomainEvent } from "@posmul/auth-economy-sdk/types";
 
 // === Economy Kernel 사용 가이드 ===
 

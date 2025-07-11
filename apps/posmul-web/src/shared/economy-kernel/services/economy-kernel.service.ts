@@ -1,7 +1,7 @@
 /**
  * Economy Kernel Service
  *
- * PosMul 플랫폼의 공유 경제 커널로, 모든 도메인에서 읽기 전용으로 PMP/PMC 잔액을 조회할 수 있습니다.
+ * PosMul 플랫폼의 공유 경제 커널로, 모든 도메인에서 읽기 전용으로 PmpAmount/PmcAmount 잔액을 조회할 수 있습니다.
  * Shared Kernel 패턴을 구현하여 경제 시스템의 무결성을 보장하고,
  * Domain Events를 통해서만 경제 데이터의 변경을 허용합니다.
  *
@@ -9,13 +9,9 @@
  * @since 2024-12
  */
 
-import {
-  Result,
-  UserId,
-  failure,
-  isFailure,
-  success,
-} from "@posmul/shared-types";
+import { Result, UserId, isFailure } from "@posmul/auth-economy-sdk";
+import { failure, success } from "@posmul/auth-economy-sdk";
+
 
 /**
  * Economy Kernel 오류 타입
@@ -37,7 +33,7 @@ export class EconomyKernelError extends Error {
 }
 
 /**
- * PMP 계정 인터페이스
+ * PmpAmount 계정 인터페이스
  */
 export interface PmpAccount {
   readonly userId: UserId;
@@ -49,7 +45,7 @@ export interface PmpAccount {
 }
 
 /**
- * PMC 계정 인터페이스
+ * PmcAmount 계정 인터페이스
  */
 export interface PmcAccount {
   readonly userId: UserId;
@@ -77,24 +73,24 @@ export interface EconomySystemStats {
  */
 export interface IEconomyKernelRepository {
   /**
-   * PMP 잔액 조회
+   * PmpAmount 잔액 조회
    */
   getPmpBalance(userId: UserId): Promise<Result<number, EconomyKernelError>>;
 
   /**
-   * PMC 잔액 조회
+   * PmcAmount 잔액 조회
    */
   getPmcBalance(userId: UserId): Promise<Result<number, EconomyKernelError>>;
 
   /**
-   * PMP 계정 정보 조회
+   * PmpAmount 계정 정보 조회
    */
   getPmpAccount(
     userId: UserId
   ): Promise<Result<PmpAccount, EconomyKernelError>>;
 
   /**
-   * PMC 계정 정보 조회
+   * PmcAmount 계정 정보 조회
    */
   getPmcAccount(
     userId: UserId
@@ -106,7 +102,7 @@ export interface IEconomyKernelRepository {
   getSystemStats(): Promise<Result<EconomySystemStats, EconomyKernelError>>;
 
   /**
-   * 사용자 PMP 잔액이 특정 금액 이상인지 확인
+   * 사용자 PmpAmount 잔액이 특정 금액 이상인지 확인
    */
   hasSufficientPmp(
     userId: UserId,
@@ -114,7 +110,7 @@ export interface IEconomyKernelRepository {
   ): Promise<Result<boolean, EconomyKernelError>>;
 
   /**
-   * 사용자 PMC 잔액이 특정 금액 이상인지 확인
+   * 사용자 PmcAmount 잔액이 특정 금액 이상인지 확인
    */
   hasSufficientPmc(
     userId: UserId,
@@ -177,17 +173,17 @@ export class EconomyKernel {
   }
 
   /**
-   * 사용자 PMP 잔액 조회
+   * 사용자 PmpAmount 잔액 조회
    *
    * @param userId 사용자 ID
-   * @returns PMP 잔액 (숫자)
+   * @returns PmpAmount 잔액 (숫자)
    */
   public async getPmpBalance(
     userId: UserId
   ): Promise<Result<number, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(repositoryResult.error);
+      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
     }
     const repo = repositoryResult.data;
 
@@ -196,26 +192,26 @@ export class EconomyKernel {
     } catch (error) {
       return failure(
         new EconomyKernelError(
-          `Failed to retrieve PMP balance for user ${userId}`,
+          `Failed to retrieve PmpAmount balance for user ${userId}`,
           "REPOSITORY_ERROR",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error) )
         )
       );
     }
   }
 
   /**
-   * 사용자 PMC 잔액 조회
+   * 사용자 PmcAmount 잔액 조회
    *
    * @param userId 사용자 ID
-   * @returns PMC 잔액 (숫자)
+   * @returns PmcAmount 잔액 (숫자)
    */
   public async getPmcBalance(
     userId: UserId
   ): Promise<Result<number, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(repositoryResult.error);
+      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
     }
     const repo = repositoryResult.data;
 
@@ -224,26 +220,26 @@ export class EconomyKernel {
     } catch (error) {
       return failure(
         new EconomyKernelError(
-          `Failed to retrieve PMC balance for user ${userId}`,
+          `Failed to retrieve PmcAmount balance for user ${userId}`,
           "REPOSITORY_ERROR",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error) )
         )
       );
     }
   }
 
   /**
-   * PMP 계정 정보 상세 조회
+   * PmpAmount 계정 정보 상세 조회
    *
    * @param userId 사용자 ID
-   * @returns PMP 계정 정보
+   * @returns PmpAmount 계정 정보
    */
   public async getPmpAccount(
     userId: UserId
   ): Promise<Result<PmpAccount, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(repositoryResult.error);
+      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
     }
     const repo = repositoryResult.data;
 
@@ -252,26 +248,26 @@ export class EconomyKernel {
     } catch (error) {
       return failure(
         new EconomyKernelError(
-          `Failed to retrieve PMP account for user ${userId}`,
+          `Failed to retrieve PmpAmount account for user ${userId}`,
           "REPOSITORY_ERROR",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error) )
         )
       );
     }
   }
 
   /**
-   * PMC 계정 정보 상세 조회
+   * PmcAmount 계정 정보 상세 조회
    *
    * @param userId 사용자 ID
-   * @returns PMC 계정 정보
+   * @returns PmcAmount 계정 정보
    */
   public async getPmcAccount(
     userId: UserId
   ): Promise<Result<PmcAccount, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(repositoryResult.error);
+      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
     }
     const repo = repositoryResult.data;
 
@@ -280,19 +276,19 @@ export class EconomyKernel {
     } catch (error) {
       return failure(
         new EconomyKernelError(
-          `Failed to retrieve PMC account for user ${userId}`,
+          `Failed to retrieve PmcAmount account for user ${userId}`,
           "REPOSITORY_ERROR",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error) )
         )
       );
     }
   }
 
   /**
-   * PMP 잔액 충분성 확인
+   * PmpAmount 잔액 충분성 확인
    *
    * @param userId 사용자 ID
-   * @param requiredAmount 필요한 PMP 금액
+   * @param requiredAmount 필요한 PmpAmount 금액
    * @returns 잔액 충분성 여부
    */
   public async canSpendPmp(
@@ -310,7 +306,7 @@ export class EconomyKernel {
 
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(repositoryResult.error);
+      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
     }
     const repo = repositoryResult.data;
 
@@ -319,19 +315,19 @@ export class EconomyKernel {
     } catch (error) {
       return failure(
         new EconomyKernelError(
-          `Failed to check PMP sufficiency for user ${userId}`,
+          `Failed to check PmpAmount sufficiency for user ${userId}`,
           "REPOSITORY_ERROR",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error) )
         )
       );
     }
   }
 
   /**
-   * PMC 잔액 충분성 확인
+   * PmcAmount 잔액 충분성 확인
    *
    * @param userId 사용자 ID
-   * @param requiredAmount 필요한 PMC 금액
+   * @param requiredAmount 필요한 PmcAmount 금액
    * @returns 잔액 충분성 여부
    */
   public async canSpendPmc(
@@ -349,7 +345,7 @@ export class EconomyKernel {
 
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(repositoryResult.error);
+      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
     }
     const repo = repositoryResult.data;
 
@@ -358,9 +354,9 @@ export class EconomyKernel {
     } catch (error) {
       return failure(
         new EconomyKernelError(
-          `Failed to check PMC sufficiency for user ${userId}`,
+          `Failed to check PmcAmount sufficiency for user ${userId}`,
           "REPOSITORY_ERROR",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error) )
         )
       );
     }
@@ -376,7 +372,7 @@ export class EconomyKernel {
   > {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(repositoryResult.error);
+      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
     }
     const repo = repositoryResult.data;
 
@@ -387,24 +383,24 @@ export class EconomyKernel {
         new EconomyKernelError(
           "Failed to retrieve system statistics",
           "REPOSITORY_ERROR",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error) )
         )
       );
     }
   }
 
   /**
-   * 여러 사용자의 PMP 잔액을 일괄 조회
+   * 여러 사용자의 PmpAmount 잔액을 일괄 조회
    *
    * @param userIds 사용자 ID 배열
-   * @returns 사용자별 PMP 잔액 맵
+   * @returns 사용자별 PmpAmount 잔액 맵
    */
   public async getBulkPmpBalances(
     userIds: UserId[]
   ): Promise<Result<Map<UserId, number>, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(repositoryResult.error);
+      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
     }
     const repo = repositoryResult.data;
 
@@ -417,7 +413,7 @@ export class EconomyKernel {
         const balanceResult = await repo.getPmpBalance(userId);
         if (isFailure(balanceResult)) {
           throw new EconomyKernelError(
-            `Failed to get PMP balance for user ${userId}: ${balanceResult.error.message}`,
+            `Failed to get PmpAmount balance for user ${userId}: ${balanceResult.error.message}`,
             "REPOSITORY_ERROR",
             balanceResult.error
           );
@@ -432,26 +428,26 @@ export class EconomyKernel {
         error instanceof EconomyKernelError
           ? error
           : new EconomyKernelError(
-              "Failed to retrieve bulk PMP balances",
+              "Failed to retrieve bulk PmpAmount balances",
               "REPOSITORY_ERROR",
-              error as Error
+              new Error(error instanceof Error ? error.message : String(error) )
             )
       );
     }
   }
 
   /**
-   * 여러 사용자의 PMC 잔액을 일괄 조회
+   * 여러 사용자의 PmcAmount 잔액을 일괄 조회
    *
    * @param userIds 사용자 ID 배열
-   * @returns 사용자별 PMC 잔액 맵
+   * @returns 사용자별 PmcAmount 잔액 맵
    */
   public async getBulkPmcBalances(
     userIds: UserId[]
   ): Promise<Result<Map<UserId, number>, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(repositoryResult.error);
+      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
     }
     const repo = repositoryResult.data;
 
@@ -464,7 +460,7 @@ export class EconomyKernel {
         const balanceResult = await repo.getPmcBalance(userId);
         if (isFailure(balanceResult)) {
           throw new EconomyKernelError(
-            `Failed to get PMC balance for user ${userId}: ${balanceResult.error.message}`,
+            `Failed to get PmcAmount balance for user ${userId}: ${balanceResult.error.message}`,
             "REPOSITORY_ERROR",
             balanceResult.error
           );
@@ -479,9 +475,9 @@ export class EconomyKernel {
         error instanceof EconomyKernelError
           ? error
           : new EconomyKernelError(
-              "Failed to retrieve bulk PMC balances",
+              "Failed to retrieve bulk PmcAmount balances",
               "REPOSITORY_ERROR",
-              error as Error
+              new Error(error instanceof Error ? error.message : String(error) )
             )
       );
     }

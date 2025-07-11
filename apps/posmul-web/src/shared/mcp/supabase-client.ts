@@ -2,7 +2,7 @@
  * Supabase MCP Client
  *
  * PosMul Platform Supabase 통합을 위한 MCP 클라이언트
- * MoneyWave 시스템과 PMP/PMC 경제 연동 지원
+ * MoneyWave 시스템과 PmpAmount/PmcAmount 경제 연동 지원
  */
 
 import {
@@ -10,6 +10,12 @@ import {
   handleMCPError,
   retryMCPOperation,
 } from "./mcp-errors";
+import {
+  isFailure,
+  toResult,
+  isFailureSafe,
+  SupabaseMCPResponse,
+} from "@posmul/auth-economy-sdk";
 
 // MCP 함수들의 타입 정의
 declare global {
@@ -77,7 +83,7 @@ export class SupabaseMCPClient {
         `Failed to execute SQL query`,
         this.projectId,
         query,
-        error as Error
+        new Error(error instanceof Error ? error.message : String(error))
       );
     }
   }
@@ -104,13 +110,10 @@ export class SupabaseMCPClient {
       conditions.push(`mw.allocated_pmc > 0`);
     }
 
-    const whereClause =
-      conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+    const whereClause = conditions.length > 0 ? "Invalid state" : "";
 
     const query = `
-      SELECT 
-        pg.*,
-        COUNT(p.id) as participant_count,
+      SELECT * FROM usersas participant_count,
         SUM(p.pmp_amount) as total_pmp_staked,
         COALESCE(mw.allocated_pmc, 0) as money_wave_pmc,
         mw.wave_type
@@ -122,9 +125,10 @@ export class SupabaseMCPClient {
       ORDER BY pg.created_at DESC
     `;
 
-    const result = await this.executeSQL(query, { retry: true });
+    const response = await this.executeSQL(query, { retry: true });
+    const result = toResult(response);
 
-    if (result.error) {
+    if (isFailure(result)) {
       throw new SupabaseMCPError(
         "Failed to find prediction games for MoneyWave",
         this.projectId,
@@ -137,7 +141,7 @@ export class SupabaseMCPClient {
   }
 
   /**
-   * 💰 PMP/PMC 계정 잔액 조회
+   * 💰 PmpAmount/PmcAmount 계정 잔액 조회
    */
   async getEconomicBalance(userId: string): Promise<{
     pmpBalance: number;
@@ -145,8 +149,7 @@ export class SupabaseMCPClient {
     lastActivity: string | null;
   }> {
     const query = `
-      SELECT 
-        COALESCE(pmp.balance, 0) as pmp_balance,
+      SELECT * FROM usersas pmp_balance,
         COALESCE(pmc.balance, 0) as pmc_balance,
         GREATEST(pmp.updated_at, pmc.updated_at) as last_activity
       FROM users u
@@ -155,9 +158,10 @@ export class SupabaseMCPClient {
       WHERE u.id = '${userId}'
     `;
 
-    const result = await this.executeSQL(query, { retry: true });
+    const response = await this.executeSQL(query, { retry: true });
+    const result = toResult(response);
 
-    if (result.error) {
+    if (isFailure(result)) {
       throw new SupabaseMCPError(
         "Failed to get economic balance",
         this.projectId,
@@ -185,19 +189,7 @@ export class SupabaseMCPClient {
     sourceId: string;
     description?: string;
   }): Promise<void> {
-    const query = `
-      INSERT INTO economic_transactions (
-        user_id, transaction_type, amount, source_domain, source_id, description, created_at
-      ) VALUES (
-        '${transaction.userId}',
-        '${transaction.transactionType}',
-        ${transaction.amount},
-        '${transaction.sourceDomain}',
-        '${transaction.sourceId}',
-        '${transaction.description || ""}',
-        NOW()
-      )
-    `;
+    const query = "Invalid state";
 
     const result = await this.executeSQL(query, { retry: true });
 
@@ -261,13 +253,12 @@ export class SupabaseMCPClient {
     dailyTransactions: number;
   }> {
     const query = `
-      SELECT 
-        (SELECT COALESCE(SUM(balance), 0) FROM pmp_accounts) as total_pmp,
-        (SELECT COALESCE(SUM(balance), 0) FROM pmc_accounts) as total_pmc,
-        (SELECT COUNT(*) FROM prediction_games pg 
-         JOIN money_wave_allocations mw ON pg.game_id = mw.game_id 
+      SELECT * FROM users, 0) FROM pmp_accounts) as total_pmp,
+        (SELECT * FROM users, 0) FROM pmc_accounts) as total_pmc,
+        (SELECT * FROM usersFROM prediction_games pg
+         JOIN money_wave_allocations mw ON pg.game_id = mw.game_id
          WHERE pg.status = 'ACTIVE') as active_games_with_money_wave,
-        (SELECT COUNT(*) FROM economic_transactions 
+        (SELECT * FROM usersFROM economic_transactions
          WHERE created_at >= CURRENT_DATE) as daily_transactions
     `;
 
@@ -378,7 +369,10 @@ export const mcp_supabase_apply_migration = async (params: {
     const result = await client.executeSQL(params.query);
 
     if (result.error) {
-      return { success: false, error: result.error };
+      return {
+        success: false,
+        error: result.error,
+      };
     }
 
     return { success: true };
@@ -420,13 +414,7 @@ export const mcp_supabase_list_tables = async (params: {
     const schemaList = schemas.map((s) => `'${s}'`).join(",");
 
     const query = `
-      SELECT 
-        table_name,
-        table_schema,
-        table_type
-      FROM information_schema.tables 
-      WHERE table_schema IN (${schemaList})
-      ORDER BY table_schema, table_name
+      SELECT * FROM usersORDER BY table_schema, table_name
     `;
 
     return await client.executeSQL(query);

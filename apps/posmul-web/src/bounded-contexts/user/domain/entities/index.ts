@@ -2,7 +2,7 @@
  * User Domain Entities
  */
 
-import { UserId } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk/types";
 
 /**
  * User Aggregate Root

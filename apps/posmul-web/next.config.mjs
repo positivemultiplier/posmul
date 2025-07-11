@@ -6,14 +6,10 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: [
-    "@posmul/shared-ui",
     "@posmul/shared-types",
-    "@posmul/shared-auth",
+    "@posmul/auth-economy-sdk",
     "@posmul/study-cycle-core",
   ],
-  eslint: {
-    ignoreDuringBuilds: true, // ⛔ 빌드 시 ESLint 단계 건너뛰기
-  },
   serverExternalPackages: ["@supabase/supabase-js"],
   webpack: (config) => {
     config.resolve.alias = {
@@ -23,9 +19,12 @@ const nextConfig = {
     };
     return config;
   },
+  // 🎯 타입 안전성 완전 활성화 - 모든 TypeScript 오류가 해결되었으므로 활성화
   typescript: {
-    // 임시: 빌드 통과를 위해 타입 에러 무시 (TODO: 이후 해결 필요)
-    ignoreBuildErrors: true,
+    ignoreBuildErrors: false, // ✅ TypeScript 빌드 오류 검증 활성화
+  },
+  eslint: {
+    ignoreDuringBuilds: true, // ⚠️ 임시: ESLint 설정 문제로 일시 비활성화
   },
   env: {
     SUPABASE_URL: process.env.SUPABASE_URL || "https://placeholder.supabase.co",

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es5",
+    "target": "es2017",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -8,12 +8,13 @@
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
     "noEmit": true,
+    "downlevelIteration": true,
     "baseUrl": ".",
     "paths": {
       "@posmul/*": ["packages/*/src"],
@@ -28,5 +29,16 @@
       "../../shared/components/*": ["packages/shared-ui/src/components/*"]
     }
   },
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules",
+    "scripts/**/*.js",
+    "**/*legacy*",
+    "**/*.tmp.*",
+    "**/samples/**",
+    "**/sports/**",
+    "**/loading.*",
+    "**/error.*",
+    "**/api/**",
+    "**/src_migrated/**"
+  ]
 }

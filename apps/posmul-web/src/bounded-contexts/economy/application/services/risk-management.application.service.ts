@@ -3,7 +3,8 @@
  * 리스크 관리 관련 애플리케이션 서비스
  */
 
-import { Result } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   EconomicSystemState,
   RiskAssessment,
@@ -71,7 +72,10 @@ export class RiskManagementApplicationService {
         systemState
       );
       if (!stabilityResult.success) {
-        return stabilityResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 정책 권고안
@@ -79,7 +83,10 @@ export class RiskManagementApplicationService {
         systemState
       );
       if (!policyResult.success) {
-        return policyResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // Circuit Breaker 상태
@@ -87,7 +94,10 @@ export class RiskManagementApplicationService {
         systemState
       );
       if (!circuitBreakerResult.success) {
-        return circuitBreakerResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       return {
@@ -224,7 +234,10 @@ export class RiskManagementApplicationService {
       // 리스크 평가
       const riskResult = await this.assessCurrentRisk(systemState);
       if (!riskResult.success) {
-        return riskResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // Circuit Breaker 실행
@@ -232,7 +245,10 @@ export class RiskManagementApplicationService {
         systemState
       );
       if (!circuitBreakerResult.success) {
-        return circuitBreakerResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 긴급도 결정
@@ -425,8 +441,8 @@ export class RiskManagementApplicationService {
     const count = states.length;
 
     return {
-      totalPmpSupply: states[0].totalPmpSupply, // PMP는 합계만 의미있음
-      totalPmcSupply: states[0].totalPmcSupply, // PMC도 합계만 의미있음
+      totalPmpSupply: states[0].totalPmpSupply, // PmpAmount는 합계만 의미있음
+      totalPmcSupply: states[0].totalPmcSupply, // PmcAmount도 합계만 의미있음
       currentEbitRate: states[0].currentEbitRate, // EBIT도 마찬가지
       inflationRate:
         states.reduce((sum, s) => sum + s.inflationRate, 0) / count,

@@ -6,7 +6,7 @@ export const CreateAdvertisementRequestSchema = z.object({
   title: z.string().min(1, '광고 제목은 필수입니다').max(100, '광고 제목은 100자 이하여야 합니다'),
   description: z.string().min(1, '광고 설명은 필수입니다').max(1000, '광고 설명은 1000자 이하여야 합니다'),
   category: z.nativeEnum(AdvertisementCategory, { 
-    errorMap: () => ({ message: '유효한 카테고리를 선택해주세요' }) 
+    errorMap: () => (new Error('유효한 카테고리를 선택해주세요' )) 
   }),
   content: z.object({
     imageUrl: z.string().url('유효한 이미지 URL을 입력해주세요').optional(),
@@ -14,7 +14,7 @@ export const CreateAdvertisementRequestSchema = z.object({
     text: z.string().max(2000, '텍스트 내용은 2000자 이하여야 합니다').optional()
   }).refine(
     (data) => data.imageUrl || data.videoUrl || data.text,
-    { message: '이미지, 비디오, 텍스트 중 최소 하나는 필수입니다' }
+    new Error('이미지, 비디오, 텍스트 중 최소 하나는 필수입니다' )
   ),
   viewingDuration: z.number().min(5, '최소 시청 시간은 5초입니다').max(300, '최대 시청 시간은 300초입니다'),
   rewardRate: z.number().min(0, '보상률은 0% 이상이어야 합니다').max(50, '보상률은 50% 이하여야 합니다'),

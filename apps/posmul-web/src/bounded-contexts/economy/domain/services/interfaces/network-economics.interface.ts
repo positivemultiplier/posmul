@@ -2,8 +2,8 @@ import {
   ActiveUserCount,
   MetcalfeValue,
   NetworkDensity,
-  PMC,
-  PMP,
+  PmcAmount,
+  PmpAmount,
   ReedValue,
 } from "../../value-objects/economic-types";
 
@@ -50,7 +50,7 @@ export interface CrossNetworkEffect {
   /** 시너지 계수 */
   synergyCoefficient: number;
   /** 예상 가치 증가 */
-  expectedValueIncrease: PMP;
+  expectedValueIncrease: PmpAmount;
 }
 
 /**
@@ -62,7 +62,7 @@ export interface NetworkValueAnalysis {
   /** Reed's Law 가치 (2^n) */
   reedValue: ReedValue;
   /** 실제 측정된 네트워크 가치 */
-  actualValue: PMP;
+  actualValue: PmpAmount;
   /** 가치 성장률 */
   growthRate: number;
   /** 네트워크 효과 지수 (실제값 대비 이론값) */
@@ -82,7 +82,7 @@ export interface NetworkOptimizationRecommendation {
   /** 예상 효과 */
   expectedImpact: {
     userGrowth: number;
-    valueIncrease: PMP;
+    valueIncrease: PmpAmount;
     engagementBoost: number;
   };
   /** 구현 복잡도 (1-10) */
@@ -120,7 +120,7 @@ export interface INetworkEconomicsEngine {
    */
   calculateMetcalfeValue(
     userCount: ActiveUserCount,
-    valuePerConnection: PMP
+    valuePerConnection: PmpAmount
   ): MetcalfeValue;
 
   /**
@@ -140,7 +140,7 @@ export interface INetworkEconomicsEngine {
     networks: Array<{
       type: NetworkType;
       state: NetworkState;
-      value: PMP;
+      value: PmpAmount;
     }>
   ): CrossNetworkEffect[];
 
@@ -154,13 +154,13 @@ export interface INetworkEconomicsEngine {
     constraints: {
       maxConnections: number;
       qualityThreshold: number;
-      maintenanceCost: PMC;
+      maintenanceCost: PmcAmount;
     }
   ): {
     optimalDensity: NetworkDensity;
     recommendedActions: string[];
-    expectedValueIncrease: PMP;
-    implementationCost: PMC;
+    expectedValueIncrease: PmpAmount;
+    implementationCost: PmcAmount;
   };
 
   /**
@@ -169,7 +169,7 @@ export interface INetworkEconomicsEngine {
    */
   measureNetworkEffects(
     networkState: NetworkState,
-    actualValue: PMP,
+    actualValue: PmpAmount,
     userEngagement: {
       averageSessionTime: number;
       monthlyActiveUsers: number;
@@ -187,7 +187,7 @@ export interface INetworkEconomicsEngine {
     historicalGrowth: Array<{
       timestamp: Date;
       userCount: number;
-      value: PMP;
+      value: PmpAmount;
       engagementMetrics: any;
     }>
   ): {
@@ -207,7 +207,7 @@ export interface INetworkEconomicsEngine {
       userGrowthRate: number;
       valueGrowthRate: number;
       churnRate: number;
-      acquisitionCost: PMC;
+      acquisitionCost: PmcAmount;
     }
   ): {
     currentStage: NetworkLifecycleStage;
@@ -226,15 +226,15 @@ export interface INetworkEconomicsEngine {
       name: string;
       userCount: number;
       connections: number;
-      value: PMP;
+      value: PmpAmount;
       characteristics: Record<string, any>;
     }>
   ): {
-    segmentValues: Map<string, PMP>;
+    segmentValues: Map<string, PmpAmount>;
     crossSegmentSynergies: Array<{
       segment1: string;
       segment2: string;
-      synergyValue: PMP;
+      synergyValue: PmpAmount;
     }>;
     optimizationOpportunities: Array<{
       segment: string;
@@ -266,12 +266,12 @@ export interface INetworkEconomicsEngine {
    * 네트워크 효과를 반영한 실시간 가격 조정
    */
   calculateDynamicPricing(
-    basePrice: PMC,
+    basePrice: PmcAmount,
     networkState: NetworkState,
     demandSignals: {
       currentDemand: number;
       priceElasticity: number;
-      competitorPricing: PMC[];
+      competitorPricing: PmcAmount[];
     },
     objectives: {
       prioritizeGrowth: boolean;
@@ -279,10 +279,10 @@ export interface INetworkEconomicsEngine {
       marketShare: number;
     }
   ): {
-    recommendedPrice: PMC;
+    recommendedPrice: PmcAmount;
     priceJustification: string;
     expectedDemandChange: number;
-    revenueImpact: PMP;
+    revenueImpact: PmpAmount;
   };
 
   /**
@@ -301,7 +301,7 @@ export interface INetworkEconomicsEngine {
   ): Array<{
     scenario: string;
     projectedStates: NetworkState[];
-    projectedValues: PMP[];
+    projectedValues: PmpAmount[];
     riskFactors: string[];
     confidence: number; // 0-1
   }>;

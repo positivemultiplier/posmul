@@ -5,9 +5,18 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
+    "start": "turbo start",
     "lint": "turbo lint",
-    "test": "turbo run test --cache-dir=.turbo",
+    "test": "turbo test",
+    "type-check": "turbo type-check",
+    "clean": "turbo clean",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "dev:web": "pnpm -F @posmul/posmul-web dev",
+    "dev:mobile": "pnpm -F @posmul/study-cycle dev",
+    "dev:sdk": "pnpm -F @posmul/auth-economy-sdk dev",
+    "build:web": "pnpm -F @posmul/posmul-web build",
+    "build:mobile": "pnpm -F @posmul/study-cycle build",
+    "build:sdk": "pnpm -F @posmul/auth-economy-sdk build",
     "e2e": "npx playwright test --config=apps/posmul-web/playwright.config.ts",
     "e2e:ui": "npx playwright test --config=apps/posmul-web/playwright.config.ts --ui",
     "e2e:list": "npx playwright test --config=apps/posmul-web/playwright.config.ts --list",
@@ -20,6 +29,7 @@
     "packages/*"
   ],
   "devDependencies": {
+    "@eslint/js": "^8.57.0",
     "@playwright/test": "^1.44.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-portal": "^1.1.9",
@@ -28,6 +38,9 @@
     "@supabase/supabase-js": "^2.50.0",
     "@types/jest": "^29.5.4",
     "@types/uuid": "^10.0.0",
+    "@typescript-eslint/eslint-plugin": "^7.8.0",
+    "@typescript-eslint/parser": "^7.8.0",
+    "eslint": "^8.57.1",
     "framer-motion": "^12.19.1",
     "glob": "^11.0.3",
     "jest": "^29.7.0",
@@ -47,10 +60,6 @@
     "typescript": "^5.4.5",
     "uuid": "^11.1.0",
     "zod": "^3.25.67",
-    "eslint": "^8.57.1",
-    "@typescript-eslint/parser": "^7.8.0",
-    "@typescript-eslint/eslint-plugin": "^7.8.0",
-    "@eslint/js": "^8.57.0",
     "zustand": "^5.0.6"
   },
   "optionalDependencies": {
@@ -62,6 +71,12 @@
   "pnpm": {
     "overrides": {
       "eslint": "^8.57.1"
-    }
+    },
+    "ignoredBuiltDependencies": [
+      "@tailwindcss/oxide",
+      "esbuild",
+      "sharp",
+      "unrs-resolver"
+    ]
   }
 }

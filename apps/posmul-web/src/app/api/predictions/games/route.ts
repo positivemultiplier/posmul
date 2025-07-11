@@ -1,4 +1,6 @@
-import { UserId, isFailure } from "@posmul/shared-types";
+import { UserId } from "../../../../shared/legacy-compatibility";
+import { isFailure } from "@posmul/auth-economy-sdk";
+
 import { NextRequest, NextResponse } from "next/server";
 import { CreatePredictionGameUseCase } from "../../../../bounded-contexts/prediction/application/use-cases/create-prediction-game.use-case";
 import { GetPredictionGamesUseCase } from "../../../../bounded-contexts/prediction/application/use-cases/get-prediction-games.use-case";
@@ -19,7 +21,7 @@ export async function GET(request: NextRequest) {
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
     // Repository 및 UseCase 초기화
-    const repository = new SupabasePredictionGameRepository();
+    const repository = new SupabasePredictionGameRepository(process.env.SUPABASE_PROJECT_ID!);
     const useCase = new GetPredictionGamesUseCase(repository);
 
     // UseCase 실행
@@ -107,7 +109,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Repository 및 서비스 초기화
-    const repository = new SupabasePredictionGameRepository();
+    const repository = new SupabasePredictionGameRepository(process.env.SUPABASE_PROJECT_ID!);
 
     // UseCase 초기화
     const useCase = new CreatePredictionGameUseCase(repository);

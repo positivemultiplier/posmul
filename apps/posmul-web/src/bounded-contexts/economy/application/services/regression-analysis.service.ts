@@ -5,7 +5,8 @@
  * @version 1.0.0
  */
 
-import { Result } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+
 
 /**
  * 회귀모델 타입 정의
@@ -269,7 +270,10 @@ export class RegressionAnalysisService {
       // 데이터 검증
       const validationResult = this.validateData(data, config);
       if (!validationResult.success) {
-        return validationResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 모델 타입에 따른 분석 실행
@@ -381,9 +385,7 @@ export class RegressionAnalysisService {
       return {
         success: false,
         error: new Error(
-          `OLS 분석 실행 중 오류: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -413,7 +415,10 @@ export class RegressionAnalysisService {
         config
       );
       if (!firstStageResults.success) {
-        return firstStageResults;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 2단계: 예측된 값을 사용한 OLS
@@ -427,9 +432,7 @@ export class RegressionAnalysisService {
       return {
         success: false,
         error: new Error(
-          `2SLS 분석 실행 중 오류: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -497,9 +500,7 @@ export class RegressionAnalysisService {
       return {
         success: false,
         error: new Error(
-          `Logit 분석 실행 중 오류: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -549,9 +550,7 @@ export class RegressionAnalysisService {
       return {
         success: false,
         error: new Error(
-          `VAR 분석 실행 중 오류: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -617,9 +616,7 @@ export class RegressionAnalysisService {
       return {
         success: false,
         error: new Error(
-          `예측 실행 중 오류: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -677,9 +674,7 @@ export class RegressionAnalysisService {
       return {
         success: false,
         error: new Error(
-          `모델 비교 중 오류: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }

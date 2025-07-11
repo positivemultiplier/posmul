@@ -2,11 +2,14 @@
  * Supabase Auth 서비스 구현
  */
 
-import type { Result } from "@posmul/shared-types";
-import { AuthenticationError, ExternalServiceError } from "@posmul/shared-ui";
+import type { Result, AuthError } from "@posmul/auth-economy-sdk";
 import { SupabaseClient, createClient } from "@supabase/supabase-js";
 import { IExternalAuthService } from "../../application/use-cases/sign-up.use-case";
 import { SignUpData } from "../../domain/services/auth-domain.service";
+import {
+  DomainError,
+  AuthenticationError,
+} from "../../domain/helpers/result-helpers";
 
 export class SupabaseAuthService implements IExternalAuthService {
   private supabase: SupabaseClient;
@@ -46,17 +49,14 @@ export class SupabaseAuthService implements IExternalAuthService {
       if (error) {
         return {
           success: false,
-          error: new ExternalServiceError("Supabase", error.message),
+          error: new DomainError(error.message, "SIGNUP_ERROR"),
         };
       }
 
       if (!authData.user || !authData.session) {
         return {
           success: false,
-          error: new ExternalServiceError(
-            "Supabase",
-            "사용자 생성에 실패했습니다."
-          ),
+          error: new DomainError("회원가입 실패", "SIGNUP_ERROR"),
         };
       }
 
@@ -71,11 +71,11 @@ export class SupabaseAuthService implements IExternalAuthService {
     } catch (error) {
       return {
         success: false,
-        error: new ExternalServiceError(
-          "Supabase",
+        error: new DomainError(
           error instanceof Error
             ? error.message
-            : "회원가입 중 오류가 발생했습니다."
+            : "회원가입 중 오류가 발생했습니다.",
+          "SIGNUP_ERROR"
         ),
       };
     }
@@ -139,7 +139,7 @@ export class SupabaseAuthService implements IExternalAuthService {
       if (error) {
         return {
           success: false,
-          error: new ExternalServiceError("Supabase", error.message),
+          error: new DomainError("SIGNOUT_ERROR", error.message),
         };
       }
 
@@ -147,31 +147,11 @@ export class SupabaseAuthService implements IExternalAuthService {
     } catch (error) {
       return {
         success: false,
-        error: new ExternalServiceError(
-          "Supabase",
+        error: new DomainError(
           error instanceof Error
             ? error.message
-            : "로그아웃 중 오류가 발생했습니다."
-        ),
-      };
-    }
-  }
-
-  async deleteUser(userId: string): Promise<Result<void, Error>> {
-    try {
-      // Supabase에서는 클라이언트에서 직접 사용자 삭제가 제한됩니다.
-      // 실제 프로덕션에서는 서버 측 API를 통해 처리해야 합니다.
-      console.warn(`사용자 삭제 요청: ${userId} - 서버 측에서 처리 필요`);
-
-      return { success: true, data: undefined };
-    } catch (error) {
-      return {
-        success: false,
-        error: new ExternalServiceError(
-          "Supabase",
-          error instanceof Error
-            ? error.message
-            : "사용자 삭제 중 오류가 발생했습니다."
+            : "로그아웃 중 오류가 발생했습니다.",
+          "SIGNOUT_ERROR"
         ),
       };
     }
@@ -182,6 +162,7 @@ export class SupabaseAuthService implements IExternalAuthService {
       {
         accessToken: string;
         refreshToken: string;
+        expiresAt: Date;
       },
       Error
     >
@@ -196,14 +177,17 @@ export class SupabaseAuthService implements IExternalAuthService {
       if (error) {
         return {
           success: false,
-          error: new AuthenticationError(error.message),
+          error: new DomainError("REFRESH_TOKEN_ERROR", error.message),
         };
       }
 
       if (!authData.session) {
         return {
           success: false,
-          error: new AuthenticationError("토큰 갱신에 실패했습니다."),
+          error: new DomainError(
+            "세션을 갱신할 수 없습니다.",
+            "REFRESH_TOKEN_ERROR"
+          ),
         };
       }
 
@@ -212,15 +196,40 @@ export class SupabaseAuthService implements IExternalAuthService {
         data: {
           accessToken: authData.session.access_token,
           refreshToken: authData.session.refresh_token,
+          expiresAt: new Date(authData.session.expires_at! * 1000),
         },
       };
     } catch (error) {
       return {
         success: false,
-        error: new AuthenticationError(
+        error: new DomainError(
           error instanceof Error
             ? error.message
-            : "토큰 갱신 중 오류가 발생했습니다."
+            : "토큰 갱신 중 오류가 발생했습니다.",
+          "REFRESH_TOKEN_ERROR"
+        ),
+      };
+    }
+  }
+
+  async deleteUser(userId: string): Promise<Result<void, Error>> {
+    try {
+      // Supabase에서는 클라이언트에서 직접 사용자 삭제가 제한됩니다.
+      // 실제 프로덕션에서는 서버 측 API를 통해 처리해야 합니다.
+      console.warn(`사용자 삭제 요청: ${userId} - 서버 측에서 처리 필요`);
+
+      return {
+        success: true,
+        data: undefined,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: new DomainError(
+          error instanceof Error
+            ? error.message
+            : "사용자 삭제 중 오류가 발생했습니다.",
+          "DELETE_USER_ERROR"
         ),
       };
     }

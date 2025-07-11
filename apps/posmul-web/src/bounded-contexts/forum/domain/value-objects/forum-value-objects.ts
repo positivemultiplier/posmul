@@ -168,10 +168,10 @@ export const createUserReputation = (score: number): UserReputation => {
 // Activity Points Value Object
 export interface ActivityPoints {
   readonly amount: number;
-  readonly type: 'PMP' | 'PMC';
+  readonly type: 'PmpAmount' | 'PmcAmount';
 }
 
-export const createActivityPoints = (amount: number, type: 'PMP' | 'PMC'): ActivityPoints => {
+export const createActivityPoints = (amount: number, type: 'PmpAmount' | 'PmcAmount'): ActivityPoints => {
   if (amount < 0) {
     throw new Error('Activity points cannot be negative');
   }

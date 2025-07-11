@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+import { getEconomicBalance } from "../adapters/simple-economy.adapter";
 
 // 실시간 데이터 타입 정의
 export interface RealtimePredictionGame {
@@ -23,7 +24,7 @@ export interface RealtimeEconomicData {
   lastUpdate: Date;
   recentTransactions: Array<{
     id: string;
-    type: "PMP_EARNED" | "PMC_EARNED" | "PMP_SPENT" | "PMC_SPENT";
+    type: "PmpAmount_EARNED" | "PmcAmount_EARNED" | "PmpAmount_SPENT" | "PmcAmount_SPENT";
     amount: number;
     timestamp: Date;
     source: string;
@@ -163,10 +164,8 @@ export const useRealtimeDataStore = create<RealtimeDataState>()(
           if (pmpChange !== 0) {
             get().addNotification({
               type: pmpChange > 0 ? "success" : "info",
-              title: "PMP 잔액 변경",
-              message: `${
-                pmpChange > 0 ? "+" : ""
-              }${pmpChange.toLocaleString()} PMP`,
+              title: "PmpAmount 잔액 변경",
+              message: "Invalid state",
               read: false,
               autoHide: true,
               duration: 3000,
@@ -176,10 +175,8 @@ export const useRealtimeDataStore = create<RealtimeDataState>()(
           if (pmcChange !== 0) {
             get().addNotification({
               type: pmcChange > 0 ? "success" : "info",
-              title: "PMC 잔액 변경",
-              message: `${
-                pmcChange > 0 ? "+" : ""
-              }${pmcChange.toLocaleString()} PMC`,
+              title: "PmcAmount 잔액 변경",
+              message: "Invalid state",
               read: false,
               autoHide: true,
               duration: 3000,

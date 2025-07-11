@@ -1,7 +1,0 @@
-export * from './mcp-study-session.repository'
-export * from './mcp-supabase-textbook.repository'
-export * from './mcp-supabase-study-session.repository'
-export * from './mcp-supabase-reading.repository'
-export * from './mcp-solution-template.repository'
-export * from './mcp-assessment.repository'
-export * from './assessment.repository' 

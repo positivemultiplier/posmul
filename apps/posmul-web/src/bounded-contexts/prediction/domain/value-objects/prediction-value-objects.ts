@@ -3,16 +3,12 @@
  */
 
 import {
-  PMC,
-  PMP,
-  createPMC,
-  createPMP,
-} from "@posmul/shared-types";
-import {
-  PredictionResult as BasePredictionResult,
-  Result,
-  ValidationError,
-} from "@posmul/shared-types";
+  createPmcAmount,
+  createPmpAmount,
+} from "@posmul/auth-economy-sdk/economy";
+import { PmcAmount, PmpAmount } from "@posmul/auth-economy-sdk/economy";
+import { Result } from "@posmul/auth-economy-sdk";
+import { ValidationError } from "@posmul/auth-economy-sdk";
 import { GameStatus as BaseGameStatus } from "./game-status";
 
 /**
@@ -29,7 +25,7 @@ export class ConfidenceLevel {
         success: false,
         error: new ValidationError(
           `Confidence level must be between 0.0 and 1.0, got: ${value}`,
-          "confidenceLevel"
+          { field: "confidenceLevel", value }
         ),
       };
     }
@@ -39,7 +35,7 @@ export class ConfidenceLevel {
         success: false,
         error: new ValidationError(
           "Confidence level must be a valid finite number",
-          "confidenceLevel"
+          { field: "confidenceLevel", value }
         ),
       };
     }
@@ -85,7 +81,7 @@ export class ConfidenceLevel {
  */
 export class StakeAmount {
   private constructor(
-    private readonly _pmpAmount: PMP,
+    private readonly _pmpAmount: PmpAmount,
     private readonly _confidenceLevel: ConfidenceLevel
   ) {}
 
@@ -97,8 +93,8 @@ export class StakeAmount {
       return {
         success: false,
         error: new ValidationError(
-          "Stake amount must be at least 1 PMP",
-          "stakeAmount"
+          "Stake amount must be at least 1 PmpAmount",
+          { field: "stakeAmount", value: pmpAmount }
         ),
       };
     }
@@ -107,31 +103,34 @@ export class StakeAmount {
       return {
         success: false,
         error: new ValidationError(
-          "Stake amount cannot exceed 10,000 PMP",
-          "stakeAmount"
+          "Stake amount cannot exceed 10,000 PmpAmount",
+          { field: "stakeAmount", value: pmpAmount }
         ),
       };
     }
 
-    const pmpResult = createPMP(pmpAmount);
+    const pmpResult = createPmpAmount(pmpAmount);
     return { success: true, data: new StakeAmount(pmpResult, confidenceLevel) };
   }
 
-  public getAdjustedStake(): PMP {
+  public getAdjustedStake(): PmpAmount {
     const baseAmount = this._pmpAmount as number;
     const multiplier = this._confidenceLevel.getStakeMultiplier();
-    return createPMP(Math.floor(baseAmount * multiplier));
+    return createPmpAmount(Math.floor(baseAmount * multiplier));
   }
 
-  public calculateExpectedReward(totalPool: PMP, winnerCount: number): PMC {
-    if (winnerCount === 0) return createPMC(0);
+  public calculateExpectedReward(
+    totalPool: PmpAmount,
+    winnerCount: number
+  ): PmcAmount {
+    if (winnerCount === 0) return createPmcAmount(0);
 
     const poolAmount = totalPool as number;
     const baseReward = poolAmount / winnerCount;
     const confidenceBonus = this._confidenceLevel.value * 0.2;
     const finalReward = baseReward * (1 + confidenceBonus);
 
-    return createPMC(Math.floor(finalReward));
+    return createPmcAmount(Math.floor(finalReward));
   }
 
   public getRiskLevel(): "LOW" | "MEDIUM" | "HIGH" {
@@ -141,7 +140,7 @@ export class StakeAmount {
     return "HIGH";
   }
 
-  public get pmpAmount(): PMP {
+  public get pmpAmount(): PmpAmount {
     return this._pmpAmount;
   }
 
@@ -150,7 +149,7 @@ export class StakeAmount {
   }
 
   public toString(): string {
-    return `${this._pmpAmount} PMP (${this._confidenceLevel.toString()})`;
+    return `${this._pmpAmount} PmpAmount (${this._confidenceLevel.toString()})`;
   }
 
   public equals(other: StakeAmount): boolean {
@@ -179,20 +178,20 @@ export class PredictionOption {
     if (!id || id.trim().length === 0) {
       return {
         success: false,
-        error: new ValidationError(
-          "Prediction option ID cannot be empty",
-          "optionId"
-        ),
+        error: new ValidationError("Prediction option ID cannot be empty", {
+          field: "optionId",
+          value: id,
+        }),
       };
     }
 
     if (!label || label.trim().length === 0) {
       return {
         success: false,
-        error: new ValidationError(
-          "Prediction option label cannot be empty",
-          "optionLabel"
-        ),
+        error: new ValidationError("Prediction option label cannot be empty", {
+          field: "optionLabel",
+          value: label,
+        }),
       };
     }
 
@@ -201,7 +200,7 @@ export class PredictionOption {
         success: false,
         error: new ValidationError(
           "Prediction option label cannot exceed 100 characters",
-          "optionLabel"
+          { field: "optionLabel", value: label }
         ),
       };
     }
@@ -211,7 +210,7 @@ export class PredictionOption {
         success: false,
         error: new ValidationError(
           "Prediction option description cannot exceed 500 characters",
-          "optionDescription"
+          { field: "optionDescription", value: description }
         ),
       };
     }
@@ -294,10 +293,8 @@ export const isValidGameStatus = (value: string): boolean => {
   return result.success;
 };
 
-export const isValidPredictionResult = (
-  value: string
-): value is BasePredictionResult => {
-  return Object.values(BasePredictionResult).includes(
-    value as BasePredictionResult
-  );
+// TODO: BasePredictionResult을 SDK로 마이그레이션한 후 복원 필요
+export const isValidPredictionResult = (value: string): boolean => {
+  // 임시로 기본적인 결과값만 검증
+  return ["win", "lose", "draw", "cancelled"].includes(value);
 };

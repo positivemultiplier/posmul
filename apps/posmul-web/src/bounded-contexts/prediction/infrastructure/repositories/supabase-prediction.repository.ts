@@ -11,19 +11,17 @@
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
-  AccuracyScore,
-  createPredictionGameId,
-  createUserId,
-  PMC,
-  PMP,
   PredictionGameId,
-  PredictionId,
-  UserId, isFailure } from "@posmul/shared-types";
-import {
-  failure,
-  Result,
-  success,
-} from "@posmul/shared-types";
+  UserId,
+  isFailure,
+  createUserId,
+  createPredictionGameId,
+} from "@posmul/auth-economy-sdk";
+import { AccuracyScore } from "@posmul/auth-economy-sdk";
+import { PmcAmount, PmpAmount } from "@posmul/auth-economy-sdk/economy";
+import { Result } from "@posmul/auth-economy-sdk";
+import { failure, success } from "@posmul/auth-economy-sdk";
+
 import { Prediction } from "../../domain/entities/prediction-game.aggregate";
 import {
   PaginatedResult,
@@ -128,7 +126,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createSaveFailedError(
           "Prediction",
           "Unexpected error during save operation",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -138,7 +136,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
    * ID로 예측 조회
    */
   async findById(
-    id: PredictionId
+    id: string
   ): Promise<Result<Prediction | null, RepositoryError>> {
     try {
       const { data, error } = await this.supabase
@@ -168,7 +166,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "findById",
           "Unexpected error during query",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -178,8 +176,8 @@ export class SupabasePredictionRepository implements IPredictionRepository {
    * 여러 ID로 예측 일괄 조회
    */
   async findByIds(
-    ids: PredictionId[]
-  ): Promise<Result<Map<PredictionId, Prediction>, RepositoryError>> {
+    ids: string[]
+  ): Promise<Result<Map<string, Prediction>, RepositoryError>> {
     try {
       if (ids.length === 0) {
         return success(new Map());
@@ -200,7 +198,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         );
       }
 
-      const result = new Map<PredictionId, Prediction>();
+      const result = new Map<string, Prediction>();
       (data || []).forEach((row) => {
         const prediction = this.mapDatabaseToDomain(row);
         result.set(prediction.id, prediction);
@@ -212,7 +210,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "findByIds",
           "Unexpected error during bulk query",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -233,14 +231,23 @@ export class SupabasePredictionRepository implements IPredictionRepository {
 
       if (!validationResult.success) {
         if (isFailure(validationResult)) {
-  if (isFailure(validationResult)) {
-  return failure(validationResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+          if (isFailure(validationResult)) {
+            return failure(
+              new RepositoryError(
+                validationResult.error?.message || "Unknown error",
+                "VALIDATION_FAILED"
+              )
+            );
+          } else {
+            return failure(
+              new RepositoryError("Unknown error", "REPOSITORY_ERROR")
+            );
+          }
+        } else {
+          return failure(
+            new RepositoryError("Unknown error", "REPOSITORY_ERROR")
+          );
+        }
       }
 
       const offset = (paginationConfig.page - 1) * paginationConfig.limit;
@@ -310,7 +317,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "findByGame",
           "Unexpected error during game query",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -331,14 +338,23 @@ export class SupabasePredictionRepository implements IPredictionRepository {
 
       if (!validationResult.success) {
         if (isFailure(validationResult)) {
-  if (isFailure(validationResult)) {
-  return failure(validationResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+          if (isFailure(validationResult)) {
+            return failure(
+              new RepositoryError(
+                validationResult.error?.message || "Unknown error",
+                "VALIDATION_FAILED"
+              )
+            );
+          } else {
+            return failure(
+              new RepositoryError("Unknown error", "REPOSITORY_ERROR")
+            );
+          }
+        } else {
+          return failure(
+            new RepositoryError("Unknown error", "REPOSITORY_ERROR")
+          );
+        }
       }
 
       const offset = (paginationConfig.page - 1) * paginationConfig.limit;
@@ -407,7 +423,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "findByUser",
           "Unexpected error during user query",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -449,7 +465,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "findByUserAndGame",
           "Unexpected error during user-game query",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -470,14 +486,23 @@ export class SupabasePredictionRepository implements IPredictionRepository {
 
       if (!validationResult.success) {
         if (isFailure(validationResult)) {
-  if (isFailure(validationResult)) {
-  return failure(validationResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+          if (isFailure(validationResult)) {
+            return failure(
+              new RepositoryError(
+                validationResult.error?.message || "Unknown error",
+                "VALIDATION_FAILED"
+              )
+            );
+          } else {
+            return failure(
+              new RepositoryError("Unknown error", "REPOSITORY_ERROR")
+            );
+          }
+        } else {
+          return failure(
+            new RepositoryError("Unknown error", "REPOSITORY_ERROR")
+          );
+        }
       }
 
       const offset = (paginationConfig.page - 1) * paginationConfig.limit;
@@ -610,7 +635,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "search",
           "Unexpected error during search",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -656,7 +681,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "findPendingResults",
           "Unexpected error during pending results query",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -708,7 +733,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "getUserPerformanceStats",
           "Unexpected error during performance stats query",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -785,7 +810,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "getGamePredictionStats",
           "Unexpected error during game stats calculation",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -794,7 +819,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
   /**
    * 예측 존재 여부 확인
    */
-  async exists(id: PredictionId): Promise<Result<boolean, RepositoryError>> {
+  async exists(id: string): Promise<Result<boolean, RepositoryError>> {
     try {
       const { data, error } = await this.supabase
         .from("predictions")
@@ -822,7 +847,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "exists",
           "Unexpected error during existence check",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -863,7 +888,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "hasUserParticipated",
           "Unexpected error during participation check",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -872,7 +897,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
   /**
    * 예측 삭제 (소프트 삭제)
    */
-  async delete(id: PredictionId): Promise<Result<void, RepositoryError>> {
+  async delete(id: string): Promise<Result<void, RepositoryError>> {
     try {
       // 실제 삭제 대신 소프트 삭제 구현 가능
       const { error } = await this.supabase
@@ -896,7 +921,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createSaveFailedError(
           "Prediction",
           "Unexpected error during deletion",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -915,7 +940,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
 
       const updateData = predictions.map((prediction) => ({
         id: prediction.id,
-        is_correct: prediction.result?.isCorrect,
+        is_correct: prediction.result === "CORRECT",
         accuracy_score: prediction.accuracyScore,
         reward_amount: prediction.reward,
         updated_at: new Date().toISOString(),
@@ -942,7 +967,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createSaveFailedError(
           "Prediction",
           "Unexpected error during bulk update",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -984,7 +1009,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "findHighConfidencePredictions",
           "Unexpected error during high confidence query",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -1042,7 +1067,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "getTopPerformersForGame",
           "Unexpected error during top performers query",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -1064,7 +1089,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
       stake: prediction.stake,
       confidence: prediction.confidence,
       reasoning: prediction.reasoning || null,
-      is_correct: prediction.result?.isCorrect || null,
+      is_correct: prediction.result === "CORRECT" || null,
       accuracy_score: prediction.accuracyScore || null,
       reward_amount: prediction.reward || null,
       created_at: prediction.timestamps.createdAt.toISOString(),
@@ -1080,7 +1105,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
       createUserId(data.user_id),
       createPredictionGameId(data.game_id),
       data.selected_option_id,
-      data.stake as PMP,
+      data.stake,
       data.confidence,
       data.reasoning || undefined
     );
@@ -1102,7 +1127,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
       predictionEntity.setResult(
         { isCorrect: data.is_correct },
         data.accuracy_score as AccuracyScore,
-        data.reward_amount as PMC
+        data.reward_amount as PmcAmount
       );
     }
 
@@ -1198,7 +1223,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         RepositoryHelpers.createQueryFailedError(
           "calculateUserPerformanceStats",
           "Unexpected error during stats calculation",
-          error as Error
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }

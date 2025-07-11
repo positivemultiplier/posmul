@@ -3,7 +3,8 @@
  * 기부 도메인 서비스 - 복잡한 비즈니스 로직 처리
  */
 
-import { UserId } from '@posmul/shared-types';
+import { UserId } from "@posmul/auth-economy-sdk";
+
 import { Donation } from '../entities/donation.entity';
 import { Institute } from '../entities/institute.entity';
 import { OpinionLeader } from '../entities/opinion-leader.entity';
@@ -73,7 +74,7 @@ export class DonationDomainService {
     // 잔액 확인
     if (donorBalance < donation.getAmount().getValue()) {
       isEligible = false;
-      reasons.push('Insufficient PMC balance');
+      reasons.push('Insufficient PmcAmount balance');
     }
 
     // 기부 대상 상태 확인

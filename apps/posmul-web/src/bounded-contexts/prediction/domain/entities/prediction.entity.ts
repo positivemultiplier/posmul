@@ -9,19 +9,25 @@
  */
 
 import {
-  AccuracyScore,
-  DomainError,
-  PmpAmount,
   PredictionGameId,
   PredictionId,
-  PredictionResult as PredictionResultType,
   Result,
-  Timestamps,
   UserId,
+  isFailure,
+} from "@posmul/auth-economy-sdk";
+import { PmpAmount } from "@posmul/auth-economy-sdk/economy";
+import {
+  AccuracyScore,
   ValidationError,
-  createPredictionId,
   failure,
-  success, isFailure } from "@posmul/shared-types";
+  success,
+  DomainError,
+} from "@posmul/auth-economy-sdk";
+import {
+  Timestamps,
+  createPredictionId,
+  PredictionResult as PredictionResultType,
+} from "../types/common";
 
 /**
  * 예측 생성을 위한 입력 데이터 인터페이스
@@ -91,16 +97,10 @@ export class Prediction {
   ): Result<Prediction, ValidationError | DomainError> {
     // 유효성 검증
     const validationResult = Prediction.validateInput(input);
-    if (!validationResult.success) {
-      if (isFailure(validationResult)) {
-  if (isFailure(validationResult)) {
-  return failure(validationResult.error);
-} else {
-  return failure(new Error("Unknown error"));
-};
-} else {
-  return failure(new Error("Unknown error"));
-}
+    if (isFailure(validationResult)) {
+      return failure(
+        new DomainError(validationResult.error?.message || "Unknown error")
+      );
     }
 
     const predictionId = createPredictionId(crypto.randomUUID());
@@ -154,26 +154,17 @@ export class Prediction {
    */
   public setResult(input: SetPredictionResultInput): Result<void, DomainError> {
     if (this._result !== undefined) {
-      return failure(
-        new DomainError("Prediction result already set", "RESULT_ALREADY_SET")
-      );
+      return failure(new DomainError("RESULT_ALREADY_SET"));
     }
 
     // 정확도 점수 유효성 검증
     if (input.accuracyScore < 0 || input.accuracyScore > 1) {
-      return failure(
-        new DomainError(
-          "Accuracy score must be between 0 and 1",
-          "INVALID_ACCURACY_SCORE"
-        )
-      );
+      return failure(new DomainError("INVALID_ACCURACY_SCORE"));
     }
 
     // 보상 유효성 검증 (음수 불가)
     if (input.reward < 0) {
-      return failure(
-        new DomainError("Reward cannot be negative", "INVALID_REWARD")
-      );
+      return failure(new DomainError("INVALID_REWARD"));
     }
 
     this._result = input.result;
@@ -271,29 +262,31 @@ export class Prediction {
   ): Result<void, ValidationError | DomainError> {
     if (!input.selectedOptionId || input.selectedOptionId.trim().length === 0) {
       return failure(
-        new ValidationError(
-          "Selected option ID is required",
-          "selectedOptionId"
-        )
+        new ValidationError("Selected option ID is required", {
+          field: "selectedOptionId",
+        })
       );
     }
 
     if (input.confidence < 0 || input.confidence > 1) {
       return failure(
-        new ValidationError("Confidence must be between 0 and 1", "confidence")
+        new ValidationError("Confidence must be between 0 and 1", {
+          field: "confidence",
+        })
       );
     }
 
     if (Number.isNaN(input.stake) || input.stake <= 0) {
-      return failure(new ValidationError("Stake must be positive", "stake"));
+      return failure(
+        new ValidationError("Stake must be positive", { field: "stake" })
+      );
     }
 
     if (input.reasoning && input.reasoning.length > 1000) {
       return failure(
-        new ValidationError(
-          "Reasoning cannot exceed 1000 characters",
-          "reasoning"
-        )
+        new ValidationError("Reasoning cannot exceed 1000 characters", {
+          field: "reasoning",
+        })
       );
     }
 
@@ -305,30 +298,25 @@ export class Prediction {
    */
   private validateInvariants(): void {
     if (this._confidence < 0 || this._confidence > 1) {
-      throw new ValidationError(
-        "Confidence must be between 0 and 1",
-        "confidence"
-      );
+      throw new ValidationError("Confidence must be between 0 and 1", {
+        field: "confidence",
+      });
     }
 
     if (this._stake <= 0) {
-      throw new ValidationError("Stake must be positive", "stake");
+      throw new ValidationError("Stake must be positive", { field: "stake" });
     }
 
     if (!this._selectedOptionId || this._selectedOptionId.trim().length === 0) {
-      throw new ValidationError(
-        "Selected option ID is required",
-        "selectedOptionId"
-      );
+      throw new ValidationError("Selected option ID is required", {
+        field: "selectedOptionId",
+      });
     }
 
     // 결과가 설정된 경우 정확도와 보상도 설정되어야 함
     if (this._result !== undefined) {
       if (this._accuracyScore === undefined || this._reward === undefined) {
-        throw new DomainError(
-          "Accuracy score and reward must be set when result is set",
-          "INCOMPLETE_RESULT"
-        );
+        throw new DomainError("INCOMPLETE_RESULT");
       }
     }
   }
@@ -365,7 +353,7 @@ export class Prediction {
 
     return (
       `Prediction ${this._id} ${status}: Option ${this._selectedOptionId}, ` +
-      `Stake ${this._stake} PMP, Confidence ${confidencePercent}%`
+      `Stake ${this._stake} PmpAmount, Confidence ${confidencePercent}%`
     );
   }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env tsx
 /**
- * 🎯 우선순위 2.1: PMP → PMC 전환 로직 검증 스크립트
+ * 🎯 우선순위 2.1: PmpAmount → PmcAmount 전환 로직 검증 스크립트
  * 실제 운영 데이터를 기반으로 예측 게임 성공 시나리오를 시뮬레이션합니다.
  */
 
@@ -23,7 +23,7 @@ interface PredictionResult {
  * 🎯 실제 예측 게임 결과 시뮬레이션
  */
 async function simulatePredictionOutcome() {
-  console.log("🎯 === PMP → PMC 전환 시뮬레이션 시작 ===");
+  console.log("🎯 === PmpAmount → PmcAmount 전환 시뮬레이션 시작 ===");
 
   // 1. 현재 활성 예측 조회
   const activePredictions = await mcp_supabase_execute_sql({
@@ -65,7 +65,7 @@ async function simulatePredictionOutcome() {
     console.log(
       `${index + 1}. ${
         pred.title
-      } - ${pred.bet_amount.toLocaleString()} PMP (신뢰도: ${
+      } - ${pred.bet_amount.toLocaleString()} PmpAmount (신뢰도: ${
         pred.confidence_level
       }%)`
     );
@@ -110,15 +110,15 @@ async function simulatePredictionOutcome() {
     console.log(
       `${
         index + 1
-      }. ${status} | PMP 배팅: ${result.betAmount.toLocaleString()} | PMC 생성: ${pmcGenerated.toFixed(
+      }. ${status} | PmpAmount 배팅: ${result.betAmount.toLocaleString()} | PmcAmount 생성: ${pmcGenerated.toFixed(
         2
       )} | 신뢰도: ${result.confidence}%`
     );
   });
 
   console.log("\n📈 전체 시뮬레이션 결과:");
-  console.log(`🔄 총 PMP 전환: ${totalPmpConverted.toLocaleString()}`);
-  console.log(`💎 총 PMC 생성: ${totalPmcGenerated.toLocaleString()}`);
+  console.log(`🔄 총 PmpAmount 전환: ${totalPmpConverted.toLocaleString()}`);
+  console.log(`💎 총 PmcAmount 생성: ${totalPmcGenerated.toLocaleString()}`);
   console.log(
     `⚡ 전환 효율성: ${((totalPmcGenerated / totalPmpConverted) * 100).toFixed(
       2
@@ -143,7 +143,7 @@ async function simulatePredictionOutcome() {
       `${index + 1}. User: ${tx.userId.slice(
         0,
         8
-      )}... | PMP: ${tx.pmpAmount.toFixed(0)} → PMC: ${tx.pmcAmount.toFixed(
+      )}... | PmpAmount: ${tx.pmpAmount.toFixed(0)} → PmcAmount: ${tx.pmcAmount.toFixed(
         2
       )} | 비율: ${(tx.conversionRatio * 100).toFixed(1)}%`
     );
@@ -196,26 +196,26 @@ async function analyzeEconomicBalance() {
 
   console.log("📊 현재 경제 현황:");
   console.log(`👥 활성 사용자: ${data.active_users}명`);
-  console.log(`💰 총 PMP: ${parseInt(data.total_pmp).toLocaleString()}`);
-  console.log(`💎 총 PMC: ${parseFloat(data.total_pmc).toLocaleString()}`);
+  console.log(`💰 총 PmpAmount: ${parseInt(data.total_pmp).toLocaleString()}`);
+  console.log(`💎 총 PmcAmount: ${parseFloat(data.total_pmc).toLocaleString()}`);
   console.log(
-    `📈 PMP/PMC 비율: ${(
+    `📈 PmpAmount/PmcAmount 비율: ${(
       parseInt(data.total_pmp) / parseFloat(data.total_pmc)
     ).toFixed(2)}`
   );
-  console.log(`🔄 평균 PMP: ${parseInt(data.avg_pmp).toLocaleString()}`);
-  console.log(`💫 평균 PMC: ${parseFloat(data.avg_pmc).toLocaleString()}`);
+  console.log(`🔄 평균 PmpAmount: ${parseInt(data.avg_pmp).toLocaleString()}`);
+  console.log(`💫 평균 PmcAmount: ${parseFloat(data.avg_pmc).toLocaleString()}`);
 
   // 경제 건전성 평가
   const pmpPmcRatio = parseInt(data.total_pmp) / parseFloat(data.total_pmc);
   let healthStatus = "";
 
   if (pmpPmcRatio > 3) {
-    healthStatus = "🟢 건전 (PMP 우세)";
+    healthStatus = "🟢 건전 (PmpAmount 우세)";
   } else if (pmpPmcRatio > 1.5) {
     healthStatus = "🟡 균형 (적정 수준)";
   } else {
-    healthStatus = "🔴 주의 (PMC 과도)";
+    healthStatus = "🔴 주의 (PmcAmount 과도)";
   }
 
   console.log(`📊 경제 건전성: ${healthStatus}`);
@@ -236,7 +236,7 @@ async function main() {
     console.log("🚀 우선순위 2.1: 예측 게임 시스템 검증 시작");
     console.log("=".repeat(60));
 
-    // 1. PMP → PMC 전환 시뮬레이션
+    // 1. PmpAmount → PmcAmount 전환 시뮬레이션
     const simulationResult = await simulatePredictionOutcome();
 
     // 2. 경제 시스템 균형 분석
@@ -262,7 +262,7 @@ async function main() {
     // 4. 권장사항
     console.log("\n📋 권장사항:");
     if (simulationResult.conversionEfficiency > 80) {
-      console.log("✅ PMP → PMC 전환 로직이 효율적으로 작동중");
+      console.log("✅ PmpAmount → PmcAmount 전환 로직이 효율적으로 작동중");
     } else {
       console.log("⚠️  전환 효율성 개선 필요 (목표: 80% 이상)");
     }

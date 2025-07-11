@@ -25,9 +25,9 @@ import {
   createMoneyWaveId,
   // Network Economics
   createNetworkDensity,
-  createPMC,
+  createPmcAmount,
   // 핵심 화폐 시스템
-  createPMP,
+  createPmpAmount,
   createProspectValue,
   createReedValue,
   // CAPM
@@ -37,24 +37,24 @@ import {
   createUtilityBeta,
   createUtilityGamma,
   MoneyWaveType,
-  unwrapPMC,
+  unwrapPmcAmount,
   // 유틸리티
-  unwrapPMP,
+  unwrapPmpAmount,
 } from "./index";
 
 /**
- * 예제 1: 기본 PMP/PMC 생성 및 사용
+ * 예제 1: 기본 PmpAmount/PmcAmount 생성 및 사용
  */
 export function exampleBasicCurrency() {
   console.log("=== 기본 화폐 시스템 예제 ===");
 
-  // PMP 생성 (위험프리 자산)
-  const userPMP = createPMP(1000);
-  console.log(`User PMP: ${unwrapPMP(userPMP)} points`);
+  // PmpAmount 생성 (위험프리 자산)
+  const userPmpAmount = createPmpAmount(1000);
+  console.log(`User PmpAmount: ${unwrapPmpAmount(userPmpAmount)} points`);
 
-  // PMC 생성 (위험자산)
-  const userPMC = createPMC(250.75);
-  console.log(`User PMC: ${unwrapPMC(userPMC)} coins`);
+  // PmcAmount 생성 (위험자산)
+  const userPmcAmount = createPmcAmount(250.75);
+  console.log(`User PmcAmount: ${unwrapPmcAmount(userPmcAmount)} coins`);
 
   // EBIT 생성
   const companyEBIT = createEBIT(1000000);
@@ -63,7 +63,7 @@ export function exampleBasicCurrency() {
   // MoneyWave 생성
   const waveId = createMoneyWaveId(MoneyWaveType.WAVE1, new Date());
   const waveAmount = createMoneyWaveAmount(500.0);
-  console.log(`MoneyWave ${waveId}: ${waveAmount} PMC distributed`);
+  console.log(`MoneyWave ${waveId}: ${waveAmount} PmcAmount distributed`);
 }
 
 /**
@@ -121,9 +121,9 @@ export function exampleBehavioralEconomics() {
   const lossAversion = createLossAversionCoefficient(); // 기본값 2.25
   console.log(`Loss Aversion Coefficient: ${lossAversion}`);
 
-  // PMP → PMC 전환 시 Prospect Value 계산
-  const pmcGain = 100; // PMC 100 획득
-  const pmpLoss = 50; // PMP 50 소모
+  // PmpAmount → PmcAmount 전환 시 Prospect Value 계산
+  const pmcGain = 100; // PmcAmount 100 획득
+  const pmpLoss = 50; // PmpAmount 50 소모
 
   // 가치함수: v(x) = x^α (이득), -λ(-x)^β (손실)
   const gainValue = Math.pow(pmcGain, 0.88); // α = 0.88
@@ -132,7 +132,7 @@ export function exampleBehavioralEconomics() {
   const prospectValue = createProspectValue(gainValue + lossValue);
   console.log(`Prospect Value: ${prospectValue}`);
   console.log(
-    `Decision: ${prospectValue > 0 ? "Accept" : "Reject"} the conversion`
+    "Invalid state"
   );
 
   // Endowment Effect
@@ -171,30 +171,30 @@ export function exampleUtilityFunction() {
   console.log("=== 개인 효용함수 예제 ===");
 
   // 효용함수 계수들
-  const alpha = createUtilityAlpha(0.5); // PMP 한계효용
-  const beta = createUtilityBeta(0.3); // PMC 한계효용
+  const alpha = createUtilityAlpha(0.5); // PmpAmount 한계효용
+  const beta = createUtilityBeta(0.3); // PmcAmount 한계효용
   const gamma = createUtilityGamma(0.8); // 사회적 효용 가중치
 
   // 사용자 자산
-  const userPMP = createPMP(500);
-  const userPMC = createPMC(200);
+  const userPmpAmount = createPmpAmount(500);
+  const userPmcAmount = createPmcAmount(200);
   const donationUtility = 0.6; // 기부로 인한 사회적 효용
 
-  // 효용함수: U(x) = α·ln(PMP) + β·ln(PMC) + γ·S(Donate)
+  // 효용함수: U(x) = α·ln(PmpAmount) + β·ln(PmcAmount) + γ·S(Donate)
   const individualUtility = calculateIndividualUtility(
-    userPMP,
-    userPMC,
+    userPmpAmount,
+    userPmcAmount,
     donationUtility,
     alpha,
     beta,
     gamma
   );
 
-  console.log(`Alpha (PMP marginal utility): ${alpha}`);
-  console.log(`Beta (PMC marginal utility): ${beta}`);
+  console.log(`Alpha (PmpAmount marginal utility): ${alpha}`);
+  console.log(`Beta (PmcAmount marginal utility): ${beta}`);
   console.log(`Gamma (social utility weight): ${gamma}`);
-  console.log(`User PMP: ${userPMP}`);
-  console.log(`User PMC: ${userPMC}`);
+  console.log(`User PmpAmount: ${userPmpAmount}`);
+  console.log(`User PmcAmount: ${userPmcAmount}`);
   console.log(`Donation Utility: ${donationUtility}`);
   console.log(`Individual Utility: ${individualUtility.toFixed(4)}`);
 }

@@ -5,7 +5,8 @@
  * Fixed Effects, Random Effects, Difference-in-Differences 모델 구현
  */
 
-import { Result } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   EconometricModelResult,
   IEconomicAnalyticsRepository,
@@ -185,7 +186,10 @@ export class PanelDataAnalysisService {
       // 패널데이터 조회
       const panelDataResult = await this.analyticsRepository.getPanelData();
       if (!panelDataResult.success) {
-        return panelDataResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const panelData = panelDataResult.data;
@@ -242,7 +246,10 @@ export class PanelDataAnalysisService {
         });
 
       if (!saveResult.success) {
-        return saveResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       return {
@@ -259,9 +266,7 @@ export class PanelDataAnalysisService {
       return {
         success: false,
         error: new Error(
-          `Panel model estimation failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -278,7 +283,10 @@ export class PanelDataAnalysisService {
     try {
       const panelDataResult = await this.analyticsRepository.getPanelData();
       if (!panelDataResult.success) {
-        return panelDataResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const panelData = panelDataResult.data;
@@ -322,9 +330,7 @@ export class PanelDataAnalysisService {
       return {
         success: false,
         error: new Error(
-          `Causal inference analysis failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -341,7 +347,10 @@ export class PanelDataAnalysisService {
     try {
       const panelDataResult = await this.analyticsRepository.getPanelData();
       if (!panelDataResult.success) {
-        return panelDataResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const panelData = panelDataResult.data;
@@ -379,9 +388,7 @@ export class PanelDataAnalysisService {
       return {
         success: false,
         error: new Error(
-          `Longitudinal analysis failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -398,7 +405,10 @@ export class PanelDataAnalysisService {
     try {
       const panelDataResult = await this.analyticsRepository.getPanelData();
       if (!panelDataResult.success) {
-        return panelDataResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const panelData = panelDataResult.data;
@@ -449,9 +459,7 @@ export class PanelDataAnalysisService {
       return {
         success: false,
         error: new Error(
-          `Predictive model building failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -760,9 +768,7 @@ export class PanelDataAnalysisService {
 
   // 추가 유틸리티 메서드들 (단순화된 구현)
   private buildSpecificationString(request: PanelDataModelRequest): string {
-    return `${request.dependentVariable} ~ ${request.independentVariables.join(
-      " + "
-    )}`;
+    return "Invalid state";
   }
 
   private getRecommendedSpecification(

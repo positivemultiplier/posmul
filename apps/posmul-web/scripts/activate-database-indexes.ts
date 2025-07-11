@@ -41,11 +41,11 @@ export async function activateEconomyIndexes() {
   console.log("💰 경제 시스템 인덱스 활성화 시작...");
 
   try {
-    console.log("  🏦 PMP/PMC 계정 생성 중...");
+    console.log("  🏦 PmpAmount/PmcAmount 계정 생성 중...");
     console.log("  ✅ 사용자 계정 5개 초기화");
 
     console.log("  💸 거래 내역 생성 중...");
-    console.log("  ✅ PMP/PMC 거래 내역 20개 생성");
+    console.log("  ✅ PmpAmount/PmcAmount 거래 내역 20개 생성");
 
     console.log("  🌊 Money Wave 이벤트 생성 중...");
     console.log("  ✅ Money Wave 이벤트 3개 생성");

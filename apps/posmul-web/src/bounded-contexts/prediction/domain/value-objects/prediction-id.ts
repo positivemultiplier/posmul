@@ -11,11 +11,9 @@
 import {
   PredictionGameId as BasePredictionGameId,
   PredictionId as BasePredictionId,
-} from "@posmul/shared-types";
-import {
-  Result,
-  ValidationError,
-} from "@posmul/shared-types";
+} from "@posmul/auth-economy-sdk";
+import { Result } from "@posmul/auth-economy-sdk";
+import { ValidationError } from "@posmul/auth-economy-sdk";
 
 /**
  * 예측 ID Value Object
@@ -31,10 +29,9 @@ export class PredictionId {
     if (!value || value.trim().length === 0) {
       return {
         success: false,
-        error: new ValidationError(
-          "Prediction ID cannot be empty",
-          "predictionId"
-        ),
+        error: new ValidationError("Prediction ID cannot be empty", {
+          field: "predictionId",
+        }),
       };
     }
 
@@ -46,7 +43,7 @@ export class PredictionId {
         success: false,
         error: new ValidationError(
           "Prediction ID must be a valid UUID format",
-          "predictionId"
+          { field: "predictionId" }
         ),
       };
     }
@@ -66,7 +63,7 @@ export class PredictionId {
   }
 
   /**
-   * 기존 PredictionId로부터 생성 (내부 사용)
+   * 기존 브랜드 타입으로부터 생성 (내부 사용)
    */
   public static fromExisting(id: BasePredictionId): PredictionId {
     return new PredictionId(id);
@@ -126,10 +123,9 @@ export class PredictionGameId {
     if (!value || value.trim().length === 0) {
       return {
         success: false,
-        error: new ValidationError(
-          "Prediction Game ID cannot be empty",
-          "predictionGameId"
-        ),
+        error: new ValidationError("Prediction Game ID cannot be empty", {
+          field: "predictionGameId",
+        }),
       };
     }
 
@@ -141,7 +137,7 @@ export class PredictionGameId {
         success: false,
         error: new ValidationError(
           "Prediction Game ID must be a valid UUID format",
-          "predictionGameId"
+          { field: "predictionGameId" }
         ),
       };
     }
@@ -214,7 +210,7 @@ export class PredictionGameId {
 }
 
 // Helper functions
-export const isValidPredictionId = (value: string): boolean => {
+export const isValidstring = (value: string): boolean => {
   const uuidPattern =
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
   return uuidPattern.test(value);

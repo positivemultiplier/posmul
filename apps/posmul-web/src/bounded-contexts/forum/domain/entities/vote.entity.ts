@@ -156,7 +156,7 @@ export class Vote {
    */
   calculateParticipationPoints(): ActivityPoints {
     // 투표 참여 포인트 (1 PMP)
-    return createActivityPoints(1, 'PMP');
+    return createActivityPoints(1, 'PmpAmount');
   }
 
   /**

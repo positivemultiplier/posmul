@@ -9,6 +9,7 @@
  */
 
 import { DomainEvent, Result } from "../types/common";
+import { isFailure } from "@posmul/auth-economy-sdk";
 
 /**
  * 도메인 이벤트 발행자 인터페이스
@@ -54,13 +55,17 @@ export interface IDomainEventSubscriber<T extends DomainEvent> {
  * 이벤트 발행 오류
  */
 export class PublishError extends Error {
+  public readonly code: string;
+
   constructor(
     message: string,
     public readonly cause?: Error,
-    public readonly eventType?: string
+    public readonly eventType?: string,
+    code: string = "PUBLISH_ERROR"
   ) {
     super(message);
     this.name = "PublishError";
+    this.code = code;
   }
 }
 
@@ -167,7 +172,7 @@ export class InMemoryEventPublisher implements IDomainEventPublisher {
             if (!result.success) {
               console.error(
                 `Handler error for ${subscriber.subscriberId}:`,
-                result.error
+                isFailure(result) ? result.error : undefined
               );
             }
             return result;
@@ -198,9 +203,7 @@ export class InMemoryEventPublisher implements IDomainEventPublisher {
       return {
         success: false,
         error: new PublishError(
-          `Failed to publish event: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
+          "Invalid state",
           error instanceof Error ? error : undefined,
           event.type
         ),
@@ -239,9 +242,7 @@ export class InMemoryEventPublisher implements IDomainEventPublisher {
       return {
         success: false,
         error: new PublishError(
-          `Batch publish error: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
+          "Invalid state",
           error instanceof Error ? error : undefined
         ),
       };
@@ -317,8 +318,8 @@ export class SupabaseEventPublisher implements IDomainEventPublisher {
         return {
           success: false,
           error: new PublishError(
-            `Failed to store event: ${storeResult.error.message}`,
-            storeResult.error,
+            "Invalid state",
+            isFailure(storeResult) ? storeResult.error : undefined,
             event.type
           ),
         };
@@ -349,9 +350,7 @@ export class SupabaseEventPublisher implements IDomainEventPublisher {
       return {
         success: false,
         error: new PublishError(
-          `Failed to publish event: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`,
+          "Invalid state",
           error instanceof Error ? error : undefined,
           event.type
         ),

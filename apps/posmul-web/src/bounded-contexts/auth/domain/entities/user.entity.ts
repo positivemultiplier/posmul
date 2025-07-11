@@ -76,7 +76,7 @@ export class User {
 
   addPmcPoints(amount: number): void {
     if (amount <= 0) {
-      throw new Error('PMC amount must be positive');
+      throw new Error('PmcAmount amount must be positive');
     }
     this.props.pmcBalance += amount;
     this.props.updatedAt = new Date();
@@ -84,10 +84,10 @@ export class User {
 
   deductPmcPoints(amount: number): void {
     if (amount <= 0) {
-      throw new Error('PMC amount must be positive');
+      throw new Error('PmcAmount amount must be positive');
     }
     if (this.props.pmcBalance < amount) {
-      throw new Error('Insufficient PMC balance');
+      throw new Error('Insufficient PmcAmount balance');
     }
     this.props.pmcBalance -= amount;
     this.props.updatedAt = new Date();
@@ -95,7 +95,7 @@ export class User {
 
   addPmpPoints(amount: number): void {
     if (amount <= 0) {
-      throw new Error('PMP amount must be positive');
+      throw new Error('PmpAmount amount must be positive');
     }
     this.props.pmpBalance += amount;
     this.props.updatedAt = new Date();

@@ -8,7 +8,8 @@
  * @since 2024-12
  */
 
-import { PredictionGameId, UserId } from "@posmul/shared-types";
+import { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
+
 import { BaseDomainEvent } from "../../events/domain-events";
 
 /**
@@ -111,7 +112,7 @@ export class MoneyWave1DistributionCompletedEvent extends BaseDomainEvent {
 }
 
 /**
- * MoneyWave2 - 미소비 PMC 감지 이벤트
+ * MoneyWave2 - 미소비 PmcAmount 감지 이벤트
  */
 export class MoneyWave2UnusedPmcDetectedEvent extends BaseDomainEvent {
   constructor(
@@ -135,7 +136,7 @@ export class MoneyWave2UnusedPmcDetectedEvent extends BaseDomainEvent {
 }
 
 /**
- * MoneyWave2 - PMC 재분배 실행 이벤트
+ * MoneyWave2 - PmcAmount 재분배 실행 이벤트
  */
 export class MoneyWave2RedistributionExecutedEvent extends BaseDomainEvent {
   constructor(
@@ -349,7 +350,7 @@ export class MoneyWaveEventUtils {
             eventType: event.type,
             amount: userTarget.distributedAmount,
             timestamp: event.timestamp,
-            source: "PMC Redistribution",
+            source: "PmcAmount Redistribution",
           });
         }
       }
@@ -421,7 +422,7 @@ export const MoneyWaveEventTypes = {
   MONEY_WAVE_1_DISTRIBUTION_COMPLETED: "MoneyWave1DistributionCompleted",
 
   // Wave 2
-  MONEY_WAVE_2_UNUSED_PMC_DETECTED: "MoneyWave2UnusedPmcDetected",
+  MONEY_WAVE_2_UNUSED_PmcAmount_DETECTED: "MoneyWave2UnusedPmcDetected",
   MONEY_WAVE_2_REDISTRIBUTION_EXECUTED: "MoneyWave2RedistributionExecuted",
 
   // Wave 3

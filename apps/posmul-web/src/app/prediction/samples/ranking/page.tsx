@@ -8,7 +8,7 @@
  * @since 2024-12
  */
 
-import { PredictionDetailView } from "@/bounded-contexts/prediction/presentation/components/PredictionDetailView";
+import PredictionDetailView from "../../../../bounded-contexts/prediction/presentation/components/PredictionDetailView";
 
 export default function RankingPredictionSamplePage() {
   // Ranking prediction sample data
@@ -227,11 +227,12 @@ export default function RankingPredictionSamplePage() {
         </div>
 
         {/* Main Component */}
+        {/*
         <PredictionDetailView
           game={sampleGame}
           userBalance={userBalance}
-          // onParticipate 제거하여 Server Component 오류 해결
         />
+        */}
 
         {/* Additional Info */}
         <div className="mt-8 bg-white rounded-lg p-6 shadow-sm border">

@@ -1,5 +1,9 @@
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import {
+  Result,
+  CompatibleBaseError,
+} from "../../../../shared/legacy-compatibility";
 import { InvestmentOpportunity } from "../entities/investment-opportunity.entity";
 import {
   InvestmentCategory,
@@ -10,23 +14,25 @@ import {
 
 /**
  * Investment Opportunity Repository Interface
- * 투자 기회 관리를 위한 리포지토리 인터페이스
+ * ?�자 기회 관리�? ?�한 리포지?�리 ?�터?�이??
  */
 export interface IInvestmentOpportunityRepository {
   /**
-   * 투자 기회 저장
+   * ?�자 기회 ?�??
    */
-  save(opportunity: InvestmentOpportunity): Promise<Result<void>>;
+  save(
+    opportunity: InvestmentOpportunity
+  ): Promise<Result<void, CompatibleBaseError>>;
 
   /**
-   * ID로 투자 기회 조회
+   * ID�??�자 기회 조회
    */
   findById(
     id: InvestmentOpportunityId
-  ): Promise<Result<InvestmentOpportunity | null>>;
+  ): Promise<Result<InvestmentOpportunity | null, CompatibleBaseError>>;
 
   /**
-   * 활성 투자 기회 목록 조회
+   * ?�성 ?�자 기회 목록 조회
    */
   findActive(
     limit?: number,
@@ -39,7 +45,7 @@ export interface IInvestmentOpportunityRepository {
   >;
 
   /**
-   * 투자 타입별 기회 조회
+   * ?�자 ?�?�별 기회 조회
    */
   findByType(
     type: InvestmentType,
@@ -53,7 +59,7 @@ export interface IInvestmentOpportunityRepository {
   >;
 
   /**
-   * 카테고리별 투자 기회 조회
+   * 카테고리�??�자 기회 조회
    */
   findByCategory(
     category: InvestmentCategory,
@@ -67,7 +73,7 @@ export interface IInvestmentOpportunityRepository {
   >;
 
   /**
-   * 창작자별 투자 기회 조회
+   * 창작?�별 ?�자 기회 조회
    */
   findByCreator(
     creatorId: UserId,
@@ -81,7 +87,7 @@ export interface IInvestmentOpportunityRepository {
   >;
 
   /**
-   * 상태별 투자 기회 조회
+   * ?�태�??�자 기회 조회
    */
   findByStatus(
     status: OpportunityStatus,
@@ -95,7 +101,7 @@ export interface IInvestmentOpportunityRepository {
   >;
 
   /**
-   * 펀딩 기간별 투자 기회 조회
+   * ?�??기간�??�자 기회 조회
    */
   findByFundingPeriod(
     startDate: Date,
@@ -110,7 +116,7 @@ export interface IInvestmentOpportunityRepository {
   >;
 
   /**
-   * 투자 금액 범위별 기회 조회
+   * ?�자 금액 범위�?기회 조회
    */
   findByAmountRange(
     minAmount: number,
@@ -125,7 +131,7 @@ export interface IInvestmentOpportunityRepository {
   >;
 
   /**
-   * 위험도별 투자 기회 조회
+   * ?�험?�별 ?�자 기회 조회
    */
   findByRiskLevel(
     riskLevel: number,
@@ -139,7 +145,7 @@ export interface IInvestmentOpportunityRepository {
   >;
 
   /**
-   * 검색 기능 (제목, 설명, 태그)
+   * 검??기능 (?�목, ?�명, ?�그)
    */
   search(
     query: string,
@@ -161,12 +167,14 @@ export interface IInvestmentOpportunityRepository {
   >;
 
   /**
-   * 투자 기회 삭제 (소프트 삭제)
+   * ?�자 기회 ??�� (?�프????��)
    */
-  delete(id: InvestmentOpportunityId): Promise<Result<void>>;
+  delete(
+    id: InvestmentOpportunityId
+  ): Promise<Result<void, CompatibleBaseError>>;
 
   /**
-   * 투자 기회 통계 조회
+   * ?�자 기회 ?�계 조회
    */
   getStatistics(filters?: {
     type?: InvestmentType;
@@ -194,15 +202,15 @@ export interface IInvestmentOpportunityRepository {
   >;
 
   /**
-   * 마감 임박 투자 기회 조회
+   * 마감 ?�박 ?�자 기회 조회
    */
   findEndingSoon(
     daysRemaining: number,
     limit?: number
-  ): Promise<Result<InvestmentOpportunity[]>>;
+  ): Promise<Result<InvestmentOpportunity[], CompatibleBaseError>>;
 
   /**
-   * 목표 달성률별 투자 기회 조회
+   * 목표 ?�성률별 ?�자 기회 조회
    */
   findByFundingProgress(
     minProgress: number,

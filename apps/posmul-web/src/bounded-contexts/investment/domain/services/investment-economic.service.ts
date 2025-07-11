@@ -1,12 +1,11 @@
+import { Result } from "@posmul/auth-economy-sdk";
+import { failure, success } from "@posmul/auth-economy-sdk";
 import {
-  EconomicError,
+  EconomyError as EconomicError,
   IDomainEventPublisher,
   PmcSpentEvent,
   PmpSpentEvent,
-  Result,
-  failure,
-  success,
-} from "@posmul/shared-types";
+} from "@posmul/auth-economy-sdk";
 import { EconomyKernel } from "../../../../shared/economy-kernel/services/economy-kernel.service";
 import { InvestmentParticipation } from "../entities/investment-participation.entity";
 import { IInvestmentOpportunityRepository } from "../repositories/investment-opportunity.repository";
@@ -35,18 +34,26 @@ export class InvestmentEconomicService {
     const props = (participation as any).props;
     const investorId = props.investorId;
 
-    // 1. 투자에 필요한 PMP/PMC 잔액이 충분한지 확인
+    // 1. 투자에 필요한 PmpAmount/PmcAmount 잔액이 충분한지 확인
     const pmpBalance = await this.economyKernel.getPmpBalance(investorId);
     const pmcBalance = await this.economyKernel.getPmcBalance(investorId);
 
     if (pmpBalance < (props.pmpAmount || 0)) {
       return failure(
-        new EconomicError("Insufficient PMP balance", "insufficient-pmp")
+        new EconomicError("Insufficient PmpAmount balance", {
+          code: "insufficient-pmp",
+          required: props.pmpAmount,
+          available: pmpBalance,
+        })
       );
     }
     if (pmcBalance < (props.pmcAmount || 0)) {
       return failure(
-        new EconomicError("Insufficient PMC balance", "insufficient-pmc")
+        new EconomicError("Insufficient PmcAmount balance", {
+          code: "insufficient-pmc",
+          required: props.pmcAmount,
+          available: pmcBalance,
+        })
       );
     }
 

@@ -1,8 +1,9 @@
 // Merchant Aggregate Root - 지역 상점 관리 (Local League)
 // UTF-8 인코딩
 
-import type { DomainEvent, Result } from "@posmul/shared-types";
-import type { UserId } from "../../../auth/domain/value-objects/user-value-objects";
+import type { Result } from "@posmul/auth-economy-sdk";
+import type { DomainEvent } from "@posmul/auth-economy-sdk";
+import type { UserId } from "@posmul/auth-economy-sdk";
 import {
   Location,
   MerchantCategory,
@@ -234,8 +235,11 @@ export class Merchant {
 
     const qrCodeResult = QRCode.create(this.id.getValue(), expiresAt);
     if (!qrCodeResult.success) {
-      return qrCodeResult;
-    }
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
+      }
 
     this.currentQRCode = qrCodeResult.data;
     this.updatedAt = new Date();

@@ -1,18 +1,18 @@
 /**
  * Economy Domain Real-time Event Publisher
  *
- * Supabase Realtime을 활용한 경제 도메인 이벤트 실시간 발행 시스템
- * MoneyWave 실행, 계좌 잔액 변경, 시장 데이터 업데이트 등 실시간 알림
+ * Supabase Realtime???�용??경제 ?�메???�벤???�시�?발행 ?�스?? * MoneyWave ?�행, 계좌 ?�액 변�? ?�장 ?�이???�데?�트 ???�시�??�림
  */
 
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
-import { PMC, PMP } from "../../domain/value-objects";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
+import { PmcAmount, PmpAmount } from "../../domain/value-objects";
 
 /**
- * 경제 도메인 이벤트 타입
- */
+ * 경제 ?�메???�벤???�?? */
 export interface EconomicDomainEvent {
   readonly eventId: string;
   readonly eventType: EconomicEventType;
@@ -32,8 +32,7 @@ export type EconomicEventType =
   | "MARKET_DATA_UPDATED";
 
 /**
- * 실시간 이벤트 발행자
- */
+ * ?�시�??�벤??발행?? */
 export class EconomicRealtimeEventPublisher {
   private client: SupabaseClient;
 
@@ -49,14 +48,14 @@ export class EconomicRealtimeEventPublisher {
   }
 
   /**
-   * MoneyWave 실행 이벤트 발행
+   * MoneyWave ?�행 ?�벤??발행
    */
   async publishMoneyWaveEvent(
     waveType: "WAVE1" | "WAVE2" | "WAVE3",
     eventData: {
       executionId: string;
       affectedUsers: UserId[];
-      totalPMCImpact: PMC;
+      totalPmcAmountImpact: PmcAmount;
       metadata: Record<string, any>;
     }
   ): Promise<Result<void>> {
@@ -84,25 +83,30 @@ export class EconomicRealtimeEventPublisher {
         return { success: false, error };
       }
 
-      // Realtime 채널로 즉시 브로드캐스트
+      // Realtime 채널�?즉시 브로?�캐?�트
       await this.broadcastToChannel("economy:money-waves", event);
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: new Error(
+          `MoneyWaveEventError: ${error instanceof Error ? error.message : String(error)}`
+        ),
+      };
     }
   }
 
   /**
-   * 계좌 잔액 변경 이벤트 발행
+   * 계좌 ?�액 변�??�벤??발행
    */
   async publishAccountBalanceChange(
     userId: UserId,
     changes: {
-      pmpBefore: PMP;
-      pmpAfter: PMP;
-      pmcBefore: PMC;
-      pmcAfter: PMC;
+      pmpBefore: PmpAmount;
+      pmpAfter: PmpAmount;
+      pmcBefore: PmcAmount;
+      pmcAfter: PmcAmount;
       transactionId: string;
       reason: string;
     }
@@ -128,10 +132,10 @@ export class EconomicRealtimeEventPublisher {
         return { success: false, error };
       }
 
-      // 개인별 채널로 브로드캐스트
+      // 개인�?채널�?브로?�캐?�트
       await this.broadcastToChannel(`economy:user:${userId}`, event);
 
-      // 전체 잔액 변경 채널로도 브로드캐스트
+      // ?�체 ?�액 변�?채널로도 브로?�캐?�트
       await this.broadcastToChannel("economy:balances", {
         ...event,
         data: {
@@ -143,18 +147,23 @@ export class EconomicRealtimeEventPublisher {
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: new Error(
+          `AccountBalanceEventError: ${error instanceof Error ? error.message : String(error)}`
+        ),
+      };
     }
   }
 
   /**
-   * 거래 완료 이벤트 발행
+   * 거래 ?�료 ?�벤??발행
    */
   async publishTransactionCompleted(transactionData: {
     transactionId: string;
     fromUserId?: UserId;
     toUserId?: UserId;
-    amount: PMC | PMP;
+    amount: PmcAmount | PmpAmount;
     type: "TRANSFER" | "CONVERT" | "EARN" | "BURN";
     metadata: Record<string, any>;
   }): Promise<Result<void>> {
@@ -177,7 +186,7 @@ export class EconomicRealtimeEventPublisher {
         return { success: false, error };
       }
 
-      // 관련 사용자들에게 브로드캐스트
+      // 관???�용?�들?�게 브로?�캐?�트
       if (transactionData.fromUserId) {
         await this.broadcastToChannel(
           `economy:user:${transactionData.fromUserId}`,
@@ -191,17 +200,22 @@ export class EconomicRealtimeEventPublisher {
         );
       }
 
-      // 전체 거래 채널로도 브로드캐스트
+      // ?�체 거래 채널로도 브로?�캐?�트
       await this.broadcastToChannel("economy:transactions", event);
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: new Error(
+          `TransactionEventError: ${error instanceof Error ? error.message : String(error)}`
+        ),
+      };
     }
   }
 
   /**
-   * 시장 데이터 업데이트 이벤트 발행
+   * ?�장 ?�이???�데?�트 ?�벤??발행
    */
   async publishMarketDataUpdate(marketData: {
     marketId: string;
@@ -228,17 +242,22 @@ export class EconomicRealtimeEventPublisher {
         return { success: false, error };
       }
 
-      // 시장 데이터 채널로 브로드캐스트
+      // ?�장 ?�이??채널�?브로?�캐?�트
       await this.broadcastToChannel("economy:market-data", event);
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: new Error(
+          error instanceof Error ? error.message : String(error)
+        ),
+      };
     }
   }
 
   /**
-   * 사회후생 계산 완료 이벤트 발행
+   * ?�회?�생 계산 ?�료 ?�벤??발행
    */
   async publishSocialWelfareCalculated(welfareData: {
     calculationId: string;
@@ -269,17 +288,22 @@ export class EconomicRealtimeEventPublisher {
         return { success: false, error };
       }
 
-      // 사회후생 분석 채널로 브로드캐스트
+      // ?�회?�생 분석 채널�?브로?�캐?�트
       await this.broadcastToChannel("economy:social-welfare", event);
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: new Error(
+          error instanceof Error ? error.message : String(error)
+        ),
+      };
     }
   }
 
   /**
-   * 특정 채널로 이벤트 브로드캐스트
+   * ?�정 채널�??�벤??브로?�캐?�트
    */
   private async broadcastToChannel(
     channel: string,
@@ -293,12 +317,12 @@ export class EconomicRealtimeEventPublisher {
       });
     } catch (error) {
       console.error(`Failed to broadcast to channel ${channel}:`, error);
-      // 브로드캐스트 실패는 치명적이지 않으므로 에러를 throw하지 않음
+      // 브로?�캐?�트 ?�패??치명?�이지 ?�으므�??�러�?throw?��? ?�음
     }
   }
 
   /**
-   * 이벤트 히스토리 조회
+   * ?�벤???�스?�리 조회
    */
   async getEventHistory(
     eventType?: EconomicEventType,
@@ -343,12 +367,17 @@ export class EconomicRealtimeEventPublisher {
 
       return { success: true, data: events };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: new Error(
+          error instanceof Error ? error.message : String(error)
+        ),
+      };
     }
   }
 
   /**
-   * 연결 해제
+   * ?�결 ?�제
    */
   async disconnect(): Promise<void> {
     await this.client.removeAllChannels();

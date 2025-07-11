@@ -1,11 +1,18 @@
+"use client";
+
 /**
  * 예측 게임 생성 페이지
  * Server Actions를 활용한 폼 처리 예시
  */
 
-import { PredictionGameForm } from "@posmul/shared-ui";
+import { PredictionGameForm } from "../../../shared/ui";
 
 export default function CreatePredictionPage() {
+  const handleSubmit = async (data: any) => {
+    console.log('Form submitted:', data);
+    // TODO: 실제 게임 생성 로직 구현
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -16,11 +23,11 @@ export default function CreatePredictionPage() {
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Agency Theory를 활용한 PosMul 예측 게임을 생성하세요.
             <br />
-            참여자들이 PMP를 사용하여 예측에 참여할 수 있습니다.
+            참여자들이 PmpAmount를 사용하여 예측에 참여할 수 있습니다.
           </p>
         </div>
 
-        <PredictionGameForm />
+        <PredictionGameForm onSubmit={handleSubmit} />
 
         {/* 도움말 섹션 */}
         <div className="mt-12 max-w-4xl mx-auto">
@@ -44,7 +51,7 @@ export default function CreatePredictionPage() {
                   💰 베팅 금액 설정
                 </h4>
                 <ul className="text-sm text-blue-700 space-y-1">
-                  <li>• 최소 100 PMP ~ 최대 10,000 PMP</li>
+                  <li>• 최소 100 PmpAmount ~ 최대 10,000 PmpAmount</li>
                   <li>• 게임 난이도에 따라 조정</li>
                   <li>• 참여 장벽을 고려한 설정</li>
                 </ul>
@@ -56,10 +63,3 @@ export default function CreatePredictionPage() {
     </div>
   );
 }
-
-// 메타데이터 설정
-export const metadata = {
-  title: "예측 게임 생성 | PosMul",
-  description:
-    "새로운 예측 게임을 만들고 참여자들과 함께 예측의 재미를 느껴보세요.",
-};

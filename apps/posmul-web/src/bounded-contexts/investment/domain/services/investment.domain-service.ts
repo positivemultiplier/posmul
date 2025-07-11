@@ -1,5 +1,6 @@
-import { Result } from "@posmul/shared-types";
-import { BusinessLogicError } from "@posmul/shared-ui";
+import { Result } from "@posmul/auth-economy-sdk";
+
+import { BusinessLogicError } from "@posmul/auth-economy-sdk";
 import { Advertisement } from "../entities/advertisement.entity";
 import { CrowdFunding } from "../entities/crowdfunding.entity";
 import { Investment } from "../entities/investment.entity";
@@ -151,7 +152,10 @@ export class InvestmentDomainService {
         Math.min(finalRate, 50)
       );
       if (!rewardRateResult.success) {
-        return rewardRateResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       return {

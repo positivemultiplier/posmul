@@ -20,25 +20,25 @@ export type EconomicBrand<T, TBrand> = T & { [__economicBrand]: TBrand };
 // ===== 핵심 화폐 시스템 =====
 
 /**
- * PMP (Positive Multiplier Point)
+ * PmpAmount (Positive Multiplier Point)
  * - 위험프리 자산 (Risk-Free Asset)
  * - CAPM의 무위험수익률 역할
  * - 사용자 활동을 통해 획득
  */
-export type PMP = EconomicBrand<number, "PMP">;
+export type PmpAmount = EconomicBrand<number, "PmpAmount">;
 
 /**
- * PMC (Positive Multiplier Coin)
+ * PmcAmount (Positive Multiplier Coin)
  * - 위험자산 (Risky Asset)
  * - EBIT 기반 발행, 위험프리미엄 반영
  * - 기부 전용 사용
  */
-export type PMC = EconomicBrand<number, "PMC">;
+export type PmcAmount = EconomicBrand<number, "PmcAmount">;
 
 /**
  * EBIT (Earnings Before Interest and Tax)
  * - PosMul 3LC의 세전영업이익
- * - PMC 발행량 결정 기준
+ * - PmcAmount 발행량 결정 기준
  */
 export type EBIT = EconomicBrand<number, "EBIT">;
 
@@ -52,8 +52,8 @@ export type MoneyWaveId = EconomicBrand<string, "MoneyWaveId">;
  * MoneyWave 타입
  */
 export enum MoneyWaveType {
-  WAVE1 = "EBIT_BASED_EMISSION", // EBIT 기반 PMC 발행
-  WAVE2 = "UNUSED_PMC_REDISTRIBUTION", // 미사용 PMC 재분배
+  WAVE1 = "EBIT_BASED_EMISSION", // EBIT 기반 PmcAmount 발행
+  WAVE2 = "UNUSED_PmcAmount_REDISTRIBUTION", // 미사용 PmcAmount 재분배
   WAVE3 = "ENTREPRENEUR_ECOSYSTEM", // 기업가 생태계
 }
 
@@ -165,10 +165,10 @@ export type EndowmentAttachment = EconomicBrand<number, "EndowmentAttachment">;
  * Mental Account 타입
  */
 export enum MentalAccountType {
-  INVESTMENT_PMP = "investment_pmp",
-  PREDICTION_PMP = "prediction_pmp",
-  SOCIAL_PMC = "social_pmc",
-  DONATION_PMC = "donation_pmc",
+  INVESTMENT_PmpAmount = "investment_pmp",
+  PREDICTION_PmpAmount = "prediction_pmp",
+  SOCIAL_PmcAmount = "social_pmc",
+  DONATION_PmcAmount = "donation_pmc",
 }
 
 /**
@@ -212,12 +212,12 @@ export type ActiveUserCount = EconomicBrand<number, "ActiveUserCount">;
 // ===== 효용함수 관련 =====
 
 /**
- * 개인 효용함수 계수 α (PMP에 대한 한계효용)
+ * 개인 효용함수 계수 α (PmpAmount에 대한 한계효용)
  */
 export type UtilityAlpha = EconomicBrand<number, "UtilityAlpha">;
 
 /**
- * 개인 효용함수 계수 β (PMC에 대한 한계효용)
+ * 개인 효용함수 계수 β (PmcAmount에 대한 한계효용)
  */
 export type UtilityBeta = EconomicBrand<number, "UtilityBeta">;
 
@@ -321,9 +321,9 @@ export type CircuitBreakerThreshold = EconomicBrand<
 export type MoneyWaveCycle = EconomicBrand<number, "MoneyWaveCycle">;
 
 /**
- * PMC 만료 기간 (일 단위)
+ * PmcAmount 만료 기간 (일 단위)
  */
-export type PMCExpirationPeriod = EconomicBrand<number, "PMCExpirationPeriod">;
+export type PmcAmountExpirationPeriod = EconomicBrand<number, "PmcAmountExpirationPeriod">;
 
 /**
  * 학습 곡선 기간 (주 단위)

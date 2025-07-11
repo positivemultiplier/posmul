@@ -4,12 +4,13 @@
  */
 
 import {
-  PaginatedResult,
-  PaginationParams,
   Result,
   UserId,
   createUserId,
-} from "@posmul/shared-types";
+  failure,
+  isFailure,
+} from "@posmul/auth-economy-sdk";
+import { PaginatedResult, PaginationParams } from "@posmul/auth-economy-sdk";
 import { Donation } from "../../domain/entities/donation.entity";
 import { Institute } from "../../domain/entities/institute.entity";
 import { OpinionLeader } from "../../domain/entities/opinion-leader.entity";
@@ -20,6 +21,10 @@ import {
 import { IInstituteRepository } from "../../domain/repositories/institute.repository";
 import { IOpinionLeaderRepository } from "../../domain/repositories/opinion-leader.repository";
 import { DonationDomainService } from "../../domain/services/donation.domain-service";
+import {
+  createLegacyPaginationResponse,
+  normalizeePaginationParams,
+} from "../../domain/helpers/pagination-helpers";
 import {
   DonationId,
   DonationStatus,
@@ -62,8 +67,8 @@ export class DonationApplicationService {
       donorBalance
     );
 
-    if (!result.success) {
-      return result;
+    if (isFailure(result)) {
+      return { success: false, error: result.error };
     }
 
     const donationResponse = this.mapDonationToResponse(result.data);
@@ -80,8 +85,8 @@ export class DonationApplicationService {
       new DonationId(donationId)
     );
 
-    if (!result.success) {
-      return result;
+    if (isFailure(result)) {
+      return { success: false, error: result.error };
     }
 
     if (!result.data) {
@@ -104,25 +109,24 @@ export class DonationApplicationService {
       pagination
     );
 
-    if (!result.success) {
-      return result;
+    if (isFailure(result)) {
+      return { success: false, error: result.error };
     }
-    const mappedData = result.data.data.map((donation) =>
+
+    const mappedData = result.data.items.map((donation) =>
       this.mapDonationToResponse(donation)
     );
 
     return {
       success: true,
       data: {
-        data: mappedData,
-        pagination: {
-          total: result.data.pagination.total,
-          page: result.data.pagination.page,
-          limit: result.data.pagination.limit,
-          totalPages: result.data.pagination.totalPages,
-          hasNext: result.data.pagination.hasNext,
-          hasPrev: result.data.pagination.hasPrev,
-        },
+        items: mappedData,
+        total: result.data.total,
+        page: result.data.page,
+        pageSize: result.data.pageSize,
+        totalPages: result.data.totalPages,
+        hasNext: result.data.hasNext,
+        hasPrev: result.data.hasPrev,
       },
     };
   }
@@ -155,7 +159,7 @@ export class DonationApplicationService {
 
     const pagination: PaginationParams = {
       page: searchRequest.page,
-      limit: searchRequest.limit,
+      pageSize: searchRequest.limit,
     };
 
     const result = await this.donationRepository.findByCriteria(
@@ -163,25 +167,24 @@ export class DonationApplicationService {
       pagination
     );
 
-    if (!result.success) {
-      return result;
+    if (isFailure(result)) {
+      return { success: false, error: result.error };
     }
-    const mappedData = result.data.data.map((donation) =>
+
+    const mappedData = result.data.items.map((donation) =>
       this.mapDonationToResponse(donation)
     );
 
     return {
       success: true,
       data: {
-        data: mappedData,
-        pagination: {
-          total: result.data.pagination.total,
-          page: result.data.pagination.page,
-          limit: result.data.pagination.limit,
-          totalPages: result.data.pagination.totalPages,
-          hasNext: result.data.pagination.hasNext,
-          hasPrev: result.data.pagination.hasPrev,
-        },
+        items: mappedData,
+        total: result.data.total,
+        page: result.data.page,
+        pageSize: result.data.pageSize,
+        totalPages: result.data.totalPages,
+        hasNext: result.data.hasNext,
+        hasPrev: result.data.hasPrev,
       },
     };
   }
@@ -205,7 +208,10 @@ export class DonationApplicationService {
     const processResult = donation.startProcessing(transactionId);
 
     if (!processResult.success) {
-      return processResult;
+      return {
+        success: false,
+        error: new Error("기부 처리 시작에 실패했습니다."),
+      };
     }
 
     return await this.donationRepository.update(donation);
@@ -230,7 +236,10 @@ export class DonationApplicationService {
     const completeResult = donation.complete(receiptUrl);
 
     if (!completeResult.success) {
-      return completeResult;
+      return {
+        success: false,
+        error: new Error("기부 완료 처리에 실패했습니다."),
+      };
     }
 
     return await this.donationRepository.update(donation);
@@ -255,7 +264,10 @@ export class DonationApplicationService {
     const cancelResult = donation.cancel(reason);
 
     if (!cancelResult.success) {
-      return cancelResult;
+      return {
+        success: false,
+        error: new Error("기부 취소 처리에 실패했습니다."),
+      };
     }
 
     return await this.donationRepository.update(donation);
@@ -276,7 +288,10 @@ export class DonationApplicationService {
     );
 
     if (!statsResult.success) {
-      return statsResult;
+      return {
+        success: false,
+        error: new Error("기부 통계 조회에 실패했습니다."),
+      };
     }
 
     const monthlyStatsResult = await this.donationRepository.getMonthlyStats(
@@ -314,7 +329,10 @@ export class DonationApplicationService {
       await this.donationRepository.getDashboardSummary(donorId);
 
     if (!dashboardResult.success) {
-      return dashboardResult;
+      return {
+        success: false,
+        error: new Error("Dashboard 데이터 조회 실패"),
+      };
     }
 
     const summary = dashboardResult.data;
@@ -322,10 +340,10 @@ export class DonationApplicationService {
     // 최근 기부 내역 조회
     const recentDonationsResult = await this.donationRepository.findByDonorId(
       donorId,
-      { page: 1, limit: 5 }
+      { page: 1, pageSize: 5 }
     );
     const recentDonations = recentDonationsResult.success
-      ? recentDonationsResult.data.data.map((d) =>
+      ? recentDonationsResult.data.items.map((d) =>
           this.mapDonationToResponse(d)
         )
       : [];
@@ -334,10 +352,10 @@ export class DonationApplicationService {
     const scheduledDonationsResult =
       await this.donationRepository.findByCriteria(
         { donorId, status: DonationStatus.PENDING },
-        { page: 1, limit: 5 }
+        { page: 1, pageSize: 5 }
       );
     const upcomingScheduledDonations = scheduledDonationsResult.success
-      ? scheduledDonationsResult.data.data
+      ? scheduledDonationsResult.data.items
           .filter((d) => d.getScheduledAt() && d.getScheduledAt()! > new Date())
           .map((d) => this.mapDonationToResponse(d))
       : [];
@@ -351,35 +369,44 @@ export class DonationApplicationService {
       summary.yearlyTotal,
       12 - new Date().getMonth()
     );
+
+    // Dashboard 응답 생성 (타입 안전성 보장)
+    const dashboardResponse: DonorDashboardResponse = {
+      totalDonated: summary.totalDonated,
+      donationCount: summary.donationCount,
+      lastDonationDate: summary.lastDonationDate?.toISOString(),
+      favoriteCategory: summary.favoriteCategory,
+      yearlyTotal: summary.yearlyTotal,
+      monthlyAverage: summary.monthlyAverage,
+      rewardPointsEarned: summary.rewardPointsEarned,
+      donorTier: donorTier.getTier(),
+      recentDonations,
+      upcomingScheduledDonations,
+      categoryDistribution: {}, // 실제로는 통계 데이터에서 가져와야 함
+      typeDistribution: {},
+      monthlyProgress: {
+        currentMonth: new Date().getMonth() + 1,
+        target: summary.monthlyAverage * 1.1, // 10% 증가 목표
+        achieved: summary.monthlyAverage,
+        percentage: 90, // 임시 값
+      },
+      tierProgress: {
+        currentTier: donorTier.getTier(),
+        nextTier: tierProgress.nextTier,
+        requiredAmount: tierProgress.requiredAmount,
+        progressPercentage: tierProgress.requiredAmount
+          ? Math.round(
+              (summary.yearlyTotal /
+                (summary.yearlyTotal + tierProgress.requiredAmount)) *
+                100
+            )
+          : 100,
+      },
+    };
+
     return {
       success: true,
-      data: {
-        ...summary,
-        lastDonationDate: summary.lastDonationDate?.toISOString(),
-        donorTier: donorTier.getTier(),
-        recentDonations,
-        upcomingScheduledDonations,
-        categoryDistribution: {}, // 실제로는 통계 데이터에서 가져와야 함
-        typeDistribution: {},
-        monthlyProgress: {
-          currentMonth: new Date().getMonth() + 1,
-          target: summary.monthlyAverage * 1.1, // 10% 증가 목표
-          achieved: summary.monthlyAverage,
-          percentage: 90, // 임시 값
-        },
-        tierProgress: {
-          currentTier: donorTier.getTier(),
-          nextTier: tierProgress.nextTier,
-          requiredAmount: tierProgress.requiredAmount,
-          progressPercentage: tierProgress.requiredAmount
-            ? Math.round(
-                (summary.yearlyTotal /
-                  (summary.yearlyTotal + tierProgress.requiredAmount)) *
-                  100
-              )
-            : 100,
-        },
-      },
+      data: dashboardResponse,
     };
   }
 
@@ -433,7 +460,7 @@ export class DonationApplicationService {
       donation.getDonorId()
     );
     const donorHistory = donorHistoryResult.success
-      ? donorHistoryResult.data.data
+      ? donorHistoryResult.data.items
       : [];
     const donorTier = DonorRating.calculateTier(
       donorHistory.reduce((sum, d) => sum + d.getAmount().getValue(), 0)

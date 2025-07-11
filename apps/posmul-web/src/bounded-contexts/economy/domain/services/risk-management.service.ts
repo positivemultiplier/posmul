@@ -4,7 +4,7 @@
  * Taylor Rule 기반 자동 조절, Circuit Breaker, Mechanism Design Theory 적용
  *
  * 주요 기능:
- * 1. Taylor Rule을 활용한 PMP/PMC 발행량 자동 조절
+ * 1. Taylor Rule을 활용한 PmpAmount/PmcAmount 발행량 자동 조절
  * 2. Circuit Breaker를 통한 급격한 시장 변동 방지
  * 3. Mechanism Design Theory 기반 인센티브 구조 최적화
  * 4. 유동성 위험 모니터링 및 관리
@@ -12,9 +12,10 @@
  * 6. 버블 형성 방지 메커니즘
  */
 
-import { Result } from "@posmul/shared-types";
-import { EBIT, PMC, PMP } from "../value-objects/economic-types";
-import { unwrapPMP } from "../value-objects/economic-value-objects";
+import { Result } from "@posmul/auth-economy-sdk";
+
+import { EBIT, PmcAmount, PmpAmount } from "../value-objects/economic-types";
+import { unwrapPmpAmount } from "../value-objects/economic-value-objects";
 
 /**
  * Taylor Rule 계수 인터페이스
@@ -30,8 +31,8 @@ export interface TaylorRuleCoefficients {
  * Circuit Breaker 설정
  */
 export interface CircuitBreakerConfig {
-  readonly dailyPmpIssuanceLimit: number; // 일일 PMP 발행 한도
-  readonly dailyPmcConversionLimit: number; // 일일 PMC 전환 한도
+  readonly dailyPmpIssuanceLimit: number; // 일일 PmpAmount 발행 한도
+  readonly dailyPmcConversionLimit: number; // 일일 PmcAmount 전환 한도
   readonly priceVolatilityThreshold: number; // 가격 변동성 임계값
   readonly liquidityRatioThreshold: number; // 유동성 비율 임계값
   readonly emergencyStopThreshold: number; // 긴급 중단 임계값
@@ -41,8 +42,8 @@ export interface CircuitBreakerConfig {
  * 경제 시스템 현재 상태
  */
 export interface EconomicSystemState {
-  readonly totalPmpSupply: PMP;
-  readonly totalPmcSupply: PMC;
+  readonly totalPmpSupply: PmpAmount;
+  readonly totalPmcSupply: PmcAmount;
   readonly currentEbitRate: EBIT;
   readonly inflationRate: number;
   readonly outputGap: number;
@@ -124,8 +125,8 @@ export class RiskManagementService {
 
     // 기본 Circuit Breaker 설정
     this.circuitBreakerConfig = {
-      dailyPmpIssuanceLimit: 1000000, // 일일 100만 PMP 한도
-      dailyPmcConversionLimit: 500000, // 일일 50만 PMC 전환 한도
+      dailyPmpIssuanceLimit: 1000000, // 일일 100만 PmpAmount 한도
+      dailyPmcConversionLimit: 500000, // 일일 50만 PmcAmount 전환 한도
       priceVolatilityThreshold: 0.15, // 15% 변동성 임계값
       liquidityRatioThreshold: 0.05, // 5% 유동성 비율 하한
       emergencyStopThreshold: 0.25, // 25% 급변동 시 긴급 중단
@@ -153,7 +154,7 @@ export class RiskManagementService {
         inflationWeight * (inflationRate - targetInflation) +
         outputGapWeight * outputGap;
 
-      // PMP 발행량 조절 권고 (-1: 감소, 0: 유지, 1: 증가)
+      // PmpAmount 발행량 조절 권고 (-1: 감소, 0: 유지, 1: 증가)
       let pmpAdjustment = 0;
       if (inflationRate > targetInflation + 0.01) {
         pmpAdjustment = -Math.min(1, (inflationRate - targetInflation) * 2);
@@ -161,7 +162,7 @@ export class RiskManagementService {
         pmpAdjustment = Math.min(1, (targetInflation - inflationRate) * 2);
       }
 
-      // PMC 전환 조절 권고
+      // PmcAmount 전환 조절 권고
       let pmcAdjustment = 0;
       if (outputGap > 0.02) {
         // 경기 과열
@@ -343,7 +344,7 @@ export class RiskManagementService {
       }
 
       // Pigouvian Tax 원리를 적용한 수수료 구조
-      const baselineContribution = unwrapPMP(systemState.totalPmpSupply) * 0.01;
+      const baselineContribution = unwrapPmpAmount(systemState.totalPmpSupply) * 0.01;
       const contributionRatio = averageContribution / baselineContribution;
       const optimalFeeStructure = Math.max(
         0.01,
@@ -464,11 +465,11 @@ export class RiskManagementService {
     }
 
     if (liquidity === RiskLevel.HIGH || liquidity === RiskLevel.CRITICAL) {
-      recommendations.push("유동성 공급 확대 및 PMC 전환 인센티브 강화");
+      recommendations.push("유동성 공급 확대 및 PmcAmount 전환 인센티브 강화");
     }
 
     if (inflation === RiskLevel.HIGH || inflation === RiskLevel.CRITICAL) {
-      recommendations.push("PMP 발행량 축소 및 통화정책 긴축 조치");
+      recommendations.push("PmpAmount 발행량 축소 및 통화정책 긴축 조치");
     }
 
     if (bubble === RiskLevel.HIGH || bubble === RiskLevel.CRITICAL) {
@@ -505,14 +506,14 @@ export class RiskManagementService {
       actions.push({
         type: "REDUCE_ISSUANCE",
         severity: 0.8,
-        description: "PMP 발행량 50% 감소",
+        description: "PmpAmount 발행량 50% 감소",
         expectedImpact: "인플레이션 압력 완화, 시장 안정화",
       });
 
       actions.push({
         type: "INCREASE_REQUIREMENTS",
         severity: 0.6,
-        description: "PMC 전환 요구사항 강화",
+        description: "PmcAmount 전환 요구사항 강화",
         expectedImpact: "투기적 거래 억제, 품질 향상",
       });
     }

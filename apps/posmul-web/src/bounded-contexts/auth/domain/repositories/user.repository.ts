@@ -3,8 +3,7 @@
  */
 
 import { User } from '../entities/user.entity';
-import { UserId, Email } from '../value-objects/user-value-objects';
-import type { Result } from '@posmul/shared-types';
+import type { Result, UserId, Email } from '@posmul/auth-economy-sdk';
 
 export interface IUserRepository {
   // 사용자 생성

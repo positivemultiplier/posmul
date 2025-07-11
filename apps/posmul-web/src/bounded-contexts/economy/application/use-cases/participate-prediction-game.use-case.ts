@@ -1,14 +1,15 @@
 /**
  * 예측 게임 참여 Use Case
  *
- * 사용자가 PMP/PMC를 활용하여 예측 게임에 참여하고 정확도에 따라 보상을 받는 핵심 비즈니스 로직
+ * 사용자가 PmpAmount/PmcAmount를 활용하여 예측 게임에 참여하고 정확도에 따라 보상을 받는 핵심 비즈니스 로직
  * Network Economics(Metcalfe's Law)와 Learning Curve Theory 적용
  */
 
-import { UserId } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
 import {
   AccountBalance,
-  IPMPPMCAccountRepository,
+  IPmpAmountPmcAmountAccountRepository,
   Transaction,
 } from "../../domain/repositories/pmp-pmc-account.repository";
 import {
@@ -20,14 +21,14 @@ import {
   NetworkEconomicsEngine,
   UtilityFunctionEstimationService,
 } from "../../domain/services";
-import { PMC, PMP, createPMC, createPMP } from "../../domain/value-objects";
+import { PmcAmount, PmpAmount, createPmcAmount, createPmpAmount } from "../../domain/value-objects";
 
 export interface PredictionGameRequest {
   readonly userId: UserId;
   readonly gameId: string;
   readonly predictionType: PredictionType;
-  readonly stake: PMP | PMC;
-  readonly stakeType: "PMP" | "PMC";
+  readonly stake: PmpAmount | PmcAmount;
+  readonly stakeType: "PmpAmount" | "PmcAmount";
   readonly prediction: PredictionData;
   readonly confidence: number; // 0-1 범위
   readonly timestamp: Date;
@@ -36,8 +37,8 @@ export interface PredictionGameRequest {
 export interface PredictionGameResult {
   readonly success: boolean;
   readonly predictionId: string;
-  readonly stakeAmount: PMP | PMC;
-  readonly potentialReward: PMP | PMC;
+  readonly stakeAmount: PmpAmount | PmcAmount;
+  readonly potentialReward: PmpAmount | PmcAmount;
   readonly networkValue: number; // Metcalfe's Law 기반
   readonly learningBonus: number;
   readonly accuracyExpectation: number;
@@ -86,12 +87,14 @@ export interface GameMetrics {
  */
 export class ParticipateInPredictionGameUseCase {
   constructor(
-    private readonly accountRepository: IPMPPMCAccountRepository,
+    private readonly accountRepository: IPmpAmountPmcAmountAccountRepository,
     private readonly utilityRepository: IUtilityFunctionRepository,
     private readonly networkEngine: NetworkEconomicsEngine,
     private readonly behavioralEngine: BehavioralEconomicsEngine,
     private readonly utilityService: UtilityFunctionEstimationService
   ) {}
+
+  
 
   async execute(request: PredictionGameRequest): Promise<PredictionGameResult> {
     try {
@@ -151,9 +154,9 @@ export class ParticipateInPredictionGameUseCase {
       }`;
       const transactionData: Omit<Transaction, "transactionId"> = {
         userId: request.userId,
-        type: request.stakeType === "PMP" ? "PMP_SPEND" : "PMC_SPEND",
+        type: request.stakeType === "PmpAmount" ? "PmpAmount_SPEND" : "PmcAmount_SPEND",
         amount: Math.abs(request.stake as number),
-        currencyType: request.stakeType === "PMP" ? "PMP" : "PMC",
+        currencyType: request.stakeType === "PmpAmount" ? "PmpAmount" : "PmcAmount",
         description: `Prediction game stake: ${request.stake} ${request.stakeType} for ${request.predictionType} prediction`,
         timestamp: request.timestamp,
       };
@@ -169,9 +172,9 @@ export class ParticipateInPredictionGameUseCase {
       if (learningBonus > 0) {
         const bonusTransaction: Omit<Transaction, "transactionId"> = {
           userId: request.userId,
-          type: "PMP_EARN",
+          type: "PmpAmount_EARN",
           amount: Math.floor(learningBonus),
-          currencyType: "PMP",
+          currencyType: "PmpAmount",
           description: `Prediction game participation bonus for ${predictionId}`,
           timestamp: request.timestamp,
         };
@@ -191,9 +194,9 @@ export class ParticipateInPredictionGameUseCase {
         predictionId,
         stakeAmount: request.stake,
         potentialReward:
-          request.stakeType === "PMP"
-            ? createPMP(potentialReward)
-            : createPMC(potentialReward),
+          request.stakeType === "PmpAmount"
+            ? createPmpAmount(potentialReward)
+            : createPmcAmount(potentialReward),
         networkValue,
         learningBonus,
         accuracyExpectation,
@@ -205,20 +208,20 @@ export class ParticipateInPredictionGameUseCase {
       return {
         success: false,
         predictionId: "",
-        stakeAmount: request.stakeType === "PMP" ? createPMP(0) : createPMC(0),
+        stakeAmount: request.stakeType === "PmpAmount" ? createPmpAmount(0) : createPmcAmount(0),
         potentialReward:
-          request.stakeType === "PMP" ? createPMP(0) : createPMC(0),
+          request.stakeType === "PmpAmount" ? createPmpAmount(0) : createPmcAmount(0),
         networkValue: 0,
         learningBonus: 0,
         accuracyExpectation: 0,
         updatedBalance: {
           userId: request.userId,
-          pmpBalance: createPMP(0),
-          pmcBalance: createPMC(0),
-          totalPMPEarned: createPMP(0),
-          totalPMCEarned: createPMC(0),
-          totalPMPSpent: createPMP(0),
-          totalPMCSpent: createPMC(0),
+          pmpBalance: createPmpAmount(0),
+          pmcBalance: createPmcAmount(0),
+          totalPmpAmountEarned: createPmpAmount(0),
+          totalPmcAmountEarned: createPmcAmount(0),
+          totalPmpAmountSpent: createPmpAmount(0),
+          totalPmcAmountSpent: createPmcAmount(0),
           accountStatus: "active",
           lastActivityAt: new Date(),
           agencyScore: 0,
@@ -234,9 +237,7 @@ export class ParticipateInPredictionGameUseCase {
           networkEffect: 0,
           informationValue: 0,
         },
-        message: `Prediction game participation failed: ${
-          error instanceof Error ? error.message : "Unknown error"
-        }`,
+        message: "Invalid state",
       };
     }
   }
@@ -250,18 +251,18 @@ export class ParticipateInPredictionGameUseCase {
   ): Promise<void> {
     const stakeAmount = request.stake as number;
 
-    if (request.stakeType === "PMP") {
-      const currentPMP = balance.pmpBalance as number;
-      if (currentPMP < stakeAmount) {
+    if (request.stakeType === "PmpAmount") {
+      const currentPmpAmount = balance.pmpBalance as number;
+      if (currentPmpAmount < stakeAmount) {
         throw new Error(
-          `Insufficient PMP balance: ${currentPMP} < ${stakeAmount}`
+          `Insufficient PmpAmount balance: ${currentPmpAmount} < ${stakeAmount}`
         );
       }
     } else {
-      const currentPMC = balance.pmcBalance as number;
-      if (currentPMC < stakeAmount) {
+      const currentPmcAmount = balance.pmcBalance as number;
+      if (currentPmcAmount < stakeAmount) {
         throw new Error(
-          `Insufficient PMC balance: ${currentPMC} < ${stakeAmount}`
+          `Insufficient PmcAmount balance: ${currentPmcAmount} < ${stakeAmount}`
         );
       }
     }
@@ -390,7 +391,7 @@ export class ParticipateInPredictionGameUseCase {
    */
   private calculatePotentialReward(
     stakeAmount: number,
-    stakeType: "PMP" | "PMC",
+    stakeType: "PmpAmount" | "PmcAmount",
     accuracyExpectation: number,
     networkValue: number,
     learningBonus: number
@@ -401,8 +402,8 @@ export class ParticipateInPredictionGameUseCase {
     // 네트워크 효과 보너스
     const networkBonus = networkValue * 0.1; // 네트워크 가치의 10%
 
-    // PMC 스테이크 시 추가 위험 프리미엄
-    const riskPremium = stakeType === "PMC" ? 1.2 : 1.0;
+    // PmcAmount 스테이크 시 추가 위험 프리미엄
+    const riskPremium = stakeType === "PmcAmount" ? 1.2 : 1.0;
 
     // 잠재적 보상 = 스테이크 × 정확도 배율 × 위험 프리미엄 + 네트워크 보너스 + 학습 보너스
     const potentialReward =

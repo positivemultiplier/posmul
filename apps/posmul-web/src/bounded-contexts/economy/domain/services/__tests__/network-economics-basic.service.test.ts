@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import {
   createActiveUserCount,
-  createPMP,
+  createPmpAmount,
 } from "../../value-objects/economic-value-objects";
 import { NetworkEconomicsEngine } from "../network-economics.service";
 
@@ -15,7 +15,7 @@ describe("NetworkEconomicsEngine", () => {
   describe("Metcalfe's Law", () => {
     it("should calculate network value using Metcalfe's Law", () => {
       const userCount = createActiveUserCount(1000);
-      const valuePerConnection = createPMP(2); // Use integer value
+      const valuePerConnection = createPmpAmount(2); // Use integer value
 
       const result = service.calculateMetcalfeValue(
         userCount,
@@ -28,7 +28,7 @@ describe("NetworkEconomicsEngine", () => {
 
     it("should handle zero network size", () => {
       const userCount = createActiveUserCount(0);
-      const valuePerConnection = createPMP(1);
+      const valuePerConnection = createPmpAmount(1);
 
       const result = service.calculateMetcalfeValue(
         userCount,
@@ -40,7 +40,7 @@ describe("NetworkEconomicsEngine", () => {
 
     it("should handle large network sizes", () => {
       const userCount = createActiveUserCount(10000);
-      const valuePerConnection = createPMP(1); // Use integer value
+      const valuePerConnection = createPmpAmount(1); // Use integer value
 
       const result = service.calculateMetcalfeValue(
         userCount,
@@ -99,7 +99,7 @@ describe("NetworkEconomicsEngine", () => {
       const startTime = Date.now();
 
       const largeUserCount = createActiveUserCount(100000);
-      const valuePerConnection = createPMP(1); // Use integer value
+      const valuePerConnection = createPmpAmount(1); // Use integer value
 
       const metcalfeResult = service.calculateMetcalfeValue(
         largeUserCount,
@@ -120,7 +120,7 @@ describe("NetworkEconomicsEngine", () => {
 
       const metcalfeResult = service.calculateMetcalfeValue(
         extremeUserCount,
-        createPMP(1.0)
+        createPmpAmount(1.0)
       );
       const reedResult = service.calculateReedValue(extremeUserCount, 0.001);
 

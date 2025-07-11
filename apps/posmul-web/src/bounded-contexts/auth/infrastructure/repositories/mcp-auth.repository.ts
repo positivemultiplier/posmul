@@ -1,13 +1,20 @@
 /**
  * MCP Auth Repository Implementation
  *
- * Clean Architecture Infrastructure 계층의 Repository 구현체
+ * Clean Architecture Infrastructure 계층의 Repository 구현
  * IAuthRepository 인터페이스를 MCP Supabase로 구현
  */
 
-import { mcp_supabase_execute_sql } from "@posmul/shared-auth";
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import {
+  MCPError,
+  handleMCPError,
+  createDefaultMCPAdapter,
+  Result,
+  CompatibleBaseError,
+  adaptErrorToBaseError,
+} from "../../../../shared/legacy-compatibility";
+import { UserId } from "@posmul/auth-economy-sdk";
+
 import {
   AuthSession,
   Permission,
@@ -20,6 +27,8 @@ import { IAuthRepository } from "../../domain/repositories";
  * MCP 기반 Auth Repository 구현
  */
 export class MCPAuthRepository implements IAuthRepository {
+  private readonly mcpAdapter = createDefaultMCPAdapter();
+
   constructor(private readonly projectId: string) {}
 
   /**
@@ -27,277 +36,259 @@ export class MCPAuthRepository implements IAuthRepository {
    */
   async getSession(
     sessionId: string
-  ): Promise<Result<AuthSession | null, Error>> {
+  ): Promise<Result<AuthSession | null, CompatibleBaseError>> {
     try {
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          SELECT s.*, u.email, u.email_confirmed_at, u.last_sign_in_at
-          FROM auth.sessions s
-          JOIN auth.users u ON s.user_id = u.id
-          WHERE s.id = $1 AND s.not_after > NOW()
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(
+        `SELECT * FROM auth_sessions WHERE session_id = '${sessionId}'`
+      );
 
-      if (!result.data || result.data.length === 0) {
+      if (result.error || !result.data?.length) {
         return { success: true, data: null };
       }
 
       const sessionData = result.data[0];
-      const session = this.mapDatabaseToAuthSession(sessionData);
-      return { success: true, data: session };
+      return {
+        success: true,
+        data: this.mapDatabaseToSession(sessionData),
+      };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: adaptErrorToBaseError(error),
+      };
     }
   }
 
-  /**
-   * 사용자 인증 정보 조회
-   */
   async getUserCredentials(
     userId: UserId
-  ): Promise<Result<UserCredentials | null, Error>> {
+  ): Promise<Result<UserCredentials | null, CompatibleBaseError>> {
     try {
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          SELECT u.*, 
-                 i.provider, i.provider_id, i.identity_data,
-                 COUNT(s.id) as active_sessions
-          FROM auth.users u
-          LEFT JOIN auth.identities i ON u.id = i.user_id
-          LEFT JOIN auth.sessions s ON u.id = s.user_id AND s.not_after > NOW()
-          WHERE u.id = $1
-          GROUP BY u.id, i.provider, i.provider_id, i.identity_data
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(
+        `SELECT * FROM user_credentials WHERE user_id = '${userId}'`
+      );
 
-      if (!result.data || result.data.length === 0) {
+      if (result.error || !result.data?.length) {
         return { success: true, data: null };
       }
 
-      const credentialsData = result.data[0];
-      const credentials = this.mapDatabaseToUserCredentials(credentialsData);
-      return { success: true, data: credentials };
+      const data = result.data[0] as any;
+      return {
+        success: true,
+        data: {
+          userId: data.user_id as UserId,
+          email: data.email as string,
+          emailConfirmed: data.email_confirmed as boolean,
+          provider: data.provider as string,
+          providerId: data.provider_id as string,
+          identityData: data.identity_data
+            ? JSON.parse(data.identity_data)
+            : {},
+          activeSessions: data.active_sessions || 0,
+          lastSignInAt: data.last_sign_in_at
+            ? new Date(data.last_sign_in_at)
+            : null,
+          createdAt: new Date(data.created_at || Date.now()),
+          updatedAt: new Date(data.updated_at || Date.now()),
+        },
+      };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: adaptErrorToBaseError(error),
+      };
     }
   }
 
-  /**
-   * 활성 세션 목록 조회
-   */
   async getActiveSessions(
     userId: UserId
-  ): Promise<Result<AuthSession[], Error>> {
+  ): Promise<Result<AuthSession[], CompatibleBaseError>> {
     try {
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          SELECT s.*, u.email, u.email_confirmed_at, u.last_sign_in_at
-          FROM auth.sessions s
-          JOIN auth.users u ON s.user_id = u.id
-          WHERE s.user_id = $1 AND s.not_after > NOW()
-          ORDER BY s.created_at DESC
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(
+        `SELECT * FROM auth_sessions WHERE user_id = '${userId}' AND is_active = true`
+      );
 
-      const sessions =
-        result.data?.map((sessionData) =>
-          this.mapDatabaseToAuthSession(sessionData)
-        ) || [];
+      if (result.error) {
+        return {
+          success: false,
+          error: adaptErrorToBaseError(result.error),
+        };
+      }
+
+      const sessions = (result.data || []).map((data: any) =>
+        this.mapDatabaseToSession(data)
+      );
       return { success: true, data: sessions };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: adaptErrorToBaseError(error),
+      };
     }
   }
 
-  /**
-   * 사용자 권한 조회
-   */
   async getUserPermissions(
     userId: UserId
-  ): Promise<Result<Permission[], Error>> {
+  ): Promise<Result<Permission[], CompatibleBaseError>> {
     try {
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          SELECT DISTINCT p.permission_name, p.resource, p.action
-          FROM user_roles ur
-          JOIN role_permissions rp ON ur.role_id = rp.role_id
-          JOIN permissions p ON rp.permission_id = p.id
-          WHERE ur.user_id = $1 AND ur.is_active = true
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(
+        `SELECT p.* FROM permissions p
+         JOIN user_permissions up ON p.id = up.permission_id
+         WHERE up.user_id = '${userId}'`
+      );
 
-      const permissions =
-        result.data?.map((permData) =>
-          this.mapDatabaseToPermission(permData)
-        ) || [];
+      if (result.error) {
+        return {
+          success: false,
+          error: adaptErrorToBaseError(result.error),
+        };
+      }
+
+      const permissions = (result.data || []).map((data: any) => ({
+        id: data.id,
+        name: data.name,
+        resource: data.resource,
+        action: data.action,
+      }));
       return { success: true, data: permissions };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: adaptErrorToBaseError(error),
+      };
     }
   }
 
-  /**
-   * 사용자 역할 조회
-   */
-  async getUserRoles(userId: UserId): Promise<Result<Role[], Error>> {
+  async getUserRoles(
+    userId: UserId
+  ): Promise<Result<Role[], CompatibleBaseError>> {
     try {
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          SELECT r.*, ur.assigned_at, ur.assigned_by
-          FROM user_roles ur
-          JOIN roles r ON ur.role_id = r.id
-          WHERE ur.user_id = $1 AND ur.is_active = true
-          ORDER BY r.hierarchy_level DESC
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(
+        `SELECT r.* FROM roles r
+         JOIN user_roles ur ON r.id = ur.role_id
+         WHERE ur.user_id = '${userId}'`
+      );
 
-      const roles =
-        result.data?.map((roleData) => this.mapDatabaseToRole(roleData)) || [];
+      if (result.error) {
+        return {
+          success: false,
+          error: adaptErrorToBaseError(result.error),
+        };
+      }
+
+      const roles = (result.data || []).map((data: any) => ({
+        id: data.id,
+        name: data.name,
+        description: data.description,
+        hierarchyLevel: data.hierarchy_level || 0,
+        isActive: data.is_active || true,
+        assignedAt: new Date(data.assigned_at || Date.now()),
+        createdAt: new Date(data.created_at || Date.now()),
+        permissions: [], // Permissions would be loaded separately if needed
+      }));
       return { success: true, data: roles };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: adaptErrorToBaseError(error),
+      };
     }
   }
 
-  /**
-   * 세션 무효화
-   */
-  async invalidateSession(sessionId: string): Promise<Result<void, Error>> {
+  async invalidateSession(
+    sessionId: string
+  ): Promise<Result<void, CompatibleBaseError>> {
     try {
-      await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          UPDATE auth.sessions 
-          SET not_after = NOW() 
-          WHERE id = $1
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(
+        `UPDATE auth_sessions SET is_active = false WHERE session_id = '${sessionId}'`
+      );
+
+      if (result.error) {
+        return {
+          success: false,
+          error: adaptErrorToBaseError(result.error),
+        };
+      }
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: adaptErrorToBaseError(error),
+      };
     }
   }
 
-  /**
-   * 모든 사용자 세션 무효화
-   */
   async invalidateAllUserSessions(
     userId: UserId
-  ): Promise<Result<void, Error>> {
+  ): Promise<Result<void, CompatibleBaseError>> {
     try {
-      await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          UPDATE auth.sessions 
-          SET not_after = NOW() 
-          WHERE user_id = $1 AND not_after > NOW()
-        `,
-      });
+      const result = await this.mcpAdapter.executeSQL(
+        `UPDATE auth_sessions SET is_active = false WHERE user_id = '${userId}'`
+      );
+
+      if (result.error) {
+        return {
+          success: false,
+          error: adaptErrorToBaseError(result.error),
+        };
+      }
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: adaptErrorToBaseError(error),
+      };
     }
   }
 
-  /**
-   * 인증 활동 로그 기록
-   */
   async logAuthActivity(
     userId: UserId,
     activity: string,
     metadata?: Record<string, any>
-  ): Promise<Result<void, Error>> {
+  ): Promise<Result<void, CompatibleBaseError>> {
     try {
-      await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: `
-          INSERT INTO auth_activity_logs (user_id, activity_type, metadata, created_at)
-          VALUES ($1, $2, $3, NOW())
-        `,
-      });
+      const metadataJson = JSON.stringify(metadata || {}).replace(/'/g, "''");
+      const result = await this.mcpAdapter.executeSQL(
+        `INSERT INTO auth_activity_log (user_id, activity, metadata, created_at)
+         VALUES ('${userId}', '${activity}', '${metadataJson}', '${new Date().toISOString()}')`
+      );
+
+      if (result.error) {
+        return {
+          success: false,
+          error: adaptErrorToBaseError(result.error),
+        };
+      }
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: error as Error };
+      return {
+        success: false,
+        error: adaptErrorToBaseError(error),
+      };
     }
   }
 
-  /**
-   * 데이터베이스 결과를 AuthSession으로 매핑
-   */
-  private mapDatabaseToAuthSession(data: any): AuthSession {
+  private mapDatabaseToSession(data: any): AuthSession {
+    // 세션 데이터 매핑 로직
     return {
-      id: data.id,
+      id: data.id || data.session_id,
       userId: data.user_id as UserId,
-      email: data.email,
-      accessToken: data.access_token,
-      refreshToken: data.refresh_token,
+      email: data.email || "",
+      accessToken: data.access_token || "",
+      refreshToken: data.refresh_token || "",
       tokenType: data.token_type || "bearer",
-      expiresAt: new Date(data.not_after),
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at),
-      isActive: new Date(data.not_after) > new Date(),
+      expiresAt: new Date(data.expires_at),
+      createdAt: new Date(data.created_at || Date.now()),
+      updatedAt: new Date(data.updated_at || Date.now()),
+      isActive: data.is_active,
       lastSignInAt: data.last_sign_in_at
         ? new Date(data.last_sign_in_at)
         : null,
       emailConfirmedAt: data.email_confirmed_at
         ? new Date(data.email_confirmed_at)
         : null,
-    };
-  }
-
-  /**
-   * 데이터베이스 결과를 UserCredentials로 매핑
-   */
-  private mapDatabaseToUserCredentials(data: any): UserCredentials {
-    return {
-      userId: data.id as UserId,
-      email: data.email,
-      emailConfirmed: !!data.email_confirmed_at,
-      provider: data.provider || "email",
-      providerId: data.provider_id,
-      identityData: data.identity_data ? JSON.parse(data.identity_data) : {},
-      activeSessions: parseInt(data.active_sessions) || 0,
-      lastSignInAt: data.last_sign_in_at
-        ? new Date(data.last_sign_in_at)
-        : null,
-      createdAt: new Date(data.created_at),
-      updatedAt: new Date(data.updated_at),
-    };
-  }
-
-  /**
-   * 데이터베이스 결과를 Permission으로 매핑
-   */
-  private mapDatabaseToPermission(data: any): Permission {
-    return {
-      name: data.permission_name,
-      resource: data.resource,
-      action: data.action,
-      description: data.description,
-    };
-  }
-
-  /**
-   * 데이터베이스 결과를 Role로 매핑
-   */
-  private mapDatabaseToRole(data: any): Role {
-    return {
-      id: data.id,
-      name: data.name,
-      description: data.description,
-      hierarchyLevel: data.hierarchy_level,
-      isActive: data.is_active,
-      assignedAt: data.assigned_at ? new Date(data.assigned_at) : new Date(),
-      assignedBy: data.assigned_by,
-      createdAt: new Date(data.created_at),
     };
   }
 }

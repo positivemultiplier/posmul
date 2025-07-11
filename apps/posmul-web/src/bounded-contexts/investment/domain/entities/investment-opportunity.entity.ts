@@ -1,5 +1,7 @@
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
 import { z } from "zod";
 import {
   InvestmentCategory,
@@ -73,13 +75,17 @@ export class InvestmentOpportunity {
         pmpRequired: z.boolean(),
         moneyWaveEligible: z.boolean(),
       })
-      .refine((data) => data.fundingEndDate > data.fundingStartDate, {
-        message: "Funding end date must be after start date",
-      });
+      .refine(
+        (data) => data.fundingEndDate > data.fundingStartDate,
+        new Error("Funding end date must be after start date")
+      );
 
     const validationResult = schema.safeParse(props);
     if (!validationResult.success) {
-      return validationResult;
+      return {
+        success: false,
+        error: validationResult.error,
+      };
     }
 
     const newProps: InvestmentOpportunityProps = {

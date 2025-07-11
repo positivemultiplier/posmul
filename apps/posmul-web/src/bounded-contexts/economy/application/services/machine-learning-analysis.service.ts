@@ -5,8 +5,10 @@
  * 시계열 예측, 클러스터링, 분류 및 이상 탐지 알고리즘 구현
  */
 
-import { UserId } from "@posmul/shared-types";
-import { Result } from "@posmul/shared-types";
+import { UserId } from "@posmul/auth-economy-sdk";
+
+import { Result } from "@posmul/auth-economy-sdk";
+
 import {
   IEconomicAnalyticsRepository,
   PanelDataObservation,
@@ -201,7 +203,10 @@ export class MachineLearningAnalysisService {
       // 패널 데이터 조회
       const panelDataResult = await this.analyticsRepository.getPanelData();
       if (!panelDataResult.success) {
-        return panelDataResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const panelData = panelDataResult.data;
@@ -259,9 +264,7 @@ export class MachineLearningAnalysisService {
       return {
         success: false,
         error: new Error(
-          `Time series forecasting failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -277,7 +280,10 @@ export class MachineLearningAnalysisService {
     try {
       const panelDataResult = await this.analyticsRepository.getPanelData();
       if (!panelDataResult.success) {
-        return panelDataResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const panelData = panelDataResult.data;
@@ -358,9 +364,7 @@ export class MachineLearningAnalysisService {
       return {
         success: false,
         error: new Error(
-          `Clustering analysis failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -376,7 +380,10 @@ export class MachineLearningAnalysisService {
     try {
       const panelDataResult = await this.analyticsRepository.getPanelData();
       if (!panelDataResult.success) {
-        return panelDataResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const panelData = panelDataResult.data;
@@ -441,9 +448,7 @@ export class MachineLearningAnalysisService {
       return {
         success: false,
         error: new Error(
-          `Anomaly detection failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -459,7 +464,10 @@ export class MachineLearningAnalysisService {
     try {
       const panelDataResult = await this.analyticsRepository.getPanelData();
       if (!panelDataResult.success) {
-        return panelDataResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       const panelData = panelDataResult.data;
@@ -524,9 +532,7 @@ export class MachineLearningAnalysisService {
       return {
         success: false,
         error: new Error(
-          `Economic behavior classification failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }
@@ -543,7 +549,10 @@ export class MachineLearningAnalysisService {
     try {
       const panelDataResult = await this.analyticsRepository.getPanelData();
       if (!panelDataResult.success) {
-        return panelDataResult;
+        return {
+          success: false,
+          error: new Error("처리에 실패했습니다.")
+        };
       }
 
       // 기본 모델들 훈련
@@ -586,9 +595,7 @@ export class MachineLearningAnalysisService {
       return {
         success: false,
         error: new Error(
-          `Ensemble model building failed: ${
-            error instanceof Error ? error.message : "Unknown error"
-          }`
+          "Invalid state"
         ),
       };
     }

@@ -6,7 +6,8 @@
  * 도메인 계층에서 상태 전환 검증 및 문자열 ↔ 객체 간 변환을 담당한다.
  */
 
-import { Result, ValidationError } from "@posmul/shared-types";
+import { Result } from "@posmul/auth-economy-sdk";
+import { ValidationError } from "@posmul/auth-economy-sdk";
 import type { GameStatus as GameStatusLiteral } from "./prediction-types";
 
 export class GameStatus {
@@ -21,7 +22,7 @@ export class GameStatus {
         success: false,
         error: new ValidationError(
           `Invalid GameStatus value: ${value}`,
-          "gameStatus"
+          { field: "gameStatus" }
         ),
       };
     }

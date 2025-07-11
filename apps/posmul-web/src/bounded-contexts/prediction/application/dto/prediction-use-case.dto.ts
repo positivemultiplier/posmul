@@ -8,11 +8,7 @@
  * @since 2024-12
  */
 
-import {
-  PredictionGameId,
-  PredictionId,
-  UserId,
-} from "@posmul/shared-types";
+import { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
 
 /**
  * 예측 게임 생성 요청 DTO
@@ -50,7 +46,7 @@ export interface ParticipatePredictionRequest {
   readonly userId: UserId;
   readonly gameId: PredictionGameId;
   readonly selectedOptionId: string;
-  readonly stakeAmount: number; // PMP 스테이크 금액
+  readonly stakeAmount: number; // PmpAmount 스테이크 금액
   readonly confidence: number; // 0-1 사이 신뢰도
   readonly reasoning?: string; // 선택 이유 (선택사항)
 }
@@ -59,7 +55,7 @@ export interface ParticipatePredictionRequest {
  * 예측 참여 응답 DTO
  */
 export interface ParticipatePredictionResponse {
-  readonly predictionId: PredictionId;
+  readonly predictionId: string;
   readonly gameId: PredictionGameId;
   readonly selectedOptionId: string;
   readonly stakeAmount: number;
@@ -92,7 +88,7 @@ export interface SettlePredictionGameResponse {
   readonly averageAccuracyScore: number;
   readonly settlementResults: Array<{
     userId: UserId;
-    predictionId: PredictionId;
+    predictionId: string;
     selectedOptionId: string;
     isWinner: boolean;
     stakeAmount: number;
@@ -106,7 +102,7 @@ export interface SettlePredictionGameResponse {
  */
 export enum MoneyWaveDistributionType {
   DAILY_PRIZE_POOL = "DAILY_PRIZE_POOL", // Wave 1: 일일 상금 풀
-  UNUSED_PMC_REDISTRIBUTION = "UNUSED_PMC_REDISTRIBUTION", // Wave 2: 미소비 PMC 재분배
+  UNUSED_PmcAmount_REDISTRIBUTION = "UNUSED_PmcAmount_REDISTRIBUTION", // Wave 2: 미소비 PmcAmount 재분배
   ENTREPRENEUR_REQUEST = "ENTREPRENEUR_REQUEST", // Wave 3: 기업가 요청
 }
 
@@ -139,6 +135,12 @@ export interface DistributeMoneyWaveResponse {
   }>;
   readonly efficiency: number; // 분배 효율성 (0-1)
   readonly agencyCostReduction: number; // Agency Cost 감소량
+  readonly metadata?: {
+    poolAmount?: number;
+    targetGames?: number;
+    selectedUsers?: number;
+    [key: string]: any;
+  };
 }
 
 /**

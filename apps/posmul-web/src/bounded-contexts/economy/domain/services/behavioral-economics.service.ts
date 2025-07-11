@@ -1,5 +1,12 @@
-import { MentalAccountType, PMC, PMP } from "../value-objects/economic-types";
-import { createPMC, createPMP } from "../value-objects/economic-value-objects";
+import {
+  MentalAccountType,
+  PmcAmount,
+  PmpAmount,
+} from "../value-objects/economic-types";
+import {
+  createPmcAmount,
+  createPmpAmount,
+} from "../value-objects/economic-value-objects";
 import {
   BehavioralRecommendation,
   DecisionContext,
@@ -33,8 +40,8 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
    * v(x) = x^α (x ≥ 0), -λ(-x)^β (x < 0)
    */
   calculateProspectValue(
-    amount: PMP | PMC,
-    referencePoint: PMP | PMC,
+    amount: PmpAmount | PmcAmount,
+    referencePoint: PmpAmount | PmcAmount,
     valueFunction: ProspectValueFunction = this.DEFAULT_VALUE_FUNCTION
   ): number {
     const x = Number(amount) - Number(referencePoint);
@@ -54,7 +61,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
    */
   calculateLossAversionRatio(user: {
     recentTransactions: Array<{
-      amount: PMP | PMC;
+      amount: PmpAmount | PmcAmount;
       type: "gain" | "loss";
       timestamp: Date;
     }>;
@@ -89,8 +96,8 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
    * WTA (Willingness to Accept) vs WTP (Willingness to Pay) 격차 분석
    */
   analyzeEndowmentEffect(
-    currentHoldings: { pmp: PMP; pmc: PMC },
-    marketValue: { pmp: PMP; pmc: PMC }
+    currentHoldings: { pmp: PmpAmount; pmc: PmcAmount },
+    marketValue: { pmp: PmpAmount; pmc: PmcAmount }
   ): EndowmentAnalysis {
     const pmpHolding = Number(currentHoldings.pmp);
     const pmcHolding = Number(currentHoldings.pmc);
@@ -100,8 +107,10 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
     // Endowment Effect로 인한 과대평가 (일반적으로 1.5-3배)
     const endowmentMultiplier = 2.0;
 
-    const willingnessToAccept = createPMP(pmpHolding * endowmentMultiplier);
-    const willingnessToPay = createPMP(pmpMarket * 0.8); // 구매 시 할인 요구
+    const willingnessToAccept = createPmpAmount(
+      pmpHolding * endowmentMultiplier
+    );
+    const willingnessToPay = createPmpAmount(pmpMarket * 0.8); // 구매 시 할인 요구
 
     const endowmentRatio =
       (pmpHolding * endowmentMultiplier) / (pmpMarket * 0.8);
@@ -119,29 +128,38 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
    * Mental Accounting 기반 예산 배분 최적화
    */
   optimizeMentalAccounting(
-    totalWealth: { pmp: PMP; pmc: PMC },
+    totalWealth: { pmp: PmpAmount; pmc: PmcAmount },
     accounts: MentalAccount[],
     userPreferences: {
       riskTolerance: number;
-      savingsGoal: PMP;
-      donationTarget: PMP;
+      savingsGoal: PmpAmount;
+      donationTarget: PmpAmount;
     }
   ): {
-    recommendedAllocation: Map<MentalAccountType, { pmp: PMP; pmc: PMC }>;
+    recommendedAllocation: Map<
+      MentalAccountType,
+      { pmp: PmpAmount; pmc: PmcAmount }
+    >;
     rebalancingNeeded: boolean;
     warnings: string[];
   } {
-    const totalPMP = Number(totalWealth.pmp);
-    const totalPMC = Number(totalWealth.pmc);
+    const totalPmpAmount = Number(totalWealth.pmp);
+    const totalPmcAmount = Number(totalWealth.pmc);
     const warnings: string[] = []; // 기본 배분 비율 (Thaler의 Mental Accounting 연구 기반)
     const defaultAllocation = new Map<
       MentalAccountType,
       { pmpRatio: number; pmcRatio: number }
     >([
-      [MentalAccountType.INVESTMENT_PMP, { pmpRatio: 0.5, pmcRatio: 0.3 }],
-      [MentalAccountType.PREDICTION_PMP, { pmpRatio: 0.3, pmcRatio: 0.2 }],
-      [MentalAccountType.SOCIAL_PMC, { pmpRatio: 0.1, pmcRatio: 0.3 }],
-      [MentalAccountType.DONATION_PMC, { pmpRatio: 0.1, pmcRatio: 0.2 }],
+      [
+        MentalAccountType.INVESTMENT_PmpAmount,
+        { pmpRatio: 0.5, pmcRatio: 0.3 },
+      ],
+      [
+        MentalAccountType.PREDICTION_PmpAmount,
+        { pmpRatio: 0.3, pmcRatio: 0.2 },
+      ],
+      [MentalAccountType.SOCIAL_PmcAmount, { pmpRatio: 0.1, pmcRatio: 0.3 }],
+      [MentalAccountType.DONATION_PmcAmount, { pmpRatio: 0.1, pmcRatio: 0.2 }],
     ]);
 
     // 위험 선호도에 따른 조정
@@ -149,18 +167,18 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
 
     const recommendedAllocation = new Map<
       MentalAccountType,
-      { pmp: PMP; pmc: PMC }
+      { pmp: PmpAmount; pmc: PmcAmount }
     >();
-    let totalAllocatedPMP = 0;
-    let totalAllocatedPMC = 0;
+    let totalAllocatedPmpAmount = 0;
+    let totalAllocatedPmcAmount = 0;
 
-    for (const [accountType, baseRatio] of defaultAllocation.entries()) {
+    defaultAllocation.forEach((baseRatio, accountType) => {
       let pmpRatio = baseRatio.pmpRatio;
       let pmcRatio = baseRatio.pmcRatio;
 
       // 리스크 조정
-      if (accountType === MentalAccountType.INVESTMENT_PMP) {
-        pmcRatio += riskAdjustment * 0.3; // 위험 선호 시 투자 계정에 PMC 더 배분
+      if (accountType === MentalAccountType.INVESTMENT_PmpAmount) {
+        pmcRatio += riskAdjustment * 0.3; // 위험 선호 시 투자 계정에 PmcAmount 더 배분
         pmpRatio -= riskAdjustment * 0.1;
       }
 
@@ -168,28 +186,28 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
       pmpRatio = Math.max(0, pmpRatio);
       pmcRatio = Math.max(0, pmcRatio);
 
-      const allocatedPMP = Math.max(0, totalPMP * pmpRatio);
-      const allocatedPMC = Math.max(0, totalPMC * pmcRatio);
+      const allocatedPmpAmount = Math.max(0, totalPmpAmount * pmpRatio);
+      const allocatedPmcAmount = Math.max(0, totalPmcAmount * pmcRatio);
 
       recommendedAllocation.set(accountType, {
-        pmp: createPMP(Math.round(allocatedPMP)),
-        pmc: createPMC(Math.round(allocatedPMC)),
+        pmp: createPmpAmount(Math.round(allocatedPmpAmount)),
+        pmc: createPmcAmount(Math.round(allocatedPmcAmount)),
       });
 
-      totalAllocatedPMP += allocatedPMP;
-      totalAllocatedPMC += allocatedPMC;
-    }
+      totalAllocatedPmpAmount += allocatedPmpAmount;
+      totalAllocatedPmcAmount += allocatedPmcAmount;
+    });
 
     // 모든 계정 타입에 대해 할당이 생성되었는지 확인
     if (recommendedAllocation.size === 0) {
       // 기본 할당 생성
-      recommendedAllocation.set(MentalAccountType.INVESTMENT_PMP, {
-        pmp: createPMP(Math.round(totalPMP * 0.5)),
-        pmc: createPMC(Math.round(totalPMC * 0.3)),
+      recommendedAllocation.set(MentalAccountType.INVESTMENT_PmpAmount, {
+        pmp: createPmpAmount(Math.round(totalPmpAmount * 0.5)),
+        pmc: createPmcAmount(Math.round(totalPmcAmount * 0.3)),
       });
-      recommendedAllocation.set(MentalAccountType.PREDICTION_PMP, {
-        pmp: createPMP(Math.round(totalPMP * 0.5)),
-        pmc: createPMC(Math.round(totalPMC * 0.7)),
+      recommendedAllocation.set(MentalAccountType.PREDICTION_PmpAmount, {
+        pmp: createPmpAmount(Math.round(totalPmpAmount * 0.5)),
+        pmc: createPmcAmount(Math.round(totalPmcAmount * 0.7)),
       });
     }
 
@@ -205,7 +223,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
           Number(account.pmcBalance) - Number(recommended.pmc)
         );
 
-        if (pmpDiff > totalPMP * 0.1 || pmcDiff > totalPMC * 0.1) {
+        if (pmpDiff > totalPmpAmount * 0.1 || pmcDiff > totalPmcAmount * 0.1) {
           // 10% 이상 차이
           rebalancingNeeded = true;
           break;
@@ -214,14 +232,14 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
     }
 
     // 경고 메시지 생성
-    if (totalAllocatedPMP > totalPMP * 1.05) {
-      warnings.push("권장 PMP 배분이 보유량을 초과합니다.");
+    if (totalAllocatedPmpAmount > totalPmpAmount * 1.05) {
+      warnings.push("권장 PmpAmount 배분이 보유량을 초과합니다.");
     }
-    if (totalAllocatedPMC > totalPMC * 1.05) {
-      warnings.push("권장 PMC 배분이 보유량을 초과합니다.");
+    if (totalAllocatedPmcAmount > totalPmcAmount * 1.05) {
+      warnings.push("권장 PmcAmount 배분이 보유량을 초과합니다.");
     }
     const donationAccount = accounts.find(
-      (a) => a.type === MentalAccountType.DONATION_PMC
+      (a) => a.type === MentalAccountType.DONATION_PmcAmount
     );
     if (
       donationAccount &&
@@ -260,8 +278,8 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
     expectedEffectiveness: number;
   } {
     const totalWealth =
-      Number(context.currentWealth.totalPMP) +
-      Number(context.currentWealth.totalPMC);
+      Number(context.currentWealth.totalPmpAmount) +
+      Number(context.currentWealth.totalPmcAmount);
 
     switch (targetBehavior) {
       case "save_more":
@@ -269,7 +287,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
           return {
             message: `현재 저축률을 유지하면 1년 후 ${Math.round(
               totalWealth * 0.1
-            )}PMP의 기회비용이 발생합니다.`,
+            )}PmpAmount의 기회비용이 발생합니다.`,
             type: "loss_framing",
             expectedEffectiveness: 0.75,
           };
@@ -277,7 +295,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
           return {
             message: `매월 추가로 ${Math.round(
               totalWealth * 0.05
-            )}PMP만 저축하면 연말에 보너스 이자를 받을 수 있습니다.`,
+            )}PmpAmount만 저축하면 연말에 보너스 이자를 받을 수 있습니다.`,
             type: "default_option",
             expectedEffectiveness: 0.65,
           };
@@ -287,7 +305,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
         return {
           message: `같은 소득 구간의 90%가 당신보다 더 많이 기부하고 있습니다. 평균 기부액은 ${Math.round(
             totalWealth * 0.03
-          )}PMP입니다.`,
+          )}PmpAmount입니다.`,
           type: "social_proof",
           expectedEffectiveness: 0.8,
         };
@@ -298,7 +316,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
           context.recentLossExperience.daysAgo < 7
         ) {
           return {
-            message: `최근 손실을 경험하셨네요. 안전한 PMP 자산 비중을 ${Math.round(
+            message: `최근 손실을 경험하셨네요. 안전한 PmpAmount 자산 비중을 ${Math.round(
               60 + context.timePressure * 20
             )}%로 늘리는 것을 고려해보세요.`,
             type: "loss_framing",
@@ -316,7 +334,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
         return {
           message: `오늘 예측 게임에 참여하지 않으면 연속 참여 보너스(${Math.round(
             totalWealth * 0.01
-          )}PMP)를 놓치게 됩니다.`,
+          )}PmpAmount)를 놓치게 됩니다.`,
           type: "loss_framing",
           expectedEffectiveness: 0.78,
         };
@@ -336,7 +354,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
   analyzeBehaviorPattern(
     userHistory: Array<{
       action: string;
-      amount: PMP | PMC;
+      amount: PmpAmount | PmcAmount;
       context: DecisionContext;
       outcome: "positive" | "negative" | "neutral";
       timestamp: Date;
@@ -420,8 +438,8 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
    * β-δ 모델: U = β * δ^t * u(x_t)
    */
   correctHyperbolicDiscounting(
-    immediateReward: PMP | PMC,
-    delayedReward: PMP | PMC,
+    immediateReward: PmpAmount | PmcAmount,
+    delayedReward: PmpAmount | PmcAmount,
     delayDays: number,
     userDiscountRate: number = 0.01
   ): {
@@ -458,8 +476,12 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
    * Social Proof 메커니즘
    */
   calculateSocialProof(
-    userAction: { type: string; amount: PMP | PMC },
-    peerGroup: Array<{ type: string; amount: PMP | PMC; success: boolean }>
+    userAction: { type: string; amount: PmpAmount | PmcAmount },
+    peerGroup: Array<{
+      type: string;
+      amount: PmpAmount | PmcAmount;
+      success: boolean;
+    }>
   ): {
     peerComparison: "above_average" | "average" | "below_average";
     socialPressure: number;
@@ -517,8 +539,8 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
     availableOptions: Array<{
       id: string;
       description: string;
-      pmpCost: PMP;
-      pmcCost: PMC;
+      pmpCost: PmpAmount;
+      pmcCost: PmcAmount;
       expectedUtility: number;
     }>,
     userBehaviorProfile: {
@@ -587,7 +609,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
   private analyzeTimeBasedPerformance(
     userHistory: Array<{
       action: string;
-      amount: PMP | PMC;
+      amount: PmpAmount | PmcAmount;
       context: DecisionContext;
       outcome: "positive" | "negative" | "neutral";
       timestamp: Date;
@@ -612,14 +634,14 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
     let bestTimeSlot: string | undefined;
     let bestSuccessRate = 0;
 
-    for (const [slot, data] of timeAnalysis.entries()) {
+    timeAnalysis.forEach((data, slot) => {
       const successRate = data.total > 0 ? data.success / data.total : 0;
       if (successRate > bestSuccessRate && data.total >= 3) {
         // 최소 3번 이상 데이터
         bestSuccessRate = successRate;
         bestTimeSlot = slot;
       }
-    }
+    });
 
     return { bestTimeSlot, successRate: bestSuccessRate };
   }
@@ -627,7 +649,7 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
   private analyzeAmountBasedPerformance(
     userHistory: Array<{
       action: string;
-      amount: PMP | PMC;
+      amount: PmpAmount | PmcAmount;
       context: DecisionContext;
       outcome: "positive" | "negative" | "neutral";
       timestamp: Date;
@@ -661,13 +683,13 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
     let optimalRange: string | undefined;
     let bestSuccessRate = 0;
 
-    for (const [range, data] of rangeAnalysis.entries()) {
+    rangeAnalysis.forEach((data, range) => {
       const successRate = data.total > 0 ? data.success / data.total : 0;
       if (successRate > bestSuccessRate && data.total >= 3) {
         bestSuccessRate = successRate;
         optimalRange = range;
       }
-    }
+    });
 
     return { optimalRange, successRate: bestSuccessRate };
   }

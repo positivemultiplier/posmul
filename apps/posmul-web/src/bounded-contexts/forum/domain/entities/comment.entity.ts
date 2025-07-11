@@ -276,7 +276,7 @@ export class Comment {
       basePoints = 2; // 대댓글
     }
 
-    return createActivityPoints(basePoints, 'PMP');
+    return createActivityPoints(basePoints, 'PmpAmount');
   }
 
   /**

@@ -3,7 +3,8 @@
  * 기부 생성 유스케이스
  */
 
-import { Result, ValidationError, isFailure } from "@posmul/shared-types";
+import { Result, isFailure, UserId } from "@posmul/auth-economy-sdk";
+import { ValidationError } from "@posmul/auth-economy-sdk";
 import { Donation } from "../../domain/entities/donation.entity";
 import { Institute } from "../../domain/entities/institute.entity";
 import { OpinionLeader } from "../../domain/entities/opinion-leader.entity";
@@ -56,10 +57,11 @@ export class CreateDonationUseCase {
     if (!validationResult.success) {
       return {
         success: false,
-        error: new ValidationError(
-          "Invalid donation request",
-          validationResult.error.errors.map((e) => e.message).join(", ")
-        ),
+        error: new ValidationError("Invalid donation request", {
+          details: validationResult.error.errors
+            .map((e) => e.message)
+            .join(", "),
+        }),
       };
     }
 
@@ -113,7 +115,12 @@ export class CreateDonationUseCase {
           );
 
           if (!instituteResult.success) {
-            return instituteResult;
+            return {
+              success: false,
+              error: isFailure(instituteResult)
+                ? instituteResult.error
+                : new Error("Unknown error"),
+            };
           }
 
           donation = instituteResult.data.donation;
@@ -133,7 +140,12 @@ export class CreateDonationUseCase {
           );
 
           if (!leaderResult.success) {
-            return leaderResult;
+            return {
+              success: false,
+              error: isFailure(leaderResult)
+                ? leaderResult.error
+                : new Error("Unknown error"),
+            };
           }
 
           donation = leaderResult.data.donation;
@@ -143,7 +155,9 @@ export class CreateDonationUseCase {
         default:
           return {
             success: false,
-            error: new ValidationError("Invalid donation type"),
+            error: new ValidationError("Invalid donation type", {
+              donationType: request.type,
+            }),
           };
       }
 
@@ -153,11 +167,13 @@ export class CreateDonationUseCase {
       if (!donorHistoryResult.success) {
         return {
           success: false,
-          error: isFailure(donorHistoryResult) ? donorHistoryResult.error : new Error("Unknown error"),
+          error: isFailure(donorHistoryResult)
+            ? donorHistoryResult.error
+            : new Error("Unknown error"),
         };
       }
 
-      const donorHistory = donorHistoryResult.data.data;
+      const donorHistory = donorHistoryResult.data.items;
 
       // 기부 적격성 검증
       if (target) {
@@ -173,10 +189,9 @@ export class CreateDonationUseCase {
         if (!eligibilityResult.isEligible) {
           return {
             success: false,
-            error: new ValidationError(
-              "Donation eligibility failed",
-              eligibilityResult.reasons.join(", ")
-            ),
+            error: new ValidationError("Donation eligibility failed", {
+              reasons: eligibilityResult.reasons,
+            }),
           };
         }
       }
@@ -186,7 +201,9 @@ export class CreateDonationUseCase {
       if (!saveResult.success) {
         return {
           success: false,
-          error: isFailure(saveResult) ? saveResult.error : new Error("Unknown error"),
+          error: isFailure(saveResult)
+            ? saveResult.error
+            : new Error("Unknown error"),
         };
       }
 
@@ -216,7 +233,8 @@ export class CreateDonationUseCase {
     // 수혜자 정보 검증
     if (!request.beneficiaryName || !request.beneficiaryDescription) {
       throw new ValidationError(
-        "Beneficiary information is required for direct donations"
+        "Beneficiary information is required for direct donations",
+        { requiredFields: ["beneficiaryName", "beneficiaryDescription"] }
       );
     }
 
@@ -238,7 +256,7 @@ export class CreateDonationUseCase {
     );
 
     if (!result.success) {
-      throw result.error;
+      throw isFailure(result) ? result.error : new Error("Unknown error");
     }
 
     return result.data;
@@ -261,14 +279,16 @@ export class CreateDonationUseCase {
     if (!instituteResult.success) {
       return {
         success: false,
-        error: isFailure(instituteResult) ? instituteResult.error : new Error("Unknown error"),
+        error: isFailure(instituteResult)
+          ? instituteResult.error
+          : new Error("Unknown error"),
       };
     }
 
     if (!instituteResult.data) {
       return {
         success: false,
-        error: new ValidationError("Institute not found"),
+        error: new ValidationError("Institute not found", { instituteId }),
       };
     }
 
@@ -276,7 +296,9 @@ export class CreateDonationUseCase {
     if (!institute.canReceiveDonations()) {
       return {
         success: false,
-        error: new ValidationError("Institute is not accepting donations"),
+        error: new ValidationError("Institute is not accepting donations", {
+          instituteId,
+        }),
       };
     }
 
@@ -294,7 +316,9 @@ export class CreateDonationUseCase {
     if (!donationResult.success) {
       return {
         success: false,
-        error: isFailure(donationResult) ? donationResult.error : new Error("Unknown error"),
+        error: isFailure(donationResult)
+          ? donationResult.error
+          : new Error("Unknown error"),
       };
     }
 
@@ -324,14 +348,18 @@ export class CreateDonationUseCase {
     if (!leaderResult.success) {
       return {
         success: false,
-        error: isFailure(leaderResult) ? leaderResult.error : new Error("Unknown error"),
+        error: isFailure(leaderResult)
+          ? leaderResult.error
+          : new Error("Unknown error"),
       };
     }
 
     if (!leaderResult.data) {
       return {
         success: false,
-        error: new ValidationError("Opinion leader not found"),
+        error: new ValidationError("Opinion leader not found", {
+          opinionLeaderId,
+        }),
       };
     }
 
@@ -339,7 +367,9 @@ export class CreateDonationUseCase {
     if (!leader.canReceiveSupport()) {
       return {
         success: false,
-        error: new ValidationError("Opinion leader is not accepting support"),
+        error: new ValidationError("Opinion leader is not accepting support", {
+          opinionLeaderId,
+        }),
       };
     }
 
@@ -357,7 +387,9 @@ export class CreateDonationUseCase {
     if (!donationResult.success) {
       return {
         success: false,
-        error: isFailure(donationResult) ? donationResult.error : new Error("Unknown error"),
+        error: isFailure(donationResult)
+          ? donationResult.error
+          : new Error("Unknown error"),
       };
     }
 
