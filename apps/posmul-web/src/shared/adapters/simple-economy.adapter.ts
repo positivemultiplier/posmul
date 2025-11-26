@@ -27,8 +27,18 @@ export class SimpleEconomyAdapter {
     lastActivity: string | null;
   }> {
     try {
-      // 현재 SDK에는 getCombinedBalance가 제대로 구현되지 않았으므로
-      // 개별 잔액 조회 후 결합
+      // SDK에서 통합 잔액 조회 시도
+      const combinedResult = await this.client.economy.getCombinedBalance(userId as any);
+      
+      if (combinedResult.success) {
+        return {
+          pmpBalance: Number(combinedResult.data.pmp) || 0,
+          pmcBalance: Number(combinedResult.data.pmc) || 0,
+          lastActivity: combinedResult.data.lastUpdated?.toISOString() || new Date().toISOString(),
+        };
+      }
+
+      // 통합 조회 실패 시 개별 잔액 조회 시도
       const pmpResult = await this.client.economy.getPmpAmountBalance(userId as any);
       const pmcResult = await this.client.economy.getPmcAmountBalance(userId as any);
 
@@ -39,6 +49,7 @@ export class SimpleEconomyAdapter {
       };
     } catch (error) {
       console.error('Failed to get economic balance:', error);
+      // 오류 시 기본값 반환 (사용자에게 0으로 표시)
       return {
         pmpBalance: 0,
         pmcBalance: 0,

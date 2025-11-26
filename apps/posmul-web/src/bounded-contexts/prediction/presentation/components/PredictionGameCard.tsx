@@ -246,7 +246,11 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
             <Button
               onClick={handleParticipate}
               disabled={!selectedOption}
-              className="px-6"
+              className={`px-6 ${
+                selectedOption 
+                  ? "bg-blue-600 hover:bg-blue-700 text-white" 
+                  : "bg-gray-300 text-gray-500 cursor-not-allowed"
+              }`}
             >
               🎯 참여하기
             </Button>

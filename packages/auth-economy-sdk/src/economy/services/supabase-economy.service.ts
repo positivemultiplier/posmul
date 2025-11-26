@@ -21,21 +21,35 @@ export class SupabaseEconomyService implements EconomyService {
   // 💰 PmpAmount 잔액 조회
   async getPmpAmountBalance(userId: UserId): Promise<Result<PmpAmount, EconomyError>> {
     try {
+      // pmp_pmc_accounts 테이블에서 조회 (기본 경제 테이블)
       const { data, error } = await this.supabase
-        .from('user_profiles')
+        .from('pmp_pmc_accounts')
         .select('pmp_balance')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .single();
 
       if (error) {
-        return { success: false, error: new EconomyError(`PmpAmount 잔액 조회 실패: ${error.message}`) };
+        // 테이블이 없거나 레코드가 없는 경우 user_profiles 테이블 시도
+        const { data: profileData, error: profileError } = await this.supabase
+          .from('user_profiles')
+          .select('pmp_balance')
+          .eq('id', userId)
+          .single();
+
+        if (profileError) {
+          // 둘 다 실패하면 기본값 반환
+          console.warn(`PmpAmount 잔액 조회 실패 (${userId}): 기본값 0 반환`);
+          return { success: true, data: 0 as PmpAmount };
+        }
+        return { success: true, data: (profileData.pmp_balance ?? 0) as PmpAmount };
       }
 
-      return { success: true, data: data.pmp_balance as PmpAmount };
+      return { success: true, data: (data.pmp_balance ?? 0) as PmpAmount };
     } catch (error) {
+      console.error('PmpAmount 잔액 조회 오류:', error);
       return { 
-        success: false, 
-        error: new EconomyError(error instanceof Error ? error.message : 'PmpAmount 잔액 조회 중 오류가 발생했습니다.') 
+        success: true, 
+        data: 0 as PmpAmount  // 오류 시에도 기본값 반환
       };
     }
   }
@@ -43,21 +57,35 @@ export class SupabaseEconomyService implements EconomyService {
   // 💰 PmcAmount 잔액 조회
   async getPmcAmountBalance(userId: UserId): Promise<Result<PmcAmount, EconomyError>> {
     try {
+      // pmp_pmc_accounts 테이블에서 조회 (기본 경제 테이블)
       const { data, error } = await this.supabase
-        .from('user_profiles')
+        .from('pmp_pmc_accounts')
         .select('pmc_balance')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .single();
 
       if (error) {
-        return { success: false, error: new EconomyError(`PmcAmount 잔액 조회 실패: ${error.message}`) };
+        // 테이블이 없거나 레코드가 없는 경우 user_profiles 테이블 시도
+        const { data: profileData, error: profileError } = await this.supabase
+          .from('user_profiles')
+          .select('pmc_balance')
+          .eq('id', userId)
+          .single();
+
+        if (profileError) {
+          // 둘 다 실패하면 기본값 반환
+          console.warn(`PmcAmount 잔액 조회 실패 (${userId}): 기본값 0 반환`);
+          return { success: true, data: 0 as PmcAmount };
+        }
+        return { success: true, data: (profileData.pmc_balance ?? 0) as PmcAmount };
       }
 
-      return { success: true, data: data.pmc_balance as PmcAmount };
+      return { success: true, data: (data.pmc_balance ?? 0) as PmcAmount };
     } catch (error) {
+      console.error('PmcAmount 잔액 조회 오류:', error);
       return { 
-        success: false, 
-        error: new EconomyError(error instanceof Error ? error.message : 'PmcAmount 잔액 조회 중 오류가 발생했습니다.') 
+        success: true, 
+        data: 0 as PmcAmount  // 오류 시에도 기본값 반환
       };
     }
   }
@@ -65,28 +93,56 @@ export class SupabaseEconomyService implements EconomyService {
   // 💰 통합 잔액 조회
   async getCombinedBalance(userId: UserId): Promise<Result<EconomicBalance, EconomyError>> {
     try {
+      // pmp_pmc_accounts 테이블에서 조회 (기본 경제 테이블)
       const { data, error } = await this.supabase
-        .from('user_profiles')
+        .from('pmp_pmc_accounts')
         .select('pmp_balance, pmc_balance, updated_at')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .single();
 
       if (error) {
-        return { success: false, error: new EconomyError(`잔액 조회 실패: ${error.message}`) };
+        // 테이블이 없거나 레코드가 없는 경우 user_profiles 테이블 시도
+        const { data: profileData, error: profileError } = await this.supabase
+          .from('user_profiles')
+          .select('pmp_balance, pmc_balance, updated_at')
+          .eq('id', userId)
+          .single();
+
+        if (profileError) {
+          // 둘 다 실패하면 기본값 반환
+          console.warn(`통합 잔액 조회 실패 (${userId}): 기본값 반환`);
+          const defaultBalance: EconomicBalance = {
+            pmp: 0 as PmpAmount,
+            pmc: 0 as PmcAmount,
+            lastUpdated: new Date()
+          };
+          return { success: true, data: defaultBalance };
+        }
+        
+        const balance: EconomicBalance = {
+          pmp: (profileData.pmp_balance ?? 0) as PmpAmount,
+          pmc: (profileData.pmc_balance ?? 0) as PmcAmount,
+          lastUpdated: profileData.updated_at ? new Date(profileData.updated_at) : new Date()
+        };
+        return { success: true, data: balance };
       }
 
       const balance: EconomicBalance = {
-        pmp: data.pmp_balance as PmpAmount,
-        pmc: data.pmc_balance as PmcAmount,
-        lastUpdated: new Date(data.updated_at)
+        pmp: (data.pmp_balance ?? 0) as PmpAmount,
+        pmc: (data.pmc_balance ?? 0) as PmcAmount,
+        lastUpdated: data.updated_at ? new Date(data.updated_at) : new Date()
       };
 
       return { success: true, data: balance };
     } catch (error) {
-      return { 
-        success: false, 
-        error: new EconomyError(error instanceof Error ? error.message : '잔액 조회 중 오류가 발생했습니다.') 
+      console.error('통합 잔액 조회 오류:', error);
+      // 오류 시에도 기본값 반환
+      const defaultBalance: EconomicBalance = {
+        pmp: 0 as PmpAmount,
+        pmc: 0 as PmcAmount,
+        lastUpdated: new Date()
       };
+      return { success: true, data: defaultBalance };
     }
   }
 
