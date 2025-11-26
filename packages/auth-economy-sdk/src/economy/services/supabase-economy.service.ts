@@ -46,10 +46,12 @@ export class SupabaseEconomyService implements EconomyService {
 
       return { success: true, data: (data.pmp_balance ?? 0) as PmpAmount };
     } catch (error) {
-      console.error('PmpAmount 잔액 조회 오류:', error);
+      // Log error but return default value to allow UI to function gracefully
+      // This is intentional - we prefer showing 0 balance over an error state
+      console.warn('PmpAmount 잔액 조회 오류 - 기본값 0 반환:', error);
       return { 
         success: true, 
-        data: 0 as PmpAmount  // 오류 시에도 기본값 반환
+        data: 0 as PmpAmount
       };
     }
   }
@@ -82,10 +84,11 @@ export class SupabaseEconomyService implements EconomyService {
 
       return { success: true, data: (data.pmc_balance ?? 0) as PmcAmount };
     } catch (error) {
-      console.error('PmcAmount 잔액 조회 오류:', error);
+      // Log error but return default value to allow UI to function gracefully
+      console.warn('PmcAmount 잔액 조회 오류 - 기본값 0 반환:', error);
       return { 
         success: true, 
-        data: 0 as PmcAmount  // 오류 시에도 기본값 반환
+        data: 0 as PmcAmount
       };
     }
   }

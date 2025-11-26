@@ -270,14 +270,16 @@ export class SupabasePredictionGameRepository
         filteredData = filteredData.filter(g => g.creatorId === filters.creatorId);
       }
       if (filters.predictionType) {
-        // PredictionType enum to string value 비교
-        const typeString = filters.predictionType;
-        filteredData = filteredData.filter(g => {
-          // PredictionType enum의 값은 문자열이므로 직접 비교
-          return g.predictionType === PredictionType.BINARY && typeString === "binary" ||
-                 g.predictionType === PredictionType.WIN_DRAW_LOSE && typeString === "wdl" ||
-                 g.predictionType === PredictionType.RANKING && typeString === "ranking";
-        });
+        // Map filter string to PredictionType enum for comparison
+        const predictionTypeMap: Record<string, PredictionType> = {
+          "binary": PredictionType.BINARY,
+          "wdl": PredictionType.WIN_DRAW_LOSE,
+          "ranking": PredictionType.RANKING,
+        };
+        const targetType = predictionTypeMap[filters.predictionType];
+        if (targetType) {
+          filteredData = filteredData.filter(g => g.predictionType === targetType);
+        }
       }
       if (filters.title) {
         filteredData = filteredData.filter(g => 
@@ -460,13 +462,14 @@ export class SupabasePredictionGameRepository
         };
       }
       
-      // Mock 통계 데이터
+      // Deterministic mock statistics based on game ID for consistent testing
+      const idHash = id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
       return {
         success: true,
         data: {
-          totalParticipants: Math.floor(Math.random() * 200) + 50,
-          totalStake: Math.floor(Math.random() * 500000) + 100000,
-          averageConfidence: 0.65 + Math.random() * 0.2,
+          totalParticipants: 50 + (idHash % 150),
+          totalStake: 100000 + (idHash * 1000 % 400000),
+          averageConfidence: 0.65 + (idHash % 20) / 100,
           statusDistribution: {
             pending: 10,
             completed: 85,
