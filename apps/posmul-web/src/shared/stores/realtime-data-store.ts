@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { subscribeWithSelector } from "zustand/middleware";
+
 import { getEconomicBalance } from "../adapters/simple-economy.adapter";
 
 // 실시간 데이터 타입 정의
@@ -24,7 +25,11 @@ export interface RealtimeEconomicData {
   lastUpdate: Date;
   recentTransactions: Array<{
     id: string;
-    type: "PmpAmount_EARNED" | "PmcAmount_EARNED" | "PmpAmount_SPENT" | "PmcAmount_SPENT";
+    type:
+      | "PmpAmount_EARNED"
+      | "PmcAmount_EARNED"
+      | "PmpAmount_SPENT"
+      | "PmcAmount_SPENT";
     amount: number;
     timestamp: Date;
     source: string;

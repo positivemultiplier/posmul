@@ -4,7 +4,6 @@
  * 사용자가 다양한 활동(기부, 예측 게임 참여, 사회 기여 등)을 통해 PmpAmount를 획득하는 핵심 비즈니스 로직
  * Agency Theory와 Behavioral Economics를 적용하여 인센티브 구조 최적화
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
 
 import {
@@ -75,9 +74,9 @@ export class AcquirePmpAmountUseCase {
     private readonly utilityService: UtilityFunctionEstimationService
   ) {}
 
-  
-
-  async execute(request: PmpAmountAcquisitionRequest): Promise<PmpAmountAcquisitionResult> {
+  async execute(
+    request: PmpAmountAcquisitionRequest
+  ): Promise<PmpAmountAcquisitionResult> {
     try {
       // 1. 현재 계정 상태 조회
       const currentBalanceResult =
@@ -120,9 +119,8 @@ export class AcquirePmpAmountUseCase {
       };
 
       // 7. 계정 업데이트
-      const transactionResult = await this.accountRepository.saveTransaction(
-        transactionData
-      );
+      const transactionResult =
+        await this.accountRepository.saveTransaction(transactionData);
       if (!transactionResult.success) {
         throw new Error("Failed to save transaction");
       }

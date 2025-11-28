@@ -1,11 +1,10 @@
 /**
  * Supabase Money Wave History Repository Implementation
  */
-
 import {
-  createDefaultMCPAdapter,
-  Result,
   CompatibleBaseError,
+  Result,
+  createDefaultMCPAdapter,
 } from "../../../../shared/legacy-compatibility";
 
 export class SupabaseMoneyWaveHistoryRepository {

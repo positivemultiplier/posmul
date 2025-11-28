@@ -1,4 +1,4 @@
----
+﻿---
 type: reference
 title: "PosMul Core MCP Tools Reference"
 description: "PosMul 프로젝트 개발에 필수적인 GitHub 및 Supabase MCP 핵심 도구에 대한 빠른 참조 가이드입니다."

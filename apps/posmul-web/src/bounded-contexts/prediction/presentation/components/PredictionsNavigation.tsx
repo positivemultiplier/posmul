@@ -13,9 +13,22 @@
 "use client";
 
 // Using inline SVG instead of heroicons for compatibility
+import { useState } from "react";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+
+/**
+ * 3-Tier Predictions Navigation Component
+ *
+ * Implements hierarchical navigation:
+ * Tier 1: Expect (예측) - Fixed
+ * Tier 2: invest, sports, entertainment, politics, user-suggestions
+ * Tier 3: Category-specific subcategories
+ *
+ * @author PosMul Development Team
+ * @since 2024-12
+ */
 
 // Navigation Data Structure based on Project_Features.md
 const navigationData = {

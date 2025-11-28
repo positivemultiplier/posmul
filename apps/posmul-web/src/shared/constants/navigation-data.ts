@@ -6,8 +6,15 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
-import { DomainNavigationConfig, DomainType, DonationNavigation, ForumNavigation, InvestmentNavigation, PredictionNavigation, SidebarLink } from "../types/navigation";
+import {
+  DomainNavigationConfig,
+  DomainType,
+  DonationNavigation,
+  ForumNavigation,
+  InvestmentNavigation,
+  PredictionNavigation,
+  SidebarLink,
+} from "../types/navigation";
 
 // Prediction Navigation (현재 구현됨)
 const predictionNav: PredictionNavigation = {

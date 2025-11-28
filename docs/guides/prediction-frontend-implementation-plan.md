@@ -1,4 +1,4 @@
-# PosMul Prediction 도메인 프론트엔드 구현 계획
+﻿# PosMul Prediction 도메인 프론트엔드 구현 계획
 
 > **목적**: PosMul 플랫폼의 Prediction 도메인 프론트엔드 개발 전략 및 구현 로드맵  
 > **작성일**: 2025-06-24  
@@ -214,11 +214,7 @@ graph LR
     A --> D["Pie Chart<br/>- 시장 점유율<br/>- 예측 분포"]
     A --> E["Heatmap<br/>- 시간대별 활동<br/>- 카테고리별 인기도"]
 
-    style A fill:#e1f5fe
-    style B fill:#f3e5f5
-    style C fill:#e8f5e8
-    style D fill:#fff3e0
-    style E fill:#fce4ec
+
 ```
 
 #### 5. UserDashboard (사용자 대시보드)
@@ -581,19 +577,16 @@ pie title "품질 관리 영역별 중요도"
 #### 핵심 품질 지표
 
 1. **기능 정확성**
-
    - 테스트 커버리지 > 80%
    - 버그 발생률 < 1%
    - 기능 완성도 > 95%
 
 2. **성능 최적화**
-
    - 첫 페이지 로딩 < 2초
    - 상호작용 응답 시간 < 100ms
    - 메모리 사용량 < 50MB
 
 3. **사용자 경험**
-
    - 사용자 만족도 > 4.5/5
    - 태스크 완료율 > 90%
    - 오류 발생률 < 5%

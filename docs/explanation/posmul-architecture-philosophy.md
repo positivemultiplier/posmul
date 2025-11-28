@@ -1,4 +1,4 @@
----
+﻿---
 type: explanation
 title: "PosMul 아키텍처 철학: 왜 DDD, Clean Architecture, MCP를 사용하는가?"
 description: "PosMul 프로젝트의 핵심을 이루는 Domain-Driven Design, Clean Architecture, 그리고 MCP-First 접근 방식의 도입 배경과 철학을 깊이 있게 설명합니다."

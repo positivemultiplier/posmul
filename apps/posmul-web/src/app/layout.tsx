@@ -1,6 +1,9 @@
-import { Navbar } from "../shared/ui";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+
+import { ThreeRowNavbar } from "../shared/ui/components/layout/ThreeRowNavbar";
+import { ThemeProvider } from "../bounded-contexts/prediction/presentation/utils/ThemeProvider";
+import { ToastProvider } from "../shared/ui/components/feedback/Toast";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -42,25 +45,26 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-50 min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="flex flex-col min-h-screen">
-          {/* 네비게이션바 */}
-          <Navbar
-            economicBalance={mockEconomicBalance}
-            isAuthenticated={false}
-          />
+        <ThemeProvider>
+          <ToastProvider>
+            <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#1a1a2e] to-[#0a0a0f]">
+              {/* Navigation */}
+              <ThreeRowNavbar />
 
-          <main className="flex-1">{children}</main>
+              <main className="flex-1 pt-16">{children}</main>
 
-          <footer className="bg-white border-t border-gray-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-              <div className="text-center text-sm text-gray-500">
-                © 2024 Posmul. AI 시대 직접민주주의 실험 플랫폼
-              </div>
+              <footer className="bg-[#0a0a0f] border-t border-white/10">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+                  <div className="text-center text-sm text-gray-400">
+                    © 2024 Posmul. AI 시대 직접민주주의 실험 플랫폼
+                  </div>
+                </div>
+              </footer>
             </div>
-          </footer>
-        </div>
+          </ToastProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

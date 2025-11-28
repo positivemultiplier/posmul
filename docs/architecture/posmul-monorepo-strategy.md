@@ -1,4 +1,4 @@
----
+﻿---
 title: "PosMul 모노레포 전략: 통합과 분리의 기술"
 author: "PosMul Agent"
 date: "2025-06-25"

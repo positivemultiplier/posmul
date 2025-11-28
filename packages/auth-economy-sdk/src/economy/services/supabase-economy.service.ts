@@ -15,16 +15,128 @@ import {
   EconomyError
 } from '../types';
 
+// 개발 모드 체크
+const IS_DEVELOPMENT = process.env.NODE_ENV === 'development';
+const DEV_BONUS_PMP = 10000;
+const DEV_BONUS_PMC = 10000;
+
 export class SupabaseEconomyService implements EconomyService {
   constructor(private supabase: SupabaseClient) {}
+
+  // 🎁 개발용 로그인 보너스 지급 (개발 환경에서만)
+  async grantDevLoginBonus(userId: UserId): Promise<Result<{ pmpBalance: number; pmcBalance: number; bonusGranted: boolean }, EconomyError>> {
+    // 프로덕션 환경에서는 스킵
+    if (!IS_DEVELOPMENT) {
+      return {
+        success: true,
+        data: {
+          pmpBalance: 0,
+          pmcBalance: 0,
+          bonusGranted: false,
+        }
+      };
+    }
+
+    try {
+      // DDD: economy.pmp_pmc_accounts에서 잔액 조회 (Single Source of Truth)
+      const { data: account, error: accountError } = await this.supabase
+        .schema('economy')
+        .from('pmp_pmc_accounts')
+        .select('pmp_balance, pmc_balance')
+        .eq('user_id', userId)
+        .single();
+
+      if (accountError?.code === 'PGRST116') {
+        // 계정이 없으면 새로 생성
+        const { error: insertError } = await this.supabase
+          .schema('economy')
+          .from('pmp_pmc_accounts')
+          .insert({
+            user_id: userId,
+            pmp_balance: DEV_BONUS_PMP,
+            pmc_balance: DEV_BONUS_PMC,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+        if (insertError) {
+          return {
+            success: false,
+            error: new EconomyError(`경제 계정 생성 실패: ${insertError.message}`),
+          };
+        }
+
+        console.log(`🎁 [DEV/SDK] 새 사용자에게 개발 보너스 지급: +${DEV_BONUS_PMP} PMP, +${DEV_BONUS_PMC} PMC`);
+
+        return {
+          success: true,
+          data: {
+            pmpBalance: DEV_BONUS_PMP,
+            pmcBalance: DEV_BONUS_PMC,
+            bonusGranted: true,
+          }
+        };
+      }
+
+      if (accountError) {
+        return {
+          success: false,
+          error: new EconomyError(`잔액 조회 실패: ${accountError.message}`),
+        };
+      }
+
+      // 현재 잔액에 보너스 추가
+      const currentPmp = Number(account.pmp_balance) || 0;
+      const currentPmc = Number(account.pmc_balance) || 0;
+      const newPmpBalance = currentPmp + DEV_BONUS_PMP;
+      const newPmcBalance = currentPmc + DEV_BONUS_PMC;
+
+      const { error: updateError } = await this.supabase
+        .schema('economy')
+        .from('pmp_pmc_accounts')
+        .update({
+          pmp_balance: newPmpBalance,
+          pmc_balance: newPmcBalance,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('user_id', userId);
+
+      if (updateError) {
+        return {
+          success: false,
+          error: new EconomyError(`잔액 업데이트 실패: ${updateError.message}`),
+        };
+      }
+
+      console.log(`🎁 [DEV/SDK] 개발 보너스 지급: +${DEV_BONUS_PMP} PMP, +${DEV_BONUS_PMC} PMC`);
+      console.log(`   - PMP: ${currentPmp.toLocaleString()} → ${newPmpBalance.toLocaleString()}`);
+      console.log(`   - PMC: ${currentPmc.toLocaleString()} → ${newPmcBalance.toLocaleString()}`);
+
+      return {
+        success: true,
+        data: {
+          pmpBalance: newPmpBalance,
+          pmcBalance: newPmcBalance,
+          bonusGranted: true,
+        }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: new EconomyError(error instanceof Error ? error.message : '개발 보너스 지급 중 오류가 발생했습니다.'),
+      };
+    }
+  }
 
   // 💰 PmpAmount 잔액 조회
   async getPmpAmountBalance(userId: UserId): Promise<Result<PmpAmount, EconomyError>> {
     try {
+      // DDD: economy.pmp_pmc_accounts is Single Source of Truth
       const { data, error } = await this.supabase
-        .from('user_profiles')
+        .schema('economy')
+        .from('pmp_pmc_accounts')
         .select('pmp_balance')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .single();
 
       if (error) {
@@ -43,10 +155,12 @@ export class SupabaseEconomyService implements EconomyService {
   // 💰 PmcAmount 잔액 조회
   async getPmcAmountBalance(userId: UserId): Promise<Result<PmcAmount, EconomyError>> {
     try {
+      // DDD: economy.pmp_pmc_accounts is Single Source of Truth
       const { data, error } = await this.supabase
-        .from('user_profiles')
+        .schema('economy')
+        .from('pmp_pmc_accounts')
         .select('pmc_balance')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .single();
 
       if (error) {
@@ -65,10 +179,12 @@ export class SupabaseEconomyService implements EconomyService {
   // 💰 통합 잔액 조회
   async getCombinedBalance(userId: UserId): Promise<Result<EconomicBalance, EconomyError>> {
     try {
+      // DDD: economy.pmp_pmc_accounts is Single Source of Truth
       const { data, error } = await this.supabase
-        .from('user_profiles')
+        .schema('economy')
+        .from('pmp_pmc_accounts')
         .select('pmp_balance, pmc_balance, updated_at')
-        .eq('id', userId)
+        .eq('user_id', userId)
         .single();
 
       if (error) {

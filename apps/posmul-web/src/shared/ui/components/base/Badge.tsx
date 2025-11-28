@@ -6,7 +6,6 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import * as React from "react";
 
 export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {

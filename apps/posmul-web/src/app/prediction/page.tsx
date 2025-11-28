@@ -1,56 +1,200 @@
-import { Card, Badge } from "../../shared/ui";
 import Link from "next/link";
+import { createClient } from "../../lib/supabase/server";
+import { FadeIn } from "../HomeClientComponents";
+import { Activity, TrendingUp, Vote, Film } from "lucide-react";
+import { GameStatus, PredictionType } from "../../bounded-contexts/prediction/domain/value-objects/prediction-types";
+import { ClientPredictionGamesGrid } from "./components/ClientPredictionGamesGrid";
 
-export default function PredictionPage() {
+export default async function PredictionPage() {
+  const supabase = await createClient();
+
+  // Get current user
+  const { data: { user } } = await supabase.auth.getUser();
+
+  // Get game counts by category
+  const { data: games } = await supabase
+    .schema('prediction')
+    .from('prediction_games')
+    .select('category, status')
+    .eq('status', 'ACTIVE');
+
+  const categoryCounts = {
+    SPORTS: games?.filter(g => g.category === 'SPORTS').length || 0,
+    POLITICS: games?.filter(g => g.category === 'POLITICS').length || 0,
+    INVEST: games?.filter(g => g.category === 'INVEST').length || 0,
+    ENTERTAINMENT: games?.filter(g => g.category === 'ENTERTAINMENT').length || 0,
+  };
+
+  const categories = [
+    {
+      href: "/prediction?category=SPORTS",
+      icon: Activity,
+      emoji: "⚽",
+      title: "스포츠",
+      count: categoryCounts.SPORTS,
+      gradient: "from-blue-500/10 to-cyan-500/10",
+      iconColor: "text-blue-400",
+    },
+    {
+      href: "/prediction?category=POLITICS",
+      icon: Vote,
+      emoji: "🗳️",
+      title: "정치",
+      count: categoryCounts.POLITICS,
+      gradient: "from-purple-500/10 to-pink-500/10",
+      iconColor: "text-purple-400",
+    },
+    {
+      href: "/prediction?category=INVEST",
+      icon: TrendingUp,
+      emoji: "📈",
+      title: "경제",
+      count: categoryCounts.INVEST,
+      gradient: "from-green-500/10 to-emerald-500/10",
+      iconColor: "text-green-400",
+    },
+    {
+      href: "/prediction?category=ENTERTAINMENT",
+      icon: Film,
+      emoji: "🎭",
+      title: "엔터테인먼트",
+      count: categoryCounts.ENTERTAINMENT,
+      gradient: "from-orange-500/10 to-red-500/10",
+      iconColor: "text-orange-400",
+    },
+  ];
+
+  // Get recent active games with all required fields
+  const { data: recentGames } = await supabase
+    .schema('prediction')
+    .from('prediction_games')
+    .select(`
+      id,
+      slug,
+      title,
+      description,
+      prediction_type,
+      start_time,
+      end_time,
+      settlement_time,
+      minimum_stake,
+      maximum_stake,
+      max_participants,
+      status,
+      allocated_prize_pool,
+      game_importance_score,
+      total_participants_count,
+      total_stake_amount,
+      created_at,
+      metadata
+    `)
+    .eq('status', 'ACTIVE')
+    .order('created_at', { ascending: false })
+    .limit(6);
+
+  // Map DB data to domain model
+  const mappedGames = recentGames?.map((game: any) => {
+    // Parse options from metadata or use default
+    const gameOptions = game.metadata?.options || [
+      { id: '1', text: '예', currentOdds: 0.5 },
+      { id: '2', text: '아니오', currentOdds: 0.5 }
+    ];
+
+    return {
+      id: game.id,
+      slug: game.slug,  // NEW: Add slug for routing
+      title: game.title,
+      description: game.description,
+      predictionType: game.prediction_type?.toUpperCase() || PredictionType.BINARY,
+      options: gameOptions,
+      startTime: new Date(game.start_time),
+      endTime: new Date(game.end_time),
+      settlementTime: new Date(game.settlement_time),
+      minimumStake: game.minimum_stake || 100,
+      maximumStake: game.maximum_stake || 10000,
+      maxParticipants: game.max_participants,
+      currentParticipants: game.total_participants_count || 0,
+      status: game.status || GameStatus.ACTIVE,
+      totalStake: game.total_stake_amount || 0,
+      gameImportanceScore: game.game_importance_score || 1.0,
+      allocatedPrizePool: game.allocated_prize_pool || 0,
+      createdAt: new Date(game.created_at),
+    };
+  }) || [];
+
+  // Get user's active predictions if logged in
+  let userPredictions: Array<{
+    prediction_id: string;
+    game_id: string;
+    bet_amount: number | null;
+    is_active: boolean;
+    prediction_data: Record<string, unknown> | null;
+  }> = [];
+
+  if (user) {
+    const { data: predictions } = await supabase
+      .schema('prediction')
+      .from('predictions')
+      .select('prediction_id, game_id, bet_amount, is_active, prediction_data')
+      .eq('user_id', user.id)
+      .eq('is_active', true);
+
+    userPredictions = predictions || [];
+  }
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">
-          🎯 예측 게임
-        </h1>
-        <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          다양한 분야의 예측 게임에 참여하고 PmpAmount를 획득하세요.
-        </p>
-      </div>
+    <div className="bg-gradient-to-b from-[#0a0a0f] via-[#1a1a2e] to-[#0a0a0f] min-h-screen text-white">
+      {/* Hero */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
+        <FadeIn>
+          <div className="text-center mb-12">
+            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              🎯 예측 게임
+            </h1>
+            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
+              AI 시대 직접민주주의를 위한 예측 게임 플랫폼
+            </p>
+          </div>
+        </FadeIn>
 
-      {/* Categories */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
-        <Link href="/prediction/sports">
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-            <div className="text-4xl mb-4">⚽</div>
-            <h3 className="text-xl font-semibold mb-2">스포츠</h3>
-            <p className="text-gray-600 mb-4">축구, 야구, 농구 등 스포츠 경기 결과를 예측하세요.</p>
-            <Badge variant="secondary">24개 게임</Badge>
-          </Card>
-        </Link>
+        {/* Category Grid */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          {categories.map((category, index) => {
+            const Icon = category.icon;
+            return (
+              <FadeIn key={category.href} delay={index * 0.1}>
+                <Link href={category.href}>
+                  <div className={`p-6 bg-gradient-to-br ${category.gradient} backdrop-blur-xl border border-white/10 rounded-2xl hover:border-white/20 transition-all cursor-pointer`}>
+                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 mb-4 mx-auto">
+                      <Icon className={`w-6 h-6 ${category.iconColor}`} />
+                    </div>
+                    <h3 className="font-semibold text-lg text-center mb-2">{category.title}</h3>
+                    <div className="text-center">
+                      <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                        {category.count}
+                      </span>
+                      <span className="text-sm text-gray-400 ml-1">개</span>
+                    </div>
+                  </div>
+                </Link>
+              </FadeIn>
+            );
+          })}
+        </div>
+      </section>
 
-        <Link href="/prediction/politics">
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-            <div className="text-4xl mb-4">🗳️</div>
-            <h3 className="text-xl font-semibold mb-2">정치</h3>
-            <p className="text-gray-600 mb-4">선거 결과와 정치적 이슈를 예측하세요.</p>
-            <Badge variant="secondary">8개 게임</Badge>
-          </Card>
-        </Link>
+      {/* Recent Games */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <FadeIn>
+          <h2 className="text-3xl font-bold mb-8 text-center">최근 게임</h2>
+        </FadeIn>
 
-        <Link href="/prediction/economy">
-          <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
-            <div className="text-4xl mb-4">📈</div>
-            <h3 className="text-xl font-semibold mb-2">경제</h3>
-            <p className="text-gray-600 mb-4">주식, 환율, 경제 지표를 예측하세요.</p>
-            <Badge variant="secondary">15개 게임</Badge>
-          </Card>
-        </Link>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="text-center">
-        <Link href="/prediction/create">
-          <button className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            새 게임 만들기
-          </button>
-        </Link>
-      </div>
+        <ClientPredictionGamesGrid 
+          games={mappedGames} 
+          userId={user?.id}
+          userPredictions={userPredictions}
+        />
+      </section>
     </div>
   );
 }

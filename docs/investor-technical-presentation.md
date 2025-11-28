@@ -1,4 +1,4 @@
-# PosMul: AI-Era Direct Democracy Platform
+﻿# PosMul: AI-Era Direct Democracy Platform
 
 ## Technical Excellence & Investment Opportunity
 

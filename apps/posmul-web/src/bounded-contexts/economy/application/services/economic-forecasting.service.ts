@@ -4,7 +4,6 @@
  * @author Economy Domain - Economic Forecasting Team
  * @version 1.0.0
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 /**

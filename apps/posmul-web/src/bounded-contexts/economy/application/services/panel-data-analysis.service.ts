@@ -4,7 +4,6 @@
  * 패널데이터를 활용한 계량경제학 분석 서비스
  * Fixed Effects, Random Effects, Difference-in-Differences 모델 구현
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import {
@@ -188,7 +187,7 @@ export class PanelDataAnalysisService {
       if (!panelDataResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
@@ -248,7 +247,7 @@ export class PanelDataAnalysisService {
       if (!saveResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
@@ -265,9 +264,7 @@ export class PanelDataAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -285,7 +282,7 @@ export class PanelDataAnalysisService {
       if (!panelDataResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
@@ -329,9 +326,7 @@ export class PanelDataAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -349,7 +344,7 @@ export class PanelDataAnalysisService {
       if (!panelDataResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
@@ -387,9 +382,7 @@ export class PanelDataAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -407,7 +400,7 @@ export class PanelDataAnalysisService {
       if (!panelDataResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
@@ -458,9 +451,7 @@ export class PanelDataAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -484,7 +475,7 @@ export class PanelDataAnalysisService {
         pValue: Math.random() * 0.1,
         confidenceInterval: [coefficient - 0.2, coefficient + 0.2] as [
           number,
-          number
+          number,
         ],
       };
     }
@@ -535,7 +526,7 @@ export class PanelDataAnalysisService {
         pValue: Math.random() * 0.1,
         confidenceInterval: [coefficient - 0.25, coefficient + 0.25] as [
           number,
-          number
+          number,
         ],
       };
     }

@@ -7,7 +7,6 @@
  * @since 2024-12
  * @task PD-006
  */
-
 import { SupabasePredictionGameRepository } from "./supabase-prediction-game.repository";
 import { SupabasePredictionRepository } from "./supabase-prediction.repository";
 

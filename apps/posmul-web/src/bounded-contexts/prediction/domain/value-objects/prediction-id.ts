@@ -7,7 +7,6 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import {
   PredictionGameId as BasePredictionGameId,
   PredictionId as BasePredictionId,

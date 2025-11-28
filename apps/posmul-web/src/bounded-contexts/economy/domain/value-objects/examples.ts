@@ -4,8 +4,8 @@
  *
  * 이 파일은 구현된 Value Objects들이 올바르게 작동하는지 확인하기 위한 예제입니다.
  */
-
 import {
+  MoneyWaveType,
   calculateCAPMReturn,
   calculateIndividualUtility,
   createActiveUserCount,
@@ -36,7 +36,6 @@ import {
   createUtilityAlpha,
   createUtilityBeta,
   createUtilityGamma,
-  MoneyWaveType,
   unwrapPmcAmount,
   // 유틸리티
   unwrapPmpAmount,
@@ -131,9 +130,7 @@ export function exampleBehavioralEconomics() {
 
   const prospectValue = createProspectValue(gainValue + lossValue);
   console.log(`Prospect Value: ${prospectValue}`);
-  console.log(
-    "Invalid state"
-  );
+  console.log("Invalid state");
 
   // Endowment Effect
   const endowmentAttachment = createEndowmentAttachment(0.3);
@@ -213,10 +210,10 @@ export function exampleSocialWelfare() {
     giniCoeff < 0.25
       ? "Low inequality"
       : giniCoeff < 0.4
-      ? "Moderate inequality"
-      : giniCoeff < 0.6
-      ? "High inequality"
-      : "Very high inequality";
+        ? "Moderate inequality"
+        : giniCoeff < 0.6
+          ? "High inequality"
+          : "Very high inequality";
 
   console.log(`Inequality Level: ${inequalityLevel}`);
 }

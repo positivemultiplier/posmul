@@ -2,17 +2,16 @@
  * Vote Entity
  * 포럼 투표 엔티티
  */
-
-import { UserId } from '../../../auth/domain/value-objects/user-value-objects';
+import { UserId } from "../../../auth/domain/value-objects/user-value-objects";
 import {
-  VoteId,
-  PostId,
+  ActivityPoints,
   CommentId,
+  PostId,
+  VoteId,
   VoteType,
   VoteValue,
-  ActivityPoints,
-  createActivityPoints
-} from '../value-objects/forum-value-objects';
+  createActivityPoints,
+} from "../value-objects/forum-value-objects";
 
 /**
  * Vote Entity
@@ -22,12 +21,12 @@ export class Vote {
   private constructor(
     private readonly id: VoteId,
     private readonly userId: UserId,
-    private readonly targetType: 'POST' | 'COMMENT',
+    private readonly targetType: "POST" | "COMMENT",
     private readonly targetId: PostId | CommentId,
     private voteValue: VoteValue,
     private readonly createdAt: Date,
     private updatedAt: Date,
-    
+
     // 투표 메타데이터
     private previousVoteValue?: VoteValue,
     private changeCount: number = 0
@@ -39,21 +38,13 @@ export class Vote {
   static create(
     id: VoteId,
     userId: UserId,
-    targetType: 'POST' | 'COMMENT',
+    targetType: "POST" | "COMMENT",
     targetId: PostId | CommentId,
     voteValue: VoteValue
   ): Vote {
     const now = new Date();
-    
-    return new Vote(
-      id,
-      userId,
-      targetType,
-      targetId,
-      voteValue,
-      now,
-      now
-    );
+
+    return new Vote(id, userId, targetType, targetId, voteValue, now, now);
   }
 
   /**
@@ -62,7 +53,7 @@ export class Vote {
   static restore(
     id: VoteId,
     userId: UserId,
-    targetType: 'POST' | 'COMMENT',
+    targetType: "POST" | "COMMENT",
     targetId: PostId | CommentId,
     voteValue: VoteValue,
     createdAt: Date,
@@ -84,23 +75,43 @@ export class Vote {
   }
 
   // Getters
-  getId(): VoteId { return this.id; }
-  getUserId(): UserId { return this.userId; }
-  getTargetType(): 'POST' | 'COMMENT' { return this.targetType; }
-  getTargetId(): PostId | CommentId { return this.targetId; }
-  getVoteValue(): VoteValue { return this.voteValue; }
-  getCreatedAt(): Date { return this.createdAt; }
-  getUpdatedAt(): Date { return this.updatedAt; }
-  getPreviousVoteValue(): VoteValue | undefined { return this.previousVoteValue; }
-  getChangeCount(): number { return this.changeCount; }
+  getId(): VoteId {
+    return this.id;
+  }
+  getUserId(): UserId {
+    return this.userId;
+  }
+  getTargetType(): "POST" | "COMMENT" {
+    return this.targetType;
+  }
+  getTargetId(): PostId | CommentId {
+    return this.targetId;
+  }
+  getVoteValue(): VoteValue {
+    return this.voteValue;
+  }
+  getCreatedAt(): Date {
+    return this.createdAt;
+  }
+  getUpdatedAt(): Date {
+    return this.updatedAt;
+  }
+  getPreviousVoteValue(): VoteValue | undefined {
+    return this.previousVoteValue;
+  }
+  getChangeCount(): number {
+    return this.changeCount;
+  }
 
   /**
    * 투표 값 변경
    */
   changeVote(newVoteValue: VoteValue): void {
-    if (this.voteValue.type === newVoteValue.type && 
-        this.voteValue.value === newVoteValue.value) {
-      throw new Error('Cannot change to the same vote value');
+    if (
+      this.voteValue.type === newVoteValue.type &&
+      this.voteValue.value === newVoteValue.value
+    ) {
+      throw new Error("Cannot change to the same vote value");
     }
 
     this.previousVoteValue = this.voteValue;
@@ -134,14 +145,14 @@ export class Vote {
    * 게시물에 대한 투표인지 확인
    */
   isPostVote(): boolean {
-    return this.targetType === 'POST';
+    return this.targetType === "POST";
   }
 
   /**
    * 댓글에 대한 투표인지 확인
    */
   isCommentVote(): boolean {
-    return this.targetType === 'COMMENT';
+    return this.targetType === "COMMENT";
   }
 
   /**
@@ -156,15 +167,15 @@ export class Vote {
    */
   calculateParticipationPoints(): ActivityPoints {
     // 투표 참여 포인트 (1 PMP)
-    return createActivityPoints(1, 'PmpAmount');
+    return createActivityPoints(1, "PmpAmount");
   }
 
   /**
    * 투표 대상 ID를 PostId로 캐스팅 (타입 가드 후 사용)
    */
   getPostId(): PostId {
-    if (this.targetType !== 'POST') {
-      throw new Error('This vote is not for a post');
+    if (this.targetType !== "POST") {
+      throw new Error("This vote is not for a post");
     }
     return this.targetId as PostId;
   }
@@ -173,8 +184,8 @@ export class Vote {
    * 투표 대상 ID를 CommentId로 캐스팅 (타입 가드 후 사용)
    */
   getCommentId(): CommentId {
-    if (this.targetType !== 'COMMENT') {
-      throw new Error('This vote is not for a comment');
+    if (this.targetType !== "COMMENT") {
+      throw new Error("This vote is not for a comment");
     }
     return this.targetId as CommentId;
   }
@@ -186,15 +197,15 @@ export class Vote {
     if (this.voteValue.type === VoteType.RATING) {
       return this.voteValue.value;
     }
-    
+
     if (this.voteValue.type === VoteType.UPVOTE) {
       return 1;
     }
-    
+
     if (this.voteValue.type === VoteType.DOWNVOTE) {
       return -1;
     }
-    
+
     return 0;
   }
 
@@ -213,7 +224,7 @@ export class Vote {
       changeCount: this.changeCount,
       previousValue: this.previousVoteValue,
       currentValue: this.voteValue,
-      lastChangedAt: this.updatedAt
+      lastChangedAt: this.updatedAt,
     };
   }
 
@@ -222,10 +233,10 @@ export class Vote {
    */
   calculateWeight(userReputationScore: number): number {
     // 평판도에 따른 투표 가중치
-    if (userReputationScore >= 5000) return 2.0;      // 마스터: 2배
-    if (userReputationScore >= 1000) return 1.5;      // 전문가: 1.5배
-    if (userReputationScore >= 500) return 1.2;       // 신뢰받는 사용자: 1.2배
-    if (userReputationScore >= 100) return 1.0;       // 일반 사용자: 1배
+    if (userReputationScore >= 5000) return 2.0; // 마스터: 2배
+    if (userReputationScore >= 1000) return 1.5; // 전문가: 1.5배
+    if (userReputationScore >= 500) return 1.2; // 신뢰받는 사용자: 1.2배
+    if (userReputationScore >= 100) return 1.0; // 일반 사용자: 1배
     return 0.5; // 신규 사용자: 0.5배
   }
 
@@ -237,15 +248,15 @@ export class Vote {
     if (this.voteValue.type === VoteType.RATING) {
       return this.voteValue.value >= 1 && this.voteValue.value <= 5;
     }
-    
+
     if (this.voteValue.type === VoteType.UPVOTE) {
       return this.voteValue.value === 1;
     }
-    
+
     if (this.voteValue.type === VoteType.DOWNVOTE) {
       return this.voteValue.value === -1;
     }
-    
+
     return false;
   }
 
@@ -255,7 +266,7 @@ export class Vote {
   getEventData(): {
     voteId: VoteId;
     userId: UserId;
-    targetType: 'POST' | 'COMMENT';
+    targetType: "POST" | "COMMENT";
     targetId: PostId | CommentId;
     voteValue: VoteValue;
     previousVoteValue?: VoteValue;
@@ -272,7 +283,7 @@ export class Vote {
       previousVoteValue: this.previousVoteValue,
       isNewVote: this.changeCount === 0,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
     };
   }
 
@@ -285,7 +296,7 @@ export class Vote {
     score: number;
     isChanged: boolean;
     target: {
-      type: 'POST' | 'COMMENT';
+      type: "POST" | "COMMENT";
       id: string;
     };
   } {
@@ -296,8 +307,8 @@ export class Vote {
       isChanged: this.hasBeenChanged(),
       target: {
         type: this.targetType,
-        id: this.targetId
-      }
+        id: this.targetId,
+      },
     };
   }
 }

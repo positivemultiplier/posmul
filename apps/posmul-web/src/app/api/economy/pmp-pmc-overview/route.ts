@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { getEconomicBalance } from "../../../../shared/adapters/simple-economy.adapter";
 
 /**
@@ -123,7 +124,8 @@ async function calculateUserEconomicStats(userId: string): Promise<{
  */
 function calculatePmpDemand(systemStats: any): number {
   if (!systemStats.totalPmpAmount) return 0;
-  const demandRatio = systemStats.totalTransactions / systemStats.totalPmpAmount;
+  const demandRatio =
+    systemStats.totalTransactions / systemStats.totalPmpAmount;
   return Math.min(demandRatio * 100, 100);
 }
 

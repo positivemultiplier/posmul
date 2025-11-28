@@ -1,10 +1,10 @@
 /**
  * 회원가입 유스케이스
  */
+import { AuthError, Result, isFailure } from "@posmul/auth-economy-sdk";
+import { createEmail } from "@posmul/auth-economy-sdk";
 
 import { UserCreatedEvent, publishEvent } from "../../../../shared/events";
-import { Result, AuthError, isFailure } from "@posmul/auth-economy-sdk";
-import { createEmail } from "@posmul/auth-economy-sdk";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {
   AuthResult,
@@ -21,18 +21,16 @@ export class SignUpUseCase implements ISignUpUseCase {
     private userRepository: IUserRepository,
     private authDomainService: IAuthDomainService,
     private authService: IExternalAuthService // Supabase Auth 서비스
-  ) {}
-
-  
+  ) { }
 
   async execute(data: SignUpData): Promise<Result<AuthResult, Error>> {
     // 1. 입력 데이터 검증
     const validationResult = this.authDomainService.validateSignUpData(data);
     if (isFailure(validationResult)) {
       return {
-            success: false,
-            error: new Error('처리에 실패했습니다.')
-          };
+        success: false,
+        error: new Error("처리에 실패했습니다."),
+      };
     }
 
     try {
@@ -145,8 +143,13 @@ export interface IExternalAuthService {
       {
         accessToken: string;
         refreshToken: string;
+        expiresAt: Date;
       },
       Error
     >
   >;
+
+  signInWithOAuth(
+    provider: "google" | "kakao" | "github"
+  ): Promise<Result<void, Error>>;
 }

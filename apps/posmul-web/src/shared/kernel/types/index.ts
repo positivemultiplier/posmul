@@ -1,8 +1,8 @@
 /**
  * Shared Kernel Types
- * 
+ *
  * Common types used across all bounded contexts
- * 
+ *
  * @author PosMul Development Team
  * @since 2025-07-06
  */
@@ -15,7 +15,7 @@ export type Result<T, E = Error> =
 // Common value objects
 export interface Money {
   amount: number;
-  currency: 'PmpAmount' | 'PmcAmount' | 'KRW';
+  currency: "PmpAmount" | "PmcAmount" | "KRW";
 }
 
 // Economic context
@@ -43,7 +43,7 @@ export class DomainError extends Error {
     public readonly context?: Record<string, any>
   ) {
     super(message);
-    this.name = 'DomainError';
+    this.name = "DomainError";
   }
 }
 
@@ -51,7 +51,7 @@ export class InsufficientBalanceError extends DomainError {
   constructor(required: number, available: number) {
     super(
       `Insufficient balance: required ${required}, available ${available}`,
-      'INSUFFICIENT_BALANCE',
+      "INSUFFICIENT_BALANCE",
       { required, available }
     );
   }
@@ -59,10 +59,10 @@ export class InsufficientBalanceError extends DomainError {
 
 export class ValidationError extends DomainError {
   constructor(field: string, value: any, reason: string) {
-    super(
-      `Validation failed for ${field}: ${reason}`,
-      'VALIDATION_ERROR',
-      { field, value, reason }
-    );
+    super(`Validation failed for ${field}: ${reason}`, "VALIDATION_ERROR", {
+      field,
+      value,
+      reason,
+    });
   }
 }

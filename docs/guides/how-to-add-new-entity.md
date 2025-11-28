@@ -1,4 +1,4 @@
----
+﻿---
 type: how-to-guide
 title: "How to: 기존 도메인에 새 엔티티 추가하기"
 description: "PosMul 프로젝트의 DDD 및 Clean Architecture 원칙을 준수하며 기존 Bounded Context에 새로운 도메인 엔티티를 추가하는 방법을 안내합니다."

@@ -1,4 +1,4 @@
-# PosMul 프로젝트 보고서 양식 규칙 (Report Template Rules)
+﻿# PosMul 프로젝트 보고서 양식 규칙 (Report Template Rules)
 
 ## 🎯 보고서 작성 철학
 

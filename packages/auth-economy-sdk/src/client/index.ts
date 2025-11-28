@@ -15,9 +15,10 @@ import type {
   TransactionResult,
 } from "../economy/types";
 import type { Result, SdkConfig } from "../types";
+import { isFailure } from "../types";
 import { EconomyError } from "../errors";
 
-export interface AuthEconomyClientConfig extends SdkConfig {}
+export interface AuthEconomyClientConfig extends SdkConfig { }
 
 export interface AuthEconomyClient {
   auth: AuthService;
@@ -48,17 +49,14 @@ class AuthEconomyClientImpl implements AuthEconomyClient {
         detectSessionInUrl: true,
         storage:
           typeof globalThis !== "undefined" &&
-          typeof globalThis.localStorage !== "undefined"
+            typeof globalThis.localStorage !== "undefined"
             ? globalThis.localStorage
             : undefined,
       },
     });
 
-    // 인증 서비스 초기화
-    this.auth = new SupabaseAuthService(
-      config.supabaseUrl,
-      config.supabaseAnonKey
-    );
+    // 인증 서비스 초기화 (DI 적용)
+    this.auth = new SupabaseAuthService(this.supabase);
 
     // 경제 서비스 초기화 (옵션)
     if (config.enableEconomy !== false) {
@@ -79,8 +77,11 @@ class AuthEconomyClientImpl implements AuthEconomyClient {
   > {
     try {
       const userResult = await this.auth.getCurrentUser();
-      if (!userResult.success) {
-        return userResult;
+      if (isFailure(userResult)) {
+        return {
+          success: false,
+          error: userResult.error || new Error("Failed to get user"),
+        };
       }
 
       if (!userResult.data) {
@@ -90,7 +91,7 @@ class AuthEconomyClientImpl implements AuthEconomyClient {
       const balanceResult = await this.economy.getCombinedBalance(
         userResult.data.id
       );
-      if (!balanceResult.success) {
+      if (isFailure(balanceResult)) {
         return {
           success: false,
           error: balanceResult.error || new Error("Failed to get balance"),

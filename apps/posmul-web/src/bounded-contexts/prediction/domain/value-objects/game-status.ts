@@ -5,10 +5,12 @@
  * `./prediction-types` 에 정의된 `GameStatus` 유니온 타입을 내부적으로 사용하며,
  * 도메인 계층에서 상태 전환 검증 및 문자열 ↔ 객체 간 변환을 담당한다.
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 import { ValidationError } from "@posmul/auth-economy-sdk";
-import type { GameStatus as GameStatusLiteral } from "./prediction-types";
+
+import { GameStatus as GameStatusEnum } from "./prediction-types";
+
+type GameStatusLiteral = GameStatusEnum;
 
 export class GameStatus {
   private constructor(private readonly _value: GameStatusLiteral) {}
@@ -20,10 +22,9 @@ export class GameStatus {
     if (!GameStatus.VALID_STATUSES.includes(upper as GameStatusLiteral)) {
       return {
         success: false,
-        error: new ValidationError(
-          `Invalid GameStatus value: ${value}`,
-          { field: "gameStatus" }
-        ),
+        error: new ValidationError(`Invalid GameStatus value: ${value}`, {
+          field: "gameStatus",
+        }),
       };
     }
 
@@ -64,20 +65,20 @@ export class GameStatus {
 
   // ----- Static constants -----
 
-  public static readonly CREATED = new GameStatus("CREATED");
-  public static readonly ACTIVE = new GameStatus("ACTIVE");
-  public static readonly ENDED = new GameStatus("ENDED");
-  public static readonly COMPLETED = new GameStatus("COMPLETED");
-  public static readonly CANCELLED = new GameStatus("CANCELLED");
+  public static readonly CREATED = new GameStatus(GameStatusEnum.CREATED);
+  public static readonly ACTIVE = new GameStatus(GameStatusEnum.ACTIVE);
+  public static readonly ENDED = new GameStatus(GameStatusEnum.ENDED);
+  public static readonly COMPLETED = new GameStatus(GameStatusEnum.COMPLETED);
+  public static readonly CANCELLED = new GameStatus(GameStatusEnum.CANCELLED);
 
   // ----- Private helpers -----
 
   private static readonly VALID_STATUSES: GameStatusLiteral[] = [
-    "CREATED",
-    "ACTIVE",
-    "ENDED",
-    "COMPLETED",
-    "CANCELLED",
+    GameStatusEnum.CREATED,
+    GameStatusEnum.ACTIVE,
+    GameStatusEnum.ENDED,
+    GameStatusEnum.COMPLETED,
+    GameStatusEnum.CANCELLED,
   ];
 }
 

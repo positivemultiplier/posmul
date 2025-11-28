@@ -2,11 +2,10 @@
  * Institute Entity
  * 기부 기관 엔티티
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
-
 import { Result } from "@posmul/auth-economy-sdk";
 import { DomainEvent } from "@posmul/auth-economy-sdk";
+
 import {
   InstituteCategory,
   InstituteId,
@@ -371,5 +370,25 @@ export class Institute {
     );
 
     return { success: true, data: institute };
+  }
+
+  // DB 데이터로부터 엔티티 재구성
+  static reconstitute(data: any): Institute {
+    const institute = new Institute(
+      new InstituteId(data.id),
+      data.name,
+      data.description,
+      data.category as InstituteCategory,
+      data.contact_info || { email: "" },
+      data.status as InstituteStatus,
+      data.trust_level as TrustLevel,
+      data.registration_number,
+      data.logo_url,
+      new Date(data.created_at),
+      new Date(data.updated_at)
+    );
+
+    institute.clearDomainEvents();
+    return institute;
   }
 }

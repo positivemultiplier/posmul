@@ -1,0 +1,326 @@
+---
+inclusion: manual
+---
+
+
+# PosMul - Supabase MCP Integration Rules
+
+## 🔥 CRITICAL: MCP-First Development
+
+**이 프로젝트는 Supabase MCP (Model Context Protocol)를 통해 모든 데이터베이스 작업을 수행합니다.**
+
+### MCP 도구 우선순위
+
+1. **`mcp_supabase_list_projects`** - 프로젝트 정보 조회
+2. **`mcp_supabase_list_tables`** - 스키마 검사
+3. **`mcp_supabase_apply_migration`** - DDL 작업 (스키마 변경)
+4. **`mcp_supabase_execute_sql`** - DML 작업 (데이터 쿼리)
+5. **`mcp_supabase_get_advisors`** - 보안/성능 검사
+6. **`mcp_supabase_generate_typescript_types`** - 타입 생성
+7. **`mcp_supabase_search_docs`** - Supabase 문서 검색
+8. **`mcp_supabase_list_edge_functions`** - Edge Function 관리
+9. **`mcp_supabase_deploy_edge_function`** - Edge Function 배포
+
+### ❌ 사용 금지
+
+- Supabase CLI 명령어 (`supabase db push`, `supabase migration new` 등)
+- 직접 SQL 파일 실행
+- 수동 스키마 관리
+
+## MCP 기반 개발 패턴
+
+### 1. 스키마 생성/수정
+
+```typescript
+// ✅ 올바른 방법: MCP 사용
+await mcp_supabase_apply_migration({
+  project_id: "your-project-id",
+  name: "create_prediction_tables",
+  query: `
+    CREATE TABLE prediction_games (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      title TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+  `,
+});
+
+// ❌ 잘못된 방법: CLI 사용 금지
+// supabase migration new create_prediction_tables
+```
+
+### 2. 데이터 쿼리
+
+```typescript
+// ✅ 올바른 방법: MCP 사용
+await mcp_supabase_execute_sql({
+  project_id: "your-project-id",
+  query: "SELECT * FROM prediction_games WHERE status = 'active'",
+});
+
+// ❌ 잘못된 방법: 직접 SQL 파일 실행 금지
+// psql -f query.sql
+```
+
+### 3. Edge Functions 관리
+
+```typescript
+// ✅ 올바른 방법: MCP 사용
+await mcp_supabase_deploy_edge_function({
+  project_id: "your-project-id",
+  name: "prediction-scorer",
+  files: [
+    {
+      name: "index.ts",
+      content: `
+        import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
+        
+        serve(async (req: Request) => {
+          return new Response("Hello from Edge Function!")
+        })
+      `,
+    },
+  ],
+});
+
+// ❌ 잘못된 방법: CLI 사용 금지
+// supabase functions deploy prediction-scorer
+```
+
+### 4. 보안 및 성능 검사
+
+```typescript
+// ✅ 정기적 보안 검사
+await mcp_supabase_get_advisors({
+  project_id: "your-project-id",
+  type: "security",
+});
+
+await mcp_supabase_get_advisors({
+  project_id: "your-project-id",
+  type: "performance",
+});
+```
+
+### 5. TypeScript 타입 생성
+
+```typescript
+// ✅ 스키마 변경 후 타입 자동 생성
+await mcp_supabase_generate_typescript_types({
+  project_id: "your-project-id",
+});
+```
+
+## 안전 모드 설정
+
+### 권장 MCP 서버 설정
+
+```json
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--read-only", // 🔒 읽기 전용 모드 (기본 권장)
+        "--project-ref=your-project-ref", // 🎯 프로젝트 범위 지정 (기본 권장)
+        "--features=database,docs,development,functions"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "your-token"
+      }
+    }
+  }
+}
+```
+
+### 기능 그룹 선택
+
+- `account`: 계정 관리 (list_projects, create_project 등)
+- `database`: 데이터베이스 작업 (필수)
+- `docs`: 문서 검색 (권장)
+- `development`: 개발 도구 (get_project_url, get_anon_key 등)
+- `functions`: Edge Functions 관리
+- `debug`: 로그 및 어드바이저
+- `branching`: 브랜치 관리 (실험적, 유료 플랜 필요)
+- `storage`: 스토리지 관리 (선택적)
+
+## Repository 구현 패턴
+
+### MCP 기반 Repository
+
+```typescript
+export class McpSupabasePredictionGameRepository
+  implements IPredictionGameRepository
+{
+  constructor(
+    private readonly projectId: string,
+    private readonly mcpClient: SupabaseMcpClient
+  ) {}
+
+  async save(game: PredictionGame): Promise<Result<void, RepositoryError>> {
+    try {
+      // MCP를 통한 데이터 저장
+      await this.mcpClient.execute_sql({
+        project_id: this.projectId,
+        query: `
+          INSERT INTO prediction_games (id, title, status, created_at)
+          VALUES ($1, $2, $3, $4)
+          ON CONFLICT (id) DO UPDATE SET
+            title = EXCLUDED.title,
+            status = EXCLUDED.status,
+            updated_at = NOW()
+        `,
+        params: [game.id, game.title, game.status, game.createdAt],
+      });
+
+      return { success: true, data: undefined };
+    } catch (error) {
+      return {
+        success: false,
+        error: new RepositoryError("Save failed", error),
+      };
+    }
+  }
+
+  async findById(
+    id: PredictionGameId
+  ): Promise<Result<PredictionGame | null, RepositoryError>> {
+    try {
+      const result = await this.mcpClient.execute_sql({
+        project_id: this.projectId,
+        query: "SELECT * FROM prediction_games WHERE id = $1",
+        params: [id],
+      });
+
+      if (result.rows.length === 0) {
+        return { success: true, data: null };
+      }
+
+      const game = this.mapRowToDomain(result.rows[0]);
+      return { success: true, data: game };
+    } catch (error) {
+      return {
+        success: false,
+        error: new RepositoryError("Find failed", error),
+      };
+    }
+  }
+}
+```
+
+## 경제 시스템 통합
+
+### MCP를 통한 경제 테이블 마이그레이션
+
+```typescript
+// PMP/PMC 계정 테이블 생성
+await mcp_supabase_apply_migration({
+  project_id: "your-project-id",
+  name: "create_economic_tables",
+  query: `
+    -- PMP 계정 테이블
+    CREATE TABLE pmp_accounts (
+      user_id UUID PRIMARY KEY REFERENCES auth.users(id),
+      balance DECIMAL(15,2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    -- PMC 계정 테이블  
+    CREATE TABLE pmc_accounts (
+      user_id UUID PRIMARY KEY REFERENCES auth.users(id),
+      balance DECIMAL(15,2) NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    -- 경제 트랜잭션 테이블
+    CREATE TABLE economic_transactions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES auth.users(id),
+      transaction_type TEXT NOT NULL CHECK (transaction_type IN ('pmp_earned', 'pmp_spent', 'pmc_earned', 'pmc_spent')),
+      amount DECIMAL(15,2) NOT NULL,
+      source_domain TEXT NOT NULL,
+      source_id UUID NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    -- RLS 정책
+    ALTER TABLE pmp_accounts ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE pmc_accounts ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE economic_transactions ENABLE ROW LEVEL SECURITY;
+
+    -- 사용자는 자신의 계정만 조회 가능
+    CREATE POLICY "Users can view own PMP account" ON pmp_accounts
+      FOR SELECT USING (auth.uid() = user_id);
+    
+    CREATE POLICY "Users can view own PMC account" ON pmc_accounts  
+      FOR SELECT USING (auth.uid() = user_id);
+
+    CREATE POLICY "Users can view own transactions" ON economic_transactions
+      FOR SELECT USING (auth.uid() = user_id);
+  `,
+});
+```
+
+## 개발 워크플로우
+
+### 1. 스키마 변경 → 타입 생성 → 코드 업데이트
+
+```typescript
+// 1. 스키마 변경
+await mcp_supabase_apply_migration({...});
+
+// 2. 타입 자동 생성
+const types = await mcp_supabase_generate_typescript_types({
+  project_id: "your-project-id"
+});
+
+// 3. 타입 파일 저장
+await writeFile('src/types/database.ts', types);
+```
+
+### 2. 보안 검사 자동화
+
+```typescript
+// 스키마 변경 후 자동 보안 검사
+const securityIssues = await mcp_supabase_get_advisors({
+  project_id: "your-project-id",
+  type: "security",
+});
+
+if (securityIssues.length > 0) {
+  console.warn("⚠️ 보안 이슈 발견:", securityIssues);
+}
+```
+
+### 3. 문서 검색 활용
+
+```typescript
+// 개발 중 Supabase 기능 검색
+const docs = await mcp_supabase_search_docs({
+  query: "Row Level Security policies setup",
+});
+```
+
+## 🚨 중요 주의사항
+
+1. **절대 CLI 명령어 사용 금지** - 모든 작업은 MCP를 통해서만
+2. **읽기 전용 모드 기본 설정** - 실수로 인한 데이터 손실 방지
+3. **프로젝트 범위 지정** - 다른 프로젝트 접근 방지
+4. **정기적 보안 검사** - 스키마 변경 후 advisor 실행
+5. **타입 자동 생성** - 스키마 변경 시 타입 동기화 필수
+
+## 호환성
+
+- ✅ Cursor (완전 지원)
+- ✅ Windsurf (완전 지원)
+- ✅ Claude Desktop (완전 지원)
+- ✅ Cline (완전 지원)
+- ✅ VS Code with Copilot (완전 지원)
+
+---
+
+**이 규칙을 따르면 Supabase 공식 MCP 표준에 완벽히 부합하는 개발 환경을 구축할 수 있습니다.**

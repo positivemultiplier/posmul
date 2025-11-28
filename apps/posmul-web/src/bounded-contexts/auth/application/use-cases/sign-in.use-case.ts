@@ -2,22 +2,22 @@
  * 로그인 유스케이스
  * Supabase Auth + auth-economy-sdk 기반 인증
  */
-
 import {
-  Result,
   AuthError,
-  isFailure,
+  Result,
   SupabaseAuthService,
+  isFailure,
 } from "@posmul/auth-economy-sdk";
 import { createEmail } from "@posmul/auth-economy-sdk";
+
+import { UserLoggedInEvent, publishEvent } from "../../../../shared/events";
+import { User } from "../../domain/entities/user.entity";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {
   AuthResult,
-  IAuthDomainService,
   AuthenticationCredentials,
+  IAuthDomainService,
 } from "../../domain/services/auth-domain.service";
-import { User } from "../../domain/entities/user.entity";
-import { UserLoggedInEvent, publishEvent } from "../../../../shared/events";
 
 export interface ISignInUseCase {
   execute(

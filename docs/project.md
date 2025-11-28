@@ -1,4 +1,4 @@
-# PosMul Project Guidelines (Enhanced Visualization Edition)
+﻿# PosMul Project Guidelines (Enhanced Visualization Edition)
 
 > **Purpose**: PosMul 프로젝트 특화 개발 및 협업 규칙  
 > **Scope**: DDD 아키텍처, MCP 도구, 경제 시스템, 기술 스택  

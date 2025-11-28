@@ -1,17 +1,16 @@
 /**
  * User Domain Entity (Shared Kernel)
- * 
+ *
  * Core user entity with economic state management.
  * This is shared across all bounded contexts as part of the Shared Kernel.
- * 
+ *
  * @author PosMul Development Team
  * @since 2025-07-06
  */
-
-import { DomainEvent } from '../events/DomainEvent';
-import { PmpEarnedEvent, RewardSource } from '../events/PmpEarnedEvent';
-import { PmcSpentEvent, SpendPurpose } from '../events/PmcSpentEvent';
-import { EconomicRules, EconomicContext } from '../rules/EconomicRules';
+import { DomainEvent } from "../events/DomainEvent";
+import { PmcSpentEvent, SpendPurpose } from "../events/PmcSpentEvent";
+import { PmpEarnedEvent, RewardSource } from "../events/PmpEarnedEvent";
+import { EconomicContext, EconomicRules } from "../rules/EconomicRules";
 
 export interface UserProps {
   id: string;
@@ -31,21 +30,39 @@ export class User {
   constructor(private props: UserProps) {}
 
   // Getters
-  get id(): string { return this.props.id; }
-  get email(): string { return this.props.email; }
-  get username(): string { return this.props.username; }
-  get pmpBalance(): number { return this.props.pmpBalance; }
-  get pmcBalance(): number { return this.props.pmcBalance; }
-  get level(): number { return this.props.level; }
-  get reputation(): number { return this.props.reputation; }
-  get createdAt(): Date { return this.props.createdAt; }
-  get lastActiveAt(): Date { return this.props.lastActiveAt; }
+  get id(): string {
+    return this.props.id;
+  }
+  get email(): string {
+    return this.props.email;
+  }
+  get username(): string {
+    return this.props.username;
+  }
+  get pmpBalance(): number {
+    return this.props.pmpBalance;
+  }
+  get pmcBalance(): number {
+    return this.props.pmcBalance;
+  }
+  get level(): number {
+    return this.props.level;
+  }
+  get reputation(): number {
+    return this.props.reputation;
+  }
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
+  get lastActiveAt(): Date {
+    return this.props.lastActiveAt;
+  }
 
   /**
    * Earn PmpAmount from platform activities
    */
   earnPmp(
-    source: RewardSource, 
+    source: RewardSource,
     economicContext: EconomicContext,
     actionContext?: Record<string, any>
   ): DomainEvent[] {
@@ -57,12 +74,7 @@ export class User {
     this.props.pmpBalance += amount;
     this.updateActivityTimestamp();
 
-    const event = new PmpEarnedEvent(
-      this.id,
-      amount,
-      source,
-      actionContext
-    );
+    const event = new PmpEarnedEvent(this.id, amount, source, actionContext);
 
     this.domainEvents.push(event);
     return [event];
@@ -87,10 +99,10 @@ export class User {
     );
 
     if (!validation.valid) {
-      return { 
-        success: false, 
-        events: [], 
-        error: validation.reason 
+      return {
+        success: false,
+        events: [],
+        error: validation.reason,
       };
     }
 
@@ -107,9 +119,9 @@ export class User {
     );
 
     this.domainEvents.push(event);
-    return { 
-      success: true, 
-      events: [event] 
+    return {
+      success: true,
+      events: [event],
     };
   }
 
@@ -124,7 +136,7 @@ export class User {
       return {
         success: false,
         pmcReceived: 0,
-        events: []
+        events: [],
       };
     }
 
@@ -139,7 +151,7 @@ export class User {
     return {
       success: true,
       pmcReceived,
-      events: []
+      events: [],
     };
   }
 
@@ -185,11 +197,7 @@ export class User {
   /**
    * Create a new user instance
    */
-  static create(
-    id: string,
-    email: string,
-    username: string
-  ): User {
+  static create(id: string, email: string, username: string): User {
     const props: UserProps = {
       id,
       email,

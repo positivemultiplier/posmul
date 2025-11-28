@@ -5,10 +5,10 @@
  * Project_Economic.md와 Project_Diagram.md 요구사항 기반
  * Agency Theory, CAPM, MoneyWave 시스템 지원
  */
-
-import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
 import { join } from "path";
+
+import { createClient } from "@supabase/supabase-js";
 
 interface MigrationConfig {
   supabaseUrl: string;
@@ -70,7 +70,7 @@ export class PredictionMigrationRunner {
 
     try {
       const migrationPath = join(this.migrationDir, filename);
-      const migrationSQL = readFileSync(migrationPath, "utf-8");
+      const migrationSQL = readFileSync(migrationPath, { encoding: "utf8" });
 
       // SQL 명령어들을 분리하고 순차 실행
       const statements = this.splitSQLStatements(migrationSQL);

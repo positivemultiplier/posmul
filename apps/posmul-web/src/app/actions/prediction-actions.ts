@@ -1,7 +1,8 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { z } from "zod";
+
+import { redirect } from "next/navigation";
 
 // 예측 게임 생성 스키마
 const createPredictionGameSchema = z.object({

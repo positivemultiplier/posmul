@@ -8,7 +8,6 @@
  * - Rent-Seeking 행동 방지
  * - Constitutional Economics
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import {

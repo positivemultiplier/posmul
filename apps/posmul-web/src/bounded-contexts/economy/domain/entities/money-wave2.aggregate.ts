@@ -1,7 +1,6 @@
 /**
  * MoneyWave2 Aggregate
  */
-
 import { Result } from "../../../../shared/legacy-compatibility";
 
 class DomainError extends Error {

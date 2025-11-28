@@ -1,9 +1,7 @@
 /**
  * Auth Domain Entities
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
-
 
 /**
  * Auth Session Entity

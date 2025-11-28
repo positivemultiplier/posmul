@@ -7,7 +7,6 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import {
   PredictionGameId,
   PredictionId,
@@ -15,18 +14,19 @@ import {
   UserId,
   isFailure,
 } from "@posmul/auth-economy-sdk";
-import { PmpAmount } from "@posmul/auth-economy-sdk/economy";
 import {
   AccuracyScore,
+  DomainError,
   ValidationError,
   failure,
   success,
-  DomainError,
 } from "@posmul/auth-economy-sdk";
+import { PmpAmount } from "@posmul/auth-economy-sdk/economy";
+
 import {
+  PredictionResult as PredictionResultType,
   Timestamps,
   createPredictionId,
-  PredictionResult as PredictionResultType,
 } from "../types/common";
 
 /**

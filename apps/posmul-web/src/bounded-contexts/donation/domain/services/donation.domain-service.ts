@@ -2,19 +2,18 @@
  * Donation Domain Service
  * 기부 도메인 서비스 - 복잡한 비즈니스 로직 처리
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
 
-import { Donation } from '../entities/donation.entity';
-import { Institute } from '../entities/institute.entity';
-import { OpinionLeader } from '../entities/opinion-leader.entity';
-import { 
+import { Donation } from "../entities/donation.entity";
+import { Institute } from "../entities/institute.entity";
+import { OpinionLeader } from "../entities/opinion-leader.entity";
+import {
   DonationAmount,
-  DonationType,
   DonationFrequency,
+  DonationType,
   DonorRating,
-  DonorTier
-} from '../value-objects/donation-value-objects';
+  DonorTier,
+} from "../value-objects/donation-value-objects";
 
 // 기부 적격성 검증 결과
 export interface DonationEligibilityResult {
@@ -27,10 +26,10 @@ export interface DonationEligibilityResult {
 // 기부 영향 분석 결과
 export interface DonationImpactAnalysis {
   estimatedBeneficiaries: number;
-  impactCategory: 'low' | 'medium' | 'high';
+  impactCategory: "low" | "medium" | "high";
   expectedOutcome: string;
   similarProjectsSuccess: number;
-  riskLevel: 'low' | 'medium' | 'high';
+  riskLevel: "low" | "medium" | "high";
 }
 
 // 기부자 포트폴리오 분석
@@ -38,7 +37,7 @@ export interface DonorPortfolioAnalysis {
   diversificationScore: number; // 0-100
   categoryDistribution: Record<string, number>;
   typeDistribution: Record<DonationType, number>;
-  riskLevel: 'conservative' | 'moderate' | 'aggressive';
+  riskLevel: "conservative" | "moderate" | "aggressive";
   recommendations: string[];
 }
 
@@ -56,7 +55,6 @@ export interface DonationOptimizationSuggestion {
  * 기부 관련 복잡한 비즈니스 로직을 처리하는 도메인 서비스
  */
 export class DonationDomainService {
-  
   /**
    * 기부 적격성 검증
    * 기부자가 특정 기부를 할 수 있는지 검증
@@ -74,7 +72,7 @@ export class DonationDomainService {
     // 잔액 확인
     if (donorBalance < donation.getAmount().getValue()) {
       isEligible = false;
-      reasons.push('Insufficient PmcAmount balance');
+      reasons.push("Insufficient PmcAmount balance");
     }
 
     // 기부 대상 상태 확인
@@ -82,42 +80,54 @@ export class DonationDomainService {
       const institute = target as Institute;
       if (!institute.canReceiveDonations()) {
         isEligible = false;
-        reasons.push('Institute is not accepting donations');
+        reasons.push("Institute is not accepting donations");
       }
     } else if (donation.getDonationType() === DonationType.OPINION_LEADER) {
       const leader = target as OpinionLeader;
       if (!leader.canReceiveSupport()) {
         isEligible = false;
-        reasons.push('Opinion leader is not accepting support');
+        reasons.push("Opinion leader is not accepting support");
       }
     }
 
     // 일일 기부 한도 확인 (예: 일일 100만원)
     const dailyLimit = 1000000;
     const today = new Date();
-    const todayDonations = donorHistory.filter(d => {
+    const todayDonations = donorHistory.filter((d) => {
       const donationDate = d.getCreatedAt();
-      return donationDate.toDateString() === today.toDateString() && d.isCompleted();
+      return (
+        donationDate.toDateString() === today.toDateString() && d.isCompleted()
+      );
     });
-    const todayTotal = todayDonations.reduce((sum, d) => sum + d.getAmount().getValue(), 0);
-    
+    const todayTotal = todayDonations.reduce(
+      (sum, d) => sum + d.getAmount().getValue(),
+      0
+    );
+
     if (todayTotal + donation.getAmount().getValue() > dailyLimit) {
       isEligible = false;
-      reasons.push(`Daily donation limit exceeded (${dailyLimit.toLocaleString('ko-KR')}원)`);
+      reasons.push(
+        `Daily donation limit exceeded (${dailyLimit.toLocaleString("ko-KR")}원)`
+      );
     }
 
     // 월별 기부 한도 확인 (예: 월 500만원)
     const monthlyLimit = 5000000;
     const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const monthlyDonations = donorHistory.filter(d => {
+    const monthlyDonations = donorHistory.filter((d) => {
       const donationDate = d.getCreatedAt();
       return donationDate >= thisMonth && d.isCompleted();
     });
-    const monthlyTotal = monthlyDonations.reduce((sum, d) => sum + d.getAmount().getValue(), 0);
-    
+    const monthlyTotal = monthlyDonations.reduce(
+      (sum, d) => sum + d.getAmount().getValue(),
+      0
+    );
+
     if (monthlyTotal + donation.getAmount().getValue() > monthlyLimit) {
       isEligible = false;
-      reasons.push(`Monthly donation limit exceeded (${monthlyLimit.toLocaleString('ko-KR')}원)`);
+      reasons.push(
+        `Monthly donation limit exceeded (${monthlyLimit.toLocaleString("ko-KR")}원)`
+      );
     }
 
     // 최대 가능 금액 계산
@@ -134,7 +144,7 @@ export class DonationDomainService {
       isEligible,
       reasons,
       maxAmount: maxAmount > 0 ? maxAmount : undefined,
-      suggestedAmount: suggestedAmount > 0 ? suggestedAmount : undefined
+      suggestedAmount: suggestedAmount > 0 ? suggestedAmount : undefined,
     };
   }
 
@@ -148,23 +158,23 @@ export class DonationDomainService {
     historicalData?: Donation[]
   ): DonationImpactAnalysis {
     const amount = donation.getAmount().getValue();
-    
+
     // 기본 수혜자 수 계산 (금액 기반)
     let estimatedBeneficiaries = Math.floor(amount / 10000); // 1만원당 1명 가정
 
     // 기관별 효율성 적용
     if (donation.getDonationType() === DonationType.INSTITUTE) {
       const institute = target as Institute;
-      
+
       // 신뢰도 등급에 따른 효율성 보정
       switch (institute.getTrustLevel()) {
-        case 'GOLD':
+        case "GOLD":
           estimatedBeneficiaries *= 1.5;
           break;
-        case 'PREMIUM':
+        case "PREMIUM":
           estimatedBeneficiaries *= 1.3;
           break;
-        case 'VERIFIED':
+        case "VERIFIED":
           estimatedBeneficiaries *= 1.1;
           break;
         default:
@@ -173,16 +183,20 @@ export class DonationDomainService {
     }
 
     // 영향 카테고리 결정
-    let impactCategory: 'low' | 'medium' | 'high' = 'low';
-    if (amount >= 1000000) impactCategory = 'high';
-    else if (amount >= 100000) impactCategory = 'medium';
+    let impactCategory: "low" | "medium" | "high" = "low";
+    if (amount >= 1000000) impactCategory = "high";
+    else if (amount >= 100000) impactCategory = "medium";
 
     // 예상 결과 생성
-    const expectedOutcome = this.generateExpectedOutcome(donation, estimatedBeneficiaries);
+    const expectedOutcome = this.generateExpectedOutcome(
+      donation,
+      estimatedBeneficiaries
+    );
 
     // 유사 프로젝트 성공률 (임시 데이터)
-    const similarProjectsSuccess = historicalData ? 
-      this.calculateSuccessRate(historicalData) : 85;
+    const similarProjectsSuccess = historicalData
+      ? this.calculateSuccessRate(historicalData)
+      : 85;
 
     // 리스크 레벨 계산
     const riskLevel = this.calculateRiskLevel(donation, target);
@@ -192,7 +206,7 @@ export class DonationDomainService {
       impactCategory,
       expectedOutcome,
       similarProjectsSuccess,
-      riskLevel
+      riskLevel,
     };
   }
 
@@ -206,34 +220,42 @@ export class DonationDomainService {
         diversificationScore: 0,
         categoryDistribution: {},
         typeDistribution: {} as Record<DonationType, number>,
-        riskLevel: 'conservative',
-        recommendations: ['Start making your first donation']
+        riskLevel: "conservative",
+        recommendations: ["Start making your first donation"],
       };
     }
 
     // 카테고리 분포 계산
     const categoryDistribution: Record<string, number> = {};
-    const typeDistribution: Record<DonationType, number> = {} as Record<DonationType, number>;
-    
-    donations.forEach(donation => {
+    const typeDistribution: Record<DonationType, number> = {} as Record<
+      DonationType,
+      number
+    >;
+
+    donations.forEach((donation) => {
       const category = donation.getCategory();
       const type = donation.getDonationType();
-      
-      categoryDistribution[category] = (categoryDistribution[category] || 0) + 1;
+
+      categoryDistribution[category] =
+        (categoryDistribution[category] || 0) + 1;
       typeDistribution[type] = (typeDistribution[type] || 0) + 1;
     });
 
     // 다양성 점수 계산 (0-100)
     const categoryCount = Object.keys(categoryDistribution).length;
     const typeCount = Object.keys(typeDistribution).length;
-    const diversificationScore = Math.min(100, (categoryCount * 20) + (typeCount * 10));
+    const diversificationScore = Math.min(
+      100,
+      categoryCount * 20 + typeCount * 10
+    );
 
     // 리스크 레벨 결정
-    const directDonationRatio = (typeDistribution[DonationType.DIRECT] || 0) / donations.length;
-    let riskLevel: 'conservative' | 'moderate' | 'aggressive' = 'conservative';
-    
-    if (directDonationRatio > 0.7) riskLevel = 'aggressive';
-    else if (directDonationRatio > 0.4) riskLevel = 'moderate';
+    const directDonationRatio =
+      (typeDistribution[DonationType.DIRECT] || 0) / donations.length;
+    let riskLevel: "conservative" | "moderate" | "aggressive" = "conservative";
+
+    if (directDonationRatio > 0.7) riskLevel = "aggressive";
+    else if (directDonationRatio > 0.4) riskLevel = "moderate";
 
     // 추천사항 생성
     const recommendations = this.generatePortfolioRecommendations(
@@ -247,14 +269,14 @@ export class DonationDomainService {
       categoryDistribution,
       typeDistribution,
       riskLevel,
-      recommendations
+      recommendations,
     };
   }
 
   /**
    * 기부 최적화 제안
    * 기부자에게 최적의 기부 방식 제안
-   */  suggestOptimalDonation(
+   */ suggestOptimalDonation(
     donorId: UserId,
     targetAmount: number,
     donorTier: DonorRating,
@@ -283,7 +305,7 @@ export class DonationDomainService {
     const reasoning = [
       `Your ${donorTier.getLabel()} tier provides ${((bonusRate - 1) * 100).toFixed(0)}% bonus`,
       `${suggestedFrequency} donations can maximize impact`,
-      `Tax benefits: ${taxBenefits.toLocaleString('ko-KR')}원`
+      `Tax benefits: ${taxBenefits.toLocaleString("ko-KR")}원`,
     ];
 
     return {
@@ -291,7 +313,7 @@ export class DonationDomainService {
       suggestedFrequency,
       taxBenefits,
       impactMultiplier,
-      reasoning
+      reasoning,
     };
   }
 
@@ -308,16 +330,23 @@ export class DonationDomainService {
     requiredAmount?: number;
     monthlyTarget?: number;
   } {
-    const tierOrder = [DonorTier.BRONZE, DonorTier.SILVER, DonorTier.GOLD, DonorTier.PLATINUM, DonorTier.DIAMOND];
+    const tierOrder = [
+      DonorTier.BRONZE,
+      DonorTier.SILVER,
+      DonorTier.GOLD,
+      DonorTier.PLATINUM,
+      DonorTier.DIAMOND,
+    ];
     const currentIndex = tierOrder.indexOf(currentTier.getTier());
-    
+
     if (currentIndex === tierOrder.length - 1) {
       return { canUpgrade: false }; // 이미 최고 등급
     }
 
     const nextTier = tierOrder[currentIndex + 1];
-    const requiredAmount = this.getTierThreshold(nextTier) - annualDonationAmount;
-    
+    const requiredAmount =
+      this.getTierThreshold(nextTier) - annualDonationAmount;
+
     if (requiredAmount <= 0) {
       return { canUpgrade: false }; // 이미 다음 등급 조건 충족
     }
@@ -328,22 +357,25 @@ export class DonationDomainService {
       canUpgrade: true,
       nextTier,
       requiredAmount,
-      monthlyTarget
+      monthlyTarget,
     };
   }
 
   // Private helper methods
-  private generateExpectedOutcome(donation: Donation, beneficiaries: number): string {
+  private generateExpectedOutcome(
+    donation: Donation,
+    beneficiaries: number
+  ): string {
     const category = donation.getCategory();
 
     switch (category) {
-      case 'FOOD':
+      case "FOOD":
         return `Approximately ${beneficiaries} people can receive meals`;
-      case 'EDUCATION':
+      case "EDUCATION":
         return `Support education for ${beneficiaries} students`;
-      case 'MEDICAL':
+      case "MEDICAL":
         return `Provide medical care for ${beneficiaries} patients`;
-      case 'HOUSING':
+      case "HOUSING":
         return `Support housing for ${beneficiaries} families`;
       default:
         return `Benefit approximately ${beneficiaries} people`;
@@ -351,29 +383,29 @@ export class DonationDomainService {
   }
 
   private calculateSuccessRate(donations: Donation[]): number {
-    const completedDonations = donations.filter(d => d.isCompleted()).length;
+    const completedDonations = donations.filter((d) => d.isCompleted()).length;
     return Math.round((completedDonations / donations.length) * 100);
   }
 
   private calculateRiskLevel(
-    donation: Donation, 
+    donation: Donation,
     target: Institute | OpinionLeader
-  ): 'low' | 'medium' | 'high' {
+  ): "low" | "medium" | "high" {
     if (donation.getDonationType() === DonationType.INSTITUTE) {
       const institute = target as Institute;
-      if (institute.getTrustLevel() === 'GOLD') return 'low';
-      if (institute.getTrustLevel() === 'PREMIUM') return 'low';
-      if (institute.getTrustLevel() === 'VERIFIED') return 'medium';
-      return 'high';
+      if (institute.getTrustLevel() === "GOLD") return "low";
+      if (institute.getTrustLevel() === "PREMIUM") return "low";
+      if (institute.getTrustLevel() === "VERIFIED") return "medium";
+      return "high";
     }
 
     if (donation.getDonationType() === DonationType.OPINION_LEADER) {
       const leader = target as OpinionLeader;
-      if (leader.isVerified()) return 'medium';
-      return 'high';
+      if (leader.isVerified()) return "medium";
+      return "high";
     }
 
-    return 'medium'; // Direct donations
+    return "medium"; // Direct donations
   }
 
   private generatePortfolioRecommendations(
@@ -384,19 +416,21 @@ export class DonationDomainService {
     const recommendations: string[] = [];
 
     if (diversificationScore < 40) {
-      recommendations.push('Consider diversifying across more categories');
+      recommendations.push("Consider diversifying across more categories");
     }
 
     if (Object.keys(categoryDistribution).length < 3) {
-      recommendations.push('Try supporting different cause categories');
+      recommendations.push("Try supporting different cause categories");
     }
 
     if (!typeDistribution[DonationType.INSTITUTE]) {
-      recommendations.push('Consider donating to verified institutions');
+      recommendations.push("Consider donating to verified institutions");
     }
 
     if (diversificationScore > 80) {
-      recommendations.push('Great diversification! Your portfolio is well-balanced');
+      recommendations.push(
+        "Great diversification! Your portfolio is well-balanced"
+      );
     }
 
     return recommendations;
@@ -406,23 +440,29 @@ export class DonationDomainService {
     // 기부금 세액공제 계산 (간단한 예시)
     // 실제로는 더 복잡한 세법 적용 필요
     if (amount <= 20000) return 0;
-    
+
     const deductibleAmount = amount - 20000;
     if (deductibleAmount <= 1000000) {
       return deductibleAmount * 0.15; // 15% 공제
     } else {
-      return 1000000 * 0.15 + (deductibleAmount - 1000000) * 0.30; // 30% 공제
+      return 1000000 * 0.15 + (deductibleAmount - 1000000) * 0.3; // 30% 공제
     }
   }
 
   private getTierThreshold(tier: DonorTier): number {
     switch (tier) {
-      case DonorTier.BRONZE: return 50000;
-      case DonorTier.SILVER: return 200000;
-      case DonorTier.GOLD: return 500000;
-      case DonorTier.PLATINUM: return 1000000;
-      case DonorTier.DIAMOND: return 5000000;
-      default: return 0;
+      case DonorTier.BRONZE:
+        return 50000;
+      case DonorTier.SILVER:
+        return 200000;
+      case DonorTier.GOLD:
+        return 500000;
+      case DonorTier.PLATINUM:
+        return 1000000;
+      case DonorTier.DIAMOND:
+        return 5000000;
+      default:
+        return 0;
     }
   }
 }

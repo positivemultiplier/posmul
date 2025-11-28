@@ -1,17 +1,18 @@
 /**
  * Event Bus (Shared Kernel)
- * 
+ *
  * Simple in-memory event bus for handling domain events
  * across bounded contexts. In production, this could be
  * replaced with a more sophisticated event infrastructure.
- * 
+ *
  * @author PosMul Development Team
  * @since 2025-07-06
  */
+import { DomainEvent } from "./DomainEvent";
 
-import { DomainEvent } from './DomainEvent';
-
-export type EventHandler<T extends DomainEvent = DomainEvent> = (event: T) => Promise<void> | void;
+export type EventHandler<T extends DomainEvent = DomainEvent> = (
+  event: T
+) => Promise<void> | void;
 
 export interface EventHandlerRegistration {
   eventType: string;
@@ -65,7 +66,7 @@ export class EventBus {
   unsubscribe(eventType: string, handler: EventHandler): void {
     const handlers = this.handlers.get(eventType);
     if (handlers) {
-      const index = handlers.findIndex(h => h.handler === handler);
+      const index = handlers.findIndex((h) => h.handler === handler);
       if (index !== -1) {
         handlers.splice(index, 1);
       }
@@ -77,7 +78,7 @@ export class EventBus {
    */
   async publish(event: DomainEvent): Promise<void> {
     this.eventQueue.push(event);
-    
+
     if (!this.isProcessing) {
       await this.processQueue();
     }
@@ -88,7 +89,7 @@ export class EventBus {
    */
   async publishMany(events: DomainEvent[]): Promise<void> {
     this.eventQueue.push(...events);
-    
+
     if (!this.isProcessing) {
       await this.processQueue();
     }
@@ -99,7 +100,7 @@ export class EventBus {
    */
   private async processQueue(): Promise<void> {
     if (this.isProcessing) return;
-    
+
     this.isProcessing = true;
 
     try {
@@ -153,11 +154,15 @@ export class EventBus {
  * Decorator for marking methods as event handlers
  */
 export function EventHandler(eventType: string, priority?: number) {
-  return function (target: any, propertyKey: string, descriptor: PropertyDescriptor) {
+  return function (
+    target: any,
+    propertyKey: string,
+    descriptor: PropertyDescriptor
+  ) {
     // This could be used with a DI container to auto-register handlers
     // For now, it's just a marker
     const originalMethod = descriptor.value;
-    
+
     descriptor.value = function (...args: any[]) {
       return originalMethod.apply(this, args);
     };
@@ -166,7 +171,7 @@ export function EventHandler(eventType: string, priority?: number) {
     if (!target.constructor._eventHandlers) {
       target.constructor._eventHandlers = [];
     }
-    
+
     target.constructor._eventHandlers.push({
       method: propertyKey,
       eventType,

@@ -1,9 +1,9 @@
 /**
  * Base Domain Event
- * 
+ *
  * All domain events must extend this base class to ensure
  * consistent event structure across all bounded contexts.
- * 
+ *
  * @author PosMul Development Team
  * @since 2025-07-06
  */

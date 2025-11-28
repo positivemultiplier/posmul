@@ -1,4 +1,4 @@
-# 🎨 Design Principles Explanations
+﻿# 🎨 Design Principles Explanations
 
 > PosMul 프로젝트의 설계 철학과 원칙에 대한 깊이 있는 이해
 

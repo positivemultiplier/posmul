@@ -7,9 +7,9 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
+import { isFailure } from "@posmul/auth-economy-sdk";
 
 import { DomainEvent, Result } from "../types/common";
-import { isFailure } from "@posmul/auth-economy-sdk";
 
 /**
  * 도메인 이벤트 발행자 인터페이스

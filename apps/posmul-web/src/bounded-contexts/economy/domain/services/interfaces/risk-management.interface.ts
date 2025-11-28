@@ -2,7 +2,6 @@
  * Risk Management Service Interfaces
  * 리스크 관리 서비스의 인터페이스 정의
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import {

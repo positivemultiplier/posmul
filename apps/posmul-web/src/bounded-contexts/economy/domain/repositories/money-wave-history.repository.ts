@@ -4,7 +4,6 @@
  * MoneyWave1, MoneyWave2, MoneyWave3의 실행 이력과 효과 분석을 위한 리포지토리 인터페이스
  * 경제학적 실증 분석과 정책 효과성 측정을 위한 히스토리 데이터 관리
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import { EBIT, PmcAmount } from "../value-objects";

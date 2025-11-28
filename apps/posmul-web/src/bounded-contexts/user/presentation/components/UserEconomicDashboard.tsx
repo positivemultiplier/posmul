@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import {
   Badge,
   Card,
@@ -8,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../../shared/ui";
-import React from "react";
 
 interface UserEconomicDashboardProps {
   userId: string;
@@ -171,7 +172,9 @@ export const UserEconomicDashboard: React.FC<UserEconomicDashboardProps> = ({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-blue-700 font-medium">PmpAmount 배분</span>
+                  <span className="text-blue-700 font-medium">
+                    PmpAmount 배분
+                  </span>
                   <span className="text-blue-600 font-bold">
                     {(data.capMAnalysis.optimalAllocation.pmp * 100).toFixed(0)}
                     %
@@ -190,7 +193,9 @@ export const UserEconomicDashboard: React.FC<UserEconomicDashboardProps> = ({
               </div>
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-purple-700 font-medium">PmcAmount 배분</span>
+                  <span className="text-purple-700 font-medium">
+                    PmcAmount 배분
+                  </span>
                   <span className="text-purple-600 font-bold">
                     {(data.capMAnalysis.optimalAllocation.pmc * 100).toFixed(0)}
                     %
@@ -273,8 +278,8 @@ export const UserEconomicDashboard: React.FC<UserEconomicDashboardProps> = ({
                 💡 Loss Aversion 분석
               </div>
               <div className="text-indigo-600">
-                현재 PmcAmount 보유량({data.pmcBalance} PmcAmount)을 고려할 때, 향후 7일 내
-                기부를 권장합니다. (MoneyWave2 재분배 방지)
+                현재 PmcAmount 보유량({data.pmcBalance} PmcAmount)을 고려할 때,
+                향후 7일 내 기부를 권장합니다. (MoneyWave2 재분배 방지)
               </div>
             </div>
             <div>
@@ -282,8 +287,8 @@ export const UserEconomicDashboard: React.FC<UserEconomicDashboardProps> = ({
                 ⚖️ Prospect Theory 적용
               </div>
               <div className="text-indigo-600">
-                현재 위험 성향(중도적)에 맞춘 PmpAmount:PmcAmount 비율 6:4가 최적의 효용을
-                제공할 것으로 예상됩니다.
+                현재 위험 성향(중도적)에 맞춘 PmpAmount:PmcAmount 비율 6:4가
+                최적의 효용을 제공할 것으로 예상됩니다.
               </div>
             </div>
           </div>

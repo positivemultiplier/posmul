@@ -9,13 +9,13 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import {
   Result,
-  UserId,
   UseCaseError,
+  UserId,
   isFailure,
 } from "@posmul/auth-economy-sdk";
+
 import { EconomyKernel } from "../../../../shared/economy-kernel/services/economy-kernel.service";
 import { MoneyWaveCalculatorService } from "../../../../shared/economy-kernel/services/money-wave-calculator.service";
 import {

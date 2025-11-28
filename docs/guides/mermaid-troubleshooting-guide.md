@@ -1,4 +1,4 @@
----
+﻿---
 type: how-to-guide
 title: "Mermaid.js 렌더링 오류 문제 해결 가이드"
 description: "PosMul 프로젝트에서 자주 발생하는 Mermaid.js 렌더링 오류의 원인을 분석하고, 구체적인 해결책을 제시하는 실무 가이드입니다."

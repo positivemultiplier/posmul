@@ -1,4 +1,4 @@
----
+﻿---
 type: task-list
 title: "[Domain] Task List Template"
 description: "체계적인 작업 계획과 우선순위 관리를 위한 템플릿"

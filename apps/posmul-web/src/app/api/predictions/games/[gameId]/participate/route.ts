@@ -1,3 +1,15 @@
+import {
+  DomainEvent,
+  IDomainEventPublisher,
+  PredictionGameId,
+  Result,
+  PublishError as SdkPublishError,
+  UserId,
+  isFailure,
+} from "@posmul/auth-economy-sdk";
+
+import { NextRequest, NextResponse } from "next/server";
+
 import { ParticipatePredictionUseCase } from "../../../../../../bounded-contexts/prediction/application/use-cases/participate-prediction.use-case";
 import { PredictionEconomicService } from "../../../../../../bounded-contexts/prediction/domain/services/prediction-economic.service";
 import { SupabasePredictionGameRepository } from "../../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
@@ -6,19 +18,9 @@ import {
   PublishError as LocalPublishError,
 } from "../../../../../../shared/events/event-publisher";
 import {
-  PredictionGameId,
-  UserId,
-  isFailure,
-  DomainEvent,
-  Result,
-  IDomainEventPublisher,
-  PublishError as SdkPublishError,
-} from "@posmul/auth-economy-sdk";
-import {
-  toLegacyUserId,
   toLegacyPredictionGameId,
+  toLegacyUserId,
 } from "../../../../../../shared/type-bridge";
-import { NextRequest, NextResponse } from "next/server";
 
 // EventPublisher 어댑터 클래스 - 타입 변환 처리
 class EventPublisherAdapter implements IDomainEventPublisher {

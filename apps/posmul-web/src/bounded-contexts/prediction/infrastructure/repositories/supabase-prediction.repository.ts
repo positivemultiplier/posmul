@@ -8,19 +8,19 @@
  * @since 2024-12
  * @task PD-006
  */
-
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import {
   PredictionGameId,
   UserId,
-  isFailure,
-  createUserId,
   createPredictionGameId,
+  createUserId,
+  isFailure,
 } from "@posmul/auth-economy-sdk";
 import { AccuracyScore } from "@posmul/auth-economy-sdk";
-import { PmcAmount, PmpAmount } from "@posmul/auth-economy-sdk/economy";
 import { Result } from "@posmul/auth-economy-sdk";
 import { failure, success } from "@posmul/auth-economy-sdk";
+import { PmcAmount, PmpAmount } from "@posmul/auth-economy-sdk/economy";
+
+import { SupabaseClient, createClient } from "@supabase/supabase-js";
 
 import { Prediction } from "../../domain/entities/prediction-game.aggregate";
 import {
@@ -789,7 +789,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
       const averageConfidence =
         totalPredictions > 0
           ? predictions.reduce((sum, p) => sum + p.confidence, 0) /
-            totalPredictions
+          totalPredictions
           : 0;
 
       // 고유 참여자 수
@@ -1197,7 +1197,7 @@ export class SupabasePredictionRepository implements IPredictionRepository {
       const averageConfidence =
         totalPredictions > 0
           ? predictions.reduce((sum, p) => sum + p.confidence, 0) /
-            totalPredictions
+          totalPredictions
           : 0;
       const totalStaked = predictions.reduce((sum, p) => sum + p.stake, 0);
       const totalRewards = predictions.reduce(

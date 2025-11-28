@@ -1,5 +1,7 @@
 "use client";
 
+import React from "react";
+
 import {
   Badge,
   Card,
@@ -8,7 +10,6 @@ import {
   CardHeader,
   CardTitle,
 } from "../../../../shared/ui";
-import React from "react";
 
 interface UserRankingPanelProps {
   userId: string;

@@ -1,10 +1,12 @@
 import { PredictionGameId, UserId, isFailure } from "@posmul/auth-economy-sdk";
+
 import { NextRequest, NextResponse } from "next/server";
-import { toLegacyUserId } from "../../../../../shared/type-bridge";
+
 import { DeletePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/delete-prediction-game.use-case";
 import { GetPredictionGameByIdUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/get-prediction-game-by-id.use-case";
 import { UpdatePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/update-prediction-game.use-case";
 import { SupabasePredictionGameRepository } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
+import { toLegacyUserId } from "../../../../../shared/type-bridge";
 
 /**
  * GET /api/predictions/games/[gameId]
@@ -31,7 +33,9 @@ export async function GET(
     }
 
     // Repository 및 UseCase 초기화
-    const repository = new SupabasePredictionGameRepository(process.env.SUPABASE_PROJECT_ID!);
+    const repository = new SupabasePredictionGameRepository(
+      process.env.SUPABASE_PROJECT_ID!
+    );
     const useCase = new GetPredictionGameByIdUseCase(repository);
 
     // UseCase 실행
@@ -132,7 +136,9 @@ export async function PUT(
     }
 
     // Repository 및 UseCase 초기화
-    const repository = new SupabasePredictionGameRepository(process.env.SUPABASE_PROJECT_ID!);
+    const repository = new SupabasePredictionGameRepository(
+      process.env.SUPABASE_PROJECT_ID!
+    );
     const useCase = new UpdatePredictionGameUseCase(repository);
 
     // UseCase 실행
@@ -255,7 +261,9 @@ export async function DELETE(
     }
 
     // Repository 및 UseCase 초기화
-    const repository = new SupabasePredictionGameRepository(process.env.SUPABASE_PROJECT_ID!);
+    const repository = new SupabasePredictionGameRepository(
+      process.env.SUPABASE_PROJECT_ID!
+    );
     const useCase = new DeletePredictionGameUseCase(repository);
 
     // UseCase 실행
@@ -292,7 +300,10 @@ export async function DELETE(
         );
       }
 
-      if (isFailure(result) && result.error.message.includes("cannot delete active")) {
+      if (
+        isFailure(result) &&
+        result.error.message.includes("cannot delete active")
+      ) {
         return NextResponse.json(
           {
             success: false,

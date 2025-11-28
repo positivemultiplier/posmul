@@ -1,19 +1,21 @@
 /**
  * Supabase 사용자 리포지토리 구현
  */
-
 import type { Result } from "@posmul/auth-economy-sdk";
-import { DomainError } from "@posmul/auth-economy-sdk"; // DomainError는 SDK의 DomainError를 사용
+import { DomainError } from "@posmul/auth-economy-sdk";
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+// DomainError는 SDK의 DomainError를 사용
+
+import { SupabaseClient, createClient } from "@supabase/supabase-js";
+
 import { User } from "../../domain/entities/user.entity";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {
+  Email,
+  UserId,
   createEmail,
   createUserId,
   createUserRole,
-  Email,
-  UserId,
 } from "../../domain/value-objects/user-value-objects";
 
 interface UserTable {
@@ -41,8 +43,6 @@ export class SupabaseUserRepository implements IUserRepository {
 
     this.supabase = createClient(supabaseUrl, supabaseKey);
   }
-
-  
 
   async save(user: User): Promise<Result<User, Error>> {
     try {
@@ -87,8 +87,6 @@ export class SupabaseUserRepository implements IUserRepository {
     }
   }
 
-  
-
   async findById(id: UserId): Promise<Result<User | null, Error>> {
     try {
       const { data, error } = await this.supabase
@@ -126,8 +124,6 @@ export class SupabaseUserRepository implements IUserRepository {
     }
   }
 
-  
-
   async findByEmail(email: Email): Promise<Result<User | null, Error>> {
     try {
       const { data, error } = await this.supabase
@@ -164,8 +160,6 @@ export class SupabaseUserRepository implements IUserRepository {
       };
     }
   }
-
-  
 
   async update(user: User): Promise<Result<User, Error>> {
     try {
@@ -211,8 +205,6 @@ export class SupabaseUserRepository implements IUserRepository {
     }
   }
 
-  
-
   async existsByEmail(email: Email): Promise<Result<boolean, Error>> {
     try {
       const { data, error } = await this.supabase
@@ -244,8 +236,6 @@ export class SupabaseUserRepository implements IUserRepository {
       };
     }
   }
-
-  
 
   async findAll(
     page: number = 1,
@@ -284,8 +274,6 @@ export class SupabaseUserRepository implements IUserRepository {
       };
     }
   }
-
-  
 
   async delete(id: UserId): Promise<Result<void, Error>> {
     try {

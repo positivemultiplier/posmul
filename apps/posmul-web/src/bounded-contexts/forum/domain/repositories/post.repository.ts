@@ -2,7 +2,6 @@
  * Post Repository Interface
  * 게시물 저장소 인터페이스
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 import { PaginatedResult, PaginationParams } from "@posmul/auth-economy-sdk";
 

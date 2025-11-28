@@ -2,7 +2,6 @@
  * Risk Management Application Service
  * 리스크 관리 관련 애플리케이션 서비스
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import {
@@ -68,35 +67,32 @@ export class RiskManagementApplicationService {
   > {
     try {
       // 안정성 모니터링
-      const stabilityResult = await this.monitorStabilityUseCase.execute(
-        systemState
-      );
+      const stabilityResult =
+        await this.monitorStabilityUseCase.execute(systemState);
       if (!stabilityResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
       // 정책 권고안
-      const policyResult = await this.autoAdjustmentUseCase.execute(
-        systemState
-      );
+      const policyResult =
+        await this.autoAdjustmentUseCase.execute(systemState);
       if (!policyResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
       // Circuit Breaker 상태
-      const circuitBreakerResult = await this.circuitBreakerUseCase.execute(
-        systemState
-      );
+      const circuitBreakerResult =
+        await this.circuitBreakerUseCase.execute(systemState);
       if (!circuitBreakerResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
@@ -236,18 +232,17 @@ export class RiskManagementApplicationService {
       if (!riskResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
       // Circuit Breaker 실행
-      const circuitBreakerResult = await this.circuitBreakerUseCase.execute(
-        systemState
-      );
+      const circuitBreakerResult =
+        await this.circuitBreakerUseCase.execute(systemState);
       if (!circuitBreakerResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 

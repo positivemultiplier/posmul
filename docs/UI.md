@@ -1,4 +1,4 @@
----
+﻿---
 applyTo: "**"
 ---
 
@@ -88,7 +88,7 @@ graph TD
 ### 📝 **Communication Principles**
 
 - **Language**: Always respond in Korean and explain clearly for Korean developers
-- **Encoding**: Use UTF-8 encoding to prevent Korean character corruption
+- **Encoding**: Use utf-8-sig encoding to prevent Korean character corruption
 - **Clarity**: Provide specific and clear explanations rather than ambiguous ones
 - **🔥 Visualization Priority**: Include appropriate visualization in all explanations
 

@@ -4,9 +4,22 @@ module.exports = {
   testEnvironment: 'node',
   transform: {
     '^.+\\.(ts|tsx)?$': ['ts-jest', {
+      useESM: false,
       tsconfig: {
+        // Jest용 독립 설정 (루트 tsconfig 상속 안함)
         module: 'CommonJS',
+        target: 'ES2017',
+        lib: ['ES2017'],
+        esModuleInterop: true,
+        skipLibCheck: true,
+        strict: false,
+        resolveJsonModule: true,
+        isolatedModules: true,
+        allowSyntheticDefaultImports: true,
+        declaration: false,
+        noEmit: true,
       },
+      isolatedModules: true,
     }],
   },
   transformIgnorePatterns: [

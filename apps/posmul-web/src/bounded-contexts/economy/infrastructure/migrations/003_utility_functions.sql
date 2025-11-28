@@ -2,7 +2,7 @@
 -- 개인 효용함수 U(x) = α·ln(PMP) + β·ln(PMC) + γ·S(Donate) 추정 시스템
 
 -- 개인 효용함수 매개변수 테이블
-CREATE TABLE IF NOT EXISTS individual_utility_parameters (
+CREATE TABLE IF NOT EXISTS economy.individual_utility_parameters (
     user_id UUID PRIMARY KEY,
     
     -- 기본 효용함수 계수
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS individual_utility_parameters (
 );
 
 -- 사회후생함수 매개변수 테이블
-CREATE TABLE IF NOT EXISTS social_welfare_parameters (
+CREATE TABLE IF NOT EXISTS economy.social_welfare_parameters (
     parameter_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     
     -- 사회후생함수 계수 W = Σᵢ Uᵢ(x) + λ·Gini(distribution) + μ·Social_Mobility + ν·Public_Good
@@ -61,9 +61,9 @@ CREATE TABLE IF NOT EXISTS social_welfare_parameters (
 );
 
 -- 효용함수 추정 입력 데이터 테이블
-CREATE TABLE IF NOT EXISTS utility_estimation_inputs (
+CREATE TABLE IF NOT EXISTS economy.utility_estimation_inputs (
     input_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES individual_utility_parameters(user_id),
+    user_id UUID NOT NULL REFERENCES economy.individual_utility_parameters(user_id),
     
     -- 행동 데이터
     action_type TEXT NOT NULL CHECK (
@@ -88,7 +88,7 @@ CREATE TABLE IF NOT EXISTS utility_estimation_inputs (
 );
 
 -- 행동경제학적 바이어스 측정 테이블
-CREATE TABLE IF NOT EXISTS behavioral_bias_profiles (
+CREATE TABLE IF NOT EXISTS economy.behavioral_bias_profiles (
     user_id UUID PRIMARY KEY,
     
     -- Kahneman-Tversky Behavioral Economics 바이어스
@@ -115,9 +115,9 @@ CREATE TABLE IF NOT EXISTS behavioral_bias_profiles (
 );
 
 -- 효용함수 예측 결과 테이블
-CREATE TABLE IF NOT EXISTS utility_predictions (
+CREATE TABLE IF NOT EXISTS economy.utility_predictions (
     prediction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES individual_utility_parameters(user_id),
+    user_id UUID NOT NULL REFERENCES economy.individual_utility_parameters(user_id),
     
     -- 시나리오 정보
     scenario_description TEXT NOT NULL,
@@ -143,7 +143,7 @@ CREATE TABLE IF NOT EXISTS utility_predictions (
 );
 
 -- 사용자 클러스터링 결과 테이블
-CREATE TABLE IF NOT EXISTS user_utility_clusters (
+CREATE TABLE IF NOT EXISTS economy.user_utility_clusters (
     cluster_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     cluster_name TEXT NOT NULL,
     cluster_description TEXT,
@@ -167,9 +167,9 @@ CREATE TABLE IF NOT EXISTS user_utility_clusters (
 );
 
 -- 사용자-클러스터 매핑 테이블
-CREATE TABLE IF NOT EXISTS user_cluster_assignments (
-    user_id UUID NOT NULL REFERENCES individual_utility_parameters(user_id),
-    cluster_id UUID NOT NULL REFERENCES user_utility_clusters(cluster_id),
+CREATE TABLE IF NOT EXISTS economy.user_cluster_assignments (
+    user_id UUID NOT NULL REFERENCES economy.individual_utility_parameters(user_id),
+    cluster_id UUID NOT NULL REFERENCES economy.user_utility_clusters(cluster_id),
     assignment_probability DECIMAL(5,3) NOT NULL,
     distance_from_center DECIMAL(8,6),
     assignment_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -179,75 +179,75 @@ CREATE TABLE IF NOT EXISTS user_cluster_assignments (
 
 -- 인덱스 생성
 CREATE INDEX IF NOT EXISTS idx_utility_params_confidence 
-    ON individual_utility_parameters(estimation_confidence DESC, data_quality);
+    ON economy.individual_utility_parameters(estimation_confidence DESC, data_quality);
 
 CREATE INDEX IF NOT EXISTS idx_utility_inputs_user_timestamp 
-    ON utility_estimation_inputs(user_id, timestamp DESC);
+    ON economy.utility_estimation_inputs(user_id, timestamp DESC);
 
 CREATE INDEX IF NOT EXISTS idx_utility_inputs_action_type 
-    ON utility_estimation_inputs(action_type, timestamp DESC);
+    ON economy.utility_estimation_inputs(action_type, timestamp DESC);
 
 CREATE INDEX IF NOT EXISTS idx_bias_profiles_updated 
-    ON behavioral_bias_profiles(updated_at DESC);
+    ON economy.behavioral_bias_profiles(updated_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_predictions_user_date 
-    ON utility_predictions(user_id, prediction_date DESC);
+    ON economy.utility_predictions(user_id, prediction_date DESC);
 
 CREATE INDEX IF NOT EXISTS idx_clusters_member_count 
-    ON user_utility_clusters(member_count DESC);
+    ON economy.user_utility_clusters(member_count DESC);
 
 -- 업데이트 트리거
 CREATE TRIGGER update_individual_utility_parameters_updated_at 
-    BEFORE UPDATE ON individual_utility_parameters 
+    BEFORE UPDATE ON economy.individual_utility_parameters 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 CREATE TRIGGER update_behavioral_bias_profiles_updated_at 
-    BEFORE UPDATE ON behavioral_bias_profiles 
+    BEFORE UPDATE ON economy.behavioral_bias_profiles 
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Row Level Security
-ALTER TABLE individual_utility_parameters ENABLE ROW LEVEL SECURITY;
-ALTER TABLE utility_estimation_inputs ENABLE ROW LEVEL SECURITY;
-ALTER TABLE behavioral_bias_profiles ENABLE ROW LEVEL SECURITY;
-ALTER TABLE utility_predictions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_cluster_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE economy.individual_utility_parameters ENABLE ROW LEVEL SECURITY;
+ALTER TABLE economy.utility_estimation_inputs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE economy.behavioral_bias_profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE economy.utility_predictions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE economy.user_cluster_assignments ENABLE ROW LEVEL SECURITY;
 
 -- 사용자는 자신의 효용함수 데이터만 조회/수정 가능
-CREATE POLICY "Users can view own utility parameters" ON individual_utility_parameters
+CREATE POLICY "Users can view own utility parameters" ON economy.individual_utility_parameters
     FOR ALL USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert own utility inputs" ON utility_estimation_inputs
+CREATE POLICY "Users can insert own utility inputs" ON economy.utility_estimation_inputs
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
-CREATE POLICY "Users can view own utility inputs" ON utility_estimation_inputs
+CREATE POLICY "Users can view own utility inputs" ON economy.utility_estimation_inputs
     FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can view own bias profiles" ON behavioral_bias_profiles
+CREATE POLICY "Users can view own bias profiles" ON economy.behavioral_bias_profiles
     FOR ALL USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can view own predictions" ON utility_predictions
+CREATE POLICY "Users can view own predictions" ON economy.utility_predictions
     FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can view own cluster assignments" ON user_cluster_assignments
+CREATE POLICY "Users can view own cluster assignments" ON economy.user_cluster_assignments
     FOR SELECT USING (auth.uid() = user_id);
 
 -- 사회후생함수 및 클러스터 정보는 모든 인증된 사용자가 조회 가능
-CREATE POLICY "Authenticated users can view social welfare parameters" ON social_welfare_parameters
+CREATE POLICY "Authenticated users can view social welfare parameters" ON economy.social_welfare_parameters
     FOR SELECT USING (auth.role() = 'authenticated');
 
-CREATE POLICY "Authenticated users can view user clusters" ON user_utility_clusters
+CREATE POLICY "Authenticated users can view user clusters" ON economy.user_utility_clusters
     FOR SELECT USING (auth.role() = 'authenticated');
 
 -- 코멘트 추가
-COMMENT ON TABLE individual_utility_parameters IS '개인별 효용함수 매개변수 U(x) = α·ln(PMP) + β·ln(PMC) + γ·S(Donate)';
-COMMENT ON TABLE social_welfare_parameters IS '사회후생함수 매개변수 W = Σᵢ Uᵢ(x) + λ·Gini + μ·Mobility + ν·PublicGood';
-COMMENT ON TABLE utility_estimation_inputs IS '효용함수 추정을 위한 사용자 행동 관찰 데이터';
-COMMENT ON TABLE behavioral_bias_profiles IS 'Kahneman-Tversky 행동경제학 기반 인지편향 프로필';
-COMMENT ON TABLE utility_predictions IS '개인 효용함수 기반 행동 예측 결과';
-COMMENT ON TABLE user_utility_clusters IS '유사한 효용 패턴을 가진 사용자 클러스터';
+COMMENT ON TABLE economy.individual_utility_parameters IS '개인별 효용함수 매개변수 U(x) = α·ln(PMP) + β·ln(PMC) + γ·S(Donate)';
+COMMENT ON TABLE economy.social_welfare_parameters IS '사회후생함수 매개변수 W = Σᵢ Uᵢ(x) + λ·Gini + μ·Mobility + ν·PublicGood';
+COMMENT ON TABLE economy.utility_estimation_inputs IS '효용함수 추정을 위한 사용자 행동 관찰 데이터';
+COMMENT ON TABLE economy.behavioral_bias_profiles IS 'Kahneman-Tversky 행동경제학 기반 인지편향 프로필';
+COMMENT ON TABLE economy.utility_predictions IS '개인 효용함수 기반 행동 예측 결과';
+COMMENT ON TABLE economy.user_utility_clusters IS '유사한 효용 패턴을 가진 사용자 클러스터';
 
-COMMENT ON COLUMN individual_utility_parameters.alpha IS 'PMP(위험프리 자산) 효용 계수';
-COMMENT ON COLUMN individual_utility_parameters.beta IS 'PMC(위험자산) 효용 계수';
-COMMENT ON COLUMN individual_utility_parameters.gamma IS '사회적 기여(기부) 효용 계수';
-COMMENT ON COLUMN behavioral_bias_profiles.loss_aversion IS 'Kahneman-Tversky 손실회피 계수 λ (기본값 2.25)';
-COMMENT ON COLUMN utility_predictions.predicted_utility IS '효용함수 기반 예측된 개인 효용값';
+COMMENT ON COLUMN economy.individual_utility_parameters.alpha IS 'PMP(위험프리 자산) 효용 계수';
+COMMENT ON COLUMN economy.individual_utility_parameters.beta IS 'PMC(위험자산) 효용 계수';
+COMMENT ON COLUMN economy.individual_utility_parameters.gamma IS '사회적 기여(기부) 효용 계수';
+COMMENT ON COLUMN economy.behavioral_bias_profiles.loss_aversion IS 'Kahneman-Tversky 손실회피 계수 λ (기본값 2.25)';
+COMMENT ON COLUMN economy.utility_predictions.predicted_utility IS '효용함수 기반 예측된 개인 효용값';

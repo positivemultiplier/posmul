@@ -1,4 +1,4 @@
-# 🔗 API Reference
+﻿# 🔗 API Reference
 
 > 모든 API 엔드포인트와 기술 세부사항
 

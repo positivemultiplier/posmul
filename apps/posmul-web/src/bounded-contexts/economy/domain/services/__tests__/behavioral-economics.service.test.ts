@@ -163,8 +163,14 @@ describe("BehavioralEconomicsEngine", () => {
 
   describe("Endowment Effect Analysis", () => {
     it("should calculate willingness to accept vs willingness to pay gap", () => {
-      const currentHoldings = { pmp: createPmpAmount(1000), pmc: createPmcAmount(500) };
-      const marketValue = { pmp: createPmpAmount(1000), pmc: createPmcAmount(500) };
+      const currentHoldings = {
+        pmp: createPmpAmount(1000),
+        pmc: createPmcAmount(500),
+      };
+      const marketValue = {
+        pmp: createPmpAmount(1000),
+        pmc: createPmcAmount(500),
+      };
 
       const analysis = engine.analyzeEndowmentEffect(
         currentHoldings,
@@ -179,8 +185,14 @@ describe("BehavioralEconomicsEngine", () => {
     });
 
     it("should show endowment ratio greater than 1 indicating bias", () => {
-      const currentHoldings = { pmp: createPmpAmount(500), pmc: createPmcAmount(250) };
-      const marketValue = { pmp: createPmpAmount(500), pmc: createPmcAmount(250) };
+      const currentHoldings = {
+        pmp: createPmpAmount(500),
+        pmc: createPmcAmount(250),
+      };
+      const marketValue = {
+        pmp: createPmpAmount(500),
+        pmc: createPmcAmount(250),
+      };
 
       const analysis = engine.analyzeEndowmentEffect(
         currentHoldings,
@@ -212,7 +224,10 @@ describe("BehavioralEconomicsEngine", () => {
     ];
 
     it("should provide mental accounting allocation recommendations", () => {
-      const totalWealth = { pmp: createPmpAmount(2000), pmc: createPmcAmount(1000) };
+      const totalWealth = {
+        pmp: createPmpAmount(2000),
+        pmc: createPmcAmount(1000),
+      };
       const userPreferences = {
         riskTolerance: 0.6,
         savingsGoal: createPmpAmount(500),
@@ -237,7 +252,10 @@ describe("BehavioralEconomicsEngine", () => {
     });
 
     it("should adjust allocation based on risk tolerance", () => {
-      const totalWealth = { pmp: createPmpAmount(1000), pmc: createPmcAmount(1000) };
+      const totalWealth = {
+        pmp: createPmpAmount(1000),
+        pmc: createPmcAmount(1000),
+      };
       const userPreferences = {
         riskTolerance: 0.8, // High risk tolerance
         savingsGoal: createPmpAmount(200),
@@ -258,7 +276,10 @@ describe("BehavioralEconomicsEngine", () => {
     });
 
     it("should generate warnings for allocation issues", () => {
-      const totalWealth = { pmp: createPmpAmount(100), pmc: createPmcAmount(100) }; // Small wealth
+      const totalWealth = {
+        pmp: createPmpAmount(100),
+        pmc: createPmcAmount(100),
+      }; // Small wealth
       const accounts: MentalAccount[] = [
         {
           type: MentalAccountType.DONATION_PmcAmount,
@@ -288,7 +309,10 @@ describe("BehavioralEconomicsEngine", () => {
 
   describe("Nudge Generation", () => {
     const sampleContext: DecisionContext = {
-      currentWealth: { totalPmpAmount: createPmpAmount(1000), totalPmcAmount: createPmcAmount(500) },
+      currentWealth: {
+        totalPmpAmount: createPmpAmount(1000),
+        totalPmcAmount: createPmcAmount(500),
+      },
       framing: "loss",
       timePressure: 0.7,
       socialInfluence: 0.5,

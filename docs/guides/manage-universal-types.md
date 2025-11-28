@@ -1,4 +1,4 @@
----
+﻿---
 type: how-to-guide
 title: "Universal MCP를 활용한 중앙 집중식 타입 관리 가이드"
 description: "mcp_supabase_generate_typescript_types와 Universal MCP 스크립트를 사용하여 프로젝트 전체의 타입 일관성을 유지하는 방법을 배웁니다."

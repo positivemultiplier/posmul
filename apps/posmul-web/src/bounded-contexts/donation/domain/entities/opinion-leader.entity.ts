@@ -2,11 +2,10 @@
  * Opinion Leader Entity
  * 오피니언 리더 엔티티
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
-
 import { Result } from "@posmul/auth-economy-sdk";
 import { DomainEvent } from "@posmul/auth-economy-sdk";
+
 import {
   DonorRating,
   OpinionLeaderId,
@@ -482,5 +481,27 @@ export class OpinionLeader {
     );
 
     return { success: true, data: opinionLeader };
+  }
+
+  // DB 데이터로부터 엔티티 재구성
+  static reconstitute(data: any): OpinionLeader {
+    const leader = new OpinionLeader(
+      new OpinionLeaderId(data.id),
+      data.user_id as UserId,
+      data.display_name || data.name, // DB column might be display_name
+      data.description || data.bio, // Mapping might vary
+      data.bio,
+      data.categories || [],
+      data.social_media_info || [],
+      data.status as OpinionLeaderStatus,
+      data.verification_status as VerificationStatus,
+      data.profile_image_url,
+      data.website_url,
+      new Date(data.created_at),
+      new Date(data.updated_at)
+    );
+
+    leader.clearDomainEvents();
+    return leader;
   }
 }

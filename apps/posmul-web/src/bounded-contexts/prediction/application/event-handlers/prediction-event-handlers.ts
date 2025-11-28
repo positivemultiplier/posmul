@@ -7,15 +7,14 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import {
+  BusinessLogicError,
+  HandlerError,
+  IDomainEventSubscriber,
   PmcEarnedEvent,
   PmcSpentEvent,
   PmpEarnedEvent,
   PmpSpentEvent,
-  IDomainEventSubscriber,
-  BusinessLogicError,
-  HandlerError,
 } from "@posmul/auth-economy-sdk";
 import { Result } from "@posmul/auth-economy-sdk";
 

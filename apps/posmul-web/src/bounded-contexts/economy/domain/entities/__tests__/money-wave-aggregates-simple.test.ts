@@ -1,12 +1,12 @@
 /**
  * MoneyWave Aggregates 기본 테스트
  */
-
 import { DomainError, isFailure } from "@posmul/auth-economy-sdk";
+
 import {
+  MoneyWaveType,
   createMoneyWaveId,
   createPmcAmount,
-  MoneyWaveType,
 } from "../../value-objects";
 import {
   MoneyWave1Aggregate,

@@ -1,4 +1,8 @@
-import { UserId, Email, UserRoleObject } from '../value-objects/user-value-objects';
+import {
+  Email,
+  UserId,
+  UserRoleObject,
+} from "../value-objects/user-value-objects";
 
 export interface UserProps {
   id: UserId;
@@ -15,7 +19,7 @@ export interface UserProps {
 export class User {
   private constructor(private props: UserProps) {}
 
-  static create(props: Omit<UserProps, 'createdAt' | 'updatedAt'>): User {
+  static create(props: Omit<UserProps, "createdAt" | "updatedAt">): User {
     const now = new Date();
     return new User({
       ...props,
@@ -68,7 +72,7 @@ export class User {
   // Business Logic
   updateDisplayName(displayName: string): void {
     if (displayName.trim().length === 0) {
-      throw new Error('Display name cannot be empty');
+      throw new Error("Display name cannot be empty");
     }
     this.props.displayName = displayName;
     this.props.updatedAt = new Date();
@@ -76,7 +80,7 @@ export class User {
 
   addPmcPoints(amount: number): void {
     if (amount <= 0) {
-      throw new Error('PmcAmount amount must be positive');
+      throw new Error("PmcAmount amount must be positive");
     }
     this.props.pmcBalance += amount;
     this.props.updatedAt = new Date();
@@ -84,10 +88,10 @@ export class User {
 
   deductPmcPoints(amount: number): void {
     if (amount <= 0) {
-      throw new Error('PmcAmount amount must be positive');
+      throw new Error("PmcAmount amount must be positive");
     }
     if (this.props.pmcBalance < amount) {
-      throw new Error('Insufficient PmcAmount balance');
+      throw new Error("Insufficient PmcAmount balance");
     }
     this.props.pmcBalance -= amount;
     this.props.updatedAt = new Date();
@@ -95,7 +99,7 @@ export class User {
 
   addPmpPoints(amount: number): void {
     if (amount <= 0) {
-      throw new Error('PmpAmount amount must be positive');
+      throw new Error("PmpAmount amount must be positive");
     }
     this.props.pmpBalance += amount;
     this.props.updatedAt = new Date();

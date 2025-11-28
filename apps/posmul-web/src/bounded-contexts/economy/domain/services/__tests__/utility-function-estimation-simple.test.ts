@@ -1,8 +1,8 @@
 /**
  * Utility Function Estimation Service Tests (Simplified)
  */
+import { createUserId, isFailure } from "@posmul/auth-economy-sdk";
 
-import { createUserId, isFailure } from '@posmul/auth-economy-sdk';
 import { createPmcAmount, createPmpAmount } from "../../value-objects";
 import {
   BehaviorObservation,
@@ -110,7 +110,9 @@ describe("UtilityFunctionEstimationService", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(isFailure(result) ? result.error : undefined).toBeDefined();
-        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("observations required");
+        expect(
+          isFailure(result) ? result.error.message : "Unknown error"
+        ).toContain("observations required");
       }
     });
   });
@@ -167,7 +169,9 @@ describe("UtilityFunctionEstimationService", () => {
       expect(result.success).toBe(false);
       if (!result.success) {
         expect(isFailure(result) ? result.error : undefined).toBeDefined();
-        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("participant");
+        expect(
+          isFailure(result) ? result.error.message : "Unknown error"
+        ).toContain("participant");
       }
     });
   });

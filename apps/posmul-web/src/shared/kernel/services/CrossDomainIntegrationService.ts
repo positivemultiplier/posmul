@@ -7,18 +7,18 @@
  * @author PosMul Development Team
  * @since 2025-07-06
  */
+import { isFailure } from "@posmul/auth-economy-sdk";
 
 import {
-  User,
-  MoneyWave,
-  EventBus,
-  PmpEarnedEvent,
-  PmcSpentEvent,
-  MoneyWaveCreatedEvent,
   EconomicRules,
+  EventBus,
   EventHandler,
+  MoneyWave,
+  MoneyWaveCreatedEvent,
+  PmcSpentEvent,
+  PmpEarnedEvent,
+  User,
 } from "../index";
-import { isFailure } from "@posmul/auth-economy-sdk";
 
 export class CrossDomainIntegrationService {
   private eventBus = EventBus.getInstance();

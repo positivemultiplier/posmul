@@ -11,7 +11,13 @@ export * from "./auth";
 // === 경제 시스템 ===
 export * from "./economy";
 
-// === 공통 타입 (중복 방지를 위해 선택적 re-export) ===
+// === DB 기반 타입 시스템 ===
+export * from "./types";
+
+// === 공통 유틸리티 ===
+export * from "./utils";
+
+// === 도메인 타입 (중복 방지를 위해 선택적 re-export) ===
 export type {
   // 기본 타입
   Result,
@@ -22,8 +28,10 @@ export type {
   PaginatedResult,
   SdkConfig,
 
-  // 식별자 타입
+  // DB 기반 식별자 타입 (Branded Types)
   UserId,
+  Username,
+  DisplayName,
   PredictionGameId,
   PredictionId,
   TransactionId,

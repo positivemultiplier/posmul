@@ -3,7 +3,6 @@
  *
  * 예측 도메인의 타입 정의
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
 
 /**
@@ -43,12 +42,14 @@ export interface PredictionResultValue {
 /**
  * 게임 상태
  */
-export type GameStatus =
-  | "CREATED"
-  | "ACTIVE"
-  | "ENDED"
-  | "COMPLETED"
-  | "CANCELLED";
+export enum GameStatus {
+  PENDING = "PENDING",
+  CREATED = "CREATED",
+  ACTIVE = "ACTIVE",
+  ENDED = "ENDED",
+  COMPLETED = "COMPLETED",
+  CANCELLED = "CANCELLED",
+}
 
 /**
  * GameStatus 유틸리티 클래스

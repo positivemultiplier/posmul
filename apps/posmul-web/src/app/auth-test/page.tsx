@@ -1,23 +1,29 @@
 "use client";
+
 // Auth 통합 테스트 페이지
-import { useState } from 'react';
-import { useAuth } from '../../bounded-contexts/auth/presentation/hooks/useAuth';
+import { useState } from "react";
+
+import { useAuth } from "../../bounded-contexts/auth/presentation/hooks/useAuth";
 
 export default function AuthTestPage() {
-  const { user, isLoading, error, signUp, signIn, signOut, clearError } = useAuth();
-  const [testEmail, setTestEmail] = useState('test@example.com');
-  const [testPassword, setTestPassword] = useState('test123456');
+  const { user, isLoading, error, signUp, signIn, signOut, clearError } =
+    useAuth();
+  const [testEmail, setTestEmail] = useState("test@example.com");
+  const [testPassword, setTestPassword] = useState("test123456");
   const [testResults, setTestResults] = useState<string[]>([]);
 
   const addTestResult = (result: string) => {
-    setTestResults(prev => [...prev, `${new Date().toLocaleTimeString()}: ${result}`]);
+    setTestResults((prev) => [
+      ...prev,
+      `${new Date().toLocaleTimeString()}: ${result}`,
+    ]);
   };
 
   const testSignUp = async () => {
     try {
       clearError();
       await signUp({ email: testEmail, password: testPassword });
-      addTestResult('✅ 회원가입 성공');
+      addTestResult("✅ 회원가입 성공");
     } catch (err) {
       addTestResult(`❌ 회원가입 실패: ${err}`);
     }
@@ -27,7 +33,7 @@ export default function AuthTestPage() {
     try {
       clearError();
       await signIn({ email: testEmail, password: testPassword });
-      addTestResult('✅ 로그인 성공');
+      addTestResult("✅ 로그인 성공");
     } catch (err) {
       addTestResult(`❌ 로그인 실패: ${err}`);
     }
@@ -36,7 +42,7 @@ export default function AuthTestPage() {
   const testSignOut = async () => {
     try {
       await signOut();
-      addTestResult('✅ 로그아웃 성공');
+      addTestResult("✅ 로그아웃 성공");
     } catch (err) {
       addTestResult(`❌ 로그아웃 실패: ${err}`);
     }
@@ -54,9 +60,16 @@ export default function AuthTestPage() {
       <div className="mb-8 p-4 bg-gray-100 rounded-lg">
         <h2 className="text-xl font-semibold mb-4">현재 인증 상태</h2>
         <div className="space-y-2">
-          <p><strong>로딩 중:</strong> {isLoading ? '예' : '아니오'}</p>
-          <p><strong>에러:</strong> {error || '없음'}</p>
-          <p><strong>사용자:</strong> {user ? `${user.email} (ID: ${user.id})` : '로그인하지 않음'}</p>
+          <p>
+            <strong>로딩 중:</strong> {isLoading ? "예" : "아니오"}
+          </p>
+          <p>
+            <strong>에러:</strong> {error || "없음"}
+          </p>
+          <p>
+            <strong>사용자:</strong>{" "}
+            {user ? `${user.email} (ID: ${user.id})` : "로그인하지 않음"}
+          </p>
         </div>
       </div>
 
@@ -65,7 +78,9 @@ export default function AuthTestPage() {
         <h2 className="text-xl font-semibold mb-4">테스트 컨트롤</h2>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">테스트 이메일:</label>
+            <label className="block text-sm font-medium mb-1">
+              테스트 이메일:
+            </label>
             <input
               type="email"
               value={testEmail}
@@ -75,7 +90,9 @@ export default function AuthTestPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">테스트 비밀번호:</label>
+            <label className="block text-sm font-medium mb-1">
+              테스트 비밀번호:
+            </label>
             <input
               type="password"
               value={testPassword}
@@ -152,16 +169,18 @@ export default function AuthTestPage() {
               {
                 isLoading,
                 error,
-                user: user ? {
-                  id: user.id,
-                  email: user.email,
-                  displayName: user.displayName,
-                  pmcBalance: user.pmcBalance,
-                  pmpBalance: user.pmpBalance,
-                  isActive: user.isActive,
-                  createdAt: user.createdAt,
-                  updatedAt: user.updatedAt,
-                } : null,
+                user: user
+                  ? {
+                      id: user.id,
+                      email: user.email,
+                      displayName: user.displayName,
+                      pmcBalance: user.pmcBalance,
+                      pmpBalance: user.pmpBalance,
+                      isActive: user.isActive,
+                      createdAt: user.createdAt,
+                      updatedAt: user.updatedAt,
+                    }
+                  : null,
               },
               null,
               2

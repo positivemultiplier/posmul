@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__ide__getDiagnostics",
+      "Bash(pnpm list:*)",
+      "Bash(turbo build:*)",
+      "Bash(pnpm build:*)",
+      "Bash(npx tsc:*)",
+      "Bash(pnpm type-check:*)",
+      "Bash(turbo type-check:*)",
+      "Bash(grep:*)",
+      "Bash(pnpm run:*)",
+      "Bash(pnpm -F posmul-web run type-check)",
+      "Bash(pnpm -F posmul-web dev)",
+      "Bash(pnpm install:*)",
+      "Bash(pnpm dev:*)",
+      "Bash(turbo dev:*)",
+      "Bash(taskkill:*)",
+      "Bash(node:*)",
+      "Bash(powershell:*)"
+    ],
+    "deny": []
+  }
+}

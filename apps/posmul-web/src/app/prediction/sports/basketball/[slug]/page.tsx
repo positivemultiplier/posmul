@@ -7,9 +7,9 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
+import { notFound } from "next/navigation";
 
 import PredictionDetailView from "../../../../../bounded-contexts/prediction/presentation/components/PredictionDetailView";
-import { notFound } from "next/navigation";
 
 interface PredictionDetailPageProps {
   params: Promise<{
@@ -262,7 +262,7 @@ export default async function BasketballPredictionDetailPage({
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="container mx-auto px-4">
-        // <PredictionDetailView game={game} userBalance={userBalance} />
+        {/* <PredictionDetailView game={game} userBalance={userBalance} /> */}
       </div>
     </div>
   );

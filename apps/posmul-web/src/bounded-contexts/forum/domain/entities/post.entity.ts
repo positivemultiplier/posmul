@@ -2,22 +2,21 @@
  * Post Entity
  * 포럼 게시물 엔티티
  */
-
-import { UserId } from '../../../auth/domain/value-objects/user-value-objects';
+import { UserId } from "../../../auth/domain/value-objects/user-value-objects";
 import {
-  PostId,
-  ForumSection,
-  ForumCategory,
-  PostStatus,
-  PostTitle,
-  PostContent,
-  PostMetadata,
-  NewsCategory,
+  ActivityPoints,
   BudgetCategory,
   DebatePosition,
-  ActivityPoints,
-  createActivityPoints
-} from '../value-objects/forum-value-objects';
+  ForumCategory,
+  ForumSection,
+  NewsCategory,
+  PostContent,
+  PostId,
+  PostMetadata,
+  PostStatus,
+  PostTitle,
+  createActivityPoints,
+} from "../value-objects/forum-value-objects";
 
 /**
  * Post Entity
@@ -35,18 +34,18 @@ export class Post {
     private metadata: PostMetadata,
     private readonly createdAt: Date,
     private updatedAt: Date,
-    
+
     // Section별 특화 필드들
     private readonly newsCategory?: NewsCategory,
     private readonly budgetCategory?: BudgetCategory,
     private readonly debatePosition?: DebatePosition,
-    
+
     // 통계 및 상호작용
     private upvoteCount: number = 0,
     private downvoteCount: number = 0,
     private commentCount: number = 0,
     private shareCount: number = 0,
-    
+
     // 선택적 필드들
     private moderatedAt?: Date,
     private moderatedBy?: UserId,
@@ -70,16 +69,16 @@ export class Post {
     debatePosition?: DebatePosition
   ): Post {
     const now = new Date();
-    
+
     // Section별 특화 필드 검증
     if (section === ForumSection.NEWS && !newsCategory) {
-      throw new Error('News posts must have a news category');
+      throw new Error("News posts must have a news category");
     }
     if (section === ForumSection.BUDGET && !budgetCategory) {
-      throw new Error('Budget posts must have a budget category');
+      throw new Error("Budget posts must have a budget category");
     }
     if (section === ForumSection.DEBATE && !debatePosition) {
-      throw new Error('Debate posts must have a position');
+      throw new Error("Debate posts must have a position");
     }
 
     return new Post(
@@ -151,27 +150,69 @@ export class Post {
   }
 
   // Getters
-  getId(): PostId { return this.id; }
-  getAuthorId(): UserId { return this.authorId; }
-  getSection(): ForumSection { return this.section; }
-  getCategory(): ForumCategory { return this.category; }
-  getTitle(): PostTitle { return this.title; }
-  getContent(): PostContent { return this.content; }
-  getStatus(): PostStatus { return this.status; }
-  getMetadata(): PostMetadata { return this.metadata; }
-  getCreatedAt(): Date { return this.createdAt; }
-  getUpdatedAt(): Date { return this.updatedAt; }
-  getNewsCategory(): NewsCategory | undefined { return this.newsCategory; }
-  getBudgetCategory(): BudgetCategory | undefined { return this.budgetCategory; }
-  getDebatePosition(): DebatePosition | undefined { return this.debatePosition; }
-  getUpvoteCount(): number { return this.upvoteCount; }
-  getDownvoteCount(): number { return this.downvoteCount; }
-  getCommentCount(): number { return this.commentCount; }
-  getShareCount(): number { return this.shareCount; }
-  getModeratedAt(): Date | undefined { return this.moderatedAt; }
-  getModeratedBy(): UserId | undefined { return this.moderatedBy; }
-  getPinnedAt(): Date | undefined { return this.pinnedAt; }
-  getArchivedAt(): Date | undefined { return this.archivedAt; }
+  getId(): PostId {
+    return this.id;
+  }
+  getAuthorId(): UserId {
+    return this.authorId;
+  }
+  getSection(): ForumSection {
+    return this.section;
+  }
+  getCategory(): ForumCategory {
+    return this.category;
+  }
+  getTitle(): PostTitle {
+    return this.title;
+  }
+  getContent(): PostContent {
+    return this.content;
+  }
+  getStatus(): PostStatus {
+    return this.status;
+  }
+  getMetadata(): PostMetadata {
+    return this.metadata;
+  }
+  getCreatedAt(): Date {
+    return this.createdAt;
+  }
+  getUpdatedAt(): Date {
+    return this.updatedAt;
+  }
+  getNewsCategory(): NewsCategory | undefined {
+    return this.newsCategory;
+  }
+  getBudgetCategory(): BudgetCategory | undefined {
+    return this.budgetCategory;
+  }
+  getDebatePosition(): DebatePosition | undefined {
+    return this.debatePosition;
+  }
+  getUpvoteCount(): number {
+    return this.upvoteCount;
+  }
+  getDownvoteCount(): number {
+    return this.downvoteCount;
+  }
+  getCommentCount(): number {
+    return this.commentCount;
+  }
+  getShareCount(): number {
+    return this.shareCount;
+  }
+  getModeratedAt(): Date | undefined {
+    return this.moderatedAt;
+  }
+  getModeratedBy(): UserId | undefined {
+    return this.moderatedBy;
+  }
+  getPinnedAt(): Date | undefined {
+    return this.pinnedAt;
+  }
+  getArchivedAt(): Date | undefined {
+    return this.archivedAt;
+  }
 
   /**
    * 게시물 제목 수정
@@ -206,7 +247,7 @@ export class Post {
   publish(publisherId: UserId): void {
     this.checkEditPermission(publisherId);
     if (this.status !== PostStatus.DRAFT) {
-      throw new Error('Only draft posts can be published');
+      throw new Error("Only draft posts can be published");
     }
     this.status = PostStatus.PUBLISHED;
     this.updatedAt = new Date();
@@ -236,8 +277,11 @@ export class Post {
    */
   restore(restorerId: UserId): void {
     this.checkEditPermission(restorerId);
-    if (this.status !== PostStatus.DELETED && this.status !== PostStatus.HIDDEN) {
-      throw new Error('Only deleted or hidden posts can be restored');
+    if (
+      this.status !== PostStatus.DELETED &&
+      this.status !== PostStatus.HIDDEN
+    ) {
+      throw new Error("Only deleted or hidden posts can be restored");
     }
     this.status = PostStatus.PUBLISHED;
     this.updatedAt = new Date();
@@ -331,7 +375,7 @@ export class Post {
   incrementViewCount(): void {
     this.metadata = {
       ...this.metadata,
-      viewCount: this.metadata.viewCount + 1
+      viewCount: this.metadata.viewCount + 1,
     };
   }
 
@@ -339,10 +383,11 @@ export class Post {
    * 게시물의 인기도 점수 계산
    */
   calculatePopularityScore(): number {
-    const ageInHours = (Date.now() - this.createdAt.getTime()) / (1000 * 60 * 60);
+    const ageInHours =
+      (Date.now() - this.createdAt.getTime()) / (1000 * 60 * 60);
     const votes = this.upvoteCount - this.downvoteCount;
     const engagement = this.commentCount + this.shareCount;
-    
+
     // 시간이 지날수록 점수가 감소하는 알고리즘
     return (votes * 2 + engagement) / Math.pow(ageInHours + 2, 1.5);
   }
@@ -374,7 +419,7 @@ export class Post {
   calculateCreationPoints(): ActivityPoints {
     // 섹션별 차등 포인트
     let basePoints = 10;
-    
+
     switch (this.section) {
       case ForumSection.NEWS:
         basePoints = 15; // 뉴스 작성은 15 PmpAmount
@@ -390,7 +435,7 @@ export class Post {
         break;
     }
 
-    return createActivityPoints(basePoints, 'PmpAmount');
+    return createActivityPoints(basePoints, "PmpAmount");
   }
 
   /**
@@ -400,21 +445,21 @@ export class Post {
     const contentLength = this.content.value.length;
     const votes = this.upvoteCount - this.downvoteCount;
     const engagement = this.commentCount;
-    
+
     // 콘텐츠 길이, 투표, 참여도를 종합한 품질 점수
     let score = 0;
-    
+
     // 콘텐츠 길이 점수 (0-30점)
     if (contentLength > 1000) score += 30;
     else if (contentLength > 500) score += 20;
     else if (contentLength > 100) score += 10;
-    
+
     // 투표 점수 (0-40점)
     score += Math.min(votes * 2, 40);
-    
+
     // 참여도 점수 (0-30점)
     score += Math.min(engagement * 3, 30);
-    
+
     return Math.max(0, Math.min(100, score));
   }
 
@@ -423,10 +468,10 @@ export class Post {
    */
   private checkEditPermission(userId: UserId): void {
     if (this.authorId !== userId) {
-      throw new Error('Only the author can edit this post');
+      throw new Error("Only the author can edit this post");
     }
     if (this.status === PostStatus.DELETED) {
-      throw new Error('Cannot edit deleted posts');
+      throw new Error("Cannot edit deleted posts");
     }
   }
 
@@ -477,7 +522,7 @@ export class Post {
       category: this.category,
       status: this.status,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
     };
   }
 }

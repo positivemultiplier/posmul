@@ -6,8 +6,8 @@
  * MoneyWave2: 미사용 PmcAmount 재분배
  * MoneyWave3: 기업가 생태계 구축
  */
+import { DomainError, Result } from "@posmul/auth-economy-sdk";
 
-import { Result, DomainError } from "@posmul/auth-economy-sdk";
 import {
   MoneyWaveId,
   PmcAmount,

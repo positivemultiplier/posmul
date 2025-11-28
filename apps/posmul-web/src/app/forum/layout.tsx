@@ -9,9 +9,9 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
+import { Suspense } from "react";
 
 import { MoneyWaveStatus } from "../../shared/ui";
-import { Suspense } from "react";
 
 interface ForumLayoutProps {
   children: React.ReactNode;

@@ -9,6 +9,7 @@
  * - Median Voter Theorem 구현 정확성 확인
  * - Rent-Seeking 탐지 로직 검증
  */
+import { isFailure } from "@posmul/auth-economy-sdk";
 
 import {
   IPolicyProposal,
@@ -17,8 +18,6 @@ import {
   PolicyCategory,
   RentSeekingType,
 } from "../interfaces/public-choice-engine.interface";
-import { isFailure } from '@posmul/auth-economy-sdk';
-
 import {
   PublicChoiceEngine,
   PublicChoiceEngineConfig,
@@ -197,9 +196,9 @@ describe("PublicChoiceEngine", () => {
       const result = await engine.analyzeMedianVoter(voterPreferences, policy);
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(isFailure(result) ? result.error.message : "Unknown error").toContain(
-          "Voter preferences cannot be empty"
-        );
+        expect(
+          isFailure(result) ? result.error.message : "Unknown error"
+        ).toContain("Voter preferences cannot be empty");
       }
     });
   });
@@ -454,7 +453,9 @@ describe("PublicChoiceEngine", () => {
       );
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("Total budget must be positive");
+        expect(
+          isFailure(result) ? result.error.message : "Unknown error"
+        ).toContain("Total budget must be positive");
       }
     });
   });

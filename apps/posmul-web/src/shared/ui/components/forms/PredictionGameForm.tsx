@@ -1,9 +1,10 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import type { PredictionGame } from "../../../../bounded-contexts/prediction/domain/types";
-import { useForm, type SubmitHandler } from "react-hook-form";
+import { type SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
+
+import type { PredictionGame } from "../../../../bounded-contexts/prediction/domain/types";
 import { Button, Card } from "../base";
 
 const formSchema = z.object({
@@ -13,8 +14,12 @@ const formSchema = z.object({
   options: z.array(z.string()).min(2, "최소 2개의 선택지가 필요합니다."),
   endTime: z.string().min(1, "종료 시간을 선택해주세요."),
   settlementTime: z.string().min(1, "정산 시간을 선택해주세요."),
-  minimumStake: z.number().min(1, "최소 참여 금액은 1 PmpAmount 이상이어야 합니다."),
-  maximumStake: z.number().min(1, "최대 참여 금액은 1 PmpAmount 이상이어야 합니다."),
+  minimumStake: z
+    .number()
+    .min(1, "최소 참여 금액은 1 PmpAmount 이상이어야 합니다."),
+  maximumStake: z
+    .number()
+    .min(1, "최대 참여 금액은 1 PmpAmount 이상이어야 합니다."),
 });
 
 type PredictionGameFormData = z.infer<typeof formSchema>;
@@ -59,7 +64,10 @@ export default function PredictionGameForm({
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
         {/* 제목 */}
         <div>
-          <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="title"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             게임 제목 *
           </label>
           <input
@@ -75,7 +83,10 @@ export default function PredictionGameForm({
 
         {/* 설명 */}
         <div>
-          <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="description"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             게임 설명 *
           </label>
           <textarea
@@ -85,13 +96,18 @@ export default function PredictionGameForm({
             placeholder="게임에 대한 자세한 설명을 입력하세요..."
           />
           {errors.description && (
-            <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.description.message}
+            </p>
           )}
         </div>
 
         {/* 예측 타입 */}
         <div>
-          <label htmlFor="predictionType" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="predictionType"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             예측 타입 *
           </label>
           <select
@@ -104,13 +120,18 @@ export default function PredictionGameForm({
             <option value="numeric">숫자 예측</option>
           </select>
           {errors.predictionType && (
-            <p className="mt-1 text-sm text-red-600">{errors.predictionType.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.predictionType.message}
+            </p>
           )}
         </div>
 
         {/* 종료 시간 */}
         <div>
-          <label htmlFor="endTime" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="endTime"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             예측 종료 시간 *
           </label>
           <input
@@ -119,13 +140,18 @@ export default function PredictionGameForm({
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {errors.endTime && (
-            <p className="mt-1 text-sm text-red-600">{errors.endTime.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.endTime.message}
+            </p>
           )}
         </div>
 
         {/* 정산 시간 */}
         <div>
-          <label htmlFor="settlementTime" className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor="settlementTime"
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             결과 정산 시간 *
           </label>
           <input
@@ -134,14 +160,19 @@ export default function PredictionGameForm({
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {errors.settlementTime && (
-            <p className="mt-1 text-sm text-red-600">{errors.settlementTime.message}</p>
+            <p className="mt-1 text-sm text-red-600">
+              {errors.settlementTime.message}
+            </p>
           )}
         </div>
 
         {/* 최소/최대 참여 금액 */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="minimumStake" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="minimumStake"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               최소 참여 금액 (PmpAmount) *
             </label>
             <input
@@ -151,11 +182,16 @@ export default function PredictionGameForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.minimumStake && (
-              <p className="mt-1 text-sm text-red-600">{errors.minimumStake.message}</p>
+              <p className="mt-1 text-sm text-red-600">
+                {errors.minimumStake.message}
+              </p>
             )}
           </div>
           <div>
-            <label htmlFor="maximumStake" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="maximumStake"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               최대 참여 금액 (PmpAmount) *
             </label>
             <input
@@ -165,7 +201,9 @@ export default function PredictionGameForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.maximumStake && (
-              <p className="mt-1 text-sm text-red-600">{errors.maximumStake.message}</p>
+              <p className="mt-1 text-sm text-red-600">
+                {errors.maximumStake.message}
+              </p>
             )}
           </div>
         </div>

@@ -6,7 +6,10 @@ import {
   PmpAmount,
   ReedValue,
 } from "../value-objects/economic-types";
-import { createPmcAmount, createPmpAmount } from "../value-objects/economic-value-objects";
+import {
+  createPmcAmount,
+  createPmpAmount,
+} from "../value-objects/economic-value-objects";
 import {
   CrossNetworkEffect,
   INetworkEconomicsEngine,
@@ -512,7 +515,9 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     segments.forEach((segment) => {
       const metcalfeValue = this.calculateMetcalfeValue(
         segment.userCount as ActiveUserCount,
-        createPmpAmount(Number(segment.value) / Math.max(1, segment.connections))
+        createPmpAmount(
+          Number(segment.value) / Math.max(1, segment.connections)
+        )
       );
       segmentValues.set(segment.id, createPmpAmount(Number(metcalfeValue)));
     });
@@ -732,7 +737,9 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     const currentRevenue = basePriceNum * currentDemand;
     const newRevenue =
       recommendedPriceNum * currentDemand * (1 + expectedDemandChange);
-    const revenueImpact = createPmpAmount(Math.round(newRevenue - currentRevenue));
+    const revenueImpact = createPmpAmount(
+      Math.round(newRevenue - currentRevenue)
+    );
 
     // 가격 정당화
     const priceJustification = this.generatePriceJustification(

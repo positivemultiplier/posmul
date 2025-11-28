@@ -1,11 +1,11 @@
-import { DomainEvent } from './DomainEvent';
+import { DomainEvent } from "./DomainEvent";
 
 /**
  * PmcAmount Spent Event
- * 
+ *
  * Fired when a user spends PmcAmount (PosMul Currency) on platform activities
  * (predictions, donations, investments, etc.)
- * 
+ *
  * @author PosMul Development Team
  * @since 2025-07-06
  */
@@ -18,14 +18,14 @@ export interface PmcSpentEventPayload {
   context?: Record<string, any>;
 }
 
-export type SpendPurpose = 
-  | 'prediction_entry'
-  | 'prediction_stake_increase'
-  | 'donation_contribution'
-  | 'investment_purchase'
-  | 'money_wave_boost'
-  | 'premium_feature'
-  | 'vote_weight_increase';
+export type SpendPurpose =
+  | "prediction_entry"
+  | "prediction_stake_increase"
+  | "donation_contribution"
+  | "investment_purchase"
+  | "money_wave_boost"
+  | "premium_feature"
+  | "vote_weight_increase";
 
 export class PmcSpentEvent extends DomainEvent {
   constructor(
@@ -39,7 +39,7 @@ export class PmcSpentEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'PmcSpentEvent';
+    return "PmcSpentEvent";
   }
 
   protected getPayload(): PmcSpentEventPayload {

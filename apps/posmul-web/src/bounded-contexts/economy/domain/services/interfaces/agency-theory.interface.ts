@@ -4,7 +4,6 @@
  *
  * DDD 원칙에 따라 구현체와 인터페이스 분리
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import { PmcAmount, PmpAmount, PredictionAccuracy } from "../../value-objects";

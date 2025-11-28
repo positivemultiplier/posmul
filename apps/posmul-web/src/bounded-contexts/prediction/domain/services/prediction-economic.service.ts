@@ -7,15 +7,15 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import {
+  IDomainEventPublisher,
   PredictionGameId,
   Result,
   UserId,
   isFailure,
-  IDomainEventPublisher,
 } from "@posmul/auth-economy-sdk";
 import { failure, success } from "@posmul/auth-economy-sdk";
+
 import {
   PmcEarnedEvent,
   PmpSpentEvent,

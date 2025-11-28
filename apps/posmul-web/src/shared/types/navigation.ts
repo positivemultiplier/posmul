@@ -118,4 +118,4 @@ export const ROUTE_PATTERNS: RoutePattern[] = [
     pattern: "/forum/[activity]/[scope]/[topic]?",
     example: "/forum/debate/nation/healthcare-policy",
   },
-]; 
+];

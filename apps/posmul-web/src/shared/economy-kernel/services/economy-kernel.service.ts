@@ -8,10 +8,8 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import { Result, UserId, isFailure } from "@posmul/auth-economy-sdk";
 import { failure, success } from "@posmul/auth-economy-sdk";
-
 
 /**
  * Economy Kernel 오류 타입
@@ -183,7 +181,12 @@ export class EconomyKernel {
   ): Promise<Result<number, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
+      return failure(
+        new EconomyKernelError(
+          repositoryResult.error?.message || "Unknown error",
+          "REPOSITORY_ERROR"
+        )
+      );
     }
     const repo = repositoryResult.data;
 
@@ -194,7 +197,7 @@ export class EconomyKernel {
         new EconomyKernelError(
           `Failed to retrieve PmpAmount balance for user ${userId}`,
           "REPOSITORY_ERROR",
-          new Error(error instanceof Error ? error.message : String(error) )
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -211,7 +214,12 @@ export class EconomyKernel {
   ): Promise<Result<number, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
+      return failure(
+        new EconomyKernelError(
+          repositoryResult.error?.message || "Unknown error",
+          "REPOSITORY_ERROR"
+        )
+      );
     }
     const repo = repositoryResult.data;
 
@@ -222,7 +230,7 @@ export class EconomyKernel {
         new EconomyKernelError(
           `Failed to retrieve PmcAmount balance for user ${userId}`,
           "REPOSITORY_ERROR",
-          new Error(error instanceof Error ? error.message : String(error) )
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -239,7 +247,12 @@ export class EconomyKernel {
   ): Promise<Result<PmpAccount, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
+      return failure(
+        new EconomyKernelError(
+          repositoryResult.error?.message || "Unknown error",
+          "REPOSITORY_ERROR"
+        )
+      );
     }
     const repo = repositoryResult.data;
 
@@ -250,7 +263,7 @@ export class EconomyKernel {
         new EconomyKernelError(
           `Failed to retrieve PmpAmount account for user ${userId}`,
           "REPOSITORY_ERROR",
-          new Error(error instanceof Error ? error.message : String(error) )
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -267,7 +280,12 @@ export class EconomyKernel {
   ): Promise<Result<PmcAccount, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
+      return failure(
+        new EconomyKernelError(
+          repositoryResult.error?.message || "Unknown error",
+          "REPOSITORY_ERROR"
+        )
+      );
     }
     const repo = repositoryResult.data;
 
@@ -278,7 +296,7 @@ export class EconomyKernel {
         new EconomyKernelError(
           `Failed to retrieve PmcAmount account for user ${userId}`,
           "REPOSITORY_ERROR",
-          new Error(error instanceof Error ? error.message : String(error) )
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -306,7 +324,12 @@ export class EconomyKernel {
 
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
+      return failure(
+        new EconomyKernelError(
+          repositoryResult.error?.message || "Unknown error",
+          "REPOSITORY_ERROR"
+        )
+      );
     }
     const repo = repositoryResult.data;
 
@@ -317,7 +340,7 @@ export class EconomyKernel {
         new EconomyKernelError(
           `Failed to check PmpAmount sufficiency for user ${userId}`,
           "REPOSITORY_ERROR",
-          new Error(error instanceof Error ? error.message : String(error) )
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -345,7 +368,12 @@ export class EconomyKernel {
 
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
+      return failure(
+        new EconomyKernelError(
+          repositoryResult.error?.message || "Unknown error",
+          "REPOSITORY_ERROR"
+        )
+      );
     }
     const repo = repositoryResult.data;
 
@@ -356,7 +384,7 @@ export class EconomyKernel {
         new EconomyKernelError(
           `Failed to check PmcAmount sufficiency for user ${userId}`,
           "REPOSITORY_ERROR",
-          new Error(error instanceof Error ? error.message : String(error) )
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -372,7 +400,12 @@ export class EconomyKernel {
   > {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
+      return failure(
+        new EconomyKernelError(
+          repositoryResult.error?.message || "Unknown error",
+          "REPOSITORY_ERROR"
+        )
+      );
     }
     const repo = repositoryResult.data;
 
@@ -383,7 +416,7 @@ export class EconomyKernel {
         new EconomyKernelError(
           "Failed to retrieve system statistics",
           "REPOSITORY_ERROR",
-          new Error(error instanceof Error ? error.message : String(error) )
+          new Error(error instanceof Error ? error.message : String(error))
         )
       );
     }
@@ -400,7 +433,12 @@ export class EconomyKernel {
   ): Promise<Result<Map<UserId, number>, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
+      return failure(
+        new EconomyKernelError(
+          repositoryResult.error?.message || "Unknown error",
+          "REPOSITORY_ERROR"
+        )
+      );
     }
     const repo = repositoryResult.data;
 
@@ -430,7 +468,7 @@ export class EconomyKernel {
           : new EconomyKernelError(
               "Failed to retrieve bulk PmpAmount balances",
               "REPOSITORY_ERROR",
-              new Error(error instanceof Error ? error.message : String(error) )
+              new Error(error instanceof Error ? error.message : String(error))
             )
       );
     }
@@ -447,7 +485,12 @@ export class EconomyKernel {
   ): Promise<Result<Map<UserId, number>, EconomyKernelError>> {
     const repositoryResult = this.ensureRepository();
     if (isFailure(repositoryResult)) {
-      return failure(new EconomyKernelError(repositoryResult.error?.message || "Unknown error", "REPOSITORY_ERROR"));
+      return failure(
+        new EconomyKernelError(
+          repositoryResult.error?.message || "Unknown error",
+          "REPOSITORY_ERROR"
+        )
+      );
     }
     const repo = repositoryResult.data;
 
@@ -477,7 +520,7 @@ export class EconomyKernel {
           : new EconomyKernelError(
               "Failed to retrieve bulk PmcAmount balances",
               "REPOSITORY_ERROR",
-              new Error(error instanceof Error ? error.message : String(error) )
+              new Error(error instanceof Error ? error.message : String(error))
             )
       );
     }

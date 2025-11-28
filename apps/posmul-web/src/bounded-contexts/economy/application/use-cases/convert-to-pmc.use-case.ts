@@ -4,7 +4,6 @@
  * PmpAmount를 PmcAmount로 전환하는 핵심 비즈니스 로직
  * Agency Theory 기반 Principal-Agent 문제 해결과 CAPM 모델 적용
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
 
 import {
@@ -22,7 +21,12 @@ import {
   BehavioralEconomicsEngine,
   CAPMEngine,
 } from "../../domain/services";
-import { PmcAmount, PmpAmount, createPmcAmount, createPmpAmount } from "../../domain/value-objects";
+import {
+  PmcAmount,
+  PmpAmount,
+  createPmcAmount,
+  createPmpAmount,
+} from "../../domain/value-objects";
 
 export interface PmcAmountConversionRequest {
   readonly userId: UserId;
@@ -65,9 +69,9 @@ export class ConvertToPmcAmountUseCase {
     private readonly behavioralEngine: BehavioralEconomicsEngine
   ) {}
 
-  
-
-  async execute(request: PmcAmountConversionRequest): Promise<PmcAmountConversionResult> {
+  async execute(
+    request: PmcAmountConversionRequest
+  ): Promise<PmcAmountConversionResult> {
     try {
       // 1. 현재 계정 상태 및 PmpAmount 잔액 확인
       const balanceResult = await this.accountRepository.getAccountBalance(
@@ -113,7 +117,9 @@ export class ConvertToPmcAmountUseCase {
       );
 
       // 6. PmcAmount 수량 계산
-      const convertedPmcAmount = createPmcAmount(requestedPmpAmount * conversionRate); // 7. 거래 기록 생성
+      const convertedPmcAmount = createPmcAmount(
+        requestedPmpAmount * conversionRate
+      ); // 7. 거래 기록 생성
       const transactionData: Omit<Transaction, "transactionId"> = {
         userId: request.userId,
         type: "PmpAmount_TO_PmcAmount_CONVERT",
@@ -124,9 +130,8 @@ export class ConvertToPmcAmountUseCase {
       };
 
       // 8. 거래 실행
-      const transactionResult = await this.accountRepository.saveTransaction(
-        transactionData
-      );
+      const transactionResult =
+        await this.accountRepository.saveTransaction(transactionData);
       if (!transactionResult.success) {
         throw new Error("Failed to execute conversion transaction");
       }

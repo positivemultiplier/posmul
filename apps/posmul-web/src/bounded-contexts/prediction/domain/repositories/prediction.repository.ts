@@ -8,9 +8,7 @@
  * @since 2024-12
  * @task PD-003
  */
-
 import { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import { Prediction } from "../entities/prediction-game.aggregate";
@@ -70,9 +68,7 @@ export interface IPredictionRepository {
    * @param id 조회할 예측 ID
    * @returns 성공 시 예측 객체 또는 null, 실패 시 RepositoryError
    */
-  findById(
-    id: string
-  ): Promise<Result<Prediction | null, RepositoryError>>;
+  findById(id: string): Promise<Result<Prediction | null, RepositoryError>>;
 
   /**
    * 여러 ID로 예측 일괄 조회

@@ -4,10 +4,16 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
 import { createAuthEconomyClient, isFailure } from "@posmul/auth-economy-sdk";
 import type { User as SDKUser } from "@posmul/auth-economy-sdk";
+
+import { useEffect, useState } from "react";
+
 import { User } from "../../domain/entities/user.entity";
+
+/**
+ * 인증 상태 관리 훅
+ */
 
 // SDK User를 도메인 User 엔티티로 변환하는 유틸리티 함수
 const convertSDKUserToDomainUser = (sdkUser: SDKUser): User => {
@@ -126,6 +132,19 @@ export function useAuth(): AuthState & AuthActions {
           isAuthenticated: true,
           error: null,
         });
+
+        // 🎁 개발용 보너스 지급 (SDK를 통해 개발 환경에서만)
+        try {
+          if (authClient.economy.grantDevLoginBonus) {
+            const bonusResult = await authClient.economy.grantDevLoginBonus(result.data.user.id);
+            if (bonusResult.success && bonusResult.data.bonusGranted) {
+              console.log(`🎁 개발 보너스 지급 완료! PMP: ${bonusResult.data.pmpBalance}, PMC: ${bonusResult.data.pmcBalance}`);
+            }
+          }
+        } catch (bonusError) {
+          console.error("⚠️ 개발 보너스 지급 실패:", bonusError);
+          // 보너스 지급 실패해도 로그인은 계속 진행
+        }
       } else {
         const errorMessage = isFailure(result)
           ? typeof result.error === "string"

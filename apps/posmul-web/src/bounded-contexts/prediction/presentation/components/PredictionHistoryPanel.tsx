@@ -1,7 +1,15 @@
 "use client";
 
-import { Badge, Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../../shared/ui/components/base';
 import React from "react";
+
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../../../shared/ui/components/base";
 
 interface PredictionHistoryPanelProps {
   userId: string;
@@ -144,7 +152,9 @@ export const PredictionHistoryPanel: React.FC<PredictionHistoryPanelProps> = ({
             </div>
           </div>
           <div className="bg-purple-50 p-4 rounded-lg border border-purple-200 text-center">
-            <div className="text-sm text-purple-600 mb-1">총 획득 PmcAmount</div>
+            <div className="text-sm text-purple-600 mb-1">
+              총 획득 PmcAmount
+            </div>
             <div className="text-xl font-bold text-purple-700">
               {totalPmcEarned.toLocaleString()}
             </div>

@@ -2,7 +2,6 @@
  * 인프라 계층 에러 정의
  * SDK에 없는 에러 타입들의 로컬 구현
  */
-
 import { NetworkError } from "@posmul/auth-economy-sdk";
 
 /**
@@ -14,16 +13,15 @@ export class DomainError extends NetworkError {
   public readonly service: string;
   public readonly originalError?: unknown;
 
-  constructor(
-    message: string,
-    service: string,
-    originalError?: unknown
-  ) {
-    super(message, { 
+  constructor(message: string, service: string, originalError?: unknown) {
+    super(message, {
       service,
-      originalError: originalError instanceof Error ? originalError.message : String(originalError)
+      originalError:
+        originalError instanceof Error
+          ? originalError.message
+          : String(originalError),
     });
     this.service = service;
     this.originalError = originalError;
   }
-} 
+}

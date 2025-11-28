@@ -4,8 +4,8 @@
  * PmpAmount와 PmcAmount 잔액 관리를 위한 리포지토리 인터페이스
  * Clean Architecture 원칙에 따라 도메인 계층에서 인터페이스만 정의
  */
+import { Result, UserId } from "@posmul/auth-economy-sdk";
 
-import { UserId, Result } from "@posmul/auth-economy-sdk";
 import { PmcAmount, PmpAmount } from "../value-objects";
 
 /**

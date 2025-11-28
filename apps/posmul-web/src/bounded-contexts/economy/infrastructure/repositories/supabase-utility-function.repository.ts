@@ -1,11 +1,10 @@
 /**
  * Supabase Utility Function Repository Implementation
  */
-
 import {
-  createDefaultMCPAdapter,
-  Result,
   CompatibleBaseError,
+  Result,
+  createDefaultMCPAdapter,
 } from "../../../../shared/legacy-compatibility";
 
 export class SupabaseUtilityFunctionRepository {
@@ -63,7 +62,7 @@ export class SupabaseUtilityFunctionRepository {
     endDate?: Date
   ): Promise<Result<any[], CompatibleBaseError>> {
     try {
-      let whereClauses = [];
+      const whereClauses = [];
 
       if (startDate) {
         whereClauses.push(`timestamp >= '${startDate.toISOString()}'`);

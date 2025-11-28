@@ -9,18 +9,17 @@
  * - Constitutional Economics 프레임워크
  * - 직접민주주의 시뮬레이션
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import {
   BudgetTransparencyScore,
   CitizenParticipationRate,
+  DemocraticLegitimacyScore,
+  IronTriangleScore,
   createBudgetTransparencyScore,
   createCitizenParticipationRate,
   createDemocraticLegitimacyScore,
   createIronTriangleScore,
-  DemocraticLegitimacyScore,
-  IronTriangleScore,
 } from "../value-objects";
 import {
   ICheckAndBalance,
@@ -907,7 +906,15 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
       .sort((a, b) => a - b);
 
     const n = utilities.length;
+    if (n <= 1) return 0; // 유권자가 1명 이하면 불평등 없음
+
     const mean = utilities.reduce((sum, u) => sum + u, 0) / n;
+
+    // 평균이 0이거나 음수면 절대값의 평균을 사용
+    const absMean =
+      Math.abs(mean) || utilities.reduce((sum, u) => sum + Math.abs(u), 0) / n;
+
+    if (absMean === 0) return 0; // 모든 값이 0이면 불평등 없음
 
     let giniSum = 0;
     for (let i = 0; i < n; i++) {
@@ -916,7 +923,9 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
       }
     }
 
-    return giniSum / (2 * n * n * mean);
+    // Gini 계수는 0과 1 사이의 값이어야 함
+    const giniCoefficient = giniSum / (2 * n * n * absMean);
+    return Math.min(1, Math.max(0, giniCoefficient));
   }
 
   private calculateSustainabilityScore(

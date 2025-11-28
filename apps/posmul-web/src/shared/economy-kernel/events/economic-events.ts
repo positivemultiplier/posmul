@@ -7,7 +7,6 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
 import { DomainEvent } from "@posmul/auth-economy-sdk";
 

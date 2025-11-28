@@ -1,12 +1,11 @@
 /**
  * Donation Repository Interface
- * 기�? 리포지?�리 ?�터?�이??
+ * 기부 리포지토리 인터페이스
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
-
 import { PaginatedResult } from "@posmul/auth-economy-sdk";
-import { Result, CompatibleBaseError, ExtendedPaginationParams } from "../../../../shared/legacy-compatibility";
+import { Result } from "@posmul/auth-economy-sdk";
+
 import { Donation } from "../entities/donation.entity";
 import {
   DonationCategory,
@@ -34,56 +33,63 @@ export interface DonationSearchCriteria {
 }
 
 export interface IDonationRepository {
-  // 기본 CRUD ?�업
-  save(donation: Donation): Promise<Result<void, CompatibleBaseError>>;
-  findById(id: DonationId): Promise<Result<Donation | null, CompatibleBaseError>>;
-  update(donation: Donation): Promise<Result<void, CompatibleBaseError>>;
-  delete(id: DonationId): Promise<Result<void, CompatibleBaseError>>;
+  // 기본 CRUD 작업
+  save(donation: Donation): Promise<Result<void>>;
+  findById(id: DonationId): Promise<Result<Donation | null>>;
+  update(donation: Donation): Promise<Result<void>>;
+  delete(id: DonationId): Promise<Result<void>>;
 
-  // 검??�??�터�?
+  // 검색 필터링
   findByDonorId(
     donorId: UserId,
-    pagination?: ExtendedPaginationParams
+    page?: number,
+    limit?: number
   ): Promise<Result<PaginatedResult<Donation>>>;
   findByStatus(
     status: DonationStatus,
-    pagination?: ExtendedPaginationParams
+    page?: number,
+    limit?: number
   ): Promise<Result<PaginatedResult<Donation>>>;
   findByType(
     type: DonationType,
-    pagination?: ExtendedPaginationParams
+    page?: number,
+    limit?: number
   ): Promise<Result<PaginatedResult<Donation>>>;
   findByInstituteId(
     instituteId: InstituteId,
-    pagination?: ExtendedPaginationParams
+    page?: number,
+    limit?: number
   ): Promise<Result<PaginatedResult<Donation>>>;
   findByOpinionLeaderId(
     leaderId: OpinionLeaderId,
-    pagination?: ExtendedPaginationParams
+    page?: number,
+    limit?: number
   ): Promise<Result<PaginatedResult<Donation>>>;
 
-  // 복합 검??
+  // 복합 검색
   findByCriteria(
     criteria: DonationSearchCriteria,
-    pagination?: ExtendedPaginationParams
+    page?: number,
+    limit?: number
   ): Promise<Result<PaginatedResult<Donation>>>;
 
-  // ?�계 �?집계
-  countByStatus(status: DonationStatus): Promise<Result<number, CompatibleBaseError>>;
-  countByDonor(donorId: UserId): Promise<Result<number, CompatibleBaseError>>;
-  getTotalAmountByDonor(donorId: UserId): Promise<Result<number, CompatibleBaseError>>;
-  getTotalAmountByInstitute(instituteId: InstituteId): Promise<Result<number, CompatibleBaseError>>;
-  getTotalAmountByOpinionLeader(
-    leaderId: OpinionLeaderId
-  ): Promise<Result<number, CompatibleBaseError>>;
+  // 통계 및 집계
+  countByStatus(status: DonationStatus): Promise<Result<number>>;
+  countByDonor(donorId: UserId): Promise<Result<number>>;
+  getTotalAmountByDonor(donorId: UserId): Promise<Result<number>>;
+  getTotalAmountByInstitute(instituteId: InstituteId): Promise<Result<number>>;
+  getTotalAmountByOpinionLeader(leaderId: OpinionLeaderId): Promise<Result<number>>;
 
-  // ?�기 기�? 관??
+  // 정기 기부 관리
   findRecurringDonations(
-    pagination?: ExtendedPaginationParams
+    page?: number,
+    limit?: number
   ): Promise<Result<PaginatedResult<Donation>>>;
-  findDueRecurringDonations(dueDate: Date): Promise<Result<Donation[], CompatibleBaseError>>;
+  findDueRecurringDonations(
+    dueDate: Date
+  ): Promise<Result<Donation[]>>;
 
-  // ?�정 기간 ?�계
+  // 특정 기간 통계
   getDonationStatsInPeriod(
     startDate: Date,
     endDate: Date,
@@ -98,7 +104,7 @@ export interface IDonationRepository {
     }>
   >;
 
-  // ?�별/?�별 ?�계
+  // 월별/연별 통계
   getMonthlyStats(
     year: number,
     donorId?: UserId
@@ -122,7 +128,7 @@ export interface IDonationRepository {
     >
   >;
 
-  // 기�?????��
+  // 기부 랭킹
   getTopDonors(
     period: "monthly" | "yearly" | "all",
     limit: number
@@ -137,7 +143,7 @@ export interface IDonationRepository {
     >
   >;
 
-  // ?�기 기�? ?�??
+  // 인기 기부처
   getPopularInstitutes(
     period: "monthly" | "yearly" | "all",
     limit: number
@@ -166,7 +172,7 @@ export interface IDonationRepository {
     >
   >;
 
-  // ?�?�보?�용 ?�약 ?�이??
+  // 대시보드용 요약 데이터
   getDashboardSummary(donorId: UserId): Promise<
     Result<{
       totalDonated: number;

@@ -1,18 +1,24 @@
-/**
- * Supabase Auth 서비스 구현
- */
-
-import type { Result, AuthError } from "@posmul/auth-economy-sdk";
-import { SupabaseClient, createClient } from "@supabase/supabase-js";
-import { IExternalAuthService } from "../../application/use-cases/sign-up.use-case";
-import { SignUpData } from "../../domain/services/auth-domain.service";
 import {
-  DomainError,
+  isFailure,
+  type AuthError,
+  type Result,
+} from "@posmul/auth-economy-sdk";
+import { SupabaseAuthService as SdkAuthService } from "@posmul/auth-economy-sdk/auth"; // SDK Service Import
+import {
+  SupabaseClient,
+  createClient,
+} from "@supabase/supabase-js";
+
+import { IExternalAuthService } from "../../application/use-cases/sign-up.use-case";
+import {
   AuthenticationError,
+  DomainError,
 } from "../../domain/helpers/result-helpers";
+import { SignUpData } from "../../domain/services/auth-domain.service";
 
 export class SupabaseAuthService implements IExternalAuthService {
   private supabase: SupabaseClient;
+  private sdkAuthService: SdkAuthService; // SDK Service Instance
 
   constructor() {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -23,6 +29,8 @@ export class SupabaseAuthService implements IExternalAuthService {
     }
 
     this.supabase = createClient(supabaseUrl, supabaseKey);
+    // Initialize SDK Service with the Supabase client
+    this.sdkAuthService = new SdkAuthService(this.supabase);
   }
 
   async signUp(data: SignUpData): Promise<
@@ -36,36 +44,26 @@ export class SupabaseAuthService implements IExternalAuthService {
     >
   > {
     try {
-      const { data: authData, error } = await this.supabase.auth.signUp({
-        email: data.email,
-        password: data.password,
-        options: {
-          data: {
-            display_name: data.displayName || null,
-          },
-        },
-      });
+      // Use SDK for sign up
+      const result = await this.sdkAuthService.signUp(
+        data.email as any, // Type assertion needed as SDK uses branded types
+        data.password,
+        data.displayName
+      );
 
-      if (error) {
+      if (isFailure(result)) {
         return {
           success: false,
-          error: new DomainError(error.message, "SIGNUP_ERROR"),
-        };
-      }
-
-      if (!authData.user || !authData.session) {
-        return {
-          success: false,
-          error: new DomainError("회원가입 실패", "SIGNUP_ERROR"),
+          error: new DomainError(result.error.message, "SIGNUP_ERROR"),
         };
       }
 
       return {
         success: true,
         data: {
-          id: authData.user.id,
-          accessToken: authData.session.access_token,
-          refreshToken: authData.session.refresh_token,
+          id: result.data.user.id,
+          accessToken: result.data.session.access_token,
+          refreshToken: result.data.session.refresh_token,
         },
       };
     } catch (error) {
@@ -92,32 +90,25 @@ export class SupabaseAuthService implements IExternalAuthService {
     >
   > {
     try {
-      const { data: authData, error } =
-        await this.supabase.auth.signInWithPassword({
-          email: credentials.email,
-          password: credentials.password,
-        });
+      // Use SDK for sign in
+      const result = await this.sdkAuthService.signIn(
+        credentials.email as any,
+        credentials.password
+      );
 
-      if (error) {
+      if (isFailure(result)) {
         return {
           success: false,
-          error: new AuthenticationError(error.message),
-        };
-      }
-
-      if (!authData.user || !authData.session) {
-        return {
-          success: false,
-          error: new AuthenticationError("로그인에 실패했습니다."),
+          error: new AuthenticationError(result.error.message),
         };
       }
 
       return {
         success: true,
         data: {
-          id: authData.user.id,
-          accessToken: authData.session.access_token,
-          refreshToken: authData.session.refresh_token,
+          id: result.data.user.id,
+          accessToken: result.data.session.access_token,
+          refreshToken: result.data.session.refresh_token,
         },
       };
     } catch (error) {
@@ -134,12 +125,13 @@ export class SupabaseAuthService implements IExternalAuthService {
 
   async signOut(): Promise<Result<void, Error>> {
     try {
-      const { error } = await this.supabase.auth.signOut();
+      // Use SDK for sign out
+      const result = await this.sdkAuthService.signOut();
 
-      if (error) {
+      if (isFailure(result)) {
         return {
           success: false,
-          error: new DomainError("SIGNOUT_ERROR", error.message),
+          error: new DomainError("SIGNOUT_ERROR", result.error.message),
         };
       }
 
@@ -168,11 +160,12 @@ export class SupabaseAuthService implements IExternalAuthService {
     >
   > {
     try {
-      const { data: authData, error } = await this.supabase.auth.refreshSession(
-        {
+      // Use SDK for refresh session
+      const { data: authData, error } = await this.sdkAuthService
+        .getSupabaseClient()
+        .auth.refreshSession({
           refresh_token: refreshToken,
-        }
-      );
+        });
 
       if (error) {
         return {
@@ -214,8 +207,7 @@ export class SupabaseAuthService implements IExternalAuthService {
 
   async deleteUser(userId: string): Promise<Result<void, Error>> {
     try {
-      // Supabase에서는 클라이언트에서 직접 사용자 삭제가 제한됩니다.
-      // 실제 프로덕션에서는 서버 측 API를 통해 처리해야 합니다.
+      // SDK doesn't have deleteUser, keep local stub
       console.warn(`사용자 삭제 요청: ${userId} - 서버 측에서 처리 필요`);
 
       return {
@@ -230,6 +222,32 @@ export class SupabaseAuthService implements IExternalAuthService {
             ? error.message
             : "사용자 삭제 중 오류가 발생했습니다.",
           "DELETE_USER_ERROR"
+        ),
+      };
+    }
+  }
+
+  async signInWithOAuth(
+    provider: "google" | "kakao" | "github"
+  ): Promise<Result<void, Error>> {
+    try {
+      const result = await this.sdkAuthService.signInWithOAuth(provider);
+
+      if (isFailure(result)) {
+        return {
+          success: false,
+          error: new AuthenticationError(result.error.message),
+        };
+      }
+
+      return { success: true, data: undefined };
+    } catch (error) {
+      return {
+        success: false,
+        error: new AuthenticationError(
+          error instanceof Error
+            ? error.message
+            : "소셜 로그인 중 오류가 발생했습니다."
         ),
       };
     }

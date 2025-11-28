@@ -4,12 +4,11 @@
  * 예측 게임 생성 페이지
  * Server Actions를 활용한 폼 처리 예시
  */
-
 import { PredictionGameForm } from "../../../shared/ui";
 
 export default function CreatePredictionPage() {
   const handleSubmit = async (data: any) => {
-    console.log('Form submitted:', data);
+    console.log("Form submitted:", data);
     // TODO: 실제 게임 생성 로직 구현
   };
 

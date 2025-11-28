@@ -1,4 +1,4 @@
-# PosMul: AI-Era Direct Democracy Platform
+﻿# PosMul: AI-Era Direct Democracy Platform
 
 **PosMul**은 예측 게임과 지역 경제 연동을 통해 시민이 직접 참여하는 새로운 민주주의 경험을 제공하는 AI 시대 직접민주주의 플랫폼입니다.
 

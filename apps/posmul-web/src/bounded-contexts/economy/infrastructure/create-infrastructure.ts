@@ -4,7 +4,6 @@
  * 경제 도메인 인프라스트럭처 구성요소들을 생성하고 초기화하는 팩토리
  * Dependency Injection Container 역할
  */
-
 import {
   IMoneyWaveHistoryRepository,
   IPmpAmountPmcAmountAccountRepository,

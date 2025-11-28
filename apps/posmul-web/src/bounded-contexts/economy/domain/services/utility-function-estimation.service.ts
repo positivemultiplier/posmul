@@ -12,10 +12,9 @@
  * - Rawls의 Veil of Ignorance와 Difference Principle
  * - Sen's Capability Approach
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
+import { DomainError, Result } from "@posmul/auth-economy-sdk";
 
-import { Result, DomainError } from "@posmul/auth-economy-sdk";
 import {
   PmcAmount,
   PmpAmount,

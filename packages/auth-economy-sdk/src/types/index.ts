@@ -80,7 +80,25 @@ export interface PaginatedResult<T> {
 }
 
 // === 도메인 이벤트 ===
+/**
+ * Domain Events for Cross-Context Communication
+ */
 export * from "./domain-events";
+
+/**
+ * Aggregate Root DDD Pattern
+ */
+export * from "./aggregate-root";
+
+/**
+ * Supabase Database Types (Auto-generated from MCP)
+ */
+export * from "./database.types";
+
+/**
+ * Branded Domain Types for Type Safety
+ */
+export * from "./branded.types";
 
 // === 환경 설정 타입 ===
 export interface SdkConfig {

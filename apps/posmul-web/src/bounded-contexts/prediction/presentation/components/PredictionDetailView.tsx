@@ -10,8 +10,26 @@
 
 "use client";
 
-import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from '../../../../shared/ui/components/base';
 import { useEffect, useState } from "react";
+
+import {
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "../../../../shared/ui/components/base";
+
+/**
+ * Advanced Prediction Detail View Component
+ *
+ * Polymarket 스타일의 고급 예측 상세페이지
+ * Binary, WDL, Ranking 예측 타입을 모두 지원
+ *
+ * @author PosMul Development Team
+ * @since 2024-12
+ */
 
 // Types
 interface PredictionOption {
@@ -322,7 +340,11 @@ export function PredictionDetailView({
                   </div>
 
                   <Button
-                    className="w-full"
+                    className={`w-full transition-all duration-200 ${
+                      stakeAmount >= game.minimumStake && stakeAmount <= userBalance.pmp
+                        ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30"
+                        : "bg-slate-600 text-slate-400 cursor-not-allowed"
+                    }`}
                     size="lg"
                     onClick={() => {
                       if (onParticipate) {
@@ -339,7 +361,9 @@ export function PredictionDetailView({
                       stakeAmount > userBalance.pmp
                     }
                   >
-                    {stakeAmount.toLocaleString()} PmpAmount로 예측 참여
+                    {stakeAmount >= game.minimumStake && stakeAmount <= userBalance.pmp 
+                      ? `🎯 ${stakeAmount.toLocaleString()} PMP로 예측 참여`
+                      : `예측 참여 불가 (잔액 부족 또는 최소 금액 미달)`}
                   </Button>
                 </div>
               )}

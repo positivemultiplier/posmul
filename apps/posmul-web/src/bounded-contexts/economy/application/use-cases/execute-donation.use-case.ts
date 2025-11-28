@@ -5,7 +5,6 @@
  * Behavioral Economics(Kahneman-Tversky Prospect Theory)와
  * Public Choice Theory(Buchanan) 적용
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
 
 import {
@@ -23,7 +22,12 @@ import {
   PublicChoiceEngine,
   UtilityFunctionEstimationService,
 } from "../../domain/services";
-import { PmcAmount, PmpAmount, createPmcAmount, createPmpAmount } from "../../domain/value-objects";
+import {
+  PmcAmount,
+  PmpAmount,
+  createPmcAmount,
+  createPmpAmount,
+} from "../../domain/value-objects";
 
 export interface DonationRequest {
   readonly userId: UserId;
@@ -93,8 +97,6 @@ export class ExecuteDonationUseCase {
     private readonly utilityService: UtilityFunctionEstimationService
   ) {}
 
-  
-
   async execute(request: DonationRequest): Promise<DonationResult> {
     try {
       // 1. 현재 계정 상태 및 잔액 확인
@@ -155,9 +157,8 @@ export class ExecuteDonationUseCase {
         timestamp: request.timestamp,
       };
 
-      const transactionResult = await this.accountRepository.saveTransaction(
-        transactionData
-      );
+      const transactionResult =
+        await this.accountRepository.saveTransaction(transactionData);
       if (!transactionResult.success) {
         throw new Error("Failed to execute donation transaction");
       }
@@ -212,7 +213,9 @@ export class ExecuteDonationUseCase {
         success: false,
         donationId: "",
         actualAmount:
-          request.currencyType === "PmpAmount" ? createPmpAmount(0) : createPmcAmount(0),
+          request.currencyType === "PmpAmount"
+            ? createPmpAmount(0)
+            : createPmcAmount(0),
         socialImpactScore: 0,
         utilityGain: 0,
         prospectValue: 0,
@@ -369,8 +372,8 @@ export class ExecuteDonationUseCase {
       recipient.verificationStatus === "verified"
         ? 1.0
         : recipient.verificationStatus === "pending"
-        ? 0.8
-        : 0.6;
+          ? 0.8
+          : 0.6;
 
     // 최종 점수 (0-10 스케일)
     return Math.min(baseScore * amountMultiplier * trustMultiplier, 10);

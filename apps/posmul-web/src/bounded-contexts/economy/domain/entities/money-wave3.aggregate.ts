@@ -10,12 +10,17 @@
  * - 성과 기반 PmcAmount 보상 시스템
  * - 벤처 실패율을 고려한 리스크 관리
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
-
 import { Result } from "@posmul/auth-economy-sdk";
-import { DomainError } from "@posmul/auth-economy-sdk"; // SDK로 마이그레이션 완료
-import { MoneyWaveId, PmcAmount, createPmcAmount, unwrapPmcAmount } from "../value-objects";
+import { DomainError } from "@posmul/auth-economy-sdk";
+
+// SDK로 마이그레이션 완료
+import {
+  MoneyWaveId,
+  PmcAmount,
+  createPmcAmount,
+  unwrapPmcAmount,
+} from "../value-objects";
 
 export interface EntrepreneurProfile {
   readonly userId: UserId;
@@ -172,7 +177,9 @@ export class MoneyWave3Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError("error instanceof Error ? error.message : Unknown error"),
+        error: new DomainError(
+          "error instanceof Error ? error.message : Unknown error"
+        ),
       };
     }
   }
@@ -231,7 +238,9 @@ export class MoneyWave3Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError("error instanceof Error ? error.message : Unknown error"),
+        error: new DomainError(
+          "error instanceof Error ? error.message : Unknown error"
+        ),
       };
     }
   }
@@ -312,7 +321,9 @@ export class MoneyWave3Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError("error instanceof Error ? error.message : Unknown error"),
+        error: new DomainError(
+          "error instanceof Error ? error.message : Unknown error"
+        ),
       };
     }
   }
@@ -340,7 +351,7 @@ export class MoneyWave3Aggregate {
       if (!diversificationResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
@@ -375,7 +386,9 @@ export class MoneyWave3Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError("error instanceof Error ? error.message : Unknown error"),
+        error: new DomainError(
+          "error instanceof Error ? error.message : Unknown error"
+        ),
       };
     }
   }
@@ -439,7 +452,9 @@ export class MoneyWave3Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError("error instanceof Error ? error.message : Unknown error"),
+        error: new DomainError(
+          "error instanceof Error ? error.message : Unknown error"
+        ),
       };
     }
   }
@@ -508,7 +523,9 @@ export class MoneyWave3Aggregate {
       // 리스크-수익 기반 배분
       const riskWeight = (1 - proposal.expectedROI) / totalRisk;
       const allocationRatio = Math.min(0.25, riskWeight); // 최대 25% 제한 (다양화)
-      const allocatedAmount = createPmcAmount(totalInvestment * allocationRatio);
+      const allocatedAmount = createPmcAmount(
+        totalInvestment * allocationRatio
+      );
 
       allocations.push({
         proposalId: proposal.proposalId,

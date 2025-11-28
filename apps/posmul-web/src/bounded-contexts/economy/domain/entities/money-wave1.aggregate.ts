@@ -10,8 +10,8 @@
  * - 일일 발행량은 연간 순이익 기대치의 1/365를 초과할 수 없음
  * - Agency Cost 최소화 원칙 준수
  */
+import { DomainError, Result } from "@posmul/auth-economy-sdk";
 
-import { Result, DomainError } from "@posmul/auth-economy-sdk";
 import {
   MoneyWaveId,
   PmcAmount,
@@ -74,7 +74,7 @@ export class MoneyWave1Aggregate {
       if (initialPolicy.emissionRate <= 0 || initialPolicy.emissionRate > 1) {
         return {
           success: false,
-          error: new DomainError("INVALID_EMISSION_RATE,"),
+          error: new DomainError("INVALID_EMISSION_RATE"),
         };
       }
 
@@ -162,7 +162,9 @@ export class MoneyWave1Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError("error instanceof Error ? error.message : Unknown error,"),
+        error: new DomainError(
+          "error instanceof Error ? error.message : Unknown error,"
+        ),
       };
     }
   }
@@ -210,7 +212,9 @@ export class MoneyWave1Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError("error instanceof Error ? error.message : Unknown error,"),
+        error: new DomainError(
+          "error instanceof Error ? error.message : Unknown error,"
+        ),
       };
     }
   }
@@ -302,7 +306,9 @@ export class MoneyWave1Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError("error instanceof Error ? error.message : Unknown error,"),
+        error: new DomainError(
+          "error instanceof Error ? error.message : Unknown error,"
+        ),
       };
     }
   }
@@ -334,7 +340,9 @@ export class MoneyWave1Aggregate {
     } catch (error) {
       return {
         success: false,
-        error: new DomainError("error instanceof Error ? error.message : Unknown error,"),
+        error: new DomainError(
+          "error instanceof Error ? error.message : Unknown error,"
+        ),
       };
     }
   }

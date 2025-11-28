@@ -9,13 +9,13 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import {
   PredictionGameId,
   Result,
   UseCaseError,
   isFailure,
 } from "@posmul/auth-economy-sdk";
+
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**
@@ -106,7 +106,7 @@ export class GetPredictionGameByIdUseCase {
 
       // 3. 기본 응답 구성
       let response: GetPredictionGameByIdResponse = {
-        id: game.id,
+        id: game.getId(),
         title: game.title,
         description: game.description,
         creatorId: game.creatorId,

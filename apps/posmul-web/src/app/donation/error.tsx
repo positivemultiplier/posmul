@@ -1,9 +1,18 @@
 "use client";
 
-import { AuthError, BusinessLogicError, EconomyError, NetworkError, ValidationError } from "@posmul/auth-economy-sdk";
-import { BaseErrorUI } from "../../shared/ui/components/feedback";
-import { useRouter } from "next/navigation";
+import {
+  AuthError,
+  BusinessLogicError,
+  EconomyError,
+  NetworkError,
+  ValidationError,
+} from "@posmul/auth-economy-sdk";
+
 import { useEffect } from "react";
+
+import { useRouter } from "next/navigation";
+
+import { BaseErrorUI } from "../../shared/ui/components/feedback";
 
 interface DonationErrorProps {
   error: Error & { digest?: string };
@@ -31,7 +40,7 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
       return new EconomyError(
         "PmcAmount 포인트가 부족합니다. 예측 게임이나 투자로 PmcAmount를 획득하세요.",
         {
-          code: 'INSUFFICIENT_POINTS',
+          code: "INSUFFICIENT_POINTS",
           currentPoints: 0, // 실제 값은 서버에서 받아야 함
           requiredPoints: 100, // 실제 값은 서버에서 받아야 함
         }
@@ -42,9 +51,7 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
       message.includes("unauthorized") ||
       message.includes("authentication")
     ) {
-      return new AuthError(
-        "기부 기능을 이용하려면 로그인이 필요합니다."
-      );
+      return new AuthError("기부 기능을 이용하려면 로그인이 필요합니다.");
     }
 
     if (
@@ -135,7 +142,8 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
         showDetails={process.env.NODE_ENV === "development"}
         className="max-w-lg"
         customActions={[
-          ...(enhancedError instanceof EconomyError && enhancedError.details?.code === 'INSUFFICIENT_POINTS'
+          ...(enhancedError instanceof EconomyError &&
+          enhancedError.details?.code === "INSUFFICIENT_POINTS"
             ? [
                 {
                   label: "PmcAmount 획득하기",

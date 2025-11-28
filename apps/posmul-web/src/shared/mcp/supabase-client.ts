@@ -4,18 +4,18 @@
  * PosMul Platform Supabase 통합을 위한 MCP 클라이언트
  * MoneyWave 시스템과 PmpAmount/PmcAmount 경제 연동 지원
  */
+import {
+  SupabaseMCPResponse,
+  isFailure,
+  isFailureSafe,
+  toResult,
+} from "@posmul/auth-economy-sdk";
 
 import {
   SupabaseMCPError,
   handleMCPError,
   retryMCPOperation,
 } from "./mcp-errors";
-import {
-  isFailure,
-  toResult,
-  isFailureSafe,
-  SupabaseMCPResponse,
-} from "@posmul/auth-economy-sdk";
 
 // MCP 함수들의 타입 정의
 declare global {
@@ -96,7 +96,7 @@ export class SupabaseMCPClient {
     minParticipants?: number;
     hasMoneyWave?: boolean;
   }): Promise<any[]> {
-    let conditions = [];
+    const conditions = [];
 
     if (filters?.status) {
       conditions.push(`pg.status = '${filters.status}'`);

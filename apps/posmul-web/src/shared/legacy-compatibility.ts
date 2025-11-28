@@ -4,35 +4,32 @@
  * Phase 1 마이그레이션 중 타입 호환성 문제 해결을 위한 확장된 호환성 계층
  * 모든 마이그레이션 완료 후 이 파일은 제거됩니다.
  */
-
 // Auth-Economy SDK에서 타입들 import - 마이그레이션 완료
 import type {
-  Result as SdkResult,
-  PaginationParams as SdkPaginationParams,
   PaginatedResult as SdkPaginatedResult,
+  PaginationParams as SdkPaginationParams,
+  Result as SdkResult,
 } from "@posmul/auth-economy-sdk";
-
 // Auth-Economy SDK에서 타입들 import
 import type {
-  UserId,
-  User,
   EconomicBalance,
-  PmpAmount,
-  PmcAmount,
-  TransactionId,
   Email,
+  PmcAmount,
+  PmpAmount,
+  TransactionId,
+  User,
+  UserId,
   Username,
 } from "@posmul/auth-economy-sdk";
-
 // SDK의 MCP 유틸리티 import (shared-auth 대신 SDK 사용)
 import {
-  createMCPAdapter,
   MCPError,
+  buildParameterizedQuery,
+  createMCPAdapter,
+  formatMCPQuery,
   handleMCPError,
   retryMCPOperation,
-  formatMCPQuery,
   validateMCPQuery,
-  buildParameterizedQuery,
 } from "@posmul/auth-economy-sdk/utils";
 
 // === 타입 호환성 계층 ===

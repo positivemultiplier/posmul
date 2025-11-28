@@ -3,7 +3,6 @@
  */
 
 import {
-  createClient,
   SupabaseClient,
   User as SupabaseUser,
 } from "@supabase/supabase-js";
@@ -18,22 +17,7 @@ import {
 import { Result } from "../../types";
 
 export class SupabaseAuthService implements AuthService {
-  private supabase: SupabaseClient;
-
-  constructor(url: string, anonKey: string) {
-    this.supabase = createClient(url, anonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-        storage:
-          typeof globalThis !== "undefined" &&
-          typeof globalThis.localStorage !== "undefined"
-            ? globalThis.localStorage
-            : undefined,
-      },
-    });
-  }
+  constructor(private supabase: SupabaseClient) { }
 
   // 🔐 회원가입 + 경제 데이터 초기화
   async signUp(
@@ -316,6 +300,36 @@ export class SupabaseAuthService implements AuthService {
           error instanceof Error
             ? error.message
             : "사용자 ID 조회 중 오류가 발생했습니다."
+        ),
+      };
+    }
+  }
+
+  // 🔐 소셜 로그인
+  async signInWithOAuth(
+    provider: "google" | "kakao" | "github",
+    redirectTo?: string
+  ): Promise<Result<void, AuthError>> {
+    try {
+      const { error } = await this.supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo,
+        },
+      });
+
+      if (error) {
+        return { success: false, error: this.mapAuthError(error) };
+      }
+
+      return { success: true, data: undefined };
+    } catch (error) {
+      return {
+        success: false,
+        error: new AuthError(
+          error instanceof Error
+            ? error.message
+            : "소셜 로그인 중 오류가 발생했습니다."
         ),
       };
     }

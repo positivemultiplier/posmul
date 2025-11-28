@@ -1,4 +1,4 @@
-# ⚙️ Configuration Reference
+﻿# ⚙️ Configuration Reference
 
 > 모든 설정 옵션과 환경 변수 완전 가이드
 

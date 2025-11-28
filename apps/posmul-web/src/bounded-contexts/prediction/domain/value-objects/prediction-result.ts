@@ -7,12 +7,10 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import { AccuracyScore } from "@posmul/auth-economy-sdk";
-import { PmcAmount, createPmcAmount } from "@posmul/auth-economy-sdk/economy";
 import { Result } from "@posmul/auth-economy-sdk";
 import { ValidationError } from "@posmul/auth-economy-sdk";
-
+import { PmcAmount, createPmcAmount } from "@posmul/auth-economy-sdk/economy";
 
 /**
  * 예측 결과 열거형

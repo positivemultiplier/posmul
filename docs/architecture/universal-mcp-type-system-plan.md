@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Universal MCP Type System Plan
  * PosMul 프로젝트의 통합 MCP 타입 시스템 계획
  * 

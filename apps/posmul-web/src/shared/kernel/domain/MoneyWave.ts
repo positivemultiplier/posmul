@@ -1,15 +1,17 @@
 /**
  * Money Wave Domain Entity (Shared Kernel)
- * 
+ *
  * Core money wave entity that affects economic context across all domains.
  * Part of the Shared Kernel for cross-domain economic integration.
- * 
+ *
  * @author PosMul Development Team
  * @since 2025-07-06
  */
-
-import { DomainEvent } from '../events/DomainEvent';
-import { MoneyWaveCreatedEvent, MoneyWaveCategory } from '../events/MoneyWaveCreatedEvent';
+import { DomainEvent } from "../events/DomainEvent";
+import {
+  MoneyWaveCategory,
+  MoneyWaveCreatedEvent,
+} from "../events/MoneyWaveCreatedEvent";
 
 export interface MoneyWaveProps {
   id: string;
@@ -27,12 +29,12 @@ export interface MoneyWaveProps {
   createdAt: Date;
 }
 
-export type MoneyWaveStatus = 
-  | 'pending'    // Created but not yet active
-  | 'active'     // Currently running
-  | 'completed'  // Target reached
-  | 'expired'    // Time limit reached
-  | 'cancelled'; // Manually cancelled
+export type MoneyWaveStatus =
+  | "pending" // Created but not yet active
+  | "active" // Currently running
+  | "completed" // Target reached
+  | "expired" // Time limit reached
+  | "cancelled"; // Manually cancelled
 
 export class MoneyWave {
   private domainEvents: DomainEvent[] = [];
@@ -40,29 +42,55 @@ export class MoneyWave {
   constructor(private props: MoneyWaveProps) {}
 
   // Getters
-  get id(): string { return this.props.id; }
-  get creatorId(): string { return this.props.creatorId; }
-  get title(): string { return this.props.title; }
-  get description(): string { return this.props.description; }
-  get targetAmount(): number { return this.props.targetAmount; }
-  get currentAmount(): number { return this.props.currentAmount; }
-  get category(): MoneyWaveCategory { return this.props.category; }
-  get multiplier(): number { return this.props.multiplier; }
-  get startTime(): Date { return this.props.startTime; }
-  get endTime(): Date { return this.props.endTime; }
-  get status(): MoneyWaveStatus { return this.props.status; }
-  get participantCount(): number { return this.props.participantCount; }
-  get createdAt(): Date { return this.props.createdAt; }
+  get id(): string {
+    return this.props.id;
+  }
+  get creatorId(): string {
+    return this.props.creatorId;
+  }
+  get title(): string {
+    return this.props.title;
+  }
+  get description(): string {
+    return this.props.description;
+  }
+  get targetAmount(): number {
+    return this.props.targetAmount;
+  }
+  get currentAmount(): number {
+    return this.props.currentAmount;
+  }
+  get category(): MoneyWaveCategory {
+    return this.props.category;
+  }
+  get multiplier(): number {
+    return this.props.multiplier;
+  }
+  get startTime(): Date {
+    return this.props.startTime;
+  }
+  get endTime(): Date {
+    return this.props.endTime;
+  }
+  get status(): MoneyWaveStatus {
+    return this.props.status;
+  }
+  get participantCount(): number {
+    return this.props.participantCount;
+  }
+  get createdAt(): Date {
+    return this.props.createdAt;
+  }
 
   /**
    * Activate the money wave (start the economic effect)
    */
   activate(): DomainEvent[] {
-    if (this.props.status !== 'pending') {
-      throw new Error('Money wave can only be activated from pending status');
+    if (this.props.status !== "pending") {
+      throw new Error("Money wave can only be activated from pending status");
     }
 
-    this.props.status = 'active';
+    this.props.status = "active";
     this.props.startTime = new Date();
 
     // Money wave activation could generate additional events
@@ -73,8 +101,8 @@ export class MoneyWave {
    * Add contribution to the money wave
    */
   addContribution(amount: number, contributorId: string): DomainEvent[] {
-    if (this.props.status !== 'active') {
-      throw new Error('Cannot contribute to inactive money wave');
+    if (this.props.status !== "active") {
+      throw new Error("Cannot contribute to inactive money wave");
     }
 
     this.props.currentAmount += amount;
@@ -82,7 +110,7 @@ export class MoneyWave {
 
     // Check if target is reached
     if (this.props.currentAmount >= this.props.targetAmount) {
-      this.props.status = 'completed';
+      this.props.status = "completed";
     }
 
     return [];
@@ -92,8 +120,8 @@ export class MoneyWave {
    * Check if money wave has expired
    */
   checkExpiration(): DomainEvent[] {
-    if (this.props.status === 'active' && new Date() > this.props.endTime) {
-      this.props.status = 'expired';
+    if (this.props.status === "active" && new Date() > this.props.endTime) {
+      this.props.status = "expired";
       return [];
     }
     return [];
@@ -103,14 +131,17 @@ export class MoneyWave {
    * Calculate completion percentage
    */
   getCompletionPercentage(): number {
-    return Math.min(100, (this.props.currentAmount / this.props.targetAmount) * 100);
+    return Math.min(
+      100,
+      (this.props.currentAmount / this.props.targetAmount) * 100
+    );
   }
 
   /**
    * Check if money wave is currently affecting economic context
    */
   isActive(): boolean {
-    return this.props.status === 'active' && new Date() <= this.props.endTime;
+    return this.props.status === "active" && new Date() <= this.props.endTime;
   }
 
   /**
@@ -118,11 +149,11 @@ export class MoneyWave {
    */
   getEconomicMultiplier(): number {
     if (!this.isActive()) return 1.0;
-    
+
     // Multiplier can vary based on completion, time remaining, etc.
     const baseMultiplier = this.props.multiplier;
-    const completionBonus = this.getCompletionPercentage() / 100 * 0.2; // Up to 20% bonus
-    
+    const completionBonus = (this.getCompletionPercentage() / 100) * 0.2; // Up to 20% bonus
+
     return baseMultiplier + completionBonus;
   }
 
@@ -167,7 +198,7 @@ export class MoneyWave {
       multiplier,
       startTime: now,
       endTime,
-      status: 'pending',
+      status: "pending",
       participantCount: 0,
       createdAt: now,
     };
@@ -188,7 +219,7 @@ export class MoneyWave {
 
     return {
       moneyWave,
-      events: [createdEvent]
+      events: [createdEvent],
     };
   }
 }

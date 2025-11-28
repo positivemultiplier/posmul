@@ -5,8 +5,13 @@
 "use client";
 
 import { useState } from "react";
+
 import { Button, Card } from "../../../../shared/ui/components/base";
 import { Input } from "../../../../shared/ui/components/forms";
+
+/**
+ * 로그인 폼 컴포넌트
+ */
 
 interface LoginFormProps {
   onSubmit?: (credentials: {

@@ -7,9 +7,9 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
+import { notFound } from "next/navigation";
 
 import PredictionDetailView from "../../../../../bounded-contexts/prediction/presentation/components/PredictionDetailView";
-import { notFound } from "next/navigation";
 
 interface PredictionDetailPageProps {
   params: Promise<{

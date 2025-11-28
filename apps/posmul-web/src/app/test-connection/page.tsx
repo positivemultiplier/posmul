@@ -1,10 +1,12 @@
 "use client";
+
 // Supabase 연결 테스트 페이지
-import { useState, useEffect } from 'react';
-import { createAuthEconomyClient } from '@posmul/auth-economy-sdk';
+import { createAuthEconomyClient } from "@posmul/auth-economy-sdk";
+
+import { useEffect, useState } from "react";
 
 export default function TestConnectionPage() {
-  const [status, setStatus] = useState<string>('연결 확인 중...');
+  const [status, setStatus] = useState<string>("연결 확인 중...");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -19,14 +21,18 @@ export default function TestConnectionPage() {
         const userResult = await sdk.auth.getCurrentUser();
 
         if (userResult.success) {
-          setStatus(`✅ Supabase 연결 성공! 현재 사용자: ${userResult.data?.email || '로그인 없음'}`);
+          setStatus(
+            `✅ Supabase 연결 성공! 현재 사용자: ${userResult.data?.email || "로그인 없음"}`
+          );
         } else {
-          setStatus('✅ Supabase 연결 성공! (로그인 없음)');
+          setStatus("✅ Supabase 연결 성공! (로그인 없음)");
         }
       } catch (err) {
-        console.error('Connection test error:', err);
-        setError(`❌ 연결 실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
-        setStatus('❌ Supabase 연결 실패');
+        console.error("Connection test error:", err);
+        setError(
+          `❌ 연결 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`
+        );
+        setStatus("❌ Supabase 연결 실패");
       }
     }
 
@@ -41,16 +47,19 @@ export default function TestConnectionPage() {
         <div className="space-y-4">
           <div className="p-4 bg-blue-50 rounded">
             <h2 className="font-semibold mb-2">환경 설정</h2>
-            <p className="text-sm">URL: {process.env.NEXT_PUBLIC_SUPABASE_URL}</p>
-            <p className="text-sm">Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20)}...</p>
+            <p className="text-sm">
+              URL: {process.env.NEXT_PUBLIC_SUPABASE_URL}
+            </p>
+            <p className="text-sm">
+              Key: {process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.substring(0, 20)}
+              ...
+            </p>
           </div>
 
           <div className="p-4 bg-green-50 rounded">
             <h2 className="font-semibold mb-2">연결 상태</h2>
             <p className="text-sm">{status}</p>
-            {error && (
-              <p className="text-sm text-red-600 mt-2">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
           </div>
 
           <div className="space-y-2">

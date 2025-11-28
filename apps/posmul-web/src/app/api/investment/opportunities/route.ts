@@ -1,5 +1,6 @@
-import { MCPInvestmentOpportunityRepository } from "../../../../bounded-contexts/investment/infrastructure/repositories/mcp-investment-opportunity.repository";
 import { NextResponse } from "next/server";
+
+import { MCPInvestmentOpportunityRepository } from "../../../../bounded-contexts/investment/infrastructure/repositories/mcp-investment-opportunity.repository";
 
 /**
  * GET /api/investment/opportunities
@@ -7,7 +8,7 @@ import { NextResponse } from "next/server";
  */
 export async function GET(request: Request) {
   try {
-    const projectId = process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID || 'default';
+    const projectId = process.env.NEXT_PUBLIC_SUPABASE_PROJECT_ID || "default";
     const opportunityRepo = new MCPInvestmentOpportunityRepository(projectId);
 
     const { searchParams } = new URL(request.url);

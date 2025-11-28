@@ -1,4 +1,4 @@
----
+﻿---
 type: explanation
 title: "PosMul 프로젝트 심층 아키텍처 분석"
 description: "DDD, 경제 커널, 실시간 데이터 흐름, MCP 자동화를 중심으로 PosMul 프로젝트의 복잡한 아키텍처 관계도를 시각적으로 분석하고 설명합니다."

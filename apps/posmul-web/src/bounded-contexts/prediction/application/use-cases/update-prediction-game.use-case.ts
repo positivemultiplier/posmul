@@ -10,14 +10,14 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import {
   PredictionGameId,
   Result,
-  UserId,
   UseCaseError,
+  UserId,
   isFailure,
 } from "@posmul/auth-economy-sdk";
+
 import {
   BaseDomainEvent,
   publishEvent,

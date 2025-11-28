@@ -1,0 +1,779 @@
+---
+inclusion: always
+---
+# PosMul Prediction Game - Cursor Rules (Monorepo + Dual MCP Edition)
+
+You are an expert in TypeScript, Next.js 15 App Router, Domain-Driven Design (DDD), Clean Architecture, **Monorepo Architecture**, **pnpm + turbo**, **Supabase MCP Integration**, and **GitHub MCP Integration**.
+
+## Project Context
+
+This is PosMul, an AI-era direct democracy platform providing prediction games and local economy integration. The platform implements Agency Theory, CAPM, and behavioral economics theories through code.
+
+**CRITICAL**: This project has a **tightly coupled economy system (PMP/PMC)** that spans across all domains. Use **Shared Kernel** and **Domain Events** patterns for economic integration.
+
+**MONOREPO ARCHITECTURE**: We use **monorepo + pnpm + turbo** approach:
+- **pnpm@10.12.4** for package management with workspaces
+- **turbo@2.0.4** for build system optimization and caching
+- **Workspace structure**: `apps/` for applications, `packages/` for shared packages
+- **Dual MCP (Model Context Protocol)** approach:
+  - **Supabase MCP** for all database operations (NOT Supabase CLI)
+  - **GitHub MCP** for all project management operations (NOT GitHub CLI)
+
+## Development Environment
+
+- **OS**: Windows
+- **Shell**: PowerShell (always use PowerShell commands)
+- **Package Manager**: pnpm@10.12.4 (NEVER use npm or yarn)
+- **Build System**: turbo@2.0.4 (for monorepo orchestration)
+- **Path Format**: Windows backslash paths (e.g., `apps\posmul-web\src\bounded-contexts\`)
+- **Commands**: Use semicolon (`;`) instead of `&&` for command chaining
+- **Database**: Supabase via MCP tools (mcp_supabase_*)
+- **Project Management**: GitHub via MCP tools (mcp_Github_*)
+
+### Technology Stack
+
+- **Next.js**: 15.3.4 (App Router with React 19)
+- **React**: 19.0.0 (Server Components, Suspense)
+- **TypeScript**: 5.4.5 (Strict mode)
+- **Package Manager**: pnpm@10.12.4
+- **Build System**: turbo@2.0.4
+- **Database**: Supabase (via MCP)
+- **UI Framework**: Custom components with Tailwind CSS
+
+## Monorepo Structure
+
+```
+posmul-monorepo/
+├── apps/
+│   ├── posmul-web/          # Main Next.js application
+│   └── android/             # React Native Android app
+├── packages/
+│   ├── shared-types/        # Common type definitions
+│   ├── shared-auth/         # Authentication utilities
+│   ├── shared-ui/           # UI components library
+│   └── study-cycle-core/    # Domain-specific package
+├── scripts/                 # Build and utility scripts
+├── docs/                    # Documentation
+├── package.json            # Root package.json
+├── pnpm-workspace.yaml     # Workspace configuration
+├── turbo.json              # Turbo configuration
+└── tsconfig.json           # Root TypeScript config
+```
+
+## Core Architecture Principles
+
+### DDD + Clean Architecture + Monorepo Integration
+
+- **Shared Kernel**: Economy domain (PMP/PMC) is shared across all contexts
+- **Domain Events**: Use events for cross-domain communication
+- **Anti-Corruption Layer**: Protect domain integrity while allowing integration
+- **Package Boundaries**: Respect monorepo package boundaries
+- Domain layer has NO external dependencies (pure business logic)
+- Use Aggregate, Entity, Value Object, Domain Service appropriately
+- Repository pattern for data access abstraction
+- **Workspace Dependencies**: Use workspace protocols for internal dependencies
+
+### Dependency Rules (CRITICAL)
+
+```
+Apps → Packages (workspace dependencies)
+Presentation → Application → Domain
+Infrastructure → Domain (implements interfaces)
+Shared Economy Kernel ← All Domains (read-only access)
+```
+
+- Domain NEVER depends on external layers
+- Applications depend on packages via workspace protocols
+- Infrastructure implements Domain interfaces
+- **All domains can READ from Economy Kernel, but WRITE through Domain Events**
+- **Use `workspace:*` protocol for internal package dependencies**
+
+## DDD Database Schema Architecture (CRITICAL)
+
+### Schema-per-Bounded-Context Principle
+
+**NEVER create tables in the `public` schema for domain logic!** Each Bounded Context has its own database schema to ensure proper isolation and maintainability.
+
+#### Current Schema Structure:
+
+```
+Supabase Database Schemas:
+├── assessment/          # Assessment Context (evaluations, tests)
+├── donation/           # Donation Context (charitable giving)
+├── economy/            # Economy Context (PMP/PMC system) - Shared Kernel
+├── forum/              # Forum Context (discussions, debates)
+├── investment/         # Investment Context (local/major leagues)
+├── prediction/         # Prediction Context (prediction games)
+├── study_cycle/        # Study-Cycle Context (learning management)
+├── user/               # User Context (user management)
+└── public/             # System tables only (NOT domain logic)
+```
+
+#### Schema Design Rules:
+
+1. **One Schema per Bounded Context**: Each domain gets its own schema
+2. **Cross-Schema References**: Use foreign keys across schemas when needed
+3. **Shared Tables**: Only `economy` schema contains shared kernel tables
+4. **Naming Convention**: `[context]_[entity]` (e.g., `sc_textbooks`, `pred_games`)
+5. **RLS Policies**: Each schema has its own Row Level Security policies
+
+#### Study-Cycle Schema Structure:
+
+```sql
+-- study_cycle schema tables:
+study_cycle.sc_textbooks            -- 교재 관리
+study_cycle.sc_chapters             -- 챕터 구조
+study_cycle.sc_questions            -- 문제 및 풀이 템플릿
+study_cycle.sc_assessments          -- 평가 마스터
+study_cycle.sc_user_answers         -- 사용자 답안
+study_cycle.sc_user_textbook_progress -- 사용자별 교재 진도
+study_cycle.sc_study_sessions       -- 학습 세션 로그
+study_cycle.sc_readings             -- 회독 관리 (집계근)
+study_cycle.sc_reading_progress     -- 회독별 챕터 진도
+```
+
+#### Migration Pattern for Bounded Contexts:
+
+```typescript
+// Always specify schema in migrations
+await mcp_supabase_apply_migration({
+  project_id: projectId,
+  name: "create_prediction_tables",
+  query: `
+    -- Create tables in prediction schema (NOT public)
+    CREATE TABLE prediction.pred_games (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      creator_id UUID NOT NULL REFERENCES auth.users(id),
+      title TEXT NOT NULL,
+      -- ... other fields
+    );
+    
+    -- Cross-schema reference to economy (Shared Kernel)
+    CREATE TABLE prediction.pred_stakes (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id UUID NOT NULL REFERENCES prediction.pred_games(id),
+      user_id UUID NOT NULL REFERENCES auth.users(id),
+      pmp_amount DECIMAL(15,2) REFERENCES economy.pmp_accounts(balance),
+      -- ... other fields
+    );
+  `,
+});
+```
+
+## Monorepo Development Commands (CRITICAL)
+
+### Root Level Commands (Use these for development)
+
+```powershell
+# Install all dependencies
+pnpm install
+
+# Development (runs all apps in parallel)
+turbo dev
+
+# Build all packages and apps
+turbo build
+
+# Run tests across all packages
+turbo test
+
+# Type generation (custom script)
+pnpm generate-types
+
+# Format code
+pnpm format
+```
+
+### Package-Specific Commands
+
+```powershell
+# Run specific app
+pnpm -F posmul-web dev
+pnpm -F android build
+
+# Run specific package
+pnpm -F shared-types build
+pnpm -F shared-ui test
+
+# Add dependency to specific package
+pnpm -F posmul-web add react-query
+pnpm -F shared-types add -D jest
+```
+
+### Cross-Package Commands
+
+```powershell
+# Build all packages
+pnpm -r build
+
+# Test all packages
+pnpm -r test
+
+# Lint all packages
+pnpm -r lint
+```
+
+### ❌ **NEVER USE** (Prohibited Commands)
+
+- `npm install` (use `pnpm install`)
+- `npm run dev` (use `turbo dev`)
+- `yarn` commands (use `pnpm`)
+- Direct package commands without workspace context
+- Commands that bypass turbo cache
+
+## MCP Integration Rules (CRITICAL)
+
+### Supabase MCP - Database Operations
+
+- **NEVER use Supabase CLI** for schema changes
+- **ALWAYS use `mcp_supabase_apply_migration`** for DDL operations
+- **Use `mcp_supabase_execute_sql`** for data queries and DML
+- **Use `mcp_supabase_list_tables`** to inspect schema
+- **Use `mcp_supabase_get_advisors`** for security and performance checks
+- **Use `mcp_supabase_generate_typescript_types`** for type generation
+- **ALWAYS specify schema name** in queries and migrations
+
+### GitHub MCP - Project Management
+
+- **NEVER use GitHub CLI** for project operations
+- **ALWAYS use `mcp_Github_create_issue`** for task management
+- **Use `mcp_Github_create_pull_request`** for code reviews
+- **Use `mcp_Github_get_file_contents`** for file inspection
+- **Use `mcp_Github_create_or_update_file`** for file management
+
+## Monorepo File Structure Rules (Updated)
+
+```
+apps/
+  posmul-web/
+    src/
+      app/                    # Next.js App Router
+      bounded-contexts/       # DDD bounded contexts
+        [context-name]/
+          domain/
+            entities/
+            value-objects/
+            repositories/
+            services/
+              [context]-economic.service.ts
+            events/
+          application/
+            use-cases/
+            services/
+            dto/
+            event-handlers/
+          infrastructure/
+            repositories/      # MCP-based implementations
+            external-services/
+            event-handlers/
+          presentation/
+            components/
+            hooks/
+          context.md
+      shared/                 # App-specific shared code
+        economy-kernel/       # Economy domain integration
+        events/               # Domain events
+        mcp/                  # MCP utilities
+        types/                # App-specific types
+      lib/                    # App utilities
+    package.json             # App dependencies
+    next.config.js
+    tsconfig.json
+    
+packages/
+  shared-types/
+    src/
+      base-entity.ts
+      branded-types.ts
+      errors/
+      [domain]-types.ts
+    package.json
+    
+  shared-auth/
+    src/
+      middleware.ts
+      react-native-client.ts
+    package.json
+    
+  shared-ui/
+    src/
+      components/
+        ui/
+        forms/
+        charts/
+      utils/
+    package.json
+    
+  study-cycle-core/           # Study-Cycle Domain Package
+    src/
+      domain/
+        entities/             # StudySession, Reading, Textbook
+        value-objects/        # StudyMetrics, ReadingRound
+        repositories/         # IStudySessionRepository
+        services/             # StudyTimeTracker
+        events/               # StudyCompletedEvent
+      application/
+        use-cases/            # StartStudySession, CompleteReading
+        dto/                  # StudyQueryDto, ReadingResponseDto
+        event-handlers/       # EconomicEventHandlers
+      infrastructure/
+        repositories/         # MCPStudySessionRepository
+        services/             # StudyTimeTrackerService
+      types/
+        supabase-generated.ts # Generated from study_cycle schema
+    package.json
+```
+
+## Package Dependencies (Workspace Protocol)
+
+### In package.json files, use workspace protocols:
+
+```json
+{
+  "dependencies": {
+    "shared-types": "workspace:*",
+    "shared-auth": "workspace:*",
+    "shared-ui": "workspace:*"
+  }
+}
+```
+
+### Import from workspace packages:
+
+```typescript
+// Import from workspace packages
+import { UserId, PredictionId } from 'shared-types';
+import { AuthMiddleware } from 'shared-auth';
+import { Button, Card } from 'shared-ui';
+```
+
+## Turbo Configuration
+
+### turbo.json optimization:
+
+```json
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+    },
+    "dev": {
+      "cache": false,
+      "persistent": true
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": ["coverage/**"]
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    },
+    "gen:types": {
+      "cache": false
+    }
+  }
+}
+```
+
+## MCP-Specific Development Patterns
+
+### Database Schema Creation (With DDD Context)
+
+```typescript
+// Use MCP for schema-specific operations
+// File: apps/posmul-web/src/shared/mcp/migrations.ts
+export const createStudyCycleExtensions = async (projectId: string) => {
+  await mcp_supabase_apply_migration({
+    project_id: projectId,
+    name: "extend_study_cycle_schema",
+    query: `
+      -- Add new tables to study_cycle schema (NOT public)
+      CREATE TABLE study_cycle.sc_solution_templates (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        textbook_id UUID NOT NULL REFERENCES study_cycle.sc_textbooks(id),
+        template_name TEXT NOT NULL,
+        subject TEXT NOT NULL,
+        problem_type TEXT NOT NULL,
+        template_structure JSONB NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      -- Cross-schema reference to economy (Shared Kernel)
+      CREATE TABLE study_cycle.sc_learning_rewards (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id UUID NOT NULL REFERENCES auth.users(id),
+        reading_id UUID NOT NULL REFERENCES study_cycle.sc_readings(id),
+        pmc_earned DECIMAL(15,2) DEFAULT 0.00,
+        reason TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      -- Reference economy schema for reward calculation
+      CREATE OR REPLACE FUNCTION study_cycle.calculate_reading_reward(
+        p_user_id UUID,
+        p_reading_id UUID
+      ) RETURNS DECIMAL(15,2) AS $$
+      DECLARE
+        reward_amount DECIMAL(15,2);
+      BEGIN
+        -- Calculate based on economy.reward_rates
+        SELECT base_rate INTO reward_amount
+        FROM economy.reward_rates
+        WHERE activity_type = 'reading_completion';
+        
+        RETURN COALESCE(reward_amount, 0.00);
+      END;
+      $$ LANGUAGE plpgsql;
+    `,
+  });
+};
+```
+
+### Repository Implementation with Schema Context
+
+```typescript
+// File: packages/study-cycle-core/src/infrastructure/repositories/mcp-study-session.repository.ts
+import { Result } from 'shared-types';
+import { IStudySessionRepository } from '../../domain/repositories/study-session.repository';
+import { StudySession } from '../../domain/entities/study-session.entity';
+
+export class MCPStudySessionRepository implements IStudySessionRepository {
+  constructor(private readonly projectId: string) {}
+
+  async save(session: StudySession): Promise<Result<void, RepositoryError>> {
+    try {
+      const query = `
+        INSERT INTO study_cycle.sc_study_sessions (
+          id, user_id, textbook_id, chapter_id, 
+          start_time, end_time, duration_seconds
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        ON CONFLICT (id) DO UPDATE SET
+          end_time = EXCLUDED.end_time,
+          duration_seconds = EXCLUDED.duration_seconds,
+          updated_at = NOW()
+      `;
+
+      await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      return { success: true, data: undefined };
+    } catch (error) {
+      return { success: false, error: new RepositoryError("Save failed", error) };
+    }
+  }
+
+  async findActiveSessionsByUser(userId: string): Promise<Result<StudySession[], RepositoryError>> {
+    try {
+      const query = `
+        SELECT 
+          ss.*,
+          st.title as textbook_title,
+          sc.title as chapter_title
+        FROM study_cycle.sc_study_sessions ss
+        LEFT JOIN study_cycle.sc_textbooks st ON ss.textbook_id = st.id
+        LEFT JOIN study_cycle.sc_chapters sc ON ss.chapter_id = sc.id
+        WHERE ss.user_id = $1 
+        AND ss.end_time IS NULL
+        ORDER BY ss.start_time DESC
+      `;
+
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query,
+      });
+
+      const sessions = result.data.map(row => this.mapRowToDomain(row));
+      return { success: true, data: sessions };
+    } catch (error) {
+      return { success: false, error: new RepositoryError("Query failed", error) };
+    }
+  }
+}
+```
+
+### Cross-Schema Query Patterns
+
+```typescript
+// Example: Getting study statistics with economic rewards
+export class StudyAnalyticsService {
+  async getStudyStatisticsWithRewards(userId: string): Promise<StudyStatistics> {
+    const query = `
+      SELECT 
+        sr.id,
+        sr.round,
+        sr.total_time_minutes,
+        sr.total_pages_read,
+        st.title as textbook_title,
+        -- Cross-schema reference to economy
+        COALESCE(er.total_pmc_earned, 0) as total_rewards
+      FROM study_cycle.sc_readings sr
+      JOIN study_cycle.sc_textbooks st ON sr.textbook_id = st.id
+      LEFT JOIN (
+        SELECT 
+          reading_id,
+          SUM(pmc_earned) as total_pmc_earned
+        FROM study_cycle.sc_learning_rewards
+        WHERE user_id = $1
+        GROUP BY reading_id
+      ) er ON sr.id = er.reading_id
+      WHERE sr.user_id = $1
+      ORDER BY sr.updated_at DESC
+    `;
+
+    const result = await mcp_supabase_execute_sql({
+      project_id: this.projectId,
+      query: query,
+    });
+
+    return this.mapToStatistics(result.data);
+  }
+}
+```
+
+## TypeScript Standards (Monorepo + MCP + Schema)
+
+### Use shared-types package for common types:
+
+```typescript
+// packages/shared-types/src/branded-types.ts
+export type UserId = string & { readonly brand: unique symbol };
+export type TextbookId = string & { readonly brand: unique symbol };
+export type StudySessionId = string & { readonly brand: unique symbol };
+export type ReadingId = string & { readonly brand: unique symbol };
+export type ChapterId = string & { readonly brand: unique symbol };
+export type SupabaseProjectId = string & { readonly brand: unique symbol };
+```
+
+### Schema-specific type generation:
+
+```typescript
+// packages/study-cycle-core/src/types/supabase-generated.ts
+// Generated from study_cycle schema only
+export interface StudyCycleTables {
+  sc_textbooks: {
+    Row: {
+      id: string;
+      creator_id: string | null;
+      title: string;
+      description: string | null;
+      cover_image_url: string | null;
+      created_at: string;
+      updated_at: string;
+    };
+    Insert: {
+      id?: string;
+      creator_id?: string | null;
+      title: string;
+      description?: string | null;
+      cover_image_url?: string | null;
+      created_at?: string;
+      updated_at?: string;
+    };
+    Update: {
+      id?: string;
+      creator_id?: string | null;
+      title?: string;
+      description?: string | null;
+      cover_image_url?: string | null;
+      created_at?: string;
+      updated_at?: string;
+    };
+  };
+  // ... other study_cycle tables
+}
+```
+
+## React Components (Next.js 15 + React 19)
+
+### Server Components (Default)
+
+```typescript
+// apps/posmul-web/src/app/predictions/page.tsx
+import { UserId } from 'shared-types';
+import { EconomicBalance } from 'shared-ui';
+
+export default async function PredictionsPage({ 
+  params 
+}: { 
+  params: { userId: UserId } 
+}) {
+  const [games, pmpBalance, pmcBalance] = await Promise.all([
+    getGames(),
+    getPmpBalance(params.userId),
+    getPmcBalance(params.userId),
+  ]);
+
+  return (
+    <div>
+      <EconomicBalance pmp={pmpBalance} pmc={pmcBalance} />
+      {/* Game list JSX */}
+    </div>
+  );
+}
+```
+
+### Client Components (When needed)
+
+```typescript
+// apps/posmul-web/src/bounded-contexts/prediction/presentation/components/prediction-form.tsx
+'use client';
+
+import { UserId } from 'shared-types';
+import { Button } from 'shared-ui';
+import { useEconomicBalance } from '../../hooks/use-economic-balance';
+
+export function PredictionForm({ userId }: { userId: UserId }) {
+  const { pmpBalance } = useEconomicBalance(userId);
+  
+  return (
+    <form>
+      <div>Balance: {pmpBalance} PMP</div>
+      <Button type="submit">Submit Prediction</Button>
+    </form>
+  );
+}
+```
+
+## Monorepo Development Workflow
+
+### Development Process
+
+1. **Install Dependencies**: `pnpm install`
+2. **Start Development**: `turbo dev`
+3. **Build All**: `turbo build`
+4. **Test All**: `turbo test`
+5. **Generate Types**: `pnpm generate-types`
+
+### Package Development
+
+1. **Create Package**: Add to `packages/` directory
+2. **Update workspace**: Add to `pnpm-workspace.yaml`
+3. **Configure turbo**: Update `turbo.json`
+4. **Add dependencies**: Use workspace protocols
+
+### Adding Dependencies
+
+```powershell
+# Add to specific package
+pnpm -F posmul-web add react-query
+
+# Add workspace dependency
+pnpm -F posmul-web add shared-types@workspace:*
+
+# Add dev dependency
+pnpm -F shared-ui add -D jest
+```
+
+## PowerShell Commands (Monorepo Edition)
+
+```powershell
+# Development commands
+pnpm install
+turbo dev
+turbo build
+turbo test
+
+# Package-specific commands
+pnpm -F posmul-web dev
+pnpm -F shared-types build
+pnpm -F shared-ui test
+
+# Cross-package commands
+pnpm -r build
+pnpm -r test
+pnpm -r lint
+
+# File operations (use Windows paths)
+New-Item -ItemType Directory -Path "apps\posmul-web\src\bounded-contexts\prediction"
+New-Item -ItemType Directory -Path "packages\shared-domain"
+```
+
+## Performance & Security (Monorepo)
+
+### Performance
+
+- **Turbo Cache**: Leverage turbo cache for faster builds
+- **Parallel Builds**: Use turbo for parallel package builds
+- **Workspace Hoisting**: Use pnpm workspace hoisting for efficient dependencies
+- **Code Splitting**: Implement proper code splitting with Next.js 15
+- **Bundle Analysis**: Analyze bundle sizes across packages
+
+### Security
+
+- **Dependency Scanning**: Scan all workspace packages
+- **RLS Policies**: Use Supabase RLS via MCP migrations
+- **Environment Variables**: Manage secrets at monorepo level
+- **Package Isolation**: Maintain security boundaries between packages
+- **Regular Security Audits**: Run `mcp_supabase_get_advisors` for security checks
+
+## CRITICAL REMINDERS (Monorepo + DDD Database Edition)
+
+1. **NEVER violate Clean Architecture dependency rules**
+2. **NEVER use npm or yarn** - always use pnpm
+3. **NEVER bypass turbo** - use turbo for builds and tests
+4. **NEVER create domain tables in public schema** - use schema-per-context
+5. **ALWAYS specify schema name** in all SQL queries and migrations
+6. **Use workspace protocols** for internal dependencies
+7. **Respect package boundaries** - don't directly import across packages
+8. **Use PowerShell commands** - never bash/zsh
+9. **Always implement Result pattern** for error handling
+10. **Repository interfaces in Domain** - implementations in Infrastructure
+11. **Server Components by default** - Client only when needed
+12. **🔥 USE MCP TOOLS FOR ALL DATABASE AND PROJECT OPERATIONS**
+13. **🔥 ECONOMIC INTEGRATION IS CRITICAL** - All domains must integrate with PMP/PMC system
+14. **Use Domain Events for cross-domain economic transactions**
+15. **Shared Economy Kernel for read access, Events for write access**
+16. **Always display economic balance in relevant UI components**
+17. **🔥 ALWAYS run security advisors after schema changes**
+18. **🔥 RESPECT SCHEMA BOUNDARIES** - Each Bounded Context has its own schema
+
+## MCP Tool Priority (CRITICAL)
+
+### Supabase MCP Tools (Database Operations)
+
+1. **`mcp_supabase_list_projects`** - Get project information
+2. **`mcp_supabase_list_tables`** - Inspect current schema (specify schema parameter)
+3. **`mcp_supabase_apply_migration`** - Apply schema changes (with schema specification)
+4. **`mcp_supabase_execute_sql`** - Run queries and DML (with schema-qualified table names)
+5. **`mcp_supabase_get_advisors`** - Check security/performance
+6. **`mcp_supabase_generate_typescript_types`** - Generate types (schema-specific)
+
+### Schema-Aware Query Examples:
+
+```sql
+-- ✅ CORRECT: Schema-qualified table names
+SELECT * FROM study_cycle.sc_readings WHERE user_id = $1;
+SELECT * FROM prediction.pred_games WHERE status = 'active';
+SELECT * FROM economy.pmp_accounts WHERE user_id = $1;
+
+-- ❌ WRONG: Unqualified table names
+SELECT * FROM sc_readings WHERE user_id = $1;
+SELECT * FROM pred_games WHERE status = 'active';
+```
+
+### GitHub MCP Tools (Project Management)
+
+1. **`mcp_Github_get_repository`** - Repository information
+2. **`mcp_Github_list_issues`** - View tasks and bugs
+3. **`mcp_Github_create_issue`** - Create new tasks
+4. **`mcp_Github_create_pull_request`** - Submit code for review
+5. **`mcp_Github_get_file_contents`** - Read files from repo
+6. **`mcp_Github_create_or_update_file`** - Modify repo files
+
+**NEVER use:**
+
+- Supabase CLI commands
+- GitHub CLI commands (gh)
+- npm or yarn commands
+- Direct SQL file execution
+- Manual schema management
+- Commands that bypass turbo cache
+- Unqualified table names in queries
+- Domain logic in public schema
+
+When in doubt, ask yourself: "Does this follow DDD principles, Clean Architecture rules, respect monorepo boundaries, use schema-per-bounded-context, use pnpm + turbo, use DUAL MCP tools (Supabase + GitHub), AND properly integrate with the economic system?"

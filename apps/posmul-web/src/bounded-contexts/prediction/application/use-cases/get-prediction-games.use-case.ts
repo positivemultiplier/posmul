@@ -9,8 +9,8 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
+import { Result, UseCaseError, isFailure } from "@posmul/auth-economy-sdk";
 
-import { Result, isFailure, UseCaseError } from "@posmul/auth-economy-sdk";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 
 /**
@@ -111,7 +111,7 @@ export class GetPredictionGamesUseCase {
       const gameList = games.map((game) => {
         const stats = game.getStatistics();
         return {
-          id: game.id,
+          id: game.getId(),
           title: game.title,
           description: game.description,
           status: game.status.toString(),

@@ -2,8 +2,7 @@
  * Base Error UI Component
  * 공통 오류 표시 컴포넌트
  */
-
-import React from 'react';
+import React from "react";
 
 export interface BaseErrorUIProps {
   title?: string;
@@ -13,13 +12,15 @@ export interface BaseErrorUIProps {
 }
 
 export default function BaseErrorUI({
-  title = '오류가 발생했습니다',
-  message = '문제가 발생했습니다. 잠시 후 다시 시도해주세요.',
+  title = "오류가 발생했습니다",
+  message = "문제가 발생했습니다. 잠시 후 다시 시도해주세요.",
   retry,
-  className = '',
+  className = "",
 }: BaseErrorUIProps) {
   return (
-    <div className={`p-6 text-center bg-red-50 border border-red-200 rounded-lg ${className}`}>
+    <div
+      className={`p-6 text-center bg-red-50 border border-red-200 rounded-lg ${className}`}
+    >
       <div className="mb-4">
         <svg
           className="w-12 h-12 text-red-400 mx-auto mb-4"
@@ -36,13 +37,9 @@ export default function BaseErrorUI({
         </svg>
       </div>
 
-      <h3 className="text-lg font-semibold text-red-800 mb-2">
-        {title}
-      </h3>
+      <h3 className="text-lg font-semibold text-red-800 mb-2">{title}</h3>
 
-      <p className="text-red-600 mb-4">
-        {message}
-      </p>
+      <p className="text-red-600 mb-4">{message}</p>
 
       {retry && (
         <button

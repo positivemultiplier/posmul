@@ -1,8 +1,8 @@
 /**
  * Auth Domain Repository Interfaces
  */
+import { Result, UserId } from "@posmul/auth-economy-sdk";
 
-import { UserId, Result } from "@posmul/auth-economy-sdk";
 import { AuthSession, Permission, Role, UserCredentials } from "../entities";
 
 /**

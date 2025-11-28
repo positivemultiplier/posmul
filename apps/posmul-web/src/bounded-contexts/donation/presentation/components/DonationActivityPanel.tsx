@@ -1,7 +1,15 @@
 "use client";
 
 import React from "react";
-import { Badge, Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../shared/ui/components/base";
+
+import {
+  Badge,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../../../shared/ui/components/base";
 
 interface DonationActivityPanelProps {
   userId: string;
@@ -91,7 +99,9 @@ export const DonationActivityPanel: React.FC<DonationActivityPanelProps> = ({
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">❤️ 기부 활동</CardTitle>
-        <CardDescription>PmcAmount를 통한 사회적 기여와 영향력 분석</CardDescription>
+        <CardDescription>
+          PmcAmount를 통한 사회적 기여와 영향력 분석
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {/* 기부 요약 */}
@@ -218,8 +228,8 @@ export const DonationActivityPanel: React.FC<DonationActivityPanelProps> = ({
             </div>
             <div className="text-sm text-pink-600">
               <div className="mb-1">
-                • <strong>MoneyWave2</strong>: 미사용 PmcAmount 자동 재분배로 플랫폼
-                활성화 기여
+                • <strong>MoneyWave2</strong>: 미사용 PmcAmount 자동 재분배로
+                플랫폼 활성화 기여
               </div>
               <div className="mb-1">
                 • <strong>Loss Aversion</strong>: 적절한 기부 타이밍으로 개인

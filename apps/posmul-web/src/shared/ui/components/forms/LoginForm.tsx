@@ -1,21 +1,22 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+
+import React, { useState } from "react";
 
 // Zod validation schema
 const loginSchema = z.object({
   email: z
     .string()
-    .min(1, '이메일을 입력해주세요')
-    .email('올바른 이메일 형식을 입력해주세요'),
+    .min(1, "이메일을 입력해주세요")
+    .email("올바른 이메일 형식을 입력해주세요"),
   password: z
     .string()
-    .min(6, '비밀번호는 최소 6자 이상이어야 합니다')
-    .max(100, '비밀번호는 100자를 초과할 수 없습니다'),
+    .min(6, "비밀번호는 최소 6자 이상이어야 합니다")
+    .max(100, "비밀번호는 100자를 초과할 수 없습니다"),
 });
 
 export type LoginFormData = z.infer<typeof loginSchema>;
@@ -27,11 +28,11 @@ interface LoginFormProps {
   className?: string;
 }
 
-export function LoginForm({ 
-  onSubmit, 
-  isLoading = false, 
-  error = null, 
-  className = '' 
+export function LoginForm({
+  onSubmit,
+  isLoading = false,
+  error = null,
+  className = "",
 }: LoginFormProps) {
   const [showPassword, setShowPassword] = useState(false);
 
@@ -42,8 +43,8 @@ export function LoginForm({
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
-      password: '',
+      email: "",
+      password: "",
     },
   });
 
@@ -54,7 +55,7 @@ export function LoginForm({
       await onSubmit(data);
     } catch (error) {
       // Error handling is delegated to parent component
-      console.error('Login form submission error:', error);
+      console.error("Login form submission error:", error);
     }
   };
 
@@ -75,7 +76,10 @@ export function LoginForm({
         <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-4">
           {/* Email Field */}
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               이메일
             </label>
             <div className="relative">
@@ -83,17 +87,18 @@ export function LoginForm({
                 <Mail className="h-5 w-5 text-gray-400" />
               </div>
               <input
-                {...register('email')}
+                {...register("email")}
                 type="email"
                 id="email"
                 className={`
                   block w-full pl-10 pr-3 py-2 border rounded-md shadow-sm placeholder-gray-400
                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                  ${errors.email 
-                    ? 'border-red-300 focus:ring-red-500' 
-                    : 'border-gray-300'
+                  ${
+                    errors.email
+                      ? "border-red-300 focus:ring-red-500"
+                      : "border-gray-300"
                   }
-                  ${isFormLoading ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}
+                  ${isFormLoading ? "bg-gray-50 cursor-not-allowed" : "bg-white"}
                 `}
                 placeholder="your@email.com"
                 disabled={isFormLoading}
@@ -101,13 +106,18 @@ export function LoginForm({
               />
             </div>
             {errors.email && (
-              <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+              <p className="mt-1 text-sm text-red-600">
+                {errors.email.message}
+              </p>
             )}
           </div>
 
           {/* Password Field */}
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               비밀번호
             </label>
             <div className="relative">
@@ -115,17 +125,18 @@ export function LoginForm({
                 <Lock className="h-5 w-5 text-gray-400" />
               </div>
               <input
-                {...register('password')}
-                type={showPassword ? 'text' : 'password'}
+                {...register("password")}
+                type={showPassword ? "text" : "password"}
                 id="password"
                 className={`
                   block w-full pl-10 pr-12 py-2 border rounded-md shadow-sm placeholder-gray-400
                   focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
-                  ${errors.password 
-                    ? 'border-red-300 focus:ring-red-500' 
-                    : 'border-gray-300'
+                  ${
+                    errors.password
+                      ? "border-red-300 focus:ring-red-500"
+                      : "border-gray-300"
                   }
-                  ${isFormLoading ? 'bg-gray-50 cursor-not-allowed' : 'bg-white'}
+                  ${isFormLoading ? "bg-gray-50 cursor-not-allowed" : "bg-white"}
                 `}
                 placeholder="••••••••"
                 disabled={isFormLoading}
@@ -145,7 +156,9 @@ export function LoginForm({
               </button>
             </div>
             {errors.password && (
-              <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
+              <p className="mt-1 text-sm text-red-600">
+                {errors.password.message}
+              </p>
             )}
           </div>
 
@@ -155,9 +168,10 @@ export function LoginForm({
             disabled={isFormLoading}
             className={`
               w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white
-              ${isFormLoading
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+              ${
+                isFormLoading
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               }
               transition-colors duration-200
             `}
@@ -168,7 +182,7 @@ export function LoginForm({
                 로그인 중...
               </>
             ) : (
-              '로그인'
+              "로그인"
             )}
           </button>
         </form>
@@ -176,13 +190,19 @@ export function LoginForm({
         {/* Additional Links */}
         <div className="mt-6 text-center">
           <div className="text-sm text-gray-600">
-            계정이 없으신가요?{' '}
-            <a href="/signup" className="font-medium text-blue-600 hover:text-blue-500">
+            계정이 없으신가요?{" "}
+            <a
+              href="/signup"
+              className="font-medium text-blue-600 hover:text-blue-500"
+            >
               회원가입
             </a>
           </div>
           <div className="mt-2">
-            <a href="/forgot-password" className="text-sm text-blue-600 hover:text-blue-500">
+            <a
+              href="/forgot-password"
+              className="text-sm text-blue-600 hover:text-blue-500"
+            >
               비밀번호를 잊으셨나요?
             </a>
           </div>

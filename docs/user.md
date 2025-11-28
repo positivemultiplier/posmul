@@ -22,15 +22,15 @@ graph TD
     A["Development Commands"] --> B["pnpm (Package Manager)"]
     A --> C["turbo (Build System)"]
     A --> D["Workspace Commands"]
-    
+
     B --> E["pnpm install"]
     B --> F["pnpm -F [workspace]"]
     B --> G["pnpm -r (recursive)"]
-    
+
     C --> H["turbo build"]
     C --> I["turbo dev"]
     C --> J["turbo test"]
-    
+
     D --> K["Root Level Commands"]
     D --> L["Package Level Commands"]
 ```
@@ -64,11 +64,11 @@ sequenceDiagram
     Dev->>Root: pnpm install
     Root->>Packages: Install dependencies
     Root->>Apps: Install dependencies
-    
+
     Dev->>Turbo: turbo dev
     Turbo->>Packages: Build shared packages
     Turbo->>Apps: Start development servers
-    
+
     Dev->>Turbo: turbo build
     Turbo->>Packages: Build packages (cached)
     Turbo->>Apps: Build applications
@@ -83,7 +83,7 @@ sequenceDiagram
 #### 📊 **Minimum Visualization Requirements by Document Type**
 
 1. **Analysis Report**: Minimum 5 charts required
-2. **Task List**: Minimum 4 charts required  
+2. **Task List**: Minimum 4 charts required
 3. **Tutorial**: Minimum 2 charts required
 4. **How-to Guide**: Minimum 2 charts required
 5. **Reference**: Minimum 1 chart required
@@ -154,7 +154,7 @@ graph TD
 ### 📝 **Communication Principles**
 
 - **Language**: Always respond in Korean and explain clearly for Korean developers
-- **Encoding**: Use UTF-8 encoding to prevent Korean character corruption
+- **Encoding**: Use utf-8-sig encoding to prevent Korean character corruption
 - **Clarity**: Provide specific and clear explanations rather than ambiguous ones
 - **🔥 Visualization Priority**: Include appropriate visualization in all explanations
 - **🔥 Monorepo Context**: Always consider workspace relationships and dependencies
@@ -170,7 +170,7 @@ graph LR
     A --> D["Next.js 15.3.4"]
     A --> E["React 19.0.0"]
     A --> F["TypeScript 5.4.5"]
-    
+
     B --> G["Package Manager"]
     C --> H["Build System"]
     D --> I["App Router"]
@@ -199,13 +199,13 @@ flowchart TD
     A["Development Start"] --> B["pnpm install"]
     B --> C["turbo dev"]
     C --> D["Parallel Development"]
-    
+
     D --> E["Apps Development"]
     D --> F["Packages Development"]
-    
+
     E --> G["posmul-web"]
     E --> H["android"]
-    
+
     F --> I["shared-types"]
     F --> J["shared-ui"]
     F --> K["shared-auth"]
@@ -236,13 +236,13 @@ graph TD
     A["Code Structure"] --> B["Package Boundaries"]
     A --> C["Dependency Direction"]
     A --> D["Shared Interfaces"]
-    
+
     B --> E["Clear Responsibilities"]
     B --> F["Minimal Coupling"]
-    
+
     C --> G["Apps → Packages"]
     C --> H["Packages → Packages"]
-    
+
     D --> I["Type Definitions"]
     D --> J["Common Interfaces"]
 ```
@@ -270,11 +270,11 @@ graph TD
     A["Refactoring Decision"] --> B["Single Package"]
     A --> C["Cross-Package"]
     A --> D["Workspace Level"]
-    
+
     B --> E["Local Changes"]
     C --> F["Interface Changes"]
     D --> G["Structure Changes"]
-    
+
     E --> H["Independent Testing"]
     F --> I["Dependency Updates"]
     G --> J["Build System Updates"]
@@ -336,13 +336,13 @@ graph TD
     A["Documentation Strategy"] --> B["Package Level"]
     A --> C["App Level"]
     A --> D["Root Level"]
-    
+
     B --> E["API Documentation"]
     B --> F["Usage Examples"]
-    
+
     C --> G["Feature Documentation"]
     C --> H["User Guides"]
-    
+
     D --> I["Architecture Overview"]
     D --> J["Workspace Guide"]
 ```
@@ -396,7 +396,7 @@ graph TD
     A["Monorepo Visualization"] --> B["Package Dependencies"]
     A --> C["Build Flows"]
     A --> D["Data Flows"]
-    
+
     B --> E["Dependency Graphs"]
     C --> F["Build Sequences"]
     D --> G["Interface Flows"]

@@ -8,7 +8,6 @@
  * - Agency Cost: 정보 비대칭으로 인한 사회적 비용
  * - 해결책: 예측 게임을 통한 집단지성 활용
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import {
@@ -101,9 +100,7 @@ export class AgencyTheoryEngine implements IAgencyTheoryEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }

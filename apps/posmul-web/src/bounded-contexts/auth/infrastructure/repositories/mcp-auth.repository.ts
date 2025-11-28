@@ -1,244 +1,219 @@
-/**
- * MCP Auth Repository Implementation
- *
- * Clean Architecture Infrastructure 계층의 Repository 구현
- * IAuthRepository 인터페이스를 MCP Supabase로 구현
- */
+import { mcp_supabase_execute_sql } from '../../../../shared/mcp/supabase-client';
+import { IAuthRepository } from '../../domain/repositories';
+import { AuthSession, Permission, Role, UserCredentials } from '../../domain/entities';
+import { Result, UserId } from '@posmul/auth-economy-sdk';
 
-import {
-  MCPError,
-  handleMCPError,
-  createDefaultMCPAdapter,
-  Result,
-  CompatibleBaseError,
-  adaptErrorToBaseError,
-} from "../../../../shared/legacy-compatibility";
-import { UserId } from "@posmul/auth-economy-sdk";
-
-import {
-  AuthSession,
-  Permission,
-  Role,
-  UserCredentials,
-} from "../../domain/entities";
-import { IAuthRepository } from "../../domain/repositories";
-
-/**
- * MCP 기반 Auth Repository 구현
- */
 export class MCPAuthRepository implements IAuthRepository {
-  private readonly mcpAdapter = createDefaultMCPAdapter();
-
   constructor(private readonly projectId: string) {}
 
-  /**
-   * 사용자 인증 세션 조회
-   */
-  async getSession(
-    sessionId: string
-  ): Promise<Result<AuthSession | null, CompatibleBaseError>> {
+  async getSession(sessionId: string): Promise<Result<AuthSession | null, Error>> {
     try {
-      const result = await this.mcpAdapter.executeSQL(
-        `SELECT * FROM auth_sessions WHERE session_id = '${sessionId}'`
-      );
+      const query = `
+        SELECT 
+          s.id, s.user_id, s.expires_at, s.created_at, s.updated_at,
+          u.email, u.created_at as user_created_at
+        FROM auth.sessions s
+        LEFT JOIN auth.users u ON s.user_id = u.id
+        WHERE s.id = '${sessionId}' AND s.expires_at > NOW()
+      `;
 
-      if (result.error || !result.data?.length) {
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query
+      });
+
+      if (result.data.length === 0) {
         return { success: true, data: null };
       }
 
       const sessionData = result.data[0];
-      return {
-        success: true,
-        data: this.mapDatabaseToSession(sessionData),
+      const session: AuthSession = {
+        id: sessionData.id,
+        userId: sessionData.user_id as UserId,
+        email: sessionData.email,
+        accessToken: '', // Not stored in DB for security
+        refreshToken: '', // Not stored in DB for security
+        tokenType: 'bearer',
+        expiresAt: new Date(sessionData.expires_at),
+        createdAt: new Date(sessionData.created_at),
+        updatedAt: new Date(sessionData.updated_at),
+        isActive: new Date(sessionData.expires_at) > new Date(),
+        lastSignInAt: new Date(sessionData.created_at),
+        emailConfirmedAt: sessionData.email_confirmed_at ? new Date(sessionData.email_confirmed_at) : null
       };
+
+      return { success: true, data: session };
     } catch (error) {
-      return {
-        success: false,
-        error: adaptErrorToBaseError(error),
-      };
+      return { success: false, error: new Error(`Failed to get session: ${error}`) };
     }
   }
 
-  async getUserCredentials(
-    userId: UserId
-  ): Promise<Result<UserCredentials | null, CompatibleBaseError>> {
+  async getUserCredentials(userId: UserId): Promise<Result<UserCredentials | null, Error>> {
     try {
-      const result = await this.mcpAdapter.executeSQL(
-        `SELECT * FROM user_credentials WHERE user_id = '${userId}'`
-      );
+      const query = `
+        SELECT 
+          u.id, u.email, u.encrypted_password, u.email_confirmed_at,
+          u.created_at, u.updated_at
+        FROM auth.users u
+        WHERE u.id = '${userId}'
+      `;
 
-      if (result.error || !result.data?.length) {
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query
+      });
+
+      if (result.data.length === 0) {
         return { success: true, data: null };
       }
 
-      const data = result.data[0] as any;
-      return {
-        success: true,
-        data: {
-          userId: data.user_id as UserId,
-          email: data.email as string,
-          emailConfirmed: data.email_confirmed as boolean,
-          provider: data.provider as string,
-          providerId: data.provider_id as string,
-          identityData: data.identity_data
-            ? JSON.parse(data.identity_data)
-            : {},
-          activeSessions: data.active_sessions || 0,
-          lastSignInAt: data.last_sign_in_at
-            ? new Date(data.last_sign_in_at)
-            : null,
-          createdAt: new Date(data.created_at || Date.now()),
-          updatedAt: new Date(data.updated_at || Date.now()),
-        },
+      const userData = result.data[0];
+      const credentials: UserCredentials = {
+        userId: userData.id as UserId,
+        email: userData.email,
+        emailConfirmed: !!userData.email_confirmed_at,
+        provider: 'email',
+        identityData: {},
+        activeSessions: 0,
+        lastSignInAt: null,
+        createdAt: new Date(userData.created_at),
+        updatedAt: new Date(userData.updated_at)
       };
+
+      return { success: true, data: credentials };
     } catch (error) {
-      return {
-        success: false,
-        error: adaptErrorToBaseError(error),
-      };
+      return { success: false, error: new Error(`Failed to get user credentials: ${error}`) };
     }
   }
 
-  async getActiveSessions(
-    userId: UserId
-  ): Promise<Result<AuthSession[], CompatibleBaseError>> {
+  async getActiveSessions(userId: UserId): Promise<Result<AuthSession[], Error>> {
     try {
-      const result = await this.mcpAdapter.executeSQL(
-        `SELECT * FROM auth_sessions WHERE user_id = '${userId}' AND is_active = true`
-      );
+      const query = `
+        SELECT id, user_id, expires_at, created_at, updated_at
+        FROM auth.sessions
+        WHERE user_id = '${userId}' AND expires_at > NOW()
+        ORDER BY created_at DESC
+      `;
 
-      if (result.error) {
-        return {
-          success: false,
-          error: adaptErrorToBaseError(result.error),
-        };
-      }
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query
+      });
 
-      const sessions = (result.data || []).map((data: any) =>
-        this.mapDatabaseToSession(data)
-      );
+      const sessions = result.data.map(sessionData => ({
+        id: sessionData.id,
+        userId: sessionData.user_id as UserId,
+        email: '',
+        accessToken: '',
+        refreshToken: '',
+        tokenType: 'bearer',
+        expiresAt: new Date(sessionData.expires_at),
+        createdAt: new Date(sessionData.created_at),
+        updatedAt: new Date(sessionData.updated_at),
+        isActive: new Date(sessionData.expires_at) > new Date(),
+        lastSignInAt: new Date(sessionData.created_at),
+        emailConfirmedAt: null
+      } as AuthSession));
+
       return { success: true, data: sessions };
     } catch (error) {
-      return {
-        success: false,
-        error: adaptErrorToBaseError(error),
-      };
+      return { success: false, error: new Error(`Failed to get active sessions: ${error}`) };
     }
   }
 
-  async getUserPermissions(
-    userId: UserId
-  ): Promise<Result<Permission[], CompatibleBaseError>> {
+  async getUserPermissions(userId: UserId): Promise<Result<Permission[], Error>> {
     try {
-      const result = await this.mcpAdapter.executeSQL(
-        `SELECT p.* FROM permissions p
-         JOIN user_permissions up ON p.id = up.permission_id
-         WHERE up.user_id = '${userId}'`
-      );
+      const query = `
+        SELECT DISTINCT p.id, p.name, p.resource, p.action, p.created_at
+        FROM auth.permissions p
+        JOIN auth.role_permissions rp ON p.id = rp.permission_id
+        JOIN auth.user_roles ur ON rp.role_id = ur.role_id
+        WHERE ur.user_id = '${userId}'
+      `;
 
-      if (result.error) {
-        return {
-          success: false,
-          error: adaptErrorToBaseError(result.error),
-        };
-      }
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query
+      });
 
-      const permissions = (result.data || []).map((data: any) => ({
-        id: data.id,
-        name: data.name,
-        resource: data.resource,
-        action: data.action,
-      }));
+      const permissions = result.data.map(permData => ({
+        name: permData.name,
+        resource: permData.resource,
+        action: permData.action,
+        description: permData.description
+      } as Permission));
+
       return { success: true, data: permissions };
     } catch (error) {
-      return {
-        success: false,
-        error: adaptErrorToBaseError(error),
-      };
+      return { success: false, error: new Error(`Failed to get user permissions: ${error}`) };
     }
   }
 
-  async getUserRoles(
-    userId: UserId
-  ): Promise<Result<Role[], CompatibleBaseError>> {
+  async getUserRoles(userId: UserId): Promise<Result<Role[], Error>> {
     try {
-      const result = await this.mcpAdapter.executeSQL(
-        `SELECT r.* FROM roles r
-         JOIN user_roles ur ON r.id = ur.role_id
-         WHERE ur.user_id = '${userId}'`
-      );
+      const query = `
+        SELECT r.id, r.name, r.description, r.created_at
+        FROM auth.roles r
+        JOIN auth.user_roles ur ON r.id = ur.role_id
+        WHERE ur.user_id = '${userId}'
+      `;
 
-      if (result.error) {
-        return {
-          success: false,
-          error: adaptErrorToBaseError(result.error),
-        };
-      }
+      const result = await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query
+      });
 
-      const roles = (result.data || []).map((data: any) => ({
-        id: data.id,
-        name: data.name,
-        description: data.description,
-        hierarchyLevel: data.hierarchy_level || 0,
-        isActive: data.is_active || true,
-        assignedAt: new Date(data.assigned_at || Date.now()),
-        createdAt: new Date(data.created_at || Date.now()),
-        permissions: [], // Permissions would be loaded separately if needed
-      }));
+      const roles = result.data.map(roleData => ({
+        id: roleData.id,
+        name: roleData.name,
+        description: roleData.description,
+        hierarchyLevel: 1,
+        isActive: true,
+        assignedAt: new Date(roleData.created_at),
+        createdAt: new Date(roleData.created_at)
+      } as Role));
+
       return { success: true, data: roles };
     } catch (error) {
-      return {
-        success: false,
-        error: adaptErrorToBaseError(error),
-      };
+      return { success: false, error: new Error(`Failed to get user roles: ${error}`) };
     }
   }
 
-  async invalidateSession(
-    sessionId: string
-  ): Promise<Result<void, CompatibleBaseError>> {
+  async invalidateSession(sessionId: string): Promise<Result<void, Error>> {
     try {
-      const result = await this.mcpAdapter.executeSQL(
-        `UPDATE auth_sessions SET is_active = false WHERE session_id = '${sessionId}'`
-      );
+      const query = `
+        UPDATE auth.sessions 
+        SET expires_at = NOW() 
+        WHERE id = '${sessionId}'
+      `;
 
-      if (result.error) {
-        return {
-          success: false,
-          error: adaptErrorToBaseError(result.error),
-        };
-      }
+      await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query
+      });
 
       return { success: true, data: undefined };
     } catch (error) {
-      return {
-        success: false,
-        error: adaptErrorToBaseError(error),
-      };
+      return { success: false, error: new Error(`Failed to invalidate session: ${error}`) };
     }
   }
 
-  async invalidateAllUserSessions(
-    userId: UserId
-  ): Promise<Result<void, CompatibleBaseError>> {
+  async invalidateAllUserSessions(userId: UserId): Promise<Result<void, Error>> {
     try {
-      const result = await this.mcpAdapter.executeSQL(
-        `UPDATE auth_sessions SET is_active = false WHERE user_id = '${userId}'`
-      );
+      const query = `
+        UPDATE auth.sessions 
+        SET expires_at = NOW() 
+        WHERE user_id = '${userId}' AND expires_at > NOW()
+      `;
 
-      if (result.error) {
-        return {
-          success: false,
-          error: adaptErrorToBaseError(result.error),
-        };
-      }
+      await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query
+      });
 
       return { success: true, data: undefined };
     } catch (error) {
-      return {
-        success: false,
-        error: adaptErrorToBaseError(error),
-      };
+      return { success: false, error: new Error(`Failed to invalidate all user sessions: ${error}`) };
     }
   }
 
@@ -246,49 +221,21 @@ export class MCPAuthRepository implements IAuthRepository {
     userId: UserId,
     activity: string,
     metadata?: Record<string, any>
-  ): Promise<Result<void, CompatibleBaseError>> {
+  ): Promise<Result<void, Error>> {
     try {
-      const metadataJson = JSON.stringify(metadata || {}).replace(/'/g, "''");
-      const result = await this.mcpAdapter.executeSQL(
-        `INSERT INTO auth_activity_log (user_id, activity, metadata, created_at)
-         VALUES ('${userId}', '${activity}', '${metadataJson}', '${new Date().toISOString()}')`
-      );
+      const query = `
+        INSERT INTO auth.auth_activity_log (user_id, activity, metadata, created_at)
+        VALUES ('${userId}', '${activity}', '${JSON.stringify(metadata || {})}', NOW())
+      `;
 
-      if (result.error) {
-        return {
-          success: false,
-          error: adaptErrorToBaseError(result.error),
-        };
-      }
+      await mcp_supabase_execute_sql({
+        project_id: this.projectId,
+        query: query
+      });
 
       return { success: true, data: undefined };
     } catch (error) {
-      return {
-        success: false,
-        error: adaptErrorToBaseError(error),
-      };
+      return { success: false, error: new Error(`Failed to log auth activity: ${error}`) };
     }
-  }
-
-  private mapDatabaseToSession(data: any): AuthSession {
-    // 세션 데이터 매핑 로직
-    return {
-      id: data.id || data.session_id,
-      userId: data.user_id as UserId,
-      email: data.email || "",
-      accessToken: data.access_token || "",
-      refreshToken: data.refresh_token || "",
-      tokenType: data.token_type || "bearer",
-      expiresAt: new Date(data.expires_at),
-      createdAt: new Date(data.created_at || Date.now()),
-      updatedAt: new Date(data.updated_at || Date.now()),
-      isActive: data.is_active,
-      lastSignInAt: data.last_sign_in_at
-        ? new Date(data.last_sign_in_at)
-        : null,
-      emailConfirmedAt: data.email_confirmed_at
-        ? new Date(data.email_confirmed_at)
-        : null,
-    };
   }
 }

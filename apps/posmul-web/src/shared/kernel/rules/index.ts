@@ -1,2 +1,2 @@
 // Business Rules
-export * from './EconomicRules';
+export * from "./EconomicRules";

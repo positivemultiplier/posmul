@@ -6,18 +6,23 @@ import {
 } from "@posmul/auth-economy-sdk";
 import {
   AccuracyScore,
+  DomainError,
   ValidationError,
   failure,
   success,
-  DomainError,
+} from "@posmul/auth-economy-sdk";
+import {
+  AggregateRoot,
+  BaseDomainEvent,
+  Timestamp,
 } from "@posmul/auth-economy-sdk";
 import { PmpAmount } from "@posmul/auth-economy-sdk/economy";
+
 import {
+  PredictionResult as PredictionResultEnum,
   Timestamps,
   createPredictionGameId,
-  PredictionResult as PredictionResultEnum,
 } from "../types/common";
-import { AggregateRoot } from "../../../../shared/domain/aggregate-root";
 import {
   GameOptions,
   GameStatus,
@@ -25,7 +30,8 @@ import {
 } from "../value-objects/prediction-types";
 import { Prediction } from "./prediction.entity";
 
-export class PredictionGame extends AggregateRoot<PredictionGameId> {
+export class PredictionGame extends AggregateRoot {
+  private _id: PredictionGameId;
   private _creatorId: UserId;
   private _title: string;
   private _description: string;
@@ -41,7 +47,6 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
   private _gameImportanceScore: number;
   private _allocatedPrizePool: PmpAmount;
   private _timestamps: Timestamps;
-  private _version: number;
   private _predictions: Prediction[];
   private _isDeleted: boolean = false;
 
@@ -67,7 +72,8 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
       predictions?: Prediction[];
     }
   ) {
-    super(id);
+    super();
+    this._id = id;
     this._creatorId = props.creatorId;
     this._title = props.title;
     this._description = props.description;
@@ -79,7 +85,7 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
     this._minimumStake = props.minimumStake ?? (createPmpAmount(0) as any);
     this._maximumStake = props.maximumStake ?? (createPmpAmount(1000) as any);
     this._maxParticipants = props.maxParticipants ?? null;
-    this._status = props.status ?? "CREATED";
+    this._status = props.status ?? GameStatus.PENDING;
     this._gameImportanceScore = props.gameImportanceScore ?? 1.0;
     this._allocatedPrizePool =
       props.allocatedPrizePool ?? (createPmpAmount(0) as any);
@@ -87,12 +93,13 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
       createdAt: new Date(),
       updatedAt: new Date(),
     };
-    this._version = props.version ?? 1;
+    // AggregateRoot에서 _version을 관리하므로 설정 불필요
     this._predictions = props.predictions ?? [];
     this._isDeleted = false;
   }
 
   public static create(props: {
+    id?: PredictionGameId; // DB에서 로딩 시 기존 ID 사용
     creatorId: UserId;
     title: string;
     description: string;
@@ -104,6 +111,7 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
     minimumStake?: PmpAmount;
     maximumStake?: PmpAmount;
     maxParticipants?: number;
+    status?: GameStatus; // DB에서 로딩 시 상태 복원용
   }): Result<PredictionGame, ValidationError> {
     if (props.title.length < 5) {
       return {
@@ -122,7 +130,8 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
       };
     }
 
-    const id = createPredictionGameId(crypto.randomUUID());
+    // props에 id가 있으면 기존 ID 사용 (DB에서 로딩), 없으면 새 UUID 생성
+    const id = props.id ?? createPredictionGameId(crypto.randomUUID());
     const game = new PredictionGame(id, props);
 
     // The event constructor in domain-events.ts expects different params
@@ -133,7 +142,7 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
   }
 
   public addPrediction(prediction: Prediction): Result<void, DomainError> {
-    if (this._status !== "ACTIVE") {
+    if (this._status !== GameStatus.ACTIVE) {
       return failure(new DomainError("GAME_NOT_ACTIVE"));
     }
     if (
@@ -190,7 +199,7 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
       });
     }
 
-    this._status = "COMPLETED";
+    this._status = GameStatus.COMPLETED;
     return success(undefined);
   }
 
@@ -380,13 +389,48 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
     this.touch();
   }
 
+  /** 게임 ID 반환 */
+  public getId(): PredictionGameId {
+    return this._id;
+  }
+
+  /** 게임 제목 반환 */
+  public getTitle(): string {
+    return this._title;
+  }
+
+  /** 게임 상태 반환 */
+  public getStatus(): GameStatus {
+    return this._status;
+  }
+
+  /** 게임 활성화 */
+  public activate(): Result<void, DomainError> {
+    if (this._status !== GameStatus.PENDING) {
+      return failure(new DomainError("CANNOT_ACTIVATE_GAME"));
+    }
+    this._status = GameStatus.ACTIVE;
+    this.touch();
+    return success(undefined);
+  }
+
+  /** 게임 종료 */
+  public end(): Result<void, DomainError> {
+    if (this._status !== GameStatus.ACTIVE) {
+      return failure(new DomainError("CANNOT_END_GAME"));
+    }
+    this._status = GameStatus.ENDED;
+    this.touch();
+    return success(undefined);
+  }
+
   /** Helper to update timestamp & version */
   private touch() {
     this._timestamps = {
       ...this._timestamps,
       updatedAt: new Date(),
     } as Timestamps;
-    this._version += 1;
+    this.incrementVersion();
   }
 
   // Additional getters
@@ -406,9 +450,45 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
     return this._maxParticipants;
   }
 
-  get version(): number {
-    return this._version;
+  get allocatedPrizePool(): PmpAmount {
+    return this._allocatedPrizePool;
   }
+
+  get gameImportanceScore(): number {
+    return this._gameImportanceScore;
+  }
+
+  /** MoneyWave 상금 풀 배정 */
+  public setAllocatedPrizePool(amount: PmpAmount): Result<void, DomainError> {
+    if (this._status !== GameStatus.CREATED && this._status !== GameStatus.PENDING) {
+      return failure(new DomainError("GAME_ALREADY_STARTED"));
+    }
+    
+    // 금액 유효성 검증 (음수 불가)
+    const amountValue = typeof amount === 'number' ? amount : Number(amount);
+    if (amountValue < 0) {
+      return failure(new DomainError("INVALID_PRIZE_AMOUNT"));
+    }
+    
+    this._allocatedPrizePool = amount;
+    this.touch(); // 업데이트 시간 갱신
+    
+    return success(undefined);
+  }
+
+  /** 게임 중요도 점수 설정 */
+  public setGameImportanceScore(score: number): Result<void, DomainError> {
+    if (score < 1.0 || score > 5.0) {
+      return failure(new DomainError("INVALID_IMPORTANCE_SCORE"));
+    }
+    
+    this._gameImportanceScore = score;
+    this.touch();
+    
+    return success(undefined);
+  }
+
+  // version getter는 AggregateRoot에서 제공
 
   /* ------------------------------------------------------------------------- */
   /* 🛠️  Legacy alias getters (backward compatibility with existing use-cases) */
@@ -439,7 +519,7 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
   }
 
   public getVersion(): number {
-    return this._version;
+    return this.version;
   }
 
   /**
@@ -462,10 +542,6 @@ export class PredictionGame extends AggregateRoot<PredictionGameId> {
   }
 
   // Legacy getters retained for backward-compat in older use-cases
-  public getTitle(): string {
-    return this._title;
-  }
-
   public getDescription(): string {
     return this._description;
   }

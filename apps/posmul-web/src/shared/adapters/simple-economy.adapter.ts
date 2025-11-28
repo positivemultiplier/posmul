@@ -1,10 +1,9 @@
 /**
  * Legacy Economy Client Adapter (Simplified)
- * 
+ *
  * 기존 MCP 경제 시스템을 새로운 Auth-Economy SDK로 점진적 마이그레이션하기 위한 어댑터
  */
-
-import { createAuthEconomyClient } from '@posmul/auth-economy-sdk';
+import { createAuthEconomyClient } from "@posmul/auth-economy-sdk";
 
 // 간소화된 어댑터 - 기본적인 경제 기능만 지원
 export class SimpleEconomyAdapter {
@@ -29,8 +28,12 @@ export class SimpleEconomyAdapter {
     try {
       // 현재 SDK에는 getCombinedBalance가 제대로 구현되지 않았으므로
       // 개별 잔액 조회 후 결합
-      const pmpResult = await this.client.economy.getPmpAmountBalance(userId as any);
-      const pmcResult = await this.client.economy.getPmcAmountBalance(userId as any);
+      const pmpResult = await this.client.economy.getPmpAmountBalance(
+        userId as any
+      );
+      const pmcResult = await this.client.economy.getPmcAmountBalance(
+        userId as any
+      );
 
       return {
         pmpBalance: pmpResult.success ? Number(pmpResult.data) : 0,
@@ -38,7 +41,7 @@ export class SimpleEconomyAdapter {
         lastActivity: new Date().toISOString(),
       };
     } catch (error) {
-      console.error('Failed to get economic balance:', error);
+      console.error("Failed to get economic balance:", error);
       return {
         pmpBalance: 0,
         pmcBalance: 0,
@@ -59,16 +62,16 @@ export function getEconomyAdapter(): SimpleEconomyAdapter {
 }
 
 // 레거시 호환 함수들
-export const getEconomicBalance = (userId: string) => 
+export const getEconomicBalance = (userId: string) =>
   getEconomyAdapter().getEconomicBalance(userId);
 
 export const recordEconomicTransaction = async (transaction: any) => {
-  console.warn('recordEconomicTransaction not implemented in SDK yet');
-  return { success: false, error: 'Not implemented' };
+  console.warn("recordEconomicTransaction not implemented in SDK yet");
+  return { success: false, error: "Not implemented" };
 };
 
 export const getSystemStats = async () => {
-  console.warn('getSystemStats not implemented in SDK yet');
+  console.warn("getSystemStats not implemented in SDK yet");
   return {
     totalPmpAmount: 0,
     totalPmcAmount: 0,

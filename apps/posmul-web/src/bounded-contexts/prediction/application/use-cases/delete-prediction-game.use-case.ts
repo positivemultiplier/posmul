@@ -9,14 +9,14 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
 import {
   PredictionGameId,
   Result,
+  UseCaseError,
   UserId,
   isFailure,
-  UseCaseError,
 } from "@posmul/auth-economy-sdk";
+
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 import { GameStatusUtil } from "../../domain/value-objects/prediction-types";
 
@@ -123,7 +123,7 @@ export class DeletePredictionGameUseCase {
       return {
         success: true,
         data: {
-          gameId: game.id,
+          gameId: game.getId(),
           deletedAt: new Date(),
           reason: request.reason || "User requested deletion",
         },

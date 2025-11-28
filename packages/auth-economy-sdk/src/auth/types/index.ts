@@ -49,6 +49,7 @@ export interface AuthService {
   refreshSession(): Promise<Result<AuthResult, AuthError>>;
   syncSessionAcrossApps(): Promise<Result<void, AuthError>>;
   getUniversalUserId(): Promise<Result<UserId | null, AuthError>>;
+  signInWithOAuth(provider: 'google' | 'kakao' | 'github', redirectTo?: string): Promise<Result<void, AuthError>>;
 }
 
 // === 유틸리티 타입 가드 ===

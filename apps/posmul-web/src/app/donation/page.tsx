@@ -12,8 +12,23 @@
 
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+
+import Link from "next/link";
+
+import { DonationLeaderboard } from "../../bounded-contexts/donation/presentation/components/DonationLeaderboard";
+
+/**
+ * Donation Main Page
+ *
+ * Overview page for donation domain showing three main categories:
+ * - Direct: 개인 간 직접 기부
+ * - Institute: 기관을 통한 기부
+ * - Opinion Leader: 오피니언 리더 기부
+ *
+ * @author PosMul Development Team
+ * @since 2024-12
+ */
 
 export default function DonationPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -70,7 +85,7 @@ export default function DonationPage() {
           <div className="animate-pulse mb-4">
             <span className="text-6xl">❤️</span>
           </div>
-          <h1 className="text-5xl font-bold text-gray-900 mb-4 bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
+          <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-red-600 to-pink-600 bg-clip-text text-transparent">
             Donation
           </h1>
           <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto">
@@ -218,6 +233,11 @@ export default function DonationPage() {
         </div>
       </div>
 
+      {/* 기부 리더보드 */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <DonationLeaderboard />
+      </div>
+
       {/* Money Wave Donation System with Enhanced Design */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl p-8 shadow-lg border border-blue-200">
@@ -230,7 +250,8 @@ export default function DonationPage() {
               {
                 step: "1️⃣",
                 title: "PmcAmount 기부 결정",
-                description: "보유한 PmcAmount(위험자산)로 기부할 금액을 결정합니다",
+                description:
+                  "보유한 PmcAmount(위험자산)로 기부할 금액을 결정합니다",
                 color: "red",
               },
               {

@@ -2,7 +2,7 @@
  * PosMul Platform - Supabase 자동 생성 타입 (Universal MCP 통합)
  * 생성 시간: 2025-07-03T06:35:00.000Z
  * 프로젝트: fabyagohqqnusmnwekuc
- * 
+ *
  * 🔥 수동 편집 금지! 이 파일은 MCP로 자동 생성됩니다.
  * 🚀 mcp_supabase_generate_typescript_types 결과 기반
  */

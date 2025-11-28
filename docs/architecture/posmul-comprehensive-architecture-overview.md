@@ -1,4 +1,4 @@
----
+﻿---
 type: explanation
 title: "PosMul 종합 아키텍처 오버뷰"
 description: "PosMul 프로젝트의 전체 시스템 아키텍처를 시각화하고, 사용자 상호작용부터 DevOps, 프런트엔드, 백엔드, 인프라, 데이터베이스 플랫폼까지의 완전한 흐름을 심층적으로 분석합니다."

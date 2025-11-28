@@ -1,8 +1,11 @@
 /**
  * MCP User Repository Implementation
  */
-
-import { createDefaultMCPAdapter, Result, CompatibleBaseError } from "../../../../shared/legacy-compatibility";
+import {
+  CompatibleBaseError,
+  Result,
+  createDefaultMCPAdapter,
+} from "../../../../shared/legacy-compatibility";
 
 export class MCPUserRepository {
   private readonly mcpAdapter = createDefaultMCPAdapter();
@@ -14,7 +17,7 @@ export class MCPUserRepository {
       const result = await this.mcpAdapter.executeSQL(`
         SELECT * FROM users WHERE id = $1
       `);
-      
+
       if (!result.data || result.data.length === 0) {
         return { success: true, data: null };
       }
@@ -22,12 +25,12 @@ export class MCPUserRepository {
       const userData = result.data[0];
       return {
         success: true,
-        data: this.mapDatabaseToUser(userData)
+        data: this.mapDatabaseToUser(userData),
       };
     } catch (error) {
       return {
         success: false,
-        error: error as CompatibleBaseError
+        error: error as CompatibleBaseError,
       };
     }
   }
@@ -38,7 +41,7 @@ export class MCPUserRepository {
       email: data.email,
       name: data.name,
       createdAt: data.created_at,
-      updatedAt: data.updated_at
+      updatedAt: data.updated_at,
     };
   }
 }

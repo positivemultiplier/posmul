@@ -1,13 +1,13 @@
 /**
  * Supabase Prediction Game Repository Implementation (Simplified)
  */
+import { PredictionGameId, Result, UserId } from "@posmul/auth-economy-sdk";
 
+import { PredictionGame } from "../../domain/entities/prediction-game.aggregate";
 import {
   IPredictionGameRepository,
   RepositoryError,
 } from "../../domain/repositories/prediction-game.repository";
-import { PredictionGame } from "../../domain/entities/prediction-game.aggregate";
-import { PredictionGameId, UserId, Result } from "@posmul/auth-economy-sdk";
 import { GameStatus } from "../../domain/value-objects/game-status";
 
 export class SupabasePredictionGameRepository

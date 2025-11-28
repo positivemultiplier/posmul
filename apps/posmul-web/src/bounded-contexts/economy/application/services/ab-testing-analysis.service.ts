@@ -4,9 +4,7 @@
  * 경제학적 실험 설계와 통계적 추론을 담당하는 애플리케이션 서비스
  * Fisher의 실험설계이론과 Neyman-Pearson 가설검정을 적용
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import {

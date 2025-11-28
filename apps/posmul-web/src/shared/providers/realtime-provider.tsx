@@ -1,8 +1,10 @@
 "use client";
 
-import { useRealtimeConnection } from "../hooks/use-realtime-connection";
-import { isFailure } from '@posmul/auth-economy-sdk';
+import { isFailure } from "@posmul/auth-economy-sdk";
 
+import React, { createContext, useContext, useEffect, useRef } from "react";
+
+import { useRealtimeConnection } from "../hooks/use-realtime-connection";
 import type {
   RealtimeEconomicData,
   RealtimeMarketData,
@@ -10,7 +12,6 @@ import type {
   RealtimePredictionGame,
 } from "../stores/realtime-data-store";
 import { useRealtimeDataStore } from "../stores/realtime-data-store";
-import React, { createContext, useContext, useEffect, useRef } from "react";
 
 interface RealtimeProviderProps {
   children: React.ReactNode;

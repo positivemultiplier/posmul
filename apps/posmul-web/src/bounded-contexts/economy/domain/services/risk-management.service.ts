@@ -11,7 +11,6 @@
  * 5. 인플레이션 위험 감지 및 대응
  * 6. 버블 형성 방지 메커니즘
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import { EBIT, PmcAmount, PmpAmount } from "../value-objects/economic-types";
@@ -344,7 +343,8 @@ export class RiskManagementService {
       }
 
       // Pigouvian Tax 원리를 적용한 수수료 구조
-      const baselineContribution = unwrapPmpAmount(systemState.totalPmpSupply) * 0.01;
+      const baselineContribution =
+        unwrapPmpAmount(systemState.totalPmpSupply) * 0.01;
       const contributionRatio = averageContribution / baselineContribution;
       const optimalFeeStructure = Math.max(
         0.01,

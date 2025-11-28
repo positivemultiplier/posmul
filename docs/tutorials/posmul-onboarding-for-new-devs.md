@@ -1,4 +1,4 @@
----
+﻿---
 type: tutorial
 title: "PosMul 신규 개발자 온보딩 튜토리얼"
 description: "PosMul 프로젝트의 개발 환경을 설정하고, MCP 기반의 핵심 개발 워크플로우를 체험하는 튜토리얼입니다."

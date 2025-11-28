@@ -78,6 +78,13 @@ export interface TransactionResult {
   createdAt: Date;
 }
 
+// === 개발용 보너스 결과 ===
+export interface DevBonusResult {
+  pmpBalance: number;
+  pmcBalance: number;
+  bonusGranted: boolean;
+}
+
 // === 경제 서비스 인터페이스 ===
 export interface EconomyService {
   getPmpAmountBalance(userId: UserId): Promise<Result<PmpAmount, EconomyError>>;
@@ -95,6 +102,9 @@ export interface EconomyService {
     toUserId: UserId,
     amount: PmcAmount
   ): Promise<Result<TransactionResult, EconomyError>>;
+  
+  // 🎁 개발용 로그인 보너스 (개발 환경에서만 작동)
+  grantDevLoginBonus?(userId: UserId): Promise<Result<DevBonusResult, EconomyError>>;
 }
 
 // === 유틸리티 함수 재수출 ===

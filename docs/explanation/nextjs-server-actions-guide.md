@@ -1,4 +1,4 @@
-# Next.js Server Actions 완전 가이드
+﻿# Next.js Server Actions 완전 가이드
 
 > **문서 목적**: Next.js App Router의 Server Actions 개념 이해 및 PosMul 프로젝트 적용 방법  
 > **대상 독자**: 프론트엔드 개발자, Next.js 학습자  

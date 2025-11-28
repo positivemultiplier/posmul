@@ -1,4 +1,4 @@
----
+﻿---
 type: tutorial
 title: "LG전자 DX School 커리큘럼 기반 PosMul 역량 강화 가이드"
 description: "LG전자 DX School의 데이터 중심 문제 해결 방법론을 PosMul 프로젝트에 적용하기 위한 체계적인 자가 학습 가이드입니다. BX, CX, AIX 3단계 학습 로드맵을 제공합니다."

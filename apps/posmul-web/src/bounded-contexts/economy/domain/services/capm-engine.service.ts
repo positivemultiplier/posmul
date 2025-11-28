@@ -9,7 +9,6 @@
  * - Portfolio Return: Σ(wi × Ri)
  * - Portfolio Variance: Σ(wi² × σi²) + ΣΣ(wi × wj × σij)
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import {
@@ -115,9 +114,7 @@ export class CAPMEngine implements ICAPMEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -179,9 +176,7 @@ export class CAPMEngine implements ICAPMEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -268,9 +263,7 @@ export class CAPMEngine implements ICAPMEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -331,9 +324,7 @@ export class CAPMEngine implements ICAPMEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -395,9 +386,7 @@ export class CAPMEngine implements ICAPMEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -444,9 +433,7 @@ export class CAPMEngine implements ICAPMEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -528,9 +515,7 @@ export class CAPMEngine implements ICAPMEngine {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -649,8 +634,8 @@ export class CAPMEngine implements ICAPMEngine {
       marketConditions.volatilityRegime === "High"
         ? 1.5
         : marketConditions.volatilityRegime === "Medium"
-        ? 1.0
-        : 0.7;
+          ? 1.0
+          : 0.7;
 
     return averageVolatility * volatilityMultiplier;
   }
@@ -668,8 +653,8 @@ export class CAPMEngine implements ICAPMEngine {
       confidenceLevel === 0.95
         ? 1.645
         : confidenceLevel === 0.99
-        ? 2.326
-        : 1.645;
+          ? 2.326
+          : 1.645;
 
     return unwrapExpectedReturn(expectedReturn) - zScore * volatility;
   }

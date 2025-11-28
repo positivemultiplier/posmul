@@ -4,7 +4,6 @@
  * 사용자가 PmpAmount/PmcAmount를 활용하여 예측 게임에 참여하고 정확도에 따라 보상을 받는 핵심 비즈니스 로직
  * Network Economics(Metcalfe's Law)와 Learning Curve Theory 적용
  */
-
 import { UserId } from "@posmul/auth-economy-sdk";
 
 import {
@@ -21,7 +20,12 @@ import {
   NetworkEconomicsEngine,
   UtilityFunctionEstimationService,
 } from "../../domain/services";
-import { PmcAmount, PmpAmount, createPmcAmount, createPmpAmount } from "../../domain/value-objects";
+import {
+  PmcAmount,
+  PmpAmount,
+  createPmcAmount,
+  createPmpAmount,
+} from "../../domain/value-objects";
 
 export interface PredictionGameRequest {
   readonly userId: UserId;
@@ -94,8 +98,6 @@ export class ParticipateInPredictionGameUseCase {
     private readonly utilityService: UtilityFunctionEstimationService
   ) {}
 
-  
-
   async execute(request: PredictionGameRequest): Promise<PredictionGameResult> {
     try {
       // 1. 현재 계정 상태 및 잔액 확인
@@ -154,16 +156,19 @@ export class ParticipateInPredictionGameUseCase {
       }`;
       const transactionData: Omit<Transaction, "transactionId"> = {
         userId: request.userId,
-        type: request.stakeType === "PmpAmount" ? "PmpAmount_SPEND" : "PmcAmount_SPEND",
+        type:
+          request.stakeType === "PmpAmount"
+            ? "PmpAmount_SPEND"
+            : "PmcAmount_SPEND",
         amount: Math.abs(request.stake as number),
-        currencyType: request.stakeType === "PmpAmount" ? "PmpAmount" : "PmcAmount",
+        currencyType:
+          request.stakeType === "PmpAmount" ? "PmpAmount" : "PmcAmount",
         description: `Prediction game stake: ${request.stake} ${request.stakeType} for ${request.predictionType} prediction`,
         timestamp: request.timestamp,
       };
 
-      const transactionResult = await this.accountRepository.saveTransaction(
-        transactionData
-      );
+      const transactionResult =
+        await this.accountRepository.saveTransaction(transactionData);
       if (!transactionResult.success) {
         throw new Error("Failed to execute prediction stake transaction");
       }
@@ -208,9 +213,14 @@ export class ParticipateInPredictionGameUseCase {
       return {
         success: false,
         predictionId: "",
-        stakeAmount: request.stakeType === "PmpAmount" ? createPmpAmount(0) : createPmcAmount(0),
+        stakeAmount:
+          request.stakeType === "PmpAmount"
+            ? createPmpAmount(0)
+            : createPmcAmount(0),
         potentialReward:
-          request.stakeType === "PmpAmount" ? createPmpAmount(0) : createPmcAmount(0),
+          request.stakeType === "PmpAmount"
+            ? createPmpAmount(0)
+            : createPmcAmount(0),
         networkValue: 0,
         learningBonus: 0,
         accuracyExpectation: 0,

@@ -1,4 +1,4 @@
-# Universal MCP Automation 시스템 작동 원리 보고서
+﻿# Universal MCP Automation 시스템 작동 원리 보고서
 
 ---
 - **type**: `explanation`

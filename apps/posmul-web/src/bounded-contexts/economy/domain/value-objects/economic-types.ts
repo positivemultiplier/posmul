@@ -323,7 +323,10 @@ export type MoneyWaveCycle = EconomicBrand<number, "MoneyWaveCycle">;
 /**
  * PmcAmount 만료 기간 (일 단위)
  */
-export type PmcAmountExpirationPeriod = EconomicBrand<number, "PmcAmountExpirationPeriod">;
+export type PmcAmountExpirationPeriod = EconomicBrand<
+  number,
+  "PmcAmountExpirationPeriod"
+>;
 
 /**
  * 학습 곡선 기간 (주 단위)

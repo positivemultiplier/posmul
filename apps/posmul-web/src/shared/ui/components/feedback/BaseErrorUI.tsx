@@ -3,16 +3,22 @@
  *
  * 기존 BaseError 클래스와 연동하여 사용자 친화적인 에러 화면을 제공합니다.
  */
-
 import { AuthEconomyError } from "@posmul/auth-economy-sdk";
 import { ChevronDown, Home, RotateCw } from "lucide-react";
-import { Button } from "../base";
+
 import { BaseError } from "../../../types/base-error";
+import { Button } from "../base";
 
 interface CustomAction {
   label: string;
   action: () => void;
-  variant?: "primary" | "secondary" | "default" | "danger" | "ghost" | "outline";
+  variant?:
+    | "primary"
+    | "secondary"
+    | "default"
+    | "danger"
+    | "ghost"
+    | "outline";
 }
 
 interface BaseErrorUIProps {
@@ -82,7 +88,8 @@ function getErrorDisplayInfo(error: BaseError | Error) {
       return {
         type: "서버 오류",
         title: "서버에서 문제가 발생했습니다",
-        description: "잠시 후 다시 시도해주세요. 문제가 지속되면 고객지원팀에 연락하세요.",
+        description:
+          "잠시 후 다시 시도해주세요. 문제가 지속되면 고객지원팀에 연락하세요.",
         icon: "🔧",
         canRetry: true,
         severity: "error" as const,

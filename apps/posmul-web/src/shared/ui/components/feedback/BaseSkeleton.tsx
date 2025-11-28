@@ -3,7 +3,6 @@
  *
  * 다양한 레이아웃에 맞는 스켈레톤 UI를 제공합니다.
  */
-
 import { cn } from "../../utils/cn";
 
 interface BaseSkeletonProps {

@@ -2,9 +2,9 @@
  * Create Donation Use Case
  * 기부 생성 유스케이스
  */
-
-import { Result, isFailure, UserId } from "@posmul/auth-economy-sdk";
+import { Result, UserId, isFailure } from "@posmul/auth-economy-sdk";
 import { ValidationError } from "@posmul/auth-economy-sdk";
+
 import { Donation } from "../../domain/entities/donation.entity";
 import { Institute } from "../../domain/entities/institute.entity";
 import { OpinionLeader } from "../../domain/entities/opinion-leader.entity";
@@ -244,16 +244,15 @@ export class CreateDonationUseCase {
       request.beneficiaryContact
     );
 
-    const result = Donation.createDirectDonation(
+    const result = Donation.createDirectDonation({
       donorId,
-      amount,
+      amount: amount.getValue(),
+      beneficiaryName: request.beneficiaryName,
+      beneficiaryId: request.beneficiaryContact, // 또는 적절한 ID 필드
       category,
-      description,
-      beneficiaryInfo,
+      description: description.getValue(),
       frequency,
-      metadata,
-      scheduledAt
-    );
+    });
 
     if (!result.success) {
       throw isFailure(result) ? result.error : new Error("Unknown error");
@@ -302,16 +301,14 @@ export class CreateDonationUseCase {
       };
     }
 
-    const donationResult = Donation.createInstituteDonation(
+    const donationResult = Donation.createInstituteDonation({
       donorId,
-      amount,
+      amount: amount.getValue(),
+      instituteId: new InstituteId(instituteId),
       category,
-      description,
-      new InstituteId(instituteId),
+      description: description.getValue(),
       frequency,
-      metadata,
-      scheduledAt
-    );
+    });
 
     if (!donationResult.success) {
       return {
@@ -373,16 +370,14 @@ export class CreateDonationUseCase {
       };
     }
 
-    const donationResult = Donation.createOpinionLeaderSupport(
+    const donationResult = Donation.createOpinionLeaderSupport({
       donorId,
-      amount,
+      amount: amount.getValue(),
+      opinionLeaderId: new OpinionLeaderId(opinionLeaderId),
       category,
-      description,
-      new OpinionLeaderId(opinionLeaderId),
+      description: description.getValue(),
       frequency,
-      metadata,
-      scheduledAt
-    );
+    });
 
     if (!donationResult.success) {
       return {

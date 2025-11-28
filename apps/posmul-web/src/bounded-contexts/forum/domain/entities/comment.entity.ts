@@ -2,16 +2,15 @@
  * Comment Entity
  * 포럼 댓글 엔티티
  */
-
-import { UserId } from '../../../auth/domain/value-objects/user-value-objects';
+import { UserId } from "../../../auth/domain/value-objects/user-value-objects";
 import {
-  CommentId,
-  PostId,
-  CommentStatus,
-  CommentContent,
   ActivityPoints,
-  createActivityPoints
-} from '../value-objects/forum-value-objects';
+  CommentContent,
+  CommentId,
+  CommentStatus,
+  PostId,
+  createActivityPoints,
+} from "../value-objects/forum-value-objects";
 
 /**
  * Comment Entity
@@ -26,20 +25,20 @@ export class Comment {
     private status: CommentStatus,
     private readonly createdAt: Date,
     private updatedAt: Date,
-    
+
     // 계층 구조 (3단계까지 지원)
     private readonly parentCommentId?: CommentId,
     private readonly depth: number = 0,
-    
+
     // 상호작용 통계
     private upvoteCount: number = 0,
     private downvoteCount: number = 0,
     private replyCount: number = 0,
-    
+
     // 모더레이션
     private moderatedAt?: Date,
     private moderatedBy?: UserId,
-    
+
     // 메타데이터
     private isEdited: boolean = false,
     private editedAt?: Date
@@ -58,11 +57,11 @@ export class Comment {
   ): Comment {
     // 최대 3단계까지만 허용
     if (depth > 2) {
-      throw new Error('Comments can only be nested up to 3 levels deep');
+      throw new Error("Comments can only be nested up to 3 levels deep");
     }
 
     const now = new Date();
-    
+
     return new Comment(
       id,
       postId,
@@ -118,29 +117,61 @@ export class Comment {
   }
 
   // Getters
-  getId(): CommentId { return this.id; }
-  getPostId(): PostId { return this.postId; }
-  getAuthorId(): UserId { return this.authorId; }
-  getContent(): CommentContent { return this.content; }
-  getStatus(): CommentStatus { return this.status; }
-  getCreatedAt(): Date { return this.createdAt; }
-  getUpdatedAt(): Date { return this.updatedAt; }
-  getParentCommentId(): CommentId | undefined { return this.parentCommentId; }
-  getDepth(): number { return this.depth; }
-  getUpvoteCount(): number { return this.upvoteCount; }
-  getDownvoteCount(): number { return this.downvoteCount; }
-  getReplyCount(): number { return this.replyCount; }
-  getModeratedAt(): Date | undefined { return this.moderatedAt; }
-  getModeratedBy(): UserId | undefined { return this.moderatedBy; }
-  getIsEdited(): boolean { return this.isEdited; }
-  getEditedAt(): Date | undefined { return this.editedAt; }
+  getId(): CommentId {
+    return this.id;
+  }
+  getPostId(): PostId {
+    return this.postId;
+  }
+  getAuthorId(): UserId {
+    return this.authorId;
+  }
+  getContent(): CommentContent {
+    return this.content;
+  }
+  getStatus(): CommentStatus {
+    return this.status;
+  }
+  getCreatedAt(): Date {
+    return this.createdAt;
+  }
+  getUpdatedAt(): Date {
+    return this.updatedAt;
+  }
+  getParentCommentId(): CommentId | undefined {
+    return this.parentCommentId;
+  }
+  getDepth(): number {
+    return this.depth;
+  }
+  getUpvoteCount(): number {
+    return this.upvoteCount;
+  }
+  getDownvoteCount(): number {
+    return this.downvoteCount;
+  }
+  getReplyCount(): number {
+    return this.replyCount;
+  }
+  getModeratedAt(): Date | undefined {
+    return this.moderatedAt;
+  }
+  getModeratedBy(): UserId | undefined {
+    return this.moderatedBy;
+  }
+  getIsEdited(): boolean {
+    return this.isEdited;
+  }
+  getEditedAt(): Date | undefined {
+    return this.editedAt;
+  }
 
   /**
    * 댓글 내용 수정
    */
   updateContent(newContent: CommentContent, editorId: UserId): void {
     this.checkEditPermission(editorId);
-    
+
     this.content = newContent;
     this.isEdited = true;
     this.editedAt = new Date();
@@ -171,8 +202,11 @@ export class Comment {
    */
   restore(restorerId: UserId): void {
     this.checkEditPermission(restorerId);
-    if (this.status !== CommentStatus.DELETED && this.status !== CommentStatus.HIDDEN) {
-      throw new Error('Only deleted or hidden comments can be restored');
+    if (
+      this.status !== CommentStatus.DELETED &&
+      this.status !== CommentStatus.HIDDEN
+    ) {
+      throw new Error("Only deleted or hidden comments can be restored");
     }
     this.status = CommentStatus.PUBLISHED;
     this.updatedAt = new Date();
@@ -267,7 +301,7 @@ export class Comment {
   calculateCreationPoints(): ActivityPoints {
     // 답글 깊이에 따른 차등 포인트
     let basePoints = 5; // 기본 댓글 포인트
-    
+
     if (this.depth === 0) {
       basePoints = 5; // 최상위 댓글
     } else if (this.depth === 1) {
@@ -276,7 +310,7 @@ export class Comment {
       basePoints = 2; // 대댓글
     }
 
-    return createActivityPoints(basePoints, 'PmpAmount');
+    return createActivityPoints(basePoints, "PmpAmount");
   }
 
   /**
@@ -286,21 +320,21 @@ export class Comment {
     const contentLength = this.content.value.length;
     const votes = this.upvoteCount - this.downvoteCount;
     const replies = this.replyCount;
-    
+
     let score = 0;
-    
+
     // 콘텐츠 길이 점수 (0-20점)
     if (contentLength > 200) score += 20;
     else if (contentLength > 100) score += 15;
     else if (contentLength > 50) score += 10;
     else score += 5;
-    
+
     // 투표 점수 (0-50점)
     score += Math.min(votes * 5, 50);
-    
+
     // 답글 유도 점수 (0-30점)
     score += Math.min(replies * 10, 30);
-    
+
     return Math.max(0, Math.min(100, score));
   }
 
@@ -308,10 +342,11 @@ export class Comment {
    * 댓글의 인기도 점수 계산
    */
   calculatePopularityScore(): number {
-    const ageInHours = (Date.now() - this.createdAt.getTime()) / (1000 * 60 * 60);
+    const ageInHours =
+      (Date.now() - this.createdAt.getTime()) / (1000 * 60 * 60);
     const votes = this.upvoteCount - this.downvoteCount;
     const engagement = this.replyCount;
-    
+
     // 시간이 지날수록 점수가 감소하는 알고리즘
     return (votes + engagement) / Math.pow(ageInHours + 1, 1.2);
   }
@@ -321,10 +356,10 @@ export class Comment {
    */
   private checkEditPermission(userId: UserId): void {
     if (this.authorId !== userId) {
-      throw new Error('Only the author can edit this comment');
+      throw new Error("Only the author can edit this comment");
     }
     if (this.status === CommentStatus.DELETED) {
-      throw new Error('Cannot edit deleted comments');
+      throw new Error("Cannot edit deleted comments");
     }
   }
 
@@ -345,7 +380,7 @@ export class Comment {
       depth: this.depth,
       hasReplies: this.replyCount > 0,
       totalVotes: this.upvoteCount + this.downvoteCount,
-      netVotes: this.upvoteCount - this.downvoteCount
+      netVotes: this.upvoteCount - this.downvoteCount,
     };
   }
 
@@ -370,7 +405,7 @@ export class Comment {
       depth: this.depth,
       status: this.status,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
     };
   }
 
@@ -382,7 +417,7 @@ export class Comment {
     if (this.isTopLevel()) {
       return this.id;
     }
-    
+
     // 답글이면 부모 댓글을 찾아서 스레드 ID를 찾아야 함
     // 이는 Repository에서 처리해야 할 로직
     return this.parentCommentId!;

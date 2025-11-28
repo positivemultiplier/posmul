@@ -8,6 +8,7 @@
  * - CAPM 공식의 수학적 정확성 확인
  * - 포트폴리오 최적화 알고리즘 검증
  */
+import { isFailure } from "@posmul/auth-economy-sdk";
 
 import {
   createBetaCoefficient,
@@ -18,8 +19,6 @@ import {
   unwrapBetaCoefficient,
   unwrapExpectedReturn,
 } from "../../value-objects";
-import { isFailure } from '@posmul/auth-economy-sdk';
-
 import { CAPMEngine, CAPMEngineConfig } from "../capm-engine.service";
 import {
   IAsset,
@@ -544,7 +543,9 @@ describe("CAPMEngine", () => {
       // Assert
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("Insufficient data");
+        expect(
+          isFailure(result) ? result.error.message : "Unknown error"
+        ).toContain("Insufficient data");
       }
     });
 
@@ -559,7 +560,9 @@ describe("CAPMEngine", () => {
       // Assert
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("same length");
+        expect(
+          isFailure(result) ? result.error.message : "Unknown error"
+        ).toContain("same length");
       }
     });
   });
@@ -631,7 +634,9 @@ describe("CAPMEngine", () => {
       const result = await engine.analyzeMarketConditions(insufficientData); // Assert
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(isFailure(result) ? result.error.message : "Unknown error").toContain("Insufficient data");
+        expect(
+          isFailure(result) ? result.error.message : "Unknown error"
+        ).toContain("Insufficient data");
       }
     });
   });

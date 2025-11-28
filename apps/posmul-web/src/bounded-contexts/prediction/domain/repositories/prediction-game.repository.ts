@@ -8,13 +8,11 @@
  * @since 2024-12
  * @task PD-003
  */
-
 import { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
-
 import { Result } from "@posmul/auth-economy-sdk";
 
 import { PredictionGame } from "../entities/prediction-game.aggregate";
-import { GameStatus } from "../value-objects/game-status";
+import { GameStatus } from "../value-objects/prediction-types";
 
 /**
  * Repository 에러 타입
@@ -91,9 +89,10 @@ export interface IPredictionGameRepository {
    * 예측 게임 저장 (생성 또는 수정)
    *
    * @param game 저장할 예측 게임 Aggregate
+   * @param options 저장 옵션 (skipGameUpdate: 게임 테이블 업데이트 스킵)
    * @returns 성공 시 void, 실패 시 RepositoryError
    */
-  save(game: PredictionGame): Promise<Result<void, RepositoryError>>;
+  save(game: PredictionGame, options?: { skipGameUpdate?: boolean }): Promise<Result<void, RepositoryError>>;
 
   /**
    * ID로 예측 게임 조회
@@ -256,6 +255,30 @@ export interface IPredictionGameRepository {
    * @returns 성공 시 업데이트된 게임 수, 실패 시 RepositoryError
    */
   bulkUpdate(games: PredictionGame[]): Promise<Result<number, RepositoryError>>;
+
+  /**
+   * 게임 정산 실행 (DB 함수 호출)
+   *
+   * @param gameId 정산할 게임 ID
+   * @param correctOptionId 정답 옵션 ID
+   * @returns 성공 시 정산 결과, 실패 시 RepositoryError
+   */
+  settleGame(
+    gameId: PredictionGameId,
+    correctOptionId: string
+  ): Promise<
+    Result<
+      {
+        gameId: string;
+        correctOptionId: string;
+        winnersCount: number;
+        losersCount: number;
+        totalRewardDistributed: number;
+        settledAt: Date;
+      },
+      RepositoryError
+    >
+  >;
 }
 
 /**

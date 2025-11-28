@@ -70,9 +70,25 @@ export class BusinessLogicError extends AuthEconomyError {
 
 // 도메인 에러
 export class DomainError extends AuthEconomyError {
-  constructor(message: string, details?: Record<string, unknown>) {
-    super("VALIDATION_ERROR", message, details);
+  constructor(codeOrMessage: string, details?: Record<string, unknown>) {
+    // 특정 에러 코드가 제공되면 코드로 사용, 그렇지 않으면 기본 VALIDATION_ERROR 사용
+    const isErrorCode =
+      codeOrMessage.includes("INVALID_") || codeOrMessage.includes("_ERROR");
+    const code = isErrorCode ? "DOMAIN_ERROR" : "VALIDATION_ERROR";
+    const message = isErrorCode ? codeOrMessage : codeOrMessage;
+
+    super(code as ErrorCode, message, details);
     this.name = "DomainError";
+
+    // 특정 에러 코드의 경우 code 속성을 덮어쓰기 (테스트에서 접근 가능하도록)
+    if (isErrorCode) {
+      Object.defineProperty(this, "code", {
+        value: codeOrMessage,
+        writable: false,
+        enumerable: true,
+        configurable: false,
+      });
+    }
   }
 }
 

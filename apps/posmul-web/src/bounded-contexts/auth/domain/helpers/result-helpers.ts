@@ -1,7 +1,6 @@
 /**
  * Result helper functions for legacy compatibility
  */
-
 import { Result, ValidationError } from "@posmul/auth-economy-sdk";
 
 export function success<T>(data: T): Result<T, never> {

@@ -4,7 +4,6 @@
  *
  * 모든 함수는 도메인 규칙과 제약조건을 검증합니다.
  */
-
 import {
   ActiveUserCount,
   AgencyCostReduction,
@@ -37,18 +36,18 @@ import {
   MultiplierEffect,
   // Network Economics
   NetworkDensity,
+  PValue,
   PmcAmount,
   // 핵심 화폐 시스템
   PmpAmount,
   // 예측 정확도
   PredictionAccuracy,
   ProspectValue,
-  PValue,
+  RSquared,
   ReedValue,
   // CAPM
   RiskFreeRate,
   RiskTolerance,
-  RSquared,
   TaxRate,
   // 효용함수
   UtilityAlpha,

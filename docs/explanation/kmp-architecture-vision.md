@@ -1,4 +1,4 @@
-# PosMul 플랫폼의 Kotlin Multiplatform(KMP) 아키텍처 비전
+﻿# PosMul 플랫폼의 Kotlin Multiplatform(KMP) 아키텍처 비전
 
 **문서 버전**: 1.0  
 **작성일**: 2025-06-24

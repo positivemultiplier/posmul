@@ -2,7 +2,6 @@
  * Risk Management Use Cases
  * 리스크 관리 관련 Use Case들
  */
-
 import { Result, isFailure } from "@posmul/auth-economy-sdk";
 
 import {
@@ -16,8 +15,6 @@ import {
  */
 export class MonitorSystemStabilityUseCase {
   constructor(private readonly riskManagementService: RiskManagementService) {}
-
-  
 
   async execute(systemState: EconomicSystemState): Promise<
     Result<{
@@ -34,7 +31,9 @@ export class MonitorSystemStabilityUseCase {
       if (!riskResult.success) {
         return {
           success: false,
-          error: isFailure(riskResult) ? riskResult.error : new Error("Unknown error"),
+          error: isFailure(riskResult)
+            ? riskResult.error
+            : new Error("Unknown error"),
         };
       }
 
@@ -77,8 +76,6 @@ export class MonitorSystemStabilityUseCase {
 export class AutoEconomicPolicyAdjustmentUseCase {
   constructor(private readonly riskManagementService: RiskManagementService) {}
 
-  
-
   async execute(systemState: EconomicSystemState): Promise<
     Result<{
       adjustments: {
@@ -98,7 +95,9 @@ export class AutoEconomicPolicyAdjustmentUseCase {
       if (!taylorResult.success) {
         return {
           success: false,
-          error: isFailure(taylorResult) ? taylorResult.error : new Error("Unknown error"),
+          error: isFailure(taylorResult)
+            ? taylorResult.error
+            : new Error("Unknown error"),
         };
       }
 
@@ -110,7 +109,9 @@ export class AutoEconomicPolicyAdjustmentUseCase {
       if (!riskResult.success) {
         return {
           success: false,
-          error: isFailure(riskResult) ? riskResult.error : new Error("Unknown error"),
+          error: isFailure(riskResult)
+            ? riskResult.error
+            : new Error("Unknown error"),
         };
       }
 
@@ -163,8 +164,6 @@ export class AutoEconomicPolicyAdjustmentUseCase {
  */
 export class EmergencyCircuitBreakerUseCase {
   constructor(private readonly riskManagementService: RiskManagementService) {}
-
-  
 
   async execute(systemState: EconomicSystemState): Promise<
     Result<{
@@ -271,8 +270,6 @@ export class EmergencyCircuitBreakerUseCase {
 export class OptimizeIncentiveMechanismUseCase {
   constructor(private readonly riskManagementService: RiskManagementService) {}
 
-  
-
   async execute(
     systemState: EconomicSystemState,
     userBehaviorData: {
@@ -307,7 +304,9 @@ export class OptimizeIncentiveMechanismUseCase {
       if (!optimizationResult.success) {
         return {
           success: false,
-          error: isFailure(optimizationResult) ? optimizationResult.error : new Error("Unknown error"),
+          error: isFailure(optimizationResult)
+            ? optimizationResult.error
+            : new Error("Unknown error"),
         };
       }
 

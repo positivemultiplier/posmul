@@ -9,10 +9,10 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-
-import { MoneyWaveStatus } from "../../shared/ui";
-import { PredictionsNavigation } from "../../bounded-contexts/prediction/presentation/components/PredictionsNavigation";
 import { Suspense } from "react";
+
+import { PredictionsNavigation } from "../../bounded-contexts/prediction/presentation/components/PredictionsNavigation";
+import { MoneyWaveStatus } from "../../shared/ui";
 
 interface PredictionLayoutProps {
   children: React.ReactNode;

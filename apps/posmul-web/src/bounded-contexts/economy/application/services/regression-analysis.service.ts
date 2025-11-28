@@ -4,9 +4,7 @@
  * @author Economy Domain - Econometric Analysis Team
  * @version 1.0.0
  */
-
 import { Result } from "@posmul/auth-economy-sdk";
-
 
 /**
  * 회귀모델 타입 정의
@@ -272,7 +270,7 @@ export class RegressionAnalysisService {
       if (!validationResult.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
@@ -384,9 +382,7 @@ export class RegressionAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -417,7 +413,7 @@ export class RegressionAnalysisService {
       if (!firstStageResults.success) {
         return {
           success: false,
-          error: new Error("처리에 실패했습니다.")
+          error: new Error("처리에 실패했습니다."),
         };
       }
 
@@ -431,9 +427,7 @@ export class RegressionAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -499,9 +493,7 @@ export class RegressionAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -549,9 +541,7 @@ export class RegressionAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -615,9 +605,7 @@ export class RegressionAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }
@@ -673,9 +661,7 @@ export class RegressionAnalysisService {
     } catch (error) {
       return {
         success: false,
-        error: new Error(
-          "Invalid state"
-        ),
+        error: new Error("Invalid state"),
       };
     }
   }

@@ -1,2 +1,2 @@
 // Domain Services
-export * from './CrossDomainIntegrationService';
+export * from "./CrossDomainIntegrationService";

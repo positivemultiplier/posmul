@@ -1,5 +1,6 @@
 import React from "react";
-import { Badge, Card } from '../../../../shared/ui/components/base';
+
+import { Badge, Card } from "../../../../shared/ui/components/base";
 
 interface UserEconomicBalanceProps {
   userId: string;
@@ -82,7 +83,9 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
             <div className="text-2xl font-bold text-blue-600">
               {formatCurrency(economicStats.pmpBalance)}
             </div>
-            <div className="text-xs text-gray-500">PmpAmount (위험프리자산)</div>
+            <div className="text-xs text-gray-500">
+              PmpAmount (위험프리자산)
+            </div>
             <div className="text-xs text-blue-600 mt-1">💰 예측 참여 가능</div>
           </div>
 
@@ -141,15 +144,16 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
               {economicStats.riskLevel === "LOW"
                 ? "PmpAmount 비중 증가 권장 (안정성 우선)"
                 : economicStats.riskLevel === "HIGH"
-                ? "PmcAmount 전환 적극 권장 (고수익 추구)"
-                : "PmpAmount/PmcAmount 균형 유지 권장 (최적 배분)"}
+                  ? "PmcAmount 전환 적극 권장 (고수익 추구)"
+                  : "PmpAmount/PmcAmount 균형 유지 권장 (최적 배분)"}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="text-gray-600">🎯 다음 목표:</span>
             <span className="text-purple-700 font-medium">
-              PmcAmount {formatCurrency(2000 - economicStats.pmcBalance)} 추가 획득
+              PmcAmount {formatCurrency(2000 - economicStats.pmcBalance)} 추가
+              획득
             </span>
           </div>
 

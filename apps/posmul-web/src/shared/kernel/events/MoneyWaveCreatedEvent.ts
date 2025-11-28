@@ -1,11 +1,11 @@
-import { DomainEvent } from './DomainEvent';
+import { DomainEvent } from "./DomainEvent";
 
 /**
  * Money Wave Created Event
- * 
+ *
  * Fired when a new Money Wave is created, affecting the economic
  * context across all domains in the platform.
- * 
+ *
  * @author PosMul Development Team
  * @since 2025-07-06
  */
@@ -21,15 +21,15 @@ export interface MoneyWaveCreatedEventPayload {
   context?: Record<string, any>;
 }
 
-export type MoneyWaveCategory = 
-  | 'local_economy'
-  | 'social_cause'
-  | 'technology_innovation'
-  | 'environmental'
-  | 'education'
-  | 'healthcare'
-  | 'cultural_arts'
-  | 'sports_events';
+export type MoneyWaveCategory =
+  | "local_economy"
+  | "social_cause"
+  | "technology_innovation"
+  | "environmental"
+  | "education"
+  | "healthcare"
+  | "cultural_arts"
+  | "sports_events";
 
 export class MoneyWaveCreatedEvent extends DomainEvent {
   constructor(
@@ -46,7 +46,7 @@ export class MoneyWaveCreatedEvent extends DomainEvent {
   }
 
   get eventType(): string {
-    return 'MoneyWaveCreatedEvent';
+    return "MoneyWaveCreatedEvent";
   }
 
   protected getPayload(): MoneyWaveCreatedEventPayload {
