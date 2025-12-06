@@ -50,7 +50,15 @@ export class Post {
     private moderatedAt?: Date,
     private moderatedBy?: UserId,
     private pinnedAt?: Date,
-    private archivedAt?: Date
+    private archivedAt?: Date,
+
+    // 추가 필드 (Repository 호환)
+    private tags: string[] = [],
+    private isSticky: boolean = false,
+    private viewCount: number = 0,
+    private popularityScore: number = 0,
+    private regionCode?: string,
+    private publishedAt?: Date
   ) {}
 
   /**
@@ -104,48 +112,54 @@ export class Post {
   static restore(
     id: PostId,
     authorId: UserId,
+    title: string,
+    content: string,
     section: ForumSection,
     category: ForumCategory,
-    title: PostTitle,
-    content: PostContent,
     status: PostStatus,
-    metadata: PostMetadata,
+    tags: string[],
+    isSticky: boolean,
+    isPinned: boolean,
+    upvoteCount: number,
+    downvoteCount: number,
+    commentCount: number,
+    viewCount: number,
+    shareCount: number,
+    popularityScore: number,
     createdAt: Date,
     updatedAt: Date,
-    newsCategory?: NewsCategory,
-    budgetCategory?: BudgetCategory,
-    debatePosition?: DebatePosition,
-    upvoteCount: number = 0,
-    downvoteCount: number = 0,
-    commentCount: number = 0,
-    shareCount: number = 0,
-    moderatedAt?: Date,
-    moderatedBy?: UserId,
-    pinnedAt?: Date,
-    archivedAt?: Date
+    publishedAt?: Date,
+    regionCode?: string,
+    metadata?: Record<string, unknown>
   ): Post {
     return new Post(
       id,
       authorId,
       section,
       category,
-      title,
-      content,
+      title as unknown as PostTitle,
+      content as unknown as PostContent,
       status,
-      metadata,
+      (metadata ?? {}) as unknown as PostMetadata,
       createdAt,
       updatedAt,
-      newsCategory,
-      budgetCategory,
-      debatePosition,
+      undefined, // newsCategory
+      undefined, // budgetCategory
+      undefined, // debatePosition
       upvoteCount,
       downvoteCount,
       commentCount,
       shareCount,
-      moderatedAt,
-      moderatedBy,
-      pinnedAt,
-      archivedAt
+      undefined, // moderatedAt
+      undefined, // moderatedBy
+      isPinned ? new Date() : undefined, // pinnedAt
+      undefined, // archivedAt
+      tags,
+      isSticky,
+      viewCount,
+      popularityScore,
+      regionCode,
+      publishedAt
     );
   }
 
@@ -212,6 +226,29 @@ export class Post {
   }
   getArchivedAt(): Date | undefined {
     return this.archivedAt;
+  }
+
+  // 추가 Getters (Repository 호환)
+  getTags(): string[] {
+    return this.tags;
+  }
+  getIsSticky(): boolean {
+    return this.isSticky;
+  }
+  getIsPinned(): boolean {
+    return !!this.pinnedAt;
+  }
+  getViewCount(): number {
+    return this.viewCount;
+  }
+  getPopularityScore(): number {
+    return this.popularityScore;
+  }
+  getRegionCode(): string | undefined {
+    return this.regionCode;
+  }
+  getPublishedAt(): Date | undefined {
+    return this.publishedAt;
   }
 
   /**

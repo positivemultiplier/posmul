@@ -302,3 +302,187 @@ export enum ReportReason {
   COPYRIGHT_VIOLATION = "COPYRIGHT_VIOLATION",
   OTHER = "OTHER",
 }
+
+// ============================================
+// Region Value Objects (지역 관련)
+// ============================================
+
+// Region Code 브랜드 타입
+export type RegionCode = string & { readonly __brand: "RegionCode" };
+
+/**
+ * 지역 코드 생성
+ * @param code 지역 코드 (예: '29140' = 광주 서구, 'KR' = 대한민국)
+ */
+export const createRegionCode = (code: string): RegionCode => {
+  if (!code || code.trim().length === 0) {
+    throw new Error("RegionCode cannot be empty");
+  }
+  const trimmed = code.trim().toUpperCase();
+  // 유효한 형식: 숫자 5자리 (시군구) 또는 알파벳 (국가/특수)
+  if (!/^[A-Z0-9]{2,10}$/.test(trimmed)) {
+    throw new Error("Invalid RegionCode format");
+  }
+  return trimmed as RegionCode;
+};
+
+// Region Level Enum (지역 계층)
+export enum RegionLevel {
+  LOCAL = "LOCAL",       // 시군구 (서구, 동구 등)
+  REGION = "REGION",     // 광역시/도 (광주광역시, 경기도 등)
+  NATION = "NATION",     // 국가 (대한민국)
+  COLONY = "COLONY",     // 대륙/지구
+  COSMOS = "COSMOS",     // 우주
+}
+
+/**
+ * 지역 정보 Value Object
+ */
+export interface RegionInfo {
+  readonly code: RegionCode;
+  readonly name: string;
+  readonly level: RegionLevel;
+  readonly parentCode?: RegionCode;
+  readonly population?: number;
+  readonly isActive: boolean;
+}
+
+/**
+ * 지역 정보 생성
+ */
+export const createRegionInfo = (
+  code: string,
+  name: string,
+  level: RegionLevel,
+  parentCode?: string,
+  population?: number,
+  isActive: boolean = true
+): RegionInfo => {
+  if (!name || name.trim().length === 0) {
+    throw new Error("Region name cannot be empty");
+  }
+  if (population !== undefined && population < 0) {
+    throw new Error("Population cannot be negative");
+  }
+  
+  return {
+    code: createRegionCode(code),
+    name: name.trim(),
+    level,
+    parentCode: parentCode ? createRegionCode(parentCode) : undefined,
+    population,
+    isActive,
+  };
+};
+
+/**
+ * 광주광역시 지역 코드 상수
+ */
+export const GWANGJU_REGION_CODES = {
+  GWANGJU: "29000",      // 광주광역시
+  DONG_GU: "29110",      // 동구
+  SEO_GU: "29140",       // 서구
+  NAM_GU: "29155",       // 남구
+  BUK_GU: "29170",       // 북구
+  GWANGSAN_GU: "29200",  // 광산구
+} as const;
+
+// ============================================
+// Demographic Statistics Value Objects (인구통계)
+// ============================================
+
+// 통계 카테고리 Enum
+export enum StatCategory {
+  BIRTH = "BIRTH",               // 출생
+  DEATH = "DEATH",               // 사망
+  MARRIAGE = "MARRIAGE",         // 혼인
+  DIVORCE = "DIVORCE",           // 이혼
+  MIGRATION_IN = "MIGRATION_IN", // 전입
+  MIGRATION_OUT = "MIGRATION_OUT", // 전출
+  EMPLOYMENT = "EMPLOYMENT",     // 취업자
+  UNEMPLOYMENT = "UNEMPLOYMENT", // 실업자
+  LABOR_FORCE = "LABOR_FORCE",   // 경제활동인구
+  CPI = "CPI",                   // 소비자물가지수
+  POPULATION = "POPULATION",     // 총인구
+}
+
+// 기간 타입 Enum
+export enum PeriodType {
+  MONTHLY = "MONTHLY",
+  QUARTERLY = "QUARTERLY",
+  YEARLY = "YEARLY",
+}
+
+/**
+ * 통계 기간 Value Object
+ */
+export interface StatisticPeriod {
+  readonly type: PeriodType;
+  readonly year: number;
+  readonly month?: number;    // 1-12 (월간)
+  readonly quarter?: number;  // 1-4 (분기)
+}
+
+/**
+ * 통계 기간 생성
+ */
+export const createStatisticPeriod = (
+  type: PeriodType,
+  year: number,
+  month?: number,
+  quarter?: number
+): StatisticPeriod => {
+  if (year < 1900 || year > 2100) {
+    throw new Error("Invalid year");
+  }
+  
+  if (type === PeriodType.MONTHLY) {
+    if (!month || month < 1 || month > 12) {
+      throw new Error("Monthly period requires valid month (1-12)");
+    }
+    return { type, year, month };
+  }
+  
+  if (type === PeriodType.QUARTERLY) {
+    if (!quarter || quarter < 1 || quarter > 4) {
+      throw new Error("Quarterly period requires valid quarter (1-4)");
+    }
+    return { type, year, quarter };
+  }
+  
+  // YEARLY
+  return { type, year };
+};
+
+/**
+ * 통계 데이터 포인트 Value Object
+ */
+export interface StatisticDataPoint {
+  readonly category: StatCategory;
+  readonly regionCode: RegionCode;
+  readonly period: StatisticPeriod;
+  readonly value: number;
+  readonly unit: string;
+  readonly isPreliminary: boolean;  // 잠정치 여부
+}
+
+/**
+ * 통계 데이터 포인트 생성
+ */
+export const createStatisticDataPoint = (
+  category: StatCategory,
+  regionCode: string,
+  period: StatisticPeriod,
+  value: number,
+  unit: string,
+  isPreliminary: boolean = true
+): StatisticDataPoint => {
+  return {
+    category,
+    regionCode: createRegionCode(regionCode),
+    period,
+    value,
+    unit,
+    isPreliminary,
+  };
+};

@@ -40,7 +40,7 @@ graph LR
     B[소비 Consume] --> D
     C[포럼 Forum] --> D
     D --> E[기부 Donation]
-    D --> F[투자 Investment]
+    D --> F[랭킹 Ranking]
     
     style D fill:#4CAF50,color:#fff
 ```
@@ -64,19 +64,29 @@ graph LR
 - **투자**: 경제 지표 예측
 
 ### 2. 소비 시스템 (Consume)
-- **MoneyConsume**: 지역 매장 결제 시 PMC 적립 (1~2%)
-- **TimeConsume**: 광고 시청으로 PMC 획득
-- **CloudConsume**: 클라우드 기여로 PMC 획득
+- **TimeConsume**: 광고 시청/설문 참여로 PMP 획득 → Expect에서 PMC로 전환
+- **MoneyConsume**: 지역 매장 결제 시 PMC 직접 적립 (1%)
+- **CloudConsume**: 클라우드 펀딩 참여로 PMC 직접 적립 (2~5%)
 
 ### 3. 기부 시스템 (Donation)
 - **기관 기부**: 공익 기관 직접 기부
 - **오피니언 리더 후원**: 영향력 있는 활동가 지원
 - **직접 기부**: 개인 간 물품/재능 기부
 
-### 4. 투자 시스템 (Investment)
-- **로컬 리그**: 지역 소상공인 투자
-- **메이저 리그**: 대규모 프로젝트 투자
-- **클라우드 펀딩**: 크라우드소싱 투자
+### 4. 포럼 시스템 (Forum)
+- **News**: 뉴스 읽기/토론으로 PMP 획득
+- **Debate**: 정책/경제/사회 토론 참여
+- **Brainstorming**: 아이디어 제안
+- **Budget**: 예산 투표 참여
+
+### 5. 랭킹 시스템 (Ranking)
+- **종합 랭킹**: 모든 활동 점수 합산
+- **카테고리별**: Forum, Consume, Expect, Donation
+- **기간별**: 전체, 월간, 주간
+
+### 6. 기타 서비스 (Other)
+- **Gift Aid**: 기부금 영수증/세액공제
+- **Accounting & Tax**: 포인트 거래 내역/세무 자료
 
 ---
 
@@ -118,13 +128,14 @@ posmul/
 │           ├── app/             # App Router 페이지
 │           ├── bounded-contexts/ # DDD 도메인 컨텍스트
 │           │   ├── auth/        # 인증
-│           │   ├── consume/     # 소비 (Money/Time/Cloud)
+│           │   ├── consume/     # 소비 (Time/Money/Cloud)
 │           │   ├── donation/    # 기부
-│           │   ├── economy/     # 경제 시스템
+│           │   ├── economy/     # 경제 시스템 (PMP/PMC)
 │           │   ├── forum/       # 포럼
-│           │   ├── investment/  # 투자
-│           │   ├── prediction/  # 예측 게임
-│           │   ├── ranking/     # 랭킹
+│           │   ├── prediction/  # 예측 게임 (Expect)
+│           │   ├── ranking/     # 통합 랭킹
+│           │   ├── public/      # 공용
+│           │   ├── study_cycle/ # 학습 사이클
 │           │   └── user/        # 사용자
 │           ├── shared/          # 공유 컴포넌트/유틸
 │           └── lib/             # 라이브러리 설정
@@ -270,6 +281,13 @@ erDiagram
         payments
         ad_campaigns
         ad_views
+        funding_projects
+        contributions
+    }
+    
+    ranking {
+        user_scores
+        ranking_history
     }
     
     donation {
@@ -410,11 +428,13 @@ chore: 빌드 프로세스/도구 변경
 | 영역 | 상태 | 비고 |
 |------|------|------|
 | **웹 애플리케이션** | ✅ 운영 | Next.js 15 + React 19 |
-| **예측 시스템** | ✅ 완료 | 스포츠/정치/엔터/투자 |
-| **소비 시스템** | ✅ 완료 | Money/Time/Cloud Consume |
+| **예측 시스템** | ✅ 완료 | 스포츠/정치/엔터 |
+| **소비 시스템** | ✅ 완료 | Time/Money/Cloud Consume |
 | **기부 시스템** | ✅ 완료 | 기관/오피니언리더/직접 |
+| **포럼 시스템** | ✅ 완료 | News/Debate/Brainstorm/Budget |
+| **랭킹 시스템** | ✅ 완료 | 종합/카테고리별/기간별 |
 | **경제 시스템** | ✅ 완료 | PMP/PMC + MoneyWave |
-| **DDD 아키텍처** | ✅ 완료 | 9개 Bounded Context |
+| **DDD 아키텍처** | ✅ 완료 | 10개 Bounded Context |
 
 ---
 
