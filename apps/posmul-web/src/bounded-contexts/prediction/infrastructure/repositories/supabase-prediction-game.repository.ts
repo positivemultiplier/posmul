@@ -6,9 +6,11 @@ import { PredictionGameId, Result, UserId } from "@posmul/auth-economy-sdk";
 import { PredictionGame } from "../../domain/entities/prediction-game.aggregate";
 import {
   IPredictionGameRepository,
+  PaginatedResult,
+  PaginationRequest,
   RepositoryError,
 } from "../../domain/repositories/prediction-game.repository";
-import { GameStatus } from "../../domain/value-objects/game-status";
+import { GameStatus } from "../../domain/value-objects/prediction-types";
 
 export class SupabasePredictionGameRepository
   implements IPredictionGameRepository
@@ -43,8 +45,8 @@ export class SupabasePredictionGameRepository
 
   async findByStatus(
     status: GameStatus,
-    pagination?: any
-  ): Promise<Result<any, RepositoryError>> {
+    pagination?: PaginationRequest
+  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
     return {
       success: false,
       error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
@@ -53,8 +55,8 @@ export class SupabasePredictionGameRepository
 
   async findByCreator(
     creatorId: UserId,
-    pagination?: any
-  ): Promise<Result<any, RepositoryError>> {
+    pagination?: PaginationRequest
+  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
     return {
       success: false,
       error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
@@ -63,8 +65,8 @@ export class SupabasePredictionGameRepository
 
   async findByParticipant(
     userId: UserId,
-    pagination?: any
-  ): Promise<Result<any, RepositoryError>> {
+    pagination?: PaginationRequest
+  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
     return {
       success: false,
       error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
@@ -73,8 +75,8 @@ export class SupabasePredictionGameRepository
 
   async search(
     filters: any,
-    pagination?: any
-  ): Promise<Result<any, RepositoryError>> {
+    pagination?: PaginationRequest
+  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
     return {
       success: false,
       error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
@@ -82,8 +84,8 @@ export class SupabasePredictionGameRepository
   }
 
   async findActiveGames(
-    pagination?: any
-  ): Promise<Result<any, RepositoryError>> {
+    pagination?: PaginationRequest
+  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
     return {
       success: false,
       error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),

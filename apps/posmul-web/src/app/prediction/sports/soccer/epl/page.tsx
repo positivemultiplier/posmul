@@ -6,10 +6,13 @@ import { createClient } from "../../../../../lib/supabase/server";
 import { FadeIn, HoverLift } from "../../../../../shared/ui/components/animations";
 import { CompactMoneyWaveCard } from "../../../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { ClientPredictionGamesGrid } from "../../../components/ClientPredictionGamesGrid";
-import { PredictionType, GameStatus } from "../../../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 import Link from "next/link";
 import { getAggregatedPrizePool } from "../../../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { ArrowLeft } from "lucide-react";
+import {
+  mapPredictionGameRowToCardModel,
+  type PredictionGameRow,
+} from "../../../components/prediction-game-mapper";
 
 interface UserPrediction {
   prediction_id: string;
@@ -29,13 +32,14 @@ export default async function EPLPage() {
   // Get aggregated prize pool for EPL
   const eplPool = await getAggregatedPrizePool(supabase, "SPORTS", "soccer");
 
-  let query = supabase
+  const query = supabase
     .schema("prediction")
     .from("prediction_games")
     .select("*")
+    .eq("category", "SPORTS")
+    .eq("subcategory", "soccer")
+    .eq("league", LEAGUE)
     .in("status", ["ACTIVE", "DRAFT"])
-    .or("metadata->>sport.eq.soccer,tags.cs.{soccer}")
-    .or(`metadata->>league.eq.${LEAGUE},tags.cs.{${LEAGUE}}`)
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -43,7 +47,7 @@ export default async function EPLPage() {
   if (error) {
     console.error("EPLPage Supabase error", error.message);
   }
-  const games = data ?? [];
+  const games = (data ?? []) as PredictionGameRow[];
 
   // 사용자의 예측 목록 조회
   let userPredictions: UserPrediction[] = [];
@@ -63,32 +67,7 @@ export default async function EPLPage() {
   }
 
   // 데이터 매핑
-  const mappedGames = games.map((game) => {
-    const gameOptions = game.game_options || [
-      { id: "1", text: "예", currentOdds: 0.5 },
-      { id: "2", text: "아니오", currentOdds: 0.5 },
-    ];
-    return {
-      id: game.game_id,
-      slug: game.slug || game.game_id,
-      title: game.title,
-      description: game.description,
-      predictionType: game.prediction_type?.toUpperCase() || PredictionType.BINARY,
-      options: gameOptions,
-      startTime: game.registration_start,
-      endTime: game.registration_end,
-      settlementTime: game.settlement_date,
-      minimumStake: game.min_bet_amount || 100,
-      maximumStake: game.max_bet_amount || 10000,
-      maxParticipants: game.max_participants,
-      currentParticipants: 0,
-      status: game.status || GameStatus.ACTIVE,
-      totalStake: 0,
-      gameImportanceScore: game.difficulty || 1.0,
-      allocatedPrizePool: game.allocated_prize_pool || 0,
-      createdAt: game.created_at,
-    };
-  });
+  const mappedGames = games.map(mapPredictionGameRowToCardModel);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">

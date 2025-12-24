@@ -2,9 +2,12 @@ import { createClient } from "../../../../lib/supabase/server";
 import { FadeIn, HoverLift } from "../../../../shared/ui/components/animations";
 import { CompactMoneyWaveCard } from "../../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { ClientPredictionGamesGrid } from "../../components/ClientPredictionGamesGrid";
-import { PredictionType, GameStatus } from "../../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 import Link from "next/link"; // Link import 추가
 import { getAggregatedPrizePool } from "../../../../bounded-contexts/prediction/application/prediction-pool.service";
+import {
+  mapPredictionGameRowToCardModel,
+  type PredictionGameRow,
+} from "../../components/prediction-game-mapper";
 
 interface PageProps {
   searchParams: Promise<{
@@ -37,22 +40,13 @@ export default async function SoccerPage({ searchParams }: PageProps) {
     .schema("prediction")
     .from("prediction_games")
     .select("*")
-    // 축구 관련 태그나 메타데이터 필터링이 필요할 수 있음
-    // 현재는 soccer 경로이므로 명시적으로 필터링하거나,
-    // 태그 시스템이 있다면 .contains("tags", ["soccer"]) 등을 사용
+    .eq("category", "SPORTS")
+    .eq("subcategory", "soccer")
     .in("status", ["ACTIVE", "DRAFT"]);
-
-  // Soccer specific filtering strategy
-  // 1. Check if 'category' column exists and equals 'SPORTS'
-  // 2. Check metadata or tags for 'soccer'
-  // For now, filtering by category 'SPORTS' and assuming checking tags/metadata is handled either here or by ensuring data integrity.
-  // Adding explicit filter for demonstration if 'soccer' tag is used:
-  query = query.or("metadata->>sport.eq.soccer,tags.cs.{soccer}");
 
   // League Filtering
   if (league) {
-    // metadata->league or tags contains league
-    query = query.or(`metadata->>league.eq.${league},tags.cs.{${league}}`);
+    query = query.eq("league", league);
   }
 
 
@@ -77,7 +71,7 @@ export default async function SoccerPage({ searchParams }: PageProps) {
     // eslint-disable-next-line no-console
     console.error("SoccerPage Supabase error", error.message);
   }
-  const games = data ?? [];
+  const games = (data ?? []) as PredictionGameRow[];
 
   // 사용자의 예측 목록 조회
   let userPredictions: UserPrediction[] = [];
@@ -96,59 +90,7 @@ export default async function SoccerPage({ searchParams }: PageProps) {
     }
   }
 
-  // 데이터 매핑
-  const mappedGames = games.map((game) => {
-    // JSON 파싱 (옵션)
-    let gameOptions = [];
-    try {
-      if (typeof game.game_options === 'string') {
-        gameOptions = JSON.parse(game.game_options);
-      } else if (Array.isArray(game.game_options)) {
-        // 이미 배열인 경우 (Supabase 클라이언트가 자동 변환했을 수 있음)
-        // 하지만 DB 타입이 jsonb[] 또는 jsonb라면 확인 필요.
-        // 보통 jsonb 컬럼은 객체나 배열로 반환됨.
-        // 여기서는 포맷을 맞추기 위해 매핑
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        gameOptions = game.game_options.map((opt: any) => ({
-          id: opt.id,
-          text: opt.label || opt.text, // label or text
-          currentOdds: opt.currentOdds || 0.5 // default
-        }));
-      }
-    } catch (e) {
-      console.error("Failed to parse game options", e);
-    }
-
-    // 만약 파싱 실패했거나 형식이 안맞으면 기본값 처리 (방어 코드)
-    if (!gameOptions || gameOptions.length === 0) {
-      // 임시 더미 데이터 또는 빈 배열
-      gameOptions = [
-        { id: '1', text: 'Yes', currentOdds: 0.5 },
-        { id: '2', text: 'No', currentOdds: 0.5 }
-      ];
-    }
-
-    return {
-      id: game.game_id,
-      slug: game.slug || game.game_id, // slug가 없으면 id 사용
-      title: game.title,
-      description: game.description,
-      predictionType: game.prediction_type?.toUpperCase() || PredictionType.BINARY,
-      options: gameOptions,
-      startTime: game.start_time,
-      endTime: game.end_time,
-      settlementTime: game.settlement_time,
-      minimumStake: game.minimum_stake || 100,
-      maximumStake: game.maximum_stake || 10000,
-      maxParticipants: game.max_participants,
-      currentParticipants: game.total_participants_count || 0,
-      status: game.status || GameStatus.ACTIVE,
-      totalStake: game.total_stake_amount || 0,
-      gameImportanceScore: game.game_importance_score || 1.0,
-      allocatedPrizePool: game.allocated_prize_pool || 0,
-      createdAt: game.created_at,
-    };
-  }) || [];
+  const mappedGames = games.map(mapPredictionGameRowToCardModel);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-20">
