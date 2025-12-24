@@ -1,8 +1,8 @@
-﻿# Investment Bounded Context
+﻿# Consume Bounded Context
 
 ## 도메인 개요
 
-Investment 도메인은 Posmul 플랫폼의 투자 및 포인트 적립 시스템을 담당합니다. 사용자가 다양한 방식으로 PMC/PMP 포인트를 적립할 수 있는 핵심 비즈니스 영역입니다.
+Consume 도메인은 Posmul 플랫폼의 소비 및 포인트 적립 시스템을 담당합니다. 사용자가 다양한 방식으로 PMC/PMP 포인트를 적립할 수 있는 핵심 비즈니스 영역입니다.
 
 ## 핵심 서비스
 

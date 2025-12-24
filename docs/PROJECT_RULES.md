@@ -38,10 +38,10 @@
 - Ubiquitous Language: 도메인 전문가와 개발자 간 동일 용어
 - Bounded Context 격리: 각 컨텍스트 독립 진화
 
-**Bounded Contexts (9개)**
+**Bounded Contexts (11개)**
 ```
-auth, donation, economy, forum, investment, 
-prediction, user, public, study_cycle
+auth, consume, demographic-data, donation, economy, forum, 
+prediction, public, ranking, study_cycle, user
 ```
 
 **도메인 계층**
@@ -116,10 +116,11 @@ prediction/
 -- 각 Context는 독립 스키마
 economy.*        (12개 테이블)
 prediction.*     (5개 테이블)
-investment.*     (4개 테이블)
+consume.*        (4개 테이블)
 forum.*          (7개 테이블)
 donation.*       (4개 테이블)
 user.*           (5개 테이블)
+ranking.*        (2개 테이블)
 public.*         (공용 테이블)
 ```
 

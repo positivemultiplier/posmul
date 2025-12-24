@@ -1,7 +1,11 @@
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": false,
@@ -21,11 +25,20 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"],
-      "@posmul/shared-types": ["../../packages/shared-types/src/index.ts"],
-      "@posmul/auth-economy-sdk": ["../../packages/auth-economy-sdk/src/index.ts"],
-      "@posmul/study-cycle-core": ["../../packages/study-cycle-core/src/index.ts"]
-    }
+      "@/*": [
+        "./src/*"
+      ],
+      "@posmul/shared-types": [
+        "../../packages/shared-types/src/index.ts"
+      ],
+      "@posmul/auth-economy-sdk": [
+        "../../packages/auth-economy-sdk/src/index.ts"
+      ],
+      "@posmul/study-cycle-core": [
+        "../../packages/study-cycle-core/src/index.ts"
+      ]
+    },
+    "baseUrl": "."
   },
   "include": [
     "next-env.d.ts",
@@ -33,5 +46,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts"
   ],
-  "exclude": ["node_modules"]
+  "exclude": [
+    "node_modules"
+  ]
 }

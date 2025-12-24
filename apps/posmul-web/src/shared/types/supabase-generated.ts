@@ -1,269 +1,289 @@
-/**
- * PosMul Platform - Supabase 자동 생성 타입 (Universal MCP 통합)
- * 생성 시간: 2025-07-03T06:35:00.000Z
- * 프로젝트: fabyagohqqnusmnwekuc
- *
- * 🔥 수동 편집 금지! 이 파일은 MCP로 자동 생성됩니다.
- * 🚀 mcp_supabase_generate_typescript_types 결과 기반
- */
-
 export type Json =
   | string
   | number
   | boolean
   | null
   | { [key: string]: Json | undefined }
-  | Json[];
+  | Json[]
 
 export type Database = {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
+  oauth_provider: {
+    Tables: {
+      auth_codes: {
+        Row: {
+          client_id: string | null
+          code: string
+          expires_at: string
+          redirect_uri: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          client_id?: string | null
+          code?: string
+          expires_at: string
+          redirect_uri: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          client_id?: string | null
+          code?: string
+          expires_at?: string
+          redirect_uri?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "auth_codes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      clients: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          redirect_uris: string[]
+          secret: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          redirect_uris: string[]
+          secret: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          redirect_uris?: string[]
+          secret?: string
+        }
+        Relationships: []
+      }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       monorepo_migration_status: {
         Row: {
-          assignee: string | null;
-          completion_percentage: number | null;
-          created_at: string | null;
-          id: string;
-          issues_found: string[] | null;
-          migration_phase: string;
-          next_actions: string[] | null;
-          notes: string | null;
-          scripts_executed: string[] | null;
-          status: string;
-          typescript_errors_count: number | null;
-          updated_at: string | null;
-        };
+          assignee: string | null
+          completion_percentage: number | null
+          created_at: string | null
+          id: string
+          issues_found: string[] | null
+          migration_phase: string
+          next_actions: string[] | null
+          notes: string | null
+          scripts_executed: string[] | null
+          status: string
+          typescript_errors_count: number | null
+          updated_at: string | null
+        }
         Insert: {
-          assignee?: string | null;
-          completion_percentage?: number | null;
-          created_at?: string | null;
-          id?: string;
-          issues_found?: string[] | null;
-          migration_phase: string;
-          next_actions?: string[] | null;
-          notes?: string | null;
-          scripts_executed?: string[] | null;
-          status: string;
-          typescript_errors_count?: number | null;
-          updated_at?: string | null;
-        };
+          assignee?: string | null
+          completion_percentage?: number | null
+          created_at?: string | null
+          id?: string
+          issues_found?: string[] | null
+          migration_phase: string
+          next_actions?: string[] | null
+          notes?: string | null
+          scripts_executed?: string[] | null
+          status: string
+          typescript_errors_count?: number | null
+          updated_at?: string | null
+        }
         Update: {
-          assignee?: string | null;
-          completion_percentage?: number | null;
-          created_at?: string | null;
-          id?: string;
-          issues_found?: string[] | null;
-          migration_phase?: string;
-          next_actions?: string[] | null;
-          notes?: string | null;
-          scripts_executed?: string[] | null;
-          status?: string;
-          typescript_errors_count?: number | null;
-          updated_at?: string | null;
-        };
-        Relationships: [];
-      };
-    };
+          assignee?: string | null
+          completion_percentage?: number | null
+          created_at?: string | null
+          id?: string
+          issues_found?: string[] | null
+          migration_phase?: string
+          next_actions?: string[] | null
+          notes?: string | null
+          scripts_executed?: string[] | null
+          status?: string
+          typescript_errors_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      user_reputation_metrics: {
+        Row: {
+          community_trust_level: number | null
+          created_at: string | null
+          forum_contribution_score: number | null
+          helpful_posts_count: number | null
+          id: string
+          investment_success_rate: number | null
+          overall_reputation_score: number | null
+          prediction_accuracy_rate: number | null
+          reputation_tier: string | null
+          roi_average: number | null
+          successful_predictions: number | null
+          total_investments_made: number | null
+          total_predictions_made: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          community_trust_level?: number | null
+          created_at?: string | null
+          forum_contribution_score?: number | null
+          helpful_posts_count?: number | null
+          id?: string
+          investment_success_rate?: number | null
+          overall_reputation_score?: number | null
+          prediction_accuracy_rate?: number | null
+          reputation_tier?: string | null
+          roi_average?: number | null
+          successful_predictions?: number | null
+          total_investments_made?: number | null
+          total_predictions_made?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          community_trust_level?: number | null
+          created_at?: string | null
+          forum_contribution_score?: number | null
+          helpful_posts_count?: number | null
+          id?: string
+          investment_success_rate?: number | null
+          overall_reputation_score?: number | null
+          prediction_accuracy_rate?: number | null
+          reputation_tier?: string | null
+          roi_average?: number | null
+          successful_predictions?: number | null
+          total_investments_made?: number | null
+          total_predictions_made?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+    }
     Views: {
-      [_ in never]: never;
-    };
+      user_profiles_with_balance: {
+        Row: {
+          account_status: string | null
+          avatar_url: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          last_login: string | null
+          pmc_balance: number | null
+          pmp_balance: number | null
+          role: string | null
+          username: string | null
+        }
+        Relationships: []
+      }
+    }
     Functions: {
-      auto_update_game_status: {
-        Args: Record<PropertyKey, never>;
-        Returns: undefined;
-      };
-      calculate_current_odds: {
-        Args: { p_game_id: string };
-        Returns: {
-          option_id: string;
-          odds: number;
-          probability: number;
-        }[];
-      };
-      calculate_prediction_accuracy: {
-        Args: { p_user_id: string };
-        Returns: number;
-      };
-      calculate_reward_amount: {
-        Args: { p_prediction_id: string; p_game_outcome: Json };
-        Returns: number;
-      };
-      get_active_games: {
-        Args: { p_limit?: number };
-        Returns: {
-          id: string;
-          title: string;
-          description: string;
-          prediction_type: string;
-          status: string;
-          participant_count: number;
-          total_stake: number;
-          end_time: string;
-        }[];
-      };
-      get_user_prediction_history: {
-        Args: { p_user_id: string; p_limit?: number };
-        Returns: {
-          prediction_id: string;
-          game_title: string;
-          prediction_data: Json;
-          stake: number;
-          confidence_level: number;
-          is_settled: boolean;
-          is_correct: boolean;
-          reward_amount: number;
-          created_at: string;
-        }[];
-      };
-      validate_pmp_balance: {
-        Args: { p_user_id: string; p_required_amount: number };
-        Returns: boolean;
-      };
-    };
+      [_ in never]: never
+    }
     Enums: {
-      game_status: "DRAFT" | "ACTIVE" | "CLOSED" | "SETTLED" | "CANCELLED";
+      game_status: "DRAFT" | "ACTIVE" | "CLOSED" | "SETTLED" | "CANCELLED"
       prediction_category:
-        | "INVEST"
-        | "SPORTS"
-        | "ENTERTAINMENT"
-        | "POLITICS"
-        | "USER_PROPOSED";
-      prediction_type: "BINARY" | "WIN_DRAW_LOSE" | "RANKING";
+      | "INVEST"
+      | "SPORTS"
+      | "ENTERTAINMENT"
+      | "POLITICS"
+      | "USER_PROPOSED"
+      prediction_type: "BINARY" | "WIN_DRAW_LOSE" | "RANKING"
       settlement_type:
-        | "WINNER_TAKE_ALL"
-        | "PROPORTIONAL"
-        | "CONFIDENCE_WEIGHTED"
-        | "HYBRID";
-    };
+      | "WINNER_TAKE_ALL"
+      | "PROPORTIONAL"
+      | "CONFIDENCE_WEIGHTED"
+      | "HYBRID"
+    }
     CompositeTypes: {
-      [_ in never]: never;
-    };
-  };
-};
-
-type DefaultSchema = Database[Extract<keyof Database, "public">];
+      [_ in never]: never
+    }
+  }
+}
 
 export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database;
-  }
-    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
-      Row: infer R;
+  PublicTableNameOrOptions extends
+  | keyof (Database["public"]["Tables"] & Database["public"]["Views"])
+  | { schema: keyof Database },
+  TableName extends PublicTableNameOrOptions extends { schema: keyof Database }
+  ? keyof (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+    Database[PublicTableNameOrOptions["schema"]]["Views"])
+  : never = never
+> = PublicTableNameOrOptions extends { schema: keyof Database }
+  ? (Database[PublicTableNameOrOptions["schema"]]["Tables"] &
+    Database[PublicTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
     }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R;
-      }
-      ? R
-      : never
-    : never;
-
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database;
-  }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I;
+  ? R
+  : never
+  : PublicTableNameOrOptions extends keyof (Database["public"]["Tables"] &
+    Database["public"]["Views"])
+  ? (Database["public"]["Tables"] &
+    Database["public"]["Views"])[PublicTableNameOrOptions] extends {
+      Row: infer R
     }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I;
-      }
-      ? I
-      : never
-    : never;
-
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof Database },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof Database;
-  }
-    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U;
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U;
-      }
-      ? U
-      : never
-    : never;
+  ? R
+  : never
+  : never
 
 export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof Database },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof Database;
-  }
-    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends { schema: keyof Database }
-  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never;
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof Database },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof Database;
-  }
-    ? keyof Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends { schema: keyof Database }
-  ? Database[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never;
-
-export const Constants = {
-  public: {
-    Enums: {
-      game_status: ["DRAFT", "ACTIVE", "CLOSED", "SETTLED", "CANCELLED"],
-      prediction_category: [
-        "INVEST",
-        "SPORTS",
-        "ENTERTAINMENT",
-        "POLITICS",
-        "USER_PROPOSED",
-      ],
-      prediction_type: ["BINARY", "WIN_DRAW_LOSE", "RANKING"],
-      settlement_type: [
-        "WINNER_TAKE_ALL",
-        "PROPORTIONAL",
-        "CONFIDENCE_WEIGHTED",
-        "HYBRID",
-      ],
-    },
-  },
-} as const;
+  PublicEnumNameOrOptions extends
+  | keyof Database["public"]["Enums"]
+  | { schema: keyof Database },
+  EnumName extends PublicEnumNameOrOptions extends { schema: keyof Database }
+  ? keyof Database[PublicEnumNameOrOptions["schema"]]["Enums"]
+  : never = never
+> = PublicEnumNameOrOptions extends { schema: keyof Database }
+  ? Database[PublicEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : PublicEnumNameOrOptions extends keyof Database["public"]["Enums"]
+  ? Database["public"]["Enums"][PublicEnumNameOrOptions]
+  : never
