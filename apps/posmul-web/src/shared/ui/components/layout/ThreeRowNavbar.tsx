@@ -91,11 +91,11 @@ const navigationData = {
       },
       user: {
         title: "사용자 제안",
-        href: "/prediction/user-proposed",
+        href: "/prediction/user-suggestions",
         subcategories: [
-          { title: "사용자 제안", path: "/prediction/user-proposed?type=community" },
-          { title: "AI 추천", path: "/prediction/user-proposed?type=ai" },
-          { title: "오피니언 리더", path: "/prediction/user-proposed?type=opinion" },
+          { title: "사용자 제안", path: "/prediction/user-suggestions/user-proposals" },
+          { title: "AI 추천", path: "/prediction/user-suggestions/ai-recommendations" },
+          { title: "오피니언 리더", path: "/prediction/user-suggestions/opinion-leader-suggestions" },
         ]
       }
     }
@@ -274,6 +274,15 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
   const pathname = usePathname();
   const supabase = createClient();
 
+  const getDefaultCategoryKey = (domain: keyof typeof navigationData): string => {
+    const keys = Object.keys(navigationData[domain].categories);
+    return keys[0] ?? "";
+  };
+
+  const isDomainKey = (value: string): value is keyof typeof navigationData => {
+    return value in navigationData;
+  };
+
   // 인증 상태 확인
   useEffect(() => {
     const getUser = async () => {
@@ -294,25 +303,31 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
 
   // pathname 기반으로 현재 선택 상태 동기화
   useEffect(() => {
-    if (pathname?.startsWith('/consume') || pathname?.startsWith('/invest')) {
-      setSelectedDomain('consume');
-      setSelectedCategory('time');
-    } else if (pathname?.startsWith('/prediction')) {
-      setSelectedDomain('prediction');
-      setSelectedCategory('invest');
-    } else if (pathname?.startsWith('/donation')) {
-      setSelectedDomain('donation');
-      setSelectedCategory('direct');
-    } else if (pathname?.startsWith('/forum')) {
-      setSelectedDomain('forum');
-      setSelectedCategory('news');
-    } else if (pathname?.startsWith('/ranking')) {
-      setSelectedDomain('ranking');
-      setSelectedCategory('overall');
-    } else if (pathname?.startsWith('/other')) {
-      setSelectedDomain('other');
-      setSelectedCategory('giftaid');
+    if (!pathname) return;
+
+    const parts = pathname.split("/").filter(Boolean);
+    const first = parts[0];
+
+    // Legacy alias: '/invest' currently maps to Consume domain in this navbar
+    if (first === "invest" || first === "consume") {
+      setSelectedDomain("consume");
+      setSelectedCategory("time");
+      return;
     }
+
+    if (!first || !isDomainKey(first)) return;
+
+    const domain = first;
+    setSelectedDomain(domain);
+
+    const categories = navigationData[domain].categories as Record<string, unknown>;
+    const maybeCategoryKey = parts[1];
+    const nextCategory =
+      maybeCategoryKey && maybeCategoryKey in categories
+        ? maybeCategoryKey
+        : getDefaultCategoryKey(domain);
+
+    if (nextCategory) setSelectedCategory(nextCategory);
   }, [pathname]);
 
   const handleSignOut = async () => {
