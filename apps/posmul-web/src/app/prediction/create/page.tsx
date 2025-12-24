@@ -4,12 +4,69 @@
  * 예측 게임 생성 페이지
  * Server Actions를 활용한 폼 처리 예시
  */
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { PredictionGameForm } from "../../../shared/ui";
 
+type PredictionTypeInput = "binary" | "multiple" | "numeric";
+
+type PredictionGameFormData = {
+  title: string;
+  description: string;
+  predictionType: PredictionTypeInput;
+  options: string[];
+  endTime: string;
+  settlementTime: string;
+  minimumStake: number;
+  maximumStake: number;
+};
+
 export default function CreatePredictionPage() {
-  const handleSubmit = async (data: any) => {
-    console.log("Form submitted:", data);
-    // TODO: 실제 게임 생성 로직 구현
+  const router = useRouter();
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const handleSubmit = async (data: PredictionGameFormData) => {
+    setIsLoading(true);
+
+    try {
+      const res = await fetch("/api/prediction/user-proposed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: data.title,
+          description: data.description,
+          predictionType: data.predictionType,
+          options: data.options,
+          endTime: data.endTime,
+          settlementTime: data.settlementTime,
+          minimumStake: data.minimumStake,
+          maximumStake: data.maximumStake,
+        }),
+      });
+
+      const json = (await res.json()) as
+        | {
+            success: true;
+            data: { slug: string; subcategory: string; league: string };
+          }
+        | { success: false; error: { message: string } };
+
+      if (!res.ok || !json.success) {
+        const message =
+          "success" in json && json.success === false
+            ? json.error.message
+            : "Create failed";
+        throw new Error(message);
+      }
+
+      router.push(
+        `/prediction/user-suggestions/${json.data.subcategory}/${json.data.league}/${json.data.slug}`
+      );
+      router.refresh();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -26,7 +83,7 @@ export default function CreatePredictionPage() {
           </p>
         </div>
 
-        <PredictionGameForm onSubmit={handleSubmit} />
+        <PredictionGameForm onSubmit={handleSubmit} isLoading={isLoading} />
 
         {/* 도움말 섹션 */}
         <div className="mt-12 max-w-4xl mx-auto">

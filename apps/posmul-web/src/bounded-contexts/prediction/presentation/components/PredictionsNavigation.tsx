@@ -3,7 +3,7 @@
  *
  * Implements hierarchical navigation:
  * Tier 1: Expect (예측) - Fixed
- * Tier 2: invest, sports, entertainment, politics, user-suggestions
+ * Tier 2: consume, sports, entertainment, politics, user-suggestions
  * Tier 3: Category-specific subcategories
  *
  * @author PosMul Development Team
@@ -23,7 +23,7 @@ import { usePathname } from "next/navigation";
  *
  * Implements hierarchical navigation:
  * Tier 1: Expect (예측) - Fixed
- * Tier 2: invest, sports, entertainment, politics, user-suggestions
+ * Tier 2: consume, sports, entertainment, politics, user-suggestions
  * Tier 3: Category-specific subcategories
  *
  * @author PosMul Development Team
@@ -32,24 +32,24 @@ import { usePathname } from "next/navigation";
 
 // Navigation Data Structure based on Project_Features.md
 const navigationData = {
-  invest: {
-    title: "💼 Invest 예측",
-    description: "PosMul 투자 서비스 예측",
+  consume: {
+    title: "💳 소비 예측",
+    description: "Time/Money/Cloud 소비 영역 예측",
     subcategories: [
       {
-        slug: "local-league",
-        title: "Local League",
-        description: "지역 소상공인 투자",
+        slug: "time",
+        title: "TimeConsume",
+        description: "광고/설문 등 시간 소비",
       },
       {
-        slug: "minor-league",
-        title: "Minor League",
-        description: "중소기업 투자",
+        slug: "money",
+        title: "MoneyConsume",
+        description: "지역 소비",
       },
       {
-        slug: "major-league",
-        title: "Major League",
-        description: "대기업 광고 참여",
+        slug: "cloud",
+        title: "CloudConsume",
+        description: "펀딩/후원",
       },
     ],
   },
@@ -141,7 +141,7 @@ export function PredictionsNavigation() {
   };
 
   return (
-    <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-40">
+    <nav className="bg-white border-b border-gray-200 shadow-sm sticky top-16 md:top-[152px] z-40">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Tier 2 Navigation - Main Categories */}
         <div className="flex space-x-8 overflow-x-auto">

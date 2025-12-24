@@ -7,7 +7,7 @@ export default function PredictionInvestPage() {
                 <FadeIn>
                     <h1 className="text-4xl font-bold mb-4">📌 투자 예측 이관 안내</h1>
                     <p className="text-gray-300 mb-8">
-                        투자 관련 기능은 이제 <span className="font-semibold">Consume</span> 도메인으로 이동했습니다.
+                        투자 예측은 이제 <span className="font-semibold">소비 예측</span> 카테고리로 통합되었습니다.
                         <br />
                         아래에서 원하는 영역으로 이동해주세요. (강제 redirect는 하지 않습니다)
                     </p>
@@ -15,7 +15,7 @@ export default function PredictionInvestPage() {
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <HoverLift>
                             <Link
-                                href="/consume/money"
+                                href="/prediction/consume/money"
                                 className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
                             >
                                 <div className="text-2xl font-bold mb-2">💳 MoneyConsume</div>
@@ -25,7 +25,7 @@ export default function PredictionInvestPage() {
 
                         <HoverLift>
                             <Link
-                                href="/consume/time"
+                                href="/prediction/consume/time"
                                 className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
                             >
                                 <div className="text-2xl font-bold mb-2">⏰ TimeConsume</div>
@@ -35,7 +35,7 @@ export default function PredictionInvestPage() {
 
                         <HoverLift>
                             <Link
-                                href="/consume/cloud"
+                                href="/prediction/consume/cloud"
                                 className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
                             >
                                 <div className="text-2xl font-bold mb-2">☁️ CloudConsume</div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/server";
 import { FadeIn } from "../HomeClientComponents";
-import { Activity, Vote, Film } from "lucide-react";
+import { Activity, Vote, Film, Store } from "lucide-react";
 import { ClientPredictionGamesGrid } from "./components/ClientPredictionGamesGrid";
 import { CompactMoneyWaveCard } from "../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { getAggregatedPrizePool } from "../../bounded-contexts/prediction/application/prediction-pool.service";
@@ -29,6 +29,7 @@ export default async function PredictionPage() {
   const categoryCounts = {
     SPORTS: games?.filter(g => g.category === 'SPORTS').length || 0,
     POLITICS: games?.filter(g => g.category === 'POLITICS').length || 0,
+    INVEST: games?.filter(g => g.category === 'INVEST').length || 0,
     ENTERTAINMENT: games?.filter(g => g.category === 'ENTERTAINMENT').length || 0,
   };
 
@@ -52,6 +53,15 @@ export default async function PredictionPage() {
       iconColor: "text-purple-400",
     },
     {
+      href: "/prediction/consume",
+      icon: Store,
+      emoji: "💳",
+      title: "소비",
+      count: categoryCounts.INVEST,
+      gradient: "from-green-500/10 to-emerald-500/10",
+      iconColor: "text-green-400",
+    },
+    {
       href: "/prediction/entertainment",
       icon: Film,
       emoji: "🎭",
@@ -68,7 +78,6 @@ export default async function PredictionPage() {
     .from('prediction_games')
     .select("*")
     .eq('status', 'ACTIVE')
-    .neq('category', 'INVEST')
     .order('created_at', { ascending: false })
     .limit(6);
 

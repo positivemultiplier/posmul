@@ -62,6 +62,10 @@ export default function PredictionGameForm({
       </div>
 
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
+        {/* 기본 옵션 (현재 UI에서 options 입력이 없어 validation 실패 방지) */}
+        <input type="hidden" defaultValue="예" {...register("options.0")} />
+        <input type="hidden" defaultValue="아니오" {...register("options.1")} />
+
         {/* 제목 */}
         <div>
           <label

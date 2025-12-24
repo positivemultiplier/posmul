@@ -51,6 +51,15 @@ const navigationData = {
     title: "예측",
     href: "/prediction",
     categories: {
+      consume: {
+        title: "소비",
+        href: "/prediction/consume",
+        subcategories: [
+          { title: "⏰ TimeConsume", path: "/prediction/consume/time" },
+          { title: "💳 MoneyConsume", path: "/prediction/consume/money" },
+          { title: "☁️ CloudConsume", path: "/prediction/consume/cloud" },
+        ]
+      },
       sports: {
         title: "스포츠",
         href: "/prediction/sports",
@@ -65,22 +74,22 @@ const navigationData = {
         title: "엔터테인먼트",
         href: "/prediction/entertainment",
         subcategories: [
-          { title: "영화", path: "/prediction/entertainment?type=movie" },
-          { title: "드라마", path: "/prediction/entertainment?type=drama" },
-          { title: "음악", path: "/prediction/entertainment?type=music" },
-          { title: "시상식", path: "/prediction/entertainment?type=awards" },
+          { title: "영화", path: "/prediction/entertainment/movies" },
+          { title: "드라마", path: "/prediction/entertainment/dramas" },
+          { title: "음악", path: "/prediction/entertainment/music" },
+          { title: "시상식", path: "/prediction/entertainment/awards" },
         ]
       },
       politics: {
         title: "정치/선거",
         href: "/prediction/politics",
         subcategories: [
-          { title: "국가 선거", path: "/prediction/politics?level=national" },
-          { title: "지역 선거", path: "/prediction/politics?level=local" },
-          { title: "정책 변화", path: "/prediction/politics?type=policy" },
+          { title: "국가 선거", path: "/prediction/politics/national-elections" },
+          { title: "지역 선거", path: "/prediction/politics/local-elections" },
+          { title: "정책 변화", path: "/prediction/politics/policy-changes" },
         ]
       },
-      user: {
+      "user-suggestions": {
         title: "사용자 제안",
         href: "/prediction/user-suggestions",
         subcategories: [

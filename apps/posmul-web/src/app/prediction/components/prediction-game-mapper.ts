@@ -58,28 +58,23 @@ const normalizeSegment = (value: unknown, fallback: string): string => {
 };
 
 const mapDbCategoryToRoute = (value: unknown): string => {
-  switch (value) {
+  const normalized = typeof value === "string" ? value.trim().toUpperCase() : "";
+
+  switch (normalized) {
     case "SPORTS":
       return "sports";
+    case "INVEST":
+      return "consume";
     case "ENTERTAINMENT":
       return "entertainment";
     case "POLITICS":
       return "politics";
+    case "USER_PROPOSED":
+    case "USER_SUGGESTIONS":
+    case "USER_SUGGESTION":
+      return "user-suggestions";
     default:
       return "prediction";
-  }
-};
-
-const mapInvestLeagueToConsumePath = (value: string): string => {
-  switch (value) {
-    case "cloud":
-      return "/consume/cloud";
-    case "local":
-      return "/consume/money";
-    case "major":
-      return "/consume/time";
-    default:
-      return "/consume";
   }
 };
 
@@ -191,10 +186,6 @@ export const mapPredictionGameRowToCardModel = (
   const league = normalizeSegment(row.league, "all").toLowerCase();
 
   const href = (() => {
-    if (row.category === "INVEST") {
-      return mapInvestLeagueToConsumePath(league);
-    }
-
     const categoryRoute = mapDbCategoryToRoute(row.category);
     return categoryRoute === "prediction"
       ? `/prediction/${slug}`

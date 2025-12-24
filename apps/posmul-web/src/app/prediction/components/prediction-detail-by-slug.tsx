@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { PredictionDetailView } from "../../../bounded-contexts/prediction/presentation/components/PredictionDetailView";
+import { PredictionDetailTabsClient } from "./PredictionDetailTabsClient";
 
 import {
   getPredictionGameBySlug,
@@ -9,6 +9,26 @@ import {
 } from "../../../bounded-contexts/public/infrastructure/repositories/prediction.repository";
 
 import { getUserBalance } from "../sports/soccer/[slug]/actions";
+
+type MoneyWaveCategory = "sports" | "politics" | "entertainment" | "economy" | "all";
+
+const mapDbCategoryToMoneyWave = (value: unknown): MoneyWaveCategory => {
+  const normalized = typeof value === "string" ? value.trim().toUpperCase() : "";
+  switch (normalized) {
+    case "SPORTS":
+      return "sports";
+    case "POLITICS":
+      return "politics";
+    case "ENTERTAINMENT":
+      return "entertainment";
+    case "INVEST":
+      return "economy";
+    case "USER_PROPOSED":
+      return "all";
+    default:
+      return "all";
+  }
+};
 
 export async function renderPredictionDetailBySlug(slug: string) {
   const decodedSlug = decodeURIComponent(slug);
@@ -28,6 +48,18 @@ export async function renderPredictionDetailBySlug(slug: string) {
   ];
 
   const gameOptions = options.length > 0 ? options : defaultOptions;
+
+  const subcategory =
+    typeof (game as unknown as { subcategory?: unknown }).subcategory === "string"
+      ? ((game as unknown as { subcategory?: string }).subcategory as string).trim().toLowerCase() || "all"
+      : "all";
+
+  const league =
+    typeof (game as unknown as { league?: unknown }).league === "string"
+      ? ((game as unknown as { league?: string }).league as string).trim().toLowerCase() || "all"
+      : "all";
+
+  const moneyWaveCategory = mapDbCategoryToMoneyWave((game as unknown as { category?: unknown }).category);
 
   const gameForView = {
     id: game.game_id,
@@ -57,11 +89,11 @@ export async function renderPredictionDetailBySlug(slug: string) {
     totalVolume: stats?.total_bet_amount || 0,
     participantCount: stats?.total_participants || 0,
     endTime: game.registration_end
-      ? new Date(game.registration_end)
-      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      ? new Date(game.registration_end).toISOString()
+      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     settlementTime: game.settlement_date
-      ? new Date(game.settlement_date)
-      : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
+      ? new Date(game.settlement_date).toISOString()
+      : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     status: (game.status === "ACTIVE"
       ? "ACTIVE"
       : game.status === "CLOSED"
@@ -75,16 +107,25 @@ export async function renderPredictionDetailBySlug(slug: string) {
       reputation: 0,
       avatar: "🎯",
     },
-    prizePool: 0,
+    prizePool:
+      typeof (game as unknown as { allocated_prize_pool?: unknown }).allocated_prize_pool === "number"
+        ? ((game as unknown as { allocated_prize_pool?: number }).allocated_prize_pool as number)
+        : stats?.total_bet_amount
+          ? Math.floor(stats.total_bet_amount * 0.5)
+          : 0,
     minimumStake: game.min_bet_amount || 100,
     maximumStake: game.max_bet_amount || 10000,
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pb-20">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <PredictionDetailView game={gameForView} userBalance={userBalance} />
-      </div>
-    </div>
+    <PredictionDetailTabsClient
+      game={gameForView}
+      userBalance={userBalance}
+      moneyWave={{
+        category: moneyWaveCategory,
+        subcategory,
+        league,
+      }}
+    />
   );
 }

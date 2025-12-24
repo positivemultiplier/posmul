@@ -7,13 +7,13 @@ type PageProps = {
 const mapLeagueToConsumePath = (league: string): string => {
   switch (league) {
     case "cloud":
-      return "/consume/cloud";
+      return "/prediction/consume/cloud";
     case "local":
-      return "/consume/money";
+      return "/prediction/consume/money";
     case "major":
-      return "/consume/time";
+      return "/prediction/consume/time";
     default:
-      return "/consume";
+      return "/prediction/consume";
   }
 };
 

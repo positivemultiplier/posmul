@@ -53,7 +53,13 @@ export default function RootLayout({
               {/* Navigation */}
               <ThreeRowNavbar />
 
-              <main className="flex-1 pt-16">{children}</main>
+              {/*
+                ThreeRowNavbar가 fixed top-0 이므로,
+                전역적으로 헤더 높이만큼 상단 패딩을 확보한다.
+                - mobile: Row1(h-16)=64px
+                - md+: Row1(h-16)+Row2(h-12)+Row3(h-10)=152px
+              */}
+              <main className="flex-1 pt-16 md:pt-[152px]">{children}</main>
 
               <footer className="bg-[#0a0a0f] border-t border-white/10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

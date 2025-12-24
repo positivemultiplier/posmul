@@ -4,7 +4,7 @@ interface PageProps {
   params: Promise<{ subcategory: string; league: string; slug: string }>;
 }
 
-export default async function PredictionPoliticsDepth5Page({
+export default async function PredictionUserSuggestionsDepth5Page({
   params,
 }: PageProps) {
   const { slug } = await params;

@@ -8,30 +8,8 @@ import {
     type PredictionGameRow,
 } from "../components/prediction-game-mapper";
 
-interface PageProps {
-    searchParams: Promise<{
-        type?: string;
-    }>;
-}
-
-export default async function PredictionEntertainmentPage({ searchParams }: PageProps) {
+export default async function PredictionEntertainmentPage() {
     const supabase = await createClient();
-    const { type: filterValue } = await searchParams;
-
-    const subcategoryFilter = (() => {
-        switch (filterValue) {
-            case "movie":
-                return "movies";
-            case "drama":
-                return "dramas";
-            case "music":
-                return "music";
-            case "awards":
-                return "awards";
-            default:
-                return undefined;
-        }
-    })();
 
     let query = supabase
         .schema('prediction')
@@ -40,10 +18,6 @@ export default async function PredictionEntertainmentPage({ searchParams }: Page
         .eq("category", "ENTERTAINMENT")
         .eq("status", "ACTIVE")
         .order("created_at", { ascending: false });
-
-    if (subcategoryFilter) {
-        query = query.eq("subcategory", subcategoryFilter);
-    }
 
     // 유저 정보 가져오기 (내 베팅 정보 표시용)
     const { data: { user } } = await supabase.auth.getUser();
@@ -71,12 +45,11 @@ export default async function PredictionEntertainmentPage({ searchParams }: Page
 
     const mappedGames = ((games || []) as PredictionGameRow[]).map(mapPredictionGameRowToCardModel);
 
-    const filters = [
-        { label: "전체", href: "/prediction/entertainment" },
-        { label: "영화", href: "/prediction/entertainment?type=movie" },
-        { label: "드라마", href: "/prediction/entertainment?type=drama" },
-        { label: "음악", href: "/prediction/entertainment?type=music" },
-        { label: "시상식", href: "/prediction/entertainment?type=awards" },
+    const subcategories = [
+        { label: "영화", href: "/prediction/entertainment/movies" },
+        { label: "드라마", href: "/prediction/entertainment/dramas" },
+        { label: "음악", href: "/prediction/entertainment/music" },
+        { label: "시상식", href: "/prediction/entertainment/awards" },
     ];
 
     return (
@@ -97,19 +70,17 @@ export default async function PredictionEntertainmentPage({ searchParams }: Page
                         <CompactMoneyWaveCard depthLevel={2} category="entertainment" />
                     </div>
 
-                    {/* Filter Tabs */}
-                    <div className="flex gap-4 mb-8">
-                        {filters.map((filter) => (
-                            <Link
-                                key={filter.label}
-                                href={filter.href}
-                                className={`px-4 py-2 rounded-lg border transition-all ${(filterValue === filter.href.split('=')[1] || (!filterValue && filter.label === "전체"))
-                                    ? "bg-blue-600 border-blue-500 text-white"
-                                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-gray-400"
-                                    }`}
-                            >
-                                {filter.label}
-                            </Link>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
+                        {subcategories.map((item) => (
+                            <HoverLift key={item.label}>
+                                <Link
+                                    href={item.href}
+                                    className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
+                                >
+                                    <div className="text-lg font-semibold mb-1">{item.label}</div>
+                                    <div className="text-sm text-gray-300">카테고리로 이동</div>
+                                </Link>
+                            </HoverLift>
                         ))}
                     </div>
 

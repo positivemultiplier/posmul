@@ -1,4 +1,4 @@
-import { renderPredictionDetailBySlug } from "../../../components/prediction-detail-by-slug";
+import { renderPredictionDetailBySlug } from "../../../../components/prediction-detail-by-slug";
 
 interface PageProps {
   params: Promise<{ subcategory: string; league: string; slug: string }>;

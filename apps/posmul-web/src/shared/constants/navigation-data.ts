@@ -163,9 +163,9 @@ export const sidebarLinks: SidebarLink[] = [
     icon: "Target",
     subLinks: [
       {
-        slug: "/consume",
-        title: "참여하기",
-        description: "예측 참여",
+        slug: "/prediction/consume",
+        title: "소비",
+        description: "투자→소비 예측",
       },
       {
         slug: "/prediction/sports",

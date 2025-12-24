@@ -8,7 +8,7 @@ import { redirect } from "next/navigation";
 const createPredictionGameSchema = z.object({
   title: z.string().min(5, "제목은 최소 5자 이상이어야 합니다"),
   description: z.string().min(10, "설명은 최소 10자 이상이어야 합니다"),
-  category: z.enum(["sports", "entertainment", "politics", "user-suggestions"]),
+  category: z.enum(["consume", "sports", "entertainment", "politics", "user-suggestions"]),
   predictionType: z.enum(["binary", "wdl", "ranking"]),
   options: z.string().min(1, "예측 옵션을 입력해주세요"),
   minimumStake: z
