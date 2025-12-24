@@ -4,7 +4,10 @@ import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
 import Link from "next/link";
 import { TrendingUp, Store, DollarSign } from "lucide-react";
 import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
-import { PredictionType, GameStatus } from "../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
+import {
+    mapPredictionGameRowToCardModel,
+    type PredictionGameRow,
+} from "../components/prediction-game-mapper";
 
 interface PageProps {
     searchParams: Promise<{
@@ -29,6 +32,8 @@ export default async function PredictionInvestPage({ searchParams }: PageProps) 
     }
 
     const { data: games } = await query;
+
+    const mappedGames = ((games || []) as PredictionGameRow[]).map(mapPredictionGameRowToCardModel);
 
     const filters = [
         { label: "전체", href: "/prediction/invest" },
@@ -95,44 +100,9 @@ export default async function PredictionInvestPage({ searchParams }: PageProps) 
                         ))}
                     </div>
 
-                    {/* Games Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {games && games.length > 0 ? (
-                            games.map((game, index) => (
-                                <FadeIn key={game.slug} delay={index * 0.1}>
-                                    <HoverLift>
-                                        <Link href={`/prediction/event/${game.slug}`}>
-                                            <div className="p-6 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl hover:border-white/20 transition-all h-full">
-                                                <div className="flex items-center gap-2 mb-4">
-                                                    <span className="px-3 py-1 bg-green-500/20 text-green-300 text-xs rounded-full border border-green-500/30">
-                                                        투자 예측
-                                                    </span>
-                                                    <span className="px-3 py-1 bg-blue-500/20 text-blue-300 text-xs rounded-full border border-blue-500/30">
-                                                        난이도 {game.difficulty}
-                                                    </span>
-                                                </div>
-
-                                                <h3 className="text-lg font-bold mb-3 line-clamp-2">{game.title}</h3>
-                                                <p className="text-sm text-gray-400 mb-4 line-clamp-2">{game.description}</p>
-
-                                                <div className="flex items-center justify-between text-sm text-gray-400">
-                                                    <span>최소 {game.min_bet_amount?.toLocaleString()} PMP</span>
-                                                    <span className="text-blue-400 font-semibold">참여하기 →</span>
-                                                </div>
-                                            </div>
-                                        </Link>
-                                    </HoverLift>
-                                </FadeIn>
-                            ))
-                        ) : (
-                            <div className="col-span-3 text-center py-12">
-                                <p className="text-gray-400 mb-4">진행 중인 투자 예측 게임이 없습니다.</p>
-                                <p className="text-sm text-gray-500">
-                                    Investment 도메인의 데이터가 축적되면 예측 게임이 생성됩니다.
-                                </p>
-                            </div>
-                        )}
-                    </div>
+                    <ClientPredictionGamesGrid
+                        games={mappedGames}
+                    />
 
                     {/* Example Games */}
                     <div className="mt-12 p-6 bg-white/5 rounded-xl border border-white/10">

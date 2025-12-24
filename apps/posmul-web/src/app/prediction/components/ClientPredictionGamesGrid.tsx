@@ -8,6 +8,7 @@ import { PredictionType, GameStatus } from "../../../bounded-contexts/prediction
 interface PredictionGame {
     id: string;
     slug: string;  // NEW: SEO-friendly identifier
+    href?: string;
     title: string;
     description: string;
     predictionType: PredictionType;
@@ -45,7 +46,12 @@ interface ClientPredictionGamesGridProps {
     basePath?: string; // 예: '/prediction/sports/soccer'
 }
 
-export function ClientPredictionGamesGrid({ games, userId, userPredictions = [], basePath = '/prediction/event' }: ClientPredictionGamesGridProps) {
+export function ClientPredictionGamesGrid({
+    games,
+    userId,
+    userPredictions = [],
+    basePath = "/prediction",
+}: ClientPredictionGamesGridProps) {
     if (games.length === 0) {
         return (
             <div className="text-center py-12 text-gray-400">
@@ -76,7 +82,7 @@ export function ClientPredictionGamesGrid({ games, userId, userPredictions = [],
 
                 return (
                     <FadeIn key={game.slug} delay={index * 0.1}>
-                        <Link href={`${basePath}/${game.slug}`} className="block">
+                        <Link href={game.href ?? `${basePath}/${game.slug}`} className="block">
                             <PredictionGameCard
                                 game={safeGame}
                                 userId={userId}

@@ -3,7 +3,10 @@ import { createClient } from "../../../lib/supabase/server";
 import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
 import Link from "next/link";
 import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
-import { PredictionType, GameStatus } from "../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
+import {
+    mapPredictionGameRowToCardModel,
+    type PredictionGameRow,
+} from "../components/prediction-game-mapper";
 
 interface PageProps {
     searchParams: Promise<{
@@ -17,6 +20,13 @@ export default async function PredictionPoliticsPage({ searchParams }: PageProps
     const resolvedParams = await searchParams;
     const filterValue = resolvedParams.level || resolvedParams.type;
 
+    const subcategoryFilter = (() => {
+        if (resolvedParams.level === "national") return "national-elections";
+        if (resolvedParams.level === "local") return "local-elections";
+        if (resolvedParams.type === "policy") return "policy-changes";
+        return undefined;
+    })();
+
     let query = supabase
         .schema('prediction')
         .from("prediction_games")
@@ -25,14 +35,22 @@ export default async function PredictionPoliticsPage({ searchParams }: PageProps
         .eq("status", "ACTIVE")
         .order("created_at", { ascending: false });
 
-    if (filterValue) {
-        query = query.contains('tags', [filterValue]);
+    if (subcategoryFilter) {
+        query = query.eq("subcategory", subcategoryFilter);
     }
 
     // 유저 정보 가져오기 (내 베팅 정보 표시용)
     const { data: { user } } = await supabase.auth.getUser();
 
-    let userPredictions: any[] = [];
+    interface UserPrediction {
+        prediction_id: string;
+        game_id: string;
+        bet_amount: number | null;
+        is_active: boolean;
+        prediction_data: Record<string, unknown> | null;
+    }
+
+    let userPredictions: UserPrediction[] = [];
     if (user) {
         const { data: predictions } = await supabase
             .schema('prediction')
@@ -40,7 +58,7 @@ export default async function PredictionPoliticsPage({ searchParams }: PageProps
             .select('prediction_id, game_id, bet_amount, is_active, prediction_data')
             .eq('user_id', user.id)
             .eq('is_active', true);
-        userPredictions = predictions || [];
+        userPredictions = (predictions || []) as UserPrediction[];
     }
 
     const { data: games, error } = await query;
@@ -48,34 +66,7 @@ export default async function PredictionPoliticsPage({ searchParams }: PageProps
         console.error("PredictionPoliticsPage Supabase error", error.message);
     }
 
-    // DB 데이터를 도메인 모델(PredictionGame)로 매핑
-    const mappedGames = games?.map((game: any) => {
-        const gameOptions = game.metadata?.options || [
-            { id: '1', text: '예', currentOdds: 0.5 },
-            { id: '2', text: '아니오', currentOdds: 0.5 }
-        ];
-
-        return {
-            id: game.id,
-            slug: game.slug || game.id, // slug가 없으면 id 사용
-            title: game.title,
-            description: game.description,
-            predictionType: game.prediction_type?.toUpperCase() || PredictionType.BINARY,
-            options: gameOptions,
-            startTime: game.start_time,
-            endTime: game.end_time,
-            settlementTime: game.settlement_time,
-            minimumStake: game.minimum_stake || 100,
-            maximumStake: game.maximum_stake || 10000,
-            maxParticipants: game.max_participants,
-            currentParticipants: game.total_participants_count || 0,
-            status: game.status || GameStatus.ACTIVE,
-            totalStake: game.total_stake_amount || 0,
-            gameImportanceScore: game.game_importance_score || 1.0,
-            allocatedPrizePool: game.allocated_prize_pool || 0,
-            createdAt: game.created_at,
-        };
-    }) || [];
+    const mappedGames = ((games || []) as PredictionGameRow[]).map(mapPredictionGameRowToCardModel);
 
     const filters = [
         { label: "전체", href: "/prediction/politics" },
