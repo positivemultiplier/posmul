@@ -1,126 +1,53 @@
-import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
-import { createClient } from "../../../lib/supabase/server";
 import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
 import Link from "next/link";
-import { TrendingUp, Store, DollarSign } from "lucide-react";
-import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
-import {
-    mapPredictionGameRowToCardModel,
-    type PredictionGameRow,
-} from "../components/prediction-game-mapper";
-
-interface PageProps {
-    searchParams: Promise<{
-        league?: string;
-    }>;
-}
-
-export default async function PredictionInvestPage({ searchParams }: PageProps) {
-    const supabase = await createClient();
-    const { league: filterValue } = await searchParams;
-
-    let query = supabase
-        .schema('prediction')
-        .from("prediction_games")
-        .select("*")
-        .eq("category", "INVEST")
-        .eq("status", "ACTIVE")
-        .order("created_at", { ascending: false });
-
-    if (filterValue) {
-        query = query.contains('tags', [filterValue]);
-    }
-
-    const { data: games } = await query;
-
-    const mappedGames = ((games || []) as PredictionGameRow[]).map(mapPredictionGameRowToCardModel);
-
-    const filters = [
-        { label: "전체", href: "/prediction/invest" },
-        { label: "Local League", href: "/prediction/invest?league=local" },
-        { label: "Major League", href: "/prediction/invest?league=major" },
-        { label: "Cloud Funding", href: "/prediction/invest?league=cloud" },
-    ];
-
+export default function PredictionInvestPage() {
     return (
-        <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#1a1a2e] to-[#0a0a0f] text-white">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
                 <FadeIn>
-                    {/* Header */}
-                    <div className="mb-8">
-                        <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                            📊 투자 예측
-                        </h1>
-                        <p className="text-xl text-gray-400">
-                            Investment 도메인의 성과를 예측하고 PMC를 획득하세요
-                        </p>
-                    </div>
+                    <h1 className="text-4xl font-bold mb-4">📌 투자 예측 이관 안내</h1>
+                    <p className="text-gray-300 mb-8">
+                        투자 관련 기능은 이제 <span className="font-semibold">Consume</span> 도메인으로 이동했습니다.
+                        <br />
+                        아래에서 원하는 영역으로 이동해주세요. (강제 redirect는 하지 않습니다)
+                    </p>
 
-                    {/* MoneyWave Card (Level 1) */}
-                    <div className="mb-8">
-                        <CompactMoneyWaveCard depthLevel={2} category="economy" />
-                    </div>
-
-                    {/* Info Card */}
-                    <div className="mb-8 p-6 bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-xl border border-green-500/30 rounded-2xl">
-                        <h3 className="text-lg font-bold mb-3">💡 투자 예측이란?</h3>
-                        <p className="text-gray-300 mb-4">
-                            PosMul의 Investment 도메인(Local League, Major League, Cloud Funding)의 <br />
-                            투자 성과, 수익률, 프로젝트 성공률 등을 예측하는 게임입니다.
-                        </p>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                            <div className="flex items-center gap-2">
-                                <Store className="w-5 h-5 text-green-400" />
-                                <span>Local League 성과 예측</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <TrendingUp className="w-5 h-5 text-blue-400" />
-                                <span>Major League 광고 성과</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <DollarSign className="w-5 h-5 text-purple-400" />
-                                <span>Cloud Funding 성공률</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Filter Tabs */}
-                    <div className="flex gap-4 mb-8">
-                        {filters.map((filter) => (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <HoverLift>
                             <Link
-                                key={filter.label}
-                                href={filter.href}
-                                className={`px-4 py-2 rounded-lg border transition-all ${(filterValue === filter.href.split('=')[1] || (!filterValue && filter.label === "전체"))
-                                    ? "bg-blue-600 border-blue-500 text-white"
-                                    : "bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20 text-gray-400"
-                                    }`}
+                                href="/consume/money"
+                                className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
                             >
-                                {filter.label}
+                                <div className="text-2xl font-bold mb-2">💳 MoneyConsume</div>
+                                <div className="text-sm text-gray-300">Local League (지역 소비)</div>
                             </Link>
-                        ))}
+                        </HoverLift>
+
+                        <HoverLift>
+                            <Link
+                                href="/consume/time"
+                                className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
+                            >
+                                <div className="text-2xl font-bold mb-2">⏰ TimeConsume</div>
+                                <div className="text-sm text-gray-300">Major League (광고/설문)</div>
+                            </Link>
+                        </HoverLift>
+
+                        <HoverLift>
+                            <Link
+                                href="/consume/cloud"
+                                className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
+                            >
+                                <div className="text-2xl font-bold mb-2">☁️ CloudConsume</div>
+                                <div className="text-sm text-gray-300">Cloud Funding (펀딩)</div>
+                            </Link>
+                        </HoverLift>
                     </div>
 
-                    <ClientPredictionGamesGrid
-                        games={mappedGames}
-                    />
-
-                    {/* Example Games */}
-                    <div className="mt-12 p-6 bg-white/5 rounded-xl border border-white/10">
-                        <h3 className="text-lg font-bold mb-4">📌 예시 게임</h3>
-                        <div className="space-y-3 text-sm text-gray-300">
-                            <div className="flex items-start gap-2">
-                                <span className="text-green-400">•</span>
-                                <span>"이번 달 Local League 신규 가맹점 수가 30개를 넘을까?"</span>
-                            </div>
-                            <div className="flex items-start gap-2">
-                                <span className="text-blue-400">•</span>
-                                <span>"다음 주 Major League 광고 중 가장 높은 CTR을 기록할 광고는?"</span>
-                            </div>
-                            <div className="flex items-start gap-2">
-                                <span className="text-purple-400">•</span>
-                                <span>"Cloud Funding '로컬 디자이너 프로젝트'가 목표 금액을 달성할까?"</span>
-                            </div>
-                        </div>
+                    <div className="mt-8">
+                        <Link href="/prediction" className="text-sm text-gray-400 hover:text-gray-200">
+                            ← 예측(Expect)으로 돌아가기
+                        </Link>
                     </div>
                 </FadeIn>
             </div>

@@ -61,14 +61,25 @@ const mapDbCategoryToRoute = (value: unknown): string => {
   switch (value) {
     case "SPORTS":
       return "sports";
-    case "INVEST":
-      return "invest";
     case "ENTERTAINMENT":
       return "entertainment";
     case "POLITICS":
       return "politics";
     default:
       return "prediction";
+  }
+};
+
+const mapInvestLeagueToConsumePath = (value: string): string => {
+  switch (value) {
+    case "cloud":
+      return "/consume/cloud";
+    case "local":
+      return "/consume/money";
+    case "major":
+      return "/consume/time";
+    default:
+      return "/consume";
   }
 };
 
@@ -176,13 +187,19 @@ export const mapPredictionGameRowToCardModel = (
   const defaultSettlement = new Date(now + 14 * 24 * 60 * 60 * 1000).toISOString();
 
   const slug = row.slug ?? row.game_id;
-  const categoryRoute = mapDbCategoryToRoute(row.category);
   const subcategory = normalizeSegment(row.subcategory, "all").toLowerCase();
   const league = normalizeSegment(row.league, "all").toLowerCase();
-  const href =
-    categoryRoute === "prediction"
+
+  const href = (() => {
+    if (row.category === "INVEST") {
+      return mapInvestLeagueToConsumePath(league);
+    }
+
+    const categoryRoute = mapDbCategoryToRoute(row.category);
+    return categoryRoute === "prediction"
       ? `/prediction/${slug}`
       : `/prediction/${categoryRoute}/${subcategory}/${league}/${slug}`;
+  })();
 
   return {
     id: row.game_id,

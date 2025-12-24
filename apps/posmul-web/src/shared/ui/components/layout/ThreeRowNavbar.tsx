@@ -51,15 +51,6 @@ const navigationData = {
     title: "예측",
     href: "/prediction",
     categories: {
-      invest: {
-        title: "투자 예측",
-        href: "/prediction/invest",
-        subcategories: [
-          { title: "Local League", path: "/prediction/invest?league=local" },
-          { title: "Major League", path: "/prediction/invest?league=major" },
-          { title: "Cloud Funding", path: "/prediction/invest?league=cloud" },
-        ]
-      },
       sports: {
         title: "스포츠",
         href: "/prediction/sports",

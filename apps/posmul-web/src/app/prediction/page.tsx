@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/server";
 import { FadeIn } from "../HomeClientComponents";
-import { Activity, TrendingUp, Vote, Film } from "lucide-react";
-import { GameStatus, PredictionType } from "../../bounded-contexts/prediction/domain/value-objects/prediction-types";
+import { Activity, Vote, Film } from "lucide-react";
 import { ClientPredictionGamesGrid } from "./components/ClientPredictionGamesGrid";
 import { CompactMoneyWaveCard } from "../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { getAggregatedPrizePool } from "../../bounded-contexts/prediction/application/prediction-pool.service";
+import {
+  mapPredictionGameRowToCardModel,
+  type PredictionGameRow,
+} from "./components/prediction-game-mapper";
 
 export default async function PredictionPage() {
   const supabase = await createClient();
@@ -26,7 +29,6 @@ export default async function PredictionPage() {
   const categoryCounts = {
     SPORTS: games?.filter(g => g.category === 'SPORTS').length || 0,
     POLITICS: games?.filter(g => g.category === 'POLITICS').length || 0,
-    INVEST: games?.filter(g => g.category === 'INVEST').length || 0,
     ENTERTAINMENT: games?.filter(g => g.category === 'ENTERTAINMENT').length || 0,
   };
 
@@ -50,15 +52,6 @@ export default async function PredictionPage() {
       iconColor: "text-purple-400",
     },
     {
-      href: "/prediction/invest",
-      icon: TrendingUp,
-      emoji: "📈",
-      title: "경제",
-      count: categoryCounts.INVEST,
-      gradient: "from-green-500/10 to-emerald-500/10",
-      iconColor: "text-green-400",
-    },
-    {
       href: "/prediction/entertainment",
       icon: Film,
       emoji: "🎭",
@@ -73,56 +66,15 @@ export default async function PredictionPage() {
   const { data: recentGames } = await supabase
     .schema('prediction')
     .from('prediction_games')
-    .select(`
-      id,
-      slug,
-      title,
-      description,
-      prediction_type,
-      start_time,
-      end_time,
-      settlement_time,
-      minimum_stake,
-      maximum_stake,
-      max_participants,
-      status,
-
-      created_at,
-      metadata
-    `)
+    .select("*")
     .eq('status', 'ACTIVE')
+    .neq('category', 'INVEST')
     .order('created_at', { ascending: false })
     .limit(6);
 
-  // Map DB data to domain model
-  const mappedGames = recentGames?.map((game: any) => {
-    // Parse options from metadata or use default
-    const gameOptions = game.metadata?.options || [
-      { id: '1', text: '예', currentOdds: 0.5 },
-      { id: '2', text: '아니오', currentOdds: 0.5 }
-    ];
-
-    return {
-      id: game.id,
-      slug: game.slug,  // NEW: Add slug for routing
-      title: game.title,
-      description: game.description,
-      predictionType: game.prediction_type?.toUpperCase() || PredictionType.BINARY,
-      options: gameOptions,
-      startTime: new Date(game.start_time),
-      endTime: new Date(game.end_time),
-      settlementTime: new Date(game.settlement_time),
-      minimumStake: game.minimum_stake || 100,
-      maximumStake: game.maximum_stake || 10000,
-      maxParticipants: game.max_participants,
-      currentParticipants: 0,
-      status: game.status || GameStatus.ACTIVE,
-      totalStake: 0,
-      gameImportanceScore: 1.0,
-      allocatedPrizePool: 0,
-      createdAt: new Date(game.created_at),
-    };
-  }) || [];
+  const mappedGames = ((recentGames ?? []) as PredictionGameRow[]).map(
+    mapPredictionGameRowToCardModel
+  );
 
   // Get user's active predictions if logged in
   let userPredictions: Array<{
