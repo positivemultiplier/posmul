@@ -1,7 +1,10 @@
+import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { createClient } from "../../../lib/supabase/server";
 import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
 import Link from "next/link";
 import { TrendingUp, Store, DollarSign } from "lucide-react";
+import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
+import { PredictionType, GameStatus } from "../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 
 interface PageProps {
     searchParams: Promise<{
@@ -39,13 +42,18 @@ export default async function PredictionInvestPage({ searchParams }: PageProps) 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <FadeIn>
                     {/* Header */}
-                    <div className="mb-12">
+                    <div className="mb-8">
                         <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                             📊 투자 예측
                         </h1>
                         <p className="text-xl text-gray-400">
                             Investment 도메인의 성과를 예측하고 PMC를 획득하세요
                         </p>
+                    </div>
+
+                    {/* MoneyWave Card (Level 1) */}
+                    <div className="mb-8">
+                        <CompactMoneyWaveCard depthLevel={2} category="economy" />
                     </div>
 
                     {/* Info Card */}

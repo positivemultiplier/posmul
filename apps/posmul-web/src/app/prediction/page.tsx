@@ -4,12 +4,17 @@ import { FadeIn } from "../HomeClientComponents";
 import { Activity, TrendingUp, Vote, Film } from "lucide-react";
 import { GameStatus, PredictionType } from "../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 import { ClientPredictionGamesGrid } from "./components/ClientPredictionGamesGrid";
+import { CompactMoneyWaveCard } from "../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
+import { getAggregatedPrizePool } from "../../bounded-contexts/prediction/application/prediction-pool.service";
 
 export default async function PredictionPage() {
   const supabase = await createClient();
 
   // Get current user
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Get platform total prize pool
+  const platformTotalPool = await getAggregatedPrizePool(supabase);
 
   // Get game counts by category
   const { data: games } = await supabase
@@ -27,7 +32,7 @@ export default async function PredictionPage() {
 
   const categories = [
     {
-      href: "/prediction?category=SPORTS",
+      href: "/prediction/sports",
       icon: Activity,
       emoji: "⚽",
       title: "스포츠",
@@ -36,7 +41,7 @@ export default async function PredictionPage() {
       iconColor: "text-blue-400",
     },
     {
-      href: "/prediction?category=POLITICS",
+      href: "/prediction/politics",
       icon: Vote,
       emoji: "🗳️",
       title: "정치",
@@ -45,7 +50,7 @@ export default async function PredictionPage() {
       iconColor: "text-purple-400",
     },
     {
-      href: "/prediction?category=INVEST",
+      href: "/prediction/invest",
       icon: TrendingUp,
       emoji: "📈",
       title: "경제",
@@ -54,7 +59,7 @@ export default async function PredictionPage() {
       iconColor: "text-green-400",
     },
     {
-      href: "/prediction?category=ENTERTAINMENT",
+      href: "/prediction/entertainment",
       icon: Film,
       emoji: "🎭",
       title: "엔터테인먼트",
@@ -81,10 +86,7 @@ export default async function PredictionPage() {
       maximum_stake,
       max_participants,
       status,
-      allocated_prize_pool,
-      game_importance_score,
-      total_participants_count,
-      total_stake_amount,
+
       created_at,
       metadata
     `)
@@ -113,11 +115,11 @@ export default async function PredictionPage() {
       minimumStake: game.minimum_stake || 100,
       maximumStake: game.maximum_stake || 10000,
       maxParticipants: game.max_participants,
-      currentParticipants: game.total_participants_count || 0,
+      currentParticipants: 0,
       status: game.status || GameStatus.ACTIVE,
-      totalStake: game.total_stake_amount || 0,
-      gameImportanceScore: game.game_importance_score || 1.0,
-      allocatedPrizePool: game.allocated_prize_pool || 0,
+      totalStake: 0,
+      gameImportanceScore: 1.0,
+      allocatedPrizePool: 0,
       createdAt: new Date(game.created_at),
     };
   }) || [];
@@ -157,6 +159,13 @@ export default async function PredictionPage() {
           </div>
         </FadeIn>
 
+        {/* MoneyWave 상금풀 현황 (Level 0: 전체) */}
+        <FadeIn delay={0.2}>
+          <div className="mb-8">
+            <CompactMoneyWaveCard depthLevel={1} initialPool={platformTotalPool} />
+          </div>
+        </FadeIn>
+
         {/* Category Grid */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
           {categories.map((category, index) => {
@@ -189,8 +198,8 @@ export default async function PredictionPage() {
           <h2 className="text-3xl font-bold mb-8 text-center">최근 게임</h2>
         </FadeIn>
 
-        <ClientPredictionGamesGrid 
-          games={mappedGames} 
+        <ClientPredictionGamesGrid
+          games={mappedGames}
           userId={user?.id}
           userPredictions={userPredictions}
         />

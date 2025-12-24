@@ -1,6 +1,9 @@
+import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { createClient } from "../../../lib/supabase/server";
 import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
 import Link from "next/link";
+import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
+import { PredictionType, GameStatus } from "../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 
 interface PageProps {
     searchParams: Promise<{
@@ -24,7 +27,50 @@ export default async function PredictionEntertainmentPage({ searchParams }: Page
         query = query.contains('tags', [filterValue]);
     }
 
+    // 유저 정보 가져오기 (내 베팅 정보 표시용)
+    const { data: { user } } = await supabase.auth.getUser();
+
+    let userPredictions: any[] = [];
+    if (user) {
+        const { data: predictions } = await supabase
+            .schema('prediction')
+            .from('predictions')
+            .select('prediction_id, game_id, bet_amount, is_active, prediction_data')
+            .eq('user_id', user.id)
+            .eq('is_active', true);
+        userPredictions = predictions || [];
+    }
+
     const { data: games } = await query;
+
+    // DB 데이터를 도메인 모델(PredictionGame)로 매핑
+    const mappedGames = games?.map((game: any) => {
+        const gameOptions = game.metadata?.options || [
+            { id: '1', text: '예', currentOdds: 0.5 },
+            { id: '2', text: '아니오', currentOdds: 0.5 }
+        ];
+
+        return {
+            id: game.id,
+            slug: game.slug || game.id,
+            title: game.title,
+            description: game.description,
+            predictionType: game.prediction_type?.toUpperCase() || PredictionType.BINARY,
+            options: gameOptions,
+            startTime: game.start_time,
+            endTime: game.end_time,
+            settlementTime: game.settlement_time,
+            minimumStake: game.minimum_stake || 100,
+            maximumStake: game.maximum_stake || 10000,
+            maxParticipants: game.max_participants,
+            currentParticipants: game.total_participants_count || 0,
+            status: game.status || GameStatus.ACTIVE,
+            totalStake: game.total_stake_amount || 0,
+            gameImportanceScore: game.game_importance_score || 1.0,
+            allocatedPrizePool: game.allocated_prize_pool || 0,
+            createdAt: game.created_at,
+        };
+    }) || [];
 
     const filters = [
         { label: "전체", href: "/prediction/entertainment" },
@@ -38,13 +84,18 @@ export default async function PredictionEntertainmentPage({ searchParams }: Page
         <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#1a1a2e] to-[#0a0a0f] text-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
                 <FadeIn>
-                    <div className="mb-12">
+                    <div className="mb-8">
                         <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                             🎬 엔터테인먼트 예측
                         </h1>
                         <p className="text-xl text-gray-400">
                             영화, 드라마, 음악, 시상식 결과를 예측하고 PMC를 획득하세요
                         </p>
+                    </div>
+
+                    {/* MoneyWave Card (Level 1) */}
+                    <div className="mb-12">
+                        <CompactMoneyWaveCard depthLevel={2} category="entertainment" />
                     </div>
 
                     {/* Filter Tabs */}
@@ -63,27 +114,11 @@ export default async function PredictionEntertainmentPage({ searchParams }: Page
                         ))}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {games && games.length > 0 ? (
-                            games.map((game, index) => (
-                                <FadeIn key={game.slug} delay={index * 0.1}>
-                                    <HoverLift>
-                                        <Link href={`/prediction/event/${game.slug}`}>
-                                            <div className="p-6 bg-gradient-to-br from-white/5 to-white/[0.02] backdrop-blur-xl border border-white/10 rounded-2xl hover:border-white/20 transition-all h-full">
-                                                <h3 className="text-lg font-bold mb-3">{game.title}</h3>
-                                                <p className="text-sm text-gray-400 mb-4">{game.description}</p>
-                                                <span className="text-blue-400 font-semibold">참여하기 →</span>
-                                            </div>
-                                        </Link>
-                                    </HoverLift>
-                                </FadeIn>
-                            ))
-                        ) : (
-                            <div className="col-span-3 text-center py-12">
-                                <p className="text-gray-400">진행 중인 엔터테인먼트 예측 게임이 없습니다.</p>
-                            </div>
-                        )}
-                    </div>
+                    <ClientPredictionGamesGrid
+                        games={mappedGames}
+                        userId={user?.id}
+                        userPredictions={userPredictions}
+                    />
                 </FadeIn>
             </div>
         </div>

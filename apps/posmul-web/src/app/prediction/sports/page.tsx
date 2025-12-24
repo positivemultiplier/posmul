@@ -1,6 +1,10 @@
 import { createClient } from "../../../lib/supabase/server";
 import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
 import Link from "next/link";
+import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
+import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
+import { PredictionType, GameStatus } from "../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
+import { getAggregatedPrizePool } from "../../../bounded-contexts/prediction/application/prediction-pool.service";
 
 interface PageProps {
   searchParams: Promise<{
@@ -9,9 +13,11 @@ interface PageProps {
 }
 
 interface UserPrediction {
+  prediction_id: string;
   game_id: string;
   bet_amount: number | null;
   is_active: boolean;
+  prediction_data: Record<string, unknown> | null;
 }
 
 const SPORT_WHITELIST = [
@@ -38,6 +44,9 @@ export default async function PredictionSportsPage({
 
   // 현재 사용자 확인
   const { data: { user } } = await supabase.auth.getUser();
+
+  // Get active sports pool
+  const sportsPool = await getAggregatedPrizePool(supabase, 'SPORTS', safeSport || undefined);
 
   let query = supabase
     .schema("prediction")
@@ -68,11 +77,11 @@ export default async function PredictionSportsPage({
     const { data: predictions } = await supabase
       .schema("prediction")
       .from("predictions")
-      .select("game_id, bet_amount, is_active")
+      .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
       .eq("user_id", user.id)
       .eq("is_active", true)
       .in("game_id", gameIds);
-    
+
     userPredictions = predictions || [];
   }
 
@@ -119,13 +128,22 @@ export default async function PredictionSportsPage({
             </p>
           </div>
 
+          {/* MoneyWave 상금풀 현황 (Depth 2: 스포츠 카테고리) */}
+          <div className="mb-8">
+            <CompactMoneyWaveCard
+              depthLevel={2}
+              category="sports"
+              initialPool={sportsPool}
+            />
+          </div>
+
           <div className="mb-8 flex gap-4">
             {filters.map((filter) => (
               <Link
                 key={filter.label}
                 href={
                   filter.value
-                    ? `/prediction/sports?sport=${filter.value}`
+                    ? `/prediction/sports/${filter.value}`
                     : "/prediction/sports"
                 }
                 className={`px-4 py-2 rounded-lg border transition-all ${safeSport === filter.value
@@ -138,76 +156,41 @@ export default async function PredictionSportsPage({
             ))}
           </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {visibleGames.length > 0 ? (
-              visibleGames.map((game, index) => {
-                const myPrediction = getUserPrediction(game.game_id);
-                const isParticipated = !!myPrediction;
-                
-                return (
-                <FadeIn key={game.slug ?? `${game.game_id}-${index}`} delay={index * 0.1}>
-                  <HoverLift>
-                    <Link href={`/prediction/sports/${(game.metadata as any)?.sport || 'other'}/${game.slug}`}>
-                      <div className={`h-full rounded-2xl border bg-gradient-to-br from-white/5 to-white/[0.02] p-6 backdrop-blur-xl transition-all hover:border-white/20 relative ${
-                        isParticipated 
-                          ? 'border-purple-500/50 border-l-4 border-l-purple-500' 
-                          : 'border-white/10'
-                      }`}>
-                        {/* 참여 중 배지 */}
-                        {isParticipated && (
-                          <div className="absolute top-3 right-3">
-                            <span className="rounded-full bg-purple-500 px-2 py-1 text-xs font-medium text-white">
-                              🎯 참여 중
-                            </span>
-                          </div>
-                        )}
-                        
-                        <div className="mb-4 flex items-center gap-2">
-                          <span className="rounded-full border border-blue-500/30 bg-blue-500/20 px-3 py-1 text-xs text-blue-300">
-                            스포츠
-                          </span>
-                          <span className="rounded-full border border-green-500/30 bg-green-500/20 px-3 py-1 text-xs text-green-300">
-                            난이도 {game.difficulty}
-                          </span>
-                        </div>
-                        <h3 className="mb-3 line-clamp-2 text-lg font-bold">
-                          {game.title}
-                        </h3>
-                        <p className="mb-4 line-clamp-2 text-sm text-gray-400">
-                          {game.description}
-                        </p>
-                        
-                        {/* 내 베팅 정보 (참여한 경우) */}
-                        {isParticipated && myPrediction && (
-                          <div className="mb-3 rounded-lg bg-purple-500/10 border border-purple-500/20 p-2">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-purple-300">💜 내 베팅</span>
-                              <span className="font-medium text-purple-200">
-                                {(myPrediction.bet_amount || 0).toLocaleString()} PMP
-                              </span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center justify-between text-sm text-gray-400">
-                          <span>최소 {game.min_bet_amount?.toLocaleString()} PMP</span>
-                          <span className={`font-semibold ${isParticipated ? 'text-purple-400' : 'text-blue-400'}`}>
-                            {isParticipated ? '상세보기 →' : '참여하기 →'}
-                          </span>
-                        </div>
-                      </div>
-                    </Link>
-                  </HoverLift>
-                </FadeIn>
-              )})
-            ) : (
-              <div className="col-span-3 py-12 text-center">
-                <p className="text-gray-400">
-                  진행 중인 스포츠 예측 게임이 없습니다.
-                </p>
-              </div>
-            )}
-          </div>
+
+          <ClientPredictionGamesGrid
+            games={(() => {
+              // Visible Games를 도메인 모델로 매핑
+              return visibleGames.map((game: any) => {
+                const gameOptions = game.metadata?.options || [
+                  { id: '1', text: '예', currentOdds: 0.5 },
+                  { id: '2', text: '아니오', currentOdds: 0.5 }
+                ];
+                return {
+                  id: game.id,
+                  slug: game.slug || game.id,
+                  title: game.title,
+                  description: game.description,
+                  predictionType: game.prediction_type?.toUpperCase() || PredictionType.BINARY,
+                  options: gameOptions,
+                  startTime: game.start_time,
+                  endTime: game.end_time,
+                  settlementTime: game.settlement_time,
+                  minimumStake: game.minimum_stake || 100,
+                  maximumStake: game.maximum_stake || 10000,
+                  maxParticipants: game.max_participants,
+                  currentParticipants: game.total_participants_count || 0,
+                  status: game.status || GameStatus.ACTIVE,
+                  totalStake: game.total_stake_amount || 0,
+                  gameImportanceScore: game.game_importance_score || 1.0,
+                  allocatedPrizePool: game.allocated_prize_pool || 0,
+                  createdAt: game.created_at,
+                };
+              });
+            })()}
+            userId={user?.id}
+            userPredictions={userPredictions}
+            basePath={safeSport ? `/prediction/sports/${safeSport}` : '/prediction/sports/soccer'}
+          />
         </FadeIn>
       </div>
     </div>

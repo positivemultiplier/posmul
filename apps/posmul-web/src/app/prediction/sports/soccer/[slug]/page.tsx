@@ -45,7 +45,7 @@ export default async function PredictionDetailPage({
     { id: "yes", label: "예", currentOdds: 0.55 },
     { id: "no", label: "아니오", currentOdds: 0.45 },
   ];
-  
+
   const gameOptions = options.length > 0 ? options : defaultOptions;
 
   // DB 데이터를 PredictionDetailView 컴포넌트가 필요로 하는 형식으로 변환
@@ -54,10 +54,10 @@ export default async function PredictionDetailPage({
     id: game.game_id,
     title: game.title || "제목 없음",
     description: game.description || "",
-    predictionType: (game.prediction_type?.toLowerCase() === "binary" 
-      ? "binary" 
-      : game.prediction_type?.toLowerCase() === "wdl" 
-        ? "wdl" 
+    predictionType: (game.prediction_type?.toLowerCase() === "binary"
+      ? "binary"
+      : game.prediction_type?.toLowerCase() === "wdl"
+        ? "wdl"
         : "ranking") as "binary" | "wdl" | "ranking",
     options: gameOptions.map((opt: { id: string; label: string; currentOdds?: number }, idx: number) => ({
       id: opt.id || `option-${idx}`,
@@ -70,11 +70,11 @@ export default async function PredictionDetailPage({
     totalVolume: stats?.total_bet_amount || 0,
     participantCount: stats?.total_participants || 0,
     // ISO 문자열로 전달하여 클라이언트에서 Date로 파싱
-    endTime: game.registration_end 
-      ? new Date(game.registration_end).toISOString() 
+    endTime: game.registration_end
+      ? new Date(game.registration_end).toISOString()
       : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    settlementTime: game.settlement_date 
-      ? new Date(game.settlement_date).toISOString() 
+    settlementTime: game.settlement_date
+      ? new Date(game.settlement_date).toISOString()
       : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
     status: (game.status === "ACTIVE" ? "ACTIVE" : game.status === "ENDED" ? "ENDED" : "SETTLED") as "ACTIVE" | "ENDED" | "SETTLED",
     category: game.category || "스포츠",
@@ -83,14 +83,14 @@ export default async function PredictionDetailPage({
       reputation: 4.7,
       avatar: "⚽",
     },
-    prizePool: stats?.total_bet_amount ? Math.floor(stats.total_bet_amount * 0.5) : 50000,
+    prizePool: game.allocated_prize_pool || (stats?.total_bet_amount ? Math.floor(stats.total_bet_amount * 0.5) : 50000),
     minimumStake: game.min_bet_amount || 1000,
     maximumStake: game.max_bet_amount || 50000,
   };
 
   return (
-    <SoccerPredictionDetailClient 
-      game={gameForView} 
+    <SoccerPredictionDetailClient
+      game={gameForView}
       userBalance={userBalance}
       userBets={userBets}
       slug={decodedSlug}

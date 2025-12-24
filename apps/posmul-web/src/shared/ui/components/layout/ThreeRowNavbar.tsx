@@ -64,10 +64,10 @@ const navigationData = {
         title: "스포츠",
         href: "/prediction/sports",
         subcategories: [
-          { title: "축구", path: "/prediction/sports?sport=soccer" },
-          { title: "야구", path: "/prediction/sports?sport=baseball" },
-          { title: "농구", path: "/prediction/sports?sport=basketball" },
-          { title: "e스포츠", path: "/prediction/sports?sport=esports" },
+          { title: "축구", path: "/prediction/sports/soccer" },
+          { title: "야구", path: "/prediction/sports/baseball" },
+          { title: "농구", path: "/prediction/sports/basketball" },
+          { title: "e스포츠", path: "/prediction/sports/esports" },
         ]
       },
       entertainment: {

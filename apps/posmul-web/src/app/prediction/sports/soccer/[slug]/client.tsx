@@ -7,13 +7,23 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
+/**
+ * Soccer Prediction Detail Client Component
+ *
+ * Immersive Redesign applied (2025-12-24)
+ */
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { PredictionDetailView } from "../../../../../bounded-contexts/prediction/presentation/components/PredictionDetailView";
 import { PredictionChartView } from "../../../../../bounded-contexts/prediction/presentation/components/charts/PredictionChartView";
 import { Card, CardContent, CardHeader, CardTitle } from "../../../../../shared/ui/components/base";
+import { CompactMoneyWaveCard } from "../../../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { placeBet, withdrawBet } from "./actions";
+import { FadeIn } from "../../../../../shared/ui/components/animations";
+import { Users, BarChart2, Info, ArrowLeft, Trophy, Calendar, Clock, DollarSign, Activity } from "lucide-react";
+import Link from "next/link";
+import { twMerge } from "tailwind-merge";
 
 interface PredictionOption {
   id: string;
@@ -32,8 +42,8 @@ interface PredictionGameDetail {
   options: PredictionOption[];
   totalVolume: number;
   participantCount: number;
-  endTime: string; // ISO 문자열로 전달받음
-  settlementTime: string; // ISO 문자열로 전달받음
+  endTime: string;
+  settlementTime: string;
   status: "ACTIVE" | "ENDED" | "SETTLED";
   category: string;
   creator: {
@@ -64,19 +74,6 @@ interface SoccerPredictionDetailClientProps {
 
 type TabType = "prediction" | "charts" | "info";
 
-interface TabItem {
-  id: TabType;
-  label: string;
-  icon: string;
-  activeClass: string;
-}
-
-const tabs: TabItem[] = [
-  { id: "prediction", label: "예측 참여", icon: "🎯", activeClass: "bg-emerald-500/20 text-emerald-300 border-emerald-500" },
-  { id: "charts", label: "실시간 분석", icon: "📊", activeClass: "bg-blue-500/20 text-blue-300 border-blue-500" },
-  { id: "info", label: "상세 정보", icon: "ℹ️", activeClass: "bg-purple-500/20 text-purple-300 border-purple-500" },
-];
-
 export function SoccerPredictionDetailClient({
   game,
   userBalance,
@@ -89,31 +86,30 @@ export function SoccerPredictionDetailClient({
   const [bets, setBets] = useState(userBets);
   const [betResult, setBetResult] = useState<{ success: boolean; message: string } | null>(null);
   const [withdrawingBetId, setWithdrawingBetId] = useState<string | null>(null);
+  const [isScrolled, setIsScrolled] = useState(false);
 
-  // ISO 문자열을 Date 객체로 변환하여 PredictionDetailView에 전달
+  // Scroll detection for sticky header effect
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 50);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  // ISO string to Date conversion
   const gameWithDates = {
     ...game,
     endTime: new Date(game.endTime),
     settlementTime: new Date(game.settlementTime),
   };
 
-  // 실제 베팅 처리 핸들러
   const handleParticipate = async (optionId: string, amount: number) => {
     setBetResult(null);
-    
     startTransition(async () => {
-      const result = await placeBet({
-        gameId: game.id,
-        optionId,
-        stakeAmount: amount,
-      });
-
+      const result = await placeBet({ gameId: game.id, optionId, stakeAmount: amount });
       setBetResult({ success: result.success, message: result.message });
-
       if (result.success && result.newBalance !== undefined) {
-        setBalance(prev => ({ ...prev, pmp: result.newBalance! }));
-        // 베팅 내역에 새 베팅 추가
-        setBets(prev => [{
+        setBalance((prev) => ({ ...prev, pmp: result.newBalance! }));
+        setBets((prev) => [{
           betId: result.predictionId || '',
           selectedOption: optionId,
           betAmount: amount,
@@ -124,54 +120,40 @@ export function SoccerPredictionDetailClient({
     });
   };
 
-  // 베팅 철회 핸들러
   const handleWithdraw = async (betId: string) => {
-    if (!confirm("정말로 이 베팅을 철회하시겠습니까? 베팅 금액은 전액 환불됩니다.")) {
-      return;
-    }
-
+    if (!confirm("정말로 이 베팅을 철회하시겠습니까? 베팅 금액은 전액 환불됩니다.")) return;
     setWithdrawingBetId(betId);
     setBetResult(null);
-
     const result = await withdrawBet(betId, slug);
-
     setBetResult({ success: result.success, message: result.message });
-
     if (result.success) {
-      // 베팅 내역에서 해당 베팅 제거
-      setBets(prev => prev.filter(bet => bet.betId !== betId));
-      // 잔액 업데이트
+      setBets((prev) => prev.filter((bet) => bet.betId !== betId));
       if (result.newBalance !== undefined) {
-        setBalance(prev => ({ ...prev, pmp: result.newBalance! }));
+        setBalance((prev) => ({ ...prev, pmp: result.newBalance! }));
       }
     }
-
     setWithdrawingBetId(null);
   };
 
-  // 차트 데이터 생성 (실제로는 API에서 가져옴)
+  // Dummy Chart Data Generation
   const generateChartData = () => {
     const probabilityData = game.predictionType === "binary"
-      ? [
-          { time: '09:00', optionA: 45, optionB: 55 },
-          { time: '10:00', optionA: 48, optionB: 52 },
-          { time: '11:00', optionA: 52, optionB: 48 },
-          { time: '12:00', optionA: 58, optionB: 42 },
-          { time: '13:00', optionA: 62, optionB: 38 },
-          { time: '14:00', optionA: 55, optionB: 45 },
-          { time: '15:00', optionA: 60, optionB: 40 },
-        ]
+      ? Array.from({ length: 7 }, (_, i) => ({
+        time: `${9 + i}:00`,
+        optionA: 45 + Math.random() * 10,
+        optionB: 55 - Math.random() * 10
+      }))
       : game.options.map((opt, idx) => ({
-          time: `T${idx + 1}`,
-          probability: opt.probability * 100,
-          confidence: 0.8 + Math.random() * 0.15,
-        }));
+        time: `T${idx + 1}`,
+        probability: opt.probability * 100,
+        confidence: 0.8 + Math.random() * 0.15,
+      }));
 
     const bettingData = game.options.map((opt, idx) => ({
       option: opt.label,
       amount: opt.volume,
       percentage: Math.round(opt.probability * 100),
-      color: idx === 0 ? '#3b82f6' : idx === 1 ? '#ef4444' : idx === 2 ? '#10b981' : '#f59e0b',
+      color: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'][idx % 5],
     }));
 
     return { probabilityData, bettingData };
@@ -180,272 +162,252 @@ export function SoccerPredictionDetailClient({
   const { probabilityData, bettingData } = generateChartData();
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950">
-      <div className="container mx-auto px-4 py-8">
-        {/* 상단 헤더 */}
-        <div className="mb-8">
-          <div className="text-xs uppercase tracking-[0.4em] text-slate-400 mb-2">
-            prediction / sports / soccer / {slug}
+    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-blue-500/30">
+
+      {/* Immersive Hero Header */}
+      <div className="relative h-[300px] w-full overflow-hidden">
+        {/* Background Gradient & Effects */}
+        <div className="absolute inset-0 bg-gradient-to-b from-blue-900/20 via-slate-950/80 to-slate-950 pointer-events-none z-10" />
+        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1579952363873-27f3bde9be51?q=80&w=2546&auto=format&fit=crop')] bg-cover bg-center opacity-30 blur-sm scale-110" />
+
+        {/* Navigation & Breadcrumb */}
+        <div className="relative z-20 container mx-auto px-4 pt-6">
+          <Link href="/prediction/sports/soccer" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors group mb-6">
+            <div className="p-2 rounded-full bg-white/5 border border-white/10 group-hover:bg-white/10 transition-all">
+              <ArrowLeft className="w-4 h-4" />
+            </div>
+            <span className="text-sm font-medium">돌아가기</span>
+          </Link>
+
+          {/* Game Title Area */}
+          <div className="max-w-4xl">
+            <div className="flex items-center gap-3 mb-3">
+              <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-bold border border-blue-500/30">
+                {game.category.toUpperCase()}
+              </span>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold border ${game.status === 'ACTIVE' ? 'bg-green-500/20 text-green-300 border-green-500/30' : 'bg-orange-500/20 text-orange-300 border-orange-500/30'
+                }`}>
+                {game.status === 'ACTIVE' ? 'LIVE NOW' : game.status}
+              </span>
+              <span className="text-slate-400 text-xs flex items-center gap-1">
+                <Clock className="w-3 h-3" />
+                {new Date(game.endTime).toLocaleDateString()} 마감
+              </span>
+            </div>
+            <h1 className="text-3xl md:text-5xl font-extrabold text-white mb-3 leading-tight tracking-tight drop-shadow-lg">
+              {game.title}
+            </h1>
+            <p className="text-lg text-slate-300 max-w-2xl line-clamp-2">
+              {game.description}
+            </p>
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">{game.title}</h1>
-          <p className="text-slate-300">{game.description}</p>
-        </div>
-
-        {/* 커스텀 탭 네비게이션 */}
-        <div className="space-y-6">
-          {/* 탭 버튼들 */}
-          <div className="flex gap-2 p-1 bg-slate-800/50 rounded-lg border border-slate-700 w-fit">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`px-4 py-2 rounded-md text-sm font-medium transition-all duration-200 border-b-2 ${
-                  activeTab === tab.id
-                    ? tab.activeClass
-                    : "text-slate-400 border-transparent hover:text-slate-200 hover:bg-slate-700/50"
-                }`}
-              >
-                <span className="mr-2">{tab.icon}</span>
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          {/* 베팅 결과 알림 */}
-          {betResult && (
-            <div className={`p-4 rounded-lg border ${
-              betResult.success 
-                ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-200" 
-                : "bg-red-500/20 border-red-500/50 text-red-200"
-            }`}>
-              <div className="flex items-center gap-2">
-                <span>{betResult.success ? "✅" : "❌"}</span>
-                <span>{betResult.message}</span>
-              </div>
-            </div>
-          )}
-
-          {/* 로딩 상태 */}
-          {isPending && (
-            <div className="p-4 rounded-lg bg-blue-500/20 border border-blue-500/50 text-blue-200">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-blue-300 border-t-transparent rounded-full animate-spin" />
-                <span>베팅 처리 중...</span>
-              </div>
-            </div>
-          )}
-
-          {/* 예측 참여 탭 */}
-          {activeTab === "prediction" && (
-            <div className="space-y-6 animate-fadeIn">
-              <PredictionDetailView
-                game={gameWithDates}
-                userBalance={balance}
-                onParticipate={handleParticipate}
-              />
-            </div>
-          )}
-
-          {/* 실시간 분석 차트 탭 */}
-          {activeTab === "charts" && (
-            <div className="space-y-6 animate-fadeIn">
-              <PredictionChartView
-                gameId={game.id}
-                predictionType={game.predictionType === "binary" ? "BINARY" : "MULTIPLE_CHOICE"}
-                probabilityData={probabilityData}
-                bettingData={bettingData}
-              />
-            </div>
-          )}
-
-          {/* 상세 정보 탭 */}
-          {activeTab === "info" && (
-            <div className="space-y-6 animate-fadeIn">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* 내 베팅 내역 카드 */}
-                {bets.length > 0 && (
-                  <Card className="bg-slate-900/60 border-slate-700 lg:col-span-2">
-                    <CardHeader>
-                      <CardTitle className="text-white flex items-center gap-2">
-                        <span>📝</span>
-                        내 베팅 내역 ({bets.length}건)
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        {bets.map((bet) => {
-                          const option = game.options.find(o => o.id === bet.selectedOption);
-                          const canWithdraw = game.status === "ACTIVE" && bet.status === "PENDING";
-                          const isWithdrawing = withdrawingBetId === bet.betId;
-                          
-                          return (
-                            <div key={bet.betId} className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50 border border-slate-700">
-                              <div className="flex items-center gap-3">
-                                <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                  bet.status === 'PENDING' ? 'bg-yellow-500/20 text-yellow-300' :
-                                  bet.status === 'WON' ? 'bg-emerald-500/20 text-emerald-300' :
-                                  bet.status === 'LOST' ? 'bg-red-500/20 text-red-300' :
-                                  'bg-slate-500/20 text-slate-300'
-                                }`}>
-                                  {bet.status === 'PENDING' ? '대기중' :
-                                   bet.status === 'WON' ? '승리' :
-                                   bet.status === 'LOST' ? '패배' : bet.status}
-                                </span>
-                                <span className="text-white font-medium">{option?.label || bet.selectedOption}</span>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                  <p className="text-emerald-400 font-semibold">{bet.betAmount.toLocaleString()} PMP</p>
-                                  <p className="text-xs text-slate-400">
-                                    {new Date(bet.createdAt).toLocaleString('ko-KR')}
-                                  </p>
-                                </div>
-                                {canWithdraw && (
-                                  <button
-                                    onClick={() => handleWithdraw(bet.betId)}
-                                    disabled={isWithdrawing}
-                                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                                      isWithdrawing
-                                        ? 'bg-slate-600 text-slate-400 cursor-not-allowed'
-                                        : 'bg-red-500/20 text-red-300 hover:bg-red-500/30 border border-red-500/50'
-                                    }`}
-                                  >
-                                    {isWithdrawing ? (
-                                      <span className="flex items-center gap-1">
-                                        <span className="w-3 h-3 border-2 border-red-300 border-t-transparent rounded-full animate-spin" />
-                                        처리중
-                                      </span>
-                                    ) : (
-                                      '철회'
-                                    )}
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {/* 게임 정보 카드 */}
-                <Card className="bg-slate-900/60 border-slate-700">
-                  <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <span>⚽</span>
-                      게임 정보
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 text-slate-300">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">카테고리</span>
-                      <span className="font-medium">{game.category}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">예측 타입</span>
-                      <span className="font-medium">
-                        {game.predictionType === "binary" && "이진 예측"}
-                        {game.predictionType === "wdl" && "승무패 예측"}
-                        {game.predictionType === "ranking" && "순위 예측"}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">상태</span>
-                      <span className={`font-medium ${game.status === "ACTIVE" ? "text-emerald-400" : "text-orange-400"}`}>
-                        {game.status === "ACTIVE" ? "진행중" : game.status}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">총 거래량</span>
-                      <span className="font-medium">{game.totalVolume.toLocaleString()} PMP</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">참여자</span>
-                      <span className="font-medium">{game.participantCount.toLocaleString()}명</span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 베팅 규칙 카드 */}
-                <Card className="bg-slate-900/60 border-slate-700">
-                  <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <span>📋</span>
-                      베팅 규칙
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 text-slate-300">
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">최소 베팅</span>
-                      <span className="font-medium">{game.minimumStake.toLocaleString()} PMP</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">최대 베팅</span>
-                      <span className="font-medium">{game.maximumStake.toLocaleString()} PMP</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">상금 풀</span>
-                      <span className="font-medium text-yellow-400">{game.prizePool.toLocaleString()} PMC</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">마감 시간</span>
-                      <span className="font-medium">
-                        {new Date(game.endTime).toLocaleString("ko-KR")}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-slate-400">정산 시간</span>
-                      <span className="font-medium">
-                        {new Date(game.settlementTime).toLocaleString("ko-KR")}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* 생성자 정보 카드 */}
-                <Card className="bg-slate-900/60 border-slate-700">
-                  <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <span>👤</span>
-                      생성자 정보
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4 text-slate-300">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-700 text-2xl">
-                        {game.creator.avatar}
-                      </div>
-                      <div>
-                        <p className="font-semibold text-white">{game.creator.name}</p>
-                        <p className="text-sm text-slate-400">
-                          평점: ⭐ {game.creator.reputation.toFixed(1)}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Agency Theory 정보 카드 */}
-                <Card className="bg-slate-900/60 border-slate-700">
-                  <CardHeader>
-                    <CardTitle className="text-white flex items-center gap-2">
-                      <span>🏛️</span>
-                      Agency Theory 적용
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="text-slate-300 space-y-2">
-                    <p className="text-sm">• 정보 비대칭 해결을 통한 민주적 의사결정</p>
-                    <p className="text-sm">• 전문가와 일반 사용자의 예측 비교</p>
-                    <p className="text-sm">• 집단 지성 활용한 정확도 향상</p>
-                    <p className="text-sm">• 투명한 보상 시스템</p>
-                  </CardContent>
-                </Card>
-              </div>
-            </div>
-          )}
         </div>
       </div>
+
+      <div className="container mx-auto px-4 -mt-10 relative z-30 pb-20">
+
+        {/* Sticky MoneyWave Card (Depth 5: Individual Game) */}
+        <div className="sticky top-4 z-40 mb-8 backdrop-blur-md bg-slate-950/50 pt-2 rounded-xl">
+          <CompactMoneyWaveCard
+            depthLevel={5}
+            category="sports"
+            subcategory="soccer"
+            gameId={game.id}
+            initialPool={game.prizePool}
+            className="shadow-2xl border border-slate-700/50"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Main Content Column */}
+          <div className="lg:col-span-8 space-y-8">
+
+            {/* Custom Tabs */}
+            <div className="flex items-center p-1.5 bg-slate-900/80 backdrop-blur rounded-xl border border-white/5 w-full sm:w-fit">
+              {[
+                { id: "prediction", label: "예측하기", icon: Trophy },
+                { id: "charts", label: "차트분석", icon: BarChart2 },
+                { id: "info", label: "정보", icon: Info },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id as TabType)}
+                  className={twMerge(
+                    "flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300",
+                    activeTab === tab.id
+                      ? "bg-white text-slate-900 shadow-lg shadow-white/10 ring-1 ring-white/20"
+                      : "text-slate-400 hover:text-white hover:bg-white/5"
+                  )}
+                >
+                  <tab.icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className="min-h-[400px]">
+              {activeTab === "prediction" && (
+                <FadeIn>
+                  <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-6 backdrop-blur-sm">
+                    <PredictionDetailView
+                      game={gameWithDates}
+                      userBalance={balance}
+                      onParticipate={handleParticipate}
+                    />
+                  </div>
+                </FadeIn>
+              )}
+
+              {activeTab === "charts" && (
+                <FadeIn>
+                  <div className="bg-slate-900/40 border border-white/5 rounded-2xl p-6 backdrop-blur-sm">
+                    <PredictionChartView
+                      gameId={game.id}
+                      predictionType={game.predictionType === "binary" ? "BINARY" : "MULTIPLE_CHOICE"}
+                      probabilityData={probabilityData}
+                      bettingData={bettingData}
+                    />
+                  </div>
+                </FadeIn>
+              )}
+
+              {activeTab === "info" && (
+                <FadeIn>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <InfoCard title="게임 규칙" icon={Calendar}>
+                      <div className="space-y-3 text-sm text-slate-300">
+                        <div className="flex justify-between">
+                          <span>참여 마감</span>
+                          <span className="text-white font-medium">{new Date(game.endTime).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>결과 정산</span>
+                          <span className="text-white font-medium">{new Date(game.settlementTime).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>최소 베팅</span>
+                          <span className="text-white font-medium">{game.minimumStake.toLocaleString()} PMP</span>
+                        </div>
+                        <div className="border-t border-white/10 pt-3 flex justify-between">
+                          <span className="text-yellow-400">총 상금 풀</span>
+                          <span className="text-yellow-400 font-bold text-lg">{game.prizePool.toLocaleString()} PMC</span>
+                        </div>
+                      </div>
+                    </InfoCard>
+                    <InfoCard title="생성자" icon={Users}>
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-slate-700 flex items-center justify-center text-xl">
+                          {game.creator.avatar}
+                        </div>
+                        <div>
+                          <div className="font-bold text-white text-lg">{game.creator.name}</div>
+                          <div className="text-yellow-400 text-sm">⭐ Reputation Score: {game.creator.reputation}</div>
+                        </div>
+                      </div>
+                      <div className="mt-4 p-3 bg-slate-800/50 rounded-lg text-xs text-slate-400 leading-relaxed">
+                        이 생성자는 최근 10개의 게임 중 9개를 성공적으로 정산했습니다. 높은 신뢰도를 가진 사용자입니다.
+                      </div>
+                    </InfoCard>
+                  </div>
+                </FadeIn>
+              )}
+            </div>
+          </div>
+
+          {/* Sidebar Column */}
+          <div className="lg:col-span-4 space-y-6">
+
+            {/* User Status Card */}
+            <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-2xl p-6 border border-white/5 shadow-xl">
+              <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                <Activity className="w-5 h-5 text-green-400" />
+                내 활동
+              </h3>
+
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-3 bg-slate-950/50 rounded-xl">
+                    <div className="text-xs text-slate-400 mb-1">보유 자산</div>
+                    <div className="text-green-400 font-bold">{balance.pmp.toLocaleString()} PMP</div>
+                  </div>
+                  <div className="p-3 bg-slate-950/50 rounded-xl">
+                    <div className="text-xs text-slate-400 mb-1">총 베팅</div>
+                    <div className="text-blue-400 font-bold">
+                      {bets.reduce((sum, b) => sum + (b.status !== 'CANCELLED' ? b.betAmount : 0), 0).toLocaleString()} PMP
+                    </div>
+                  </div>
+                </div>
+
+                {bets.length > 0 ? (
+                  <div className="space-y-3 mt-4">
+                    <div className="text-xs text-slate-500 uppercase font-bold tracking-wider">최근 베팅</div>
+                    {bets.slice(0, 3).map((bet) => (
+                      <div key={bet.betId} className="flex items-center justify-between p-3 rounded-lg bg-white/5 border border-white/5 hover:border-white/10 transition-colors">
+                        <div>
+                          <div className="text-sm font-medium text-white">
+                            {game.options.find(o => o.id === bet.selectedOption)?.label || 'Option'}
+                          </div>
+                          <div className="text-xs text-slate-400">{new Date(bet.createdAt).toLocaleTimeString()}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-bold text-green-400">{bet.betAmount.toLocaleString()}</div>
+                          {game.status === 'ACTIVE' && bet.status === 'PENDING' && (
+                            <button
+                              onClick={() => handleWithdraw(bet.betId)}
+                              disabled={withdrawingBetId === bet.betId}
+                              className="text-[10px] text-red-400 hover:text-red-300 underline mt-0.5"
+                            >
+                              {withdrawingBetId === bet.betId ? '처리중...' : '철회'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-6 text-sm text-slate-500">
+                    아직 참여 내역이 없습니다.
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Real-time Ticker (Mock) */}
+            <div className="bg-slate-900/50 rounded-2xl p-5 border border-white/5">
+              <h3 className="text-sm font-bold text-slate-400 mb-3 uppercase tracking-wider">Market Activity</h3>
+              <div className="space-y-3">
+                {[1, 2, 3].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3 text-xs animate-pulse">
+                    <div className="w-6 h-6 rounded-full bg-slate-700 flex items-center justify-center">👤</div>
+                    <div className="flex-1">
+                      <span className="text-slate-300">Someone bet </span>
+                      <span className="text-green-400 font-bold">{Math.floor(Math.random() * 5000 + 1000).toLocaleString()} PMP</span>
+                    </div>
+                    <div className="text-slate-500">Just now</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Simple Helper Component for Info Cards
+function InfoCard({ title, icon: Icon, children }: { title: string, icon: any, children: React.ReactNode }) {
+  return (
+    <div className="bg-slate-800/40 rounded-xl p-5 border border-white/5 hover:border-white/10 transition-colors">
+      <h3 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+        <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-400">
+          <Icon className="w-4 h-4" />
+        </div>
+        {title}
+      </h3>
+      {children}
     </div>
   );
 }

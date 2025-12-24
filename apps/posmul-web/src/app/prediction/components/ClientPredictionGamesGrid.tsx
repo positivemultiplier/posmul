@@ -16,9 +16,9 @@ interface PredictionGame {
         text: string;
         currentOdds: number;
     }>;
-    startTime: Date;
-    endTime: Date;
-    settlementTime: Date;
+    startTime: string | Date;
+    endTime: string | Date;
+    settlementTime: string | Date;
     minimumStake: number;
     maximumStake: number;
     maxParticipants?: number;
@@ -27,7 +27,7 @@ interface PredictionGame {
     totalStake: number;
     gameImportanceScore: number;
     allocatedPrizePool: number;
-    createdAt: Date;
+    createdAt: string | Date;
 }
 
 interface UserPrediction {
@@ -42,9 +42,10 @@ interface ClientPredictionGamesGridProps {
     games: PredictionGame[];
     userId?: string;
     userPredictions?: UserPrediction[];
+    basePath?: string; // 예: '/prediction/sports/soccer'
 }
 
-export function ClientPredictionGamesGrid({ games, userId, userPredictions = [] }: ClientPredictionGamesGridProps) {
+export function ClientPredictionGamesGrid({ games, userId, userPredictions = [], basePath = '/prediction/event' }: ClientPredictionGamesGridProps) {
     if (games.length === 0) {
         return (
             <div className="text-center py-12 text-gray-400">
@@ -62,11 +63,22 @@ export function ClientPredictionGamesGrid({ games, userId, userPredictions = [] 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {games.map((game, index) => {
                 const myPrediction = getPredictionForGame(game.id);
+
+                // Ensure dates are Date objects for PredictionGameCard
+                const safeGame = {
+                    ...game,
+                    id: game.id, // Explicitly spread to satisfy TS if needed, though ...game should work
+                    startTime: new Date(game.startTime),
+                    endTime: new Date(game.endTime),
+                    settlementTime: new Date(game.settlementTime),
+                    createdAt: new Date(game.createdAt),
+                };
+
                 return (
                     <FadeIn key={game.slug} delay={index * 0.1}>
-                        <Link href={`/prediction/event/${game.slug}`} className="block">
-                            <PredictionGameCard 
-                                game={game} 
+                        <Link href={`${basePath}/${game.slug}`} className="block">
+                            <PredictionGameCard
+                                game={safeGame}
                                 userId={userId}
                                 myPrediction={myPrediction}
                             />

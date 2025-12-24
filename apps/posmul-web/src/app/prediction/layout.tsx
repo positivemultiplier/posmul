@@ -12,7 +12,7 @@
 import { Suspense } from "react";
 
 import { PredictionsNavigation } from "../../bounded-contexts/prediction/presentation/components/PredictionsNavigation";
-import { MoneyWaveStatus } from "../../shared/ui";
+
 
 interface PredictionLayoutProps {
   children: React.ReactNode;
@@ -24,16 +24,7 @@ export default function PredictionLayout({ children }: PredictionLayoutProps) {
       {/* 3-Tier Predictions Navigation */}
       <PredictionsNavigation />
 
-      {/* Money Wave Status - 예측 도메인에서 중요한 정보 */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Suspense
-          fallback={
-            <div className="animate-pulse bg-gray-200 h-32 rounded-lg" />
-          }
-        >
-          <MoneyWaveStatus />
-        </Suspense>
-      </div>
+
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">

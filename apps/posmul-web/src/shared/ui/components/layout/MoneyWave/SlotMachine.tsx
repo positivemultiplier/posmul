@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { twMerge } from "tailwind-merge";
 
 // 슬롯머신 애니메이션 컴포넌트 (ImprovedMoneyWave에서 추출)
-interface SlotMachineProps {
+export interface SlotMachineProps {
     value: number;
     isSpinning: boolean;
     totalAmount?: number;
@@ -81,19 +82,19 @@ export function SlotMachine({
 
     if (!isSpinning) {
         return (
-            <span className={`font-bold font-mono transition-all duration-500 ${className}`}>
+            <span className={twMerge("font-bold font-mono transition-all duration-500 text-green-400", className)}>
                 💰{formatNumber(value)}
             </span>
         );
     }
 
     return (
-        <span className={`slot-container ${isSpinning ? 'spinning' : ''} ${className}`}>
-            <span className="text-green-400 font-bold">💰</span>
+        <span className={twMerge("slot-container", isSpinning ? 'spinning' : '', "text-green-400 font-bold font-mono", className)}>
+            <span className="text-inherit">💰</span>
             {digits.map((digitInfo, index) => {
                 if (digitInfo.isComma) {
                     return (
-                        <span key={index} className="text-green-400">,</span>
+                        <span key={index} className="text-inherit">,</span>
                     );
                 }
 
@@ -103,7 +104,7 @@ export function SlotMachine({
                 return (
                     <span
                         key={index}
-                        className="slot-digit inline-block relative overflow-hidden text-green-400"
+                        className="slot-digit inline-block relative overflow-hidden text-inherit border-white/10"
                         style={{
                             height: '1.2em',
                             width: '0.8em',
@@ -112,26 +113,26 @@ export function SlotMachine({
                     >
                         {spinState.shouldSpin ? (
                             <span
-                                className="absolute inset-0 flex flex-col"
+                                className="absolute inset-0 flex flex-col text-inherit"
                                 style={{
                                     animation: `slotSpin ${spinState.spinSpeed}s linear infinite`,
                                 }}
                             >
                                 {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((num, i) => (
-                                    <span key={i} className="h-[1.2em] flex items-center justify-center text-green-400 font-bold font-mono">
+                                    <span key={i} className="h-[1.2em] flex items-center justify-center text-inherit font-bold font-mono">
                                         {num}
                                     </span>
                                 ))}
                             </span>
                         ) : (
-                            <span className="h-[1.2em] flex items-center justify-center text-green-400 font-bold font-mono">
+                            <span className="h-[1.2em] flex items-center justify-center text-inherit font-bold font-mono">
                                 {digitInfo.digitValue}
                             </span>
                         )}
                     </span>
                 );
             })}
-            <span className="text-green-400 font-bold ml-2"></span>
+            <span className="text-inherit ml-2"></span>
 
             {/* CSS for slot machine animation */}
             <style jsx>{`
