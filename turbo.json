@@ -8,10 +8,8 @@
       "cache": true
     },
     "dev": {
-      "dependsOn": ["^build"],
       "cache": false,
-      "persistent": true,
-      "env": ["NODE_ENV", "PORT", "NEXT_PUBLIC_*"]
+      "persistent": true
     },
     "start": {
       "dependsOn": ["build"],
@@ -34,9 +32,6 @@
       "outputs": []
     },
     "clean": {
-      "cache": false
-    },
-    "gen:types": {
       "cache": false
     }
   }

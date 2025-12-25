@@ -61,7 +61,7 @@ CREATE SCHEMA IF NOT EXISTS {domain_name};
 
 // turbo
 ```powershell
-pnpm generate-types
+타입 생성: VS Code(MCP)에서 `mcp_com_supabase__generate_typescript_types`
 ```
 
 ## 체크리스트

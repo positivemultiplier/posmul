@@ -177,9 +177,6 @@ turbo build
 # Run tests across all packages
 turbo test
 
-# Type generation (custom script)
-pnpm generate-types
-
 # Format code
 pnpm format
 ```
@@ -369,9 +366,6 @@ import { Button, Card } from 'shared-ui';
     },
     "lint": {
       "dependsOn": ["^build"]
-    },
-    "gen:types": {
-      "cache": false
     }
   }
 }
@@ -647,7 +641,7 @@ export function PredictionForm({ userId }: { userId: UserId }) {
 2. **Start Development**: `turbo dev`
 3. **Build All**: `turbo build`
 4. **Test All**: `turbo test`
-5. **Generate Types**: `pnpm generate-types`
+5. **Generate Types**: VS Code에서 MCP `generate_typescript_types` 실행
 
 ### Package Development
 

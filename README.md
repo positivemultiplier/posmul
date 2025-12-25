@@ -220,7 +220,7 @@ pnpm lint             # ESLint
 pnpm format           # Prettier
 
 # 타입 생성
-pnpm generate-types   # Supabase 타입 자동 생성
+타입 생성: VS Code(MCP)에서 `mcp_com_supabase__generate_typescript_types`
 ```
 
 ---

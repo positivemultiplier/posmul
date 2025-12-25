@@ -54,7 +54,9 @@ export class CreateDonationUseCase {
     };
   }
 
-  private parseRequest(request: CreateDonationRequest) {
+  private parseRequest(
+    request: CreateDonationRequest
+  ): Result<CreateDonationRequest, ValidationError> {
     const validationResult = CreateDonationRequestSchema.safeParse(request);
     if (!validationResult.success) {
       return {
@@ -255,7 +257,7 @@ export class CreateDonationUseCase {
     donorBalance: number
   ): Promise<Result<Donation>> {
     const parsedResult = this.parseRequest(request);
-    if (!parsedResult.success) return parsedResult;
+    if (isFailure(parsedResult)) return parsedResult;
 
     const parsedRequest = parsedResult.data;
 
@@ -280,11 +282,11 @@ export class CreateDonationUseCase {
         metadata,
         scheduledAt
       );
-      if (!createResult.success) return createResult;
+      if (isFailure(createResult)) return createResult;
       const { donation, target } = createResult.data;
 
       const historyResult = await this.fetchDonorHistory(donorId);
-      if (!historyResult.success) return historyResult;
+      if (isFailure(historyResult)) return historyResult;
 
       const eligibilityResult = this.validateEligibilityIfTargetProvided(
         donorId,
@@ -294,7 +296,7 @@ export class CreateDonationUseCase {
         target
       );
       if (!eligibilityResult.success) {
-        return { success: false, error: eligibilityResult.error };
+        return { success: false as const, error: eligibilityResult.error };
       }
 
       return this.saveDonation(donation);

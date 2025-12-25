@@ -276,7 +276,7 @@ export const Card: FC<Props> = ({ title }) => {
 **초기 설정**
 ```powershell
 pnpm install
-pnpm generate-types
+타입 생성: VS Code(MCP)에서 `mcp_com_supabase__generate_typescript_types`
 pnpm build
 ```
 
@@ -319,7 +319,7 @@ pnpm -F @posmul/posmul-web lint:fix
 
 **타입 생성**
 ```powershell
-pnpm generate-types
+타입 생성: VS Code(MCP)에서 `mcp_com_supabase__generate_typescript_types`
 ```
 
 ---
@@ -361,7 +361,7 @@ pnpm install              # 의존성
 turbo dev                # 개발
 turbo build              # 빌드
 turbo test               # 테스트
-pnpm generate-types      # DB 타입
+타입 생성: VS Code(MCP)에서 `mcp_com_supabase__generate_typescript_types`  # DB 타입
 pnpm format              # 포맷팅
 ```
 

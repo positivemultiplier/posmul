@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { createClient } from "../../../../../lib/supabase/client";
 
-const ANNUAL_EBITDA = 1000000000; // 10억
-
 interface WaveCalculationResult {
     waveAmount: number;
     isSpinning: boolean;
@@ -22,7 +20,8 @@ export function useWaveCalculation({
     category = 'all'
 }: UseWaveCalculationProps): WaveCalculationResult {
     const supabase = createClient();
-    const hourlyWave = ANNUAL_EBITDA / 365 / 24;
+
+    const [hourlyWaveTotal, setHourlyWaveTotal] = useState<number | null>(null);
 
     const [waveAmount, setWaveAmount] = useState(0);
     const [slotState, setSlotState] = useState({
@@ -36,6 +35,24 @@ export function useWaveCalculation({
     useEffect(() => {
         const fetchWaveData = async () => {
             try {
+                // 오늘의 MoneyWave 스냅샷(서버 계산)에서 시간당 총 풀을 읽음
+                const { data: snapshot } = await supabase
+                    .schema('economy')
+                    .from('money_wave_daily_snapshots')
+                    .select('hourly_pool_total_pmc')
+                    .order('snapshot_date', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+
+                const hourlyTotalRaw = snapshot?.hourly_pool_total_pmc;
+                const hourlyTotal =
+                    typeof hourlyTotalRaw === 'number'
+                        ? hourlyTotalRaw
+                        : typeof hourlyTotalRaw === 'string'
+                            ? Number.parseFloat(hourlyTotalRaw)
+                            : null;
+                setHourlyWaveTotal(Number.isFinite(hourlyTotal ?? NaN) ? hourlyTotal : null);
+
                 // 현재 카테고리의 활성 게임 수 조회
                 let query = supabase
                     .schema('prediction')
@@ -69,7 +86,7 @@ export function useWaveCalculation({
 
                 // 가중치 계산
                 const weight = totalGames && totalGames > 0 ? (categoryGames || 0) / totalGames : 0;
-                const categoryWave = hourlyWave * weight;
+                const categoryWave = (hourlyTotal ?? 0) * weight;
 
                 setWaveAmount(Math.round(categoryWave));
                 setActiveGames(categoryGames || 0);

@@ -106,7 +106,7 @@ type Result<T, E = Error> =
 ```powershell
 pnpm run dev          # 개발 실행
 turbo build           # 빌드
-pnpm generate-types   # DB 타입 생성
+타입 생성: VS Code(MCP)에서 `mcp_com_supabase__generate_typescript_types`  # DB 타입 생성
 ```
 
 ---

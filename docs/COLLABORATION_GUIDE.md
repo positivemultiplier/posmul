@@ -473,7 +473,7 @@ sequenceDiagram
 ```powershell
 # 🚀 시작하기
 pnpm install          # 의존성 설치
-pnpm generate-types   # Supabase 타입 생성
+Supabase 타입 생성: VS Code에서 MCP 도구 `generate_typescript_types` 실행
 turbo dev             # 개발 서버
 
 # 🔧 빌드 & 테스트

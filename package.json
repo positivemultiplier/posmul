@@ -21,8 +21,7 @@
     "e2e:ui": "npx playwright test --config=apps/posmul-web/playwright.config.ts --ui",
     "e2e:list": "npx playwright test --config=apps/posmul-web/playwright.config.ts --list",
     "e2e:chromium": "npx playwright test --config=apps/posmul-web/playwright.config.ts --project=chromium",
-    "e2e:debug": "npx playwright test --config=apps/posmul-web/playwright.config.ts --debug",
-    "generate-types": "tsx scripts/generate-types-mcp.ts"
+    "e2e:debug": "npx playwright test --config=apps/posmul-web/playwright.config.ts --debug"
   },
   "workspaces": [
     "apps/*",

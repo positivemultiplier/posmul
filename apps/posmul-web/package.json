@@ -12,8 +12,7 @@
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
     "test": "jest --passWithNoTests",
     "type-check": "tsc --noEmit",
-    "clean": "rimraf .next",
-    "gen:types": "cmd /c \"chcp 65001 > nul && C:/G/posmul/node_modules/.bin/tsx C:/G/mcp-automation/universal-mcp-automation.ts batch public,prediction,economy,investment,donation,forum,user\""
+    "clean": "rimraf .next"
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",

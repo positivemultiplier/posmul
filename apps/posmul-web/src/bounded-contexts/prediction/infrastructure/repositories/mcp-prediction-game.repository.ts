@@ -115,40 +115,66 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
       // 일반 모드에서는 모든 predictions 저장
       const predictions = game.predictions;
       if (predictions.length > 0) {
-        // skipGameUpdate 모드 (참여자): 마지막에 추가된 prediction만 저장
-        // 전체 저장 모드 (관리자): 모든 predictions 저장
-        const predictionsToSave = options?.skipGameUpdate 
-          ? [predictions[predictions.length - 1]] // 가장 최근 prediction만
-          : predictions;
+        // 참여(베팅)는 반드시 원자적으로 처리 (PMP 즉시 차감 + prediction insert)
+        if (options?.skipGameUpdate) {
+          const last = predictions[predictions.length - 1];
 
-        const predictionData = predictionsToSave.map((p) => ({
-          prediction_id: p.id,
-          game_id: game.getId(),
-          user_id: p.userId,
-          prediction_data: { selectedOptionId: p.selectedOptionId },
-          confidence_level: Math.round(p.confidence * 100),
-          bet_amount: Number(p.stake),
-          expected_reward: 0,
-          odds_at_time: 1.0,
-          is_active: true,
-          created_at: p.timestamps.createdAt.toISOString(),
-          updated_at: p.timestamps.updatedAt.toISOString(),
-        }));
+          const { data: predictionId, error: rpcError } = await supabase
+            .schema("prediction")
+            .rpc("place_prediction_bet", {
+              p_game_id: game.getId(),
+              p_prediction_data: { selectedOptionId: last.selectedOptionId },
+              p_confidence_level: Math.round(last.confidence * 100),
+              p_bet_amount: Number(last.stake),
+              p_expected_reward: 0,
+              p_odds_at_time: 1,
+            });
 
-        const { error: predError } = await supabase
-          .schema("prediction")
-          .from("predictions")
-          .insert(predictionData); // upsert 대신 insert 사용 (새 prediction만 추가)
+          if (rpcError) {
+            return {
+              success: false,
+              error: RepositoryHelpers.createSaveFailedError(
+                "place_prediction_bet",
+                rpcError.message,
+                new Error(rpcError.message)
+              ),
+            };
+          }
 
-        if (predError) {
-          return {
-            success: false,
-            error: RepositoryHelpers.createSaveFailedError(
-              "Predictions",
-              predError.message,
-              new Error(predError.message)
-            ),
-          };
+          // Domain의 prediction_id와 DB에서 생성된 prediction_id가 달라도,
+          // 현재 구현은 DB가 최종 소스이므로 RPC 결과를 신뢰한다.
+          void predictionId;
+        } else {
+          // 관리자/배치 저장 모드에서는 경제 잔액 변동이 발생하면 안 되므로 기존 insert 경로 유지
+          const predictionData = predictions.map((p) => ({
+            prediction_id: p.id,
+            game_id: game.getId(),
+            user_id: p.userId,
+            prediction_data: { selectedOptionId: p.selectedOptionId },
+            confidence_level: Math.round(p.confidence * 100),
+            bet_amount: Number(p.stake),
+            expected_reward: 0,
+            odds_at_time: 1.0,
+            is_active: true,
+            created_at: p.timestamps.createdAt.toISOString(),
+            updated_at: p.timestamps.updatedAt.toISOString(),
+          }));
+
+          const { error: predError } = await supabase
+            .schema("prediction")
+            .from("predictions")
+            .insert(predictionData);
+
+          if (predError) {
+            return {
+              success: false,
+              error: RepositoryHelpers.createSaveFailedError(
+                "Predictions",
+                predError.message,
+                new Error(predError.message)
+              ),
+            };
+          }
         }
       }
 

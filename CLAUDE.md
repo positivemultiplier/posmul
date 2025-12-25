@@ -92,7 +92,7 @@ turbo build
 pnpm -F @posmul/posmul-web type-check
 
 # 타입 생성
-pnpm generate-types
+타입 생성: VS Code(MCP)에서 `mcp_com_supabase__generate_typescript_types`
 ```
 
 ---

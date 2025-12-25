@@ -91,7 +91,7 @@ function generateDomainStats(mcpResult: string, domains: string[]): string {
 // 📊 도메인별 테이블 통계:
 ${stats}
 //
-// 🔄 자동 업데이트: npm run generate-types
+// 🔄 자동 업데이트: VS Code MCP generate_typescript_types
 // 🛠️ 수동 적용: node scripts/apply-mcp-types.js
 
 `;

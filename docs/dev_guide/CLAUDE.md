@@ -352,7 +352,7 @@ pnpm -F posmul-web dev
 pnpm -F auth-economy-sdk build
 
 # 타입 생성 (UTF-8-sig 인코딩)
-pnpm generate-types
+타입 생성: VS Code(MCP)에서 `mcp_com_supabase__generate_typescript_types`
 ```
 
 ### 파일 작업 규칙

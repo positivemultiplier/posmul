@@ -11,6 +11,8 @@ export default [
       '.next/**',
       'coverage/**',
       '.turbo/**',
+      'out/**',
+      'supabase/**',
       '**/*.d.ts',
       'apps/posmul-web/**',
     ],

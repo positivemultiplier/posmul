@@ -48,7 +48,7 @@ node scripts/rewire-shared-imports.js packages/shared-ui/src
 
 ### 🤖 **Universal MCP 시스템**
 
-타입 생성은 별도의 **Universal MCP Automation System**을 통해 관리됩니다.
+타입 생성은 VS Code(MCP)에서 `mcp_com_supabase__generate_typescript_types`로 수행하는 것을 기준으로 합니다.
 
 ```mermaid
 sequenceDiagram
@@ -57,7 +57,7 @@ sequenceDiagram
     participant MCP as Universal MCP
     participant DB as Supabase DB
 
-    Dev->>Root: pnpm generate-types
+    Dev->>MCP: VS Code MCP generate_typescript_types
     Root->>MCP: apps/posmul-web/scripts/universal-mcp-automation.ts
     MCP->>DB: 스키마 정보 요청
     DB-->>MCP: 39개 테이블 스키마
@@ -68,11 +68,8 @@ sequenceDiagram
 ### 📍 **타입 생성 명령어**
 
 ```powershell
-# 메인 타입 생성 (권장)
-pnpm generate-types
-
-# 수동 타입 생성 (개발용)
-pnpm --filter posmul gen:types
+# 타입 생성 (권장)
+# - VS Code 에이전트/MCP로 generate_typescript_types 실행
 ```
 
 ## 📦 레거시 스크립트 정보
@@ -109,7 +106,7 @@ Get-ChildItem "scripts/archive/2025-07-legacy/" -Name
 
 ```mermaid
 flowchart TD
-    A["🔄 코드 변경"] --> B["📝 타입 동기화<br/>pnpm generate-types"]
+    A["🔄 코드 변경"] --> B["📝 타입 동기화<br/>MCP generate_typescript_types"]
     B --> C["🔧 Import 정리<br/>rewire-shared-imports.js"]
     C --> D["🧪 테스트 실행<br/>pnpm test"]
     D --> E["🏗️ 빌드<br/>pnpm build"]
@@ -125,13 +122,13 @@ flowchart TD
 
 ```powershell
 # 전체 개발 환경 설정
-pnpm install; pnpm build; pnpm generate-types
+pnpm install; pnpm build
 
 # 개발 서버 실행
 pnpm dev
 
-# 타입 + 테스트
-pnpm generate-types; pnpm test
+# 테스트
+pnpm test
 ```
 
 ## 📚 관련 문서
