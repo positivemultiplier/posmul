@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
 
     const body: unknown = await request.json();
     const parsedBodyResult = parseCreateForumPostBody(body);
-    if (!parsedBodyResult.ok) return parsedBodyResult.response;
+    if (parsedBodyResult.ok === false) return parsedBodyResult.response;
     const { categoryId, title, content, postType, tags } = parsedBodyResult.data;
 
     if (title.length < 5 || title.length > 200) {

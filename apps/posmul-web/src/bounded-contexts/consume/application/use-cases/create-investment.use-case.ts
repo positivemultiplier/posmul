@@ -1,5 +1,5 @@
 import type { Result, UserId } from "@posmul/auth-economy-sdk";
-import { ValidationError } from "@posmul/auth-economy-sdk";
+import { isFailure, ValidationError } from "@posmul/auth-economy-sdk";
 
 // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import { Investment } from "../../domain/entities/investment.entity";
@@ -44,23 +44,23 @@ export class CreateInvestmentUseCase {
   ): Promise<Result<{ investmentId: string; estimatedReturn: number }>> {
     try {
       const validDataResult = this.validateRequest(request);
-      if (!validDataResult.success) return validDataResult;
+      if (isFailure(validDataResult)) return validDataResult;
       const validData = validDataResult.data;
 
       const targetResult = await this.fetchInvestmentTarget(
         validData.type,
         validData.targetId
       );
-      if (!targetResult.success) return targetResult;
+      if (isFailure(targetResult)) return targetResult;
 
       const investmentResult = this.createInvestmentEntity(userId, validData);
-      if (!investmentResult.success) return investmentResult;
+      if (isFailure(investmentResult)) return investmentResult;
 
       const eligibilityResult = this.validateEligibility(
         investmentResult.data,
         targetResult.data
       );
-      if (!eligibilityResult.success) return eligibilityResult;
+      if (isFailure(eligibilityResult)) return eligibilityResult;
 
       const estimatedReturnResult = this.calculateEstimatedReturn(
         validData.type,
@@ -68,7 +68,7 @@ export class CreateInvestmentUseCase {
         validData.amount,
         investmentResult.data
       );
-      if (!estimatedReturnResult.success) return estimatedReturnResult;
+      if (isFailure(estimatedReturnResult)) return estimatedReturnResult;
 
       const saveResult = await this.investmentRepository.save(
         investmentResult.data

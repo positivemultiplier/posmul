@@ -5,6 +5,7 @@ import { ClientPredictionGamesGrid } from "../../components/ClientPredictionGame
 import Link from "next/link"; // Link import 추가
 import { getAggregatedPrizePool } from "../../../../bounded-contexts/prediction/application/prediction-pool.service";
 import {
+  attachHourlyGamePoolsToRows,
   mapPredictionGameRowToCardModel,
   type PredictionGameRow,
 } from "../../components/prediction-game-mapper";
@@ -23,6 +24,55 @@ interface UserPrediction {
   is_active: boolean;
   prediction_data: Record<string, unknown> | null;
 }
+
+type CardModel = ReturnType<typeof mapPredictionGameRowToCardModel>;
+
+const applyLeagueFilter = <Q extends { eq: (column: string, value: string) => Q }>(
+  query: Q,
+  league?: string
+): Q => {
+  return league ? query.eq("league", league) : query;
+};
+
+const applySort = <Q extends { order: (column: string, options: { ascending: boolean }) => Q }>(
+  query: Q,
+  sort: string
+): Q => {
+  if (sort === "closing_soon") {
+    return query.order("registration_end", { ascending: true });
+  }
+  // "latest" / "prize_pool" / default
+  return query.order("created_at", { ascending: false });
+};
+
+const fetchUserPredictions = async (
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string | undefined,
+  games: PredictionGameRow[]
+): Promise<UserPrediction[]> => {
+  if (!userId || games.length === 0) return [];
+
+  const gameIds = games.map((g) => g.game_id);
+  const { data: predictions } = await supabase
+    .schema("prediction")
+    .from("predictions")
+    .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .in("game_id", gameIds);
+
+  return (predictions ?? []) as UserPrediction[];
+};
+
+const sortMappedGamesIfNeeded = (
+  sort: string,
+  mappedGames: CardModel[]
+) => {
+  if (sort !== "prize_pool") return mappedGames;
+  return [...mappedGames].sort(
+    (a, b) => b.allocatedPrizePool - a.allocatedPrizePool
+  );
+};
 
 export default async function SoccerPage({ searchParams }: PageProps) {
   const supabase = await createClient();
@@ -45,24 +95,10 @@ export default async function SoccerPage({ searchParams }: PageProps) {
     .in("status", ["ACTIVE", "DRAFT"]);
 
   // League Filtering
-  if (league) {
-    query = query.eq("league", league);
-  }
+  query = applyLeagueFilter(query, league);
 
-
-  // Sorting logic
-  switch (sort) {
-    case "prize_pool":
-      query = query.order("allocated_prize_pool", { ascending: false });
-      break;
-    case "closing_soon":
-      query = query.order("end_time", { ascending: true }); // 마감 임박 = end_time이 가까운 미래
-      break;
-    case "latest":
-    default:
-      query = query.order("created_at", { ascending: false });
-      break;
-  }
+  // Sorting logic (DB 컬럼 의존 제거: prize_pool은 MoneyWave Truth를 붙인 뒤 로컬 정렬)
+  query = applySort(query, sort);
 
   query = query.limit(20);
 
@@ -74,23 +110,18 @@ export default async function SoccerPage({ searchParams }: PageProps) {
   const games = (data ?? []) as PredictionGameRow[];
 
   // 사용자의 예측 목록 조회
-  let userPredictions: UserPrediction[] = [];
-  if (user && games.length > 0) {
-    const gameIds = games.map(g => g.game_id);
-    const { data: predictions } = await supabase
-      .schema("prediction")
-      .from("predictions")
-      .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .in("game_id", gameIds);
+  const userPredictions = await fetchUserPredictions(
+    supabase,
+    user?.id,
+    games
+  );
 
-    if (predictions) {
-      userPredictions = predictions as UserPrediction[];
-    }
-  }
+  const gamesWithPools = await attachHourlyGamePoolsToRows(supabase, games);
 
-  const mappedGames = games.map(mapPredictionGameRowToCardModel);
+  const mappedGames = sortMappedGamesIfNeeded(
+    sort,
+    gamesWithPools.map(mapPredictionGameRowToCardModel)
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-20">

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { getAggregatedPrizePool } from "../../../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { ArrowLeft } from "lucide-react";
 import {
+  attachHourlyGamePoolsToRows,
   mapPredictionGameRowToCardModel,
   type PredictionGameRow,
 } from "../../../components/prediction-game-mapper";
@@ -48,6 +49,7 @@ export default async function EPLPage() {
     void error;
   }
   const games = (data ?? []) as PredictionGameRow[];
+  const gamesWithPools = await attachHourlyGamePoolsToRows(supabase, games);
 
   // 사용자의 예측 목록 조회
   let userPredictions: UserPrediction[] = [];
@@ -67,7 +69,7 @@ export default async function EPLPage() {
   }
 
   // 데이터 매핑
-  const mappedGames = games.map(mapPredictionGameRowToCardModel);
+  const mappedGames = gamesWithPools.map(mapPredictionGameRowToCardModel);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">

@@ -5,6 +5,7 @@ import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/prese
 import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
 import { getAggregatedPrizePool } from "../../../bounded-contexts/prediction/application/prediction-pool.service";
 import {
+  attachHourlyGamePoolsToRows,
   mapPredictionGameRowToCardModel,
   type PredictionGameRow,
 } from "../components/prediction-game-mapper";
@@ -71,6 +72,8 @@ export default async function PredictionSportsPage({
   }
   const games = (data ?? []) as PredictionGameRow[];
 
+  const gamesWithPools = await attachHourlyGamePoolsToRows(supabase, games);
+
   // 사용자의 예측 목록 조회
   let userPredictions: UserPrediction[] = [];
   if (user && games.length > 0) {
@@ -86,7 +89,7 @@ export default async function PredictionSportsPage({
     userPredictions = predictions || [];
   }
 
-  const visibleGames = games;
+  const visibleGames = gamesWithPools;
 
   const filters = [
     { label: "전체", value: undefined },

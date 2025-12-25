@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     const body: unknown = await request.json();
     const parsedBody = parseContributionBody(body);
-    if (!parsedBody.ok) return parsedBody.response;
+    if (parsedBody.ok === false) return parsedBody.response;
     const { projectId, amount } = parsedBody.data;
 
     // 프로젝트 조회

@@ -5,6 +5,11 @@ import { CompactMoneyWaveCard } from "../../../../bounded-contexts/prediction/pr
 import { ClientPredictionGamesGrid } from "../../components/ClientPredictionGamesGrid";
 import { getAggregatedPrizePool } from "../../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { notFound } from "next/navigation";
+import {
+  attachHourlyGamePoolsToRows,
+  mapPredictionGameRowToCardModel,
+  type PredictionGameRow,
+} from "../../components/prediction-game-mapper";
 
 interface PageProps {
   params: Promise<{
@@ -55,21 +60,22 @@ export default async function PredictionSportsSubcategoryPage({
   const query = supabase
     .schema("prediction")
     .from("prediction_games")
-    .select("id, slug, title, description, category, prediction_type, start_time, end_time, settlement_time, minimum_stake, maximum_stake, max_participants, status, created_at, metadata")
+    .select("*")
     .eq("category", "SPORTS")
+    .eq("subcategory", decodedSubcategory)
     .in("status", ["ACTIVE", "DRAFT"])
     .order("created_at", { ascending: false })
-    .or(`metadata->>sport.eq.${decodedSubcategory},tags.cs.{${decodedSubcategory}}`)
     .limit(12);
 
   const { data } = await query;
 
-  const games = data ?? [];
+  const games = (data ?? []) as PredictionGameRow[];
+  const gamesWithPools = await attachHourlyGamePoolsToRows(supabase, games);
 
   // User predictions
   let userPredictions: UserPrediction[] = [];
   if (user && games.length > 0) {
-    const gameIds = games.map(g => g.id);
+    const gameIds = games.map((g) => g.game_id);
     const { data: predictions } = await supabase
       .schema("prediction")
       .from("predictions")
@@ -143,32 +149,7 @@ export default async function PredictionSportsSubcategoryPage({
           </div>
 
           <ClientPredictionGamesGrid
-            games={games.map((game: any) => {
-              const gameOptions = game.metadata?.options || [
-                { id: '1', text: '예', currentOdds: 0.5 },
-                { id: '2', text: '아니오', currentOdds: 0.5 }
-              ];
-              return {
-                id: game.id,
-                slug: game.slug || game.id,
-                title: game.title,
-                description: game.description,
-                predictionType: game.prediction_type?.toUpperCase() || PredictionType.BINARY,
-                options: gameOptions,
-                startTime: new Date(game.start_time),
-                endTime: new Date(game.end_time),
-                settlementTime: new Date(game.settlement_time),
-                minimumStake: game.minimum_stake || 100,
-                maximumStake: game.maximum_stake || 10000,
-                maxParticipants: game.max_participants,
-                currentParticipants: 0,
-                status: game.status || GameStatus.ACTIVE,
-                totalStake: 0,
-                gameImportanceScore: 1.0,
-                allocatedPrizePool: 0,
-                createdAt: new Date(game.created_at),
-              };
-            })}
+            games={gamesWithPools.map(mapPredictionGameRowToCardModel)}
             userId={user?.id}
             userPredictions={userPredictions}
             basePath={`/prediction/sports/${decodedSubcategory}`}

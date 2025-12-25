@@ -6,6 +6,7 @@ import { ClientPredictionGamesGrid } from "./components/ClientPredictionGamesGri
 import { CompactMoneyWaveCard } from "../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { getAggregatedPrizePool } from "../../bounded-contexts/prediction/application/prediction-pool.service";
 import {
+  attachHourlyGamePoolsToRows,
   mapPredictionGameRowToCardModel,
   type PredictionGameRow,
 } from "./components/prediction-game-mapper";
@@ -81,9 +82,9 @@ export default async function PredictionPage() {
     .order('created_at', { ascending: false })
     .limit(6);
 
-  const mappedGames = ((recentGames ?? []) as PredictionGameRow[]).map(
-    mapPredictionGameRowToCardModel
-  );
+  const recentGameRows = (recentGames ?? []) as PredictionGameRow[];
+  const recentGameRowsWithPools = await attachHourlyGamePoolsToRows(supabase, recentGameRows);
+  const mappedGames = recentGameRowsWithPools.map(mapPredictionGameRowToCardModel);
 
   // Get user's active predictions if logged in
   let userPredictions: Array<{

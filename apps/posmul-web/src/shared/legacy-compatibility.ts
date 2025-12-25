@@ -9,6 +9,9 @@ import type {
   PaginatedResult as SdkPaginatedResult,
   PaginationParams as SdkPaginationParams,
   Result as SdkResult,
+  UserId,
+  PmpAmount,
+  PmcAmount,
 } from "@posmul/auth-economy-sdk";
 // Auth-Economy SDK에서 타입들 import
 // SDK의 MCP 유틸리티 import (shared-auth 대신 SDK 사용)
@@ -159,7 +162,7 @@ export const normalizePaginationParams = (
 
 // 유틸리티 함수들
 export const createUserId = (id: string): UserId => id as UserId;
-export const createPmpAmount = (amount: number) => amount;
+export const createPmpAmount = (amount: number): PmpAmount => amount as PmpAmount;
 export const createPmcAmount = (amount: number): PmcAmount =>
   amount as PmcAmount;
 

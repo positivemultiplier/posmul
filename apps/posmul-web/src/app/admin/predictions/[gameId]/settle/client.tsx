@@ -474,7 +474,8 @@ export function SettlementClient({
         return;
       }
 
-      applyFailureResult(result.error?.message);
+      const errorMessage = "error" in result ? result.error?.message : undefined;
+      applyFailureResult(errorMessage);
     } catch (error) {
       void error;
       applyFailureResult("네트워크 오류가 발생했습니다.");

@@ -25,19 +25,20 @@ graph TD
 ```
 
 ## 표시 계산(현재)
-- UI는 `ANNUAL_EBITDA = 1,000,000,000` 상수로
-$$hourlyWave = \frac{ANNUAL\_EBITDA}{365\times 24}$$
-를 만들고,
-- `카테고리 활성 게임 수 / 전체 활성 게임 수`를 가중치로 곱해 `waveAmount`를 표시합니다.
+- UI는 `economy.money_wave_daily_snapshots.hourly_pool_total_pmc`(서버 계산 스냅샷)을 읽어 **시간당 풀(Truth)** 을 가져옵니다.
+- 이후 `카테고리 활성 게임 수 / 전체 활성 게임 수`(+ 카테고리 multiplier)를 가중치로 적용해 **카테고리별 Truth 금액**을 산출합니다.
+- 마지막으로 UI는 “연출(Display)”을 위해 해당 시간의 진행률을 기반으로 **50% → 100% reveal** 을 적용해 화면 표시값을 만듭니다.
 
 ```mermaid
 flowchart TD
-  A[ANNUAL_EBITDA 상수] --> B[hourlyWave = /365/24]
-  B --> C["count(active games by category)"]
-  B --> D["count(active games total)"]
-  C --> E["weight = category/total"]
+  A[DB snapshot: hourly_pool_total_pmc] --> B[Truth hourly total]
+  B --> C[count(active games by category)]
+  B --> D[count(active games total)]
+  C --> E[weight by counts (+ multipliers)]
   D --> E
-  E --> F["waveAmount = hourlyWave * weight"]
+  E --> F[truthWave = hourlyTotal * weight]
+  F --> G[revealRatio 0.5 -> 1.0]
+  G --> H[displayWave = truthWave * revealRatio]
 ```
 
 ## “prediction 이외 도메인 MoneyWave는 쓸모 없다”에 대한 정리

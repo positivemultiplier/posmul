@@ -6,6 +6,7 @@ import {
   Statistic,
   createStatisticId,
   createDataSourceId,
+  type DataSourceId,
 } from "../../domain/entities/statistic.entity";
 import {
   IStatisticRepository,
@@ -14,6 +15,9 @@ import {
 } from "../../domain/repositories/statistic.repository";
 import { StatCategory, PeriodType } from "../../domain/value-objects/statistics-value-objects";
 import { KOSISClient, KOSISStatItem as _KOSISStatItem } from "../../infrastructure/api-clients/kosis.client";
+
+const isFailure = <T, E>(result: Result<T, E>): result is { success: false; error: E } =>
+  result.success === false;
 
 /**
  * 수집 요청 DTO
@@ -68,7 +72,7 @@ export class CollectDemographicsUseCase {
     return { success: true, data: undefined };
   }
 
-  private async resolveKosisSourceId(): Promise<string> {
+  private async resolveKosisSourceId(): Promise<DataSourceId> {
     const sourceResult = await this.dataSourceRepository.findByName("KOSIS");
     return sourceResult.success && sourceResult.data
       ? sourceResult.data.getId()
@@ -78,7 +82,7 @@ export class CollectDemographicsUseCase {
   private async collectForCategory(
     request: CollectDemographicsRequest,
     category: StatCategory,
-    kosisSourceId: string,
+    kosisSourceId: DataSourceId,
     result: CollectDemographicsResult
   ): Promise<void> {
     try {
@@ -109,7 +113,7 @@ export class CollectDemographicsUseCase {
   private async processItems(
     category: StatCategory,
     items: _KOSISStatItem[],
-    kosisSourceId: string,
+    kosisSourceId: DataSourceId,
     result: CollectDemographicsResult
   ): Promise<void> {
     for (const item of items) {
@@ -187,7 +191,7 @@ export class CollectDemographicsUseCase {
     };
 
     const configuredResult = this.ensureKosisConfigured();
-    if (!configuredResult.success) return configuredResult;
+    if (isFailure(configuredResult)) return configuredResult;
 
     const kosisSourceId = await this.resolveKosisSourceId();
 

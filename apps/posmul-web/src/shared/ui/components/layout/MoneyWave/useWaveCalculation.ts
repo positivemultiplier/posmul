@@ -1,5 +1,13 @@
 import { useState, useEffect } from "react";
 import { createClient } from "../../../../../lib/supabase/client";
+import {
+    buildMultiplierByCategory,
+    clamp01,
+    computeRevealRatio,
+    countCategories,
+    parseNumeric,
+    resolveSelectedDbCategory,
+} from "./wave-math";
 
 interface WaveCalculationResult {
     waveAmount: number;
@@ -21,7 +29,7 @@ export function useWaveCalculation({
 }: UseWaveCalculationProps): WaveCalculationResult {
     const supabase = createClient();
 
-    const [hourlyWaveTotal, setHourlyWaveTotal] = useState<number | null>(null);
+    const [_hourlyWaveTotal, setHourlyWaveTotal] = useState<number | null>(null);
 
     const [waveAmount, setWaveAmount] = useState(0);
     const [slotState, setSlotState] = useState({
@@ -35,7 +43,8 @@ export function useWaveCalculation({
     useEffect(() => {
         const fetchWaveData = async () => {
             try {
-                // 오늘의 MoneyWave 스냅샷(서버 계산)에서 시간당 총 풀을 읽음
+                const selectedDbCategory = resolveSelectedDbCategory(domain, category);
+
                 const { data: snapshot } = await supabase
                     .schema('economy')
                     .from('money_wave_daily_snapshots')
@@ -44,81 +53,66 @@ export function useWaveCalculation({
                     .limit(1)
                     .maybeSingle();
 
-                const hourlyTotalRaw = snapshot?.hourly_pool_total_pmc;
-                const hourlyTotal =
-                    typeof hourlyTotalRaw === 'number'
-                        ? hourlyTotalRaw
-                        : typeof hourlyTotalRaw === 'string'
-                            ? Number.parseFloat(hourlyTotalRaw)
-                            : null;
+                const hourlyTotal = parseNumeric(snapshot?.hourly_pool_total_pmc);
                 setHourlyWaveTotal(Number.isFinite(hourlyTotal ?? NaN) ? hourlyTotal : null);
 
-                // 현재 카테고리의 활성 게임 수 조회
-                let query = supabase
-                    .schema('prediction')
-                    .from("prediction_games")
-                    .select("game_id", { count: "exact" })
-                    .eq("status", "ACTIVE");
-
-                // 카테고리 필터
-                if (domain === 'prediction' && category !== 'all') {
-                    const categoryMap: Record<string, string> = {
-                        'invest': 'INVEST',
-                        'sports': 'SPORTS',
-                        'politics': 'POLITICS',
-                        'entertainment': 'ENTERTAINMENT',
-                        'user': 'USER_PROPOSED'
-                    };
-                    const dbCategory = categoryMap[category];
-                    if (dbCategory) {
-                        query = query.eq("category", dbCategory);
-                    }
-                }
-
-                const { count: categoryGames } = await query;
-
-                // 전체 활성 게임 수
-                const { count: totalGames } = await supabase
-                    .schema('prediction')
-                    .from("prediction_games")
-                    .select("game_id", { count: "exact" })
-                    .eq("status", "ACTIVE");
-
-                // 가중치 계산
-                const weight = totalGames && totalGames > 0 ? (categoryGames || 0) / totalGames : 0;
-                const categoryWave = (hourlyTotal ?? 0) * weight;
-
-                setWaveAmount(Math.round(categoryWave));
-                setActiveGames(categoryGames || 0);
-
-                // 참여자 수
                 const { count: participants } = await supabase
                     .schema('prediction')
                     .from("predictions")
                     .select("user_id", { count: "exact" });
+                const participantTotal = participants || 0;
+                setParticipantCount(participantTotal);
 
-                setParticipantCount(participants || 0);
+                const { data: activeGameRows } = await supabase
+                    .schema('prediction')
+                    .from("prediction_games")
+                    .select("category")
+                    .eq("status", "ACTIVE");
+                const { counts, total: totalActiveGames } = countCategories(activeGameRows as unknown[] | null);
 
-                // 슬롯머신 상태 (간단한 버전)
-                const now = Date.now();
+                let multiplierByCategory: Record<string, number> = {};
+                try {
+                    const { data: multipliers } = await supabase
+                        .schema('economy')
+                        .from('prediction_category_multipliers')
+                        .select('category,reward_multiplier');
+                    multiplierByCategory = buildMultiplierByCategory(multipliers as unknown[] | null);
+                } catch (_error) {
+                }
+
+                const totalWeighted = Object.entries(counts).reduce((sum, [cat, count]) => {
+                    const multiplier = multiplierByCategory[cat] ?? 1;
+                    return sum + count * multiplier;
+                }, 0);
+
+                const selectedCount = selectedDbCategory ? (counts[selectedDbCategory] ?? 0) : totalActiveGames;
+                const selectedWeighted = selectedDbCategory
+                    ? selectedCount * (multiplierByCategory[selectedDbCategory] ?? 1)
+                    : totalWeighted;
+
+                const weight = totalWeighted > 0 ? selectedWeighted / totalWeighted : 0;
+                const truthWave = (hourlyTotal ?? 0) * weight;
+
                 const startOfHour = new Date();
                 startOfHour.setMinutes(0, 0, 0);
-                const elapsed = now - startOfHour.getTime();
-                const duration = 60 * 60 * 1000; // 1시간
-                const progress = Math.min(elapsed / duration, 1);
+                const progress = clamp01((Date.now() - startOfHour.getTime()) / (60 * 60 * 1000));
 
+                const { progressAdjusted, revealRatio } = computeRevealRatio(progress, participantTotal, totalActiveGames);
+                const displayWave = truthWave * revealRatio;
+
+                setWaveAmount(Math.round(displayWave));
+                setActiveGames(selectedCount);
                 setSlotState({
                     isSpinning: progress < 1,
-                    spinSpeed: Math.max(0.1, 0.3 + progress * 1.2),
-                    progressRatio: progress
+                    spinSpeed: Math.max(0.1, 0.3 + progressAdjusted * 1.2),
+                    progressRatio: progressAdjusted
                 });
             } catch (_error) {
             }
         };
 
         fetchWaveData();
-        const interval = setInterval(fetchWaveData, 60000); // 1분마다 업데이트
-
+        const interval = setInterval(fetchWaveData, 60000);
         return () => clearInterval(interval);
     }, [domain, category]);
 

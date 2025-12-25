@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -348,7 +348,7 @@ function DonationMatchSection({
 }) {
   const action = getMatchActionState(match);
 
-  let actionNode: JSX.Element | null = null;
+  let actionNode: ReactNode = null;
   if (action.kind === "cancel") {
     actionNode = (
       <button

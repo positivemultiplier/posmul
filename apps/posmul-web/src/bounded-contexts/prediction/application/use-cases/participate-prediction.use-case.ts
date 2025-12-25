@@ -166,24 +166,24 @@ export class ParticipatePredictionUseCase {
   ): Promise<Result<ParticipatePredictionResponse, UseCaseError>> {
     try {
       const eligibilityResult = await this.ensureEligibility(request);
-      if (!eligibilityResult.success) return eligibilityResult;
+      if (isFailure(eligibilityResult)) return eligibilityResult;
 
       const gameResult = await this.getGame(request.gameId);
-      if (!gameResult.success) return gameResult;
+      if (isFailure(gameResult)) return gameResult;
       const predictionGame = gameResult.data;
 
       const predictionResult = this.createPrediction(request);
-      if (!predictionResult.success) return predictionResult;
+      if (isFailure(predictionResult)) return predictionResult;
       const prediction = predictionResult.data;
 
       const participationResult = this.addPredictionToGame(
         predictionGame,
         prediction
       );
-      if (!participationResult.success) return participationResult;
+      if (isFailure(participationResult)) return participationResult;
 
       const saveResult = await this.savePredictionOnly(predictionGame);
-      if (!saveResult.success) return saveResult;
+      if (isFailure(saveResult)) return saveResult;
 
       // 6. PMP 잔액 차감 - DB 트리거(process_prediction_payment)가 자동으로 처리
       // predictions 테이블 INSERT 시 트리거가 economy.pmp_pmc_accounts에서 차감하고 

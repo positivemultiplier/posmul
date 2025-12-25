@@ -1,4 +1,6 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { GameStatus, PredictionType } from "../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
+import { getKstHourStartIso } from "../../../shared/utils/time/getKstHourStartIso";
 
 export type PredictionGameCardModel = {
   id: string;
@@ -49,6 +51,46 @@ export type PredictionGameRow = {
   total_participants_count?: unknown;
   total_stake_amount?: unknown;
   game_importance_score?: unknown;
+};
+
+type HourlyGamePoolRow = {
+  game_id: string;
+  pool_pmc: string | number | null;
+};
+
+export const attachHourlyGamePoolsToRows = async (
+  supabase: SupabaseClient,
+  games: PredictionGameRow[]
+): Promise<PredictionGameRow[]> => {
+  if (games.length === 0) return games;
+
+  const gameIds = games.map((g) => g.game_id);
+  const hourStart = getKstHourStartIso();
+
+  const { data, error } = await supabase
+    .schema("economy")
+    .from("money_wave_hourly_game_pools")
+    .select("game_id, pool_pmc")
+    .eq("domain", "prediction")
+    .eq("hour_start", hourStart)
+    .in("game_id", gameIds);
+
+  if (error || !data) return games;
+
+  const poolByGameId = new Map<string, number>();
+  for (const row of data as HourlyGamePoolRow[]) {
+    const pool = toNumber(row.pool_pmc, NaN);
+    if (!Number.isFinite(pool)) continue;
+    poolByGameId.set(row.game_id, pool);
+  }
+
+  if (poolByGameId.size === 0) return games;
+
+  return games.map((g) => {
+    const pool = poolByGameId.get(g.game_id);
+    if (pool === undefined) return g;
+    return { ...g, allocated_prize_pool: pool };
+  });
 };
 
 const normalizeSegment = (value: unknown, fallback: string): string => {

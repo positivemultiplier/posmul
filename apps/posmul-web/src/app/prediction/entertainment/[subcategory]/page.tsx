@@ -8,6 +8,7 @@ import { FadeIn, HoverLift } from "../../../../shared/ui/components/animations";
 
 import { ClientPredictionGamesGrid } from "../../components/ClientPredictionGamesGrid";
 import {
+  attachHourlyGamePoolsToRows,
   mapPredictionGameRowToCardModel,
   type PredictionGameRow,
 } from "../../components/prediction-game-mapper";
@@ -83,9 +84,9 @@ export default async function PredictionEntertainmentSubcategoryPage({
     userPredictions = (predictions ?? []) as UserPrediction[];
   }
 
-  const mappedGames = ((games ?? []) as PredictionGameRow[]).map(
-    mapPredictionGameRowToCardModel
-  );
+  const gameRows = (games ?? []) as PredictionGameRow[];
+  const gameRowsWithPools = await attachHourlyGamePoolsToRows(supabase, gameRows);
+  const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
 
   const title =
     subcategory === "movies"
@@ -98,8 +99,8 @@ export default async function PredictionEntertainmentSubcategoryPage({
 
   const leagueCandidates = Array.from(
     new Set(
-      (games ?? [])
-        .map((g) => (typeof (g as Record<string, unknown>).league === "string" ? ((g as Record<string, unknown>).league as string) : "all"))
+      gameRows
+        .map((g) => (typeof g.league === "string" ? g.league : "all"))
         .map((v) => v.trim())
         .filter((v) => v)
     )

@@ -4,6 +4,7 @@ import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
 import Link from "next/link";
 import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
 import {
+    attachHourlyGamePoolsToRows,
     mapPredictionGameRowToCardModel,
     type PredictionGameRow,
 } from "../components/prediction-game-mapper";
@@ -43,7 +44,9 @@ export default async function PredictionEntertainmentPage() {
 
     const { data: games } = await query;
 
-    const mappedGames = ((games || []) as PredictionGameRow[]).map(mapPredictionGameRowToCardModel);
+    const gameRows = (games || []) as PredictionGameRow[];
+    const gameRowsWithPools = await attachHourlyGamePoolsToRows(supabase, gameRows);
+    const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
 
     const subcategories = [
         { label: "영화", href: "/prediction/entertainment/movies" },

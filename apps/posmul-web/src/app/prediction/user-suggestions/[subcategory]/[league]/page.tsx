@@ -8,6 +8,7 @@ import { FadeIn, HoverLift } from "../../../../../shared/ui/components/animation
 
 import { ClientPredictionGamesGrid } from "../../../components/ClientPredictionGamesGrid";
 import {
+  attachHourlyGamePoolsToRows,
   mapPredictionGameRowToCardModel,
   type PredictionGameRow,
 } from "../../../components/prediction-game-mapper";
@@ -49,7 +50,7 @@ export default async function PredictionUserSuggestionsLeaguePage({
     notFound();
   }
 
-  const pool = await getAggregatedPrizePool(supabase, "all", subcategory);
+  const pool = await getAggregatedPrizePool(supabase, "USER_PROPOSED", subcategory);
 
   const {
     data: { user },
@@ -86,9 +87,9 @@ export default async function PredictionUserSuggestionsLeaguePage({
     userPredictions = (predictions ?? []) as UserPrediction[];
   }
 
-  const mappedGames = ((games ?? []) as PredictionGameRow[]).map(
-    mapPredictionGameRowToCardModel
-  );
+  const gameRows = (games ?? []) as PredictionGameRow[];
+  const gameRowsWithPools = await attachHourlyGamePoolsToRows(supabase, gameRows);
+  const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">

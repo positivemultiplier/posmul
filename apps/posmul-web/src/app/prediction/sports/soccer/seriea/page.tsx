@@ -6,10 +6,14 @@ import { createClient } from "../../../../../lib/supabase/server";
 import { FadeIn, HoverLift } from "../../../../../shared/ui/components/animations";
 import { CompactMoneyWaveCard } from "../../../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { ClientPredictionGamesGrid } from "../../../components/ClientPredictionGamesGrid";
-import { PredictionType, GameStatus } from "../../../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 import Link from "next/link";
 import { getAggregatedPrizePool } from "../../../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { ArrowLeft } from "lucide-react";
+import {
+  attachHourlyGamePoolsToRows,
+  mapPredictionGameRowToCardModel,
+  type PredictionGameRow,
+} from "../../../components/prediction-game-mapper";
 
 interface UserPrediction {
   prediction_id: string;
@@ -30,9 +34,10 @@ export default async function SerieAPage() {
     .schema("prediction")
     .from("prediction_games")
     .select("*")
+    .eq("category", "SPORTS")
+    .eq("subcategory", "soccer")
+    .eq("league", LEAGUE)
     .in("status", ["ACTIVE", "DRAFT"])
-    .or("metadata->>sport.eq.soccer,tags.cs.{soccer}")
-    .or(`metadata->>league.eq.${LEAGUE},tags.cs.{${LEAGUE}}`)
     .order("created_at", { ascending: false })
     .limit(20);
 
@@ -40,11 +45,12 @@ export default async function SerieAPage() {
   if (error) {
     void error;
   }
-  const games = data ?? [];
+  const gameRows = (data ?? []) as PredictionGameRow[];
+  const gameRowsWithPools = await attachHourlyGamePoolsToRows(supabase, gameRows);
 
   let userPredictions: UserPrediction[] = [];
-  if (user && games.length > 0) {
-    const gameIds = games.map(g => g.game_id);
+  if (user && gameRows.length > 0) {
+    const gameIds = gameRows.map((g) => g.game_id);
     const { data: predictions } = await supabase
       .schema("prediction")
       .from("predictions")
@@ -55,26 +61,7 @@ export default async function SerieAPage() {
     if (predictions) userPredictions = predictions as UserPrediction[];
   }
 
-  const mappedGames = games.map((game) => ({
-    id: game.game_id,
-    slug: game.slug || game.game_id,
-    title: game.title,
-    description: game.description,
-    predictionType: game.prediction_type?.toUpperCase() || PredictionType.BINARY,
-    options: game.game_options || [],
-    startTime: game.registration_start,
-    endTime: game.registration_end,
-    settlementTime: game.settlement_date,
-    minimumStake: game.min_bet_amount || 100,
-    maximumStake: game.max_bet_amount || 10000,
-    maxParticipants: game.max_participants,
-    currentParticipants: 0,
-    status: game.status || GameStatus.ACTIVE,
-    totalStake: 0,
-    gameImportanceScore: game.difficulty || 1.0,
-    allocatedPrizePool: game.allocated_prize_pool || 0,
-    createdAt: game.created_at,
-  }));
+  const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">

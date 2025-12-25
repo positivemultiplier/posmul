@@ -211,7 +211,7 @@ export async function POST(request: NextRequest) {
 
     const body: unknown = await request.json();
     const parsedBodyResult = parseDonationCreateBody(body);
-    if (!parsedBodyResult.ok) return parsedBodyResult.response;
+    if (parsedBodyResult.ok === false) return parsedBodyResult.response;
     const { instituteId, amount, isAnonymous, message } = parsedBodyResult.data;
 
     if (amount < 100) {
@@ -219,10 +219,10 @@ export async function POST(request: NextRequest) {
     }
 
     const instituteResult = await fetchInstitute(supabase, instituteId);
-    if (!instituteResult.ok) return instituteResult.response;
+    if (instituteResult.ok === false) return instituteResult.response;
 
     const balanceResult = await fetchPmcBalance(supabase, user.id);
-    if (!balanceResult.ok) return balanceResult.response;
+    if (balanceResult.ok === false) return balanceResult.response;
     const pmcBalance = balanceResult.pmcBalance;
 
     if (pmcBalance < amount) {
@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
       "PMC_DEDUCTION_FAILED",
       "PMC 차감에 실패했습니다."
     );
-    if (!deductionResult.ok) return deductionResult.response;
+    if (deductionResult.ok === false) return deductionResult.response;
 
     // 2. 기부 레코드 생성
     const donationResult = await createDonationRecord({

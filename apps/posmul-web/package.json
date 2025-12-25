@@ -11,6 +11,7 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
     "test": "jest --passWithNoTests",
+    "verify:moneywave:depth5": "tsx scripts/verify-moneywave-depth5.ts",
     "type-check": "tsc --noEmit",
     "clean": "rimraf .next"
   },

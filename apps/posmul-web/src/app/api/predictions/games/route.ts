@@ -8,6 +8,20 @@ import { SupabasePredictionGameRepository } from "../../../../bounded-contexts/p
 import { MoneyWaveCalculatorService } from "../../../../shared/economy-kernel/services/money-wave-calculator.service";
 import type { GameOptions } from "../../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 
+const PREDICTION_GAME_STATUSES = [
+  "COMPLETED",
+  "ACTIVE",
+  "PENDING",
+  "CREATED",
+  "ENDED",
+  "CANCELLED",
+] as const;
+
+type PredictionGameStatus = (typeof PREDICTION_GAME_STATUSES)[number];
+
+const isPredictionGameStatus = (value: string): value is PredictionGameStatus =>
+  (PREDICTION_GAME_STATUSES as readonly string[]).includes(value);
+
 /**
  * GET /api/predictions/games
  * 예측 게임 목록 조회
@@ -15,7 +29,9 @@ import type { GameOptions } from "../../../../bounded-contexts/prediction/domain
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status") || "ACTIVE";
+    const statusParam = searchParams.get("status");
+    const status: PredictionGameStatus =
+      statusParam && isPredictionGameStatus(statusParam) ? statusParam : "ACTIVE";
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = parseInt(searchParams.get("offset") || "0");
     const category = searchParams.get("category");
@@ -98,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     // 요청 데이터 검증
     const validationResult = validateCreateGameRequest(body);
-    if (!validationResult.valid) {
+    if (validationResult.valid === false) {
       return NextResponse.json(
         {
           success: false,
@@ -184,7 +200,7 @@ export async function POST(request: NextRequest) {
 /**
  * 게임 생성 요청 데이터 검증
  */
-function validateCreateGameRequest(body: any): {
+function validateCreateGameRequest(body: unknown): {
   valid: true;
   data: {
     title: string;
@@ -206,7 +222,7 @@ function validateCreateGameRequest(body: any): {
   if (!isRecord(body)) return { valid: false, errors: ["Invalid request body"] };
 
   const parsed = parseCreateGameRequestBody(body);
-  if (!parsed.ok) return { valid: false, errors: parsed.errors };
+  if (parsed.ok === false) return { valid: false, errors: parsed.errors };
   return { valid: true, data: parsed.value };
 }
 

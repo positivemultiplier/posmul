@@ -93,14 +93,11 @@ export class GameSchedulingService {
       description:
         "프리미어리그 주요 경기 결과를 예측해보세요. MoneyWave 기반 상금 지급!",
       predictionType: PredictionType.WIN_DRAW_LOSE,
-      options: {
-        type: PredictionType.WIN_DRAW_LOSE,
-        choices: [
-          { id: "home", text: "홈팀 승", odds: 2.1 },
-          { id: "draw", text: "무승부", odds: 3.2 },
-          { id: "away", text: "원정팀 승", odds: 3.8 },
-        ],
-      },
+      options: [
+        { id: "home", label: "홈팀 승", description: "odds: 2.1" },
+        { id: "draw", label: "무승부", description: "odds: 3.2" },
+        { id: "away", label: "원정팀 승", description: "odds: 3.8" },
+      ],
       scheduledTime: new Date(now.getTime() + 60 * 60 * 1000), // 1시간 후
       duration: 12, // 12시간 지속
       settlementDelay: 2, // 2시간 후 정산
@@ -121,16 +118,13 @@ export class GameSchedulingService {
       description:
         "이번 주 대통령 지지율 변동을 예측하세요. 고난이도 고수익 게임!",
       predictionType: PredictionType.RANKING,
-      options: {
-        type: PredictionType.RANKING,
-        choices: [
-          { id: "up", text: "상승 (2%p 이상)", rank: 1 },
-          { id: "slight_up", text: "소폭 상승 (1%p)", rank: 2 },
-          { id: "stable", text: "현상 유지 (±0.5%p)", rank: 3 },
-          { id: "slight_down", text: "소폭 하락 (-1%p)", rank: 4 },
-          { id: "down", text: "하락 (-2%p 이상)", rank: 5 },
-        ],
-      },
+      options: [
+        { id: "up", label: "상승 (2%p 이상)", description: "rank: 1" },
+        { id: "slight_up", label: "소폭 상승 (1%p)", description: "rank: 2" },
+        { id: "stable", label: "현상 유지 (±0.5%p)", description: "rank: 3" },
+        { id: "slight_down", label: "소폭 하락 (-1%p)", description: "rank: 4" },
+        { id: "down", label: "하락 (-2%p 이상)", description: "rank: 5" },
+      ],
       scheduledTime: new Date(now.getTime() + 2 * 60 * 60 * 1000), // 2시간 후
       duration: 168, // 1주일 지속
       settlementDelay: 24, // 24시간 후 정산
@@ -150,13 +144,10 @@ export class GameSchedulingService {
       title: "비트코인 시간별 가격 예측",
       description: "다음 시간 비트코인 가격 방향을 예측하세요. 단기 고수익!",
       predictionType: PredictionType.BINARY,
-      options: {
-        type: PredictionType.BINARY,
-        choices: [
-          { id: "up", text: "상승", odds: 1.95 },
-          { id: "down", text: "하락", odds: 1.95 },
-        ],
-      },
+      options: [
+        { id: "up", label: "상승", description: "odds: 1.95" },
+        { id: "down", label: "하락", description: "odds: 1.95" },
+      ],
       scheduledTime: new Date(now.getTime() + 30 * 60 * 1000), // 30분 후
       duration: 1, // 1시간 지속
       settlementDelay: 0.5, // 30분 후 정산

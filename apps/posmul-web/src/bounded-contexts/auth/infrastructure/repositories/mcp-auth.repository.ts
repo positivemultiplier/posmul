@@ -3,6 +3,12 @@ import { IAuthRepository } from '../../domain/repositories';
 import { AuthSession, Permission, Role, UserCredentials } from '../../domain/entities';
 import { Result, UserId } from '@posmul/auth-economy-sdk';
 
+const toStringSafe = (value: unknown): string =>
+  typeof value === "string" ? value : String(value);
+
+const toOptionalString = (value: unknown): string =>
+  typeof value === "string" ? value : "";
+
 export class MCPAuthRepository implements IAuthRepository {
   private readonly mcpAdapter = createDefaultMCPAdapter();
 
@@ -29,18 +35,18 @@ export class MCPAuthRepository implements IAuthRepository {
 
       const sessionData = result.data[0];
       const session: AuthSession = {
-        id: sessionData.id,
+        id: toStringSafe(sessionData.id),
         userId: sessionData.user_id as UserId,
-        email: sessionData.email,
+        email: toOptionalString(sessionData.email),
         accessToken: '', // Not stored in DB for security
         refreshToken: '', // Not stored in DB for security
         tokenType: 'bearer',
-        expiresAt: new Date(sessionData.expires_at),
-        createdAt: new Date(sessionData.created_at),
-        updatedAt: new Date(sessionData.updated_at),
-        isActive: new Date(sessionData.expires_at) > new Date(),
-        lastSignInAt: new Date(sessionData.created_at),
-        emailConfirmedAt: sessionData.email_confirmed_at ? new Date(sessionData.email_confirmed_at) : null
+        expiresAt: new Date(toStringSafe(sessionData.expires_at)),
+        createdAt: new Date(toStringSafe(sessionData.created_at)),
+        updatedAt: new Date(toStringSafe(sessionData.updated_at)),
+        isActive: new Date(toStringSafe(sessionData.expires_at)) > new Date(),
+        lastSignInAt: new Date(toStringSafe(sessionData.created_at)),
+        emailConfirmedAt: sessionData.email_confirmed_at ? new Date(toStringSafe(sessionData.email_confirmed_at)) : null
       };
 
       return { success: true, data: session };
@@ -69,14 +75,14 @@ export class MCPAuthRepository implements IAuthRepository {
       const userData = result.data[0];
       const credentials: UserCredentials = {
         userId: userData.id as UserId,
-        email: userData.email,
-        emailConfirmed: !!userData.email_confirmed_at,
+        email: toOptionalString(userData.email),
+        emailConfirmed: Boolean(userData.email_confirmed_at),
         provider: 'email',
         identityData: {},
         activeSessions: 0,
         lastSignInAt: null,
-        createdAt: new Date(userData.created_at),
-        updatedAt: new Date(userData.updated_at)
+        createdAt: new Date(toStringSafe(userData.created_at)),
+        updatedAt: new Date(toStringSafe(userData.updated_at))
       };
 
       return { success: true, data: credentials };
@@ -100,17 +106,17 @@ export class MCPAuthRepository implements IAuthRepository {
       const result = await this.mcpAdapter.executeSQL(query);
 
       const sessions = result.data.map(sessionData => ({
-        id: sessionData.id,
+        id: toStringSafe(sessionData.id),
         userId: sessionData.user_id as UserId,
         email: '',
         accessToken: '',
         refreshToken: '',
         tokenType: 'bearer',
-        expiresAt: new Date(sessionData.expires_at),
-        createdAt: new Date(sessionData.created_at),
-        updatedAt: new Date(sessionData.updated_at),
-        isActive: new Date(sessionData.expires_at) > new Date(),
-        lastSignInAt: new Date(sessionData.created_at),
+        expiresAt: new Date(toStringSafe(sessionData.expires_at)),
+        createdAt: new Date(toStringSafe(sessionData.created_at)),
+        updatedAt: new Date(toStringSafe(sessionData.updated_at)),
+        isActive: new Date(toStringSafe(sessionData.expires_at)) > new Date(),
+        lastSignInAt: new Date(toStringSafe(sessionData.created_at)),
         emailConfirmedAt: null
       } as AuthSession));
 
@@ -133,10 +139,10 @@ export class MCPAuthRepository implements IAuthRepository {
       const result = await this.mcpAdapter.executeSQL(query);
 
       const permissions = result.data.map(permData => ({
-        name: permData.name,
-        resource: permData.resource,
-        action: permData.action,
-        description: permData.description
+        name: toOptionalString(permData.name),
+        resource: toOptionalString(permData.resource),
+        action: toOptionalString(permData.action),
+        description: toOptionalString(permData.description)
       } as Permission));
 
       return { success: true, data: permissions };
@@ -157,13 +163,13 @@ export class MCPAuthRepository implements IAuthRepository {
       const result = await this.mcpAdapter.executeSQL(query);
 
       const roles = result.data.map(roleData => ({
-        id: roleData.id,
-        name: roleData.name,
-        description: roleData.description,
+        id: toStringSafe(roleData.id),
+        name: toOptionalString(roleData.name),
+        description: toOptionalString(roleData.description),
         hierarchyLevel: 1,
         isActive: true,
-        assignedAt: new Date(roleData.created_at),
-        createdAt: new Date(roleData.created_at)
+        assignedAt: new Date(toStringSafe(roleData.created_at)),
+        createdAt: new Date(toStringSafe(roleData.created_at))
       } as Role));
 
       return { success: true, data: roles };

@@ -4,6 +4,7 @@ import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
 import Link from "next/link";
 import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
 import {
+    attachHourlyGamePoolsToRows,
     mapPredictionGameRowToCardModel,
     type PredictionGameRow,
 } from "../components/prediction-game-mapper";
@@ -44,7 +45,9 @@ export default async function PredictionPoliticsPage() {
     const { data: games, error } = await query;
     void error;
 
-    const mappedGames = ((games || []) as PredictionGameRow[]).map(mapPredictionGameRowToCardModel);
+    const gameRows = (games || []) as PredictionGameRow[];
+    const gameRowsWithPools = await attachHourlyGamePoolsToRows(supabase, gameRows);
+    const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
 
     const subcategories = [
         { label: "국가 선거", href: "/prediction/politics/national-elections" },

@@ -10,6 +10,7 @@ import Link from "next/link";
 import { getAggregatedPrizePool } from "../../../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { ArrowLeft } from "lucide-react";
 import {
+  attachHourlyGamePoolsToRows,
   mapPredictionGameRowToCardModel,
   type PredictionGameRow,
 } from "../../../components/prediction-game-mapper";
@@ -45,6 +46,7 @@ export default async function LaLigaPage() {
     void error;
   }
   const games = (data ?? []) as PredictionGameRow[];
+  const gamesWithPools = await attachHourlyGamePoolsToRows(supabase, games);
 
   let userPredictions: UserPrediction[] = [];
   if (user && games.length > 0) {
@@ -59,7 +61,7 @@ export default async function LaLigaPage() {
     if (predictions) userPredictions = predictions as UserPrediction[];
   }
 
-  const mappedGames = games.map(mapPredictionGameRowToCardModel);
+  const mappedGames = gamesWithPools.map(mapPredictionGameRowToCardModel);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">

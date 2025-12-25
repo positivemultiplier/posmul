@@ -53,7 +53,7 @@ function getWatchDurationSeconds(startTimeMs: number): number {
 
 async function startWatchingCampaign(params: {
   campaign: AdCampaign;
-  startView: (campaignId: string) => Promise<void>;
+  startView: (campaignId: string) => Promise<unknown>;
   setWatchingCampaign: React.Dispatch<React.SetStateAction<AdCampaign | null>>;
   setWatchProgress: React.Dispatch<React.SetStateAction<number>>;
   timerRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>;
@@ -84,7 +84,7 @@ async function startWatchingCampaign(params: {
 async function completeWatchingCampaign(params: {
   currentView: CurrentView | null;
   watchingCampaign: AdCampaign | null;
-  completeView: (viewId: string, watchDurationSeconds: number, withSurvey: boolean) => Promise<void>;
+  completeView: (viewId: string, watchDurationSeconds: number, surveyCompleted?: boolean) => Promise<unknown>;
   setShowSurvey: React.Dispatch<React.SetStateAction<boolean>>;
   setWatchingCampaign: React.Dispatch<React.SetStateAction<AdCampaign | null>>;
   setWatchProgress: React.Dispatch<React.SetStateAction<number>>;
@@ -113,7 +113,7 @@ async function completeWatchingCampaign(params: {
 
 async function cancelWatchingCampaign(params: {
   currentView: CurrentView | null;
-  completeView: (viewId: string, watchDurationSeconds: number, withSurvey: boolean) => Promise<void>;
+  completeView: (viewId: string, watchDurationSeconds: number, surveyCompleted?: boolean) => Promise<unknown>;
   reset: () => void;
   setWatchingCampaign: React.Dispatch<React.SetStateAction<AdCampaign | null>>;
   setWatchProgress: React.Dispatch<React.SetStateAction<number>>;
