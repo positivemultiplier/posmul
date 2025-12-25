@@ -42,6 +42,13 @@ yarn-error.log*
 *.tmp
 *.temp
 *.bak
+*.backup
+
+# --- Local command outputs (tracked artifacts cleanup) ---
+build-output.txt
+type-check-output.txt
+test_output.txt
+test_output_utf8.txt
 
 # --- Env & Secrets ---
 .env

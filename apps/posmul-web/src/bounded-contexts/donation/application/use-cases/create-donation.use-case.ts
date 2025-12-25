@@ -265,6 +265,13 @@ export class CreateDonationUseCase {
       const metadata = this.buildMetadata(parsedRequest);
       const scheduledAt = this.getScheduledAt(parsedRequest);
 
+      if (donorBalance < amount.getValue()) {
+        return this.fail("Insufficient balance", {
+          donorBalance,
+          requiredAmount: amount.getValue(),
+        });
+      }
+
       const createResult = await this.createDonationByType(
         donorId,
         parsedRequest,
@@ -308,7 +315,7 @@ export class CreateDonationUseCase {
     frequency: DonationFrequency,
     metadata: DonationMetadata,
     request: CreateDonationRequest,
-    _scheduledAt?: Date
+    scheduledAt?: Date
   ): Promise<Donation> {
     // 수혜자 정보 검증
     if (!request.beneficiaryName || !request.beneficiaryDescription) {
@@ -332,6 +339,8 @@ export class CreateDonationUseCase {
       category,
       description: description.getValue(),
       frequency,
+      metadata,
+      scheduledAt,
     });
 
     if (!result.success) {
@@ -388,6 +397,8 @@ export class CreateDonationUseCase {
       category,
       description: description.getValue(),
       frequency,
+      metadata,
+      scheduledAt: _scheduledAt,
     });
 
     if (!donationResult.success) {
@@ -457,6 +468,8 @@ export class CreateDonationUseCase {
       category,
       description: description.getValue(),
       frequency,
+      metadata,
+      scheduledAt: _scheduledAt,
     });
 
     if (!donationResult.success) {

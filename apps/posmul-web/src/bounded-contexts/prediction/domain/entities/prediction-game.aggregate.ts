@@ -21,6 +21,11 @@ import {
   createPredictionGameId,
 } from "../types/common";
 import {
+  PredictionGameCreatedEvent,
+  PredictionGameStartedEvent,
+  PredictionParticipatedEvent,
+} from "../events/prediction-game-events";
+import {
   GameOptions,
   GameStatus,
   PredictionType,
@@ -129,13 +134,40 @@ export class PredictionGame extends AggregateRoot {
       };
     }
 
+    const minimumStake =
+      props.minimumStake ?? (createPmpAmount(0) as unknown as PmpAmount);
+    const maximumStake =
+      props.maximumStake ?? (createPmpAmount(1000) as unknown as PmpAmount);
+
+    if (unwrapPmpAmount(minimumStake) > unwrapPmpAmount(maximumStake)) {
+      return {
+        success: false,
+        error: new ValidationError(
+          "Minimum stake must be less than or equal to maximum stake",
+          { field: "minimumStake" }
+        ),
+      };
+    }
+
     // props에 id가 있으면 기존 ID 사용 (DB에서 로딩), 없으면 새 UUID 생성
     const id = props.id ?? createPredictionGameId(crypto.randomUUID());
-    const game = new PredictionGame(id, props);
+    const game = new PredictionGame(id, {
+      ...props,
+      minimumStake,
+      maximumStake,
+    });
 
-    // The event constructor in domain-events.ts expects different params
-    // I'll create a more specific event for this bounded context for now
-    // game.addDomainEvent(new PredictionGameCreatedEvent(id, props.creatorId));
+    game.addDomainEvent(
+      new PredictionGameCreatedEvent(
+        id,
+        props.title,
+        props.description,
+        props.predictionType,
+        props.creatorId,
+        props.startTime,
+        props.endTime
+      )
+    );
 
     return success(game);
   }
@@ -173,6 +205,16 @@ export class PredictionGame extends AggregateRoot {
     }
 
     this._predictions.push(prediction);
+    this.addDomainEvent(
+      new PredictionParticipatedEvent(
+        this._id,
+        String(prediction.id),
+        prediction.userId,
+        prediction.selectedOptionId,
+        prediction.confidence,
+        unwrapPmpAmount(prediction.stake)
+      )
+    );
     return success(undefined);
   }
 
@@ -440,6 +482,7 @@ export class PredictionGame extends AggregateRoot {
       return failure(new DomainError("CANNOT_ACTIVATE_GAME"));
     }
     this._status = GameStatus.ACTIVE;
+    this.addDomainEvent(new PredictionGameStartedEvent(this._id));
     this.touch();
     return success(undefined);
   }

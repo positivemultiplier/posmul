@@ -60,11 +60,28 @@ export class SupabaseMCPClient {
       context?: Record<string, any>;
     }
   ): Promise<{ data: any[] | null; error: any | null }> {
-    const operation = () =>
-      mcp_supabase_execute_sql({
+    const operation = async () => {
+      const tool = (globalThis as unknown as {
+        mcp_supabase_execute_sql?: (params: {
+          project_id: string;
+          query: string;
+        }) => Promise<{ data: any[] | null; error: any | null }>;
+      }).mcp_supabase_execute_sql;
+
+      if (typeof tool !== "function") {
+        return {
+          data: null,
+          error: new Error(
+            "mcp_supabase_execute_sql MCP tool is not available in this runtime"
+          ),
+        };
+      }
+
+      return await tool({
         project_id: this.projectId,
         query,
       });
+    };
 
     try {
       if (options?.retry) {
@@ -348,8 +365,23 @@ export const mcp_supabase_execute_sql = async (params: {
   project_id: string;
   query: string;
 }): Promise<{ data: any[] | null; error: any | null }> => {
-  const client = createSupabaseMCPClient(params.project_id);
-  return client.executeSQL(params.query);
+  const tool = (globalThis as unknown as {
+    mcp_supabase_execute_sql?: (p: typeof params) => Promise<{
+      data: any[] | null;
+      error: any | null;
+    }>;
+  }).mcp_supabase_execute_sql;
+
+  if (typeof tool === "function" && tool !== mcp_supabase_execute_sql) {
+    return await tool(params);
+  }
+
+  return {
+    data: null,
+    error: new Error(
+      "mcp_supabase_execute_sql MCP tool is not available in this runtime"
+    ),
+  };
 };
 
 export const mcp_supabase_apply_migration = async (params: {

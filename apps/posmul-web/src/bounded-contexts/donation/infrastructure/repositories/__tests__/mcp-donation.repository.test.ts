@@ -11,6 +11,7 @@ import { DonationId, DonationStatus } from "../../../domain/value-objects/donati
 // MCP Adapter 모킹
 jest.mock("../../../../../shared/legacy-compatibility", () => ({
   createDefaultMCPAdapter: jest.fn(),
+  buildParameterizedQuery: (query: string) => query,
 }));
 
 describe("MCPDonationRepository", () => {

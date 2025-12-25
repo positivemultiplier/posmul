@@ -10,6 +10,7 @@ import { MCPAuthRepository } from "../mcp-auth.repository";
 // MCP Adapter 모킹
 jest.mock("../../../../../shared/legacy-compatibility", () => ({
   createDefaultMCPAdapter: jest.fn(),
+  buildParameterizedQuery: (query: string) => query,
 }));
 
 describe("MCPAuthRepository", () => {

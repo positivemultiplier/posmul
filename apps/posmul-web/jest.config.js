@@ -19,7 +19,6 @@ module.exports = {
         declaration: false,
         noEmit: true,
       },
-      isolatedModules: true,
     }],
   },
   transformIgnorePatterns: [

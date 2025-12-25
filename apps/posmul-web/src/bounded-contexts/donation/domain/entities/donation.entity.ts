@@ -877,6 +877,8 @@ export class Donation {
     category: DonationCategory;
     description: string;
     frequency?: DonationFrequency;
+    metadata?: DonationMetadata;
+    scheduledAt?: Date;
   }): Result<Donation> {
     try {
       const amountResult = DonationAmount.create(props.amount);
@@ -902,7 +904,7 @@ export class Donation {
         descriptionVO,
         frequency,
         DonationStatus.PENDING,
-        {
+        props.metadata ?? {
           isAnonymous: false,
           taxDeductible: true,
           receiptRequired: false,
@@ -911,7 +913,7 @@ export class Donation {
         undefined,
         beneficiaryInfo,
         {},
-        undefined
+        props.scheduledAt
       );
 
       const validationResult = donation.validateTarget();
@@ -942,6 +944,8 @@ export class Donation {
     category: DonationCategory;
     description: string;
     frequency: DonationFrequency;
+    metadata?: DonationMetadata;
+    scheduledAt?: Date;
   }): Result<Donation> {
     try {
       const amountResult = DonationAmount.create(props.amount);
@@ -962,7 +966,7 @@ export class Donation {
         descriptionVO,
         props.frequency,
         DonationStatus.PENDING,
-        {
+        props.metadata ?? {
           isAnonymous: false,
           taxDeductible: true,
           receiptRequired: false,
@@ -971,7 +975,7 @@ export class Donation {
         undefined,
         undefined,
         {},
-        undefined
+        props.scheduledAt
       );
 
       const validationResult = donation.validateTarget();
@@ -1002,6 +1006,8 @@ export class Donation {
     category: DonationCategory;
     description: string;
     frequency?: DonationFrequency;
+    metadata?: DonationMetadata;
+    scheduledAt?: Date;
   }): Result<Donation> {
     try {
       const amountResult = DonationAmount.create(props.amount);
@@ -1025,7 +1031,7 @@ export class Donation {
         descriptionVO,
         frequency,
         DonationStatus.PENDING,
-        {
+        props.metadata ?? {
           isAnonymous: false,
           taxDeductible: true,
           receiptRequired: false,
@@ -1034,7 +1040,7 @@ export class Donation {
         opinionLeaderIdVO,
         undefined,
         {},
-        undefined
+        props.scheduledAt
       );
 
       const validationResult = donation.validateTarget();

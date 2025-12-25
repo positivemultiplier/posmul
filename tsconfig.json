@@ -18,6 +18,7 @@
     "jsx": "preserve",
     "incremental": true,
     "noEmit": true,
+    "ignoreDeprecations": "5.0",
     "downlevelIteration": true,
     "baseUrl": ".",
     "paths": {

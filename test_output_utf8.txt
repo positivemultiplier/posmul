@@ -1,7 +1,0 @@
-﻿
-> @posmul/posmul-web@0.1.0 test C:\G\posmul\apps\posmul-web
-> jest --passWithNoTests
-
-C:\G\posmul\apps\posmul-web:
-?덭RR_PNPM_RECURSIVE_RUN_FIRST_FAIL??@posmul/posmul-web@0.1.0 test: `jest --passWithNoTests`
-Exit status 1

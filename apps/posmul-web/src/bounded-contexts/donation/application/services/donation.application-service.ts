@@ -56,18 +56,25 @@ export class DonationApplicationService {
     request: CreateDonationRequest,
     donorBalance: number
   ): Promise<Result<DonationResponse>> {
-    const result = await this.createDonationUseCase.execute(
-      donorId,
-      request,
-      donorBalance
-    );
+    try {
+      const result = await this.createDonationUseCase.execute(
+        donorId,
+        request,
+        donorBalance
+      );
 
-    if (isFailure(result)) {
-      return { success: false, error: result.error };
+      if (isFailure(result)) {
+        return { success: false, error: result.error };
+      }
+
+      const donationResponse = this.mapDonationToResponse(result.data);
+      return { success: true, data: donationResponse };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error : new Error("Unknown error"),
+      };
     }
-
-    const donationResponse = this.mapDonationToResponse(result.data);
-    return { success: true, data: donationResponse };
   }
 
   /**
@@ -76,20 +83,27 @@ export class DonationApplicationService {
   async getDonationById(
     donationId: string
   ): Promise<Result<DonationResponse | null>> {
-    const result = await this.donationRepository.findById(
-      new DonationId(donationId)
-    );
+    try {
+      const result = await this.donationRepository.findById(
+        new DonationId(donationId)
+      );
 
-    if (isFailure(result)) {
-      return { success: false, error: result.error };
+      if (isFailure(result)) {
+        return { success: false, error: result.error };
+      }
+
+      if (!result.data) {
+        return { success: true, data: null };
+      }
+
+      const donationResponse = this.mapDonationToResponse(result.data);
+      return { success: true, data: donationResponse };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error : new Error("Unknown error"),
+      };
     }
-
-    if (!result.data) {
-      return { success: true, data: null };
-    }
-
-    const donationResponse = this.mapDonationToResponse(result.data);
-    return { success: true, data: donationResponse };
   }
 
   /**
@@ -109,34 +123,41 @@ export class DonationApplicationService {
     donorId: UserId,
     pagination?: PaginationParams
   ): Promise<Result<PaginatedResult<DonationResponse>>> {
-    const page = pagination?.page;
-    const limit = pagination?.pageSize;
-    const result = await this.donationRepository.findByDonorId(
-      donorId,
-      page,
-      limit
-    );
+    try {
+      const page = pagination?.page;
+      const limit = pagination?.pageSize;
+      const result = await this.donationRepository.findByDonorId(
+        donorId,
+        page,
+        limit
+      );
 
-    if (isFailure(result)) {
-      return { success: false, error: result.error };
+      if (isFailure(result)) {
+        return { success: false, error: result.error };
+      }
+
+      const mappedData = result.data.items.map((donation) =>
+        this.mapDonationToResponse(donation)
+      );
+
+      return {
+        success: true,
+        data: {
+          items: mappedData,
+          total: result.data.total,
+          page: result.data.page,
+          pageSize: result.data.pageSize,
+          totalPages: result.data.totalPages,
+          hasNext: result.data.hasNext,
+          hasPrev: result.data.hasPrev,
+        },
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error : new Error("Unknown error"),
+      };
     }
-
-    const mappedData = result.data.items.map((donation) =>
-      this.mapDonationToResponse(donation)
-    );
-
-    return {
-      success: true,
-      data: {
-        items: mappedData,
-        total: result.data.total,
-        page: result.data.page,
-        pageSize: result.data.pageSize,
-        totalPages: result.data.totalPages,
-        hasNext: result.data.hasNext,
-        hasPrev: result.data.hasPrev,
-      },
-    };
   }
 
   /**
@@ -145,6 +166,7 @@ export class DonationApplicationService {
   async searchDonations(
     searchRequest: DonationSearchRequest
   ): Promise<Result<PaginatedResult<DonationResponse>>> {
+    try {
     // 검색 조건 변환
     const criteria: DonationSearchCriteria = {
       donorId: searchRequest.donorId
@@ -196,6 +218,12 @@ export class DonationApplicationService {
         hasPrev: result.data.hasPrev,
       },
     };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error : new Error("Unknown error"),
+      };
+    }
   }
 
   /**

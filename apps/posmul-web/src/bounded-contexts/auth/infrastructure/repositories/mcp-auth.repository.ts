@@ -1,10 +1,14 @@
-import { mcp_supabase_execute_sql } from '../../../../shared/mcp/supabase-client';
+import { createDefaultMCPAdapter } from "../../../../shared/legacy-compatibility";
 import { IAuthRepository } from '../../domain/repositories';
 import { AuthSession, Permission, Role, UserCredentials } from '../../domain/entities';
 import { Result, UserId } from '@posmul/auth-economy-sdk';
 
 export class MCPAuthRepository implements IAuthRepository {
-  constructor(private readonly projectId: string) {}
+  private readonly mcpAdapter = createDefaultMCPAdapter();
+
+  constructor(private readonly projectId: string) {
+    void this.projectId;
+  }
 
   async getSession(sessionId: string): Promise<Result<AuthSession | null, Error>> {
     try {
@@ -17,10 +21,7 @@ export class MCPAuthRepository implements IAuthRepository {
         WHERE s.id = '${sessionId}' AND s.expires_at > NOW()
       `;
 
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: query
-      });
+      const result = await this.mcpAdapter.executeSQL(query);
 
       if (result.data.length === 0) {
         return { success: true, data: null };
@@ -44,7 +45,8 @@ export class MCPAuthRepository implements IAuthRepository {
 
       return { success: true, data: session };
     } catch (error) {
-      return { success: false, error: new Error(`Failed to get session: ${error}`) };
+      void error;
+      return { success: false, error: new Error("GET_SESSION_ERROR") };
     }
   }
 
@@ -58,10 +60,7 @@ export class MCPAuthRepository implements IAuthRepository {
         WHERE u.id = '${userId}'
       `;
 
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: query
-      });
+      const result = await this.mcpAdapter.executeSQL(query);
 
       if (result.data.length === 0) {
         return { success: true, data: null };
@@ -82,7 +81,10 @@ export class MCPAuthRepository implements IAuthRepository {
 
       return { success: true, data: credentials };
     } catch (error) {
-      return { success: false, error: new Error(`Failed to get user credentials: ${error}`) };
+      if (error instanceof Error) {
+        return { success: false, error };
+      }
+      return { success: false, error: new Error("Credential lookup failed") };
     }
   }
 
@@ -95,10 +97,7 @@ export class MCPAuthRepository implements IAuthRepository {
         ORDER BY created_at DESC
       `;
 
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: query
-      });
+      const result = await this.mcpAdapter.executeSQL(query);
 
       const sessions = result.data.map(sessionData => ({
         id: sessionData.id,
@@ -131,10 +130,7 @@ export class MCPAuthRepository implements IAuthRepository {
         WHERE ur.user_id = '${userId}'
       `;
 
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: query
-      });
+      const result = await this.mcpAdapter.executeSQL(query);
 
       const permissions = result.data.map(permData => ({
         name: permData.name,
@@ -158,10 +154,7 @@ export class MCPAuthRepository implements IAuthRepository {
         WHERE ur.user_id = '${userId}'
       `;
 
-      const result = await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: query
-      });
+      const result = await this.mcpAdapter.executeSQL(query);
 
       const roles = result.data.map(roleData => ({
         id: roleData.id,
@@ -187,14 +180,14 @@ export class MCPAuthRepository implements IAuthRepository {
         WHERE id = '${sessionId}'
       `;
 
-      await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: query
-      });
+      await this.mcpAdapter.executeSQL(query);
 
       return { success: true, data: undefined };
     } catch (error) {
-      return { success: false, error: new Error(`Failed to invalidate session: ${error}`) };
+      if (error instanceof Error) {
+        return { success: false, error };
+      }
+      return { success: false, error: new Error("Invalidation failed") };
     }
   }
 
@@ -206,10 +199,7 @@ export class MCPAuthRepository implements IAuthRepository {
         WHERE user_id = '${userId}' AND expires_at > NOW()
       `;
 
-      await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: query
-      });
+      await this.mcpAdapter.executeSQL(query);
 
       return { success: true, data: undefined };
     } catch (error) {
@@ -228,10 +218,7 @@ export class MCPAuthRepository implements IAuthRepository {
         VALUES ('${userId}', '${activity}', '${JSON.stringify(metadata || {})}', NOW())
       `;
 
-      await mcp_supabase_execute_sql({
-        project_id: this.projectId,
-        query: query
-      });
+      await this.mcpAdapter.executeSQL(query);
 
       return { success: true, data: undefined };
     } catch (error) {
