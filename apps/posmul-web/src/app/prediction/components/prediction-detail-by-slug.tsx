@@ -12,6 +12,48 @@ import { getUserBalance } from "../sports/soccer/[slug]/actions";
 
 type MoneyWaveCategory = "sports" | "politics" | "entertainment" | "economy" | "all";
 
+type PredictionTypeView = "binary" | "wdl" | "ranking";
+
+const DEFAULT_OPTIONS: ReadonlyArray<{ id: string; label: string; currentOdds: number }> = [
+  { id: "yes", label: "예", currentOdds: 0.55 },
+  { id: "no", label: "아니오", currentOdds: 0.45 },
+];
+
+function normalizeLowerOrAll(value: unknown): string {
+  if (typeof value !== "string") return "all";
+  return value.trim().toLowerCase() || "all";
+}
+
+function mapPredictionType(value: unknown): PredictionTypeView {
+  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+  if (normalized === "binary") return "binary";
+  if (normalized === "win_draw_lose" || normalized === "wdl") return "wdl";
+  return "ranking";
+}
+
+function mapStatus(value: unknown): "ACTIVE" | "ENDED" | "SETTLED" {
+  if (value === "ACTIVE") return "ACTIVE";
+  if (value === "CLOSED") return "ENDED";
+  if (value === "SETTLED") return "SETTLED";
+  return "ACTIVE";
+}
+
+function toIsoOrFallback(value: unknown, fallbackMsFromNow: number): string {
+  if (typeof value === "string" || value instanceof Date) {
+    const date = value instanceof Date ? value : new Date(value);
+    if (!Number.isNaN(date.getTime())) return date.toISOString();
+  }
+
+  return new Date(Date.now() + fallbackMsFromNow).toISOString();
+}
+
+function getPrizePool(params: { game: unknown; totalBetAmount?: number }): number {
+  const prizePool = (params.game as { allocated_prize_pool?: unknown }).allocated_prize_pool;
+  if (typeof prizePool === "number") return prizePool;
+  if (typeof params.totalBetAmount === "number") return Math.floor(params.totalBetAmount * 0.5);
+  return 0;
+}
+
 const mapDbCategoryToMoneyWave = (value: unknown): MoneyWaveCategory => {
   const normalized = typeof value === "string" ? value.trim().toUpperCase() : "";
   switch (normalized) {
@@ -42,35 +84,20 @@ export async function renderPredictionDetailBySlug(slug: string) {
   const balanceResult = await getUserBalance();
   const userBalance = balanceResult ?? { pmp: 0, pmc: 0 };
 
-  const defaultOptions = [
-    { id: "yes", label: "예", currentOdds: 0.55 },
-    { id: "no", label: "아니오", currentOdds: 0.45 },
-  ];
+  const gameOptions = options.length > 0 ? options : DEFAULT_OPTIONS;
 
-  const gameOptions = options.length > 0 ? options : defaultOptions;
-
-  const subcategory =
-    typeof (game as unknown as { subcategory?: unknown }).subcategory === "string"
-      ? ((game as unknown as { subcategory?: string }).subcategory as string).trim().toLowerCase() || "all"
-      : "all";
-
-  const league =
-    typeof (game as unknown as { league?: unknown }).league === "string"
-      ? ((game as unknown as { league?: string }).league as string).trim().toLowerCase() || "all"
-      : "all";
+  const subcategory = normalizeLowerOrAll((game as unknown as { subcategory?: unknown }).subcategory);
+  const league = normalizeLowerOrAll((game as unknown as { league?: unknown }).league);
 
   const moneyWaveCategory = mapDbCategoryToMoneyWave((game as unknown as { category?: unknown }).category);
+  const totalBetAmount = stats?.total_bet_amount ?? 0;
+  const participantCount = stats?.total_participants ?? 0;
 
   const gameForView = {
     id: game.game_id,
     title: game.title || "제목 없음",
     description: game.description || "",
-    predictionType: (game.prediction_type?.toLowerCase() === "binary"
-      ? "binary"
-      : game.prediction_type?.toLowerCase() === "win_draw_lose" ||
-          game.prediction_type?.toLowerCase() === "wdl"
-        ? "wdl"
-        : "ranking") as "binary" | "wdl" | "ranking",
+    predictionType: mapPredictionType(game.prediction_type),
     options: gameOptions.map(
       (
         opt: { id: string; label: string; currentOdds?: number },
@@ -80,39 +107,22 @@ export async function renderPredictionDetailBySlug(slug: string) {
         label: opt.label || `옵션 ${idx + 1}`,
         probability: opt.currentOdds || 0.5,
         odds: opt.currentOdds && opt.currentOdds > 0 ? 1 / opt.currentOdds : 2.0,
-        volume: stats?.total_bet_amount
-          ? Math.floor(stats.total_bet_amount / gameOptions.length)
-          : 0,
+        volume: totalBetAmount ? Math.floor(totalBetAmount / gameOptions.length) : 0,
         change24h: 0,
       })
     ),
-    totalVolume: stats?.total_bet_amount || 0,
-    participantCount: stats?.total_participants || 0,
-    endTime: game.registration_end
-      ? new Date(game.registration_end).toISOString()
-      : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-    settlementTime: game.settlement_date
-      ? new Date(game.settlement_date).toISOString()
-      : new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString(),
-    status: (game.status === "ACTIVE"
-      ? "ACTIVE"
-      : game.status === "CLOSED"
-        ? "ENDED"
-        : game.status === "SETTLED"
-          ? "SETTLED"
-          : "ACTIVE") as "ACTIVE" | "ENDED" | "SETTLED",
+    totalVolume: totalBetAmount,
+    participantCount,
+    endTime: toIsoOrFallback(game.registration_end, 7 * 24 * 60 * 60 * 1000),
+    settlementTime: toIsoOrFallback(game.settlement_date, 14 * 24 * 60 * 60 * 1000),
+    status: mapStatus(game.status),
     category: game.category || "예측",
     creator: {
       name: "PosMul",
       reputation: 0,
       avatar: "🎯",
     },
-    prizePool:
-      typeof (game as unknown as { allocated_prize_pool?: unknown }).allocated_prize_pool === "number"
-        ? ((game as unknown as { allocated_prize_pool?: number }).allocated_prize_pool as number)
-        : stats?.total_bet_amount
-          ? Math.floor(stats.total_bet_amount * 0.5)
-          : 0,
+    prizePool: getPrizePool({ game, totalBetAmount }),
     minimumStake: game.min_bet_amount || 100,
     maximumStake: game.max_bet_amount || 10000,
   };

@@ -35,6 +35,100 @@ const isStatCategory = (value: string): value is StatCategory => {
   return (Object.values(StatCategory) as string[]).includes(value);
 };
 
+type ParsedQuery = {
+  category: StatCategory;
+  regionCode: string;
+  year: number;
+  month?: number;
+};
+
+const parseQuery = (
+  searchParams: URLSearchParams
+):
+  | { type: "ok"; value: ParsedQuery }
+  | { type: "error"; response: NextResponse<ApiResponse<{ data: DemographicDataItem[] }>> } => {
+  const categoryRaw = searchParams.get("category");
+  const regionCode = searchParams.get("regionCode");
+  const yearRaw = searchParams.get("year");
+  const monthRaw = searchParams.get("month");
+
+  if (!categoryRaw || !regionCode || !yearRaw) {
+    return {
+      type: "error",
+      response: NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "invalid_request",
+            message: "category, regionCode, year는 필수입니다.",
+          },
+        },
+        { status: 400 }
+      ),
+    };
+  }
+
+  if (!isStatCategory(categoryRaw)) {
+    return {
+      type: "error",
+      response: NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "invalid_category",
+            message: `지원하지 않는 category 입니다: ${categoryRaw}`,
+          },
+        },
+        { status: 400 }
+      ),
+    };
+  }
+
+  const year = Number(yearRaw);
+  if (!Number.isInteger(year) || year < 1900 || year > 2100) {
+    return {
+      type: "error",
+      response: NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "invalid_year",
+            message: `year 값이 올바르지 않습니다: ${yearRaw}`,
+          },
+        },
+        { status: 400 }
+      ),
+    };
+  }
+
+  const month = monthRaw ? Number(monthRaw) : undefined;
+  if (monthRaw && (!Number.isInteger(month) || month < 1 || month > 12)) {
+    return {
+      type: "error",
+      response: NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "invalid_month",
+            message: `month 값이 올바르지 않습니다: ${monthRaw}`,
+          },
+        },
+        { status: 400 }
+      ),
+    };
+  }
+
+  return {
+    type: "ok",
+    value: {
+      category: categoryRaw,
+      regionCode,
+      year,
+      ...(typeof month === "number" ? { month } : {}),
+    },
+  };
+};
+
 /**
  * GET /api/demographic-data
  * Query:
@@ -46,64 +140,8 @@ const isStatCategory = (value: string): value is StatCategory => {
 export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<{ data: DemographicDataItem[] }>>> {
   const { searchParams } = new URL(req.url);
 
-  const categoryRaw = searchParams.get("category");
-  const regionCode = searchParams.get("regionCode");
-  const yearRaw = searchParams.get("year");
-  const monthRaw = searchParams.get("month");
-
-  if (!categoryRaw || !regionCode || !yearRaw) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "invalid_request",
-          message: "category, regionCode, year는 필수입니다.",
-        },
-      },
-      { status: 400 }
-    );
-  }
-
-  if (!isStatCategory(categoryRaw)) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "invalid_category",
-          message: `지원하지 않는 category 입니다: ${categoryRaw}`,
-        },
-      },
-      { status: 400 }
-    );
-  }
-
-  const year = Number(yearRaw);
-  if (!Number.isInteger(year) || year < 1900 || year > 2100) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "invalid_year",
-          message: `year 값이 올바르지 않습니다: ${yearRaw}`,
-        },
-      },
-      { status: 400 }
-    );
-  }
-
-  const month = monthRaw ? Number(monthRaw) : undefined;
-  if (monthRaw && (!Number.isInteger(month) || month < 1 || month > 12)) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "invalid_month",
-          message: `month 값이 올바르지 않습니다: ${monthRaw}`,
-        },
-      },
-      { status: 400 }
-    );
-  }
+  const parsed = parseQuery(searchParams);
+  if (parsed.type === "error") return parsed.response;
 
   const kosisClient = getKOSISClient();
   if (!kosisClient.isConfigured()) {
@@ -119,22 +157,25 @@ export async function GET(req: NextRequest): Promise<NextResponse<ApiResponse<{ 
     );
   }
 
-  const category = categoryRaw;
+  const { category, regionCode, year, month } = parsed.value;
 
   const kosisResponse = month
     ? await kosisClient.fetchMonthlyData(category, regionCode, year, month)
     : await kosisClient.fetchStatistics(category, regionCode, year, year);
 
   if (!kosisResponse.success || !kosisResponse.data) {
+    const message = kosisResponse.error ?? "KOSIS 데이터 조회에 실패했습니다.";
+    const isMissingUserStatsId = message.includes("userStatsId가 설정되지 않았습니다");
+
     return NextResponse.json(
       {
         success: false,
         error: {
-          code: "kosis_error",
-          message: kosisResponse.error ?? "KOSIS 데이터 조회에 실패했습니다.",
+          code: isMissingUserStatsId ? "missing_kosis_user_stats_id" : "kosis_error",
+          message,
         },
       },
-      { status: 502 }
+      { status: isMissingUserStatsId ? 500 : 502 }
     );
   }
 

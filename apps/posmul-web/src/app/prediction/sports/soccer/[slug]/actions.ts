@@ -144,16 +144,13 @@ export async function getUserBalance(): Promise<{ pmp: number; pmc: number } | n
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
     if (authError) {
-      console.log("[getUserBalance] Auth error:", authError.message);
+      void authError;
       return null;
     }
     
     if (!user) {
-      console.log("[getUserBalance] No user logged in");
       return null;
     }
-
-    console.log("[getUserBalance] Fetching balance for user:", user.id);
 
     // DDD: economy.pmp_pmc_accounts is the Single Source of Truth for balances
     const { data: accountData, error: accountError } = await supabase
@@ -164,29 +161,23 @@ export async function getUserBalance(): Promise<{ pmp: number; pmc: number } | n
       .single();
 
     if (accountError) {
-      console.log("[getUserBalance] Account error:", accountError.message);
+      void accountError;
       return null;
     }
 
     // 방어적 처리: 배열 또는 객체 모두 처리
     const account = Array.isArray(accountData) ? accountData[0] : accountData;
-    
-    console.log("[getUserBalance] Raw account data:", JSON.stringify(accountData, null, 2));
-    console.log("[getUserBalance] Processed account:", JSON.stringify(account, null, 2));
-    console.log("[getUserBalance] account.pmp_balance:", account?.pmp_balance, "type:", typeof account?.pmp_balance);
 
     // Decimal 타입은 문자열 또는 숫자로 반환될 수 있으므로 Number()로 변환
     const pmpBalance = account?.pmp_balance != null ? Number(account.pmp_balance) : 0;
     const pmcBalance = account?.pmc_balance != null ? Number(account.pmc_balance) : 0;
-
-    console.log("[getUserBalance] Returning:", { pmp: pmpBalance, pmc: pmcBalance });
 
     return {
       pmp: pmpBalance,
       pmc: pmcBalance,
     };
   } catch (error) {
-    console.error("[getUserBalance] Exception:", error);
+    void error;
     return null;
   }
 }

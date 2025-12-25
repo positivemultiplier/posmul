@@ -74,9 +74,6 @@ export default function CloudConsumePage() {
   // 모든 카테고리 목록 생성 (전체 포함)
   const allCategories = ["전체", ...categories];
 
-  // 총 후원 금액 계산
-  const totalFunded = projects.reduce((sum, p) => sum + p.currentAmount, 0);
-
   if (error) {
     return (
       <div className="min-h-screen flex items-center justify-center">

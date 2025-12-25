@@ -48,6 +48,45 @@ interface MyDonationsClientProps {
   stats: Stats;
 }
 
+const STATUS_COLOR_MAP: Record<string, string> = {
+  green: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+  yellow: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
+  blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+  gray: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+  red: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
+  purple: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+};
+
+function getStatusColorClass(statusColor: string | undefined) {
+  return STATUS_COLOR_MAP[statusColor ?? ""] || STATUS_COLOR_MAP.gray;
+}
+
+function formatKoDate(isoString: string) {
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return isoString;
+  return date.toLocaleDateString("ko-KR");
+}
+
+type MatchActionState =
+  | { kind: "cancel" }
+  | { kind: "complete" }
+  | { kind: "completed"; label: string }
+  | { kind: "none" };
+
+function getMatchActionState(match: Match): MatchActionState {
+  if (match.status === "pending") return { kind: "cancel" };
+  if (match.status === "accepted" && !match.donorConfirmed) {
+    return { kind: "complete" };
+  }
+  if (match.status === "completed" && match.completedAt) {
+    return {
+      kind: "completed",
+      label: `✓ ${formatKoDate(match.completedAt)} 완료`,
+    };
+  }
+  return { kind: "none" };
+}
+
 // ===== 메인 컴포넌트 =====
 export function MyDonationsClient({ items, stats }: MyDonationsClientProps) {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
@@ -203,15 +242,6 @@ function DonationItemCard({ item }: { item: DonationItem }) {
   const router = useRouter();
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const statusColorMap: Record<string, string> = {
-    green: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
-    yellow: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300",
-    blue: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
-    gray: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
-    red: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-    purple: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
-  };
-
   // 기부 완료 처리
   const handleComplete = async () => {
     if (!item.match) return;
@@ -228,8 +258,7 @@ function DonationItemCard({ item }: { item: DonationItem }) {
         router.refresh();
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("Complete error:", err);
+      void err;
     } finally {
       setIsUpdating(false);
     }
@@ -251,12 +280,20 @@ function DonationItemCard({ item }: { item: DonationItem }) {
         router.refresh();
       }
     } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("Cancel error:", err);
+      void err;
     } finally {
       setIsUpdating(false);
     }
   };
+
+  const matchSection = item.match ? (
+    <DonationMatchSection
+      match={item.match}
+      isUpdating={isUpdating}
+      onCancel={handleCancel}
+      onComplete={handleComplete}
+    />
+  ) : null;
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
@@ -279,7 +316,7 @@ function DonationItemCard({ item }: { item: DonationItem }) {
           </div>
           <span
             className={`text-xs px-3 py-1 rounded-full font-semibold ${
-              statusColorMap[item.statusColor] || statusColorMap.gray
+              getStatusColorClass(item.statusColor)
             }`}
           >
             {item.statusLabel}
@@ -287,90 +324,107 @@ function DonationItemCard({ item }: { item: DonationItem }) {
         </div>
 
         {/* 매칭 정보 */}
-        {item.match && (
-          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                🤝 매칭 정보
-              </span>
-              <span
-                className={`text-xs px-2 py-1 rounded-full ${
-                  statusColorMap[item.match.statusColor] || statusColorMap.gray
-                }`}
-              >
-                {item.match.statusLabel}
-              </span>
-            </div>
-
-            {item.match.recipient && (
-              <div className="mb-3">
-                <div className="text-sm text-gray-900 dark:text-white font-semibold">
-                  {item.match.recipient.displayName}
-                </div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  📍 {item.match.recipient.location}
-                </div>
-              </div>
-            )}
-
-            {/* 진행 상태 표시 */}
-            <div className="flex items-center gap-4 text-xs">
-              <div className="flex items-center gap-1">
-                <span
-                  className={
-                    item.match.donorConfirmed ? "text-green-500" : "text-gray-400"
-                  }
-                >
-                  {item.match.donorConfirmed ? "✓" : "○"}
-                </span>
-                <span className="text-gray-500 dark:text-gray-400">내 확인</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <span
-                  className={
-                    item.match.recipientConfirmed ? "text-green-500" : "text-gray-400"
-                  }
-                >
-                  {item.match.recipientConfirmed ? "✓" : "○"}
-                </span>
-                <span className="text-gray-500 dark:text-gray-400">수혜자 확인</span>
-              </div>
-            </div>
-
-            {/* 액션 버튼 */}
-            {item.match.status === "pending" && (
-              <button
-                onClick={handleCancel}
-                disabled={isUpdating}
-                className="mt-3 w-full py-2 px-4 rounded-lg text-sm font-semibold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
-              >
-                {isUpdating ? "처리 중..." : "매칭 취소"}
-              </button>
-            )}
-
-            {item.match.status === "accepted" && !item.match.donorConfirmed && (
-              <button
-                onClick={handleComplete}
-                disabled={isUpdating}
-                className="mt-3 w-full py-2 px-4 rounded-lg text-sm font-semibold bg-green-500 text-white hover:bg-green-600 transition-colors disabled:opacity-50"
-              >
-                {isUpdating ? "처리 중..." : "기부 완료 확인"}
-              </button>
-            )}
-
-            {item.match.status === "completed" && item.match.completedAt && (
-              <div className="mt-3 text-center text-sm text-green-600 dark:text-green-400">
-                ✓ {new Date(item.match.completedAt).toLocaleDateString("ko-KR")} 완료
-              </div>
-            )}
-          </div>
-        )}
+        {matchSection}
 
         {/* 날짜 정보 */}
         <div className="text-xs text-gray-400 dark:text-gray-500">
-          등록일: {new Date(item.createdAt).toLocaleDateString("ko-KR")}
+          등록일: {formatKoDate(item.createdAt)}
         </div>
       </div>
+    </div>
+  );
+}
+
+function DonationMatchSection({
+  match,
+  isUpdating,
+  onCancel,
+  onComplete,
+}: {
+  match: Match;
+  isUpdating: boolean;
+  onCancel: () => Promise<void>;
+  onComplete: () => Promise<void>;
+}) {
+  const action = getMatchActionState(match);
+
+  let actionNode: JSX.Element | null = null;
+  if (action.kind === "cancel") {
+    actionNode = (
+      <button
+        onClick={onCancel}
+        disabled={isUpdating}
+        className="mt-3 w-full py-2 px-4 rounded-lg text-sm font-semibold bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors disabled:opacity-50"
+      >
+        {isUpdating ? "처리 중..." : "매칭 취소"}
+      </button>
+    );
+  } else if (action.kind === "complete") {
+    actionNode = (
+      <button
+        onClick={onComplete}
+        disabled={isUpdating}
+        className="mt-3 w-full py-2 px-4 rounded-lg text-sm font-semibold bg-green-500 text-white hover:bg-green-600 transition-colors disabled:opacity-50"
+      >
+        {isUpdating ? "처리 중..." : "기부 완료 확인"}
+      </button>
+    );
+  } else if (action.kind === "completed") {
+    actionNode = (
+      <div className="mt-3 text-center text-sm text-green-600 dark:text-green-400">
+        {action.label}
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          🤝 매칭 정보
+        </span>
+        <span
+          className={`text-xs px-2 py-1 rounded-full ${getStatusColorClass(
+            match.statusColor
+          )}`}
+        >
+          {match.statusLabel}
+        </span>
+      </div>
+
+      {match.recipient ? (
+        <div className="mb-3">
+          <div className="text-sm text-gray-900 dark:text-white font-semibold">
+            {match.recipient.displayName}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            📍 {match.recipient.location}
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex items-center gap-4 text-xs">
+        <div className="flex items-center gap-1">
+          <span
+            className={match.donorConfirmed ? "text-green-500" : "text-gray-400"}
+          >
+            {match.donorConfirmed ? "✓" : "○"}
+          </span>
+          <span className="text-gray-500 dark:text-gray-400">내 확인</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span
+            className={
+              match.recipientConfirmed ? "text-green-500" : "text-gray-400"
+            }
+          >
+            {match.recipientConfirmed ? "✓" : "○"}
+          </span>
+          <span className="text-gray-500 dark:text-gray-400">수혜자 확인</span>
+        </div>
+      </div>
+
+      {actionNode}
     </div>
   );
 }

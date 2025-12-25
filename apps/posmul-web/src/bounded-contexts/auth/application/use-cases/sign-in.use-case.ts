@@ -3,7 +3,6 @@
  * Supabase Auth + auth-economy-sdk 기반 인증
  */
 import {
-  AuthError,
   Result,
   SupabaseAuthService,
   isFailure,
@@ -11,13 +10,14 @@ import {
 import { createEmail } from "@posmul/auth-economy-sdk";
 
 import { UserLoggedInEvent, publishEvent } from "../../../../shared/events";
-import { User } from "../../domain/entities/user.entity";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {
   AuthResult,
   AuthenticationCredentials,
   IAuthDomainService,
 } from "../../domain/services/auth-domain.service";
+import { User } from "../../domain/entities/user.entity";
+import { createUserId, createUserRole } from "../../domain/value-objects/user-value-objects";
 
 export interface ISignInUseCase {
   execute(
@@ -66,13 +66,20 @@ export class SignInUseCase implements ISignInUseCase {
       const userResult = await this.userRepository.findByEmail(userEmail);
 
       if (isFailure(userResult)) {
-        // 사용자 정보를 찾을 수 없어도 auth-economy-sdk에서 반환된 사용자 정보 사용
-        console.warn(
-          "Local user repository에서 사용자를 찾을 수 없습니다. auth-economy-sdk 정보를 사용합니다."
-        );
+        // 사용자 정보를 찾을 수 없어도 인증 정보로 최소 User를 구성해 진행
       }
 
-      const user = userResult.success ? userResult.data : null;
+      const user: User = userResult.success
+        ? userResult.data
+        : User.create({
+            id: createUserId(authResult.data.user.id),
+            email: userEmail,
+            displayName: authResult.data.user.displayName,
+            role: createUserRole("citizen"),
+            pmcBalance: 0,
+            pmpBalance: 0,
+            isActive: true,
+          });
 
       // 4. 인증 성공 이벤트 발행
       const signInEvent = new UserLoggedInEvent(
@@ -87,14 +94,7 @@ export class SignInUseCase implements ISignInUseCase {
 
       // 5. 인증 결과 반환 - auth-economy-sdk의 AuthResult를 도메인 AuthResult로 변환
       const domainAuthResult: AuthResult = {
-        user:
-          user ||
-          ({
-            id: authResult.data.user.id,
-            email: authResult.data.user.email,
-            displayName: authResult.data.user.displayName,
-            // 추가 속성들은 기본값으로 설정 (실제로는 사용자 등록 시 설정되어야 함)
-          } as any), // 임시로 any 사용
+        user,
         accessToken: authResult.data.session.access_token,
         refreshToken: authResult.data.session.refresh_token,
       };

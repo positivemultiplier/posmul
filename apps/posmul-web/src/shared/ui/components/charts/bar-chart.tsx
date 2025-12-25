@@ -12,6 +12,82 @@ import {
   YAxis,
 } from "recharts";
 
+type TooltipPayloadEntry = {
+  name?: string;
+  value?: string | number;
+  color?: string;
+};
+
+type CustomTooltipProps = {
+  active?: boolean;
+  payload?: TooltipPayloadEntry[];
+  label?: string | number;
+};
+
+function formatAxisValue(value: unknown): string {
+  if (typeof value === "number") return value.toLocaleString();
+  if (typeof value === "string") return value;
+  return String(value);
+}
+
+function getTickFill(isDarkMode: boolean): string {
+  return isDarkMode ? "#9CA3AF" : "#6B7280";
+}
+
+function getGridStroke(isDarkMode: boolean): string {
+  return isDarkMode ? "#374151" : "#E5E7EB";
+}
+
+function getLegendTextColor(isDarkMode: boolean): string {
+  return isDarkMode ? "#F3F4F6" : "#374151";
+}
+
+function getAxisProps(layout: "horizontal" | "vertical", xAxisKey: string): {
+  xAxis: {
+    dataKey?: string;
+    type: "category" | "number";
+    tickFormatter?: (value: unknown) => string;
+  };
+  yAxis: {
+    dataKey?: string;
+    type: "category" | "number";
+    tickFormatter?: (value: unknown) => string;
+  };
+} {
+  if (layout === "vertical") {
+    return {
+      xAxis: { dataKey: xAxisKey, type: "category" },
+      yAxis: { type: "number", tickFormatter: formatAxisValue },
+    };
+  }
+
+  return {
+    xAxis: { type: "number", tickFormatter: formatAxisValue },
+    yAxis: { dataKey: xAxisKey, type: "category" },
+  };
+}
+
+function getAnimationDuration(animate: boolean): number {
+  return animate ? 1000 : 0;
+}
+
+function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+      <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+        {label}
+      </p>
+      {payload.map((entry, index) => (
+        <p key={index} className="text-sm" style={{ color: entry.color }}>
+          {`${entry.name}: ${formatAxisValue(entry.value)}`}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export interface BarChartData {
   [key: string]: string | number;
 }
@@ -60,23 +136,11 @@ export function BarChart({
   barSize = 40,
   radius = 4,
 }: BarChartProps) {
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-            {label}
-          </p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {`${entry.name}: ${entry.value.toLocaleString()}`}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  const axisProps = getAxisProps(layout, xAxisKey);
+  const tickFill = getTickFill(isDarkMode);
+  const gridStroke = getGridStroke(isDarkMode);
+  const legendTextColor = getLegendTextColor(isDarkMode);
+  const animationDuration = getAnimationDuration(animate);
 
   return (
     <div className={cn("w-full", className)}>
@@ -99,41 +163,33 @@ export function BarChart({
           {showGrid && (
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke={isDarkMode ? "#374151" : "#E5E7EB"}
+              stroke={gridStroke}
               opacity={0.5}
             />
           )}
 
           <XAxis
-            dataKey={layout === "vertical" ? xAxisKey : undefined}
-            type={layout === "vertical" ? "category" : "number"}
+            dataKey={axisProps.xAxis.dataKey}
+            type={axisProps.xAxis.type}
             axisLine={false}
             tickLine={false}
             tick={{
-              fill: isDarkMode ? "#9CA3AF" : "#6B7280",
+              fill: tickFill,
               fontSize: 12,
             }}
-            tickFormatter={
-              layout === "horizontal"
-                ? (value) => value.toLocaleString()
-                : undefined
-            }
+            tickFormatter={axisProps.xAxis.tickFormatter}
           />
 
           <YAxis
-            dataKey={layout === "horizontal" ? xAxisKey : undefined}
-            type={layout === "vertical" ? "number" : "category"}
+            dataKey={axisProps.yAxis.dataKey}
+            type={axisProps.yAxis.type}
             axisLine={false}
             tickLine={false}
             tick={{
-              fill: isDarkMode ? "#9CA3AF" : "#6B7280",
+              fill: tickFill,
               fontSize: 12,
             }}
-            tickFormatter={
-              layout === "vertical"
-                ? (value) => value.toLocaleString()
-                : undefined
-            }
+            tickFormatter={axisProps.yAxis.tickFormatter}
           />
 
           {showTooltip && <Tooltip content={<CustomTooltip />} />}
@@ -141,7 +197,7 @@ export function BarChart({
           {showLegend && (
             <Legend
               wrapperStyle={{
-                color: isDarkMode ? "#F3F4F6" : "#374151",
+                color: legendTextColor,
               }}
             />
           )}
@@ -151,7 +207,7 @@ export function BarChart({
             fill={color}
             radius={[radius, radius, 0, 0]}
             maxBarSize={barSize}
-            animationDuration={animate ? 1000 : 0}
+            animationDuration={animationDuration}
           />
         </RechartsBarChart>
       </ResponsiveContainer>
@@ -185,23 +241,11 @@ export function GroupedBarChart({
   barSize = 20,
   radius = 4,
 }: GroupedBarChartProps) {
-  const CustomTooltip = ({ active, payload, label }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-            {label}
-          </p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {`${entry.name}: ${entry.value.toLocaleString()}`}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
+  const axisProps = getAxisProps(layout, xAxisKey);
+  const tickFill = getTickFill(isDarkMode);
+  const gridStroke = getGridStroke(isDarkMode);
+  const legendTextColor = getLegendTextColor(isDarkMode);
+  const animationDuration = getAnimationDuration(animate);
 
   return (
     <div className={cn("w-full", className)}>
@@ -224,36 +268,33 @@ export function GroupedBarChart({
           {showGrid && (
             <CartesianGrid
               strokeDasharray="3 3"
-              stroke={isDarkMode ? "#374151" : "#E5E7EB"}
+              stroke={gridStroke}
               opacity={0.5}
             />
           )}
 
           <XAxis
-            dataKey={layout === "vertical" ? xAxisKey : undefined}
-            type={layout === "vertical" ? "category" : "number"}
+            dataKey={axisProps.xAxis.dataKey}
+            type={axisProps.xAxis.type}
             axisLine={false}
             tickLine={false}
             tick={{
-              fill: isDarkMode ? "#9CA3AF" : "#6B7280",
+              fill: tickFill,
               fontSize: 12,
             }}
+            tickFormatter={axisProps.xAxis.tickFormatter}
           />
 
           <YAxis
-            dataKey={layout === "horizontal" ? xAxisKey : undefined}
-            type={layout === "vertical" ? "number" : "category"}
+            dataKey={axisProps.yAxis.dataKey}
+            type={axisProps.yAxis.type}
             axisLine={false}
             tickLine={false}
             tick={{
-              fill: isDarkMode ? "#9CA3AF" : "#6B7280",
+              fill: tickFill,
               fontSize: 12,
             }}
-            tickFormatter={
-              layout === "vertical"
-                ? (value) => value.toLocaleString()
-                : undefined
-            }
+            tickFormatter={axisProps.yAxis.tickFormatter}
           />
 
           {showTooltip && <Tooltip content={<CustomTooltip />} />}
@@ -261,7 +302,7 @@ export function GroupedBarChart({
           {showLegend && (
             <Legend
               wrapperStyle={{
-                color: isDarkMode ? "#F3F4F6" : "#374151",
+                color: legendTextColor,
               }}
             />
           )}
@@ -274,7 +315,7 @@ export function GroupedBarChart({
               fill={item.color}
               radius={[radius, radius, 0, 0]}
               maxBarSize={barSize}
-              animationDuration={animate ? 1000 : 0}
+              animationDuration={animationDuration}
             />
           ))}
         </RechartsBarChart>

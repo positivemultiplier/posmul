@@ -18,7 +18,7 @@ import {
 import { AccuracyScore } from "@posmul/auth-economy-sdk";
 import { Result } from "@posmul/auth-economy-sdk";
 import { failure, success } from "@posmul/auth-economy-sdk";
-import type { PmcAmount, PmpAmount } from "@posmul/auth-economy-sdk";
+import type { PmcAmount } from "@posmul/auth-economy-sdk";
 
 import { SupabaseClient, createClient } from "@supabase/supabase-js";
 
@@ -53,20 +53,43 @@ interface PredictionRow {
   updated_at: string;
 }
 
-/**
- * 성과 통계 데이터베이스 행 타입
- */
-interface UserPredictionStatsRow {
-  user_id: string;
-  total_predictions: number;
-  correct_predictions: number;
-  accuracy_rate: number;
-  average_confidence: number;
-  total_staked: number;
-  total_rewards: number;
-  roi: number;
-  period_start: string;
-  period_end: string;
+type ApplyEq = (column: string, value: string) => void;
+type ApplyNumericOrString = (column: string, value: number | string) => void;
+type ApplyNullCheck = (column: string) => void;
+
+function applySearchIdFilters(filters: PredictionSearchFilters, applyEq: ApplyEq) {
+  if (filters.userId) applyEq("user_id", filters.userId);
+  if (filters.gameId) applyEq("game_id", filters.gameId);
+  if (filters.selectedOptionId) applyEq("selected_option_id", filters.selectedOptionId);
+}
+
+function applySearchStakeFilters(filters: PredictionSearchFilters, applyGte: ApplyNumericOrString, applyLte: ApplyNumericOrString) {
+  if (filters.minStake !== undefined) applyGte("stake", filters.minStake);
+  if (filters.maxStake !== undefined) applyLte("stake", filters.maxStake);
+}
+
+function applySearchConfidenceFilters(
+  filters: PredictionSearchFilters,
+  applyGte: ApplyNumericOrString,
+  applyLte: ApplyNumericOrString
+) {
+  if (filters.minConfidence !== undefined) applyGte("confidence", filters.minConfidence);
+  if (filters.maxConfidence !== undefined) applyLte("confidence", filters.maxConfidence);
+}
+
+function applySearchResultFilter(
+  filters: PredictionSearchFilters,
+  applyIsNull: ApplyNullCheck,
+  applyIsNotNull: ApplyNullCheck
+) {
+  if (filters.hasResult === undefined) return;
+  if (filters.hasResult) applyIsNotNull("is_correct");
+  else applyIsNull("is_correct");
+}
+
+function applySearchCreatedAtFilters(filters: PredictionSearchFilters, applyGte: ApplyNumericOrString, applyLte: ApplyNumericOrString) {
+  if (filters.createdFrom) applyGte("created_at", filters.createdFrom.toISOString());
+  if (filters.createdTo) applyLte("created_at", filters.createdTo.toISOString());
 }
 
 /**
@@ -479,30 +502,16 @@ export class SupabasePredictionRepository implements IPredictionRepository {
     pagination?: PaginationRequest
   ): Promise<Result<PaginatedResult<Prediction>, RepositoryError>> {
     try {
-      const paginationConfig =
-        pagination || RepositoryHelpers.getDefaultPagination();
-      const validationResult =
-        RepositoryHelpers.validatePagination(paginationConfig);
+      const paginationConfig = pagination || RepositoryHelpers.getDefaultPagination();
+      const validationResult = RepositoryHelpers.validatePagination(paginationConfig);
 
-      if (!validationResult.success) {
-        if (isFailure(validationResult)) {
-          if (isFailure(validationResult)) {
-            return failure(
-              new RepositoryError(
-                validationResult.error?.message || "Unknown error",
-                "VALIDATION_FAILED"
-              )
-            );
-          } else {
-            return failure(
-              new RepositoryError("Unknown error", "REPOSITORY_ERROR")
-            );
-          }
-        } else {
-          return failure(
-            new RepositoryError("Unknown error", "REPOSITORY_ERROR")
-          );
-        }
+      if (isFailure(validationResult)) {
+        return failure(
+          new RepositoryError(
+            validationResult.error?.message || "Invalid pagination",
+            "VALIDATION_FAILED"
+          )
+        );
       }
 
       const offset = (paginationConfig.page - 1) * paginationConfig.limit;
@@ -513,70 +522,37 @@ export class SupabasePredictionRepository implements IPredictionRepository {
         .from("predictions")
         .select("*", { count: "exact", head: true });
 
+      const applyEq = (column: string, value: string) => {
+        query = query.eq(column, value);
+        countQuery = countQuery.eq(column, value);
+      };
+
+      const applyGte = (column: string, value: number | string) => {
+        query = query.gte(column, value);
+        countQuery = countQuery.gte(column, value);
+      };
+
+      const applyLte = (column: string, value: number | string) => {
+        query = query.lte(column, value);
+        countQuery = countQuery.lte(column, value);
+      };
+
+      const applyIsNull = (column: string) => {
+        query = query.is(column, null);
+        countQuery = countQuery.is(column, null);
+      };
+
+      const applyIsNotNull = (column: string) => {
+        query = query.not(column, "is", null);
+        countQuery = countQuery.not(column, "is", null);
+      };
+
       // 필터 적용
-      if (filters.userId) {
-        query = query.eq("user_id", filters.userId);
-        countQuery = countQuery.eq("user_id", filters.userId);
-      }
-
-      if (filters.gameId) {
-        query = query.eq("game_id", filters.gameId);
-        countQuery = countQuery.eq("game_id", filters.gameId);
-      }
-
-      if (filters.selectedOptionId) {
-        query = query.eq("selected_option_id", filters.selectedOptionId);
-        countQuery = countQuery.eq(
-          "selected_option_id",
-          filters.selectedOptionId
-        );
-      }
-
-      if (filters.minStake !== undefined) {
-        query = query.gte("stake", filters.minStake);
-        countQuery = countQuery.gte("stake", filters.minStake);
-      }
-
-      if (filters.maxStake !== undefined) {
-        query = query.lte("stake", filters.maxStake);
-        countQuery = countQuery.lte("stake", filters.maxStake);
-      }
-
-      if (filters.minConfidence !== undefined) {
-        query = query.gte("confidence", filters.minConfidence);
-        countQuery = countQuery.gte("confidence", filters.minConfidence);
-      }
-
-      if (filters.maxConfidence !== undefined) {
-        query = query.lte("confidence", filters.maxConfidence);
-        countQuery = countQuery.lte("confidence", filters.maxConfidence);
-      }
-
-      if (filters.hasResult !== undefined) {
-        if (filters.hasResult) {
-          query = query.not("is_correct", "is", null);
-          countQuery = countQuery.not("is_correct", "is", null);
-        } else {
-          query = query.is("is_correct", null);
-          countQuery = countQuery.is("is_correct", null);
-        }
-      }
-
-      if (filters.createdFrom) {
-        query = query.gte("created_at", filters.createdFrom.toISOString());
-        countQuery = countQuery.gte(
-          "created_at",
-          filters.createdFrom.toISOString()
-        );
-      }
-
-      if (filters.createdTo) {
-        query = query.lte("created_at", filters.createdTo.toISOString());
-        countQuery = countQuery.lte(
-          "created_at",
-          filters.createdTo.toISOString()
-        );
-      }
+      applySearchIdFilters(filters, applyEq);
+      applySearchStakeFilters(filters, applyGte, applyLte);
+      applySearchConfidenceFilters(filters, applyGte, applyLte);
+      applySearchResultFilter(filters, applyIsNull, applyIsNotNull);
+      applySearchCreatedAtFilters(filters, applyGte, applyLte);
 
       // 총 개수 조회
       const { count, error: countError } = await countQuery;

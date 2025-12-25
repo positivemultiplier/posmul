@@ -261,6 +261,65 @@ export class ABTestingAnalysisService {
     }>
   > {
     try {
+      const isRecord = (value: unknown): value is Record<string, unknown> => {
+        return typeof value === "object" && value !== null && !Array.isArray(value);
+      };
+
+      const getNumberFromRecord = (
+        record: Record<string, unknown>,
+        key: string
+      ): number => {
+        const raw = record[key];
+        return typeof raw === "number" ? raw : Number(raw) || 0;
+      };
+
+      const analyzeLatestMetrics = (
+        latestResult: {
+          controlMetrics: Record<string, number>;
+          treatmentMetrics: Record<string, unknown>;
+        },
+        confidenceLevel: number
+      ) => {
+        const statisticalTests: StatisticalTestResult[] = [];
+        const effectSizes: Record<string, number> = {};
+
+        for (const [metric, treatmentData] of Object.entries(
+          latestResult.treatmentMetrics
+        )) {
+          const controlValue = latestResult.controlMetrics[metric] || 0;
+          if (!isRecord(treatmentData)) continue;
+
+          for (const [groupId, treatment] of Object.entries(treatmentData)) {
+            if (!isRecord(treatment)) continue;
+            const valuesRaw = treatment.values;
+            if (!isRecord(valuesRaw)) continue;
+
+            const treatmentValue = getNumberFromRecord(valuesRaw, metric);
+            const tTestResult = this.performTTest(
+              [controlValue],
+              [treatmentValue],
+              confidenceLevel
+            );
+            statisticalTests.push(tTestResult);
+
+            const cohensD = this.calculateCohensD(
+              controlValue,
+              treatmentValue,
+              1,
+              1
+            );
+
+            const groupKey =
+              typeof treatment.groupId === "string" && treatment.groupId.length > 0
+                ? treatment.groupId
+                : groupId;
+            effectSizes[`${metric}_${groupKey}`] = cohensD;
+          }
+        }
+
+        return { statisticalTests, effectSizes };
+      };
+
       // A/B 테스트 데이터 조회
       const testResults = await this.analyticsRepository.getABTestResults(
         request.testId
@@ -276,55 +335,10 @@ export class ABTestingAnalysisService {
 
       const latestResult = testResults.data[testResults.data.length - 1];
 
-      // 통계적 검정 수행
-      const statisticalTests: StatisticalTestResult[] = [];
-      const effectSizes: Record<string, number> = {};
-      for (const [metric, treatmentData] of Object.entries(
-        latestResult.treatmentMetrics
-      )) {
-        const controlValue = latestResult.controlMetrics[metric] || 0;
-
-        // treatmentData의 타입을 확인하고 처리
-        if (
-          typeof treatmentData === "object" &&
-          treatmentData !== null &&
-          !Array.isArray(treatmentData)
-        ) {
-          for (const [groupId, treatment] of Object.entries(treatmentData)) {
-            if (
-              typeof treatment === "object" &&
-              treatment !== null &&
-              "values" in treatment
-            ) {
-              const treatmentObj = treatment as {
-                groupId: string;
-                values: Record<string, number>;
-                [key: string]: any;
-              };
-              const treatmentValue = treatmentObj.values[metric] || 0;
-
-              // t-test 수행
-              const tTestResult = this.performTTest(
-                [controlValue],
-                [treatmentValue],
-                request.confidenceLevel
-              );
-
-              statisticalTests.push(tTestResult);
-
-              // Cohen's d 효과 크기 계산
-              const cohensD = this.calculateCohensD(
-                controlValue,
-                treatmentValue,
-                1,
-                1
-              );
-              effectSizes[`${metric}_${treatmentObj.groupId || groupId}`] =
-                cohensD;
-            }
-          }
-        }
-      }
+      const { statisticalTests, effectSizes } = analyzeLatestMetrics(
+        latestResult,
+        request.confidenceLevel
+      );
 
       // 다중비교 보정
       const pValues = statisticalTests.map((test) => test.pValue);

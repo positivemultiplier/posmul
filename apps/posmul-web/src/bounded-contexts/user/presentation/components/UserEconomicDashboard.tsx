@@ -45,6 +45,7 @@ const mockEconomicData = {
 export const UserEconomicDashboard: React.FC<UserEconomicDashboardProps> = ({
   userId,
 }) => {
+  void userId;
   const data = mockEconomicData;
 
   const getRiskProfileColor = (profile: string) => {

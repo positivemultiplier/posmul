@@ -5,9 +5,7 @@
  * MoneyWave 시스템과 PmpAmount/PmcAmount 경제 연동 지원
  */
 import {
-  SupabaseMCPResponse,
   isFailure,
-  isFailureSafe,
   toResult,
 } from "@posmul/auth-economy-sdk";
 
@@ -189,6 +187,7 @@ export class SupabaseMCPClient {
     sourceId: string;
     description?: string;
   }): Promise<void> {
+    void transaction;
     const query = "Invalid state";
 
     const result = await this.executeSQL(query, { retry: true });
@@ -414,7 +413,10 @@ export const mcp_supabase_list_tables = async (params: {
     const schemaList = schemas.map((s) => `'${s}'`).join(",");
 
     const query = `
-      SELECT * FROM usersORDER BY table_schema, table_name
+      SELECT table_schema, table_name
+      FROM information_schema.tables
+      WHERE table_schema IN (${schemaList})
+      ORDER BY table_schema, table_name
     `;
 
     return await client.executeSQL(query);

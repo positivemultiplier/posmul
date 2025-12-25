@@ -1,6 +1,5 @@
 import {
   isFailure,
-  type AuthError,
   type Result,
 } from "@posmul/auth-economy-sdk";
 import { SupabaseAuthService as SdkAuthService } from "@posmul/auth-economy-sdk/auth"; // SDK Service Import
@@ -205,11 +204,9 @@ export class SupabaseAuthService implements IExternalAuthService {
     }
   }
 
-  async deleteUser(userId: string): Promise<Result<void, Error>> {
+  async deleteUser(_userId: string): Promise<Result<void, Error>> {
     try {
       // SDK doesn't have deleteUser, keep local stub
-      console.warn(`사용자 삭제 요청: ${userId} - 서버 측에서 처리 필요`);
-
       return {
         success: true,
         data: undefined,

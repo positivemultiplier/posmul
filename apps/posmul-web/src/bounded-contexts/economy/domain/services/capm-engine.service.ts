@@ -711,6 +711,7 @@ export class CAPMEngine implements ICAPMEngine {
     riskTolerance: number,
     targetReturn?: ExpectedReturn
   ): number[] {
+    void targetReturn;
     // 실제로는 복잡한 2차 계획법이 필요하지만, 여기서는 단순화
     const numAssets = portfolio.assets.length;
     const equalWeight = 1 / numAssets;
@@ -894,6 +895,7 @@ export class CAPMEngine implements ICAPMEngine {
     volatilityRegime: "Low" | "Medium" | "High",
     correlationLevel: number
   ): "Risk-On" | "Risk-Off" | "Neutral" {
+    void correlationLevel;
     if (marketRegime === "Bull" && volatilityRegime === "Low") {
       return "Risk-On";
     } else if (marketRegime === "Bear" || volatilityRegime === "High") {

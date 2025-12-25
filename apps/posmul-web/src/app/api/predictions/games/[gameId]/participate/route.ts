@@ -177,10 +177,7 @@ export async function POST(
       { status: 201 }
     );
   } catch (error) {
-    console.error(
-      `POST /api/predictions/games/[gameId]/participate error:`,
-      error
-    );
+    void error;
     return NextResponse.json(
       {
         success: false,
@@ -263,10 +260,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error(
-      `GET /api/predictions/games/[gameId]/participate error:`,
-      error
-    );
+    void error;
     return NextResponse.json(
       {
         success: false,

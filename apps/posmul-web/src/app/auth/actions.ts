@@ -84,7 +84,6 @@ export async function grantDevLoginBonus(): Promise<DevBonusResult> {
       bonusGranted: true,
     };
   } catch (error) {
-    console.error("개발 보너스 지급 오류:", error);
     return {
       success: false,
       message: "보너스 지급 중 오류가 발생했습니다.",

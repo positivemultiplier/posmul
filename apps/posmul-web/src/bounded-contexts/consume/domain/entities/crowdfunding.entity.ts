@@ -1,7 +1,6 @@
 // CrowdFunding Aggregate Root - 크라우드 펀딩 관리 (Cloud Funding)
 // utf-8-sig 인코딩
 import type { Result } from "@posmul/auth-economy-sdk";
-import type { isSuccess } from "@posmul/auth-economy-sdk";
 import type { DomainEvent } from "@posmul/auth-economy-sdk";
 import type { UserId } from "@posmul/auth-economy-sdk";
 

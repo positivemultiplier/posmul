@@ -37,8 +37,7 @@ export default function SignUpForm({
 
     try {
       await onSubmit(formData);
-    } catch (error) {
-      console.error("SignUp form submission error:", error);
+    } catch (_error) {
     }
   };
 

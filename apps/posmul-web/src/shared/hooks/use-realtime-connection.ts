@@ -56,9 +56,10 @@ export function useRealtimeConnection(
   );
   const configRef = useRef({ ...DEFAULT_CONFIG, ...config });
 
-  const log = useCallback((message: string, data?: any) => {
+  const log = useCallback((_message: string, _data?: any) => {
     if (configRef.current.debug) {
-      console.log(`[RealtimeConnection] ${message}`, data);
+      void _message;
+      void _data;
     }
   }, []);
 
@@ -105,12 +106,12 @@ export function useRealtimeConnection(
             try {
               handler(message.data);
             } catch (error) {
-              console.error("Error in message handler:", error);
+              void error;
             }
           });
         }
       } catch (error) {
-        console.error("Error parsing WebSocket message:", error);
+        void error;
       }
     },
     [log]

@@ -234,6 +234,8 @@ export class ConvertToPmcAmountUseCase {
     const personalRiskAdjustment = utilityParams?.delta || 0.5;
     const behavioralAdjustment = biasProfile?.lossAversion || 0.5;
 
+    void personalRiskAdjustment;
+
     // PmcAmount의 베타 계수 (시장 대비 위험도)
     const baseBeta = 1.2; // PmcAmount는 시장보다 20% 더 위험
     const adjustedBeta = baseBeta * riskTolerance * (1 - behavioralAdjustment);

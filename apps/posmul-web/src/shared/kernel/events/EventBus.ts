@@ -125,7 +125,7 @@ export class EventBus {
         await registration.handler(event);
       } catch (error) {
         // Log error but don't stop processing other handlers
-        console.error(`Error handling event ${event.eventType}:`, error);
+        void error;
       }
     }
   }

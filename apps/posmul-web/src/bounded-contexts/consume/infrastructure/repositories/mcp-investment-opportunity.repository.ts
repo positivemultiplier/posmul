@@ -2,10 +2,8 @@ import { UserId } from "@posmul/auth-economy-sdk";
 
 import {
   CompatibleBaseError,
-  MCPError,
   Result,
   adaptErrorToBaseError,
-  createDefaultMCPAdapter,
   failure,
   success,
 } from "../../../../shared/legacy-compatibility";
@@ -28,9 +26,8 @@ export class MCPInvestmentOpportunityRepository
   constructor(private readonly projectId: string) {}
 
   async save(
-    opportunity: InvestmentOpportunity
+    _opportunity: InvestmentOpportunity
   ): Promise<Result<void, CompatibleBaseError>> {
-    const props = (opportunity as any).props;
     const query = `
       INSERT INTO investment_opportunities (
         id, creator_id, title, description, investment_type, category, subcategory,
@@ -66,7 +63,7 @@ export class MCPInvestmentOpportunityRepository
   async findById(
     id: InvestmentOpportunityId
   ): Promise<Result<InvestmentOpportunity | null, CompatibleBaseError>> {
-    const query = `SELECT * FROM users}'`;
+    const query = `SELECT * FROM investment_opportunities WHERE id = '${id.toString()}'`;
     try {
       const result = await mcp_supabase_execute_sql({
         project_id: this.projectId,
@@ -171,7 +168,7 @@ export class MCPInvestmentOpportunityRepository
     return this.findAndCount(`WHERE risk_level = ${riskLevel}`, limit, offset);
   }
 
-  async search(query: string, filters: any = {}, limit = 20, offset = 0) {
+  async search(query: string, _filters: unknown = {}, limit = 20, offset = 0) {
     // Basic search implementation
     const where = `WHERE title ILIKE '%${query}%' OR description ILIKE '%${query}%'`;
     return this.findAndCount(where, limit, offset);
@@ -189,7 +186,7 @@ export class MCPInvestmentOpportunityRepository
     }
   }
 
-  async getStatistics(filters: any = {}) {
+  async getStatistics(_filters: unknown = {}) {
     // TODO: Implement statistics logic
     return success({
       totalOpportunities: 0,

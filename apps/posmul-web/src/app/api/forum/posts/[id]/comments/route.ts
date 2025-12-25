@@ -12,6 +12,259 @@ import { createClient } from "../../../../../../lib/supabase/server";
 const COMMENT_PMP_REWARD = 20;
 const DAILY_COMMENT_LIMIT = 10;
 
+class HttpError extends Error {
+  constructor(
+    readonly status: number,
+    readonly code: string,
+    message: string
+  ) {
+    super(message);
+  }
+}
+
+function jsonError(error: HttpError): NextResponse {
+  return NextResponse.json(
+    {
+      success: false,
+      error: {
+        code: error.code,
+        message: error.message,
+      },
+    },
+    { status: error.status }
+  );
+}
+
+async function getPostId(params: Promise<{ id: string }>): Promise<string> {
+  const { id } = await params;
+  return id;
+}
+
+async function requireUserId(supabase: Awaited<ReturnType<typeof createClient>>): Promise<string> {
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    throw new HttpError(401, "UNAUTHORIZED", "로그인이 필요합니다.");
+  }
+
+  return user.id;
+}
+
+async function parseBody(request: NextRequest): Promise<{ content: string; parentCommentId?: string }> {
+  const body = (await request.json()) as unknown;
+  if (!body || typeof body !== "object") {
+    throw new HttpError(400, "INVALID_BODY", "요청 본문이 올바르지 않습니다.");
+  }
+
+  const content = (body as { content?: unknown }).content;
+  const parentCommentId = (body as { parentCommentId?: unknown }).parentCommentId;
+
+  if (typeof content !== "string") {
+    throw new HttpError(400, "INVALID_CONTENT", "댓글 내용은 필수입니다.");
+  }
+
+  if (content.length < 1) {
+    throw new HttpError(400, "INVALID_CONTENT", "댓글 내용은 필수입니다.");
+  }
+
+  if (content.length > 1000) {
+    throw new HttpError(400, "CONTENT_TOO_LONG", "댓글은 1000자 이하여야 합니다.");
+  }
+
+  return {
+    content,
+    parentCommentId: typeof parentCommentId === "string" ? parentCommentId : undefined,
+  };
+}
+
+async function getPublishedPostOrThrow(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  postId: string
+): Promise<{ id: string; title: string; status: string; comment_count?: number | null }> {
+  const { data: post, error: postError } = await supabase
+    .schema("forum")
+    .from("forum_posts")
+    .select("id, title, status, comment_count")
+    .eq("id", postId)
+    .single();
+
+  const postData = Array.isArray(post) ? post[0] : post;
+
+  if (postError || !postData) {
+    throw new HttpError(404, "POST_NOT_FOUND", "게시글을 찾을 수 없습니다.");
+  }
+
+  if (postData.status !== "published") {
+    throw new HttpError(400, "POST_NOT_AVAILABLE", "댓글을 작성할 수 없는 게시글입니다.");
+  }
+
+  return postData as { id: string; title: string; status: string; comment_count?: number | null };
+}
+
+function getTodayStartIso(): string {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  return todayStart.toISOString();
+}
+
+async function getTodayCommentCount(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<number> {
+  const { data: todayComments } = await supabase
+    .schema("forum")
+    .from("forum_comments")
+    .select("id", { count: "exact" })
+    .eq("author_id", userId)
+    .gte("created_at", getTodayStartIso());
+
+  return Array.isArray(todayComments) ? todayComments.length : 0;
+}
+
+function assertDailyLimitNotReached(todayCount: number): void {
+  if (todayCount >= DAILY_COMMENT_LIMIT) {
+    throw new HttpError(
+      429,
+      "DAILY_LIMIT_REACHED",
+      `오늘의 댓글 작성 한도(${DAILY_COMMENT_LIMIT}회)에 도달했습니다.`
+    );
+  }
+}
+
+async function getThreadInfo(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  postId: string,
+  parentCommentId?: string
+): Promise<{ depth: number; path: string; parentCommentId: string | null }> {
+  if (!parentCommentId) {
+    return { depth: 0, path: postId, parentCommentId: null };
+  }
+
+  const { data: parentComment } = await supabase
+    .schema("forum")
+    .from("forum_comments")
+    .select("id, depth, path")
+    .eq("id", parentCommentId)
+    .single();
+
+  const parentData = Array.isArray(parentComment) ? parentComment[0] : parentComment;
+
+  if (!parentData) {
+    return { depth: 0, path: postId, parentCommentId: null };
+  }
+
+  const depth = (parentData.depth || 0) + 1;
+  if (depth > 5) {
+    throw new HttpError(400, "MAX_DEPTH_EXCEEDED", "최대 5단계까지만 대댓글을 작성할 수 있습니다.");
+  }
+
+  const path = parentData.path ? `${parentData.path}/${parentCommentId}` : parentCommentId;
+  return { depth, path, parentCommentId };
+}
+
+async function createCommentOrThrow(params: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  postId: string;
+  userId: string;
+  content: string;
+  depth: number;
+  path: string;
+  parentCommentId: string | null;
+}): Promise<{ id: string; content: string; pmp_earned: number; created_at: string }> {
+  const { data: comment, error: commentError } = await params.supabase
+    .schema("forum")
+    .from("forum_comments")
+    .insert({
+      post_id: params.postId,
+      author_id: params.userId,
+      content: params.content,
+      parent_comment_id: params.parentCommentId,
+      depth: params.depth,
+      path: params.path,
+      status: "published",
+      pmp_earned: COMMENT_PMP_REWARD,
+    })
+    .select("id, content, pmp_earned, created_at")
+    .single();
+
+  const commentData = Array.isArray(comment) ? comment[0] : comment;
+
+  if (commentError || !commentData) {
+    throw new HttpError(500, "CREATE_FAILED", "댓글 생성에 실패했습니다.");
+  }
+
+  return commentData as { id: string; content: string; pmp_earned: number; created_at: string };
+}
+
+async function updatePostAfterComment(params: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  postId: string;
+  currentCommentCount?: number | null;
+}): Promise<void> {
+  const nextCount = params.currentCommentCount ? params.currentCommentCount + 1 : 1;
+
+  await params.supabase
+    .schema("forum")
+    .from("forum_posts")
+    .update({
+      comment_count: nextCount,
+      last_activity_at: new Date().toISOString(),
+    })
+    .eq("id", params.postId);
+}
+
+async function rewardForComment(params: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  postId: string;
+  commentId: string;
+  content: string;
+}): Promise<void> {
+  // 1. 활동 로그 기록
+  await params.supabase.schema("forum").from("forum_activity_logs").insert({
+    user_id: params.userId,
+    activity_type: "comment_created",
+    post_id: params.postId,
+    comment_id: params.commentId,
+    description: `댓글 작성: ${params.content.substring(0, 50)}...`,
+    pmp_earned: COMMENT_PMP_REWARD,
+  });
+
+  // 2. PMP 잔액 증가
+  const { data: account } = await params.supabase
+    .schema("economy")
+    .from("pmp_pmc_accounts")
+    .select("pmp_balance")
+    .eq("user_id", params.userId)
+    .single();
+
+  const accountData = Array.isArray(account) ? account[0] : account;
+  const currentBalance = Number(accountData?.pmp_balance) || 0;
+
+  await params.supabase
+    .schema("economy")
+    .from("pmp_pmc_accounts")
+    .update({ pmp_balance: currentBalance + COMMENT_PMP_REWARD })
+    .eq("user_id", params.userId);
+
+  // 3. 거래 내역 기록
+  await params.supabase.schema("economy").from("pmp_pmc_transactions").insert({
+    user_id: params.userId,
+    transaction_type: "PMP_EARN",
+    pmp_amount: COMMENT_PMP_REWARD,
+    description: `Forum 댓글 작성`,
+    timestamp: new Date().toISOString(),
+    metadata: {
+      source: "forum",
+      post_id: params.postId,
+      comment_id: params.commentId,
+    },
+  });
+}
+
 /**
  * POST /api/forum/posts/[id]/comments
  * 댓글 작성 + PMP 지급
@@ -21,238 +274,39 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: postId } = await params;
+    const postId = await getPostId(params);
     const supabase = await createClient();
 
-    // 현재 사용자 확인
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const userId = await requireUserId(supabase);
+    const { content, parentCommentId } = await parseBody(request);
 
-    if (userError || !user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "UNAUTHORIZED",
-            message: "로그인이 필요합니다.",
-          },
-        },
-        { status: 401 }
-      );
-    }
+    const postData = await getPublishedPostOrThrow(supabase, postId);
+    const todayCount = await getTodayCommentCount(supabase, userId);
+    assertDailyLimitNotReached(todayCount);
 
-    const body = await request.json();
-    const { content, parentCommentId } = body;
-
-    // 유효성 검사
-    if (!content || content.length < 1) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "INVALID_CONTENT",
-            message: "댓글 내용은 필수입니다.",
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    if (content.length > 1000) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "CONTENT_TOO_LONG",
-            message: "댓글은 1000자 이하여야 합니다.",
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    // 게시글 존재 확인
-    const { data: post, error: postError } = await supabase
-      .schema("forum")
-      .from("forum_posts")
-      .select("id, title, status")
-      .eq("id", postId)
-      .single();
-
-    const postData = Array.isArray(post) ? post[0] : post;
-
-    if (postError || !postData) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "POST_NOT_FOUND",
-            message: "게시글을 찾을 수 없습니다.",
-          },
-        },
-        { status: 404 }
-      );
-    }
-
-    if (postData.status !== "published") {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "POST_NOT_AVAILABLE",
-            message: "댓글을 작성할 수 없는 게시글입니다.",
-          },
-        },
-        { status: 400 }
-      );
-    }
-
-    // 일일 한도 체크
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const { data: todayComments } = await supabase
-      .schema("forum")
-      .from("forum_comments")
-      .select("id", { count: "exact" })
-      .eq("author_id", user.id)
-      .gte("created_at", todayStart.toISOString());
-
-    const todayCount = Array.isArray(todayComments) ? todayComments.length : 0;
-
-    if (todayCount >= DAILY_COMMENT_LIMIT) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "DAILY_LIMIT_REACHED",
-            message: `오늘의 댓글 작성 한도(${DAILY_COMMENT_LIMIT}회)에 도달했습니다.`,
-          },
-        },
-        { status: 429 }
-      );
-    }
-
-    // 부모 댓글이 있으면 depth 계산
-    let depth = 0;
-    let path = "";
-
-    if (parentCommentId) {
-      const { data: parentComment } = await supabase
-        .schema("forum")
-        .from("forum_comments")
-        .select("id, depth, path")
-        .eq("id", parentCommentId)
-        .single();
-
-      const parentData = Array.isArray(parentComment)
-        ? parentComment[0]
-        : parentComment;
-
-      if (parentData) {
-        depth = (parentData.depth || 0) + 1;
-        if (depth > 5) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: {
-                code: "MAX_DEPTH_EXCEEDED",
-                message: "최대 5단계까지만 대댓글을 작성할 수 있습니다.",
-              },
-            },
-            { status: 400 }
-          );
-        }
-        path = parentData.path ? `${parentData.path}/${parentCommentId}` : parentCommentId;
-      }
-    }
-
-    // 댓글 생성
-    const { data: comment, error: commentError } = await supabase
-      .schema("forum")
-      .from("forum_comments")
-      .insert({
-        post_id: postId,
-        author_id: user.id,
-        content,
-        parent_comment_id: parentCommentId || null,
-        depth,
-        path: path || postId,
-        status: "published",
-        pmp_earned: COMMENT_PMP_REWARD,
-      })
-      .select("id, content, pmp_earned, created_at")
-      .single();
-
-    const commentData = Array.isArray(comment) ? comment[0] : comment;
-
-    if (commentError || !commentData) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "CREATE_FAILED",
-            message: "댓글 생성에 실패했습니다.",
-          },
-        },
-        { status: 500 }
-      );
-    }
-
-    // 게시글 댓글 수 증가
-    await supabase
-      .schema("forum")
-      .from("forum_posts")
-      .update({
-        comment_count: (postData as { comment_count?: number }).comment_count
-          ? (postData as { comment_count?: number }).comment_count! + 1
-          : 1,
-        last_activity_at: new Date().toISOString(),
-      })
-      .eq("id", postId);
-
-    // PMP 지급
-    // 1. 활동 로그 기록
-    await supabase.schema("forum").from("forum_activity_logs").insert({
-      user_id: user.id,
-      activity_type: "comment_created",
-      post_id: postId,
-      comment_id: commentData.id,
-      description: `댓글 작성: ${content.substring(0, 50)}...`,
-      pmp_earned: COMMENT_PMP_REWARD,
+    const threadInfo = await getThreadInfo(supabase, postId, parentCommentId);
+    const commentData = await createCommentOrThrow({
+      supabase,
+      postId,
+      userId,
+      content,
+      depth: threadInfo.depth,
+      path: threadInfo.path,
+      parentCommentId: threadInfo.parentCommentId,
     });
 
-    // 2. PMP 잔액 증가
-    const { data: account } = await supabase
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .select("pmp_balance")
-      .eq("user_id", user.id)
-      .single();
+    await updatePostAfterComment({
+      supabase,
+      postId,
+      currentCommentCount: postData.comment_count,
+    });
 
-    const accountData = Array.isArray(account) ? account[0] : account;
-    const currentBalance = Number(accountData?.pmp_balance) || 0;
-
-    await supabase
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .update({ pmp_balance: currentBalance + COMMENT_PMP_REWARD })
-      .eq("user_id", user.id);
-
-    // 3. 거래 내역 기록
-    await supabase.schema("economy").from("pmp_pmc_transactions").insert({
-      user_id: user.id,
-      transaction_type: "PMP_EARN",
-      pmp_amount: COMMENT_PMP_REWARD,
-      description: `Forum 댓글 작성`,
-      timestamp: new Date().toISOString(),
-      metadata: {
-        source: "forum",
-        post_id: postId,
-        comment_id: commentData.id,
-      },
+    await rewardForComment({
+      supabase,
+      userId,
+      postId,
+      commentId: commentData.id,
+      content,
     });
 
     return NextResponse.json({
@@ -266,7 +320,10 @@ export async function POST(
       },
     });
   } catch (error) {
-    console.error("Forum comment creation error:", error);
+    if (error instanceof HttpError) {
+      return jsonError(error);
+    }
+    void error;
     return NextResponse.json(
       {
         success: false,
@@ -377,7 +434,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error("Forum comments fetch error:", error);
+    void error;
     return NextResponse.json(
       {
         success: false,

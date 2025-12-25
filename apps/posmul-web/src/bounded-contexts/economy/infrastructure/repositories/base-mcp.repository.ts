@@ -12,7 +12,7 @@ export abstract class BaseMCPRepository {
     this.projectId = SupabaseProjectService.getInstance().getProjectId();
   }
 
-  protected async executeQuery(query: string, params?: any[]): Promise<any> {
+  protected async executeQuery(query: string, _params?: any[]): Promise<any> {
     // 참고: 실제 mcp_supabase_execute_sql은 파라미터를 지원하는지 확인 필요
     // 우선은 쿼리만 전달하는 형태로 구현
     return await mcp_supabase_execute_sql({

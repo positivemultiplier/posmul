@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json()
-        const { client_id, client_secret, code, grant_type, redirect_uri } = body
+        const { client_id, client_secret, code, grant_type, redirect_uri: _redirect_uri } = body
 
         if (grant_type !== 'authorization_code') {
             return NextResponse.json({ error: 'unsupported_grant_type' }, { status: 400 })
@@ -71,7 +71,6 @@ export async function POST(req: NextRequest) {
         })
 
     } catch (err: any) {
-        console.error('Token Error:', err)
         return NextResponse.json({ error: 'server_error', details: err.message }, { status: 500 })
     }
 }

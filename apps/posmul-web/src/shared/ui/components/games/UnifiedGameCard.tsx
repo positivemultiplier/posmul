@@ -89,6 +89,7 @@ export const UnifiedGameCard: React.FC<UnifiedGameCardProps> = ({
   LinkComponent = ({ href, children }) => <a href={href}>{children}</a>,
   className,
 }) => {
+  void userId;
   const cardContent = (
     <Card className={`p-6 hover:shadow-lg transition-shadow cursor-pointer ${className || ''}`}>
       {/* Header */}

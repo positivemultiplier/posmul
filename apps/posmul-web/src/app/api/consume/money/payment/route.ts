@@ -81,7 +81,6 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error('결제 기록 생성 오류:', insertError);
       return NextResponse.json(
         { error: '결제 처리에 실패했습니다.' },
         { status: 500 }
@@ -158,7 +157,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('결제 API 오류:', error);
+    void error;
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }
@@ -198,7 +197,6 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('결제 내역 조회 오류:', error);
       return NextResponse.json(
         { error: '결제 내역을 불러오는 데 실패했습니다.' },
         { status: 500 }
@@ -228,7 +226,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('결제 내역 API 오류:', error);
+    void error;
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

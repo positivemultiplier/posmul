@@ -177,8 +177,6 @@ export class AgencyTheoryEngine implements IAgencyTheoryEngine {
    * Jensen & Meckling 공식: Agency Cost가 낮을수록 높은 전환율
    */
   private calculateConversionRate(metrics: IAgencyMetrics): number {
-    const { agencyCostReduction, agentAlignment, informationAsymmetry } =
-      metrics; // Agency Theory 효율성 지수
     const efficiencyIndex =
       metrics.agencyCostReduction * 0.5 + // Agency Cost 감소의 직접적 영향
       metrics.agentAlignment * 0.3 + // Principal-Agent 정렬

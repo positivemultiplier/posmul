@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("POST /api/predictions/settle error:", error);
+    void error;
     return NextResponse.json(
       {
         success: false,
@@ -189,7 +189,7 @@ export async function GET(_request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("GET /api/predictions/settle error:", error);
+    void error;
     return NextResponse.json(
       {
         success: false,

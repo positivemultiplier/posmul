@@ -127,7 +127,7 @@ export default function DonationPage() {
           기부 방식을 선택하세요
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {donationCategories.map((category, index) => (
+          {donationCategories.map((category) => (
             <Link
               key={category.slug}
               href={`/donation/${category.slug}`}

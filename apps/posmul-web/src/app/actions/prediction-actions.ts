@@ -42,11 +42,10 @@ export async function createPredictionGame(formData: FormData) {
     };
 
     // 데이터 검증
-    const validatedData = createPredictionGameSchema.parse(rawData);
+  createPredictionGameSchema.parse(rawData);
 
     // TODO: MCP를 통한 데이터베이스 저장
     // 현재는 콘솔에 로그만 출력
-    console.log("Creating prediction game:", validatedData);
 
     // 임시 게임 ID 생성 (실제로는 DB에서 반환)
     const gameId = "temp-" + Date.now();
@@ -61,7 +60,6 @@ export async function createPredictionGame(formData: FormData) {
     }
 
     // 기타 오류 처리
-    console.error("Failed to create prediction game:", error);
     throw new Error("예측 게임 생성에 실패했습니다. 다시 시도해주세요.");
   }
 }
@@ -86,11 +84,6 @@ export async function participateInPrediction(formData: FormData) {
     // 1. 사용자 PmpAmount 잔액 확인
     // 2. 예측 참여 기록 저장
     // 3. PmpAmount 차감 처리
-    console.log("Participating in prediction:", {
-      gameId,
-      selectedOption,
-      stakeAmount,
-    });
 
     return {
       success: true,
@@ -98,7 +91,6 @@ export async function participateInPrediction(formData: FormData) {
       data: { gameId, selectedOption, stakeAmount },
     };
   } catch (error) {
-    console.error("Failed to participate in prediction:", error);
     return {
       success: false,
       message:

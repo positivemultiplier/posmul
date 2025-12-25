@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronUp, ChevronDown } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useState } from 'react';
 
 export const MobileBettingSheet = ({

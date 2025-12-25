@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       .eq('view_date', today);
 
     if (countError) {
-      console.error('시청 횟수 조회 오류:', countError);
+      void countError;
     }
 
     if ((count ?? 0) >= campaign.daily_view_limit) {
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (insertError) {
-      console.error('시청 기록 생성 오류:', insertError);
+      void insertError;
       return NextResponse.json(
         { error: '시청 기록을 생성하는 데 실패했습니다.' },
         { status: 500 }
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('광고 시청 시작 API 오류:', error);
+    void error;
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

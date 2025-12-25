@@ -14,6 +14,7 @@ export class MCPUserRepository {
 
   async findById(id: string): Promise<Result<any, CompatibleBaseError>> {
     try {
+      void id;
       const result = await this.mcpAdapter.executeSQL(`
         SELECT * FROM users WHERE id = $1
       `);

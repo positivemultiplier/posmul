@@ -999,12 +999,16 @@ export class RegressionAnalysisService {
   }
 
   private calculateFPValue(fStat: number, df1: number, df2: number): number {
+    void fStat;
+    void df1;
+    void df2;
     // F-분포 p-값 계산 (간단한 근사)
     return 0.05; // 실제 구현에서는 정확한 계산 필요
   }
 
   // 추가 진단 메서드들 (실제 구현에서 완성)
   private performNormalityTests(residuals: number[]): NormalityTestResult {
+    void residuals;
     return {
       jarqueBeraStatistic: 0,
       jarqueBeraPValue: 0,
@@ -1019,6 +1023,8 @@ export class RegressionAnalysisService {
     X: number[][],
     residuals: number[]
   ): HeteroskedasticityTestResult {
+    void X;
+    void residuals;
     return {
       breuschPaganStatistic: 0,
       breuschPaganPValue: 0,
@@ -1032,6 +1038,7 @@ export class RegressionAnalysisService {
   private performAutocorrelationTests(
     residuals: number[]
   ): AutocorrelationTestResult {
+    void residuals;
     return {
       durbinWatsonStatistic: 0,
       ljungBoxStatistic: 0,
@@ -1044,6 +1051,7 @@ export class RegressionAnalysisService {
   private performMulticollinearityTests(
     X: number[][]
   ): MulticollinearityTestResult {
+    void X;
     return {
       varianceInflationFactors: [],
       conditionNumber: 0,
@@ -1057,6 +1065,10 @@ export class RegressionAnalysisService {
     residuals: number[],
     predictions: number[]
   ): OutlierDetectionResult {
+    void X;
+    void y;
+    void residuals;
+    void predictions;
     return {
       cookDistance: [],
       leverage: [],
@@ -1071,6 +1083,9 @@ export class RegressionAnalysisService {
     y: number[],
     residuals: number[]
   ): InfluentialObservationResult[] {
+    void X;
+    void y;
+    void residuals;
     return [];
   }
 
@@ -1079,6 +1094,9 @@ export class RegressionAnalysisService {
     y: number[],
     residuals: number[]
   ): SpecificationTestResult {
+    void X;
+    void y;
+    void residuals;
     return {
       ramseyResetStatistic: 0,
       ramseyResetPValue: 0,
@@ -1094,6 +1112,9 @@ export class RegressionAnalysisService {
     y: number[],
     residuals: number[]
   ): StabilityTestResult {
+    void X;
+    void y;
+    void residuals;
     return {
       chowTestStatistic: 0,
       chowTestPValue: 0,
@@ -1124,6 +1145,8 @@ export class RegressionAnalysisService {
     data: Record<string, number>[],
     config: RegressionConfig
   ): Promise<Result<any>> {
+    void data;
+    void config;
     return { success: true, data: {} };
   }
 
@@ -1132,6 +1155,8 @@ export class RegressionAnalysisService {
     y: number[],
     method: string
   ): Promise<number[]> {
+    void y;
+    void method;
     // MLE 구현 스텁
     return new Array(X[0].length).fill(0);
   }
@@ -1140,6 +1165,7 @@ export class RegressionAnalysisService {
     X: number[][],
     predictions: number[]
   ): number[][] {
+    void predictions;
     // 정보행렬 계산 스텁
     return X[0].map(() => X[0].map(() => 0));
   }
@@ -1149,6 +1175,7 @@ export class RegressionAnalysisService {
     predictions: number[],
     parameterCount: number
   ): ModelFitStatistics {
+    void predictions;
     // Logit 모델 적합도 계산 스텁
     return {
       rSquared: 0,
@@ -1179,6 +1206,8 @@ export class RegressionAnalysisService {
     variables: string[],
     lagOrder: number
   ): Record<string, number>[] {
+    void variables;
+    void lagOrder;
     // VAR 데이터 준비 스텁
     return data;
   }
@@ -1187,6 +1216,7 @@ export class RegressionAnalysisService {
     equations: RegressionResult[],
     config: RegressionConfig
   ): RegressionResult {
+    void config;
     // VAR 결과 통합 스텁
     return equations[0];
   }
@@ -1195,6 +1225,8 @@ export class RegressionAnalysisService {
     model: RegressionResult,
     dataPoint: Record<string, number>
   ): number {
+    void model;
+    void dataPoint;
     // 예측값 계산 스텁
     return 0;
   }
@@ -1203,6 +1235,8 @@ export class RegressionAnalysisService {
     model: RegressionResult,
     dataPoint: Record<string, number>
   ): number {
+    void model;
+    void dataPoint;
     // 예측 표준오차 계산 스텁
     return 0;
   }
@@ -1231,6 +1265,7 @@ export class RegressionAnalysisService {
   private performLikelihoodRatioTests(
     models: RegressionResult[]
   ): LikelihoodRatioTest[] {
+    void models;
     // 우도비 검정 스텁
     return [];
   }

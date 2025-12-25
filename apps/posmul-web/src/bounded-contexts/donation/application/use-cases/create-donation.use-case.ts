@@ -47,16 +47,18 @@ export class CreateDonationUseCase {
     private readonly donationDomainService: DonationDomainService
   ) {}
 
-  async execute(
-    donorId: UserId,
-    request: CreateDonationRequest,
-    donorBalance: number
-  ): Promise<Result<Donation>> {
-    // 입력 데이터 검증
+  private fail(message: string, details?: Record<string, unknown>) {
+    return {
+      success: false as const,
+      error: new ValidationError(message, details),
+    };
+  }
+
+  private parseRequest(request: CreateDonationRequest) {
     const validationResult = CreateDonationRequestSchema.safeParse(request);
     if (!validationResult.success) {
       return {
-        success: false,
+        success: false as const,
         error: new ValidationError("Invalid donation request", {
           details: validationResult.error.errors
             .map((e) => e.message)
@@ -65,152 +67,230 @@ export class CreateDonationUseCase {
       };
     }
 
-    try {
-      // Value Objects 생성
-      const amount = new DonationAmount(request.amount);
-      const description = new DonationDescription(request.description);
+    return { success: true as const, data: validationResult.data };
+  }
 
-      // 기부 메타데이터 구성
-      const metadata: DonationMetadata = {
-        isAnonymous: request.isAnonymous,
-        message: request.message,
-        dedicatedTo: request.dedicatedTo,
-        taxDeductible: request.taxDeductible,
-        receiptRequired: request.receiptRequired,
-      };
+  private buildMetadata(request: CreateDonationRequest): DonationMetadata {
+    return {
+      isAnonymous: request.isAnonymous,
+      message: request.message,
+      dedicatedTo: request.dedicatedTo,
+      taxDeductible: request.taxDeductible,
+      receiptRequired: request.receiptRequired,
+    };
+  }
 
-      // 예약 날짜 처리
-      const scheduledAt = request.scheduledAt
-        ? new Date(request.scheduledAt)
-        : undefined;
+  private getScheduledAt(request: CreateDonationRequest) {
+    return request.scheduledAt ? new Date(request.scheduledAt) : undefined;
+  }
 
-      // 기부 타입별 엔티티 생성
-      let donation: Donation;
-      let target: Institute | OpinionLeader | undefined;
+  private async createDonationByType(
+    donorId: UserId,
+    request: CreateDonationRequest,
+    amount: DonationAmount,
+    description: DonationDescription,
+    metadata: DonationMetadata,
+    scheduledAt: Date | undefined
+  ): Promise<
+    Result<
+      { donation: Donation; target?: Institute | OpinionLeader },
+      ValidationError | Error
+    >
+  > {
+    if (request.type === DonationType.DIRECT) {
+      const donation = await this.createDirectDonation(
+        donorId,
+        amount,
+        request.category,
+        description,
+        request.frequency,
+        metadata,
+        request,
+        scheduledAt
+      );
+      return { success: true, data: { donation } };
+    }
 
-      switch (request.type) {
-        case DonationType.DIRECT:
-          donation = await this.createDirectDonation(
-            donorId,
-            amount,
-            request.category,
-            description,
-            request.frequency,
-            metadata,
-            request,
-            scheduledAt
-          );
-          break;
-
-        case DonationType.INSTITUTE:
-          const instituteResult = await this.createInstituteDonation(
-            donorId,
-            amount,
-            request.category,
-            description,
-            request.frequency,
-            metadata,
-            request.instituteId!,
-            scheduledAt
-          );
-
-          if (!instituteResult.success) {
-            return {
-              success: false,
-              error: isFailure(instituteResult)
-                ? instituteResult.error
-                : new Error("Unknown error"),
-            };
-          }
-
-          donation = instituteResult.data.donation;
-          target = instituteResult.data.target;
-          break;
-
-        case DonationType.OPINION_LEADER:
-          const leaderResult = await this.createOpinionLeaderSupport(
-            donorId,
-            amount,
-            request.category,
-            description,
-            request.frequency,
-            metadata,
-            request.opinionLeaderId!,
-            scheduledAt
-          );
-
-          if (!leaderResult.success) {
-            return {
-              success: false,
-              error: isFailure(leaderResult)
-                ? leaderResult.error
-                : new Error("Unknown error"),
-            };
-          }
-
-          donation = leaderResult.data.donation;
-          target = leaderResult.data.target;
-          break;
-
-        default:
-          return {
-            success: false,
-            error: new ValidationError("Invalid donation type", {
-              donationType: request.type,
-            }),
-          };
+    if (request.type === DonationType.INSTITUTE) {
+      if (!request.instituteId) {
+        return this.fail("Invalid donation request", {
+          requiredFields: ["instituteId"],
+        });
       }
 
-      // 기부자 기부 내역 조회
-      const donorHistoryResult =
-        await this.donationRepository.findByDonorId(donorId);
-      if (!donorHistoryResult.success) {
+      const instituteResult = await this.createInstituteDonation(
+        donorId,
+        amount,
+        request.category,
+        description,
+        request.frequency,
+        metadata,
+        request.instituteId,
+        scheduledAt
+      );
+
+      if (!instituteResult.success) {
         return {
           success: false,
-          error: isFailure(donorHistoryResult)
-            ? donorHistoryResult.error
-            : new Error("Unknown error"),
-        };
-      }
-
-      const donorHistory = donorHistoryResult.data.items;
-
-      // 기부 적격성 검증
-      if (target) {
-        const eligibilityResult =
-          this.donationDomainService.validateDonationEligibility(
-            donorId,
-            donation,
-            donorBalance,
-            donorHistory,
-            target
-          );
-
-        if (!eligibilityResult.isEligible) {
-          return {
-            success: false,
-            error: new ValidationError("Donation eligibility failed", {
-              reasons: eligibilityResult.reasons,
-            }),
-          };
-        }
-      }
-
-      // 기부 저장
-      const saveResult = await this.donationRepository.save(donation);
-      if (!saveResult.success) {
-        return {
-          success: false,
-          error: isFailure(saveResult)
-            ? saveResult.error
+          error: isFailure(instituteResult)
+            ? instituteResult.error
             : new Error("Unknown error"),
         };
       }
 
       return {
         success: true,
-        data: donation,
+        data: {
+          donation: instituteResult.data.donation,
+          target: instituteResult.data.target,
+        },
       };
+    }
+
+    if (request.type === DonationType.OPINION_LEADER) {
+      if (!request.opinionLeaderId) {
+        return this.fail("Invalid donation request", {
+          requiredFields: ["opinionLeaderId"],
+        });
+      }
+
+      const leaderResult = await this.createOpinionLeaderSupport(
+        donorId,
+        amount,
+        request.category,
+        description,
+        request.frequency,
+        metadata,
+        request.opinionLeaderId,
+        scheduledAt
+      );
+
+      if (!leaderResult.success) {
+        return {
+          success: false,
+          error: isFailure(leaderResult)
+            ? leaderResult.error
+            : new Error("Unknown error"),
+        };
+      }
+
+      return {
+        success: true,
+        data: {
+          donation: leaderResult.data.donation,
+          target: leaderResult.data.target,
+        },
+      };
+    }
+
+    return {
+      success: false,
+      error: new ValidationError("Invalid donation type", {
+        donationType: request.type,
+      }),
+    };
+  }
+
+  private async fetchDonorHistory(donorId: UserId) {
+    const donorHistoryResult = await this.donationRepository.findByDonorId(
+      donorId
+    );
+    if (!donorHistoryResult.success) {
+      return {
+        success: false as const,
+        error: isFailure(donorHistoryResult)
+          ? donorHistoryResult.error
+          : new Error("Unknown error"),
+      };
+    }
+
+    return { success: true as const, data: donorHistoryResult.data.items };
+  }
+
+  private validateEligibilityIfTargetProvided(
+    donorId: UserId,
+    donation: Donation,
+    donorBalance: number,
+    donorHistory: Donation[],
+    target: Institute | OpinionLeader | undefined
+  ) {
+    if (!target) return { success: true as const, data: undefined };
+
+    const eligibilityResult =
+      this.donationDomainService.validateDonationEligibility(
+        donorId,
+        donation,
+        donorBalance,
+        donorHistory,
+        target
+      );
+
+    if (!eligibilityResult.isEligible) {
+      return {
+        success: false as const,
+        error: new ValidationError("Donation eligibility failed", {
+          reasons: eligibilityResult.reasons,
+        }),
+      };
+    }
+
+    return { success: true as const, data: undefined };
+  }
+
+  private async saveDonation(donation: Donation) {
+    const saveResult = await this.donationRepository.save(donation);
+    if (!saveResult.success) {
+      return {
+        success: false as const,
+        error: isFailure(saveResult) ? saveResult.error : new Error("Unknown error"),
+      };
+    }
+
+    return { success: true as const, data: donation };
+  }
+
+  async execute(
+    donorId: UserId,
+    request: CreateDonationRequest,
+    donorBalance: number
+  ): Promise<Result<Donation>> {
+    const parsedResult = this.parseRequest(request);
+    if (!parsedResult.success) return parsedResult;
+
+    const parsedRequest = parsedResult.data;
+
+    try {
+      const amount = new DonationAmount(parsedRequest.amount);
+      const description = new DonationDescription(parsedRequest.description);
+      const metadata = this.buildMetadata(parsedRequest);
+      const scheduledAt = this.getScheduledAt(parsedRequest);
+
+      const createResult = await this.createDonationByType(
+        donorId,
+        parsedRequest,
+        amount,
+        description,
+        metadata,
+        scheduledAt
+      );
+      if (!createResult.success) return createResult;
+      const { donation, target } = createResult.data;
+
+      const historyResult = await this.fetchDonorHistory(donorId);
+      if (!historyResult.success) return historyResult;
+
+      const eligibilityResult = this.validateEligibilityIfTargetProvided(
+        donorId,
+        donation,
+        donorBalance,
+        historyResult.data,
+        target
+      );
+      if (!eligibilityResult.success) {
+        return { success: false, error: eligibilityResult.error };
+      }
+
+      return this.saveDonation(donation);
     } catch (error) {
       return {
         success: false,
@@ -228,7 +308,7 @@ export class CreateDonationUseCase {
     frequency: DonationFrequency,
     metadata: DonationMetadata,
     request: CreateDonationRequest,
-    scheduledAt?: Date
+    _scheduledAt?: Date
   ): Promise<Donation> {
     // 수혜자 정보 검증
     if (!request.beneficiaryName || !request.beneficiaryDescription) {
@@ -238,7 +318,7 @@ export class CreateDonationUseCase {
       );
     }
 
-    const beneficiaryInfo = new BeneficiaryInfo(
+    const _beneficiaryInfo = new BeneficiaryInfo(
       request.beneficiaryName,
       request.beneficiaryDescription,
       request.beneficiaryContact
@@ -269,7 +349,7 @@ export class CreateDonationUseCase {
     frequency: DonationFrequency,
     metadata: DonationMetadata,
     instituteId: string,
-    scheduledAt?: Date
+    _scheduledAt?: Date
   ): Promise<Result<{ donation: Donation; target: Institute }>> {
     // 기관 존재 및 상태 확인
     const instituteResult = await this.instituteRepository.findById(
@@ -336,7 +416,7 @@ export class CreateDonationUseCase {
     frequency: DonationFrequency,
     metadata: DonationMetadata,
     opinionLeaderId: string,
-    scheduledAt?: Date
+    _scheduledAt?: Date
   ): Promise<Result<{ donation: Donation; target: OpinionLeader }>> {
     // 오피니언 리더 존재 및 상태 확인
     const leaderResult = await this.opinionLeaderRepository.findById(

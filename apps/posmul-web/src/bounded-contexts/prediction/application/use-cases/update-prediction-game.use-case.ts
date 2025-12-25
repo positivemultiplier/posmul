@@ -23,6 +23,15 @@ import {
   publishEvent,
 } from "../../../../shared/events/domain-events";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
+import type { PredictionGame } from "../../domain/entities/prediction-game.aggregate";
+
+type UpdateValueRecord = Record<string, unknown>;
+
+interface UpdateChangeSet {
+  readonly previousValues: UpdateValueRecord;
+  readonly newValues: UpdateValueRecord;
+  readonly updatedFields: string[];
+}
 
 /**
  * 예측 게임 업데이트 이벤트
@@ -32,8 +41,8 @@ class PredictionGameUpdatedEvent extends BaseDomainEvent {
     gameId: PredictionGameId,
     updatedBy: UserId,
     updateFields: string[],
-    previousValues: Record<string, any>,
-    newValues: Record<string, any>
+    previousValues: UpdateValueRecord,
+    newValues: UpdateValueRecord
   ) {
     super("PREDICTION_GAME_UPDATED", gameId, {
       updatedBy,
@@ -64,7 +73,7 @@ export interface UpdatePredictionGameRequest {
       text: string;
       description?: string;
     }>;
-    readonly metadata?: Record<string, any>;
+    readonly metadata?: Record<string, unknown>;
   };
   readonly reason?: string;
 }
@@ -148,183 +157,22 @@ export class UpdatePredictionGameUseCase {
       }
 
       // 5. 업데이트 적용 및 이전 값 저장
-      const previousValues: Record<string, any> = {};
-      const newValues: Record<string, any> = {};
-      const updatedFields: string[] = [];
+      const changes: UpdateChangeSet = {
+        previousValues: {},
+        newValues: {},
+        updatedFields: [],
+      };
 
-      // 제목 업데이트
-      if (request.updates.title && request.updates.title !== game.title) {
-        previousValues.title = game.title;
-        newValues.title = request.updates.title;
-        updatedFields.push("title");
-
-        const updateResult = game.updateTitle(request.updates.title);
-        if (isFailure(updateResult)) {
-          return {
-            success: false,
-            error: new UseCaseError("Failed to update game title"),
-          };
-        }
-      }
-
-      // 설명 업데이트
-      if (
-        request.updates.description !== undefined &&
-        request.updates.description !== game.description
-      ) {
-        previousValues.description = game.description;
-        newValues.description = request.updates.description;
-        updatedFields.push("description");
-
-        const updateResult = game.updateDescription(
-          request.updates.description
-        );
-        if (isFailure(updateResult)) {
-          return {
-            success: false,
-            error: new UseCaseError("Failed to update game description"),
-          };
-        }
-      }
-
-      // 종료시간 업데이트 (생성된 상태에서만 가능)
-      if (request.updates.endTime && currentStatus.isCreated()) {
-        previousValues.endTime = game.endTime;
-        newValues.endTime = request.updates.endTime;
-        updatedFields.push("endTime");
-
-        const updateResult = game.updateEndTime(request.updates.endTime);
-        if (isFailure(updateResult)) {
-          return {
-            success: false,
-            error: new UseCaseError("Failed to update game end time"),
-          };
-        }
-      }
-
-      // 정산시간 업데이트 (생성된 상태에서만 가능)
-      if (request.updates.settlementTime && currentStatus.isCreated()) {
-        previousValues.settlementTime = game.settlementTime;
-        newValues.settlementTime = request.updates.settlementTime;
-        updatedFields.push("settlementTime");
-
-        const updateResult = game.updateSettlementTime(
-          request.updates.settlementTime
-        );
-        if (isFailure(updateResult)) {
-          return {
-            success: false,
-            error: new UseCaseError("Failed to update game settlement time"),
-          };
-        }
-      }
-
-      // 옵션 업데이트 (생성된 상태에서만 가능, 참여자가 없을 때만)
-      if (request.updates.options && currentStatus.isCreated()) {
-        const gameStats = game.getStatistics();
-        if (gameStats.totalParticipants === 0) {
-          previousValues.options = game.options;
-          newValues.options = request.updates.options;
-          updatedFields.push("options");
-
-          // 옵션 업데이트는 간소화된 형태로 처리
-          try {
-            // PredictionGame에 updateOptions 메서드가 없으므로 간소화
-            updatedFields.push("options");
-          } catch (error) {
-            return {
-              success: false,
-              error: new UseCaseError("Failed to update game options"),
-            };
-          }
-        } else {
-          return {
-            success: false,
-            error: new UseCaseError(
-              "Cannot update options after participants joined"
-            ),
-          };
-        }
-      }
-
-      // 메타데이터 업데이트 (간소화)
-      if (request.updates.metadata) {
-        previousValues.metadata = {};
-        newValues.metadata = request.updates.metadata;
-        updatedFields.push("metadata");
-
-        // PredictionGame에 updateMetadata 메서드가 없으므로 간소화
-        try {
-          updatedFields.push("metadata");
-        } catch (error) {
-          return {
-            success: false,
-            error: new UseCaseError("Failed to update game metadata"),
-          };
-        }
-      }
-
-      // minimumStake 업데이트 (생성된 상태에서만 가능)
-      if (
-        request.updates.minimumStake !== undefined &&
-        currentStatus.isCreated()
-      ) {
-        previousValues.minimumStake = game.minimumStake;
-        newValues.minimumStake = request.updates.minimumStake;
-        updatedFields.push("minimumStake");
-
-        // 간소화된 업데이트 (PredictionGame 엔티티의 메서드가 있다고 가정)
-        try {
-          // 실제 구현에서는 game.updateMinimumStake(request.updates.minimumStake) 형태
-          updatedFields.push("minimumStake");
-        } catch (error) {
-          return {
-            success: false,
-            error: new UseCaseError("Failed to update minimum stake"),
-          };
-        }
-      }
-
-      // maximumStake 업데이트 (생성된 상태에서만 가능)
-      if (
-        request.updates.maximumStake !== undefined &&
-        currentStatus.isCreated()
-      ) {
-        previousValues.maximumStake = game.maximumStake;
-        newValues.maximumStake = request.updates.maximumStake;
-        updatedFields.push("maximumStake");
-
-        try {
-          updatedFields.push("maximumStake");
-        } catch (error) {
-          return {
-            success: false,
-            error: new UseCaseError("Failed to update maximum stake"),
-          };
-        }
-      }
-
-      // maxParticipants 업데이트 (생성된 상태에서만 가능)
-      if (
-        request.updates.maxParticipants !== undefined &&
-        currentStatus.isCreated()
-      ) {
-        previousValues.maxParticipants = game.maxParticipants;
-        newValues.maxParticipants = request.updates.maxParticipants;
-        updatedFields.push("maxParticipants");
-
-        try {
-          updatedFields.push("maxParticipants");
-        } catch (error) {
-          return {
-            success: false,
-            error: new UseCaseError("Failed to update max participants"),
-          };
-        }
+      const applyUpdatesResult = this.applyUpdates(game, request, changes);
+      if (isFailure(applyUpdatesResult)) {
+        return {
+          success: false,
+          error: applyUpdatesResult.error,
+        };
       }
 
       // 6. 업데이트가 있는지 확인
-      if (updatedFields.length === 0) {
+      if (changes.updatedFields.length === 0) {
         return {
           success: false,
           error: new UseCaseError("No valid updates provided"),
@@ -345,9 +193,9 @@ export class UpdatePredictionGameUseCase {
         new PredictionGameUpdatedEvent(
           request.gameId,
           request.updatedBy,
-          updatedFields,
-          previousValues,
-          newValues
+          changes.updatedFields,
+          changes.previousValues,
+          changes.newValues
         )
       );
 
@@ -357,17 +205,18 @@ export class UpdatePredictionGameUseCase {
         data: {
           success: true,
           gameId: request.gameId,
-          updatedFields,
+          updatedFields: changes.updatedFields,
           updatedAt: new Date(),
-          message: `Successfully updated ${updatedFields.join(", ")}`,
+          message: `Successfully updated ${changes.updatedFields.join(", ")}`,
         },
       };
     } catch (error) {
+      const originalMessage = error instanceof Error ? error.message : "Unknown error";
       return {
         success: false,
         error: new UseCaseError(
           "Unexpected error in UpdatePredictionGameUseCase",
-          { originalError: (error as any)?.message || "Unknown error" }
+          { originalError: originalMessage }
         ),
       };
     }
@@ -377,6 +226,29 @@ export class UpdatePredictionGameUseCase {
    * 요청 검증
    */
   private validateRequest(
+    request: UpdatePredictionGameRequest
+  ): Result<void, UseCaseError> {
+    const validators: Array<
+      (req: UpdatePredictionGameRequest) => Result<void, UseCaseError>
+    > = [
+      this.validateRequiredFields.bind(this),
+      this.validateTitle.bind(this),
+      this.validateDescription.bind(this),
+      this.validateTimes.bind(this),
+      this.validateOptions.bind(this),
+    ];
+
+    for (const validator of validators) {
+      const result = validator(request);
+      if (isFailure(result)) {
+        return result;
+      }
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  private validateRequiredFields(
     request: UpdatePredictionGameRequest
   ): Result<void, UseCaseError> {
     if (!request.gameId) {
@@ -400,92 +272,339 @@ export class UpdatePredictionGameUseCase {
       };
     }
 
-    // 제목 검증
-    if (request.updates.title !== undefined) {
-      if (
-        typeof request.updates.title !== "string" ||
-        request.updates.title.trim().length === 0
-      ) {
-        return {
-          success: false,
-          error: new UseCaseError("Title must be a non-empty string"),
-        };
-      }
-      if (request.updates.title.length > 200) {
-        return {
-          success: false,
-          error: new UseCaseError("Title must be 200 characters or less"),
-        };
-      }
+    return { success: true, data: undefined };
+  }
+
+  private validateTitle(
+    request: UpdatePredictionGameRequest
+  ): Result<void, UseCaseError> {
+    const { title } = request.updates;
+    if (title === undefined) {
+      return { success: true, data: undefined };
     }
 
-    // 설명 검증
-    if (request.updates.description !== undefined) {
-      if (typeof request.updates.description !== "string") {
-        return {
-          success: false,
-          error: new UseCaseError("Description must be a string"),
-        };
-      }
-      if (request.updates.description.length > 2000) {
-        return {
-          success: false,
-          error: new UseCaseError(
-            "Description must be 2000 characters or less"
-          ),
-        };
-      }
+    if (typeof title !== "string" || title.trim().length === 0) {
+      return {
+        success: false,
+        error: new UseCaseError("Title must be a non-empty string"),
+      };
     }
 
-    // 시간 검증
-    if (request.updates.endTime && !(request.updates.endTime instanceof Date)) {
+    if (title.length > 200) {
+      return {
+        success: false,
+        error: new UseCaseError("Title must be 200 characters or less"),
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  private validateDescription(
+    request: UpdatePredictionGameRequest
+  ): Result<void, UseCaseError> {
+    const { description } = request.updates;
+    if (description === undefined) {
+      return { success: true, data: undefined };
+    }
+
+    if (typeof description !== "string") {
+      return {
+        success: false,
+        error: new UseCaseError("Description must be a string"),
+      };
+    }
+
+    if (description.length > 2000) {
+      return {
+        success: false,
+        error: new UseCaseError("Description must be 2000 characters or less"),
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  private validateTimes(
+    request: UpdatePredictionGameRequest
+  ): Result<void, UseCaseError> {
+    const { endTime, settlementTime } = request.updates;
+
+    if (endTime && !(endTime instanceof Date)) {
       return {
         success: false,
         error: new UseCaseError("End time must be a valid Date"),
       };
     }
 
-    if (
-      request.updates.settlementTime &&
-      !(request.updates.settlementTime instanceof Date)
-    ) {
+    if (settlementTime && !(settlementTime instanceof Date)) {
       return {
         success: false,
         error: new UseCaseError("Settlement time must be a valid Date"),
       };
     }
 
-    // 시간 순서 검증
-    if (request.updates.endTime && request.updates.settlementTime) {
-      if (request.updates.endTime >= request.updates.settlementTime) {
+    if (endTime && settlementTime && endTime >= settlementTime) {
+      return {
+        success: false,
+        error: new UseCaseError("Settlement time must be after end time"),
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  private validateOptions(
+    request: UpdatePredictionGameRequest
+  ): Result<void, UseCaseError> {
+    const { options } = request.updates;
+    if (!options) {
+      return { success: true, data: undefined };
+    }
+
+    if (!Array.isArray(options) || options.length < 2) {
+      return {
+        success: false,
+        error: new UseCaseError("At least 2 options are required"),
+      };
+    }
+
+    for (const option of options) {
+      if (!option.id || !option.text) {
         return {
           success: false,
-          error: new UseCaseError("Settlement time must be after end time"),
+          error: new UseCaseError("Each option must have id and text"),
         };
       }
     }
 
-    // 옵션 검증
-    if (request.updates.options) {
-      if (
-        !Array.isArray(request.updates.options) ||
-        request.updates.options.length < 2
-      ) {
-        return {
-          success: false,
-          error: new UseCaseError("At least 2 options are required"),
-        };
-      }
+    return { success: true, data: undefined };
+  }
 
-      for (const option of request.updates.options) {
-        if (!option.id || !option.text) {
-          return {
-            success: false,
-            error: new UseCaseError("Each option must have id and text"),
-          };
-        }
+  private applyUpdates(
+    game: PredictionGame,
+    request: UpdatePredictionGameRequest,
+    changes: UpdateChangeSet
+  ): Result<void, UseCaseError> {
+    const currentStatus = game.status;
+
+    const isCreated = currentStatus.isCreated();
+    const handlers: Array<() => Result<void, UseCaseError>> = [
+      () => this.applyTitleUpdate(game, request, changes),
+      () => this.applyDescriptionUpdate(game, request, changes),
+      () => this.applyEndTimeUpdate(game, request, isCreated, changes),
+      () => this.applySettlementTimeUpdate(game, request, isCreated, changes),
+      () => this.applyOptionsUpdate(game, request, isCreated, changes),
+      () => this.applyMetadataUpdate(request, changes),
+      () => this.applyMinimumStakeUpdate(game, request, isCreated, changes),
+      () => this.applyMaximumStakeUpdate(game, request, isCreated, changes),
+      () => this.applyMaxParticipantsUpdate(game, request, isCreated, changes),
+    ];
+
+    for (const handler of handlers) {
+      const result = handler();
+      if (isFailure(result)) {
+        return result;
       }
     }
+
+    return { success: true, data: undefined };
+  }
+
+  private applyTitleUpdate(
+    game: PredictionGame,
+    request: UpdatePredictionGameRequest,
+    changes: UpdateChangeSet
+  ): Result<void, UseCaseError> {
+    const { title } = request.updates;
+    if (title === undefined || title === game.title) {
+      return { success: true, data: undefined };
+    }
+
+    changes.previousValues.title = game.title;
+    changes.newValues.title = title;
+    changes.updatedFields.push("title");
+
+    const updateResult = game.updateTitle(title);
+    if (isFailure(updateResult)) {
+      return {
+        success: false,
+        error: new UseCaseError("Failed to update game title"),
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  private applyDescriptionUpdate(
+    game: PredictionGame,
+    request: UpdatePredictionGameRequest,
+    changes: UpdateChangeSet
+  ): Result<void, UseCaseError> {
+    const { description } = request.updates;
+    if (description === undefined || description === game.description) {
+      return { success: true, data: undefined };
+    }
+
+    changes.previousValues.description = game.description;
+    changes.newValues.description = description;
+    changes.updatedFields.push("description");
+
+    const updateResult = game.updateDescription(description);
+    if (isFailure(updateResult)) {
+      return {
+        success: false,
+        error: new UseCaseError("Failed to update game description"),
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  private applyEndTimeUpdate(
+    game: PredictionGame,
+    request: UpdatePredictionGameRequest,
+    isCreated: boolean,
+    changes: UpdateChangeSet
+  ): Result<void, UseCaseError> {
+    const { endTime } = request.updates;
+    if (!endTime || !isCreated) {
+      return { success: true, data: undefined };
+    }
+
+    changes.previousValues.endTime = game.endTime;
+    changes.newValues.endTime = endTime;
+    changes.updatedFields.push("endTime");
+
+    const updateResult = game.updateEndTime(endTime);
+    if (isFailure(updateResult)) {
+      return {
+        success: false,
+        error: new UseCaseError("Failed to update game end time"),
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  private applySettlementTimeUpdate(
+    game: PredictionGame,
+    request: UpdatePredictionGameRequest,
+    isCreated: boolean,
+    changes: UpdateChangeSet
+  ): Result<void, UseCaseError> {
+    const { settlementTime } = request.updates;
+    if (!settlementTime || !isCreated) {
+      return { success: true, data: undefined };
+    }
+
+    changes.previousValues.settlementTime = game.settlementTime;
+    changes.newValues.settlementTime = settlementTime;
+    changes.updatedFields.push("settlementTime");
+
+    const updateResult = game.updateSettlementTime(settlementTime);
+    if (isFailure(updateResult)) {
+      return {
+        success: false,
+        error: new UseCaseError("Failed to update game settlement time"),
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  private applyOptionsUpdate(
+    game: PredictionGame,
+    request: UpdatePredictionGameRequest,
+    isCreated: boolean,
+    changes: UpdateChangeSet
+  ): Result<void, UseCaseError> {
+    const { options } = request.updates;
+    if (!options || !isCreated) {
+      return { success: true, data: undefined };
+    }
+
+    const gameStats = game.getStatistics();
+    if (gameStats.totalParticipants !== 0) {
+      return {
+        success: false,
+        error: new UseCaseError("Cannot update options after participants joined"),
+      };
+    }
+
+    changes.previousValues.options = game.options;
+    changes.newValues.options = options;
+    changes.updatedFields.push("options");
+
+    return { success: true, data: undefined };
+  }
+
+  private applyMetadataUpdate(
+    request: UpdatePredictionGameRequest,
+    changes: UpdateChangeSet
+  ): Result<void, UseCaseError> {
+    const { metadata } = request.updates;
+    if (!metadata) {
+      return { success: true, data: undefined };
+    }
+
+    changes.previousValues.metadata = {};
+    changes.newValues.metadata = metadata;
+    changes.updatedFields.push("metadata");
+
+    return { success: true, data: undefined };
+  }
+
+  private applyMinimumStakeUpdate(
+    game: PredictionGame,
+    request: UpdatePredictionGameRequest,
+    isCreated: boolean,
+    changes: UpdateChangeSet
+  ): Result<void, UseCaseError> {
+    const { minimumStake } = request.updates;
+    if (minimumStake === undefined || !isCreated) {
+      return { success: true, data: undefined };
+    }
+
+    changes.previousValues.minimumStake = game.minimumStake;
+    changes.newValues.minimumStake = minimumStake;
+    changes.updatedFields.push("minimumStake");
+
+    return { success: true, data: undefined };
+  }
+
+  private applyMaximumStakeUpdate(
+    game: PredictionGame,
+    request: UpdatePredictionGameRequest,
+    isCreated: boolean,
+    changes: UpdateChangeSet
+  ): Result<void, UseCaseError> {
+    const { maximumStake } = request.updates;
+    if (maximumStake === undefined || !isCreated) {
+      return { success: true, data: undefined };
+    }
+
+    changes.previousValues.maximumStake = game.maximumStake;
+    changes.newValues.maximumStake = maximumStake;
+    changes.updatedFields.push("maximumStake");
+
+    return { success: true, data: undefined };
+  }
+
+  private applyMaxParticipantsUpdate(
+    game: PredictionGame,
+    request: UpdatePredictionGameRequest,
+    isCreated: boolean,
+    changes: UpdateChangeSet
+  ): Result<void, UseCaseError> {
+    const { maxParticipants } = request.updates;
+    if (maxParticipants === undefined || !isCreated) {
+      return { success: true, data: undefined };
+    }
+
+    changes.previousValues.maxParticipants = game.maxParticipants;
+    changes.newValues.maxParticipants = maxParticipants;
+    changes.updatedFields.push("maxParticipants");
 
     return { success: true, data: undefined };
   }

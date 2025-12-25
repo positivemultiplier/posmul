@@ -167,7 +167,7 @@ export class WatchAdUseCase {
 
       const pmpResult = await this.awardPmp(view.userId, completedView.pmpEarned, pmpDescription);
       if (pmpResult.success === false) {
-        console.error('PMP 지급 실패:', pmpResult.error);
+        void pmpResult;
         // PMP 지급 실패해도 시청 완료는 처리됨
       }
 

@@ -681,7 +681,8 @@ export class ViewingDuration {
   toString(): string {
     const minutes = Math.floor(this.totalSeconds / 60);
     const seconds = this.totalSeconds % 60;
-    return "Invalid state";
+    const paddedSeconds = seconds.toString().padStart(2, "0");
+    return `${minutes}:${paddedSeconds} (${this.completionPercentage}%)`;
   }
 }
 

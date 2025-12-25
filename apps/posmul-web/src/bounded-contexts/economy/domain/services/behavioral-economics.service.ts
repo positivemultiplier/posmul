@@ -104,6 +104,9 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
     const pmpMarket = Number(marketValue.pmp);
     const pmcMarket = Number(marketValue.pmc);
 
+    void pmcHolding;
+    void pmcMarket;
+
     // Endowment Effect로 인한 과대평가 (일반적으로 1.5-3배)
     const endowmentMultiplier = 2.0;
 
@@ -615,7 +618,6 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
       timestamp: Date;
     }>
   ): { bestTimeSlot?: string; successRate: number } {
-    const timeSlots = ["morning", "afternoon", "evening"];
     const timeAnalysis = new Map<string, { success: number; total: number }>();
 
     userHistory.forEach((entry) => {
@@ -664,7 +666,6 @@ export class BehavioralEconomicsEngine implements IBehavioralEconomicsEngine {
       q3: amounts[Math.floor(amounts.length * 0.75)],
     };
 
-    const ranges = ["low", "medium", "high"];
     const rangeAnalysis = new Map<string, { success: number; total: number }>();
 
     userHistory.forEach((entry) => {

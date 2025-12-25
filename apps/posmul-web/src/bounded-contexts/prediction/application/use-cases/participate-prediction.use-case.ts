@@ -22,6 +22,7 @@ import {
 import { createClient } from "../../../../lib/supabase/server";
 import { failure, success } from "../../../auth/domain/helpers/result-helpers";
 import { Prediction } from "../../domain/entities/prediction.entity";
+import type { PredictionGame } from "../../domain/entities/prediction-game.aggregate";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
 import { PredictionEconomicService } from "../../domain/services/prediction-economic.service";
 
@@ -52,142 +53,144 @@ export class ParticipatePredictionUseCase {
     private readonly predictionGameRepository: IPredictionGameRepository,
     private readonly predictionEconomicService: PredictionEconomicService
   ) {}
+
+  private fail(message: string, details?: Record<string, unknown>) {
+    return failure(new UseCaseError(message, details));
+  }
+
+  private async ensureEligibility(
+    request: ParticipatePredictionRequest
+  ): Promise<Result<void, UseCaseError>> {
+    const eligibilityResult =
+      await this.predictionEconomicService.checkPmpParticipationEligibility(
+        request.userId,
+        request.stakeAmount
+      );
+
+    if (!eligibilityResult.success) {
+      return this.fail("Failed to check PmpAmount participation eligibility", {
+        message: isFailure(eligibilityResult)
+          ? "eligibility check failed"
+          : "unknown error",
+      });
+    }
+
+    if (!eligibilityResult.data.canParticipate) {
+      return {
+        success: false,
+        error: new UseCaseError(
+          `Insufficient PmpAmount balance. Required: ${eligibilityResult.data.requiredAmount}`
+        ),
+      };
+    }
+
+    return { success: true, data: undefined };
+  }
+
+  private async getGame(
+    gameId: PredictionGameId
+  ): Promise<Result<PredictionGame, UseCaseError>> {
+    const gameResult = await this.predictionGameRepository.findById(gameId);
+
+    if (!gameResult.success) {
+      return {
+        success: false,
+        error: new UseCaseError("Failed to retrieve prediction game"),
+      };
+    }
+
+    if (!gameResult.data) {
+      return {
+        success: false,
+        error: new UseCaseError("Prediction game not found"),
+      };
+    }
+
+    return { success: true, data: gameResult.data };
+  }
+
+  private createPrediction(
+    request: ParticipatePredictionRequest
+  ): Result<Prediction, UseCaseError> {
+    const predictionResult = Prediction.create({
+      userId: request.userId,
+      gameId: request.gameId,
+      selectedOptionId: request.selectedOptionId,
+      stake: request.stakeAmount,
+      confidence: request.confidence || 0.5,
+      reasoning: request.reasoning,
+    });
+
+    if (!predictionResult.success) {
+      return this.fail("Failed to create prediction entity", {
+        message: isFailure(predictionResult)
+          ? "prediction creation failed"
+          : "unknown error",
+      });
+    }
+
+    return { success: true, data: predictionResult.data };
+  }
+
+  private addPredictionToGame(
+    game: PredictionGame,
+    prediction: Prediction
+  ): Result<void, UseCaseError> {
+    const participationResult = game.addPrediction(prediction);
+    if (!participationResult.success) {
+      return this.fail("Failed to add prediction to game", {
+        message: isFailure(participationResult)
+          ? "participation failed"
+          : "unknown error",
+      });
+    }
+    return { success: true, data: undefined };
+  }
+
+  private async savePredictionOnly(
+    game: PredictionGame
+  ): Promise<Result<void, UseCaseError>> {
+    const saveResult = await this.predictionGameRepository.save(game, {
+      skipGameUpdate: true,
+    });
+    if (!saveResult.success) {
+      return this.fail("Failed to save prediction game state", {
+        message: isFailure(saveResult) ? "save failed" : "unknown error",
+      });
+    }
+    return { success: true, data: undefined };
+  }
+
   async execute(
     request: ParticipatePredictionRequest
   ): Promise<Result<ParticipatePredictionResponse, UseCaseError>> {
     try {
-      console.log("[UseCase] Starting participation with request:", JSON.stringify({
-        userId: request.userId,
-        gameId: request.gameId,
-        selectedOptionId: request.selectedOptionId,
-        stakeAmount: unwrapPmpAmount(request.stakeAmount),
-        confidence: request.confidence,
-      }));
+      const eligibilityResult = await this.ensureEligibility(request);
+      if (!eligibilityResult.success) return eligibilityResult;
 
-      // 1. PmpAmount 참여 자격 및 위험 평가
-      console.log("[UseCase] Step 1: Checking eligibility...");
-      const eligibilityResult =
-        await this.predictionEconomicService.checkPmpParticipationEligibility(
-          request.userId,
-          request.stakeAmount
-        );
-      console.log("[UseCase] Eligibility result:", JSON.stringify(eligibilityResult));
-
-      if (!eligibilityResult.success) {
-        console.log("[UseCase] Eligibility check failed!");
-        return failure(
-          new UseCaseError(
-            "Failed to check PmpAmount participation eligibility",
-            {
-              message: isFailure(eligibilityResult)
-                ? "eligibility check failed"
-                : "unknown error",
-            }
-          )
-        );
-      }
-      if (!eligibilityResult.data.canParticipate) {
-        console.log("[UseCase] Cannot participate - insufficient balance");
-        return {
-          success: false,
-          error: new UseCaseError(
-            `Insufficient PmpAmount balance. Required: ${eligibilityResult.data.requiredAmount}`
-          ),
-        };
-      }
-
-      // 2. 예측 게임 조회
-      console.log("[UseCase] Step 2: Finding game by id:", request.gameId);
-      const gameResult = await this.predictionGameRepository.findById(
-        request.gameId
-      );
-      console.log(
-        "[UseCase] Game find result success:",
-        gameResult.success,
-        "hasData:",
-        gameResult.success ? !!gameResult.data : false
-      );
-      
-      if (!gameResult.success) {
-        console.log("[UseCase] Game retrieval failed!");
-        return {
-          success: false,
-          error: new UseCaseError("Failed to retrieve prediction game"),
-        };
-      }
-      if (!gameResult.data) {
-        console.log("[UseCase] Game not found!");
-        return {
-          success: false,
-          error: new UseCaseError("Prediction game not found"),
-        };
-      }
+      const gameResult = await this.getGame(request.gameId);
+      if (!gameResult.success) return gameResult;
       const predictionGame = gameResult.data;
-      console.log("[UseCase] Game found:", predictionGame.title);
 
-      // 3. 예측 엔티티 생성
-      console.log("[UseCase] Step 3: Creating prediction entity...");
-      const predictionResult = Prediction.create({
-        userId: request.userId,
-        gameId: request.gameId,
-        selectedOptionId: request.selectedOptionId,
-        stake: request.stakeAmount as any,
-        confidence: request.confidence || 0.5,
-      });
-      console.log("[UseCase] Prediction creation result:", predictionResult.success);
-
-      if (!predictionResult.success) {
-        console.log("[UseCase] Prediction creation failed!");
-        return failure(
-          new UseCaseError("Failed to create prediction entity", {
-            message: isFailure(predictionResult)
-              ? "prediction creation failed"
-              : "unknown error",
-          })
-        );
-      }
+      const predictionResult = this.createPrediction(request);
+      if (!predictionResult.success) return predictionResult;
       const prediction = predictionResult.data;
-      console.log("[UseCase] Prediction created with id:", prediction.id);
 
-      // 4. 예측 게임에 참여 처리
-      console.log("[UseCase] Step 4: Adding prediction to game...");
-      const participationResult = predictionGame.addPrediction(prediction);
-      console.log("[UseCase] Participation result:", participationResult.success);
+      const participationResult = this.addPredictionToGame(
+        predictionGame,
+        prediction
+      );
+      if (!participationResult.success) return participationResult;
 
-      if (!participationResult.success) {
-        console.log("[UseCase] Participation failed!");
-        return failure(
-          new UseCaseError("Failed to add prediction to game", {
-            message: isFailure(participationResult)
-              ? "participation failed"
-              : "unknown error",
-          })
-        );
-      }
-
-      // 5. 게임 상태 저장 (참여자는 게임 테이블 업데이트 권한이 없으므로 predictions만 저장)
-      console.log("[UseCase] Step 5: Saving game state...");
-      const saveResult =
-        await this.predictionGameRepository.save(predictionGame, { skipGameUpdate: true });
-      console.log("[UseCase] Save result:", saveResult.success);
-      
-      if (!saveResult.success) {
-        console.log("[UseCase] Save failed!", isFailure(saveResult) ? saveResult.error : "unknown error");
-        return failure(
-          new UseCaseError("Failed to save prediction game state", {
-            message: isFailure(saveResult) ? "save failed" : "unknown error",
-          })
-        );
-      }
+      const saveResult = await this.savePredictionOnly(predictionGame);
+      if (!saveResult.success) return saveResult;
 
       // 6. PMP 잔액 차감 - DB 트리거(process_prediction_payment)가 자동으로 처리
       // predictions 테이블 INSERT 시 트리거가 economy.pmp_pmc_accounts에서 차감하고 
       // economy.pmp_pmc_transactions에 거래 기록을 남김
-      console.log("[UseCase] Step 6: PMP deduction handled by DB trigger");
       const stakeValue = unwrapPmpAmount(request.stakeAmount);
 
       // 7. 경제 시스템에서 이벤트 발행 (차감은 DB 트리거에서 완료)
-      console.log("[UseCase] Step 7: Processing economic event...");
       const economicProcessResult =
         await this.predictionEconomicService.processParticipation(
           request.userId,
@@ -197,21 +200,17 @@ export class ParticipatePredictionUseCase {
           request.confidence,
           request.selectedOptionId
         );
-      console.log("[UseCase] Economic process result:", economicProcessResult.success);
 
       if (!economicProcessResult.success) {
         // NOTE: 이벤트 발행 실패는 로깅만 하고 진행 (MVP)
         // 실제 프로덕션에서는 재시도 큐 등 사용
-        console.log("[UseCase] Economic process failed (non-blocking)");
       }
 
       // 8. 응답 생성
-      console.log("[UseCase] Success! Returning prediction id:", prediction.id);
       return success({
         predictionId: prediction.id,
       });
     } catch (error) {
-      console.log("[UseCase] Caught exception:", error);
       const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,

@@ -95,8 +95,7 @@ export function useWaveCalculation({
                     spinSpeed: Math.max(0.1, 0.3 + progress * 1.2),
                     progressRatio: progress
                 });
-            } catch (error) {
-                console.error("Wave calculation error:", error);
+            } catch (_error) {
             }
         };
 

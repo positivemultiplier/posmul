@@ -1,7 +1,5 @@
 "use client";
 
-import { isFailure } from "@posmul/auth-economy-sdk";
-
 import React, { createContext, useContext, useEffect, useRef } from "react";
 
 import { useRealtimeConnection } from "../hooks/use-realtime-connection";
@@ -193,12 +191,6 @@ export function RealtimeProvider({
     reconnect: connect,
     disconnect,
   };
-
-  if (debug) {
-    console.log("[RealtimeProvider] Status:", connectionState.status);
-    console.log("[RealtimeProvider] Subscribed:", subscribedRef.current);
-    console.log("[RealtimeProvider] UserId:", userId);
-  }
 
   return (
     <RealtimeContext.Provider value={contextValue}>

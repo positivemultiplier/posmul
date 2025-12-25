@@ -387,6 +387,7 @@ export class ExecuteDonationUseCase {
     socialImpactScore: number,
     currentBalance: AccountBalance
   ): Promise<{ matchingBonus?: PmpAmount; taxIncentive?: number }> {
+    void currentBalance;
     const amount = request.amount as number;
 
     // 매칭 보너스 계산 (사회적 임팩트에 비례)

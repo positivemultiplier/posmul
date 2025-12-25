@@ -59,7 +59,6 @@ export async function createDirectDonation(formData: FormData) {
     // 1. 사용자 PmcAmount 잔액 확인
     // 2. 기부 기록 저장
     // 3. PmcAmount 차감 및 Money Wave 처리
-    console.log("Creating direct donation:", validatedData);
 
     return {
       success: true,
@@ -79,7 +78,6 @@ export async function createDirectDonation(formData: FormData) {
       };
     }
 
-    console.error("Failed to create direct donation:", error);
     return {
       success: false,
       message: "기부 처리에 실패했습니다. 다시 시도해주세요.",
@@ -102,7 +100,6 @@ export async function createInstituteDonation(formData: FormData) {
     const validatedData = instituteDonationSchema.parse(rawData);
 
     // TODO: MCP를 통한 처리
-    console.log("Creating institute donation:", validatedData);
 
     return {
       success: true,
@@ -122,7 +119,6 @@ export async function createInstituteDonation(formData: FormData) {
       };
     }
 
-    console.error("Failed to create institute donation:", error);
     return {
       success: false,
       message: "기관 기부 처리에 실패했습니다.",
@@ -145,7 +141,6 @@ export async function createOpinionLeaderDonation(formData: FormData) {
     const validatedData = opinionLeaderDonationSchema.parse(rawData);
 
     // TODO: MCP를 통한 처리
-    console.log("Creating opinion leader donation:", validatedData);
 
     return {
       success: true,
@@ -165,7 +160,6 @@ export async function createOpinionLeaderDonation(formData: FormData) {
       };
     }
 
-    console.error("Failed to create opinion leader donation:", error);
     return {
       success: false,
       message: "오피니언 리더 기부 처리에 실패했습니다.",

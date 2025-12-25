@@ -8,8 +8,6 @@ import {
   ValidationError,
 } from "@posmul/auth-economy-sdk";
 
-import { useEffect } from "react";
-
 import { useRouter } from "next/navigation";
 
 import { BaseErrorUI } from "../../shared/ui/components/feedback";
@@ -17,6 +15,111 @@ import { BaseErrorUI } from "../../shared/ui/components/feedback";
 interface DonationErrorProps {
   error: Error & { digest?: string };
   reset: () => void;
+}
+
+function tryEconomyError(message: string) {
+  const isEconomyRelated =
+    message.includes("insufficient") ||
+    message.includes("balance") ||
+    message.includes("pmc");
+
+  if (!isEconomyRelated) return null;
+
+  return new EconomyError(
+    "PmcAmount 포인트가 부족합니다. 예측 게임이나 투자로 PmcAmount를 획득하세요.",
+    {
+      code: "INSUFFICIENT_POINTS",
+      currentPoints: 0, // 실제 값은 서버에서 받아야 함
+      requiredPoints: 100, // 실제 값은 서버에서 받아야 함
+    }
+  );
+}
+
+function tryAuthError(message: string) {
+  const isAuthRelated =
+    message.includes("unauthorized") || message.includes("authentication");
+  if (!isAuthRelated) return null;
+
+  return new AuthError("기부 기능을 이용하려면 로그인이 필요합니다.");
+}
+
+function tryAmountValidationError(message: string) {
+  const isAmountRelated =
+    message.includes("amount") ||
+    message.includes("limit") ||
+    message.includes("minimum") ||
+    message.includes("maximum");
+
+  if (!isAmountRelated) return null;
+
+  return new ValidationError(
+    "기부 금액이 유효하지 않습니다. 최소/최대 기부 금액을 확인해주세요.",
+    { field: "donation_amount" }
+  );
+}
+
+function tryTargetValidationError(message: string) {
+  const isTargetRelated =
+    message.includes("recipient") ||
+    message.includes("target") ||
+    message.includes("invalid");
+
+  if (!isTargetRelated) return null;
+
+  return new ValidationError(
+    "기부 대상이 올바르지 않습니다. 기부 대상을 다시 확인해주세요.",
+    { field: "donation_target" }
+  );
+}
+
+function tryDonationClosedError(message: string) {
+  const isClosedRelated =
+    message.includes("closed") ||
+    message.includes("ended") ||
+    message.includes("deadline");
+
+  if (!isClosedRelated) return null;
+
+  return new BusinessLogicError(
+    "기부 모집이 종료되었습니다. 다른 진행 중인 기부에 참여해보세요.",
+    { code: "DONATION_CLOSED" }
+  );
+}
+
+function tryMoneyWaveError(message: string) {
+  const isMoneyWaveRelated =
+    message.includes("money wave") || message.includes("distribution");
+  if (!isMoneyWaveRelated) return null;
+
+  return new BusinessLogicError(
+    "머니 웨이브 시스템 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
+    { code: "MONEY_WAVE_ERROR" }
+  );
+}
+
+function tryNetworkError(message: string) {
+  const isNetworkRelated =
+    message.includes("network") || message.includes("connection");
+  if (!isNetworkRelated) return null;
+
+  return new NetworkError(
+    "네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인하고 다시 시도해주세요."
+  );
+}
+
+function enhanceDonationError(error: Error) {
+  const message = error.message.toLowerCase();
+
+  return (
+    tryEconomyError(message) ||
+    tryAuthError(message) ||
+    tryAmountValidationError(message) ||
+    tryTargetValidationError(message) ||
+    tryDonationClosedError(message) ||
+    tryMoneyWaveError(message) ||
+    tryNetworkError(message) ||
+    new BusinessLogicError(error.message || "기부 처리 중 오류가 발생했습니다.")
+  );
 }
 
 /**
@@ -28,91 +131,7 @@ export default function DonationError({ error, reset }: DonationErrorProps) {
   const router = useRouter();
 
   // 기부 특화 에러 변환
-  const enhancedError = (() => {
-    const message = error.message.toLowerCase();
-
-    // 기부 관련 특수 에러들 (PmcAmount 사용)
-    if (
-      message.includes("insufficient") ||
-      message.includes("balance") ||
-      message.includes("pmc")
-    ) {
-      return new EconomyError(
-        "PmcAmount 포인트가 부족합니다. 예측 게임이나 투자로 PmcAmount를 획득하세요.",
-        {
-          code: "INSUFFICIENT_POINTS",
-          currentPoints: 0, // 실제 값은 서버에서 받아야 함
-          requiredPoints: 100, // 실제 값은 서버에서 받아야 함
-        }
-      );
-    }
-
-    if (
-      message.includes("unauthorized") ||
-      message.includes("authentication")
-    ) {
-      return new AuthError("기부 기능을 이용하려면 로그인이 필요합니다.");
-    }
-
-    if (
-      message.includes("amount") ||
-      message.includes("limit") ||
-      message.includes("minimum") ||
-      message.includes("maximum")
-    ) {
-      return new ValidationError(
-        "기부 금액이 유효하지 않습니다. 최소/최대 기부 금액을 확인해주세요.",
-        { field: "donation_amount" }
-      );
-    }
-
-    if (
-      message.includes("recipient") ||
-      message.includes("target") ||
-      message.includes("invalid")
-    ) {
-      return new ValidationError(
-        "기부 대상이 올바르지 않습니다. 기부 대상을 다시 확인해주세요.",
-        { field: "donation_target" }
-      );
-    }
-
-    if (
-      message.includes("closed") ||
-      message.includes("ended") ||
-      message.includes("deadline")
-    ) {
-      return new BusinessLogicError(
-        "기부 모집이 종료되었습니다. 다른 진행 중인 기부에 참여해보세요.",
-        { code: "DONATION_CLOSED" }
-      );
-    }
-
-    if (message.includes("money wave") || message.includes("distribution")) {
-      return new BusinessLogicError(
-        "머니 웨이브 시스템 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.",
-        { code: "MONEY_WAVE_ERROR" }
-      );
-    }
-
-    if (message.includes("network") || message.includes("connection")) {
-      return new NetworkError(
-        "네트워크 연결에 문제가 있습니다. 인터넷 연결을 확인하고 다시 시도해주세요."
-      );
-    }
-
-    // 기본적으로 비즈니스 로직 에러로 처리
-    return new BusinessLogicError(
-      error.message || "기부 처리 중 오류가 발생했습니다."
-    );
-  })();
-
-  // 에러 로깅
-  useEffect(() => {
-    if (process.env.NODE_ENV === "development") {
-      console.error("Donation page error:", error);
-    }
-  }, [error]);
+  const enhancedError = enhanceDonationError(error);
 
   const handleGoHome = () => {
     router.push("/dashboard");

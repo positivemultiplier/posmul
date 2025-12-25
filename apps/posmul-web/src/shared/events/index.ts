@@ -96,12 +96,6 @@ export {
  * Domain Events System 초기화 헬퍼
  */
 export function initializeDomainEventSystem() {
-  console.log("[DomainEvents] Initializing Domain Event System...");
-
-  // Event handlers는 다른 곳에서 수동으로 등록
-  console.log("[DomainEvents] Event handlers should be registered manually");
-  console.log("[DomainEvents] Domain Event System initialized successfully");
-
   return {
     eventPublisher: "Available via import",
     registeredHandlers: 0,

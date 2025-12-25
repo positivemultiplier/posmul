@@ -8,6 +8,12 @@
 
 ---
 
+## Runtime Prereqs (KOSIS)
+
+- `KOSIS_API_KEY`: KOSIS OpenAPI 인증 키
+- `KOSIS_USER_STATS_ID_*`: 카테고리별 `userStatsId` (통계 조회가 `statisticsData.do` + `userStatsId` 기반)
+  - 예: `KOSIS_USER_STATS_ID_BIRTH`, `KOSIS_USER_STATS_ID_DEATH` 등
+
 ## Where It’s Used
 
 ### 1) Forum → Demographic Prediction Game 생성
@@ -39,11 +45,13 @@ flowchart TD
   UI[Forum UI / Hook
 useDemographicData] -->|GET /api/demographic-data| API[Next Route
 app/api/demographic-data]
-  API -->|KOSISClient.fetchMonthlyData| KOSIS[KOSIS Open API]
+  API -->|KOSISClient.fetchMonthlyData
+(statisticsData.do + userStatsId)| KOSIS[KOSIS Open API]
   KOSIS --> API
   API --> UI
 
-  ForumUC[VerifyPredictionResultUseCase] -->|KOSISClient.fetchMonthlyData| KOSIS
+  ForumUC[VerifyPredictionResultUseCase] -->|KOSISClient.fetchMonthlyData
+(statisticsData.do + userStatsId)| KOSIS
   ForumUC -->|predictionRepository.settle| PredRepo[Prediction Repository]
 ```
 
@@ -61,7 +69,7 @@ graph TD
   Forum[forum bounded-context] -->|imports| DemoInfra[demographic-data/infrastructure
 KOSISClient]
   Forum -->|uses VO| DemoDomain["demographic-data/domain
-(re-export VO)"]
+(owns VO)"]
 
   DemoInfra -->|MCP repositories| DB["(Postgres
 schema: demographic_data)"]
@@ -72,9 +80,10 @@ schema: demographic_data)"]
 
 ## Notes / Risks
 
-- 현재 `StatCategory`, `PeriodType` 등 인구통계 관련 Value Object가 forum 쪽 파일에서 정의되어 있고, demographic-data 도메인이 이를 재export 하는 구조입니다.
-  - 빠르게 기능을 붙이기에는 편하지만, bounded context 독립성 관점에서는 결합도가 생깁니다.
-- `/api/demographic-data`는 KOSIS API 키(`KOSIS_API_KEY`)가 없으면 동작하지 않습니다.
+- 현재 인구통계 관련 Value Object(`StatCategory`, `PeriodType`, `StatisticPeriod` 등)는 **demographic-data 도메인이 소유**하며, forum은 필요 시 이를 import 해서 사용합니다.
+  - (호환성 목적) 일부 forum 코드 경로에서 re-export가 남아 있을 수 있습니다.
+- `/api/demographic-data`는 `KOSIS_API_KEY`가 없으면 동작하지 않습니다.
+- 또한 통계 조회는 `userStatsId` 기반이므로, 카테고리별 `KOSIS_USER_STATS_ID_*`가 없으면 500(`missing_kosis_user_stats_id`)로 실패합니다.
 
 ---
 

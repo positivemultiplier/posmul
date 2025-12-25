@@ -13,11 +13,7 @@ import {
   failure,
   success,
 } from "@posmul/auth-economy-sdk";
-import {
-  AggregateRoot,
-  BaseDomainEvent,
-  Timestamp,
-} from "@posmul/auth-economy-sdk";
+import { AggregateRoot } from "@posmul/auth-economy-sdk";
 
 import {
   PredictionResult as PredictionResultEnum,

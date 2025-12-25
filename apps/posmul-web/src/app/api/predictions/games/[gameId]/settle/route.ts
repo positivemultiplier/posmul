@@ -130,7 +130,7 @@ export async function POST(
       { status: 200 }
     );
   } catch (error) {
-    console.error(`POST /api/predictions/games/[gameId]/settle error:`, error);
+    void error;
     return NextResponse.json(
       {
         success: false,
@@ -232,7 +232,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error(`GET /api/predictions/games/[gameId]/settle error:`, error);
+    void error;
     return NextResponse.json(
       {
         success: false,

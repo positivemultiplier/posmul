@@ -24,12 +24,12 @@ export function ChartWidget(props) {
     gameId,
     type,
     title,
-    data = [],
+    data: _data = [],
     height = 300,
     className = ''
   } = props;
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, _setError] = useState(null);
   const [chartData, setChartData] = useState([]);
 
   // Mock 데이터 생성 (실제 환경에서는 API 호출)

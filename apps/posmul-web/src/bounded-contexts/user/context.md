@@ -2,39 +2,27 @@
 
 ## 책임 (Responsibilities)
 
-- 사용자 프로필 관리
-- 사용자 활동 기록
-- 사용자 통계 및 랭킹
-- 사용자 설정 관리
+- 사용자 프로필 관리 (UserProfile)
+- 사용자 통계 및 상태 관리
+- MCP 기반 사용자 데이터 접근
 
 ## 핵심 엔티티 (Core Entities)
 
-- **User**: 사용자 애그리게이트 루트
-- **UserProfile**: 사용자 프로필
-- **UserActivity**: 사용자 활동 기록
-- **UserStatistics**: 사용자 통계
+- **UserProfile**: 사용자 상세 프로필 (DisplayName, Avatar, Bio 등)
+- **UserStatistics**: 사용자 활동 통계
+- **User**: (참고: 기본 인증 및 자산 정보는 Auth Context의 User Entity가 담당할 수 있음, 여기서는 프로필 관점)
 
-## 주요 값 객체 (Value Objects)
+## Repository & Infra
 
-- **UserId**: 사용자 고유 식별자
-- **Nickname**: 사용자 닉네임
-- **UserLevel**: 사용자 레벨
-- **ReputationScore**: 평판 점수
+- **MCPUserRepository**: `users` 테이블에 대한 MCP 기반 접근
+- **SupabaseUserRepository**: (Legacy/Alternative) Supabase 클라이언트 기반 접근
 
 ## 바운디드 컨텍스트 경계
 
-- **포함**: 사용자 프로필, 활동 기록, 통계 관련 비즈니스 로직
-- **제외**: 인증, 예측, 결제
+- **포함**: 프로필 상세, 통계, 설정
+- **제외**: 인증(Auth), 포인트 잔액(Auth/Economy)
 
 ## 외부 의존성
 
-- Auth Context (인증 정보 연동)
-- Prediction Context (예측 활동 기록)
-- Payment Context (포인트 현황)
-
-## 도메인 이벤트
-
-- UserRegistered
-- UserProfileUpdated
-- UserLevelChanged
-- UserStatisticsUpdated
+- Auth Context
+- Prediction Context (통계 집계용)

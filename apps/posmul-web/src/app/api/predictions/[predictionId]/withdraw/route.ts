@@ -38,7 +38,6 @@ interface GameData {
   title: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>;
 
 async function validateWithdrawal(
@@ -46,8 +45,6 @@ async function validateWithdrawal(
   predictionId: string,
   userId: string
 ): Promise<ValidationResult> {
-  console.log("[Withdraw] Validating:", { predictionId, userId });
-  
   // 예측 정보 조회
   const { data: prediction, error: predictionError } = await supabase
     .schema("prediction")
@@ -56,17 +53,9 @@ async function validateWithdrawal(
     .eq("prediction_id", predictionId)
     .single();
 
-  console.log("[Withdraw] Prediction query result:", { prediction, error: predictionError?.message });
-
   if (predictionError || !prediction) {
     return { valid: false, error: { code: "NOT_FOUND", message: "예측을 찾을 수 없습니다.", status: 404 } };
   }
-
-  console.log("[Withdraw] Comparing user_id:", { 
-    predictionUserId: prediction.user_id, 
-    requestUserId: userId,
-    match: prediction.user_id === userId 
-  });
 
   if (prediction.user_id !== userId) {
     return { valid: false, error: { code: "FORBIDDEN", message: "본인의 예측만 철회할 수 있습니다.", status: 403 } };
@@ -144,13 +133,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     // 인증 확인
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    console.log("[Withdraw API] Auth result:", { 
-      userId: user?.id, 
-      email: user?.email,
-      authError: authError?.message 
-    });
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { success: false, error: { code: "UNAUTHORIZED", message: "로그인이 필요합니다." } },
@@ -188,7 +171,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       success: true,
       data: { predictionId, gameTitle: game.title, refundedAmount: betAmount, message },
     });
-  } catch {
+  } catch (error) {
+    void error;
     return NextResponse.json(
       { success: false, error: { code: "INTERNAL_ERROR", message: "서버 오류가 발생했습니다." } },
       { status: 500 }

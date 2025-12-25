@@ -80,7 +80,7 @@ const mockPredictionHistory = [
 ];
 
 export const PredictionHistoryPanel: React.FC<PredictionHistoryPanelProps> = ({
-  userId,
+  userId: _userId,
 }) => {
   const history = mockPredictionHistory;
 

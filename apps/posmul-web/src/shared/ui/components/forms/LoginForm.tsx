@@ -53,9 +53,8 @@ export function LoginForm({
   const onFormSubmit = async (data: LoginFormData) => {
     try {
       await onSubmit(data);
-    } catch (error) {
+    } catch (_error) {
       // Error handling is delegated to parent component
-      console.error("Login form submission error:", error);
     }
   };
 

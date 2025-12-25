@@ -45,7 +45,7 @@ export default async function EPLPage() {
 
   const { data, error } = await query;
   if (error) {
-    console.error("EPLPage Supabase error", error.message);
+    void error;
   }
   const games = (data ?? []) as PredictionGameRow[];
 

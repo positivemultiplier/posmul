@@ -1,19 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
 import { Button } from "../../shared/ui";
 
 export default function DashboardError({
-    error,
+    error: _error,
     reset,
 }: {
     error: Error & { digest?: string };
     reset: () => void;
 }) {
-    useEffect(() => {
-        console.error(error);
-    }, [error]);
-
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center px-4">
             <div className="text-center">

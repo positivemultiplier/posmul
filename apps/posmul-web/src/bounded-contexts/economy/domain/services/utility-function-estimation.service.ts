@@ -564,6 +564,7 @@ export class UtilityFunctionEstimationService {
     utilities: UtilityEstimationResult[],
     wealthDistribution: number[]
   ): number {
+    void wealthDistribution;
     // Sen's Capability Approach 기반 활용도
     // 잠재 능력 대비 실현 효용의 비율
     const maxPossibleUtility = Math.max(

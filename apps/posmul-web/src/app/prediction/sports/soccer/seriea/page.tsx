@@ -37,7 +37,9 @@ export default async function SerieAPage() {
     .limit(20);
 
   const { data, error } = await query;
-  if (error) console.error("SerieAPage error", error.message);
+  if (error) {
+    void error;
+  }
   const games = data ?? [];
 
   let userPredictions: UserPrediction[] = [];

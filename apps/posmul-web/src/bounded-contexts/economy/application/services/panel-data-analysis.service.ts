@@ -340,6 +340,7 @@ export class PanelDataAnalysisService {
     entityVariable: string
   ): Promise<Result<LongitudinalAnalysisResult>> {
     try {
+      void entityVariable;
       const panelDataResult = await this.analyticsRepository.getPanelData();
       if (!panelDataResult.success) {
         return {
@@ -612,6 +613,8 @@ export class PanelDataAnalysisService {
     fixedEffectsModel: EconometricModelResult,
     randomEffectsModel: EconometricModelResult
   ): HausmanTestResult {
+    void fixedEffectsModel;
+    void randomEffectsModel;
     // Hausman 검정 구현
     const testStatistic = 12.5; // 가상의 검정통계량
     const pValue = 0.025;
@@ -634,6 +637,9 @@ export class PanelDataAnalysisService {
     modelResult: EconometricModelResult,
     request: PanelDataModelRequest
   ): Promise<DiagnosticTestResults> {
+    void panelData;
+    void modelResult;
+    void request;
     // 진단 테스트들 구현
     return {
       breuschPaganTest: {
@@ -682,6 +688,10 @@ export class PanelDataAnalysisService {
     pValue: number;
     confidenceInterval: [number, number];
   } {
+    void panelData;
+    void treatmentVariable;
+    void timeVariable;
+    void outcomeVariable;
     // DiD 효과 추정
     const coefficient = 0.15;
     const standardError = 0.03;
@@ -706,6 +716,10 @@ export class PanelDataAnalysisService {
     timeVariable: string,
     outcomeVariable: string
   ): Promise<CausalInferenceResult["robustnessChecks"]> {
+    void panelData;
+    void treatmentVariable;
+    void timeVariable;
+    void outcomeVariable;
     return {
       placeboTests: [
         {
@@ -741,6 +755,9 @@ export class PanelDataAnalysisService {
     treatmentVariable: string,
     outcomeVariable: string
   ): Record<string, CausalInferenceResult["heterogeneousEffects"][string]> {
+    void panelData;
+    void treatmentVariable;
+    void outcomeVariable;
     return {
       high_activity_users: {
         subgroup: "High activity users",
@@ -759,6 +776,7 @@ export class PanelDataAnalysisService {
 
   // 추가 유틸리티 메서드들 (단순화된 구현)
   private buildSpecificationString(request: PanelDataModelRequest): string {
+    void request;
     return "Invalid state";
   }
 
@@ -780,6 +798,9 @@ export class PanelDataAnalysisService {
     outcomeVariable: string,
     timeVariable: string
   ): LongitudinalAnalysisResult["growthCurveModel"] {
+    void panelData;
+    void outcomeVariable;
+    void timeVariable;
     return {
       intercept: 2.5,
       linearSlope: 0.15,
@@ -797,6 +818,9 @@ export class PanelDataAnalysisService {
     outcomeVariable: string,
     timeVariable: string
   ): LongitudinalAnalysisResult["changePointAnalysis"] {
+    void panelData;
+    void outcomeVariable;
+    void timeVariable;
     return {
       changePoints: [12, 24],
       regimeEffects: [0.1, 0.25, 0.05],
@@ -813,6 +837,9 @@ export class PanelDataAnalysisService {
     outcomeVariable: string,
     timeVariable: string
   ): LongitudinalAnalysisResult["learningCurveAnalysis"] {
+    void panelData;
+    void outcomeVariable;
+    void timeVariable;
     return {
       learningRate: 0.25,
       asymptote: 4.5,
@@ -826,6 +853,7 @@ export class PanelDataAnalysisService {
     panelData: PanelDataObservation[],
     strategy: string
   ): { trainData: PanelDataObservation[]; testData: PanelDataObservation[] } {
+    void strategy;
     const splitIndex = Math.floor(panelData.length * 0.8);
     return {
       trainData: panelData.slice(0, splitIndex),
@@ -838,6 +866,9 @@ export class PanelDataAnalysisService {
     targetVariable: string,
     features: string[]
   ): any {
+    void trainData;
+    void targetVariable;
+    void features;
     return { trained: true }; // 단순화된 모델
   }
 
@@ -845,6 +876,8 @@ export class PanelDataAnalysisService {
     model: any,
     trainData: PanelDataObservation[]
   ): PredictiveModelResult["inSampleFit"] {
+    void model;
+    void trainData;
     return {
       rSquared: 0.78,
       adjustedRSquared: 0.76,
@@ -857,6 +890,8 @@ export class PanelDataAnalysisService {
     model: any,
     testData: PanelDataObservation[]
   ): PredictiveModelResult["outOfSamplePerformance"] {
+    void model;
+    void testData;
     return {
       crossValidatedR2: 0.72,
       predictionError: 0.52,
@@ -868,8 +903,9 @@ export class PanelDataAnalysisService {
     model: any,
     features: string[]
   ): Record<string, number> {
+    void model;
     const importance: Record<string, number> = {};
-    features.forEach((feature, index) => {
+    features.forEach((feature) => {
       importance[feature] = Math.random() * 0.5 + 0.1;
     });
     return importance;
@@ -880,6 +916,9 @@ export class PanelDataAnalysisService {
     features: string[],
     panelData: PanelDataObservation[]
   ): PredictiveModelResult["modelInterpretation"] {
+    void model;
+    void features;
+    void panelData;
     return {
       marginalEffects: {
         feature1: 0.15,

@@ -103,16 +103,10 @@ export class CreatePredictionGameUseCase {
               error: new UseCaseError("Failed to set allocated prize pool"),
             };
           }
-        } else {
-          // MoneyWave 계산 실패 시 기본값 사용 (0으로 유지)
-          console.warn(
-            "Failed to calculate MoneyWave, using default values:",
-            isFailure(dailyPoolResult) ? dailyPoolResult.error : "Unknown error"
-          );
         }
       } catch (error) {
         // MoneyWave 계산 중 오류 발생 시 게임 생성은 계속 진행
-        console.error("Error in MoneyWave calculation:", error);
+        void error;
       }
 
       // 3. Repository에 저장

@@ -25,6 +25,156 @@ const DAILY_LIMITS = {
   question: 10,
 };
 
+type CreateForumPostBodyParsed = {
+  categoryId: string;
+  title: string;
+  content: string;
+  postType: string;
+  tags: string[];
+};
+
+function jsonError(status: number, code: string, message: string) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: {
+        code,
+        message,
+      },
+    },
+    { status }
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseCreateForumPostBody(body: unknown):
+  | { ok: true; data: CreateForumPostBodyParsed }
+  | { ok: false; response: NextResponse } {
+  if (!isRecord(body)) {
+    return {
+      ok: false,
+      response: jsonError(400, "INVALID_REQUEST", "카테고리, 제목, 내용은 필수입니다."),
+    };
+  }
+
+  const categoryId = body["categoryId"];
+  const title = body["title"];
+  const content = body["content"];
+  const postType = body["postType"];
+  const tags = body["tags"];
+
+  const normalizedCategoryId = typeof categoryId === "string" ? categoryId : "";
+  const normalizedTitle = typeof title === "string" ? title : "";
+  const normalizedContent = typeof content === "string" ? content : "";
+  const normalizedPostType = typeof postType === "string" ? postType : "discussion";
+  const normalizedTags = Array.isArray(tags)
+    ? tags.filter((t): t is string => typeof t === "string")
+    : [];
+
+  if (!normalizedCategoryId || !normalizedTitle || !normalizedContent) {
+    return {
+      ok: false,
+      response: jsonError(400, "INVALID_REQUEST", "카테고리, 제목, 내용은 필수입니다."),
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      categoryId: normalizedCategoryId,
+      title: normalizedTitle,
+      content: normalizedContent,
+      postType: normalizedPostType,
+      tags: normalizedTags,
+    },
+  };
+}
+
+function getDailyLimit(postType: string): number {
+  return DAILY_LIMITS[postType as keyof typeof DAILY_LIMITS] || 5;
+}
+
+function getPmpReward(postType: string): number {
+  return PMP_REWARDS[postType as keyof typeof PMP_REWARDS] || 0;
+}
+
+function startOfToday(): Date {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  return todayStart;
+}
+
+async function countTodayPosts(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  postType: string,
+  todayStart: Date
+): Promise<number> {
+  const { data: todayPosts, error: _countError } = await supabase
+    .schema("forum")
+    .from("forum_posts")
+    .select("id", { count: "exact" })
+    .eq("author_id", userId)
+    .eq("post_type", postType)
+    .gte("created_at", todayStart.toISOString());
+
+  void _countError;
+  return Array.isArray(todayPosts) ? todayPosts.length : 0;
+}
+
+async function awardPmpForPost(params: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  postId: string;
+  title: string;
+  postType: string;
+  tags: string[];
+  pmpEarned: number;
+}) {
+  const { supabase, userId, postId, title, postType, tags, pmpEarned } = params;
+
+  await supabase.schema("forum").from("forum_activity_logs").insert({
+    user_id: userId,
+    activity_type: "post_created",
+    post_id: postId,
+    description: `${postType} 게시글 작성: ${title}`,
+    pmp_earned: pmpEarned,
+    metadata: { postType, tags },
+  });
+
+  const { data: account } = await supabase
+    .schema("economy")
+    .from("pmp_pmc_accounts")
+    .select("pmp_balance")
+    .eq("user_id", userId)
+    .single();
+
+  const accountData = Array.isArray(account) ? account[0] : account;
+  const currentBalance = Number(accountData?.pmp_balance) || 0;
+
+  await supabase
+    .schema("economy")
+    .from("pmp_pmc_accounts")
+    .update({ pmp_balance: currentBalance + pmpEarned })
+    .eq("user_id", userId);
+
+  await supabase.schema("economy").from("pmp_pmc_transactions").insert({
+    user_id: userId,
+    transaction_type: "PMP_EARN",
+    pmp_amount: pmpEarned,
+    description: `Forum ${postType} 작성: ${title}`,
+    timestamp: new Date().toISOString(),
+    metadata: {
+      source: "forum",
+      post_id: postId,
+      post_type: postType,
+    },
+  });
+}
+
 /**
  * POST /api/forum/posts
  * 게시글 생성 + PMP 지급
@@ -40,81 +190,31 @@ export async function POST(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "UNAUTHORIZED",
-            message: "로그인이 필요합니다.",
-          },
-        },
-        { status: 401 }
-      );
+      return jsonError(401, "UNAUTHORIZED", "로그인이 필요합니다.");
     }
 
-    const body = await request.json();
-    const {
-      categoryId,
-      title,
-      content,
-      postType = "discussion",
-      tags = [],
-    } = body;
-
-    // 유효성 검사
-    if (!categoryId || !title || !content) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "INVALID_REQUEST",
-            message: "카테고리, 제목, 내용은 필수입니다.",
-          },
-        },
-        { status: 400 }
-      );
-    }
+    const body: unknown = await request.json();
+    const parsedBodyResult = parseCreateForumPostBody(body);
+    if (!parsedBodyResult.ok) return parsedBodyResult.response;
+    const { categoryId, title, content, postType, tags } = parsedBodyResult.data;
 
     if (title.length < 5 || title.length > 200) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "INVALID_TITLE",
-            message: "제목은 5자 이상 200자 이하여야 합니다.",
-          },
-        },
-        { status: 400 }
-      );
+      return jsonError(400, "INVALID_TITLE", "제목은 5자 이상 200자 이하여야 합니다.");
     }
 
     if (content.length < 10) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "INVALID_CONTENT",
-            message: "내용은 10자 이상이어야 합니다.",
-          },
-        },
-        { status: 400 }
-      );
+      return jsonError(400, "INVALID_CONTENT", "내용은 10자 이상이어야 합니다.");
     }
 
     // 일일 한도 체크
-    const dailyLimit = DAILY_LIMITS[postType as keyof typeof DAILY_LIMITS] || 5;
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    const { data: todayPosts, error: countError } = await supabase
-      .schema("forum")
-      .from("forum_posts")
-      .select("id", { count: "exact" })
-      .eq("author_id", user.id)
-      .eq("post_type", postType)
-      .gte("created_at", todayStart.toISOString());
-
-    const todayCount = Array.isArray(todayPosts) ? todayPosts.length : 0;
+    const dailyLimit = getDailyLimit(postType);
+    const todayStart = startOfToday();
+    const todayCount = await countTodayPosts(
+      supabase,
+      user.id,
+      postType,
+      todayStart
+    );
 
     if (todayCount >= dailyLimit) {
       return NextResponse.json(
@@ -161,49 +261,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const pmpEarned = PMP_REWARDS[postType as keyof typeof PMP_REWARDS] || 0;
+    const pmpEarned = getPmpReward(postType);
 
     // PMP 지급
     if (pmpEarned > 0) {
-      // 1. 활동 로그 기록
-      await supabase.schema("forum").from("forum_activity_logs").insert({
-        user_id: user.id,
-        activity_type: "post_created",
-        post_id: postData.id,
-        description: `${postType} 게시글 작성: ${title}`,
-        pmp_earned: pmpEarned,
-        metadata: { postType, tags },
-      });
-
-      // 2. PMP 잔액 증가
-      const { data: account } = await supabase
-        .schema("economy")
-        .from("pmp_pmc_accounts")
-        .select("pmp_balance")
-        .eq("user_id", user.id)
-        .single();
-
-      const accountData = Array.isArray(account) ? account[0] : account;
-      const currentBalance = Number(accountData?.pmp_balance) || 0;
-
-      await supabase
-        .schema("economy")
-        .from("pmp_pmc_accounts")
-        .update({ pmp_balance: currentBalance + pmpEarned })
-        .eq("user_id", user.id);
-
-      // 3. 거래 내역 기록
-      await supabase.schema("economy").from("pmp_pmc_transactions").insert({
-        user_id: user.id,
-        transaction_type: "PMP_EARN",
-        pmp_amount: pmpEarned,
-        description: `Forum ${postType} 작성: ${title}`,
-        timestamp: new Date().toISOString(),
-        metadata: {
-          source: "forum",
-          post_id: postData.id,
-          post_type: postType,
-        },
+      await awardPmpForPost({
+        supabase,
+        userId: user.id,
+        postId: postData.id,
+        title,
+        postType,
+        tags,
+        pmpEarned,
       });
     }
 
@@ -219,17 +288,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Forum post creation error:", error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "서버 오류가 발생했습니다.",
-        },
-      },
-      { status: 500 }
-    );
+    void error;
+    return jsonError(500, "INTERNAL_ERROR", "서버 오류가 발생했습니다.");
   }
 }
 
@@ -343,7 +403,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Forum posts fetch error:", error);
+    void error;
     return NextResponse.json(
       {
         success: false,

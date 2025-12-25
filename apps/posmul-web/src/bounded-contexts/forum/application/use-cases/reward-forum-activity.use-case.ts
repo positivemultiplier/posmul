@@ -9,12 +9,7 @@ import { Result } from "@posmul/auth-economy-sdk";
 import {
   AcquirePmpAmountUseCase,
   PmpAmountAcquisitionRequest,
-  PmpAmountAcquisitionResult,
 } from "../../../economy/application/use-cases/acquire-pmp.use-case";
-import {
-  PmpAmount,
-  createPmpAmount,
-} from "../../../economy/domain/value-objects";
 import { UserId } from "../../../auth/domain/value-objects/user-value-objects";
 
 /**
@@ -164,82 +159,129 @@ export class RewardForumActivityUseCase {
     const timestamp = request.timestamp ?? new Date();
 
     try {
-      // 1. 보상 규칙 조회
-      const rewardRule = FORUM_PMP_REWARDS[request.activityType];
-      if (!rewardRule) {
-        return {
-          success: false,
-          pmpEarned: 0,
-          dailyRemaining: 0,
-          dailyLimitReached: false,
-          message: `Unknown activity type: ${request.activityType}`,
-        };
-      }
+      const fail = (params: {
+        message: string;
+        dailyRemaining: number;
+        dailyLimitReached: boolean;
+      }): RewardForumActivityResult => ({
+        success: false,
+        pmpEarned: 0,
+        dailyRemaining: params.dailyRemaining,
+        dailyLimitReached: params.dailyLimitReached,
+        message: params.message,
+      });
 
-      // 2. 오늘 해당 활동 횟수 체크
-      const todayCountResult = await this.activityLogRepository.getTodayActivityCount(
-        request.userId,
-        request.activityType
-      );
+      const getRewardRule = () => {
+        const rule = FORUM_PMP_REWARDS[request.activityType];
+        if (!rule) {
+          return {
+            ok: false as const,
+            response: fail({
+              message: `Unknown activity type: ${request.activityType}`,
+              dailyRemaining: 0,
+              dailyLimitReached: false,
+            }),
+          };
+        }
+        return { ok: true as const, rule };
+      };
 
-      if (!todayCountResult.success) {
-        return {
-          success: false,
-          pmpEarned: 0,
-          dailyRemaining: rewardRule.dailyLimit,
-          dailyLimitReached: false,
-          message: "Failed to check daily activity count",
-        };
-      }
+      const getTodayCount = async (rewardRule: (typeof FORUM_PMP_REWARDS)[ForumActivityType]) => {
+        const todayCountResult =
+          await this.activityLogRepository.getTodayActivityCount(
+            request.userId,
+            request.activityType
+          );
 
-      const todayCount = todayCountResult.data;
-      const remaining = Math.max(0, rewardRule.dailyLimit - todayCount);
+        if (!todayCountResult.success) {
+          return {
+            ok: false as const,
+            response: fail({
+              message: "Failed to check daily activity count",
+              dailyRemaining: rewardRule.dailyLimit,
+              dailyLimitReached: false,
+            }),
+          };
+        }
 
-      // 3. 일일 한도 체크
-      if (todayCount >= rewardRule.dailyLimit) {
-        return {
-          success: false,
-          pmpEarned: 0,
-          dailyRemaining: 0,
-          dailyLimitReached: true,
-          message: `일일 ${rewardRule.description} 한도(${rewardRule.dailyLimit}회)에 도달했습니다.`,
-        };
-      }
+        const todayCount = todayCountResult.data;
+        const remaining = Math.max(0, rewardRule.dailyLimit - todayCount);
 
-      // 4. 오늘 총 PMP 획득량 체크
-      const todayTotalResult = await this.activityLogRepository.getTodayTotalPmpEarned(
-        request.userId
-      );
+        if (todayCount >= rewardRule.dailyLimit) {
+          return {
+            ok: false as const,
+            response: fail({
+              message: `일일 ${rewardRule.description} 한도(${rewardRule.dailyLimit}회)에 도달했습니다.`,
+              dailyRemaining: 0,
+              dailyLimitReached: true,
+            }),
+          };
+        }
 
-      if (todayTotalResult.success && todayTotalResult.data >= DAILY_MAX_PMP) {
-        return {
-          success: false,
-          pmpEarned: 0,
-          dailyRemaining: 0,
-          dailyLimitReached: true,
-          message: `일일 최대 PMP 획득량(${DAILY_MAX_PMP} PMP)에 도달했습니다.`,
-        };
-      }
+        return { ok: true as const, todayCount, remaining };
+      };
 
-      // 5. PMP 보상 계산 (품질 점수에 따른 보너스)
-      let pmpAmount = rewardRule.baseAmount;
-      if (request.qualityScore && request.qualityScore > 7) {
-        // 품질 점수 7점 초과 시 최대 50% 보너스
+      const checkDailyMax = async () => {
+        const todayTotalResult =
+          await this.activityLogRepository.getTodayTotalPmpEarned(request.userId);
+
+        if (todayTotalResult.success && todayTotalResult.data >= DAILY_MAX_PMP) {
+          return {
+            ok: false as const,
+            response: fail({
+              message: `일일 최대 PMP 획득량(${DAILY_MAX_PMP} PMP)에 도달했습니다.`,
+              dailyRemaining: 0,
+              dailyLimitReached: true,
+            }),
+          };
+        }
+
+        return { ok: true as const };
+      };
+
+      const calculatePmpAmount = (
+        rewardRule: (typeof FORUM_PMP_REWARDS)[ForumActivityType]
+      ) => {
+        const baseAmount = rewardRule.baseAmount;
+        if (!request.qualityScore || request.qualityScore <= 7) return baseAmount;
+
         const bonusMultiplier = 1 + ((request.qualityScore - 7) / 3) * 0.5;
-        pmpAmount = Math.floor(pmpAmount * bonusMultiplier);
-      }
+        return Math.floor(baseAmount * bonusMultiplier);
+      };
 
-      // 6. Economy 도메인을 통한 PMP 지급
-      const pmpRequest: PmpAmountAcquisitionRequest = {
+      const buildPmpRequest = (
+        rewardRule: (typeof FORUM_PMP_REWARDS)[ForumActivityType],
+        pmpAmount: number
+      ): PmpAmountAcquisitionRequest => ({
         userId: request.userId,
-        activityType: "civic_participation", // Forum 활동은 civic_participation으로 매핑
+        activityType: "civic_participation",
         activityData: {
           amount: pmpAmount,
           description: `Forum ${rewardRule.description}: ${request.contentTitle || request.contentId}`,
           socialImpact: request.qualityScore ? request.qualityScore * 10 : 0,
         },
         timestamp,
-      };
+      });
+
+      // 1. 보상 규칙 조회
+      const rewardRuleResult = getRewardRule();
+      if (!rewardRuleResult.ok) return rewardRuleResult.response;
+      const rewardRule = rewardRuleResult.rule;
+
+      // 2. 오늘 해당 활동 횟수 체크
+      const todayCountResult = await getTodayCount(rewardRule);
+      if (!todayCountResult.ok) return todayCountResult.response;
+      const remaining = todayCountResult.remaining;
+
+      // 4. 오늘 총 PMP 획득량 체크
+      const dailyMaxResult = await checkDailyMax();
+      if (!dailyMaxResult.ok) return dailyMaxResult.response;
+
+      // 5. PMP 보상 계산 (품질 점수에 따른 보너스)
+      const pmpAmount = calculatePmpAmount(rewardRule);
+
+      // 6. Economy 도메인을 통한 PMP 지급
+      const pmpRequest = buildPmpRequest(rewardRule, pmpAmount);
 
       const pmpResult = await this.acquirePmpUseCase.execute(pmpRequest);
 

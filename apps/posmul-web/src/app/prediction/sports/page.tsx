@@ -1,5 +1,5 @@
 import { createClient } from "../../../lib/supabase/server";
-import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
+import { FadeIn } from "../../../shared/ui/components/animations";
 import Link from "next/link";
 import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
@@ -85,11 +85,6 @@ export default async function PredictionSportsPage({
 
     userPredictions = predictions || [];
   }
-
-  // 게임 ID로 사용자 예측 찾기
-  const getUserPrediction = (gameId: string): UserPrediction | undefined => {
-    return userPredictions.find(p => p.game_id === gameId);
-  };
 
   const visibleGames = games;
 

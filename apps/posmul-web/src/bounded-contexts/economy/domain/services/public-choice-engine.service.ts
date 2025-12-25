@@ -603,6 +603,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
     vulnerablePoints: string[],
     policyArea: PolicyCategory
   ): string[] {
+    void policyArea;
     const interventions: string[] = [];
 
     if (triangleStrength > 0.6) {
@@ -1056,6 +1057,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
     objectives: string[],
     constraints: string[]
   ): IInstitutionalRule[] {
+    void constraints;
     const rules: IInstitutionalRule[] = [
       {
         ruleId: "transparency_rule_001",
@@ -1087,6 +1089,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
   }
 
   private designCheckAndBalances(stakeholders: string[]): ICheckAndBalance[] {
+    void stakeholders;
     return [
       {
         balanceId: "executive_legislative_001",
@@ -1106,6 +1109,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
   private designParticipationMechanisms(
     objectives: string[]
   ): IParticipationMechanism[] {
+    void objectives;
     return [
       {
         mechanismId: "citizen_assembly_001",
@@ -1125,6 +1129,7 @@ export class PublicChoiceEngine implements IPublicChoiceEngine {
   private designTransparencyRequirements(
     stakeholders: string[]
   ): ITransparencyRule[] {
+    void stakeholders;
     return [
       {
         ruleId: "decision_transparency_001",

@@ -5,7 +5,7 @@ import { initializeTestData } from "../../../../lib/supabase/direct-client";
  * POST /api/test/init
  * 테스트 데이터 초기화
  */
-export async function POST(request: NextRequest) {
+export async function POST(_request: NextRequest) {
   try {
     const result = await initializeTestData();
     
@@ -22,7 +22,6 @@ export async function POST(request: NextRequest) {
       error: result.success ? null : result.error
     });
   } catch (error) {
-    console.error('Test init error:', error);
     return NextResponse.json(
       {
         success: false,

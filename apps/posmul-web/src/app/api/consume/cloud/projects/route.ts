@@ -35,7 +35,6 @@ export async function GET(request: NextRequest) {
     const { data: projects, error } = await query;
 
     if (error) {
-      console.error('프로젝트 조회 오류:', error);
       return NextResponse.json(
         { error: '프로젝트 목록을 불러오는 데 실패했습니다.' },
         { status: 500 }
@@ -55,7 +54,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('펀딩 API 오류:', error);
+    void error;
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

@@ -85,8 +85,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       .eq("id", matchId);
 
     if (updateError) {
-      // eslint-disable-next-line no-console
-      console.error("Match update error:", updateError);
+      void updateError;
       return NextResponse.json(
         { success: false, error: "매칭 상태 업데이트에 실패했습니다." },
         { status: 500 }
@@ -112,8 +111,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       },
     });
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error("Match PATCH error:", error);
+    void error;
     return NextResponse.json(
       { success: false, error: "서버 오류가 발생했습니다." },
       { status: 500 }
@@ -142,12 +140,13 @@ interface UpdateResult {
   message: string;
 }
 
-function determineUpdate(
-  match: Match,
-  userId: string,
-  action: string
-): UpdateResult {
-  // 배열 방어 처리
+type MatchAction = UpdateMatchRequest["action"];
+
+function buildFailure(error: string, status: number): UpdateResult {
+  return { success: false, error, status, updateData: {}, message: "" };
+}
+
+function getRelatedEntities(match: Match) {
   const item = Array.isArray(match.direct_donation_items)
     ? match.direct_donation_items[0]
     : match.direct_donation_items;
@@ -155,89 +154,139 @@ function determineUpdate(
     ? match.donation_recipients[0]
     : match.donation_recipients;
 
+  return { item, recipient };
+}
+
+function acceptUpdate(
+  match: Match,
+  isRecipient: boolean,
+  action: MatchAction,
+  nowIso: string
+): UpdateResult | null {
+  if (action !== "accept" || !isRecipient) return null;
+  if (match.status !== "pending") {
+    return buildFailure("대기 중인 매칭만 수락할 수 있습니다.", 400);
+  }
+  return {
+    success: true,
+    updateData: {
+      status: "accepted",
+      recipient_confirmed: true,
+      matched_at: nowIso,
+    },
+    itemStatus: "matched",
+    message: "매칭이 수락되었습니다.",
+  };
+}
+
+function rejectUpdate(
+  match: Match,
+  isRecipient: boolean,
+  action: MatchAction
+): UpdateResult | null {
+  if (action !== "reject" || !isRecipient) return null;
+  if (match.status !== "pending") {
+    return buildFailure("대기 중인 매칭만 거절할 수 있습니다.", 400);
+  }
+  return {
+    success: true,
+    updateData: { status: "rejected" },
+    itemStatus: "available",
+    message: "매칭이 거절되었습니다.",
+  };
+}
+
+function cancelUpdate(
+  match: Match,
+  isDonor: boolean,
+  action: MatchAction
+): UpdateResult | null {
+  if (action !== "cancel" || !isDonor) return null;
+  if (match.status !== "pending") {
+    return buildFailure("대기 중인 매칭만 취소할 수 있습니다.", 400);
+  }
+  return {
+    success: true,
+    updateData: { status: "cancelled" },
+    itemStatus: "available",
+    message: "매칭이 취소되었습니다.",
+  };
+}
+
+function completeUpdate(
+  match: Match,
+  isDonor: boolean,
+  isRecipient: boolean,
+  action: MatchAction,
+  nowIso: string
+): UpdateResult | null {
+  if (action !== "complete") return null;
+  if (match.status !== "accepted") {
+    return buildFailure("수락된 매칭만 완료할 수 있습니다.", 400);
+  }
+
+  if (isDonor) {
+    if (match.recipient_confirmed) {
+      return {
+        success: true,
+        updateData: {
+          status: "completed",
+          donor_confirmed: true,
+          completed_at: nowIso,
+        },
+        itemStatus: "completed",
+        message: "기부가 완료되었습니다!",
+      };
+    }
+
+    return {
+      success: true,
+      updateData: { donor_confirmed: true },
+      message: "완료 확인되었습니다. 수혜자의 확인을 기다리고 있습니다.",
+    };
+  }
+
+  if (isRecipient) {
+    if (match.donor_confirmed) {
+      return {
+        success: true,
+        updateData: {
+          status: "completed",
+          recipient_confirmed: true,
+          completed_at: nowIso,
+        },
+        itemStatus: "completed",
+        message: "기부가 완료되었습니다!",
+      };
+    }
+
+    return {
+      success: true,
+      updateData: { recipient_confirmed: true },
+      message: "완료 확인되었습니다. 기부자의 확인을 기다리고 있습니다.",
+    };
+  }
+
+  return buildFailure("권한이 없거나 유효하지 않은 요청입니다.", 403);
+}
+
+function determineUpdate(
+  match: Match,
+  userId: string,
+  action: MatchAction
+): UpdateResult {
+  const { item, recipient } = getRelatedEntities(match);
   const isDonor = item?.donor_user_id === userId;
   const isRecipient = recipient?.user_id === userId;
+  const nowIso = new Date().toISOString();
 
-  // 수혜자의 수락/거절
-  if (action === "accept" && isRecipient) {
-    if (match.status !== "pending") {
-      return { success: false, error: "대기 중인 매칭만 수락할 수 있습니다.", status: 400, updateData: {}, message: "" };
-    }
-    return {
-      success: true,
-      updateData: { status: "accepted", recipient_confirmed: true, matched_at: new Date().toISOString() },
-      itemStatus: "matched",
-      message: "매칭이 수락되었습니다.",
-    };
-  }
-
-  if (action === "reject" && isRecipient) {
-    if (match.status !== "pending") {
-      return { success: false, error: "대기 중인 매칭만 거절할 수 있습니다.", status: 400, updateData: {}, message: "" };
-    }
-    return {
-      success: true,
-      updateData: { status: "rejected" },
-      itemStatus: "available",
-      message: "매칭이 거절되었습니다.",
-    };
-  }
-
-  // 기부 완료 (양측 모두 가능)
-  if (action === "complete") {
-    if (match.status !== "accepted") {
-      return { success: false, error: "수락된 매칭만 완료할 수 있습니다.", status: 400, updateData: {}, message: "" };
-    }
-
-    if (isDonor) {
-      // 기부자가 완료 처리
-      if (match.recipient_confirmed) {
-        return {
-          success: true,
-          updateData: { status: "completed", donor_confirmed: true, completed_at: new Date().toISOString() },
-          itemStatus: "completed",
-          message: "기부가 완료되었습니다!",
-        };
-      }
-      return {
-        success: true,
-        updateData: { donor_confirmed: true },
-        message: "완료 확인되었습니다. 수혜자의 확인을 기다리고 있습니다.",
-      };
-    }
-
-    if (isRecipient) {
-      // 수혜자가 완료 처리
-      if (match.donor_confirmed) {
-        return {
-          success: true,
-          updateData: { status: "completed", recipient_confirmed: true, completed_at: new Date().toISOString() },
-          itemStatus: "completed",
-          message: "기부가 완료되었습니다!",
-        };
-      }
-      return {
-        success: true,
-        updateData: { recipient_confirmed: true },
-        message: "완료 확인되었습니다. 기부자의 확인을 기다리고 있습니다.",
-      };
-    }
-  }
-
-  // 취소 (기부자만 가능, pending 상태에서만)
-  if (action === "cancel" && isDonor) {
-    if (match.status !== "pending") {
-      return { success: false, error: "대기 중인 매칭만 취소할 수 있습니다.", status: 400, updateData: {}, message: "" };
-    }
-    return {
-      success: true,
-      updateData: { status: "cancelled" },
-      itemStatus: "available",
-      message: "매칭이 취소되었습니다.",
-    };
-  }
-
-  return { success: false, error: "권한이 없거나 유효하지 않은 요청입니다.", status: 403, updateData: {}, message: "" };
+  return (
+    acceptUpdate(match, isRecipient, action, nowIso) ||
+    rejectUpdate(match, isRecipient, action) ||
+    completeUpdate(match, isDonor, isRecipient, action, nowIso) ||
+    cancelUpdate(match, isDonor, action) ||
+    buildFailure("권한이 없거나 유효하지 않은 요청입니다.", 403)
+  );
 }
 
 // ===== GET: 매칭 상세 조회 =====

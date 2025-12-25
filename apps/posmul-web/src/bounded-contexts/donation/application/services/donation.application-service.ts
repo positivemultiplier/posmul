@@ -6,7 +6,6 @@ import {
   Result,
   UserId,
   createUserId,
-  failure,
   isFailure,
 } from "@posmul/auth-economy-sdk";
 import { PaginatedResult, PaginationParams } from "@posmul/auth-economy-sdk";
@@ -14,10 +13,6 @@ import { PaginatedResult, PaginationParams } from "@posmul/auth-economy-sdk";
 import { Donation } from "../../domain/entities/donation.entity";
 import { Institute } from "../../domain/entities/institute.entity";
 import { OpinionLeader } from "../../domain/entities/opinion-leader.entity";
-import {
-  createLegacyPaginationResponse,
-  normalizeePaginationParams,
-} from "../../domain/helpers/pagination-helpers";
 import {
   DonationSearchCriteria,
   IDonationRepository,

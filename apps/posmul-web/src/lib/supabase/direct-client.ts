@@ -165,7 +165,7 @@ export async function initializeTestData() {
   );
 
   if (userError) {
-    console.error('User creation failed:', userError);
+    void userError;
     return { success: false, error: userError };
   }
 

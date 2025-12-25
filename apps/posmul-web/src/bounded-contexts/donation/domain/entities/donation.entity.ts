@@ -2,7 +2,7 @@
  * Donation Entity
  * 기부 엔티티 - 모든 기부 활동의 루트 애그리거트
  */
-import { AggregateRoot, UserId } from "@posmul/auth-economy-sdk";
+import { UserId } from "@posmul/auth-economy-sdk";
 import { Result } from "@posmul/auth-economy-sdk";
 import { DomainEvent } from "@posmul/auth-economy-sdk";
 
@@ -666,7 +666,6 @@ export class Donation {
     }
 
     const baseDate = this.scheduledAt || this.createdAt;
-    const now = new Date();
 
     switch (this.frequency) {
       case DonationFrequency.WEEKLY:

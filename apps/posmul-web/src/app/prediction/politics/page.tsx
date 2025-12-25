@@ -42,9 +42,7 @@ export default async function PredictionPoliticsPage() {
     }
 
     const { data: games, error } = await query;
-    if (error) {
-        console.error("PredictionPoliticsPage Supabase error", error.message);
-    }
+    void error;
 
     const mappedGames = ((games || []) as PredictionGameRow[]).map(mapPredictionGameRowToCardModel);
 

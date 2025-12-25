@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Badge, Button } from "../../../../shared/ui/components/base";
+import { Button } from "../../../../shared/ui/components/base";
 import { PredictionGameCard } from "./PredictionGameCard";
 import { MobilePredictionCard } from "./mobile/MobilePredictionCard";
 import { MobileGameNavigation } from "./mobile/MobileGameNavigation";
@@ -85,7 +85,9 @@ const mockGames = [
   }
 ];
 
-export const PredictionGameList = ({ userId }) => {
+export const PredictionGameList: React.FC<{ userId?: string }> = ({
+  userId: _userId,
+}) => {
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("grid");

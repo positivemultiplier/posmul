@@ -315,7 +315,7 @@ export class EconomicRealtimeEventPublisher {
         payload: event,
       });
     } catch (error) {
-      console.error(`Failed to broadcast to channel ${channel}:`, error);
+      void error;
       // 브로?�캐?�트 ?�패??치명?�이지 ?�으므�??�러�?throw?��? ?�음
     }
   }

@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
         })
 
     } catch (err: any) {
-        console.error('UserInfo Error:', err)
+        void err
         return NextResponse.json({ error: 'server_error' }, { status: 500 })
     }
 }

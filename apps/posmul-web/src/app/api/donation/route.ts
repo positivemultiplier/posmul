@@ -1,6 +1,196 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../lib/supabase/server";
 
+type DonationCreateBodyParsed = {
+  instituteId: string;
+  amount: number;
+  isAnonymous: boolean;
+  message: string;
+};
+
+function jsonError(status: number, code: string, message: string) {
+  return NextResponse.json(
+    {
+      success: false,
+      error: {
+        code,
+        message,
+      },
+    },
+    { status }
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function parseNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed)) return null;
+  return parsed;
+}
+
+function parseDonationCreateBody(body: unknown):
+  | { ok: true; data: DonationCreateBodyParsed }
+  | { ok: false; response: NextResponse } {
+  if (!isRecord(body)) {
+    return {
+      ok: false,
+      response: jsonError(400, "INVALID_REQUEST", "기관 ID와 금액은 필수입니다."),
+    };
+  }
+
+  const instituteIdRaw = body["instituteId"];
+  const amountRaw = body["amount"];
+  const isAnonymousRaw = body["isAnonymous"];
+  const messageRaw = body["message"];
+
+  const instituteId = typeof instituteIdRaw === "string" ? instituteIdRaw : "";
+  const amount = parseNumber(amountRaw);
+  const isAnonymous = typeof isAnonymousRaw === "boolean" ? isAnonymousRaw : false;
+  const message = typeof messageRaw === "string" ? messageRaw : "";
+
+  if (!instituteId || amount === null) {
+    return {
+      ok: false,
+      response: jsonError(400, "INVALID_REQUEST", "기관 ID와 금액은 필수입니다."),
+    };
+  }
+
+  return { ok: true, data: { instituteId, amount, isAnonymous, message } };
+}
+
+async function fetchInstitute(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  instituteId: string
+): Promise<
+  | { ok: true; data: { id: string; name: string; category: string } }
+  | { ok: false; response: NextResponse }
+> {
+  const { data: institute, error: instError } = await supabase
+    .schema("donation")
+    .from("donation_institutes")
+    .select("id, name, category")
+    .eq("id", instituteId)
+    .eq("is_active", true)
+    .single();
+
+  const instData = Array.isArray(institute) ? institute[0] : institute;
+  if (instError || !instData) {
+    return {
+      ok: false,
+      response: jsonError(404, "INSTITUTE_NOT_FOUND", "유효하지 않은 기부 기관입니다."),
+    };
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: instData.id,
+      name: instData.name,
+      category: instData.category,
+    },
+  };
+}
+
+async function fetchPmcBalance(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string
+): Promise<
+  | { ok: true; pmcBalance: number }
+  | { ok: false; response: NextResponse }
+> {
+  const { data: account, error: accError } = await supabase
+    .schema("economy")
+    .from("pmp_pmc_accounts")
+    .select("pmc_balance")
+    .eq("user_id", userId)
+    .single();
+
+  const accData = Array.isArray(account) ? account[0] : account;
+  if (accError || !accData) {
+    return {
+      ok: false,
+      response: jsonError(404, "ACCOUNT_NOT_FOUND", "경제 계정을 찾을 수 없습니다."),
+    };
+  }
+
+  const pmcBalance = Number(accData.pmc_balance) || 0;
+  return { ok: true, pmcBalance };
+}
+
+async function updatePmcBalance(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  userId: string,
+  newBalance: number,
+  errorCode: string,
+  errorMessage: string
+): Promise<{ ok: true } | { ok: false; response: NextResponse }> {
+  const { error } = await supabase
+    .schema("economy")
+    .from("pmp_pmc_accounts")
+    .update({ pmc_balance: newBalance })
+    .eq("user_id", userId);
+
+  if (error) {
+    return { ok: false, response: jsonError(500, errorCode, errorMessage) };
+  }
+
+  return { ok: true };
+}
+
+async function createDonationRecord(params: {
+  supabase: Awaited<ReturnType<typeof createClient>>;
+  userId: string;
+  instituteId: string;
+  instituteName: string;
+  category: string;
+  amount: number;
+  isAnonymous: boolean;
+  message: string;
+}): Promise<{ ok: true; donationId: string } | { ok: false }> {
+  const {
+    supabase,
+    userId,
+    instituteId,
+    instituteName,
+    category,
+    amount,
+    isAnonymous,
+    message,
+  } = params;
+
+  const { data: donation, error: donationError } = await supabase
+    .schema("donation")
+    .from("donations")
+    .insert({
+      donor_id: userId,
+      donation_type: "institute",
+      amount: amount,
+      pmc_amount: amount,
+      title: `${instituteName} 기부`,
+      description: message || `${instituteName}에 대한 기부`,
+      category,
+      status: "completed",
+      institute_id: instituteId,
+      is_anonymous: isAnonymous,
+      support_message: message,
+      completed_at: new Date().toISOString(),
+    })
+    .select("id")
+    .single();
+
+  const donationData = Array.isArray(donation) ? donation[0] : donation;
+  if (donationError || !donationData) return { ok: false };
+
+  return { ok: true, donationId: donationData.id };
+}
+
 /**
  * POST /api/donation
  * PMC를 사용하여 기부 생성
@@ -10,99 +200,30 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
 
     // 현재 사용자 확인
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
     if (userError || !user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "UNAUTHORIZED",
-            message: "로그인이 필요합니다.",
-          },
-        },
-        { status: 401 }
-      );
+      return jsonError(401, "UNAUTHORIZED", "로그인이 필요합니다.");
     }
 
-    const body = await request.json();
-    const { instituteId, amount, isAnonymous = false, message = "" } = body;
-
-    // 유효성 검사
-    if (!instituteId || !amount) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "INVALID_REQUEST",
-            message: "기관 ID와 금액은 필수입니다.",
-          },
-        },
-        { status: 400 }
-      );
-    }
+    const body: unknown = await request.json();
+    const parsedBodyResult = parseDonationCreateBody(body);
+    if (!parsedBodyResult.ok) return parsedBodyResult.response;
+    const { instituteId, amount, isAnonymous, message } = parsedBodyResult.data;
 
     if (amount < 100) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "MINIMUM_AMOUNT",
-            message: "최소 기부 금액은 100 PMC입니다.",
-          },
-        },
-        { status: 400 }
-      );
+      return jsonError(400, "MINIMUM_AMOUNT", "최소 기부 금액은 100 PMC입니다.");
     }
 
-    // 기관 정보 조회
-    const { data: institute, error: instError } = await supabase
-      .schema("donation")
-      .from("donation_institutes")
-      .select("id, name, category")
-      .eq("id", instituteId)
-      .eq("is_active", true)
-      .single();
+    const instituteResult = await fetchInstitute(supabase, instituteId);
+    if (!instituteResult.ok) return instituteResult.response;
 
-    const instData = Array.isArray(institute) ? institute[0] : institute;
-
-    if (instError || !instData) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "INSTITUTE_NOT_FOUND",
-            message: "유효하지 않은 기부 기관입니다.",
-          },
-        },
-        { status: 404 }
-      );
-    }
-
-    // PMC 잔액 확인
-    const { data: account, error: accError } = await supabase
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .select("pmc_balance")
-      .eq("user_id", user.id)
-      .single();
-
-    const accData = Array.isArray(account) ? account[0] : account;
-
-    if (accError || !accData) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "ACCOUNT_NOT_FOUND",
-            message: "경제 계정을 찾을 수 없습니다.",
-          },
-        },
-        { status: 404 }
-      );
-    }
-
-    const pmcBalance = Number(accData.pmc_balance) || 0;
+    const balanceResult = await fetchPmcBalance(supabase, user.id);
+    if (!balanceResult.ok) return balanceResult.response;
+    const pmcBalance = balanceResult.pmcBalance;
 
     if (pmcBalance < amount) {
       return NextResponse.json(
@@ -120,66 +241,37 @@ export async function POST(request: NextRequest) {
     // 트랜잭션 시작: PMC 차감 + 기부 생성
     // 1. PMC 차감
     const newBalance = pmcBalance - amount;
-    const { error: updateError } = await supabase
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .update({ pmc_balance: newBalance })
-      .eq("user_id", user.id);
-
-    if (updateError) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "PMC_DEDUCTION_FAILED",
-            message: "PMC 차감에 실패했습니다.",
-          },
-        },
-        { status: 500 }
-      );
-    }
+    const deductionResult = await updatePmcBalance(
+      supabase,
+      user.id,
+      newBalance,
+      "PMC_DEDUCTION_FAILED",
+      "PMC 차감에 실패했습니다."
+    );
+    if (!deductionResult.ok) return deductionResult.response;
 
     // 2. 기부 레코드 생성
-    const { data: donation, error: donationError } = await supabase
-      .schema("donation")
-      .from("donations")
-      .insert({
-        donor_id: user.id,
-        donation_type: "institute",
-        amount: amount, // 표시 금액 (원화 환산 기준)
-        pmc_amount: amount, // PMC 실제 사용량
-        title: `${instData.name} 기부`,
-        description: message || `${instData.name}에 대한 기부`,
-        category: instData.category,
-        status: "completed",
-        institute_id: instituteId,
-        is_anonymous: isAnonymous,
-        support_message: message,
-        completed_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
+    const donationResult = await createDonationRecord({
+      supabase,
+      userId: user.id,
+      instituteId,
+      instituteName: instituteResult.data.name,
+      category: instituteResult.data.category,
+      amount,
+      isAnonymous,
+      message,
+    });
 
-    const donationData = Array.isArray(donation) ? donation[0] : donation;
-
-    if (donationError || !donationData) {
+    if (!donationResult.ok) {
       // 기부 생성 실패 시 PMC 롤백
-      await supabase
-        .schema("economy")
-        .from("pmp_pmc_accounts")
-        .update({ pmc_balance: pmcBalance })
-        .eq("user_id", user.id);
-
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "DONATION_CREATE_FAILED",
-            message: "기부 생성에 실패했습니다.",
-          },
-        },
-        { status: 500 }
+      await updatePmcBalance(
+        supabase,
+        user.id,
+        pmcBalance,
+        "PMC_ROLLBACK_FAILED",
+        "PMC 롤백에 실패했습니다."
       );
+      return jsonError(500, "DONATION_CREATE_FAILED", "기부 생성에 실패했습니다.");
     }
 
     // 3. 거래 내역 기록
@@ -190,25 +282,26 @@ export async function POST(request: NextRequest) {
         user_id: user.id,
         transaction_type: "DONATION",
         pmc_amount: -amount,
-        description: `${instData.name}에 기부`,
+        description: `${instituteResult.data.name}에 기부`,
         timestamp: new Date().toISOString(),
         metadata: {
-          donation_id: donationData.id,
+          donation_id: donationResult.donationId,
           institute_id: instituteId,
-          institute_name: instData.name,
+          institute_name: instituteResult.data.name,
         },
       });
 
     return NextResponse.json({
       success: true,
       data: {
-        donationId: donationData.id,
-        instituteName: instData.name,
+        donationId: donationResult.donationId,
+        instituteName: instituteResult.data.name,
         amount,
         newBalance,
       },
     });
   } catch (error) {
+    void error;
     return NextResponse.json(
       {
         success: false,

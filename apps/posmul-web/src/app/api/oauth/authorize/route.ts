@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
             })
 
         if (insertError) {
-            console.error('Failed to create auth code:', insertError)
+            void insertError
             return NextResponse.json({ error: 'server_error' }, { status: 500 })
         }
 
@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
         return NextResponse.redirect(callbackUrl)
 
     } catch (err: any) {
-        console.error('OAuth Authorize Error:', err)
+        void err
         return NextResponse.json({ error: 'server_error', details: err.message }, { status: 500 })
     }
 }

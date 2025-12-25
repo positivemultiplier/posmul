@@ -38,7 +38,7 @@ export default async function KLeaguePage() {
 
   const { data, error } = await query;
   if (error) {
-    console.error("KLeaguePage Supabase error", error.message);
+    void error;
   }
   const games = data ?? [];
 

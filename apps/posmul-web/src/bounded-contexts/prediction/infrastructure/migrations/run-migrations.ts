@@ -38,9 +38,6 @@ export class PredictionMigrationRunner {
    * 모든 예측 도메인 마이그레이션 실행
    */
   async runAllMigrations(): Promise<void> {
-    console.log("🚀 Starting Prediction Domain Database Migrations");
-    console.log("📊 Agency Theory & CAPM Schema Deployment");
-
     try {
       // 1. 예측 게임 테이블 생성
       await this.runMigration("001_prediction_games.sql");
@@ -50,14 +47,7 @@ export class PredictionMigrationRunner {
 
       // 3. 마이그레이션 기록 저장
       await this.recordMigrationCompletion();
-
-      console.log(
-        "✅ All Prediction Domain migrations completed successfully!"
-      );
-      console.log("📈 MoneyWave integration ready");
-      console.log("🎯 Agency Theory & CAPM models active");
     } catch (error) {
-      console.error("❌ Migration failed:", error);
       throw error;
     }
   }
@@ -66,8 +56,6 @@ export class PredictionMigrationRunner {
    * 개별 마이그레이션 파일 실행
    */
   private async runMigration(filename: string): Promise<void> {
-    console.log(`📝 Running migration: ${filename}`);
-
     try {
       const migrationPath = join(this.migrationDir, filename);
       const migrationSQL = readFileSync(migrationPath, { encoding: "utf8" });
@@ -80,10 +68,7 @@ export class PredictionMigrationRunner {
           await this.executeSQLStatement(statement);
         }
       }
-
-      console.log(`✅ Migration ${filename} completed`);
     } catch (error) {
-      console.error(`❌ Failed to run migration ${filename}:`, error);
       throw error;
     }
   }
@@ -103,11 +88,8 @@ export class PredictionMigrationRunner {
     } catch (error: any) {
       // 이미 존재하는 객체 오류는 무시 (IF NOT EXISTS 사용)
       if (error.message?.includes("already exists")) {
-        console.log("⚠️  Object already exists, skipping...");
         return;
       }
-
-      console.error("SQL Error:", error);
       throw error;
     }
   }
@@ -190,8 +172,6 @@ export class PredictionMigrationRunner {
       completed_at: new Date().toISOString(),
     };
 
-    console.log("📊 Migration Summary:", completionRecord);
-
     try {
       // 시스템 통계 테이블에 기록 (economy domain에서 생성됨)
       await this.supabase.from("system_statistics").upsert({
@@ -199,7 +179,7 @@ export class PredictionMigrationRunner {
         migration_log: completionRecord,
       });
     } catch (error) {
-      console.warn("⚠️  Could not record migration completion:", error);
+      void error;
       // 기록 실패는 마이그레이션 전체를 실패시키지 않음
     }
   }
@@ -208,8 +188,6 @@ export class PredictionMigrationRunner {
    * 테이블 생성 확인
    */
   async verifyTables(): Promise<boolean> {
-    console.log("🔍 Verifying prediction domain tables...");
-
     const expectedTables = [
       "prediction_games",
       "prediction_options",
@@ -222,21 +200,18 @@ export class PredictionMigrationRunner {
 
     try {
       for (const tableName of expectedTables) {
-        const { data, error } = await this.supabase
+        const { error } = await this.supabase
           .from(tableName)
           .select("*")
           .limit(1);
 
         if (error && !error.message.includes("permission denied")) {
-          console.error(`❌ Table ${tableName} not found or accessible`);
           return false;
         }
       }
-
-      console.log("✅ All prediction domain tables verified successfully");
       return true;
     } catch (error) {
-      console.error("❌ Table verification failed:", error);
+      void error;
       return false;
     }
   }
@@ -267,10 +242,6 @@ function loadMigrationConfig(): MigrationConfig {
  */
 async function main() {
   try {
-    console.log("🎯 PosMul Prediction Domain Migration");
-    console.log("📈 Economic Theory Database Schema Deployment");
-    console.log("=".repeat(50));
-
     const config = loadMigrationConfig();
     const migrationRunner = new PredictionMigrationRunner(config);
 
@@ -281,18 +252,12 @@ async function main() {
     const isValid = await migrationRunner.verifyTables();
 
     if (isValid) {
-      console.log("");
-      console.log("🎉 Prediction Domain Migration Complete!");
-      console.log("💰 PmpAmount/PmcAmount economic integration ready");
-      console.log("🏆 Agency Theory & CAPM models deployed");
-      console.log("📊 Ready for prediction game UI development");
       process.exit(0);
     } else {
-      console.error("❌ Migration verification failed");
       process.exit(1);
     }
   } catch (error) {
-    console.error("💥 Migration failed:", error);
+    void error;
     process.exit(1);
   }
 }

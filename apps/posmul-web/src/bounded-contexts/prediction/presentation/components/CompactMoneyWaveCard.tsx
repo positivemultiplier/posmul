@@ -52,6 +52,67 @@ const LEAGUE_WEIGHTS: Record<string, number> = {
   "champions": 0.10,
 };
 
+const computeSeed = (seedString: string): number => {
+  let seed = 0;
+  for (let i = 0; i < seedString.length; i++) {
+    seed = (seed << 5) - seed + seedString.charCodeAt(i);
+    seed |= 0;
+  }
+  return seed;
+};
+
+const computeVariance = (seed: number): number => {
+  return (Math.abs(seed) % 200) / 1000 + 0.9;
+};
+
+const applyCategoryWeight = (params: {
+  pool: number;
+  depth: DepthLevel;
+  category: CategoryType;
+  variance: number;
+}): number => {
+  const { pool, depth, category, variance } = params;
+  if (depth < 2 || category === "all") return pool;
+  return pool * (CATEGORY_WEIGHTS[category] || 0.25) * variance;
+};
+
+const applySubcategoryWeight = (params: {
+  pool: number;
+  depth: DepthLevel;
+  subcategory?: string;
+  seed: number;
+}): number => {
+  const { pool, depth, subcategory, seed } = params;
+  if (depth < 3 || !subcategory) return pool;
+  const subCount = SUBCATEGORY_COUNTS[subcategory] || 4;
+  return pool * (1 / subCount) * (0.8 + (Math.abs(seed % 40) / 100));
+};
+
+const applyLeagueWeight = (params: {
+  pool: number;
+  depth: DepthLevel;
+  league?: string;
+  seed: number;
+}): number => {
+  const { pool, depth, league, seed } = params;
+  if (depth < 4 || !league) return pool;
+  const leagueWeight = LEAGUE_WEIGHTS[league.toLowerCase()] || 0.1;
+  return pool * leagueWeight * (0.9 + (Math.abs(seed % 20) / 100));
+};
+
+const applyGameWeight = (params: {
+  pool: number;
+  depth: DepthLevel;
+  gameId?: string;
+  seed: number;
+}): number => {
+  const { pool, depth, gameId, seed } = params;
+  if (depth < 5 || !gameId) return pool;
+  let updatedPool = pool / 20;
+  updatedPool *= (Math.abs(seed) % 50) / 100 + 0.75;
+  return updatedPool;
+};
+
 const calculateDepthPool = (
   depth: DepthLevel,
   category: CategoryType = "all",
@@ -59,39 +120,15 @@ const calculateDepthPool = (
   league?: string,
   gameId?: string
 ): number => {
-  let pool = TOTAL_PLATFORM_POOL;
-
-  // Simple hash for consistency (pseudo-random)
   const seedString = `${depth}-${category}-${subcategory || ""}-${league || ""}-${gameId || ""}`;
-  let seed = 0;
-  for (let i = 0; i < seedString.length; i++) {
-    seed = (seed << 5) - seed + seedString.charCodeAt(i);
-    seed |= 0;
-  }
-  const variance = (Math.abs(seed) % 200) / 1000 + 0.9; // 0.9 ~ 1.1 multiplier
+  const seed = computeSeed(seedString);
+  const variance = computeVariance(seed);
 
-  // Depth 2: Category (스포츠/정치/경제/엔터)
-  if (depth >= 2 && category !== "all") {
-    pool *= (CATEGORY_WEIGHTS[category] || 0.25) * variance;
-  }
-
-  // Depth 3: Subcategory (축구/야구/농구)
-  if (depth >= 3 && subcategory) {
-    const subCount = SUBCATEGORY_COUNTS[subcategory] || 4;
-    pool = pool * (1 / subCount) * (0.8 + (Math.abs(seed % 40) / 100));
-  }
-
-  // Depth 4: League (EPL/K-리그 등)
-  if (depth >= 4 && league) {
-    const leagueWeight = LEAGUE_WEIGHTS[league.toLowerCase()] || 0.1;
-    pool *= leagueWeight * (0.9 + (Math.abs(seed % 20) / 100));
-  }
-
-  // Depth 5: Individual Game
-  if (depth >= 5 && gameId) {
-    pool /= 20; // 게임별 풀 축소
-    pool *= (Math.abs(seed) % 50) / 100 + 0.75; // 0.75 ~ 1.25 variance
-  }
+  let pool = TOTAL_PLATFORM_POOL;
+  pool = applyCategoryWeight({ pool, depth, category, variance });
+  pool = applySubcategoryWeight({ pool, depth, subcategory, seed });
+  pool = applyLeagueWeight({ pool, depth, league, seed });
+  pool = applyGameWeight({ pool, depth, gameId, seed });
 
   return Math.floor(pool);
 };

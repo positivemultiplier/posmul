@@ -11,16 +11,6 @@ import type {
   Result as SdkResult,
 } from "@posmul/auth-economy-sdk";
 // Auth-Economy SDK에서 타입들 import
-import type {
-  EconomicBalance,
-  Email,
-  PmcAmount,
-  PmpAmount,
-  TransactionId,
-  User,
-  UserId,
-  Username,
-} from "@posmul/auth-economy-sdk";
 // SDK의 MCP 유틸리티 import (shared-auth 대신 SDK 사용)
 import {
   MCPError,

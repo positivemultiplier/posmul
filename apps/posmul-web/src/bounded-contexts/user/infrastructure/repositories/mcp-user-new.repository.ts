@@ -14,6 +14,7 @@ export class MCPUserNewRepository {
 
   async findByEmail(email: string): Promise<Result<any, CompatibleBaseError>> {
     try {
+      void email;
       const result = await this.mcpAdapter.executeSQL(`
         SELECT * FROM users WHERE email = $1
       `);

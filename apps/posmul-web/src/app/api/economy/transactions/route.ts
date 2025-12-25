@@ -35,7 +35,7 @@ export async function GET() {
       .limit(50);
 
     if (txError) {
-      console.error("Transaction fetch error:", txError);
+      void txError;
       return NextResponse.json(
         {
           success: false,
@@ -74,7 +74,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("GET /api/economy/transactions error:", error);
+    void error;
     return NextResponse.json(
       {
         success: false,

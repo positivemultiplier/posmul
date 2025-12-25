@@ -13,7 +13,7 @@ export default async function EconomyStats() {
   const { data, error } = await supabase.rpc('get_economy_stats');
 
   if (error) {
-    console.error('Error fetching economy stats:', error);
+    void error;
     return (
       <div className="grid grid-cols-2 md:grid-cols-4 gap-6 opacity-50">
         {[1, 2, 3, 4].map((i) => (

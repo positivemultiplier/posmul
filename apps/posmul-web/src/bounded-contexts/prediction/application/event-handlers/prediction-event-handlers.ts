@@ -1,14 +1,13 @@
-/**
+﻿/**
  * Prediction Domain Event Handlers
  *
- * ?�측 ?�메?�에??발생?�는 ?�벤?�들??처리?�는 ?�들?�들???�의?�니??
- * 경제 ?�스?�과???�신 �??�른 ?�메?�과???�호?�용???�당?�니??
+ * ?占쎌륫 ?占쎈찓?占쎌뿉??諛쒖깮?占쎈뒗 ?占쎈깽?占쎈뱾??泥섎━?占쎈뒗 ?占쎈뱾?占쎈뱾???占쎌쓽?占쎈땲??
+ * 寃쎌젣 ?占쎌뒪?占쎄낵???占쎌떊 占??占쎈Ⅸ ?占쎈찓?占쎄낵???占쏀샇?占쎌슜???占쎈떦?占쎈땲??
  *
  * @author PosMul Development Team
  * @since 2024-12
  */
 import {
-  BusinessLogicError,
   HandlerError,
   IDomainEventSubscriber,
   PmcEarnedEvent,
@@ -26,9 +25,11 @@ import {
   PredictionParticipatedEvent,
 } from "../../../prediction/domain/events/prediction-game-events";
 
+const noop = (..._args: unknown[]): void => {};
+
 /**
- * ?�측 참여 ?�벤???�들??
- * PmpAmount 차감 ?�벤?��? 경제 ?�스?�으�??�파?�니??
+ * ?占쎌륫 李몄뿬 ?占쎈깽???占쎈뱾??
+ * PmpAmount 李④컧 ?占쎈깽?占쏙옙? 寃쎌젣 ?占쎌뒪?占쎌쑝占??占쏀뙆?占쎈땲??
  */
 export class PredictionParticipatedEventHandler
   implements IDomainEventSubscriber<PredictionParticipatedEvent>
@@ -40,26 +41,26 @@ export class PredictionParticipatedEventHandler
     event: PredictionParticipatedEvent
   ): Promise<Result<void, HandlerError>> {
     try {
-      console.log(
+      noop(
         `[PredictionParticipatedEventHandler] Processing event: ${event.id}`
       );
 
-      // 1. ?�계 ?�데?�트 (?�제 구현?�서???�계 ?�비???�출)
+      // 1. ?占쎄퀎 ?占쎈뜲?占쏀듃 (?占쎌젣 援ы쁽?占쎌꽌???占쎄퀎 ?占쎈퉬???占쎌텧)
       await this.updateParticipationStats(event);
 
-      // 2. ?�시�??�림 발송 (?�제 구현?�서???�림 ?�비???�출)
+      // 2. ?占쎌떆占??占쎈┝ 諛쒖넚 (?占쎌젣 援ы쁽?占쎌꽌???占쎈┝ ?占쎈퉬???占쎌텧)
       await this.sendParticipationNotification(event);
 
-      // 3. 게임 ?�태 ?�데?�트 체크 (참여????기반)
+      // 3. 寃뚯엫 ?占쏀깭 ?占쎈뜲?占쏀듃 泥댄겕 (李몄뿬????湲곕컲)
       await this.checkGameStateUpdate(event);
 
-      console.log(
+      noop(
         `[PredictionParticipatedEventHandler] Successfully processed event: ${event.id}`
       );
 
       return { success: true, data: undefined };
     } catch (error) {
-      console.error(
+      noop(
         `[PredictionParticipatedEventHandler] Error processing event: ${event.id}`,
         error
       );
@@ -76,8 +77,8 @@ export class PredictionParticipatedEventHandler
   private async updateParticipationStats(
     event: PredictionParticipatedEvent
   ): Promise<void> {
-    // TODO: ?�제 ?�계 ?�비?��? ?�동
-    console.log(
+    // TODO: ?占쎌젣 ?占쎄퀎 ?占쎈퉬?占쏙옙? ?占쎈룞
+    noop(
       `[Stats] User ${event.userId} participated in game ${event.gameId} with stake ${event.stakeAmount}`
     );
   }
@@ -85,8 +86,8 @@ export class PredictionParticipatedEventHandler
   private async sendParticipationNotification(
     event: PredictionParticipatedEvent
   ): Promise<void> {
-    // TODO: ?�제 ?�림 ?�비?��? ?�동
-    console.log(
+    // TODO: ?占쎌젣 ?占쎈┝ ?占쎈퉬?占쏙옙? ?占쎈룞
+    noop(
       `[Notification] Participation notification sent for user ${event.userId}`
     );
   }
@@ -94,14 +95,14 @@ export class PredictionParticipatedEventHandler
   private async checkGameStateUpdate(
     event: PredictionParticipatedEvent
   ): Promise<void> {
-    // TODO: 게임 ?�태 ?�데?�트 로직
-    console.log(`[GameState] Checking state update for game ${event.gameId}`);
+    // TODO: 寃뚯엫 ?占쏀깭 ?占쎈뜲?占쏀듃 濡쒖쭅
+    noop(`[GameState] Checking state update for game ${event.gameId}`);
   }
 }
 
 /**
- * PmpAmount 지�??�벤???�들??
- * 경제 ?�스?�의 PmpAmount 지출을 처리?�니??
+ * PmpAmount 吏占??占쎈깽???占쎈뱾??
+ * 寃쎌젣 ?占쎌뒪?占쎌쓽 PmpAmount 吏異쒖쓣 泥섎━?占쎈땲??
  */
 export class PmpSpentForPredictionEventHandler
   implements IDomainEventSubscriber<PmpSpentForPredictionEvent>
@@ -113,26 +114,26 @@ export class PmpSpentForPredictionEventHandler
     event: PmpSpentForPredictionEvent
   ): Promise<Result<void, HandlerError>> {
     try {
-      console.log(
+      noop(
         `[PmpSpentForPredictionEventHandler] Processing event: ${event.id}`
       );
 
-      // 1. 경제 ?�스???�랜??�� 기록
+      // 1. 寃쎌젣 ?占쎌뒪???占쎈옖??占쏙옙 湲곕줉
       await this.recordEconomicTransaction(event);
 
-      // 2. ?�용???�액 ?�데?�트 ?�인
+      // 2. ?占쎌슜???占쎌븸 ?占쎈뜲?占쏀듃 ?占쎌씤
       await this.verifyBalanceUpdate(event);
 
-      // 3. 감사 로그 ?�성
+      // 3. 媛먯궗 濡쒓렇 ?占쎌꽦
       await this.createAuditLog(event);
 
-      console.log(
+      noop(
         `[PmpSpentForPredictionEventHandler] Successfully processed event: ${event.id}`
       );
 
       return { success: true, data: undefined };
     } catch (error) {
-      console.error(
+      noop(
         `[PmpSpentForPredictionEventHandler] Error processing event: ${event.id}`,
         error
       );
@@ -149,8 +150,8 @@ export class PmpSpentForPredictionEventHandler
   private async recordEconomicTransaction(
     event: PmpSpentForPredictionEvent
   ): Promise<void> {
-    // TODO: 경제 ?�스???�랜??�� 기록
-    console.log(
+    // TODO: 寃쎌젣 ?占쎌뒪???占쎈옖??占쏙옙 湲곕줉
+    noop(
       `[EconomicTransaction] PmpAmount spent recorded: ${event.amount} for user ${event.userId}`
     );
   }
@@ -158,8 +159,8 @@ export class PmpSpentForPredictionEventHandler
   private async verifyBalanceUpdate(
     event: PmpSpentForPredictionEvent
   ): Promise<void> {
-    // TODO: ?�액 ?�데?�트 ?�인
-    console.log(
+    // TODO: ?占쎌븸 ?占쎈뜲?占쏀듃 ?占쎌씤
+    noop(
       `[BalanceVerification] Verifying balance update for user ${event.userId}`
     );
   }
@@ -167,16 +168,16 @@ export class PmpSpentForPredictionEventHandler
   private async createAuditLog(
     event: PmpSpentForPredictionEvent
   ): Promise<void> {
-    // TODO: 감사 로그 ?�성
-    console.log(
+    // TODO: 媛먯궗 濡쒓렇 ?占쎌꽦
+    noop(
       `[AuditLog] PmpAmount spending audit log created for transaction ${event.transactionId}`
     );
   }
 }
 
 /**
- * ?�측 게임 ?�산 ?�벤???�들??
- * 게임 ?�산 ??PmcAmount 보상 분배�?처리?�니??
+ * ?占쎌륫 寃뚯엫 ?占쎌궛 ?占쎈깽???占쎈뱾??
+ * 寃뚯엫 ?占쎌궛 ??PmcAmount 蹂댁긽 遺꾨같占?泥섎━?占쎈땲??
  */
 export class PredictionGameSettledEventHandler
   implements IDomainEventSubscriber<PredictionGameSettledEvent>
@@ -188,29 +189,29 @@ export class PredictionGameSettledEventHandler
     event: PredictionGameSettledEvent
   ): Promise<Result<void, HandlerError>> {
     try {
-      console.log(
+      noop(
         `[PredictionGameSettledEventHandler] Processing event: ${event.id}`
       );
 
-      // 1. 게임 결과 ?�계 ?�데?�트
+      // 1. 寃뚯엫 寃곌낵 ?占쎄퀎 ?占쎈뜲?占쏀듃
       await this.updateGameResultStats(event);
 
-      // 2. 참여???�과 기록 ?�데?�트
+      // 2. 李몄뿬???占쎄낵 湲곕줉 ?占쎈뜲?占쏀듃
       await this.updateParticipantPerformance(event);
 
-      // 3. 리더보드 ?�데?�트
+      // 3. 由щ뜑蹂대뱶 ?占쎈뜲?占쏀듃
       await this.updateLeaderboard(event);
 
-      // 4. ?�산 ?�료 ?�림 발송
+      // 4. ?占쎌궛 ?占쎈즺 ?占쎈┝ 諛쒖넚
       await this.sendSettlementNotifications(event);
 
-      console.log(
+      noop(
         `[PredictionGameSettledEventHandler] Successfully processed event: ${event.id}`
       );
 
       return { success: true, data: undefined };
     } catch (error) {
-      console.error(
+      noop(
         `[PredictionGameSettledEventHandler] Error processing event: ${event.id}`,
         error
       );
@@ -227,7 +228,7 @@ export class PredictionGameSettledEventHandler
   private async updateGameResultStats(
     event: PredictionGameSettledEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[GameStats] Updating stats for game ${event.gameId}: ${event.winnerCount}/${event.totalParticipants} winners`
     );
   }
@@ -235,7 +236,7 @@ export class PredictionGameSettledEventHandler
   private async updateParticipantPerformance(
     event: PredictionGameSettledEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[ParticipantPerformance] Updating performance records for game ${event.gameId}`
     );
   }
@@ -243,7 +244,7 @@ export class PredictionGameSettledEventHandler
   private async updateLeaderboard(
     event: PredictionGameSettledEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[Leaderboard] Updating leaderboard after game ${event.gameId} settlement`
     );
   }
@@ -251,15 +252,15 @@ export class PredictionGameSettledEventHandler
   private async sendSettlementNotifications(
     event: PredictionGameSettledEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[Notification] Sending settlement notifications for game ${event.gameId}`
     );
   }
 }
 
 /**
- * PmcAmount ?�득 ?�벤???�들??
- * ?�측 ?�공?�로 ?�한 PmcAmount 보상??처리?�니??
+ * PmcAmount ?占쎈뱷 ?占쎈깽???占쎈뱾??
+ * ?占쎌륫 ?占쎄났?占쎈줈 ?占쏀븳 PmcAmount 蹂댁긽??泥섎━?占쎈땲??
  */
 export class PmcEarnedFromPredictionEventHandler
   implements IDomainEventSubscriber<PmcEarnedFromPredictionEvent>
@@ -271,29 +272,29 @@ export class PmcEarnedFromPredictionEventHandler
     event: PmcEarnedFromPredictionEvent
   ): Promise<Result<void, HandlerError>> {
     try {
-      console.log(
+      noop(
         `[PmcEarnedFromPredictionEventHandler] Processing event: ${event.id}`
       );
 
-      // 1. 경제 ?�스??PmcAmount ?�레??기록
+      // 1. 寃쎌젣 ?占쎌뒪??PmcAmount ?占쎈젅??湲곕줉
       await this.recordPmcCredit(event);
 
-      // 2. ?�용???�과 기록 ?�데?�트
+      // 2. ?占쎌슜???占쎄낵 湲곕줉 ?占쎈뜲?占쏀듃
       await this.updateUserPerformance(event);
 
-      // 3. 보상 ?�림 발송
+      // 3. 蹂댁긽 ?占쎈┝ 諛쒖넚
       await this.sendRewardNotification(event);
 
-      // 4. MoneyWave ?�분�??�리�?체크
+      // 4. MoneyWave ?占쎈텇占??占쎈━占?泥댄겕
       await this.checkMoneyWaveRedistribution(event);
 
-      console.log(
+      noop(
         `[PmcEarnedFromPredictionEventHandler] Successfully processed event: ${event.id}`
       );
 
       return { success: true, data: undefined };
     } catch (error) {
-      console.error(
+      noop(
         `[PmcEarnedFromPredictionEventHandler] Error processing event: ${event.id}`,
         error
       );
@@ -310,7 +311,7 @@ export class PmcEarnedFromPredictionEventHandler
   private async recordPmcCredit(
     event: PmcEarnedFromPredictionEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[PmcCredit] Recording PmcAmount credit: ${event.amount} for user ${event.userId}`
     );
   }
@@ -318,7 +319,7 @@ export class PmcEarnedFromPredictionEventHandler
   private async updateUserPerformance(
     event: PmcEarnedFromPredictionEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[UserPerformance] Updating performance for user ${event.userId} with accuracy ${event.accuracyScore}`
     );
   }
@@ -326,7 +327,7 @@ export class PmcEarnedFromPredictionEventHandler
   private async sendRewardNotification(
     event: PmcEarnedFromPredictionEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[RewardNotification] Sending reward notification to user ${event.userId}`
     );
   }
@@ -334,15 +335,15 @@ export class PmcEarnedFromPredictionEventHandler
   private async checkMoneyWaveRedistribution(
     event: PmcEarnedFromPredictionEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[MoneyWave] Checking redistribution triggers for user ${event.userId}`
     );
   }
 }
 
 /**
- * MoneyWave 분배 ?�료 ?�벤???�들??
- * MoneyWave ?�스?�의 분배 ?�료�?처리?�니??
+ * MoneyWave 遺꾨같 ?占쎈즺 ?占쎈깽???占쎈뱾??
+ * MoneyWave ?占쎌뒪?占쎌쓽 遺꾨같 ?占쎈즺占?泥섎━?占쎈땲??
  */
 export class MoneyWaveDistributionCompletedEventHandler
   implements IDomainEventSubscriber<MoneyWaveDistributionCompletedEvent>
@@ -354,29 +355,29 @@ export class MoneyWaveDistributionCompletedEventHandler
     event: MoneyWaveDistributionCompletedEvent
   ): Promise<Result<void, HandlerError>> {
     try {
-      console.log(
+      noop(
         `[MoneyWaveDistributionCompletedEventHandler] Processing event: ${event.id}`
       );
 
-      // 1. 분배 ?�계 ?�데?�트
+      // 1. 遺꾨같 ?占쎄퀎 ?占쎈뜲?占쏀듃
       await this.updateDistributionStats(event);
 
-      // 2. 게임�?분배 ?�황 ?�데?�트
+      // 2. 寃뚯엫占?遺꾨같 ?占쏀솴 ?占쎈뜲?占쏀듃
       await this.updateGameDistributionStatus(event);
 
-      // 3. 경제 ?�스??메트�??�데?�트
+      // 3. 寃쎌젣 ?占쎌뒪??硫뷀듃占??占쎈뜲?占쏀듃
       await this.updateEconomicMetrics(event);
 
-      // 4. 분배 ?�료 ?�림 발송
+      // 4. 遺꾨같 ?占쎈즺 ?占쎈┝ 諛쒖넚
       await this.sendDistributionNotifications(event);
 
-      console.log(
+      noop(
         `[MoneyWaveDistributionCompletedEventHandler] Successfully processed event: ${event.id}`
       );
 
       return { success: true, data: undefined };
     } catch (error) {
-      console.error(
+      noop(
         `[MoneyWaveDistributionCompletedEventHandler] Error processing event: ${event.id}`,
         error
       );
@@ -393,7 +394,7 @@ export class MoneyWaveDistributionCompletedEventHandler
   private async updateDistributionStats(
     event: MoneyWaveDistributionCompletedEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[DistributionStats] Updating stats for ${event.distributionType} distribution: ${event.totalDistributed} distributed`
     );
   }
@@ -401,7 +402,7 @@ export class MoneyWaveDistributionCompletedEventHandler
   private async updateGameDistributionStatus(
     event: MoneyWaveDistributionCompletedEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[GameDistribution] Updating distribution status for ${event.distributions.length} games`
     );
   }
@@ -409,7 +410,7 @@ export class MoneyWaveDistributionCompletedEventHandler
   private async updateEconomicMetrics(
     event: MoneyWaveDistributionCompletedEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[EconomicMetrics] Updating economic metrics for ${event.distributionType} wave`
     );
   }
@@ -417,15 +418,15 @@ export class MoneyWaveDistributionCompletedEventHandler
   private async sendDistributionNotifications(
     event: MoneyWaveDistributionCompletedEvent
   ): Promise<void> {
-    console.log(
+    noop(
       `[DistributionNotification] Sending distribution notifications to ${event.recipientCount} recipients`
     );
   }
 }
 
 /**
- * 경제 ?�스???�벤???�들??
- * Economy Kernel?�서 발생?�는 ?�벤?�들??처리?�니??
+ * 寃쎌젣 ?占쎌뒪???占쎈깽???占쎈뱾??
+ * Economy Kernel?占쎌꽌 諛쒖깮?占쎈뒗 ?占쎈깽?占쎈뱾??泥섎━?占쎈땲??
  */
 export class EconomicEventHandler
   implements
@@ -440,11 +441,11 @@ export class EconomicEventHandler
     event: PmpEarnedEvent | PmcEarnedEvent | PmpSpentEvent | PmcSpentEvent
   ): Promise<Result<void, HandlerError>> {
     try {
-      console.log(
+      noop(
         `[EconomicEventHandler] Processing economic event: ${event.type}`
       );
 
-      // ?�벤???�?�별 처리
+      // ?占쎈깽???占?占쎈퀎 泥섎━
       switch (event.type) {
         case "PmpEarnedEvent":
           await this.handlePmpEarned(event as PmpEarnedEvent);
@@ -459,14 +460,14 @@ export class EconomicEventHandler
           await this.handlePmcSpent(event as PmcSpentEvent);
           break;
         default:
-          console.warn(
+          noop(
             `[EconomicEventHandler] Unknown economic event type: ${event.type}`
           );
       }
 
       return { success: true, data: undefined };
     } catch (error) {
-      console.error(
+      noop(
         `[EconomicEventHandler] Error processing economic event: ${event.type}`,
         error
       );
@@ -481,24 +482,24 @@ export class EconomicEventHandler
   }
 
   private async handlePmpEarned(event: PmpEarnedEvent): Promise<void> {
-    console.log(`[PmpEarned] Event received with type: ${event.type}`);
+    noop(`[PmpEarned] Event received with type: ${event.type}`);
   }
 
   private async handlePmcEarned(event: PmcEarnedEvent): Promise<void> {
-    console.log(`[PmcEarned] Event received with type: ${event.type}`);
+    noop(`[PmcEarned] Event received with type: ${event.type}`);
   }
 
   private async handlePmpSpent(event: PmpSpentEvent): Promise<void> {
-    console.log(`[PmpSpent] Event received with type: ${event.type}`);
+    noop(`[PmpSpent] Event received with type: ${event.type}`);
   }
 
   private async handlePmcSpent(event: PmcSpentEvent): Promise<void> {
-    console.log(`[PmcSpent] Event received with type: ${event.type}`);
+    noop(`[PmcSpent] Event received with type: ${event.type}`);
   }
 }
 
 /**
- * 모든 ?�벤???�들?�들???�보?�는 ?�토�?
+ * 紐⑤뱺 ?占쎈깽???占쎈뱾?占쎈뱾???占쎈낫?占쎈뒗 ?占쏀넗占?
  */
 export const createPredictionEventHandlers = () => {
   return [
@@ -512,17 +513,19 @@ export const createPredictionEventHandlers = () => {
 };
 
 /**
- * ?�벤???�들???�록 ?�퍼
+ * ?占쎈깽???占쎈뱾???占쎈줉 ?占쏀띁
  */
 export const registerPredictionEventHandlers = (eventPublisher: any) => {
   const handlers = createPredictionEventHandlers();
 
   handlers.forEach((handler) => {
     eventPublisher.subscribe(handler);
-    console.log(
+    noop(
       `[EventRegistration] Registered handler: ${handler.subscriberId} for event: ${handler.eventType}`
     );
   });
 
   return handlers;
 };
+
+

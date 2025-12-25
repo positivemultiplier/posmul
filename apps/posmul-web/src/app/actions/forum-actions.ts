@@ -70,7 +70,6 @@ export async function createBrainstormingSession(formData: FormData) {
     // 1. 사용자 PmpAmount 잔액 확인 (보상 풀 설정)
     // 2. 브레인스토밍 세션 생성
     // 3. PmpAmount 예치 처리
-    console.log("Creating brainstorming session:", validatedData);
 
     return {
       success: true,
@@ -91,7 +90,6 @@ export async function createBrainstormingSession(formData: FormData) {
       };
     }
 
-    console.error("Failed to create brainstorming session:", error);
     return {
       success: false,
       message: "브레인스토밍 세션 생성에 실패했습니다.",
@@ -117,7 +115,6 @@ export async function createDebateTopic(formData: FormData) {
     const validatedData = createDebateSchema.parse(rawData);
 
     // TODO: MCP를 통한 처리
-    console.log("Creating debate topic:", validatedData);
 
     return {
       success: true,
@@ -138,7 +135,6 @@ export async function createDebateTopic(formData: FormData) {
       };
     }
 
-    console.error("Failed to create debate topic:", error);
     return {
       success: false,
       message: "토론 주제 생성에 실패했습니다.",
@@ -164,7 +160,6 @@ export async function createComment(formData: FormData) {
     // 2. 의견 저장
     // 3. 품질 평가 시스템 트리거
     // 4. PmpAmount 보상 계산 (추후)
-    console.log("Creating comment:", validatedData);
 
     return {
       success: true,
@@ -184,7 +179,6 @@ export async function createComment(formData: FormData) {
       };
     }
 
-    console.error("Failed to create comment:", error);
     return {
       success: false,
       message: "의견 등록에 실패했습니다.",
@@ -209,7 +203,6 @@ export async function joinSession(formData: FormData) {
     // 1. 세션 존재 및 상태 확인
     // 2. 참여자 수 제한 확인
     // 3. 참여 기록 저장
-    console.log("Joining session:", { sessionId, sessionType });
 
     return {
       success: true,
@@ -221,7 +214,6 @@ export async function joinSession(formData: FormData) {
       },
     };
   } catch (error) {
-    console.error("Failed to join session:", error);
     return {
       success: false,
       message: "세션 참여에 실패했습니다.",

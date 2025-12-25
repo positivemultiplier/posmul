@@ -367,7 +367,7 @@ export class MoneyWave1Aggregate {
   /**
    * 긴급 상황에서 발행을 일시 중단합니다.
    */
-  suspend(reason: string): Result<void> {
+  suspend(_reason: string): Result<void> {
     if (this.status === MoneyWave1Status.COMPLETED) {
       return {
         success: false,

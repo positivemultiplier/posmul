@@ -35,7 +35,6 @@ export default function LoginPage() {
 
       if (error) throw error;
     } catch (err) {
-      console.error("Login error:", err);
       setError(err instanceof Error ? err.message : "로그인 중 오류가 발생했습니다.");
       setIsLoading(false);
     }
@@ -59,7 +58,6 @@ export default function LoginPage() {
       router.push("/dashboard");
       router.refresh();
     } catch (err) {
-      console.error("Email login error:", err);
       setError(err instanceof Error ? err.message : "이메일 로그인 중 오류가 발생했습니다.");
       setIsLoading(false);
     }

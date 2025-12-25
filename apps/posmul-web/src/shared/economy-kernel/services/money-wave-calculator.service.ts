@@ -74,6 +74,7 @@ export class MoneyWaveCalculatorService {
     gameImportanceScore: number,
     gameEndTime: Date
   ): Promise<number> {
+    void gameEndTime;
     // 하루 중 남은 시간 비율 계산
     const now = new Date();
     const todayStart = new Date(
@@ -138,7 +139,7 @@ export class MoneyWaveCalculatorService {
       return baseRedistributionPool;
       
     } catch (error) {
-      console.warn("MoneyWave2 calculation fallback to base amount:", error);
+      void error;
       return this.expectedAnnualEbit * MoneyWaveCalculatorService.EBIT_DAILY_RATIO * 0.3;
     }
   }
@@ -172,7 +173,7 @@ export class MoneyWaveCalculatorService {
       return enhancedEnterprisePool;
       
     } catch (error) {
-      console.warn("MoneyWave3 calculation fallback to base amount:", error);
+      void error;
       return this.expectedAnnualEbit * MoneyWaveCalculatorService.EBIT_DAILY_RATIO * 0.1;
     }
   }

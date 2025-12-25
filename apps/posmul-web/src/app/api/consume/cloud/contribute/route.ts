@@ -6,6 +6,63 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function jsonError(status: number, message: string) {
+  return NextResponse.json({ error: message }, { status });
+}
+
+function parseContributionBody(body: unknown):
+  | { ok: true; data: { projectId: string; amount: number } }
+  | { ok: false; response: NextResponse } {
+  if (!isRecord(body)) {
+    return { ok: false, response: jsonError(400, '프로젝트 ID와 펀딩 금액이 필요합니다.') };
+  }
+
+  const projectId = body['projectId'];
+  const amount = body['amount'];
+
+  if (typeof projectId !== 'string' || typeof amount !== 'number') {
+    return { ok: false, response: jsonError(400, '프로젝트 ID와 펀딩 금액이 필요합니다.') };
+  }
+
+  return { ok: true, data: { projectId, amount } };
+}
+
+function validateProjectContribution(params: {
+  project: Record<string, unknown>;
+  amount: number;
+}): NextResponse | null {
+  const { project, amount } = params;
+
+  const minContribution = Number(project['min_contribution']);
+  const maxContribution = project['max_contribution'] ?? 10000000;
+  const endDate = project['end_date'];
+
+  if (amount < minContribution) {
+    return jsonError(
+      400,
+      `최소 펀딩 금액은 ${minContribution.toLocaleString()}원입니다.`
+    );
+  }
+
+  const normalizedMax = Number(maxContribution);
+  if (amount > normalizedMax) {
+    return jsonError(
+      400,
+      `최대 펀딩 금액은 ${normalizedMax.toLocaleString()}원입니다.`
+    );
+  }
+
+  if (typeof endDate === 'string' && new Date(endDate) < new Date()) {
+    return jsonError(400, '펀딩 기간이 종료되었습니다.');
+  }
+
+  return null;
+}
+
 /**
  * POST - 펀딩 참여
  */
@@ -15,22 +72,12 @@ export async function POST(request: NextRequest) {
     
     // 사용자 인증 확인
     const { data: { user }, error: authError } = await supabase.auth.getUser();
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: '로그인이 필요합니다.' },
-        { status: 401 }
-      );
-    }
+    if (authError || !user) return jsonError(401, '로그인이 필요합니다.');
 
-    const body = await request.json();
-    const { projectId, amount } = body;
-
-    if (!projectId || !amount) {
-      return NextResponse.json(
-        { error: '프로젝트 ID와 펀딩 금액이 필요합니다.' },
-        { status: 400 }
-      );
-    }
+    const body: unknown = await request.json();
+    const parsedBody = parseContributionBody(body);
+    if (!parsedBody.ok) return parsedBody.response;
+    const { projectId, amount } = parsedBody.data;
 
     // 프로젝트 조회
     const { data: project, error: projectError } = await supabase
@@ -41,39 +88,20 @@ export async function POST(request: NextRequest) {
       .eq('status', 'ACTIVE')
       .single();
 
-    if (projectError || !project) {
-      return NextResponse.json(
-        { error: '프로젝트를 찾을 수 없거나 펀딩이 종료되었습니다.' },
-        { status: 404 }
-      );
+    const projectData = Array.isArray(project) ? project[0] : project;
+    if (projectError || !projectData) {
+      return jsonError(404, '프로젝트를 찾을 수 없거나 펀딩이 종료되었습니다.');
     }
 
-    // 최소/최대 펀딩 금액 확인
-    if (amount < project.min_contribution) {
-      return NextResponse.json(
-        { error: `최소 펀딩 금액은 ${project.min_contribution.toLocaleString()}원입니다.` },
-        { status: 400 }
-      );
-    }
-
-    const maxContribution = project.max_contribution ?? 10000000;
-    if (amount > maxContribution) {
-      return NextResponse.json(
-        { error: `최대 펀딩 금액은 ${maxContribution.toLocaleString()}원입니다.` },
-        { status: 400 }
-      );
-    }
-
-    // 마감일 확인
-    if (new Date(project.end_date) < new Date()) {
-      return NextResponse.json(
-        { error: '펀딩 기간이 종료되었습니다.' },
-        { status: 400 }
-      );
-    }
+    const validationErrorResponse = validateProjectContribution({
+      project: projectData,
+      amount,
+    });
+    if (validationErrorResponse) return validationErrorResponse;
 
     // PMC 계산 (펀딩 금액 * PMC 비율)
-    const pmcEarned = Math.floor(amount * Number(project.pmc_rate) * 100) / 100;
+    const pmcEarned =
+      Math.floor(amount * Number(projectData.pmc_rate) * 100) / 100;
 
     // 펀딩 참여 기록 생성 (contributions 테이블 사용)
     const { data: contribution, error: insertError } = await supabase
@@ -89,18 +117,13 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (insertError) {
-      console.error('펀딩 참여 기록 생성 오류:', insertError);
-      return NextResponse.json(
-        { error: '펀딩 참여에 실패했습니다.' },
-        { status: 500 }
-      );
-    }
+    if (insertError) return jsonError(500, '펀딩 참여에 실패했습니다.');
 
     // 프로젝트 금액 및 후원자 수 업데이트
-    const newCurrentAmount = Number(project.current_amount) + amount;
-    const newBackerCount = project.backer_count + 1;
-    const newStatus = newCurrentAmount >= project.target_amount ? 'FUNDED' : 'ACTIVE';
+    const newCurrentAmount = Number(projectData.current_amount) + amount;
+    const newBackerCount = Number(projectData.backer_count) + 1;
+    const newStatus =
+      newCurrentAmount >= Number(projectData.target_amount) ? 'FUNDED' : 'ACTIVE';
 
     await supabase
       .schema('consume')
@@ -123,11 +146,11 @@ export async function POST(request: NextRequest) {
           user_id: user.id,
           transaction_type: 'PMC_EARN',
           pmc_amount: pmcEarned,
-          description: `CloudConsume: ${project.title} 펀딩 참여`,
+          description: `CloudConsume: ${projectData.title} 펀딩 참여`,
           metadata: {
             source: 'CLOUD_CONSUME',
             project_id: projectId,
-            project_title: project.title,
+            project_title: projectData.title,
             contribution_id: contribution.id,
             contribution_amount: amount,
           },
@@ -142,14 +165,17 @@ export async function POST(request: NextRequest) {
       .eq('user_id', user.id)
       .single();
 
-    const progress = Math.min(Math.round((newCurrentAmount / Number(project.target_amount)) * 100), 100);
+    const progress = Math.min(
+      Math.round((newCurrentAmount / Number(projectData.target_amount)) * 100),
+      100
+    );
 
     return NextResponse.json({
       success: true,
       data: {
         contributionId: contribution.id,
         projectId,
-        projectTitle: project.title,
+        projectTitle: projectData.title,
         amount,
         pmcEarned,
         updatedBalance: {
@@ -157,7 +183,7 @@ export async function POST(request: NextRequest) {
         },
         projectProgress: {
           currentAmount: newCurrentAmount,
-          targetAmount: Number(project.target_amount),
+          targetAmount: Number(projectData.target_amount),
           progress,
           contributorCount: newBackerCount,
         },
@@ -165,11 +191,8 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('펀딩 참여 API 오류:', error);
-    return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
-      { status: 500 }
-    );
+    void error;
+    return jsonError(500, '서버 오류가 발생했습니다.');
   }
 }
 
@@ -205,7 +228,6 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (error) {
-      console.error('펀딩 참여 내역 조회 오류:', error);
       return NextResponse.json(
         { error: '펀딩 참여 내역을 불러오는 데 실패했습니다.' },
         { status: 500 }
@@ -233,7 +255,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('펀딩 참여 내역 API 오류:', error);
+    void error;
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

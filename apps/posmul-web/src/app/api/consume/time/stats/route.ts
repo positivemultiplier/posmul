@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       .single();
 
     if (statsError && statsError.code !== 'PGRST116') {
-      console.error('일일 통계 조회 오류:', statsError);
+      void statsError;
       return NextResponse.json(
         { error: '통계를 불러오는 데 실패했습니다.' },
         { status: 500 }
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('일일 통계 API 오류:', error);
+    void error;
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

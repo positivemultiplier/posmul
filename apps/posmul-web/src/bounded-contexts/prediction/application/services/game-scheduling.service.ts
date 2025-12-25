@@ -1,7 +1,8 @@
-import { Result, UserId } from "@posmul/auth-economy-sdk";
+import { UserId } from "@posmul/auth-economy-sdk";
 import type { PmpAmount } from "@posmul/auth-economy-sdk";
 
 import { PredictionType } from "../../domain/value-objects/prediction-types";
+import type { GameOptions } from "../../domain/value-objects/prediction-types";
 import { CreatePredictionGameUseCase } from "../use-cases/create-prediction-game.use-case";
 
 export interface ScheduledGameTemplate {
@@ -9,7 +10,7 @@ export interface ScheduledGameTemplate {
   title: string;
   description: string;
   predictionType: PredictionType;
-  options: any;
+  options: GameOptions;
   scheduledTime: Date; // 생성될 시간
   duration: number; // 게임 지속 시간 (시간 단위)
   settlementDelay: number; // 정산까지의 지연 시간 (시간 단위)
@@ -175,12 +176,10 @@ export class GameSchedulingService {
    */
   async startScheduling(): Promise<void> {
     if (this.isRunning) {
-      console.log("Game scheduling is already running");
       return;
     }
 
     this.isRunning = true;
-    console.log("🚀 Game Scheduling Service started");
 
     // 매분마다 스케줄 확인
     setInterval(async () => {
@@ -194,8 +193,6 @@ export class GameSchedulingService {
       },
       60 * 60 * 1000
     ); // 1시간 간격
-
-    console.log("⏰ Scheduled game creation monitoring active");
   }
 
   /**
@@ -203,7 +200,6 @@ export class GameSchedulingService {
    */
   stopScheduling(): void {
     this.isRunning = false;
-    console.log("⏹️ Game Scheduling Service stopped");
   }
 
   /**
@@ -264,17 +260,11 @@ export class GameSchedulingService {
       });
 
       if (result.success) {
-        console.log(
-          `✅ Scheduled game created: ${template.title} (${result.data.gameId})`
-        );
       } else {
-        console.error(`❌ Failed to create scheduled game: ${template.title}`);
+        // 실패 로깅은 생략
       }
     } catch (error) {
-      console.error(
-        `🚫 Error creating game from template ${template.id}:`,
-        error
-      );
+      void error;
     }
   }
 
@@ -301,10 +291,6 @@ export class GameSchedulingService {
         );
         break;
     }
-
-    console.log(
-      `📅 Template ${template.id} next scheduled for: ${template.scheduledTime.toLocaleString()}`
-    );
   }
 
   /**
@@ -321,9 +307,7 @@ export class GameSchedulingService {
       gamesToCreate = Math.max(1, Math.ceil(gamesToCreate * 0.5)); // 50% 감소
     }
 
-    console.log(
-      `🎮 Creating ${gamesToCreate} dynamic games for hour ${currentHour}`
-    );
+    void currentHour;
 
     for (let i = 0; i < gamesToCreate; i++) {
       await this.createDynamicGame(i, gamesToCreate);
@@ -340,6 +324,7 @@ export class GameSchedulingService {
     index: number,
     totalGames: number
   ): Promise<void> {
+    void totalGames;
     const category =
       this.config.categoryRotation[index % this.config.categoryRotation.length];
     const difficulty = this.selectRandomDifficulty();
@@ -409,7 +394,6 @@ export class GameSchedulingService {
    */
   addTemplate(template: ScheduledGameTemplate): void {
     this.templates.push(template);
-    console.log(`📝 New template added: ${template.id}`);
   }
 
   /**

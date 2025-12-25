@@ -87,8 +87,6 @@ export class SettlePredictionGameUseCase {
     request: SettlePredictionGameRequest
   ): Promise<Result<SettlePredictionGameResponse, UseCaseError>> {
     try {
-      console.log("[SettleGame] Step 1: 게임 조회");
-      
       // 1. 게임 조회 및 검증
       const gameResult = await this.predictionGameRepository.findById(
         request.gameId
@@ -107,8 +105,6 @@ export class SettlePredictionGameUseCase {
           error: new UseCaseError("Prediction game not found"),
         };
       }
-
-      console.log("[SettleGame] Step 2: 게임 상태 검증 - 현재:", predictionGame.getStatus());
 
       // 2. 게임 상태 검증 - ACTIVE 게임만 정산 가능
       const status = predictionGame.getStatus();
@@ -130,8 +126,6 @@ export class SettlePredictionGameUseCase {
         };
       }
 
-      console.log("[SettleGame] Step 3: DB 함수로 정산 실행");
-
       // 4. Repository의 settleGame 메서드 호출 (DB 함수 실행)
       const settlementResult = await this.predictionGameRepository.settleGame(
         request.gameId,
@@ -139,7 +133,6 @@ export class SettlePredictionGameUseCase {
       );
 
       if (isFailure(settlementResult)) {
-        console.error("[SettleGame] Settlement failed:", settlementResult.error);
         return {
           success: false,
           error: new UseCaseError("Settlement failed: " + settlementResult.error?.message),
@@ -147,7 +140,7 @@ export class SettlePredictionGameUseCase {
       }
 
       const settlement = settlementResult.data;
-      console.log("[SettleGame] Step 4: 정산 완료", settlement);
+      void settlement;
 
       // 5. 정산 완료 이벤트 발행
       await publishEvent(
@@ -174,7 +167,7 @@ export class SettlePredictionGameUseCase {
         },
       };
     } catch (error) {
-      console.error("[SettleGame] Unexpected error:", error);
+      void error;
       return {
         success: false,
         error: new UseCaseError(

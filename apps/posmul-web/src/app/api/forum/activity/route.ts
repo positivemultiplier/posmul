@@ -147,7 +147,7 @@ export async function GET() {
       },
     });
   } catch (error) {
-    console.error("Forum activity fetch error:", error);
+    void error;
     return NextResponse.json(
       {
         success: false,

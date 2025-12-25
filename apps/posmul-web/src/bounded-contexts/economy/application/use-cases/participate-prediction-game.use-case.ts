@@ -114,8 +114,6 @@ export class ParticipateInPredictionGameUseCase {
       await this.validateSufficientStake(currentBalance, request);
 
       // 3. 사용자 예측 이력 및 학습 패턴 조회
-      const utilityParamsResult =
-        await this.utilityRepository.getUtilityParameters(request.userId);
       const biasProfileResult =
         await this.utilityRepository.getBehavioralBiasProfile(request.userId);
 
@@ -282,6 +280,7 @@ export class ParticipateInPredictionGameUseCase {
    * 게임 메트릭스 계산 (실제 구현에서는 게임 저장소에서 조회)
    */
   private async calculateGameMetrics(gameId: string): Promise<GameMetrics> {
+    void gameId;
     // Mock 데이터 - 실제로는 게임 리포지토리에서 조회
     return {
       participantCount: Math.floor(Math.random() * 1000) + 50, // 50-1050명

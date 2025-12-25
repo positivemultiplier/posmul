@@ -29,7 +29,7 @@ export async function GET() {
         .order('created_at', { ascending: false });
 
       if (fallbackError) {
-        console.error('광고 캠페인 조회 오류:', fallbackError);
+        void fallbackError;
         return NextResponse.json(
           { error: '광고 캠페인을 불러오는 데 실패했습니다.' },
           { status: 500 }
@@ -52,7 +52,7 @@ export async function GET() {
       data: (campaigns ?? []).map(formatCampaign),
     });
   } catch (error) {
-    console.error('캠페인 API 오류:', error);
+    void error;
     return NextResponse.json(
       { error: '서버 오류가 발생했습니다.' },
       { status: 500 }

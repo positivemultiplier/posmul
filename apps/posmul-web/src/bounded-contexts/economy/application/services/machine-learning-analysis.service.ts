@@ -213,12 +213,6 @@ export class MachineLearningAnalysisService {
         request.targetVariable
       );
 
-      // 시계열 분해
-      const decomposition = this.performSeasonalDecomposition(
-        timeSeries,
-        request.seasonality
-      );
-
       // 모델 훈련
       let forecastResult: ForecastResult;
 
@@ -604,6 +598,7 @@ export class MachineLearningAnalysisService {
     timeSeries: number[],
     seasonality: string
   ): ForecastResult["seasonalDecomposition"] {
+    void seasonality;
     // 단순화된 계절성 분해
     const trend = timeSeries.map((_, i) => Math.sin(i * 0.1) + i * 0.01);
     const seasonal = timeSeries.map((_, i) => Math.sin(i * 0.5) * 0.1);
@@ -715,6 +710,8 @@ export class MachineLearningAnalysisService {
     timeSeries: number[],
     forecasts: number[]
   ): ForecastResult["modelDiagnostics"] {
+    void timeSeries;
+    void forecasts;
     return {
       residualAutocorrelation: 0.05,
       residualNormality: true,
@@ -739,11 +736,13 @@ export class MachineLearningAnalysisService {
   }
 
   private normalizeData(features: number[][], method: string): number[][] {
+    void method;
     // 데이터 정규화 구현
     return features; // 단순화
   }
 
   private findOptimalClusterNumber(features: number[][]): number {
+    void features;
     // Elbow method나 Silhouette analysis 구현
     return 3; // 단순화
   }
@@ -753,6 +752,7 @@ export class MachineLearningAnalysisService {
     k: number,
     distanceMetric: string
   ): ClusteringResult {
+    void distanceMetric;
     // K-means 클러스터링 구현 (단순화)
     const clusterAssignments: Record<UserId, number> = {};
     features.forEach((_, i) => {
@@ -806,6 +806,9 @@ export class MachineLearningAnalysisService {
     clusterAssignments: Record<UserId, number>,
     variables: string[]
   ): ClusteringResult["clusterInterpretation"] {
+    void panelData;
+    void clusterAssignments;
+    void variables;
     return {
       clusterProfiles: {
         0: {
@@ -822,8 +825,9 @@ export class MachineLearningAnalysisService {
     features: number[][],
     clusterAssignments: Record<UserId, number>
   ): ClusteringResult["visualizationData"] {
+    void features;
     return {
-      pca2D: Object.entries(clusterAssignments).map(([userId, cluster], i) => ({
+      pca2D: Object.entries(clusterAssignments).map(([userId, cluster]) => ({
         x: Math.random() * 10,
         y: Math.random() * 10,
         cluster,
@@ -839,6 +843,9 @@ export class MachineLearningAnalysisService {
     contaminationRate: number,
     threshold: number
   ): AnomalyDetectionResult["anomalies"] {
+    void features;
+    void contaminationRate;
+    void threshold;
     return []; // 단순화된 구현
   }
 
@@ -847,6 +854,9 @@ export class MachineLearningAnalysisService {
     contaminationRate: number,
     threshold: number
   ): AnomalyDetectionResult["anomalies"] {
+    void features;
+    void contaminationRate;
+    void threshold;
     return [];
   }
 
@@ -855,6 +865,9 @@ export class MachineLearningAnalysisService {
     contaminationRate: number,
     threshold: number
   ): AnomalyDetectionResult["anomalies"] {
+    void features;
+    void contaminationRate;
+    void threshold;
     return [];
   }
 
@@ -862,6 +875,8 @@ export class MachineLearningAnalysisService {
     features: number[][],
     threshold: number
   ): AnomalyDetectionResult["anomalies"] {
+    void features;
+    void threshold;
     return [];
   }
 
@@ -869,6 +884,7 @@ export class MachineLearningAnalysisService {
     anomalies: AnomalyDetectionResult["anomalies"],
     variables: string[]
   ): AnomalyDetectionResult["anomalyStatistics"] {
+    void variables;
     return {
       totalAnomalies: anomalies.length,
       anomalyRate: 0.05,
@@ -880,6 +896,7 @@ export class MachineLearningAnalysisService {
   private evaluateAnomalyDetectionPerformance(
     anomalies: AnomalyDetectionResult["anomalies"]
   ): AnomalyDetectionResult["modelPerformance"] {
+    void anomalies;
     return {
       precision: 0.85,
       recall: 0.78,
@@ -893,6 +910,7 @@ export class MachineLearningAnalysisService {
     features: string[],
     target: string
   ): { features: number[][]; labels: string[] } {
+    void target;
     return {
       features: this.extractFeatures(panelData, features),
       labels: panelData.map(() => "default_class"), // 단순화
@@ -903,6 +921,7 @@ export class MachineLearningAnalysisService {
     features: number[][],
     labels: string[]
   ): number[][] {
+    void labels;
     return features; // 단순화
   }
 
@@ -911,6 +930,7 @@ export class MachineLearningAnalysisService {
     labels: string[],
     method: string
   ): { features: number[][]; labels: string[] } {
+    void method;
     return { features, labels }; // 단순화
   }
 
@@ -920,6 +940,10 @@ export class MachineLearningAnalysisService {
     algorithm: string,
     folds: number
   ): Promise<{ meanAccuracy: number; scores: number[] }> {
+    void features;
+    void labels;
+    void algorithm;
+    void folds;
     return {
       meanAccuracy: 0.85,
       scores: [0.82, 0.87, 0.84, 0.86, 0.83],
@@ -931,6 +955,9 @@ export class MachineLearningAnalysisService {
     labels: string[],
     algorithm: string
   ): any {
+    void features;
+    void labels;
+    void algorithm;
     return {
       confusionMatrix: [
         [45, 5],
@@ -948,6 +975,8 @@ export class MachineLearningAnalysisService {
     features: string[],
     method: string
   ): ClassificationResult["modelInterpretation"] {
+    void model;
+    void method;
     return {
       topFeatures: features.map((f) => ({
         feature: f,
@@ -961,6 +990,7 @@ export class MachineLearningAnalysisService {
     modelType: string,
     data: PanelDataObservation[]
   ): Promise<any> {
+    void data;
     return { type: modelType, predictions: [] }; // 단순화
   }
 
@@ -994,6 +1024,7 @@ export class MachineLearningAnalysisService {
   private calculateDiversityMetrics(
     baseModels: any[]
   ): EnsembleModelResult["diversityMetrics"] {
+    void baseModels;
     return {
       disagreementMeasure: 0.25,
       correlationMatrix: [],

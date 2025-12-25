@@ -106,7 +106,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
 
         if (error) {
           // RLS 오류인 경우 게임 데이터 업데이트 실패지만, predictions 저장은 계속 진행
-          console.warn("[Repository] Game update failed (RLS or permission issue), continuing with predictions save:", error.message);
+          void error;
         }
       }
 
@@ -135,16 +135,12 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
           updated_at: p.timestamps.updatedAt.toISOString(),
         }));
 
-        // 디버그: 저장할 데이터 확인
-        console.log("[Repository] Saving predictions:", JSON.stringify(predictionData, null, 2));
-
         const { error: predError } = await supabase
           .schema("prediction")
           .from("predictions")
           .insert(predictionData); // upsert 대신 insert 사용 (새 prediction만 추가)
 
         if (predError) {
-          console.log("[Repository] Prediction save error:", predError);
           return {
             success: false,
             error: RepositoryHelpers.createSaveFailedError(
@@ -421,36 +417,57 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
       const pag = pagination || RepositoryHelpers.getDefaultPagination();
       const offset = (pag.page - 1) * pag.limit;
 
-      let query = supabase
+      const baseQuery = supabase
         .schema("prediction")
         .from("prediction_games")
         .select("*", { count: "exact" });
 
-      // 필터 적용
-      if (filters.creatorId) {
-        query = query.eq("creator_id", filters.creatorId);
-      }
-      if (filters.status) {
-        query = query.eq("status", this.mapStatusToDB(filters.status));
-      }
-      if (filters.predictionType) {
-        query = query.eq("prediction_type", filters.predictionType);
-      }
-      if (filters.title) {
-        query = query.ilike("title", `%${filters.title}%`);
-      }
-      if (filters.startTimeFrom) {
-        query = query.gte("registration_start", filters.startTimeFrom.toISOString());
-      }
-      if (filters.startTimeTo) {
-        query = query.lte("registration_start", filters.startTimeTo.toISOString());
-      }
+      const applyFilters = (query: typeof baseQuery) => {
+        let q = query;
 
-      // 정렬 및 페이지네이션
-      query = query
-        .order(pag.sortBy || "created_at", { ascending: pag.sortOrder === "asc" })
-        .range(offset, offset + pag.limit - 1);
+        if (filters.creatorId) {
+          q = q.eq("creator_id", filters.creatorId);
+        }
+        if (filters.status) {
+          q = q.eq("status", this.mapStatusToDB(filters.status));
+        }
+        if (filters.predictionType) {
+          q = q.eq("prediction_type", filters.predictionType);
+        }
+        if (filters.title) {
+          q = q.ilike("title", `%${filters.title}%`);
+        }
+        if (filters.startTimeFrom) {
+          q = q.gte(
+            "registration_start",
+            filters.startTimeFrom.toISOString()
+          );
+        }
+        if (filters.startTimeTo) {
+          q = q.lte("registration_start", filters.startTimeTo.toISOString());
+        }
 
+        return q;
+      };
+
+      const applyPagination = (query: typeof baseQuery) => {
+        const sortBy = pag.sortBy || "created_at";
+        const ascending = pag.sortOrder === "asc";
+
+        return query
+          .order(sortBy, { ascending })
+          .range(offset, offset + pag.limit - 1);
+      };
+
+      const mapRowsToGames = (rows: unknown[] | null) => {
+        if (!rows?.length) return [];
+
+        return rows
+          .map((row) => this.mapRowToAggregate(row as PredictionGameRow, []))
+          .filter((game): game is PredictionGame => game !== null);
+      };
+
+      const query = applyPagination(applyFilters(baseQuery));
       const { data: gameRows, error, count } = await query;
 
       if (error) {
@@ -460,11 +477,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
         };
       }
 
-      const games: PredictionGame[] = [];
-      for (const row of gameRows || []) {
-        const game = this.mapRowToAggregate(row as PredictionGameRow, []);
-        if (game) games.push(game);
-      }
+      const games = mapRowsToGames(gameRows as unknown[] | null);
 
       const totalCount = count || 0;
       const totalPages = Math.ceil(totalCount / pag.limit);
@@ -1053,7 +1066,6 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
       });
 
       if (error) {
-        console.error("[Repository] Settlement failed:", error);
         return {
           success: false,
           error: RepositoryHelpers.createQueryFailedError(
@@ -1085,7 +1097,6 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
         },
       };
     } catch (error) {
-      console.error("[Repository] Settlement error:", error);
       return {
         success: false,
         error: RepositoryHelpers.createQueryFailedError(

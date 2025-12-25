@@ -55,7 +55,7 @@ export interface RealtimeGameData {
 
 export function useRealtimeGameData({
   gameIds = [],
-  category,
+  category: _category,
   userId,
   autoConnect = true,
 }: UseRealtimeGameDataProps = {}) {
@@ -166,14 +166,13 @@ export function useRealtimeGameData({
           }
         )
         .on("presence", { event: "sync" }, () => {
-          console.log("Realtime presence synced");
+          // no-op
         })
         .subscribe((status) => {
           if (status === "SUBSCRIBED") {
             setIsConnected(true);
             setIsLoading(false);
             reconnectAttemptsRef.current = 0;
-            console.log("✅ 실시간 업데이트 연결 완료");
           } else if (status === "CHANNEL_ERROR") {
             setConnectionError("채널 연결 오류");
             setIsLoading(false);
@@ -190,7 +189,7 @@ export function useRealtimeGameData({
 
       channelRef.current = channel;
     } catch (error) {
-      console.error("실시간 연결 오류:", error);
+      void error;
       setConnectionError("연결 실패");
       setIsLoading(false);
       attemptReconnect();
@@ -209,10 +208,6 @@ export function useRealtimeGameData({
       10000
     );
     reconnectAttemptsRef.current += 1;
-
-    console.log(
-      `🔄 재연결 시도 ${reconnectAttemptsRef.current}/${maxReconnectAttempts} (${delay}ms 후)`
-    );
 
     reconnectTimeoutRef.current = setTimeout(() => {
       setIsConnected(false);
@@ -246,7 +241,6 @@ export function useRealtimeGameData({
   const requestGameUpdate = useCallback(
     async (gameId: string) => {
       if (!isConnected || !channelRef.current) {
-        console.warn("실시간 연결이 활성화되지 않음");
         return;
       }
 
@@ -257,7 +251,7 @@ export function useRealtimeGameData({
           payload: { gameId, requesterId: userId },
         });
       } catch (error) {
-        console.error("게임 업데이트 요청 오류:", error);
+        void error;
       }
     },
     [isConnected, userId]

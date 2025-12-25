@@ -158,6 +158,9 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     const targetUsers = Number(targetUserCount);
     const currentDensity = Number(currentState.density);
 
+    void currentUsers;
+    void currentDensity;
+
     // 최적 밀도 계산: 가치 최대화와 비용 최소화의 균형
     const maxPossibleConnections = (targetUsers * (targetUsers - 1)) / 2;
     const constrainedMaxConnections = Math.min(

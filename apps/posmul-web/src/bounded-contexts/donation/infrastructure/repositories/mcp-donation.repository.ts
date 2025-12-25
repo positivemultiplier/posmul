@@ -171,73 +171,103 @@ export class MCPDonationRepository implements IDonationRepository {
     limit: number = 10
   ): Promise<Result<PaginatedResult<Donation>>> {
     try {
-      let query = "SELECT * FROM donation.donations WHERE 1=1";
-      const params: Record<string, any> = {};
+      type QueryParam = string | number | boolean | null;
+      type QueryParams = Record<string, QueryParam>;
 
-      if (criteria.donorId) {
-        query += ` AND donor_id = $donorId`;
-        params.donorId = criteria.donorId.toString();
-      }
-      if (criteria.status) {
-        query += ` AND status = $status`;
-        params.status = criteria.status;
-      }
-      if (criteria.type) {
-        query += ` AND donation_type = $type`;
-        params.type = criteria.type;
-      }
-      if (criteria.category) {
-        query += ` AND category = $category`;
-        params.category = criteria.category;
-      }
-      if (criteria.frequency) {
-        query += ` AND frequency = $frequency`;
-        params.frequency = criteria.frequency;
-      }
-      if (criteria.instituteId) {
-        query += ` AND institute_id = $instituteId`;
-        params.instituteId = criteria.instituteId.getValue();
-      }
-      if (criteria.opinionLeaderId) {
-        query += ` AND opinion_leader_id = $opinionLeaderId`;
-        params.opinionLeaderId = criteria.opinionLeaderId.getValue();
-      }
-      if (criteria.startDate) {
-        query += ` AND created_at >= $startDate`;
-        params.startDate = criteria.startDate.toISOString();
-      }
-      if (criteria.endDate) {
-        query += ` AND created_at <= $endDate`;
-        params.endDate = criteria.endDate.toISOString();
-      }
-      if (criteria.minAmount) {
-        query += ` AND amount >= $minAmount`;
-        params.minAmount = criteria.minAmount;
-      }
-      if (criteria.maxAmount) {
-        query += ` AND amount <= $maxAmount`;
-        params.maxAmount = criteria.maxAmount;
-      }
-      if (criteria.isAnonymous !== undefined) {
-        query += ` AND (metadata->>'isAnonymous')::boolean = $isAnonymous`;
-        params.isAnonymous = criteria.isAnonymous;
-      }
+      const buildQuery = () => {
+        let query = "SELECT * FROM donation.donations WHERE 1=1";
+        const params: QueryParams = {};
+
+        const add = (clause: string, key: keyof QueryParams, value: QueryParam) => {
+          query += ` AND ${clause}`;
+          params[key] = value;
+        };
+
+        if (criteria.donorId) {
+          add("donor_id = $donorId", "donorId", criteria.donorId.toString());
+        }
+        if (criteria.status) {
+          add("status = $status", "status", criteria.status);
+        }
+        if (criteria.type) {
+          add("donation_type = $type", "type", criteria.type);
+        }
+        if (criteria.category) {
+          add("category = $category", "category", criteria.category);
+        }
+        if (criteria.frequency) {
+          add("frequency = $frequency", "frequency", criteria.frequency);
+        }
+        if (criteria.instituteId) {
+          add(
+            "institute_id = $instituteId",
+            "instituteId",
+            criteria.instituteId.getValue()
+          );
+        }
+        if (criteria.opinionLeaderId) {
+          add(
+            "opinion_leader_id = $opinionLeaderId",
+            "opinionLeaderId",
+            criteria.opinionLeaderId.getValue()
+          );
+        }
+        if (criteria.startDate) {
+          add(
+            "created_at >= $startDate",
+            "startDate",
+            criteria.startDate.toISOString()
+          );
+        }
+        if (criteria.endDate) {
+          add(
+            "created_at <= $endDate",
+            "endDate",
+            criteria.endDate.toISOString()
+          );
+        }
+        if (criteria.minAmount) {
+          add("amount >= $minAmount", "minAmount", criteria.minAmount);
+        }
+        if (criteria.maxAmount) {
+          add("amount <= $maxAmount", "maxAmount", criteria.maxAmount);
+        }
+        if (criteria.isAnonymous !== undefined) {
+          add(
+            "(metadata->>'isAnonymous')::boolean = $isAnonymous",
+            "isAnonymous",
+            criteria.isAnonymous
+          );
+        }
+
+        return { query, params };
+      };
+
+      const { query: baseQuery, params } = buildQuery();
 
       // Count query
-      const countQuery = query.replace("SELECT *", "SELECT COUNT(*)");
+      const countQuery = baseQuery.replace("SELECT *", "SELECT COUNT(*)");
       const finalCountQuery = buildParameterizedQuery(countQuery, params);
       const countResult = await this.mcpAdapter.executeSQL(finalCountQuery);
       const total = parseInt(countResult.data?.[0]?.count as string || "0");
 
       // Pagination
-      query += ` ORDER BY created_at DESC LIMIT $limit OFFSET $offset`;
-      params.limit = limit;
-      params.offset = (page - 1) * limit;
+      const queryWithPagination =
+        baseQuery + " ORDER BY created_at DESC LIMIT $limit OFFSET $offset";
+      const paramsWithPagination: QueryParams = {
+        ...params,
+        limit,
+        offset: (page - 1) * limit,
+      };
 
-      const finalQuery = buildParameterizedQuery(query, params);
+      const finalQuery = buildParameterizedQuery(
+        queryWithPagination,
+        paramsWithPagination
+      );
       const result = await this.mcpAdapter.executeSQL(finalQuery);
-      const items = (result.data || []).map((row: any) =>
-        Donation.reconstitute(row)
+      const rows = (result.data || []) as unknown[];
+      const items = rows.map((row) =>
+        Donation.reconstitute(row as Record<string, unknown>)
       );
 
       const totalPages = Math.ceil(total / limit);
@@ -374,16 +404,16 @@ export class MCPDonationRepository implements IDonationRepository {
     );
   }
 
-  async findDueRecurringDonations(dueDate: Date): Promise<Result<Donation[]>> {
+  async findDueRecurringDonations(_dueDate: Date): Promise<Result<Donation[]>> {
     // This requires complex logic to check next execution date
     // For now, returning empty as placeholder
     return { success: true, data: [] };
   }
 
   async getDonationStatsInPeriod(
-    startDate: Date,
-    endDate: Date,
-    donorId?: UserId
+    _startDate: Date,
+    _endDate: Date,
+    _donorId?: UserId
   ): Promise<
     Result<{
       totalDonations: number;
@@ -407,8 +437,8 @@ export class MCPDonationRepository implements IDonationRepository {
   }
 
   async getMonthlyStats(
-    year: number,
-    donorId?: UserId
+    _year: number,
+    _donorId?: UserId
   ): Promise<
     Result<
       {
@@ -421,7 +451,7 @@ export class MCPDonationRepository implements IDonationRepository {
     return { success: true, data: [] };
   }
 
-  async getYearlyStats(donorId?: UserId): Promise<
+  async getYearlyStats(_donorId?: UserId): Promise<
     Result<
       {
         year: number;
@@ -434,8 +464,8 @@ export class MCPDonationRepository implements IDonationRepository {
   }
 
   async getTopDonors(
-    period: "monthly" | "yearly" | "all",
-    limit: number
+    _period: "monthly" | "yearly" | "all",
+    _limit: number
   ): Promise<
     Result<
       {
@@ -450,8 +480,8 @@ export class MCPDonationRepository implements IDonationRepository {
   }
 
   async getPopularInstitutes(
-    period: "monthly" | "yearly" | "all",
-    limit: number
+    _period: "monthly" | "yearly" | "all",
+    _limit: number
   ): Promise<
     Result<
       {
@@ -466,8 +496,8 @@ export class MCPDonationRepository implements IDonationRepository {
   }
 
   async getPopularOpinionLeaders(
-    period: "monthly" | "yearly" | "all",
-    limit: number
+    _period: "monthly" | "yearly" | "all",
+    _limit: number
   ): Promise<
     Result<
       {

@@ -28,7 +28,7 @@ const mockEconomicStats: EconomicStats = {
 };
 
 const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
-  userId,
+  userId: _userId,
 }) => {
   // TODO: Replace with actual data fetching
   // const economicStats = await getEconomicStats(userId);

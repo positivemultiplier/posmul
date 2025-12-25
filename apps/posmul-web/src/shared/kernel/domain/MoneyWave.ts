@@ -101,6 +101,7 @@ export class MoneyWave {
    * Add contribution to the money wave
    */
   addContribution(amount: number, contributorId: string): DomainEvent[] {
+    void contributorId;
     if (this.props.status !== "active") {
       throw new Error("Cannot contribute to inactive money wave");
     }

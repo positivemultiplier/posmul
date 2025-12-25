@@ -66,7 +66,7 @@ export class PredictionSettlementService {
       winnerCount: number;
     };
   }> {
-    console.log(`🎯 정산 시작: 게임 ${gameId}`);
+    void gameId;
 
     // 1. 승자와 패자 분류
     const winners = participants.filter(
@@ -84,9 +84,8 @@ export class PredictionSettlementService {
     const winnersStaked = winners.reduce((sum, p) => sum + p.stakedAmount, 0);
     const losersStaked = losers.reduce((sum, p) => sum + p.stakedAmount, 0);
 
-    console.log(
-      `💰 총 스테이킹: ${totalStaked} PMP (승자: ${winnersStaked}, 패자: ${losersStaked})`
-    );
+    void winnersStaked;
+    void losersStaked;
 
     // 3. 승자별 정산 계산
     const winnerSettlements = this.calculateWinnerPayouts(
@@ -127,7 +126,7 @@ export class PredictionSettlementService {
 
     const settlements = [...winnerSettlements, ...loserSettlements];
 
-    console.log(`✅ 정산 완료: ${settlements.length}명 처리`);
+    void settlements;
 
     return {
       settlements,
@@ -240,7 +239,7 @@ export class PredictionSettlementService {
     processedCount: number;
     errors: Array<{ userId: string; error: string }>;
   }> {
-    console.log(`🔄 정산 실행 시작: ${settlements.length}건`);
+    void gameId;
 
     let processedCount = 0;
     const errors: Array<{ userId: string; error: string }> = [];
@@ -261,7 +260,7 @@ export class PredictionSettlementService {
         await this.recordSettlement(gameId, settlement);
         processedCount++;
       } catch (error) {
-        console.error(`❌ 정산 실패: ${settlement.userId}`, error);
+        void error;
         errors.push({
           userId: settlement.userId,
           error: error instanceof Error ? error.message : "알 수 없는 오류",
@@ -269,9 +268,7 @@ export class PredictionSettlementService {
       }
     }
 
-    console.log(
-      `✅ 정산 실행 완료: ${processedCount}/${settlements.length}건 성공`
-    );
+    void processedCount;
 
     return {
       success: errors.length === 0,
@@ -285,7 +282,8 @@ export class PredictionSettlementService {
    */
   private async transferPmp(userId: string, amount: PmpAmount): Promise<void> {
     // TODO: 실제 경제 시스템과 연동
-    console.log(`💰 PMP 전송: ${userId} -> ${amount} PMP`);
+    void userId;
+    void amount;
   }
 
   /**
@@ -293,7 +291,8 @@ export class PredictionSettlementService {
    */
   private async transferPmc(userId: string, amount: PmcAmount): Promise<void> {
     // TODO: 실제 경제 시스템과 연동
-    console.log(`🏆 PMC 보너스: ${userId} -> ${amount} PMC`);
+    void userId;
+    void amount;
   }
 
   /**
@@ -304,7 +303,8 @@ export class PredictionSettlementService {
     settlement: SettlementCalculationData
   ): Promise<void> {
     // TODO: 데이터베이스에 정산 기록 저장
-    console.log(`📝 정산 기록: ${gameId} - ${settlement.userId}`);
+    void gameId;
+    void settlement;
   }
 
   /**
@@ -316,6 +316,7 @@ export class PredictionSettlementService {
     settlementSummary?: any;
   }> {
     // TODO: 실제 정산 상태 조회 로직
+    void gameId;
     return {
       isSettled: false,
     };

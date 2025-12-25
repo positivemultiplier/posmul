@@ -141,7 +141,7 @@ export class DeletePredictionGameUseCase {
   /**
    * 게임 삭제 권한 확인
    */
-  private canDeleteGame(game: any, userId: UserId): boolean {
+  private canDeleteGame(_game: any, _userId: UserId): boolean {
     // TODO: 실제 구현에서는 게임의 createdBy 프로퍼티와 비교
     // 또는 관리자 권한 확인 로직 추가
     return true; // 임시로 모든 사용자에게 권한 부여
@@ -150,7 +150,7 @@ export class DeletePredictionGameUseCase {
   /**
    * 게임에 참여자가 있는지 확인
    */
-  private hasParticipants(game: any): boolean {
+  private hasParticipants(_game: any): boolean {
     // TODO: 실제 구현에서는 게임의 predictions 맵 크기 확인
     return false; // 임시로 참여자 없음으로 처리
   }

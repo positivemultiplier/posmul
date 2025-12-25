@@ -8,7 +8,7 @@ import { ParticipantTimelineChart } from './ParticipantTimelineChart';
 import { TrendingUp, Users, PieChart } from 'lucide-react';
 
 export const PredictionChartView = ({
-  gameId,
+  gameId: _gameId,
   predictionType = 'BINARY', // BINARY, MULTIPLE_CHOICE, etc.
   probabilityData = [],
   bettingData = [],

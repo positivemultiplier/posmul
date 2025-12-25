@@ -3,9 +3,8 @@
 import { useState, FormEvent } from "react";
 import { createClient } from "../../../lib/supabase/client";
 import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
-import { Chrome, Loader2, Sparkles, Mail, Lock, User } from "lucide-react";
+import { Chrome, Loader2, Sparkles, Mail, Lock } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
   const [mode, setMode] = useState<"social" | "email">("social");
@@ -15,7 +14,6 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const router = useRouter();
 
   const handleGoogleSignup = async () => {
     setIsLoading(true);
@@ -37,7 +35,6 @@ export default function SignupPage() {
 
       if (error) throw error;
     } catch (err) {
-      console.error("Signup error:", err);
       setError(err instanceof Error ? err.message : "회원가입 중 오류가 발생했습니다.");
       setIsLoading(false);
     }
@@ -75,7 +72,6 @@ export default function SignupPage() {
 
       setSuccess(true);
     } catch (err) {
-      console.error("Email signup error:", err);
       setError(err instanceof Error ? err.message : "이메일 회원가입 중 오류가 발생했습니다.");
       setIsLoading(false);
     }

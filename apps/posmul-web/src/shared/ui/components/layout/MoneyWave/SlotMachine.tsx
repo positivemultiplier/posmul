@@ -25,6 +25,7 @@ export function SlotMachine({
     className = ""
 }: SlotMachineProps) {
     const [displayValue, setDisplayValue] = useState(value);
+    void totalAmount;
 
     // 숫자를 자릿수별로 분리
     const formatAndSplit = (num: number) => {

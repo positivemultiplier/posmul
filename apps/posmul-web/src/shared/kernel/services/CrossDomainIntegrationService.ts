@@ -7,12 +7,8 @@
  * @author PosMul Development Team
  * @since 2025-07-06
  */
-import { isFailure } from "@posmul/auth-economy-sdk";
-
 import {
-  EconomicRules,
   EventBus,
-  EventHandler,
   MoneyWave,
   MoneyWaveCreatedEvent,
   PmcSpentEvent,
@@ -54,39 +50,14 @@ export class CrossDomainIntegrationService {
    * Handle PmpAmount earned events
    */
   private async handlePmpEarned(event: PmpEarnedEvent): Promise<void> {
-    console.log(
-      `💰 User ${event.userId} earned ${event.amount} PmpAmount from ${event.source}`
-    );
-
-    // Here you could:
-    // - Update user statistics
-    // - Send notifications
-    // - Update leaderboards
-    // - Trigger achievements
-
-    // Example: Check for level up
-    if (event.amount >= 100) {
-      console.log(`🎉 Large reward detected! User might level up.`);
-    }
+    void event;
   }
 
   /**
    * Handle PmcAmount spent events
    */
   private async handlePmcSpent(event: PmcSpentEvent): Promise<void> {
-    console.log(
-      `💸 User ${event.userId} spent ${event.amount} PmcAmount on ${event.purpose}`
-    );
-
-    // Here you could:
-    // - Update spending analytics
-    // - Track user behavior patterns
-    // - Update economic models
-    // - Trigger warnings for excessive spending
-
-    if (event.amount >= 500) {
-      console.log(`⚠️ Large spending detected: ${event.amount} PmcAmount`);
-    }
+    void event;
   }
 
   /**
@@ -95,20 +66,7 @@ export class CrossDomainIntegrationService {
   private async handleMoneyWaveCreated(
     event: MoneyWaveCreatedEvent
   ): Promise<void> {
-    console.log(
-      `🌊 New Money Wave created: ${event.title} by user ${event.creatorId}`
-    );
-
-    // Here you could:
-    // - Send platform-wide notifications
-    // - Update economic multipliers
-    // - Create cross-promotional content
-    // - Update trending topics
-
-    // Automatically activate high-impact money waves
-    if (event.targetAmount >= 10000) {
-      console.log(`🔥 High-impact Money Wave created! Auto-featuring.`);
-    }
+    void event;
   }
 
   /**
@@ -154,10 +112,6 @@ export class CrossDomainIntegrationService {
 
     // 4. Publish PmpAmount earned event
     await this.eventBus.publishMany(earnEvents);
-
-    console.log(
-      `✅ User ${user.id} participated in prediction ${predictionId} with ${stake} PmcAmount`
-    );
   }
 
   /**
@@ -190,9 +144,5 @@ export class CrossDomainIntegrationService {
     });
 
     await this.eventBus.publishMany(earnEvents);
-
-    console.log(
-      `🎯 User ${user.id} successful prediction ${predictionId} with ${accuracy * 100}% accuracy`
-    );
   }
 }

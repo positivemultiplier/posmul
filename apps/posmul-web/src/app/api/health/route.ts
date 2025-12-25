@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
  * API 시스템 헬스체크
  */
 export async function GET(request: NextRequest) {
+  void request;
   try {
     const startTime = Date.now();
 
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error("Health check error:", error);
+    void error;
     return NextResponse.json(
       {
         success: false,

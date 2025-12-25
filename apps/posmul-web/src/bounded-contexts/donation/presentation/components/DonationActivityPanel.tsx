@@ -73,7 +73,7 @@ const mockDonationData = {
 };
 
 export const DonationActivityPanel: React.FC<DonationActivityPanelProps> = ({
-  userId,
+  userId: _userId,
 }) => {
   const data = mockDonationData;
 

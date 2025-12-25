@@ -14,14 +14,13 @@
  */
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition } from "react";
 import { PredictionDetailView } from "../../../../../bounded-contexts/prediction/presentation/components/PredictionDetailView";
 import { PredictionChartView } from "../../../../../bounded-contexts/prediction/presentation/components/charts/PredictionChartView";
-import { Card, CardContent, CardHeader, CardTitle } from "../../../../../shared/ui/components/base";
 import { CompactMoneyWaveCard } from "../../../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { placeBet, withdrawBet } from "./actions";
 import { FadeIn } from "../../../../../shared/ui/components/animations";
-import { Users, BarChart2, Info, ArrowLeft, Trophy, Calendar, Clock, DollarSign, Activity } from "lucide-react";
+import { Users, BarChart2, Info, ArrowLeft, Trophy, Calendar, Clock, Activity } from "lucide-react";
 import Link from "next/link";
 import { twMerge } from "tailwind-merge";
 
@@ -81,19 +80,10 @@ export function SoccerPredictionDetailClient({
   slug,
 }: SoccerPredictionDetailClientProps) {
   const [activeTab, setActiveTab] = useState<TabType>("prediction");
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
   const [balance, setBalance] = useState(userBalance);
   const [bets, setBets] = useState(userBets);
-  const [betResult, setBetResult] = useState<{ success: boolean; message: string } | null>(null);
   const [withdrawingBetId, setWithdrawingBetId] = useState<string | null>(null);
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  // Scroll detection for sticky header effect
-  useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 50);
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   // ISO string to Date conversion
   const gameWithDates = {
@@ -103,10 +93,8 @@ export function SoccerPredictionDetailClient({
   };
 
   const handleParticipate = async (optionId: string, amount: number) => {
-    setBetResult(null);
     startTransition(async () => {
       const result = await placeBet({ gameId: game.id, optionId, stakeAmount: amount });
-      setBetResult({ success: result.success, message: result.message });
       if (result.success && result.newBalance !== undefined) {
         setBalance((prev) => ({ ...prev, pmp: result.newBalance! }));
         setBets((prev) => [{
@@ -123,9 +111,7 @@ export function SoccerPredictionDetailClient({
   const handleWithdraw = async (betId: string) => {
     if (!confirm("정말로 이 베팅을 철회하시겠습니까? 베팅 금액은 전액 환불됩니다.")) return;
     setWithdrawingBetId(betId);
-    setBetResult(null);
     const result = await withdrawBet(betId, slug);
-    setBetResult({ success: result.success, message: result.message });
     if (result.success) {
       setBets((prev) => prev.filter((bet) => bet.betId !== betId));
       if (result.newBalance !== undefined) {

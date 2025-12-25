@@ -48,7 +48,6 @@ export async function getPredictionGames(options?: {
   const { data, error } = await query;
 
   if (error) {
-    console.error("Error fetching prediction games:", error);
     throw error;
   }
 
@@ -61,8 +60,6 @@ export async function getPredictionGames(options?: {
 export async function getPredictionGameBySlug(slug: string) {
   const supabase = await createClient();
 
-  console.log("[DEBUG] getPredictionGameBySlug called with slug:", slug);
-
   // slug 컬럼으로 직접 조회 - maybeSingle() 사용하여 배열/null 처리
   const { data, error } = await supabase
     .schema("prediction")
@@ -71,10 +68,7 @@ export async function getPredictionGameBySlug(slug: string) {
     .eq("slug", slug)
     .maybeSingle();
 
-  console.log("[DEBUG] Query result - data:", JSON.stringify(data), "error:", JSON.stringify(error));
-
   if (error) {
-    console.error(`Error fetching prediction game with slug ${slug}:`, error);
     return null;
   }
 
@@ -88,15 +82,10 @@ export async function getPredictionGameBySlug(slug: string) {
       .maybeSingle();
 
     if (errorById) {
-      console.error(`Error fetching prediction game with game_id ${slug}:`, errorById);
       return null;
     }
-
-    console.log("[DEBUG] Returning game by game_id:", gameById?.game_id);
     return gameById;
   }
-
-  console.log("[DEBUG] Returning game with game_id:", data?.game_id);
   return data;
 }
 
@@ -128,7 +117,6 @@ export async function getPredictionGameStats(gameId: string) {
     .single();
 
   if (error) {
-    console.error(`Error fetching stats for game ${gameId}:`, error);
     return null;
   }
 
@@ -153,7 +141,7 @@ export function parseGameOptions(gameOptions: any) {
     
     return [];
   } catch (error) {
-    console.error("Error parsing game options:", error);
+    void error;
     return [];
   }
 }

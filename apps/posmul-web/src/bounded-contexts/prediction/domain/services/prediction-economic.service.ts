@@ -12,7 +12,6 @@ import {
   PredictionGameId,
   Result,
   UserId,
-  isFailure,
 } from "@posmul/auth-economy-sdk";
 import { failure, success } from "@posmul/auth-economy-sdk";
 
@@ -378,6 +377,7 @@ export class PredictionEconomicService {
     userId: UserId
   ): Promise<Result<PredictionEconomicStats, PredictionEconomicError>> {
     try {
+      void userId;
       // TODO: Repository 구현 후 실제 데이터 조회로 변경
       // 현재는 임시 더미 데이터 반환
       const stats: PredictionEconomicStats = {
@@ -410,6 +410,7 @@ export class PredictionEconomicService {
     requiredAmount: number,
     remainingAfterParticipation: number
   ): PmpParticipationCheck["riskAssessment"] {
+    void remainingAfterParticipation;
     const riskRatio = requiredAmount / currentBalance;
 
     let riskLevel: "LOW" | "MEDIUM" | "HIGH";

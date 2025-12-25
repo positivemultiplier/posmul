@@ -154,6 +154,8 @@ export class AcquirePmpAmountUseCase {
         timestamp: request.timestamp,
       };
 
+      void utilityInput;
+
       // Repository에 데이터 저장이 필요한 경우에만 호출
       // const saveUtilityResult = await this.utilityRepository.saveUtilityPrediction(utilityInput);
 
@@ -288,6 +290,7 @@ export class AcquirePmpAmountUseCase {
     userId: UserId,
     activityType: PmpAmountActivityType
   ): Promise<number> {
+    void activityType;
     // 최근 7일간 동일 활동 횟수 조회 (실제로는 repository를 통해 조회)
     // 연속 활동 시 손실 방지를 위한 보너스 제공
     const recentActivitiesResult =

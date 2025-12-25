@@ -41,7 +41,9 @@ export default async function LaLigaPage() {
     .limit(20);
 
   const { data, error } = await query;
-  if (error) console.error("LaLigaPage error", error.message);
+  if (error) {
+    void error;
+  }
   const games = (data ?? []) as PredictionGameRow[];
 
   let userPredictions: UserPrediction[] = [];

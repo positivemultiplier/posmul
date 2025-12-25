@@ -37,7 +37,9 @@ export default async function BundesligaPage() {
     .limit(20);
 
   const { data, error } = await query;
-  if (error) console.error("BundesligaPage error", error.message);
+  if (error) {
+    void error;
+  }
   const games = data ?? [];
 
   let userPredictions: UserPrediction[] = [];

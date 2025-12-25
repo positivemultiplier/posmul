@@ -85,6 +85,7 @@ const mockRankingData = {
 export const UserRankingPanel: React.FC<UserRankingPanelProps> = ({
   userId,
 }) => {
+  void userId;
   const data = mockRankingData;
 
   const getPercentile = (rank: number, total: number) => {

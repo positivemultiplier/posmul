@@ -59,7 +59,7 @@ export function useAuth(): AuthState & AuthActions {
     error: null,
   });
 
-  const [error, setError] = useState<string | null>(null);
+  const [_error, setError] = useState<string | null>(null);
 
   // Auth-Economy SDK 클라이언트 초기화
   const authClient = createAuthEconomyClient({
@@ -103,7 +103,7 @@ export function useAuth(): AuthState & AuthActions {
         });
       }
     } catch (error) {
-      console.error("Auth status check failed:", error);
+      void error;
       setAuthState({
         user: null,
         isLoading: false,
@@ -138,11 +138,11 @@ export function useAuth(): AuthState & AuthActions {
           if (authClient.economy.grantDevLoginBonus) {
             const bonusResult = await authClient.economy.grantDevLoginBonus(result.data.user.id);
             if (bonusResult.success && bonusResult.data.bonusGranted) {
-              console.log(`🎁 개발 보너스 지급 완료! PMP: ${bonusResult.data.pmpBalance}, PMC: ${bonusResult.data.pmcBalance}`);
+              // 개발 보너스 지급 로그는 생략
             }
           }
         } catch (bonusError) {
-          console.error("⚠️ 개발 보너스 지급 실패:", bonusError);
+          void bonusError;
           // 보너스 지급 실패해도 로그인은 계속 진행
         }
       } else {
@@ -271,11 +271,11 @@ export function useAuth(): AuthState & AuthActions {
             ? result.error
             : result.error?.message || "Unknown error"
           : "토큰 갱신에 실패했습니다.";
-        console.error("Token refresh failed:", errorMessage);
+        void errorMessage;
         throw new Error(errorMessage);
       }
     } catch (error) {
-      console.error("Token refresh failed:", error);
+      void error;
       throw error;
     }
   };

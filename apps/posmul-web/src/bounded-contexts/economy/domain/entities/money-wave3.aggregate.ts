@@ -648,7 +648,7 @@ export class MoneyWave3Aggregate {
   /**
    * 긴급 중단
    */
-  suspend(reason: string): Result<void> {
+  suspend(_reason: string): Result<void> {
     if (this.status === MoneyWave3Status.COMPLETED) {
       return {
         success: false,

@@ -58,6 +58,120 @@ export class CollectDemographicsUseCase {
     private readonly kosisClient: KOSISClient
   ) {}
 
+  private ensureKosisConfigured(): Result<void> {
+    if (!this.kosisClient.isConfigured()) {
+      return {
+        success: false,
+        error: new Error("KOSIS API Key가 설정되지 않았습니다. KOSIS_API_KEY 환경변수를 확인하세요."),
+      };
+    }
+    return { success: true, data: undefined };
+  }
+
+  private async resolveKosisSourceId(): Promise<string> {
+    const sourceResult = await this.dataSourceRepository.findByName("KOSIS");
+    return sourceResult.success && sourceResult.data
+      ? sourceResult.data.getId()
+      : createDataSourceId("kosis");
+  }
+
+  private async collectForCategory(
+    request: CollectDemographicsRequest,
+    category: StatCategory,
+    kosisSourceId: string,
+    result: CollectDemographicsResult
+  ): Promise<void> {
+    try {
+      const response = request.month
+        ? await this.kosisClient.fetchMonthlyData(category, request.regionCode, request.year, request.month)
+        : await this.kosisClient.fetchStatistics(
+            category,
+            request.regionCode,
+            request.year,
+            request.year,
+            PeriodType.MONTHLY
+          );
+
+      if (!response.success || !response.data) {
+        result.failedCount++;
+        result.errors.push(`${category}: ${response.error}`);
+        return;
+      }
+
+      result.successCount++;
+      await this.processItems(category, response.data, kosisSourceId, result);
+    } catch (error) {
+      result.failedCount++;
+      result.errors.push(`${category}: ${error instanceof Error ? error.message : "Unknown error"}`);
+    }
+  }
+
+  private async processItems(
+    category: StatCategory,
+    items: _KOSISStatItem[],
+    kosisSourceId: string,
+    result: CollectDemographicsResult
+  ): Promise<void> {
+    for (const item of items) {
+      const parsedData = KOSISClient.parseStatItem(item, category);
+      if (!parsedData) continue;
+
+      const existsResult = await this.statisticRepository.exists(
+        parsedData.regionCode,
+        category,
+        PeriodType.MONTHLY,
+        parsedData.year,
+        parsedData.month ?? undefined
+      );
+
+      if (existsResult.success && existsResult.data) {
+        result.skippedCount++;
+        result.collectedData.push({
+          category,
+          regionCode: parsedData.regionCode,
+          period: this.formatPeriod(parsedData.year, parsedData.month),
+          value: parsedData.value,
+          unit: parsedData.unit,
+          isNew: false,
+        });
+        continue;
+      }
+
+      const statistic = Statistic.create(
+        createStatisticId(crypto.randomUUID()),
+        kosisSourceId,
+        parsedData.regionCode,
+        category,
+        PeriodType.MONTHLY,
+        parsedData.year,
+        parsedData.value,
+        parsedData.unit,
+        parsedData.month ?? undefined,
+        undefined,
+        { rawData: item }
+      );
+
+      const saveResult = await this.statisticRepository.save(statistic);
+      if (saveResult.success) {
+        result.savedCount++;
+        result.collectedData.push({
+          category,
+          regionCode: parsedData.regionCode,
+          period: this.formatPeriod(parsedData.year, parsedData.month),
+          value: parsedData.value,
+          unit: parsedData.unit,
+          isNew: true,
+        });
+        continue;
+      }
+
+      const failedResult = saveResult as { success: false; error: Error };
+      result.errors.push(
+        `저장 실패 (${category}, ${parsedData.year}/${parsedData.month}): ${failedResult.error.message}`
+      );
+    }
+  }
+
   /**
    * 인구통계 데이터 수집 실행
    */
@@ -72,110 +186,13 @@ export class CollectDemographicsUseCase {
       collectedData: [],
     };
 
-    // API Key 확인
-    if (!this.kosisClient.isConfigured()) {
-      return {
-        success: false,
-        error: new Error("KOSIS API Key가 설정되지 않았습니다. KOSIS_API_KEY 환경변수를 확인하세요."),
-      };
-    }
+    const configuredResult = this.ensureKosisConfigured();
+    if (!configuredResult.success) return configuredResult;
 
-    // KOSIS 데이터 소스 ID 조회
-    const sourceResult = await this.dataSourceRepository.findByName("KOSIS");
-    const kosisSourceId = sourceResult.success && sourceResult.data
-      ? sourceResult.data.getId()
-      : createDataSourceId("kosis");
+    const kosisSourceId = await this.resolveKosisSourceId();
 
-    // 각 카테고리별 데이터 수집
     for (const category of request.categories) {
-      try {
-        const response = request.month
-          ? await this.kosisClient.fetchMonthlyData(
-              category,
-              request.regionCode,
-              request.year,
-              request.month
-            )
-          : await this.kosisClient.fetchStatistics(
-              category,
-              request.regionCode,
-              request.year,
-              request.year,
-              PeriodType.MONTHLY
-            );
-
-        if (!response.success || !response.data) {
-          result.failedCount++;
-          result.errors.push(`${category}: ${response.error}`);
-          continue;
-        }
-
-        result.successCount++;
-
-        // 각 데이터 항목 처리
-        for (const item of response.data) {
-          const parsedData = KOSISClient.parseStatItem(item, category);
-          if (!parsedData) continue;
-
-          // 중복 확인
-          const existsResult = await this.statisticRepository.exists(
-            parsedData.regionCode,
-            category,
-            PeriodType.MONTHLY,
-            parsedData.year,
-            parsedData.month ?? undefined
-          );
-
-          if (existsResult.success && existsResult.data) {
-            result.skippedCount++;
-            result.collectedData.push({
-              category,
-              regionCode: parsedData.regionCode,
-              period: this.formatPeriod(parsedData.year, parsedData.month),
-              value: parsedData.value,
-              unit: parsedData.unit,
-              isNew: false,
-            });
-            continue;
-          }
-
-          // 새 통계 엔티티 생성
-          const statistic = Statistic.create(
-            createStatisticId(crypto.randomUUID()),
-            kosisSourceId,
-            parsedData.regionCode,
-            category,
-            PeriodType.MONTHLY,
-            parsedData.year,
-            parsedData.value,
-            parsedData.unit,
-            parsedData.month ?? undefined,
-            undefined,
-            { rawData: item }
-          );
-
-          // 저장
-          const saveResult = await this.statisticRepository.save(statistic);
-          if (saveResult.success) {
-            result.savedCount++;
-            result.collectedData.push({
-              category,
-              regionCode: parsedData.regionCode,
-              period: this.formatPeriod(parsedData.year, parsedData.month),
-              value: parsedData.value,
-              unit: parsedData.unit,
-              isNew: true,
-            });
-          } else {
-            // Type narrowing: saveResult.success === false here
-            const failedResult = saveResult as { success: false; error: Error };
-            result.errors.push(`저장 실패 (${category}, ${parsedData.year}/${parsedData.month}): ${failedResult.error.message}`);
-          }
-        }
-      } catch (error) {
-        result.failedCount++;
-        result.errors.push(`${category}: ${error instanceof Error ? error.message : "Unknown error"}`);
-      }
+      await this.collectForCategory(request, category, kosisSourceId, result);
     }
 
     return { success: true, data: result };

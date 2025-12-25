@@ -54,7 +54,7 @@ export default function TransactionHistory({ userId }: TransactionHistoryProps) 
         setError(result.error?.message || "거래 내역 조회 실패");
       }
     } catch (err) {
-      console.error("Failed to fetch transactions:", err);
+      void err;
       setError("네트워크 오류가 발생했습니다.");
     } finally {
       setLoading(false);

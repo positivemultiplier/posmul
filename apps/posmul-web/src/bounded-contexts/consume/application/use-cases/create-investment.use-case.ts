@@ -1,8 +1,11 @@
-import { Result, UserId, isFailure } from "@posmul/auth-economy-sdk";
+import type { Result, UserId } from "@posmul/auth-economy-sdk";
 import { ValidationError } from "@posmul/auth-economy-sdk";
 
 // TODO: SDK로 마이그레이션 필요 // TODO: SDK로 마이그레이션 필요
 import { Investment } from "../../domain/entities/investment.entity";
+import { Advertisement } from "../../domain/entities/advertisement.entity";
+import { CrowdFunding } from "../../domain/entities/crowdfunding.entity";
+import { Merchant } from "../../domain/entities/merchant.entity";
 import {
   IAdvertisementRepository,
   ICrowdFundingRepository,
@@ -33,165 +36,45 @@ export class CreateInvestmentUseCase {
     private readonly crowdFundingRepository: ICrowdFundingRepository
   ) {}
 
+  private static readonly GENERIC_FAILURE_MESSAGE = "처리에 실패했습니다.";
+
   async execute(
     userId: UserId,
     request: CreateInvestmentRequest
-  ): Promise<Result<{ investmentId: string; estimatedReturn: number } | any>> {
+  ): Promise<Result<{ investmentId: string; estimatedReturn: number }>> {
     try {
-      // 요청 데이터 검증
-      const validationResult = CreateInvestmentRequestSchema.safeParse(request);
-      if (!validationResult.success) {
-        return {
-          success: false,
-          error: new ValidationError("입력 데이터가 유효하지 않습니다.", {
-            validationErrors:
-              validationResult.error?.flatten()?.fieldErrors || {},
-          }),
-        };
-      }
+      const validDataResult = this.validateRequest(request);
+      if (!validDataResult.success) return validDataResult;
+      const validData = validDataResult.data;
 
-      const validData = validationResult.data; // 투자 대상 조회
-      let target = null;
-      switch (validData.type) {
-        case InvestmentType.LOCAL_LEAGUE:
-          const merchantIdResult = MerchantId.create(validData.targetId);
-          if (!merchantIdResult.success) {
-            return {
-              success: false,
-              error: new Error("처리에 실패했습니다."),
-            };
-          }
-          const merchantResult = await this.merchantRepository.findById(
-            merchantIdResult.data
-          );
-          if (!merchantResult.success || !merchantResult.data) {
-            return {
-              success: false,
-              error: new Error("투자 대상 상점을 찾을 수 없습니다."),
-            };
-          }
-          target = merchantResult.data;
-          break;
-
-        case InvestmentType.MAJOR_LEAGUE:
-          const advertisementIdResult = AdvertisementId.create(
-            validData.targetId
-          );
-          if (!advertisementIdResult.success) {
-            return {
-              success: false,
-              error: new Error("처리에 실패했습니다."),
-            };
-          }
-          const advertisementResult =
-            await this.advertisementRepository.findById(
-              advertisementIdResult.data
-            );
-          if (!advertisementResult.success || !advertisementResult.data) {
-            return {
-              success: false,
-              error: new Error("투자 대상 광고를 찾을 수 없습니다."),
-            };
-          }
-          target = advertisementResult.data;
-          break;
-
-        case InvestmentType.CLOUD_FUNDING:
-          const crowdFundingIdResult = CrowdFundingId.create(
-            validData.targetId
-          );
-          if (!crowdFundingIdResult.success) {
-            return {
-              success: false,
-              error: new Error("처리에 실패했습니다."),
-            };
-          }
-          const crowdFundingResult = await this.crowdFundingRepository.findById(
-            crowdFundingIdResult.data
-          );
-          if (!crowdFundingResult.success || !crowdFundingResult.data) {
-            return {
-              success: false,
-              error: new Error("투자 대상 크라우드 펀딩을 찾을 수 없습니다."),
-            };
-          }
-          target = crowdFundingResult.data;
-          break;
-
-        default:
-          return {
-            success: false,
-            error: new Error("지원하지 않는 투자 타입입니다."),
-          };
-      }
-
-      // Investment 엔티티 생성
-      const investmentResult = Investment.create(
-        userId,
+      const targetResult = await this.fetchInvestmentTarget(
         validData.type,
-        validData.targetId,
+        validData.targetId
+      );
+      if (!targetResult.success) return targetResult;
+
+      const investmentResult = this.createInvestmentEntity(userId, validData);
+      if (!investmentResult.success) return investmentResult;
+
+      const eligibilityResult = this.validateEligibility(
+        investmentResult.data,
+        targetResult.data
+      );
+      if (!eligibilityResult.success) return eligibilityResult;
+
+      const estimatedReturnResult = this.calculateEstimatedReturn(
+        validData.type,
+        targetResult.data,
         validData.amount,
-        { message: validData.message || "Investment creation failed" }
+        investmentResult.data
       );
+      if (!estimatedReturnResult.success) return estimatedReturnResult;
 
-      if (!investmentResult.success) {
-        return {
-          success: false,
-          error: new Error("처리에 실패했습니다."),
-        };
-      }
-
-      // 도메인 서비스를 통한 투자 검증
-      const validationResult2 =
-        InvestmentDomainService.validateInvestmentEligibility(
-          investmentResult.data,
-          target
-        );
-
-      if (!validationResult2.success) {
-        return {
-          success: false,
-          error: new Error("처리에 실패했습니다."),
-        };
-      }
-
-      // 보상률 계산
-      const rewardRateResult = InvestmentDomainService.calculateRewardRate(
-        validData.type,
-        target,
-        validData.amount
-      );
-
-      if (!rewardRateResult.success) {
-        return {
-          success: false,
-          error: new Error("처리에 실패했습니다."),
-        };
-      }
-
-      // 예상 수익 계산
-      const estimatedReturnResult =
-        InvestmentDomainService.calculateInvestmentReward(
-          investmentResult.data,
-          rewardRateResult.data
-        );
-
-      if (!estimatedReturnResult.success) {
-        return {
-          success: false,
-          error: new Error("처리에 실패했습니다."),
-        };
-      }
-
-      // 데이터베이스에 저장
       const saveResult = await this.investmentRepository.save(
         investmentResult.data
       );
       if (!saveResult.success) {
-        return {
-          success: false,
-          error: new Error("처리에 실패했습니다."),
-        };
+        return this.fail(CreateInvestmentUseCase.GENERIC_FAILURE_MESSAGE);
       }
 
       return {
@@ -210,5 +93,153 @@ export class CreateInvestmentUseCase {
             : new Error("투자 생성 중 오류가 발생했습니다."),
       };
     }
+  }
+
+  private validateRequest(
+    request: CreateInvestmentRequest
+  ): Result<CreateInvestmentRequest> {
+    const validationResult = CreateInvestmentRequestSchema.safeParse(request);
+    if (!validationResult.success) {
+      return {
+        success: false,
+        error: new ValidationError("입력 데이터가 유효하지 않습니다.", {
+          validationErrors: validationResult.error?.flatten()?.fieldErrors || {},
+        }),
+      };
+    }
+    return { success: true, data: validationResult.data };
+  }
+
+  private createInvestmentEntity(
+    userId: UserId,
+    validData: CreateInvestmentRequest
+  ): Result<Investment> {
+    const investmentResult = Investment.create(
+      userId,
+      validData.type,
+      validData.targetId,
+      validData.amount,
+      { message: validData.message || "Investment creation failed" }
+    );
+
+    if (!investmentResult.success) {
+      return this.fail(CreateInvestmentUseCase.GENERIC_FAILURE_MESSAGE);
+    }
+
+    return investmentResult;
+  }
+
+  private validateEligibility(
+    investment: Investment,
+    target: Merchant | Advertisement | CrowdFunding
+  ): Result<void> {
+    const validationResult =
+      InvestmentDomainService.validateInvestmentEligibility(investment, target);
+    if (!validationResult.success) {
+      return this.fail(CreateInvestmentUseCase.GENERIC_FAILURE_MESSAGE);
+    }
+    return { success: true, data: undefined };
+  }
+
+  private calculateEstimatedReturn(
+    type: InvestmentType,
+    target: Merchant | Advertisement | CrowdFunding,
+    amount: number,
+    investment: Investment
+  ): Result<number> {
+    const rewardRateResult = InvestmentDomainService.calculateRewardRate(
+      type,
+      target,
+      amount
+    );
+    if (!rewardRateResult.success) {
+      return this.fail(CreateInvestmentUseCase.GENERIC_FAILURE_MESSAGE);
+    }
+
+    const estimatedReturnResult =
+      InvestmentDomainService.calculateInvestmentReward(
+        investment,
+        rewardRateResult.data
+      );
+    if (!estimatedReturnResult.success) {
+      return this.fail(CreateInvestmentUseCase.GENERIC_FAILURE_MESSAGE);
+    }
+
+    return estimatedReturnResult;
+  }
+
+  private async fetchInvestmentTarget(
+    type: InvestmentType,
+    targetId: string
+  ): Promise<Result<Merchant | Advertisement | CrowdFunding>> {
+    switch (type) {
+      case InvestmentType.LOCAL_LEAGUE:
+        return this.fetchMerchantTarget(targetId);
+      case InvestmentType.MAJOR_LEAGUE:
+        return this.fetchAdvertisementTarget(targetId);
+      case InvestmentType.CLOUD_FUNDING:
+        return this.fetchCrowdFundingTarget(targetId);
+      default:
+        return this.fail("지원하지 않는 투자 타입입니다.");
+    }
+  }
+
+  private async fetchMerchantTarget(targetId: string): Promise<Result<Merchant>> {
+    const merchantIdResult = MerchantId.create(targetId);
+    if (!merchantIdResult.success) {
+      return this.fail(CreateInvestmentUseCase.GENERIC_FAILURE_MESSAGE);
+    }
+
+    const merchantResult = await this.merchantRepository.findById(
+      merchantIdResult.data
+    );
+    if (!merchantResult.success || !merchantResult.data) {
+      return this.fail("투자 대상 상점을 찾을 수 없습니다.");
+    }
+
+    return { success: true, data: merchantResult.data };
+  }
+
+  private async fetchAdvertisementTarget(
+    targetId: string
+  ): Promise<Result<Advertisement>> {
+    const advertisementIdResult = AdvertisementId.create(targetId);
+    if (!advertisementIdResult.success) {
+      return this.fail(CreateInvestmentUseCase.GENERIC_FAILURE_MESSAGE);
+    }
+
+    const advertisementResult = await this.advertisementRepository.findById(
+      advertisementIdResult.data
+    );
+    if (!advertisementResult.success || !advertisementResult.data) {
+      return this.fail("투자 대상 광고를 찾을 수 없습니다.");
+    }
+
+    return { success: true, data: advertisementResult.data };
+  }
+
+  private async fetchCrowdFundingTarget(
+    targetId: string
+  ): Promise<Result<CrowdFunding>> {
+    const crowdFundingIdResult = CrowdFundingId.create(targetId);
+    if (!crowdFundingIdResult.success) {
+      return this.fail(CreateInvestmentUseCase.GENERIC_FAILURE_MESSAGE);
+    }
+
+    const crowdFundingResult = await this.crowdFundingRepository.findById(
+      crowdFundingIdResult.data
+    );
+    if (!crowdFundingResult.success || !crowdFundingResult.data) {
+      return this.fail("투자 대상 크라우드 펀딩을 찾을 수 없습니다.");
+    }
+
+    return { success: true, data: crowdFundingResult.data };
+  }
+
+  private fail<T>(message: string): Result<T> {
+    return {
+      success: false,
+      error: new Error(message),
+    };
   }
 }

@@ -407,8 +407,6 @@ export class EconomicForecastingService {
         };
       }
 
-      const cleanedData = preprocessedData.data;
-
       // 모델 추정
       const modelResult = await this.estimateModel(
         preprocessedData.data,
@@ -822,6 +820,9 @@ export class EconomicForecastingService {
     model: any,
     config: ForecastingConfig
   ): Promise<ForecastingDiagnostics> {
+    void data;
+    void model;
+    void config;
     // 모델 진단 구현 (스텁)
     return {
       modelSpecification: {
@@ -899,6 +900,9 @@ export class EconomicForecastingService {
     model: any,
     config: ForecastingConfig
   ): Promise<ForecastingAccuracy> {
+    void data;
+    void model;
+    void config;
     // 정확도 평가 구현 (스텁)
     return {
       mae: 0,
@@ -986,6 +990,8 @@ export class EconomicForecastingService {
     data: TimeSeriesDataPoint[],
     config: ForecastingConfig
   ): Promise<Result<any>> {
+    void data;
+    void config;
     return { success: true, data: {} };
   }
 
@@ -993,6 +999,8 @@ export class EconomicForecastingService {
     data: TimeSeriesDataPoint[],
     config: ForecastingConfig
   ): Promise<Result<any>> {
+    void data;
+    void config;
     return { success: true, data: {} };
   }
 
@@ -1000,6 +1008,8 @@ export class EconomicForecastingService {
     data: Record<EconomicIndicatorType, TimeSeriesDataPoint[]>,
     config: ForecastingConfig
   ): Promise<Result<any>> {
+    void data;
+    void config;
     return { success: true, data: {} };
   }
 
@@ -1007,6 +1017,8 @@ export class EconomicForecastingService {
     data: TimeSeriesDataPoint[],
     config: ForecastingConfig
   ): Promise<Result<any>> {
+    void data;
+    void config;
     return { success: true, data: {} };
   }
 
@@ -1014,6 +1026,8 @@ export class EconomicForecastingService {
     data: TimeSeriesDataPoint[],
     config: ForecastingConfig
   ): Promise<Result<any>> {
+    void data;
+    void config;
     return { success: true, data: {} };
   }
 
@@ -1022,6 +1036,9 @@ export class EconomicForecastingService {
     horizon: number,
     config: ForecastingConfig
   ): Promise<number> {
+    void model;
+    void horizon;
+    void config;
     return 0; // 스텁
   }
 
@@ -1031,6 +1048,8 @@ export class EconomicForecastingService {
     model: any,
     config: ForecastingConfig
   ): { lower: number; upper: number } {
+    void model;
+    void config;
     const margin = 1.96 * Math.sqrt(horizon); // 간단한 계산
     return {
       lower: forecast - margin,
@@ -1043,6 +1062,7 @@ export class EconomicForecastingService {
     bounds: { lower: number; upper: number },
     model: any
   ): ProbabilityDistribution {
+    void model;
     const variance = Math.pow((bounds.upper - bounds.lower) / 4, 2); // 근사
     return {
       mean: forecast,
@@ -1064,6 +1084,7 @@ export class EconomicForecastingService {
     data: TimeSeriesDataPoint[],
     shocks: Record<string, number[]>
   ): TimeSeriesDataPoint[] {
+    void shocks;
     return data; // 스텁
   }
 
@@ -1071,6 +1092,7 @@ export class EconomicForecastingService {
     data: TimeSeriesDataPoint[],
     stressTest: StressTestScenario
   ): TimeSeriesDataPoint[] {
+    void stressTest;
     return data; // 스텁
   }
 
@@ -1079,6 +1101,9 @@ export class EconomicForecastingService {
     config: ForecastingConfig,
     simulations: number
   ): Promise<MonteCarloResult> {
+    void data;
+    void config;
+    void simulations;
     return {
       meanForecasts: [],
       medianForecasts: [],
@@ -1092,6 +1117,9 @@ export class EconomicForecastingService {
     alternatives: Record<string, ForecastPoint[]>,
     stressTests: Record<string, ForecastPoint[]>
   ): RiskMetrics {
+    void baseline;
+    void alternatives;
+    void stressTests;
     return {
       valueAtRisk: {},
       expectedShortfall: {},
@@ -1108,6 +1136,8 @@ export class EconomicForecastingService {
     newDataPoint: TimeSeriesDataPoint,
     config: ForecastingConfig
   ): Promise<Result<ForecastingResult>> {
+    void newDataPoint;
+    void config;
     return { success: true, data: existingForecast };
   }
 
@@ -1116,6 +1146,8 @@ export class EconomicForecastingService {
     newDataPoint: TimeSeriesDataPoint,
     config: ForecastingConfig
   ): Promise<Result<ForecastingResult>> {
+    void newDataPoint;
+    void config;
     return { success: true, data: existingForecast };
   }
 
@@ -1181,6 +1213,8 @@ export class EconomicForecastingService {
     actual: number[],
     forecast: number[]
   ): Promise<BacktestResult[]> {
+    void actual;
+    void forecast;
     return []; // 스텁
   }
 }

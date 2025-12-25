@@ -2,6 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getEconomicBalance } from "../../../../shared/adapters/simple-economy.adapter";
 
+type SystemStats = {
+  totalPmpAmount: number;
+  totalPmcAmount: number;
+  activeUsers: number;
+  totalTransactions: number;
+};
+
 /**
  * GET /api/economy/pmp-pmc-overview
  * PmpAmount/PmcAmount 경제 시스템 개요 조회 (Auth-Economy SDK 기반)
@@ -74,7 +81,7 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("GET /api/economy/pmp-pmc-overview error:", error);
+    void error;
     return NextResponse.json(
       {
         success: false,
@@ -99,6 +106,7 @@ async function calculateUserEconomicStats(userId: string): Promise<{
   riskScore: number;
 }> {
   try {
+    void userId;
     // SDK를 통한 트랜잭션 히스토리 조회 (현재 미구현이므로 기본값)
     return {
       weeklyPmpEarned: 0,
@@ -108,7 +116,7 @@ async function calculateUserEconomicStats(userId: string): Promise<{
       riskScore: 0.5,
     };
   } catch (error) {
-    console.error("Error calculating user economic stats:", error);
+    void error;
     return {
       weeklyPmpEarned: 0,
       weeklyPmcEarned: 0,
@@ -122,7 +130,7 @@ async function calculateUserEconomicStats(userId: string): Promise<{
 /**
  * PmpAmount 수요 계산
  */
-function calculatePmpDemand(systemStats: any): number {
+function calculatePmpDemand(systemStats: SystemStats): number {
   if (!systemStats.totalPmpAmount) return 0;
   const demandRatio =
     systemStats.totalTransactions / systemStats.totalPmpAmount;
@@ -132,7 +140,7 @@ function calculatePmpDemand(systemStats: any): number {
 /**
  * PmcAmount 변동성 계산
  */
-function calculatePmcVolatility(systemStats: any): number {
+function calculatePmcVolatility(systemStats: SystemStats): number {
   if (!systemStats.totalPmcAmount) return 0;
   return 25; // 기본 변동성
 }
@@ -140,7 +148,7 @@ function calculatePmcVolatility(systemStats: any): number {
 /**
  * 경제 건강도 계산
  */
-function calculateEconomicHealth(systemStats: any): number {
+function calculateEconomicHealth(systemStats: SystemStats): number {
   const factors = [
     systemStats.activeUsers > 0 ? 25 : 0,
     systemStats.totalPmpAmount > 0 ? 25 : 0,

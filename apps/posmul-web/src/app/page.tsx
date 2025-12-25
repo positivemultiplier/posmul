@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { Sparkles, TrendingUp, Users, MessageCircle } from "lucide-react";
-import { Badge, Card } from "../shared/ui";
+import { Sparkles } from "lucide-react";
 import EconomyStats from "../bounded-contexts/economy/presentation/components/EconomyStats";
 import {
   FadeInClient,

@@ -31,12 +31,6 @@ export const metadata: Metadata = {
   // viewport: "width=device-width, initial-scale=1",
 };
 
-// 임시 경제 정보 (추후 실제 API로 교체)
-const mockEconomicBalance = {
-  pmp: 12500,
-  pmc: 8750,
-};
-
 export default function RootLayout({
   children,
 }: Readonly<{

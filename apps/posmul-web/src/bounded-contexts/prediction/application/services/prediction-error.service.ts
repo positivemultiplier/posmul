@@ -215,7 +215,7 @@ export class PredictionErrorService {
     }
 
     // 알 수 없는 에러
-    console.error("Unexpected error in prediction game:", error);
+    void error;
     return "예상치 못한 오류가 발생했습니다. 문제가 계속되면 고객센터에 문의해주세요.";
   }
 

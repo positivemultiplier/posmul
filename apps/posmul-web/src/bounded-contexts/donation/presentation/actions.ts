@@ -10,7 +10,6 @@ import { MCPInstituteRepository } from "../infrastructure/repositories/mcp-insti
 import { MCPOpinionLeaderRepository } from "../infrastructure/repositories/mcp-opinion-leader.repository";
 import { DonationDomainService } from "../domain/services/donation.domain-service";
 import { CreateDonationRequest, DonationSearchRequest } from "../application/dto/donation.dto";
-import { Donation } from "../domain/entities/donation.entity";
 import { PaginatedResult } from "@posmul/auth-economy-sdk";
 
 // Dependency Injection

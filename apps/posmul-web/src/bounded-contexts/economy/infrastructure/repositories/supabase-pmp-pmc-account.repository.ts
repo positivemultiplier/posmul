@@ -38,6 +38,9 @@ export class SupabasePmpPmcAccountRepository {
     pmpBalance: number,
     pmcBalance: number
   ): Promise<Result<any, CompatibleBaseError>> {
+    void userId;
+    void pmpBalance;
+    void pmcBalance;
     try {
       const query = `
         INSERT INTO user_economic_profiles (user_id, pmp_balance, pmc_balance, last_activity_at, updated_at)
@@ -66,6 +69,7 @@ export class SupabasePmpPmcAccountRepository {
   async findByUserId(
     userId: string
   ): Promise<Result<any, CompatibleBaseError>> {
+    void userId;
     try {
       const query = `SELECT * FROM user_economic_profiles WHERE user_id = $1`;
       const result = await this.mcpAdapter.executeSQL(query);

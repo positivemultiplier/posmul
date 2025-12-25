@@ -50,6 +50,11 @@ export interface KOSISTableInfo {
   orgId: string;
   itemCode?: string;
   itemCodeNm?: string;
+  /**
+   * KOSIS OpenAPI v2 가이드 기준 통계 조회 키(userStatsId).
+   * 값은 보통 KOSIS OpenAPI 화면에서 통계표 등록/선택 후 발급됩니다.
+   */
+  userStatsIdEnvVar?: string;
 }
 
 /**
@@ -74,6 +79,7 @@ export const CATEGORY_TABLE_MAP: Record<StatCategory, KOSISTableInfo> = {
     category: StatCategory.BIRTH,
     orgId: "101",
     itemCode: "T1",
+    userStatsIdEnvVar: "KOSIS_USER_STATS_ID_BIRTH",
   },
   [StatCategory.DEATH]: {
     tableId: "DT_1B8000F",
@@ -81,6 +87,7 @@ export const CATEGORY_TABLE_MAP: Record<StatCategory, KOSISTableInfo> = {
     category: StatCategory.DEATH,
     orgId: "101",
     itemCode: "T2",
+    userStatsIdEnvVar: "KOSIS_USER_STATS_ID_DEATH",
   },
   [StatCategory.MARRIAGE]: {
     tableId: "DT_1B8000F",
@@ -88,6 +95,7 @@ export const CATEGORY_TABLE_MAP: Record<StatCategory, KOSISTableInfo> = {
     category: StatCategory.MARRIAGE,
     orgId: "101",
     itemCode: "T3",
+    userStatsIdEnvVar: "KOSIS_USER_STATS_ID_MARRIAGE",
   },
   [StatCategory.DIVORCE]: {
     tableId: "DT_1B8000F",
@@ -95,6 +103,7 @@ export const CATEGORY_TABLE_MAP: Record<StatCategory, KOSISTableInfo> = {
     category: StatCategory.DIVORCE,
     orgId: "101",
     itemCode: "T4",
+    userStatsIdEnvVar: "KOSIS_USER_STATS_ID_DIVORCE",
   },
   [StatCategory.MIGRATION_IN]: {
     tableId: "DT_1B26001_A01",
@@ -102,6 +111,7 @@ export const CATEGORY_TABLE_MAP: Record<StatCategory, KOSISTableInfo> = {
     category: StatCategory.MIGRATION_IN,
     orgId: "101",
     itemCode: "T10",
+    userStatsIdEnvVar: "KOSIS_USER_STATS_ID_MIGRATION_IN",
   },
   [StatCategory.MIGRATION_OUT]: {
     tableId: "DT_1B26001_A01",
@@ -109,6 +119,7 @@ export const CATEGORY_TABLE_MAP: Record<StatCategory, KOSISTableInfo> = {
     category: StatCategory.MIGRATION_OUT,
     orgId: "101",
     itemCode: "T20",
+    userStatsIdEnvVar: "KOSIS_USER_STATS_ID_MIGRATION_OUT",
   },
   [StatCategory.EMPLOYMENT]: {
     tableId: "DT_1DA7004S",
@@ -116,6 +127,7 @@ export const CATEGORY_TABLE_MAP: Record<StatCategory, KOSISTableInfo> = {
     category: StatCategory.EMPLOYMENT,
     orgId: "101",
     itemCode: "T20",
+    userStatsIdEnvVar: "KOSIS_USER_STATS_ID_EMPLOYMENT",
   },
   [StatCategory.UNEMPLOYMENT]: {
     tableId: "DT_1DA7004S",
@@ -123,6 +135,7 @@ export const CATEGORY_TABLE_MAP: Record<StatCategory, KOSISTableInfo> = {
     category: StatCategory.UNEMPLOYMENT,
     orgId: "101",
     itemCode: "T60",
+    userStatsIdEnvVar: "KOSIS_USER_STATS_ID_UNEMPLOYMENT",
   },
   [StatCategory.LABOR_FORCE]: {
     tableId: "DT_1DA7004S",
@@ -130,18 +143,21 @@ export const CATEGORY_TABLE_MAP: Record<StatCategory, KOSISTableInfo> = {
     category: StatCategory.LABOR_FORCE,
     orgId: "101",
     itemCode: "T10",
+    userStatsIdEnvVar: "KOSIS_USER_STATS_ID_LABOR_FORCE",
   },
   [StatCategory.CPI]: {
     tableId: "DT_1J20004",
     tableName: "소비자물가지수",
     category: StatCategory.CPI,
     orgId: "101",
+    userStatsIdEnvVar: "KOSIS_USER_STATS_ID_CPI",
   },
   [StatCategory.POPULATION]: {
     tableId: "DT_1B04005N",
     tableName: "주민등록인구",
     category: StatCategory.POPULATION,
     orgId: "101",
+    userStatsIdEnvVar: "KOSIS_USER_STATS_ID_POPULATION",
   },
 };
 
@@ -149,16 +165,17 @@ export const CATEGORY_TABLE_MAP: Record<StatCategory, KOSISTableInfo> = {
  * KOSIS API 요청 파라미터
  */
 export interface KOSISRequestParams {
-  method: "getList" | "getMeta";
+  method: "getList";
   apiKey: string;
-  orgId: string;
-  tblId: string;
+  userStatsId: string;
   itmId?: string; // 항목 ID
   objL1?: string; // 분류1 (지역코드)
   objL2?: string; // 분류2
   prdSe?: "M" | "Q" | "Y"; // 기간구분 (월/분기/연)
   startPrdDe?: string; // 시작기간
   endPrdDe?: string; // 종료기간
+  prdInterval?: string; // 시점 간격
+  newEstPrdCnt?: string; // 최신시점 개수
   format?: "json" | "xml";
   jsonVD?: "Y" | "N"; // JSON 유효성 검증
 }
@@ -168,7 +185,7 @@ export interface KOSISRequestParams {
  * KOSIS Open API 호출 클라이언트
  */
 export class KOSISClient {
-  private readonly baseUrl = "https://kosis.kr/openapi/Param/statisticsParameterData.do";
+  private readonly baseUrl = "https://kosis.kr/openapi/statisticsData.do";
   private readonly apiKey: string;
   private requestCount = 0;
   private readonly rateLimit = 1000; // 일일 요청 제한
@@ -225,15 +242,19 @@ export class KOSISClient {
       };
     }
 
-    const kosisRegionCode = GWANGJU_KOSIS_CODES[regionCode] ?? regionCode;
+    const userStatsId = this.resolveUserStatsId(tableInfo);
+    if (!userStatsId) {
+      return {
+        success: false,
+        error:
+          "KOSIS userStatsId가 설정되지 않았습니다. OpenAPI에서 통계표 등록 후 발급된 userStatsId를 환경변수로 설정하세요.",
+      };
+    }
 
     const params = this.buildParams({
       method: "getList",
       apiKey: this.apiKey,
-      orgId: tableInfo.orgId,
-      tblId: tableInfo.tableId,
-      itmId: tableInfo.itemCode,
-      objL1: kosisRegionCode,
+      userStatsId,
       prdSe: this.mapPeriodType(periodType),
       startPrdDe: this.formatPeriod(startYear, 1, periodType),
       endPrdDe: this.formatPeriod(endYear, 12, periodType),
@@ -299,16 +320,21 @@ export class KOSISClient {
       };
     }
 
-    const kosisRegionCode = GWANGJU_KOSIS_CODES[regionCode] ?? regionCode;
+    const userStatsId = this.resolveUserStatsId(tableInfo);
+    if (!userStatsId) {
+      return {
+        success: false,
+        error:
+          "KOSIS userStatsId가 설정되지 않았습니다. OpenAPI에서 통계표 등록 후 발급된 userStatsId를 환경변수로 설정하세요.",
+      };
+    }
+
     const prdDe = `${year}${month.toString().padStart(2, "0")}`;
 
     const params = this.buildParams({
       method: "getList",
       apiKey: this.apiKey,
-      orgId: tableInfo.orgId,
-      tblId: tableInfo.tableId,
-      itmId: tableInfo.itemCode,
-      objL1: kosisRegionCode,
+      userStatsId,
       prdSe: "M",
       startPrdDe: prdDe,
       endPrdDe: prdDe,
@@ -380,8 +406,7 @@ export class KOSISClient {
 
     searchParams.append("method", params.method);
     searchParams.append("apiKey", params.apiKey);
-    searchParams.append("orgId", params.orgId);
-    searchParams.append("tblId", params.tblId);
+    searchParams.append("userStatsId", params.userStatsId);
 
     if (params.itmId) searchParams.append("itmId", params.itmId);
     if (params.objL1) searchParams.append("objL1", params.objL1);
@@ -389,10 +414,20 @@ export class KOSISClient {
     if (params.prdSe) searchParams.append("prdSe", params.prdSe);
     if (params.startPrdDe) searchParams.append("startPrdDe", params.startPrdDe);
     if (params.endPrdDe) searchParams.append("endPrdDe", params.endPrdDe);
+    if (params.prdInterval) searchParams.append("prdInterval", params.prdInterval);
+    if (params.newEstPrdCnt) searchParams.append("newEstPrdCnt", params.newEstPrdCnt);
     if (params.format) searchParams.append("format", params.format);
     if (params.jsonVD) searchParams.append("jsonVD", params.jsonVD);
 
     return searchParams.toString();
+  }
+
+  private resolveUserStatsId(tableInfo: KOSISTableInfo): string | null {
+    if (!tableInfo.userStatsIdEnvVar) return null;
+    const v = process.env[tableInfo.userStatsIdEnvVar];
+    if (!v) return null;
+    const trimmed = v.trim();
+    return trimmed.length > 0 ? trimmed : null;
   }
 
   /**

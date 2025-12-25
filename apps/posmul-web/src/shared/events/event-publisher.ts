@@ -169,34 +169,14 @@ export class InMemoryEventPublisher implements IDomainEventPublisher {
         subscribers.map(async (subscriber) => {
           try {
             const result = await subscriber.handle(event);
-            if (!result.success) {
-              console.error(
-                `Handler error for ${subscriber.subscriberId}:`,
-                isFailure(result) ? result.error : undefined
-              );
-            }
             return result;
           } catch (error) {
-            console.error(
-              `Unexpected error in handler ${subscriber.subscriberId}:`,
-              error
-            );
             throw error;
           }
         })
       );
 
-      // 실패한 핸들러들 체크
-      const failedResults = results.filter(
-        (result): result is PromiseRejectedResult =>
-          result.status === "rejected"
-      );
-
-      if (failedResults.length > 0) {
-        console.warn(
-          `${failedResults.length} handlers failed for event ${event.type}`
-        );
-      }
+      void results;
 
       return { success: true, data: undefined };
     } catch (error) {
@@ -332,18 +312,7 @@ export class SupabaseEventPublisher implements IDomainEventPublisher {
         subscribers.map((subscriber) => subscriber.handle(event))
       );
 
-      // 실패한 핸들러들 로깅 (프로덕션에서는 실패해도 계속 진행)
-      const failedCount = results.filter(
-        (result) =>
-          result.status === "rejected" ||
-          (result.status === "fulfilled" && !result.value.success)
-      ).length;
-
-      if (failedCount > 0) {
-        console.warn(
-          `${failedCount}/${subscribers.length} handlers failed for event ${event.type}`
-        );
-      }
+      void results;
 
       return { success: true, data: undefined };
     } catch (error) {

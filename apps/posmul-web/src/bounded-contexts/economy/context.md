@@ -247,6 +247,16 @@ MRS_PMP,PMC = MRT_PMP,PMC
 - 글로벌 네트워크 확장
 - 학술 연구 결과 발표
 
----
 
-이 Context는 PosMul Platform의 **경제적 실험**을 통해 기존 민주주의 시스템의 한계를 극복하고, **시민 직접 참여**를 통한 새로운 거버넌스 모델을 제시합니다. 모든 경제학적 설계는 **노벨경제학상 수상자들의 검증된 이론**을 바탕으로 하여 학술적 신뢰성을 확보했습니다.
+## 💻 **코드 구현 현황**
+
+### **애그리게이트 (Aggregates)**
+- **MoneyWave1, 2, 3**: `domain/entities/money-wave{n}.aggregate.ts`
+- **PmpPmcAccount**: `domain/repositories/pmp-pmc-account.repository.ts` (자산 계정)
+
+### **서비스 (Services)**
+- **EconomicForecastingService**: `application/services/economic-forecasting.service.ts`
+- **MachineLearningAnalysisService**: `application/services/machine-learning-analysis.service.ts`
+- **UtilityFunctionRepository**: 효용 함수 관리
+
+

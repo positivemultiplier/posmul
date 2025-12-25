@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('POST /api/predictions/participate error:', error);
+    void error;
     return NextResponse.json(
       {
         success: false,

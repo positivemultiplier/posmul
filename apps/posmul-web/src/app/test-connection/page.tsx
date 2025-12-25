@@ -28,7 +28,6 @@ export default function TestConnectionPage() {
           setStatus("✅ Supabase 연결 성공! (로그인 없음)");
         }
       } catch (err) {
-        console.error("Connection test error:", err);
         setError(
           `❌ 연결 실패: ${err instanceof Error ? err.message : "알 수 없는 오류"}`
         );

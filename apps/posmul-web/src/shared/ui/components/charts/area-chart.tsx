@@ -226,7 +226,7 @@ export function StackedAreaChart({
           }}
         >
           <defs>
-            {dataKeys.map((item, index) => (
+            {dataKeys.map((item) => (
               <linearGradient
                 key={item.key}
                 id={`gradient-${item.key}`}

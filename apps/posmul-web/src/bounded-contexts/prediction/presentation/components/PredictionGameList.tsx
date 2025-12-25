@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Badge, Button } from "../../../../shared/ui/components/base";
+import { Button } from "../../../../shared/ui/components/base";
 import { PredictionGameCard } from "./PredictionGameCard";
 import { GameStatus, PredictionType } from "../../domain/value-objects/prediction-types";
 
@@ -162,43 +162,6 @@ const PredictionGameList: React.FC<PredictionGameListProps> = async ({
   // TODO: Replace with actual data fetching
   // const games = await fetchPredictionGames({ status: 'ACTIVE', limit: 20 });
   const games = mockGames;
-
-  const getStatusBadge = (status: GameStatus) => {
-    const statusConfig = {
-      [GameStatus.PENDING]: { label: "시작 예정", variant: "secondary" as const },
-      [GameStatus.CREATED]: { label: "생성됨", variant: "secondary" as const },
-      [GameStatus.ACTIVE]: { label: "참여 가능", variant: "default" as const },
-      [GameStatus.ENDED]: { label: "종료", variant: "outline" as const },
-      [GameStatus.COMPLETED]: { label: "정산 완료", variant: "success" as const },
-      [GameStatus.CANCELLED]: { label: "취소됨", variant: "destructive" as const },
-    };
-
-    const config = statusConfig[status];
-    return <Badge variant={config.variant}>{config.label}</Badge>;
-  };
-
-  const getImportanceIcon = (score: number) => {
-    if (score >= 2.5) return "🔥"; // 높은 중요도
-    if (score >= 2.0) return "⭐"; // 중간 중요도
-    return "📊"; // 일반 중요도
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("ko-KR").format(amount);
-  };
-
-  const calculateTimeRemaining = (endTime: Date) => {
-    const now = new Date();
-    const diff = endTime.getTime() - now.getTime();
-
-    if (diff <= 0) return "종료됨";
-
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-
-    if (days > 0) return `${days}일 ${hours}시간 남음`;
-    return `${hours}시간 남음`;
-  };
 
   return (
     <div className="space-y-6">

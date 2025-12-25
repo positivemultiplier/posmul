@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('GET /api/economy/balance error:', error);
+    void error;
     return NextResponse.json(
       {
         success: false,

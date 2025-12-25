@@ -36,6 +36,7 @@ export class SupabaseUtilityFunctionRepository {
   async saveParameters(
     parameters: any
   ): Promise<Result<any, CompatibleBaseError>> {
+    void parameters;
     try {
       const query = `
         INSERT INTO social_welfare_parameters (lambda, mu, nu, phi, psi, omega, calculation_date, total_population, sample_size, statistical_significance)

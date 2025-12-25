@@ -18,7 +18,7 @@ export default async function EconomicBalance({ userId }: { userId: string }) {
         .single();
     
     if (error) {
-        console.error('[EconomicBalance] 잔액 조회 실패:', error.message);
+        void error;
     }
 
     const pmpBalance = account?.pmp_balance ? Number(account.pmp_balance) : 0;

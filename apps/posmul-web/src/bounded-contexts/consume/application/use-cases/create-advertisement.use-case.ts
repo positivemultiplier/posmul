@@ -1,4 +1,4 @@
-import { UserId, isFailure } from "@posmul/auth-economy-sdk";
+import { UserId } from "@posmul/auth-economy-sdk";
 import { Result } from "@posmul/auth-economy-sdk";
 import { ValidationError } from "@posmul/auth-economy-sdk";
 

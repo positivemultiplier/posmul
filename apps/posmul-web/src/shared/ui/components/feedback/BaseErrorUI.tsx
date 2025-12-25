@@ -37,7 +37,7 @@ interface BaseErrorUIProps {
 function getErrorDisplayInfo(error: BaseError | Error) {
   // BaseError인 경우 상세 정보 활용
   if (error instanceof BaseError) {
-    const { code, statusCode } = error;
+    const { statusCode } = error;
 
     // 상태 코드별 메시지 분류
     if (statusCode === 401) {

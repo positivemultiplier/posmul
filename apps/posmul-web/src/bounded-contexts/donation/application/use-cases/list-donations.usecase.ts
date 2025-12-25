@@ -2,7 +2,7 @@
  * List Donations Use Case
  * 기부 목록 조회 유스케이스
  */
-import { PaginatedResult, Result, UserId, ValidationError } from "@posmul/auth-economy-sdk";
+import { PaginatedResult, Result, UserId } from "@posmul/auth-economy-sdk";
 import { Donation } from "../../domain/entities/donation.entity";
 import { IDonationRepository } from "../../domain/repositories/donation.repository";
 import {

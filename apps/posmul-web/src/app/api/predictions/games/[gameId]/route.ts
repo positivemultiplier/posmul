@@ -80,7 +80,7 @@ export async function GET(
       },
     });
   } catch (error) {
-    console.error(`GET /api/predictions/games/[gameId] error:`, error);
+    void error;
     return NextResponse.json(
       {
         success: false,
@@ -104,7 +104,7 @@ export async function PUT(
 ) {
   try {
     const { gameId } = await params;
-    const body = await request.json();
+    const body: unknown = await request.json();
 
     if (!gameId) {
       return NextResponse.json(
@@ -141,20 +141,20 @@ export async function PUT(
     );
     const useCase = new UpdatePredictionGameUseCase(repository);
 
+    const parsedBody = parseUpdateGameRequestBody(body);
+
     // UseCase 실행
     const result = await useCase.execute({
       gameId: gameId as PredictionGameId,
-      updatedBy: toLegacyUserId(body.updatedBy as UserId),
+      updatedBy: toLegacyUserId(parsedBody.updatedBy as UserId),
       updates: {
-        title: body.title,
-        description: body.description,
-        endTime: body.endTime ? new Date(body.endTime) : undefined,
-        settlementTime: body.settlementTime
-          ? new Date(body.settlementTime)
-          : undefined,
-        minimumStake: body.minimumStake,
-        maximumStake: body.maximumStake,
-        maxParticipants: body.maxParticipants,
+        title: parsedBody.updates.title,
+        description: parsedBody.updates.description,
+        endTime: parsedBody.updates.endTime,
+        settlementTime: parsedBody.updates.settlementTime,
+        minimumStake: parsedBody.updates.minimumStake,
+        maximumStake: parsedBody.updates.maximumStake,
+        maxParticipants: parsedBody.updates.maxParticipants,
       },
     });
 
@@ -206,7 +206,7 @@ export async function PUT(
       },
     });
   } catch (error) {
-    console.error(`PUT /api/predictions/games/[gameId] error:`, error);
+    void error;
     return NextResponse.json(
       {
         success: false,
@@ -341,7 +341,7 @@ export async function DELETE(
       },
     });
   } catch (error) {
-    console.error(`DELETE /api/predictions/games/[gameId] error:`, error);
+    void error;
     return NextResponse.json(
       {
         success: false,
@@ -358,60 +358,137 @@ export async function DELETE(
 /**
  * 게임 수정 요청 데이터 검증
  */
-function validateUpdateGameRequest(body: any): {
+function validateUpdateGameRequest(body: unknown): {
   valid: boolean;
   errors?: string[];
 } {
-  const errors: string[] = [];
+  if (!isRecord(body)) return { valid: false, errors: ["Invalid request body"] };
 
-  if (!body.updatedBy) {
-    errors.push("Updated by user ID is required");
+  const errors = collectUpdateGameRequestErrors(body);
+  return { valid: errors.length === 0, errors: errors.length > 0 ? errors : undefined };
+}
+
+type UpdateGameRequestBodyParsed = {
+  updatedBy: string;
+  updates: {
+    title?: string;
+    description?: string;
+    endTime?: Date;
+    settlementTime?: Date;
+    minimumStake?: number;
+    maximumStake?: number;
+    maxParticipants?: number;
+  };
+};
+
+function parseUpdateGameRequestBody(body: unknown): UpdateGameRequestBodyParsed {
+  if (!isRecord(body)) {
+    return { updatedBy: "", updates: {} };
   }
 
-  if (body.title && (typeof body.title !== "string" || body.title.length < 5)) {
-    errors.push("Title must be at least 5 characters long");
-  }
+  const updatedBy = isNonEmptyString(body["updatedBy"]) ? body["updatedBy"] : "";
 
-  if (
-    body.description &&
-    (typeof body.description !== "string" || body.description.length < 20)
-  ) {
-    errors.push("Description must be at least 20 characters long");
-  }
-
-  if (body.endTime && body.settlementTime) {
-    const endTime = new Date(body.endTime);
-    const settlementTime = new Date(body.settlementTime);
-
-    if (endTime >= settlementTime) {
-      errors.push("Settlement time must be after end time");
-    }
-  }
-
-  if (
-    body.minimumStake &&
-    (typeof body.minimumStake !== "number" || body.minimumStake < 1)
-  ) {
-    errors.push("Minimum stake must be at least 1");
-  }
-
-  if (
-    body.maximumStake &&
-    body.minimumStake &&
-    body.maximumStake <= body.minimumStake
-  ) {
-    errors.push("Maximum stake must be greater than minimum stake");
-  }
-
-  if (
-    body.maxParticipants &&
-    (typeof body.maxParticipants !== "number" || body.maxParticipants < 1)
-  ) {
-    errors.push("Maximum participants must be at least 1");
-  }
+  const title = typeof body["title"] === "string" ? body["title"] : undefined;
+  const description = typeof body["description"] === "string" ? body["description"] : undefined;
+  const endTime = parseOptionalDate(body["endTime"]);
+  const settlementTime = parseOptionalDate(body["settlementTime"]);
+  const minimumStake = typeof body["minimumStake"] === "number" ? body["minimumStake"] : undefined;
+  const maximumStake = typeof body["maximumStake"] === "number" ? body["maximumStake"] : undefined;
+  const maxParticipants = typeof body["maxParticipants"] === "number" ? body["maxParticipants"] : undefined;
 
   return {
-    valid: errors.length === 0,
-    errors: errors.length > 0 ? errors : undefined,
+    updatedBy,
+    updates: {
+      title,
+      description,
+      endTime,
+      settlementTime,
+      minimumStake,
+      maximumStake,
+      maxParticipants,
+    },
   };
+}
+
+function collectUpdateGameRequestErrors(body: Record<string, unknown>): string[] {
+  return [
+    ...validateUpdatedBy(body),
+    ...validateOptionalMinLengthString(body, "title", 5, "Title must be at least 5 characters long"),
+    ...validateOptionalMinLengthString(
+      body,
+      "description",
+      20,
+      "Description must be at least 20 characters long"
+    ),
+    ...validateTimeOrder(body),
+    ...validateMinimumStake(body),
+    ...validateMaximumStake(body),
+    ...validateMaxParticipants(body),
+  ];
+}
+
+function validateUpdatedBy(body: Record<string, unknown>): string[] {
+  const updatedBy = body["updatedBy"];
+  if (!isNonEmptyString(updatedBy)) return ["Updated by user ID is required"];
+  return [];
+}
+
+function validateOptionalMinLengthString(
+  body: Record<string, unknown>,
+  key: string,
+  minLength: number,
+  errorMessage: string
+): string[] {
+  const value = body[key];
+  if (value === undefined) return [];
+  if (typeof value !== "string") return [errorMessage];
+  if (value.length < minLength) return [errorMessage];
+  return [];
+}
+
+function validateTimeOrder(body: Record<string, unknown>): string[] {
+  const endTime = parseOptionalDate(body["endTime"]);
+  const settlementTime = parseOptionalDate(body["settlementTime"]);
+  if (!endTime || !settlementTime) return [];
+  if (endTime >= settlementTime) return ["Settlement time must be after end time"];
+  return [];
+}
+
+function validateMinimumStake(body: Record<string, unknown>): string[] {
+  const minimumStake = body["minimumStake"];
+  if (minimumStake === undefined) return [];
+  if (typeof minimumStake !== "number" || minimumStake < 1) return ["Minimum stake must be at least 1"];
+  return [];
+}
+
+function validateMaximumStake(body: Record<string, unknown>): string[] {
+  const minimumStake = body["minimumStake"];
+  const maximumStake = body["maximumStake"];
+  if (typeof minimumStake !== "number" || typeof maximumStake !== "number") return [];
+  if (maximumStake <= minimumStake) return ["Maximum stake must be greater than minimum stake"];
+  return [];
+}
+
+function validateMaxParticipants(body: Record<string, unknown>): string[] {
+  const maxParticipants = body["maxParticipants"];
+  if (maxParticipants === undefined) return [];
+  if (typeof maxParticipants !== "number" || maxParticipants < 1) {
+    return ["Maximum participants must be at least 1"];
+  }
+  return [];
+}
+
+function parseOptionalDate(value: unknown): Date | undefined {
+  if (typeof value !== "string") return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
 }

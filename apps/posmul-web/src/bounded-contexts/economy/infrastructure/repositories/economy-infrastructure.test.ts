@@ -13,16 +13,16 @@ jest.mock("../../../../shared/mcp/supabase-tools", () => ({
 // Economy Repository Mock 함수들
 const createMockEconomyRepository = (projectId: string) => ({
   projectId,
-  async getPmpBalance(userId: UserId): Promise<PmpAmount> {
+  async getPmpBalance(_userId: UserId): Promise<PmpAmount> {
     return 1000.0 as PmpAmount;
   },
-  async getPmcBalance(userId: UserId): Promise<PmcAmount> {
+  async getPmcBalance(_userId: UserId): Promise<PmcAmount> {
     return 500.0 as PmcAmount;
   },
-  async deductPmp(userId: UserId, amount: PmpAmount): Promise<boolean> {
+  async deductPmp(_userId: UserId, _amount: PmpAmount): Promise<boolean> {
     return true;
   },
-  async addPmc(userId: UserId, amount: PmcAmount): Promise<boolean> {
+  async addPmc(_userId: UserId, _amount: PmcAmount): Promise<boolean> {
     return true;
   },
 });

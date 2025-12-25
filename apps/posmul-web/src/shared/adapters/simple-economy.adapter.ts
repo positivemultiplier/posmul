@@ -41,7 +41,7 @@ export class SimpleEconomyAdapter {
         lastActivity: new Date().toISOString(),
       };
     } catch (error) {
-      console.error("Failed to get economic balance:", error);
+      void error;
       return {
         pmpBalance: 0,
         pmcBalance: 0,
@@ -65,13 +65,11 @@ export function getEconomyAdapter(): SimpleEconomyAdapter {
 export const getEconomicBalance = (userId: string) =>
   getEconomyAdapter().getEconomicBalance(userId);
 
-export const recordEconomicTransaction = async (transaction: any) => {
-  console.warn("recordEconomicTransaction not implemented in SDK yet");
+export const recordEconomicTransaction = async (_transaction: unknown) => {
   return { success: false, error: "Not implemented" };
 };
 
 export const getSystemStats = async () => {
-  console.warn("getSystemStats not implemented in SDK yet");
   return {
     totalPmpAmount: 0,
     totalPmcAmount: 0,

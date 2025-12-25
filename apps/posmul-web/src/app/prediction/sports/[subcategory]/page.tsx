@@ -3,7 +3,6 @@ import { FadeIn } from "../../../../shared/ui/components/animations";
 import Link from "next/link";
 import { CompactMoneyWaveCard } from "../../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { ClientPredictionGamesGrid } from "../../components/ClientPredictionGamesGrid";
-import { PredictionType, GameStatus } from "../../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 import { getAggregatedPrizePool } from "../../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { notFound } from "next/navigation";
 
@@ -36,7 +35,11 @@ export default async function PredictionSportsSubcategoryPage({
   const decodedSubcategory = decodeURIComponent(subcategory).toLowerCase();
 
   // Validate subcategory
-  if (!SPORT_WHITELIST.includes(decodedSubcategory as any)) {
+  if (
+    !SPORT_WHITELIST.includes(
+      decodedSubcategory as (typeof SPORT_WHITELIST)[number]
+    )
+  ) {
     notFound();
   }
 
@@ -59,7 +62,7 @@ export default async function PredictionSportsSubcategoryPage({
     .or(`metadata->>sport.eq.${decodedSubcategory},tags.cs.{${decodedSubcategory}}`)
     .limit(12);
 
-  const { data, error } = await query;
+  const { data } = await query;
 
   const games = data ?? [];
 
