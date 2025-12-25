@@ -26,7 +26,7 @@ export default async function KLeaguePage() {
   const { data: { user } } = await supabase.auth.getUser();
   const kleaguePool = await getAggregatedPrizePool(supabase, "SPORTS", "soccer");
 
-  let query = supabase
+  const query = supabase
     .schema("prediction")
     .from("prediction_games")
     .select("*")

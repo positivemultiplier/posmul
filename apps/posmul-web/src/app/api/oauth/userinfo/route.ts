@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
         // Fetch User Profile
         // Try getting public profile first
-        let { data: userProfile } = await supabase
+        const { data: userProfile } = await supabase
             .from('user.profiles' as any)
             .select('username')
             .eq('id', tokenData.user_id)

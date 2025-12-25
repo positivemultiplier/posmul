@@ -114,9 +114,12 @@ export class DonationApplicationService {
     donorId: UserId,
     pagination?: PaginationParams
   ): Promise<Result<PaginatedResult<DonationResponse>>> {
+    const page = pagination?.page;
+    const limit = pagination?.pageSize;
     const result = await this.donationRepository.findByDonorId(
       donorId,
-      pagination
+      page,
+      limit
     );
 
     if (isFailure(result)) {
@@ -174,7 +177,8 @@ export class DonationApplicationService {
 
     const result = await this.donationRepository.findByCriteria(
       criteria,
-      pagination
+      pagination.page,
+      pagination.pageSize
     );
 
     if (isFailure(result)) {
@@ -350,7 +354,8 @@ export class DonationApplicationService {
     // 최근 기부 내역 조회
     const recentDonationsResult = await this.donationRepository.findByDonorId(
       donorId,
-      { page: 1, pageSize: 5 }
+      1,
+      5
     );
     const recentDonations = recentDonationsResult.success
       ? recentDonationsResult.data.items.map((d) =>
@@ -362,7 +367,8 @@ export class DonationApplicationService {
     const scheduledDonationsResult =
       await this.donationRepository.findByCriteria(
         { donorId, status: DonationStatus.PENDING },
-        { page: 1, pageSize: 5 }
+        1,
+        5
       );
     const upcomingScheduledDonations = scheduledDonationsResult.success
       ? scheduledDonationsResult.data.items

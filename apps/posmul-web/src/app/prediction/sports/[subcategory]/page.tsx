@@ -49,7 +49,7 @@ export default async function PredictionSportsSubcategoryPage({
   const subcategoryPool = await getAggregatedPrizePool(supabase, 'SPORTS', decodedSubcategory);
 
   // Fetch games for this subcategory
-  let query = supabase
+  const query = supabase
     .schema("prediction")
     .from("prediction_games")
     .select("id, slug, title, description, category, prediction_type, start_time, end_time, settlement_time, minimum_stake, maximum_stake, max_participants, status, created_at, metadata")

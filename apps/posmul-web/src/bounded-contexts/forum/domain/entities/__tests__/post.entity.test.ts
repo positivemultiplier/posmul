@@ -516,21 +516,25 @@ describe("Post Entity", () => {
       const restoredPost = Post.restore(
         validPostProps.id,
         validPostProps.authorId,
+        validPostProps.title as unknown as string,
+        validPostProps.content as unknown as string,
         validPostProps.section,
         validPostProps.category,
-        validPostProps.title,
-        validPostProps.content,
         PostStatus.PUBLISHED,
-        validPostProps.metadata,
-        now,
-        now,
-        undefined,
-        undefined,
-        undefined,
+        [], // tags
+        false, // isSticky
+        false, // isPinned
         5, // upvoteCount
         1, // downvoteCount
         3, // commentCount
-        2 // shareCount
+        0, // viewCount
+        2, // shareCount
+        0, // popularityScore
+        now,
+        now,
+        undefined, // publishedAt
+        undefined, // regionCode
+        validPostProps.metadata as unknown as Record<string, unknown>
       );
 
       // Then

@@ -5,7 +5,7 @@ import { LineChart, LineConfig } from '../../../../../shared/ui/components/chart
 interface ProbabilityLineChartProps {
     data: Array<{
         time: string;
-        [key: string]: any;
+        [key: string]: number | string;
     }>;
     lines?: LineConfig[];
     isDarkMode?: boolean;

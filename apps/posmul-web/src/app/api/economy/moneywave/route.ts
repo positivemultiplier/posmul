@@ -41,7 +41,7 @@ export async function GET() {
     const wave3Data = waves.filter((w) => w.wave_type === "wave3");
 
     // 내 수령 내역 조회 (로그인한 경우만)
-    let myRewards = { wave1: 0, wave2: 0, wave3: 0, total: 0 };
+    const myRewards = { wave1: 0, wave2: 0, wave3: 0, total: 0 };
 
     if (user) {
       // Wave1 수령 내역

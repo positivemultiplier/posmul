@@ -7,26 +7,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { PredictionGameForm } from "../../../shared/ui";
-
-type PredictionTypeInput = "binary" | "multiple" | "numeric";
-
-type PredictionGameFormData = {
-  title: string;
-  description: string;
-  predictionType: PredictionTypeInput;
-  options: string[];
-  endTime: string;
-  settlementTime: string;
-  minimumStake: number;
-  maximumStake: number;
-};
+import PredictionGameForm from "@/bounded-contexts/prediction/presentation/components/forms/PredictionGameForm";
+import type { UserProposedPredictionGameRequest } from "@/bounded-contexts/prediction/application/dto/user-proposed-prediction-game.dto";
 
 export default function CreatePredictionPage() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const handleSubmit = async (data: PredictionGameFormData) => {
+  const handleSubmit = async (data: UserProposedPredictionGameRequest) => {
     setIsLoading(true);
 
     try {

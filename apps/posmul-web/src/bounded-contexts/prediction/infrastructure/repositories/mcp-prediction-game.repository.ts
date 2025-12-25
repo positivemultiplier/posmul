@@ -17,6 +17,7 @@ import {
   PaginatedResult,
   PaginationRequest,
   GameSearchFilters,
+  PredictionGameFindManyFilters,
   RepositoryError,
   RepositoryHelpers,
 } from "../../domain/repositories/prediction-game.repository";
@@ -626,7 +627,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
    * 다양한 옵션으로 게임 조회
    */
   async findMany(options: {
-    filters?: Record<string, unknown>;
+    filters?: PredictionGameFindManyFilters;
     pagination?: { limit: number; offset: number };
     sorting?: { field: string; order: "asc" | "desc" };
   }): Promise<Result<PredictionGame[], RepositoryError>> {
@@ -637,10 +638,32 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
 
       // 필터 적용
       if (options.filters) {
-        for (const [key, value] of Object.entries(options.filters)) {
-          if (value !== undefined) {
-            query = query.eq(key, value);
-          }
+        const filters = options.filters;
+
+        if (filters.status) {
+          query = query.eq("status", filters.status);
+        }
+
+        if (filters.category) {
+          query = query.eq("category", filters.category);
+        }
+
+        if (filters.createdBy) {
+          query = query.eq("creator_id", filters.createdBy);
+        }
+
+        if (filters.startTimeFrom) {
+          query = query.gte(
+            "registration_start",
+            filters.startTimeFrom.toISOString()
+          );
+        }
+
+        if (filters.startTimeTo) {
+          query = query.lte(
+            "registration_start",
+            filters.startTimeTo.toISOString()
+          );
         }
       }
 
@@ -690,7 +713,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
    * 필터 조건에 맞는 게임 수 카운트
    */
   async countByFilters(
-    filters: Record<string, unknown>
+    filters: PredictionGameFindManyFilters
   ): Promise<Result<number, RepositoryError>> {
     try {
       const supabase = await createClient();
@@ -700,10 +723,24 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
         .from("prediction_games")
         .select("*", { count: "exact", head: true });
 
-      for (const [key, value] of Object.entries(filters)) {
-        if (value !== undefined) {
-          query = query.eq(key, value);
-        }
+      if (filters.status) {
+        query = query.eq("status", filters.status);
+      }
+
+      if (filters.category) {
+        query = query.eq("category", filters.category);
+      }
+
+      if (filters.createdBy) {
+        query = query.eq("creator_id", filters.createdBy);
+      }
+
+      if (filters.startTimeFrom) {
+        query = query.gte("registration_start", filters.startTimeFrom.toISOString());
+      }
+
+      if (filters.startTimeTo) {
+        query = query.lte("registration_start", filters.startTimeTo.toISOString());
       }
 
       const { count, error } = await query;

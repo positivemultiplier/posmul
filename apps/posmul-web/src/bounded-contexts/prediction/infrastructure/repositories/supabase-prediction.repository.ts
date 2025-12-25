@@ -18,7 +18,7 @@ import {
 import { AccuracyScore } from "@posmul/auth-economy-sdk";
 import { Result } from "@posmul/auth-economy-sdk";
 import { failure, success } from "@posmul/auth-economy-sdk";
-import { PmcAmount, PmpAmount } from "@posmul/auth-economy-sdk/economy";
+import type { PmcAmount, PmpAmount } from "@posmul/auth-economy-sdk";
 
 import { SupabaseClient, createClient } from "@supabase/supabase-js";
 

@@ -38,8 +38,7 @@
         "../../packages/study-cycle-core/src/index.ts"
       ]
     },
-    "baseUrl": ".",
-    "ignoreDeprecations": "5.0"
+    "baseUrl": "."
   },
   "include": [
     "next-env.d.ts",

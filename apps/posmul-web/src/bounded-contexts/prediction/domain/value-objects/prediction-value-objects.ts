@@ -4,10 +4,11 @@
 import { Result } from "@posmul/auth-economy-sdk";
 import { ValidationError } from "@posmul/auth-economy-sdk";
 import {
+  PmcAmount,
+  PmpAmount,
   createPmcAmount,
   createPmpAmount,
-} from "@posmul/auth-economy-sdk/economy";
-import { PmcAmount, PmpAmount } from "@posmul/auth-economy-sdk/economy";
+} from "@posmul/auth-economy-sdk";
 
 import { GameStatus as BaseGameStatus } from "./game-status";
 

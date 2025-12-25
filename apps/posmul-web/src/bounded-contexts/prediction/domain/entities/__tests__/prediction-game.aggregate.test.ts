@@ -17,6 +17,7 @@ import {
   PredictionGameId,
   UserId,
   createPmpAmount,
+  isFailure,
 } from "@posmul/auth-economy-sdk";
 import { AccuracyScore, ValidationError } from "@posmul/auth-economy-sdk";
 
@@ -26,6 +27,7 @@ import {
   GameStatus,
   PredictionType,
 } from "../../value-objects/prediction-types";
+import { Prediction } from "../prediction.entity";
 import { PredictionGame } from "../prediction-game.aggregate";
 
 describe("PredictionGame Aggregate", () => {
@@ -83,7 +85,9 @@ describe("PredictionGame Aggregate", () => {
       // Then
       expect(result.success).toBe(false);
       if (!result.success) {
-        expect(result.error).toBeInstanceOf(ValidationError);
+        expect(isFailure(result) ? result.error : null).toBeInstanceOf(
+          ValidationError
+        );
       }
     });
 
@@ -182,15 +186,18 @@ describe("PredictionGame Aggregate", () => {
 
     it("활성 게임에 예측을 추가할 수 있다", () => {
       // Given
-      const predictionData = {
+      const predictionResult = Prediction.create({
         userId: "user-456" as UserId,
-        selectedOption: "Yes",
-        stakeAmount: createPmpAmount(100),
-        confidenceLevel: 0.8,
-      };
+        gameId: game.getId(),
+        selectedOptionId: "option-1",
+        stake: createPmpAmount(100),
+        confidence: 0.8,
+      });
+      expect(predictionResult.success).toBe(true);
+      if (!predictionResult.success) return;
 
       // When
-      const result = game.addPrediction(predictionData);
+      const result = game.addPrediction(predictionResult.data);
 
       // Then
       expect(result.success).toBe(true);
@@ -200,15 +207,18 @@ describe("PredictionGame Aggregate", () => {
     it("비활성 게임에는 예측을 추가할 수 없다", () => {
       // Given
       game.end(); // 게임 종료
-      const predictionData = {
+      const predictionResult = Prediction.create({
         userId: "user-456" as UserId,
-        selectedOption: "Yes",
-        stakeAmount: createPmpAmount(100),
-        confidenceLevel: 0.8,
-      };
+        gameId: game.getId(),
+        selectedOptionId: "option-1",
+        stake: createPmpAmount(100),
+        confidence: 0.8,
+      });
+      expect(predictionResult.success).toBe(true);
+      if (!predictionResult.success) return;
 
       // When
-      const result = game.addPrediction(predictionData);
+      const result = game.addPrediction(predictionResult.data);
 
       // Then
       expect(result.success).toBe(false);
@@ -216,15 +226,18 @@ describe("PredictionGame Aggregate", () => {
 
     it("최소 스테이크보다 적은 금액으로는 예측할 수 없다", () => {
       // Given
-      const predictionData = {
+      const predictionResult = Prediction.create({
         userId: "user-456" as UserId,
-        selectedOption: "Yes",
-        stakeAmount: createPmpAmount(5), // minimumStake(10)보다 적음
-        confidenceLevel: 0.8,
-      };
+        gameId: game.getId(),
+        selectedOptionId: "option-1",
+        stake: createPmpAmount(5), // minimumStake(10)보다 적음
+        confidence: 0.8,
+      });
+      expect(predictionResult.success).toBe(true);
+      if (!predictionResult.success) return;
 
       // When
-      const result = game.addPrediction(predictionData);
+      const result = game.addPrediction(predictionResult.data);
 
       // Then
       expect(result.success).toBe(false);
@@ -232,15 +245,18 @@ describe("PredictionGame Aggregate", () => {
 
     it("최대 스테이크보다 많은 금액으로는 예측할 수 없다", () => {
       // Given
-      const predictionData = {
+      const predictionResult = Prediction.create({
         userId: "user-456" as UserId,
-        selectedOption: "Yes",
-        stakeAmount: createPmpAmount(2000), // maximumStake(1000)보다 많음
-        confidenceLevel: 0.8,
-      };
+        gameId: game.getId(),
+        selectedOptionId: "option-1",
+        stake: createPmpAmount(2000), // maximumStake(1000)보다 많음
+        confidence: 0.8,
+      });
+      expect(predictionResult.success).toBe(true);
+      if (!predictionResult.success) return;
 
       // When
-      const result = game.addPrediction(predictionData);
+      const result = game.addPrediction(predictionResult.data);
 
       // Then
       expect(result.success).toBe(false);
@@ -258,19 +274,24 @@ describe("PredictionGame Aggregate", () => {
         game.activate();
 
         // 테스트용 예측 추가
-        game.addPrediction({
+        const p1 = Prediction.create({
           userId: "user-456" as UserId,
-          selectedOption: "Yes",
-          stakeAmount: createPmpAmount(100),
-          confidenceLevel: 0.8,
+          gameId: game.getId(),
+          selectedOptionId: "option-1",
+          stake: createPmpAmount(100),
+          confidence: 0.8,
         });
-
-        game.addPrediction({
+        const p2 = Prediction.create({
           userId: "user-789" as UserId,
-          selectedOption: "No",
-          stakeAmount: createPmpAmount(200),
-          confidenceLevel: 0.7,
+          gameId: game.getId(),
+          selectedOptionId: "option-2",
+          stake: createPmpAmount(200),
+          confidence: 0.7,
         });
+        expect(p1.success).toBe(true);
+        expect(p2.success).toBe(true);
+        if (p1.success) game.addPrediction(p1.data);
+        if (p2.success) game.addPrediction(p2.data);
 
         game.end();
       }
@@ -278,11 +299,11 @@ describe("PredictionGame Aggregate", () => {
 
     it("게임을 정산할 수 있다", () => {
       // When
-      const result = game.settle("Yes"); // "Yes"가 정답
+      const result = game.settle("option-1");
 
       // Then
       expect(result.success).toBe(true);
-      expect(game.getStatus()).toBe(GameStatus.SETTLED);
+      expect(game.getStatus()).toBe(GameStatus.COMPLETED);
     });
 
     it("종료되지 않은 게임은 정산할 수 없다", () => {
@@ -293,7 +314,7 @@ describe("PredictionGame Aggregate", () => {
         activeGame.data.activate();
 
         // When (종료하지 않고 바로 정산 시도)
-        const result = activeGame.data.settle("Yes");
+        const result = activeGame.data.settle("option-1");
 
         // Then
         expect(result.success).toBe(false);
@@ -347,12 +368,17 @@ describe("PredictionGame Aggregate", () => {
       game.clearDomainEvents(); // 이전 이벤트 클리어
 
       // When
-      game.addPrediction({
+      const predictionResult = Prediction.create({
         userId: "user-456" as UserId,
-        selectedOption: "Yes",
-        stakeAmount: createPmpAmount(100),
-        confidenceLevel: 0.8,
+        gameId: game.getId(),
+        selectedOptionId: "option-1",
+        stake: createPmpAmount(100),
+        confidence: 0.8,
       });
+      expect(predictionResult.success).toBe(true);
+      if (predictionResult.success) {
+        game.addPrediction(predictionResult.data);
+      }
       const events = game.getDomainEvents();
 
       // Then
@@ -375,20 +401,28 @@ describe("PredictionGame Aggregate", () => {
     it("동일 사용자는 중복 예측을 할 수 없다", () => {
       // Given
       const userId = "user-456" as UserId;
-      const predictionData = {
+      const p1 = Prediction.create({
         userId,
-        selectedOption: "Yes",
-        stakeAmount: createPmpAmount(100),
-        confidenceLevel: 0.8,
-      };
-
-      game.addPrediction(predictionData);
+        gameId: game.getId(),
+        selectedOptionId: "option-1",
+        stake: createPmpAmount(100),
+        confidence: 0.8,
+      });
+      expect(p1.success).toBe(true);
+      if (!p1.success) return;
+      game.addPrediction(p1.data);
 
       // When (동일 사용자 재예측 시도)
-      const result = game.addPrediction({
-        ...predictionData,
-        selectedOption: "No", // 다른 옵션으로 변경
+      const p2 = Prediction.create({
+        userId,
+        gameId: game.getId(),
+        selectedOptionId: "option-2",
+        stake: createPmpAmount(100),
+        confidence: 0.8,
       });
+      expect(p2.success).toBe(true);
+      if (!p2.success) return;
+      const result = game.addPrediction(p2.data);
 
       // Then
       expect(result.success).toBe(false);
@@ -408,20 +442,27 @@ describe("PredictionGame Aggregate", () => {
         limitedGame.data.activate();
 
         // 첫 번째 예측자 추가
-        limitedGame.data.addPrediction({
+        const p1 = Prediction.create({
           userId: "user-456" as UserId,
-          selectedOption: "Yes",
-          stakeAmount: createPmpAmount(100),
-          confidenceLevel: 0.8,
+          gameId: limitedGame.data.getId(),
+          selectedOptionId: "option-1",
+          stake: createPmpAmount(100),
+          confidence: 0.8,
         });
+        expect(p1.success).toBe(true);
+        if (p1.success) limitedGame.data.addPrediction(p1.data);
 
         // When (두 번째 예측자 추가 시도)
-        const result = limitedGame.data.addPrediction({
+        const p2 = Prediction.create({
           userId: "user-789" as UserId,
-          selectedOption: "No",
-          stakeAmount: createPmpAmount(200),
-          confidenceLevel: 0.7,
+          gameId: limitedGame.data.getId(),
+          selectedOptionId: "option-2",
+          stake: createPmpAmount(200),
+          confidence: 0.7,
         });
+        expect(p2.success).toBe(true);
+        if (!p2.success) return;
+        const result = limitedGame.data.addPrediction(p2.data);
 
         // Then
         expect(result.success).toBe(false);

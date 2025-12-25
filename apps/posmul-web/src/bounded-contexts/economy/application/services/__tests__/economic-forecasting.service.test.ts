@@ -137,7 +137,9 @@ describe("EconomicForecastingService", () => {
       if (result.success) {
         expect(result.data).toBeDefined();
       } else {
-        expect(result.error).toBeDefined();
+        if (result.success === false) {
+          expect(result.error).toBeDefined();
+        }
       }
     });
   });

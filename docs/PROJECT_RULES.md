@@ -7,8 +7,19 @@
 ## ⚠️ 절대 원칙 (위반 시 코드 거부)
 
 1. **Schema-per-Bounded-Context**: 각 도메인은 독립 DB 스키마 (economy.*, prediction.*, user.* 등)
-2. **Supabase CLI 절대 금지**: MCP 도구만 사용 (mcp_execute_sql, mcp_apply_migration)
+2. **Supabase CLI 절대 금지**: 데이터베이스 변경은 MCP 도구만 사용 (`mcp_supabase_execute_sql`, `mcp_supabase_apply_migration`)
 3. **TypeScript Strict Mode**: any 사용 금지, 모든 타입 명시 필수
+4. **한글 우선**: 모든 응답, 주석, 문서는 한국어
+5. **UI 개발 원칙(Local First)**: `shared/ui`는 **프리미티브(Button/Input/Modal shell/Layout shell)** 중심으로 유지하고, **도메인 조합 UI(카드/섹션/도메인 의미가 담긴 컴포넌트)**는 각 `bounded-contexts/{domain}/presentation`에 둔다.
+
+```mermaid
+flowchart TD
+  A[New UI] --> B{"Primitive only? (Button/Input/Modal shell/Layout shell)"}
+  B -- Yes --> C[shared/ui]
+  B -- No --> D{Domain meaning / cadence?}
+  D -- Yes --> E[bounded-contexts/<domain>/presentation]
+  D -- No --> F[Default: keep local first\nthen promote if stable]
+```
 
 ## 🚫 금지사항
 
@@ -266,26 +277,27 @@ export const Card: FC<Props> = ({ title }) => {
 ```powershell
 pnpm install
 pnpm generate-types
-turbo build
+pnpm build
 ```
 
 **개발**
 ```powershell
-turbo dev                          # 전체
+pnpm dev                           # 전체(turbo dev)
 pnpm -F @posmul/posmul-web dev     # 웹만
 ```
 
 **빌드 & 테스트**
 ```powershell
-turbo build                        # 18초 고속 빌드
-turbo test
-turbo type-check
+pnpm build
+pnpm test
+pnpm type-check
 ```
 
 **코드 품질**
 ```powershell
 pnpm format
-turbo lint --fix
+pnpm lint
+pnpm -F @posmul/posmul-web lint:fix
 ```
 
 ---
@@ -293,10 +305,12 @@ turbo lint --fix
 ## 7. MCP 활용
 
 **Supabase MCP**
-- SQL 실행: `mcp_execute_sql`
-- 마이그레이션: `mcp_apply_migration`
-- 타입 생성: `mcp_generate_typescript_types`
-- 보안 검사: `mcp_get_advisors`
+- SQL 실행(DML): `mcp_supabase_execute_sql`
+- 마이그레이션(DDL): `mcp_supabase_apply_migration`
+- 타입 생성: `mcp_supabase_generate_typescript_types`
+- 보안 검사: `mcp_supabase_get_advisors`
+
+> 참고: 런타임/도구 레지스트리에 따라 MCP 함수 prefix가 다를 수 있으나, 프로젝트 문서/코드에서는 `mcp_supabase_*` 표기를 표준으로 한다.
 
 **원칙**
 - Supabase CLI 사용 금지, MCP 도구만 사용

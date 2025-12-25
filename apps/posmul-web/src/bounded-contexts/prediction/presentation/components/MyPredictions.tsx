@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Card } from "../../../../shared/ui";
 import { withdrawPrediction } from "./actions";
 
+import type { GameOption } from "../../domain/value-objects/prediction-types";
+
 interface Prediction {
   prediction_id: string;
   game_id: string;
@@ -17,7 +19,7 @@ interface Prediction {
     game_id: string;
     title: string;
     status: string;
-    game_options: any;
+    game_options: unknown;
     settlement_date: string;
   };
 }
@@ -97,17 +99,15 @@ export function MyPredictions({ userId }: MyPredictionsProps) {
   };
 
   const getSelectedOptionLabel = (prediction: Prediction) => {
-    if (!prediction.game?.game_options) return prediction.prediction_data?.selectedOptionId || "-";
-    
-    try {
-      const options = typeof prediction.game.game_options === "string" 
-        ? JSON.parse(prediction.game.game_options) 
-        : prediction.game.game_options;
-      const selectedOption = options.find((opt: any) => opt.id === prediction.prediction_data?.selectedOptionId);
-      return selectedOption?.label || prediction.prediction_data?.selectedOptionId || "-";
-    } catch {
-      return prediction.prediction_data?.selectedOptionId || "-";
-    }
+    const selectedOptionId = prediction.prediction_data?.selectedOptionId;
+    if (!selectedOptionId) return "-";
+
+    const rawOptions = prediction.game?.game_options;
+    const parsedOptions = parseGameOptions(rawOptions);
+    if (!parsedOptions) return selectedOptionId;
+
+    const selectedOption = parsedOptions.find((opt) => opt.id === selectedOptionId);
+    return selectedOption?.label || selectedOptionId;
   };
 
   const canWithdraw = (prediction: Prediction) => {
@@ -220,5 +220,41 @@ export function MyPredictions({ userId }: MyPredictionsProps) {
     </div>
   );
 }
+
+const isGameOption = (value: unknown): value is GameOption => {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return typeof record.id === "string" && typeof record.label === "string";
+};
+
+const parseGameOptions = (raw: unknown): GameOption[] | null => {
+  if (raw === null || raw === undefined) return null;
+
+  const value: unknown = typeof raw === "string" ? safeJsonParse(raw) : raw;
+
+  if (Array.isArray(value)) {
+    const options = value.filter(isGameOption);
+    return options.length > 0 ? options : null;
+  }
+
+  if (typeof value === "object" && value !== null) {
+    const record = value as Record<string, unknown>;
+    const nested = record.options;
+    if (Array.isArray(nested)) {
+      const options = nested.filter(isGameOption);
+      return options.length > 0 ? options : null;
+    }
+  }
+
+  return null;
+};
+
+const safeJsonParse = (raw: string): unknown => {
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return null;
+  }
+};
 
 export default MyPredictions;

@@ -57,7 +57,7 @@ export class WatchAdUseCase {
   async startAdView(input: StartAdViewInput): Promise<Result<StartAdViewOutput>> {
     // 1. 캠페인 조회
     const campaignResult = await this.campaignRepository.findById(input.campaignId);
-    if (!campaignResult.success) {
+    if (campaignResult.success === false) {
       return { success: false, error: campaignResult.error };
     }
 
@@ -77,7 +77,7 @@ export class WatchAdUseCase {
       new Date()
     );
 
-    if (!dailyCountResult.success) {
+    if (dailyCountResult.success === false) {
       return { success: false, error: dailyCountResult.error };
     }
 
@@ -96,7 +96,7 @@ export class WatchAdUseCase {
     });
 
     const saveResult = await this.viewRepository.save(adView);
-    if (!saveResult.success) {
+    if (saveResult.success === false) {
       return { success: false, error: saveResult.error };
     }
 
@@ -118,7 +118,7 @@ export class WatchAdUseCase {
   async completeAdView(input: CompleteAdViewInput): Promise<Result<CompleteAdViewOutput>> {
     // 1. 시청 기록 조회
     const viewResult = await this.viewRepository.findById(input.viewId);
-    if (!viewResult.success) {
+    if (viewResult.success === false) {
       return { success: false, error: viewResult.error };
     }
 
@@ -133,7 +133,7 @@ export class WatchAdUseCase {
 
     // 2. 캠페인 조회
     const campaignResult = await this.campaignRepository.findById(view.campaignId);
-    if (!campaignResult.success) {
+    if (campaignResult.success === false) {
       return { success: false, error: campaignResult.error };
     }
 
@@ -155,7 +155,7 @@ export class WatchAdUseCase {
 
     // 4. 시청 기록 업데이트
     const updateResult = await this.viewRepository.update(completedView);
-    if (!updateResult.success) {
+    if (updateResult.success === false) {
       return { success: false, error: updateResult.error };
     }
 
@@ -166,7 +166,7 @@ export class WatchAdUseCase {
         : `TimeConsume: ${campaign.title} 시청 완료`;
 
       const pmpResult = await this.awardPmp(view.userId, completedView.pmpEarned, pmpDescription);
-      if (!pmpResult.success) {
+      if (pmpResult.success === false) {
         console.error('PMP 지급 실패:', pmpResult.error);
         // PMP 지급 실패해도 시청 완료는 처리됨
       }

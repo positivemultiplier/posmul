@@ -11,9 +11,9 @@ import { Result, success, failure } from "../types";
 /**
  * Supabase MCP 응답 타입
  */
-export interface SupabaseMCPResponse<T = any> {
-  data: T | null;
-  error: any | null;
+export interface SupabaseMCPResponse<TData = unknown, TError = unknown> {
+  data: TData | null;
+  error: TError | null;
 }
 
 /**
@@ -23,7 +23,15 @@ export interface SupabaseMCPResponse<T = any> {
  */
 export function toResult<T>(response: SupabaseMCPResponse<T>): Result<T> {
   if (response.error) {
-    return failure(response.error);
+    const error =
+      response.error instanceof Error
+        ? response.error
+        : new Error(
+            typeof response.error === "string"
+              ? response.error
+              : JSON.stringify(response.error)
+          );
+    return failure(error);
   }
   return success(response.data as T);
 }
@@ -34,10 +42,18 @@ export function toResult<T>(response: SupabaseMCPResponse<T>): Result<T> {
  * @returns Result 타입
  */
 export function toResultWithNull<T>(
-  response: SupabaseMCPResponse<T>
+  response: SupabaseMCPResponse<T, unknown>
 ): Result<T | null> {
   if (response.error) {
-    return failure(response.error);
+    const error =
+      response.error instanceof Error
+        ? response.error
+        : new Error(
+            typeof response.error === "string"
+              ? response.error
+              : JSON.stringify(response.error)
+          );
+    return failure(error);
   }
   return success(response.data);
 }
@@ -67,7 +83,7 @@ export function isErrorResponse<T>(response: SupabaseMCPResponse<T>): boolean {
  * Supabase MCP 응답과 Result 타입 모두 지원
  */
 export function isFailureSafe(
-  result: Result<any, any> | SupabaseMCPResponse<any>
+  result: Result<unknown, unknown> | SupabaseMCPResponse<unknown, unknown>
 ): boolean {
   // Result 타입인 경우
   if ("success" in result) {

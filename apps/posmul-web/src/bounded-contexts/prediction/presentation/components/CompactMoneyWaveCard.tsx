@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { ChevronDown, ChevronUp, Zap, Activity } from "lucide-react";
-import { SlotMachine } from "../../../../shared/ui/components/layout/MoneyWave/SlotMachine";
+import { SlotMachine } from "./MoneyWave/SlotMachine";
 import { twMerge } from "tailwind-merge";
 
 // Depth와 Category 타입 정의

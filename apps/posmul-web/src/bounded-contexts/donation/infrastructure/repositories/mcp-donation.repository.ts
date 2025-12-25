@@ -267,9 +267,15 @@ export class MCPDonationRepository implements IDonationRepository {
       const query = "SELECT COUNT(*) as count FROM donation.donations WHERE status = $status";
       const finalQuery = buildParameterizedQuery(query, { status });
       const result = await this.mcpAdapter.executeSQL(finalQuery);
+
+      const rawCount: unknown = result.data?.[0]?.count;
+      const normalizedCount =
+        typeof rawCount === "number" || typeof rawCount === "string"
+          ? rawCount
+          : 0;
       return {
         success: true,
-        data: parseInt(result.data?.[0]?.count || "0"),
+        data: parseInt(String(normalizedCount), 10),
       };
     } catch (error) {
       return {
@@ -284,9 +290,15 @@ export class MCPDonationRepository implements IDonationRepository {
       const query = "SELECT COUNT(*) as count FROM donation.donations WHERE donor_id = $donorId";
       const finalQuery = buildParameterizedQuery(query, { donorId: donorId.toString() });
       const result = await this.mcpAdapter.executeSQL(finalQuery);
+
+      const rawCount: unknown = result.data?.[0]?.count;
+      const normalizedCount =
+        typeof rawCount === "number" || typeof rawCount === "string"
+          ? rawCount
+          : 0;
       return {
         success: true,
-        data: parseInt(result.data?.[0]?.count || "0"),
+        data: parseInt(String(normalizedCount), 10),
       };
     } catch (error) {
       return {

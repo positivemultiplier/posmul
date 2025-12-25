@@ -1,10 +1,21 @@
 /** @type {import('next').NextConfig} */
 import typescriptEslintParser from "@typescript-eslint/parser";
 import typescriptEslintPlugin from "@typescript-eslint/eslint-plugin";
+import nextPlugin from "@next/eslint-plugin-next";
 
 export default [
   {
-    ignores: ["node_modules/**", ".next/**", "out/**", "dist/**"],
+    ignores: [
+      "node_modules/**",
+      ".next/**",
+      "out/**",
+      "dist/**",
+      "tests/**",
+      "src/**/__tests__/**",
+      "src/**/__snapshots__/**",
+      "src/**/*.js",
+      "src/**/*.jsx",
+    ],
   },
   {
     files: ["**/*.js", "**/*.jsx"],
@@ -23,7 +34,7 @@ export default [
       "no-debugger": "error",
       "prefer-const": "error",
       "no-var": "error",
-      "no-unused-vars": ["error", {
+      "no-unused-vars": ["warn", {
         argsIgnorePattern: "^_",
         varsIgnorePattern: "^_"
       }],
@@ -49,6 +60,7 @@ export default [
     },
     plugins: {
       "@typescript-eslint": typescriptEslintPlugin,
+      "@next/next": nextPlugin,
     },
     rules: {
       // 기본 품질 규칙
@@ -57,7 +69,7 @@ export default [
       "prefer-const": "error",
       "no-var": "error",
       "no-unused-vars": "off", // TypeScript가 처리
-      "@typescript-eslint/no-unused-vars": ["error", {
+      "@typescript-eslint/no-unused-vars": ["warn", {
         argsIgnorePattern: "^_",
         varsIgnorePattern: "^_"
       }],

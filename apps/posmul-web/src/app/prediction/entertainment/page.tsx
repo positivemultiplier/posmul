@@ -11,7 +11,7 @@ import {
 export default async function PredictionEntertainmentPage() {
     const supabase = await createClient();
 
-    let query = supabase
+    const query = supabase
         .schema('prediction')
         .from("prediction_games")
         .select("*")

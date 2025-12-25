@@ -3,17 +3,8 @@
  * 모든 핵심 타입은 ../../types에서 통일되게 관리됩니다.
  */
 
-import {
-  Result,
-  UserId,
-  TransactionId,
-  PmpAmount,
-  PmcAmount,
-  createUserId,
-  unwrapPmpAmount,
-  unwrapPmcAmount,
-} from "../../types";
-import { EconomyError } from "../../errors";
+import type { PmpAmount, PmcAmount, Result, TransactionId, UserId } from "../../types";
+import type { EconomyError } from "../../errors";
 
 // === 공통 타입 재수출 ===
 export type {

@@ -2,50 +2,41 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type SubmitHandler, useForm } from "react-hook-form";
-import { z } from "zod";
+import { Button, Card } from "../../../../../shared/ui/components/base";
 
-import type { PredictionGame } from "../../../../bounded-contexts/prediction/domain/types";
-import { Button, Card } from "../base";
-
-const formSchema = z.object({
-  title: z.string().min(10, "제목은 10자 이상이어야 합니다."),
-  description: z.string().min(20, "설명은 20자 이상이어야 합니다."),
-  predictionType: z.enum(["binary", "multiple", "numeric"]),
-  options: z.array(z.string()).min(2, "최소 2개의 선택지가 필요합니다."),
-  endTime: z.string().min(1, "종료 시간을 선택해주세요."),
-  settlementTime: z.string().min(1, "정산 시간을 선택해주세요."),
-  minimumStake: z
-    .number()
-    .min(1, "최소 참여 금액은 1 PmpAmount 이상이어야 합니다."),
-  maximumStake: z
-    .number()
-    .min(1, "최대 참여 금액은 1 PmpAmount 이상이어야 합니다."),
-});
-
-type PredictionGameFormData = z.infer<typeof formSchema>;
+import {
+  userProposedPredictionGameRequestSchema,
+  type UserProposedPredictionGameRequest,
+} from "../../../application/dto/user-proposed-prediction-game.dto";
 
 interface PredictionGameFormProps {
-  onSubmit: (data: PredictionGameFormData) => Promise<void>;
-  initialData?: Partial<PredictionGame>;
+  onSubmit: (data: UserProposedPredictionGameRequest) => Promise<void>;
   isLoading?: boolean;
 }
 
 export default function PredictionGameForm({
   onSubmit,
-  initialData,
   isLoading = false,
 }: PredictionGameFormProps) {
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
-  } = useForm<PredictionGameFormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: initialData,
+  } = useForm<UserProposedPredictionGameRequest>({
+    resolver: zodResolver(userProposedPredictionGameRequestSchema),
+    defaultValues: {
+      predictionType: "binary",
+      options: ["예", "아니오"],
+      minimumStake: 1,
+      maximumStake: 1,
+    },
   });
 
-  const handleFormSubmit: SubmitHandler<PredictionGameFormData> = async (
-    data: PredictionGameFormData
+  const predictionType = watch("predictionType");
+
+  const handleFormSubmit: SubmitHandler<UserProposedPredictionGameRequest> = async (
+    data: UserProposedPredictionGameRequest
   ) => {
     await onSubmit(data);
   };
@@ -62,9 +53,13 @@ export default function PredictionGameForm({
       </div>
 
       <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
-        {/* 기본 옵션 (현재 UI에서 options 입력이 없어 validation 실패 방지) */}
-        <input type="hidden" defaultValue="예" {...register("options.0")} />
-        <input type="hidden" defaultValue="아니오" {...register("options.1")} />
+        {/* 기본 옵션: binary는 예/아니오 고정 */}
+        {predictionType === "binary" && (
+          <>
+            <input type="hidden" defaultValue="예" {...register("options.0")} />
+            <input type="hidden" defaultValue="아니오" {...register("options.1")} />
+          </>
+        )}
 
         {/* 제목 */}
         <div>
@@ -100,9 +95,7 @@ export default function PredictionGameForm({
             placeholder="게임에 대한 자세한 설명을 입력하세요..."
           />
           {errors.description && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.description.message}
-            </p>
+            <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
           )}
         </div>
 
@@ -124,11 +117,47 @@ export default function PredictionGameForm({
             <option value="numeric">숫자 예측</option>
           </select>
           {errors.predictionType && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.predictionType.message}
-            </p>
+            <p className="mt-1 text-sm text-red-600">{errors.predictionType.message}</p>
           )}
         </div>
+
+        {/* 선택지 (binary 외 타입에서 입력) */}
+        {predictionType !== "binary" && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              선택지 *
+            </label>
+            <div className="space-y-2">
+              <input
+                {...register("options.0")}
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="선택지 1"
+              />
+              <input
+                {...register("options.1")}
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="선택지 2"
+              />
+              <input
+                {...register("options.2")}
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="선택지 3 (선택)"
+              />
+              <input
+                {...register("options.3")}
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="선택지 4 (선택)"
+              />
+            </div>
+            {errors.options && (
+              <p className="mt-1 text-sm text-red-600">{errors.options.message}</p>
+            )}
+          </div>
+        )}
 
         {/* 종료 시간 */}
         <div>
@@ -144,9 +173,7 @@ export default function PredictionGameForm({
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {errors.endTime && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.endTime.message}
-            </p>
+            <p className="mt-1 text-sm text-red-600">{errors.endTime.message}</p>
           )}
         </div>
 
@@ -164,9 +191,7 @@ export default function PredictionGameForm({
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {errors.settlementTime && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.settlementTime.message}
-            </p>
+            <p className="mt-1 text-sm text-red-600">{errors.settlementTime.message}</p>
           )}
         </div>
 
@@ -186,9 +211,7 @@ export default function PredictionGameForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.minimumStake && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.minimumStake.message}
-              </p>
+              <p className="mt-1 text-sm text-red-600">{errors.minimumStake.message}</p>
             )}
           </div>
           <div>
@@ -205,9 +228,7 @@ export default function PredictionGameForm({
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             {errors.maximumStake && (
-              <p className="mt-1 text-sm text-red-600">
-                {errors.maximumStake.message}
-              </p>
+              <p className="mt-1 text-sm text-red-600">{errors.maximumStake.message}</p>
             )}
           </div>
         </div>

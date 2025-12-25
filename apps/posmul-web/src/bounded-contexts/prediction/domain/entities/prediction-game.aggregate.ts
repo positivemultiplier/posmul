@@ -1,8 +1,10 @@
 import {
+  PmpAmount,
   PredictionGameId,
   Result,
   UserId,
   createPmpAmount,
+  unwrapPmpAmount,
 } from "@posmul/auth-economy-sdk";
 import {
   AccuracyScore,
@@ -16,7 +18,6 @@ import {
   BaseDomainEvent,
   Timestamp,
 } from "@posmul/auth-economy-sdk";
-import { PmpAmount } from "@posmul/auth-economy-sdk/economy";
 
 import {
   PredictionResult as PredictionResultEnum,
@@ -82,13 +83,15 @@ export class PredictionGame extends AggregateRoot {
     this._startTime = props.startTime;
     this._endTime = props.endTime;
     this._settlementTime = props.settlementTime;
-    this._minimumStake = props.minimumStake ?? (createPmpAmount(0) as any);
-    this._maximumStake = props.maximumStake ?? (createPmpAmount(1000) as any);
+    this._minimumStake =
+      props.minimumStake ?? (createPmpAmount(0) as unknown as PmpAmount);
+    this._maximumStake =
+      props.maximumStake ?? (createPmpAmount(1000) as unknown as PmpAmount);
     this._maxParticipants = props.maxParticipants ?? null;
     this._status = props.status ?? GameStatus.PENDING;
     this._gameImportanceScore = props.gameImportanceScore ?? 1.0;
     this._allocatedPrizePool =
-      props.allocatedPrizePool ?? (createPmpAmount(0) as any);
+      props.allocatedPrizePool ?? (createPmpAmount(0) as unknown as PmpAmount);
     this._timestamps = props.timestamps ?? {
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -145,14 +148,40 @@ export class PredictionGame extends AggregateRoot {
     if (this._status !== GameStatus.ACTIVE) {
       return failure(new DomainError("GAME_NOT_ACTIVE"));
     }
-    if (
-      this._maxParticipants &&
-      this._predictions.length >= this._maxParticipants
-    ) {
+
+    if (this._predictions.some((p) => p.userId === prediction.userId)) {
+      return failure(new DomainError("DUPLICATE_PREDICTION"));
+    }
+
+    const hasOption = this._options.some(
+      (option) => option.id === prediction.selectedOptionId
+    );
+    if (!hasOption) {
+      return failure(new DomainError("INVALID_OPTION"));
+    }
+
+    const stake = unwrapPmpAmount(prediction.stake);
+    const minStake = unwrapPmpAmount(this._minimumStake);
+    const maxStake = unwrapPmpAmount(this._maximumStake);
+
+    if (stake < minStake) {
+      return failure(new DomainError("STAKE_BELOW_MINIMUM"));
+    }
+
+    if (stake > maxStake) {
+      return failure(new DomainError("STAKE_ABOVE_MAXIMUM"));
+    }
+
+    if (this._maxParticipants && this._predictions.length >= this._maxParticipants) {
       return failure(new DomainError("MAX_PARTICIPANTS"));
     }
+
     this._predictions.push(prediction);
     return success(undefined);
+  }
+
+  public getPredictions(): readonly Prediction[] {
+    return this._predictions;
   }
 
   public getPrediction(predictionId: string): Prediction | undefined {
@@ -163,8 +192,13 @@ export class PredictionGame extends AggregateRoot {
     correctOptionId: string
     // IUserRepository is not actually used, removing for now to reduce dependencies
   ): Result<void, DomainError> {
-    if (this._status !== "ENDED") {
+    if (this._status !== GameStatus.ENDED) {
       return failure(new DomainError("SETTLEMENT_INVALID_STATE"));
+    }
+
+    const hasOption = this._options.some((option) => option.id === correctOptionId);
+    if (!hasOption) {
+      return failure(new DomainError("INVALID_OPTION"));
     }
 
     const winningPredictions = this._predictions.filter(
@@ -186,7 +220,7 @@ export class PredictionGame extends AggregateRoot {
         prediction.setResult({
           result: PredictionResultEnum.CORRECT,
           accuracyScore: 1 as AccuracyScore, // Simplified
-          reward: createPmpAmount(Math.floor(reward)) as any,
+          reward: createPmpAmount(Math.floor(reward)) as unknown as PmpAmount,
         });
       }
     }
@@ -195,7 +229,7 @@ export class PredictionGame extends AggregateRoot {
       prediction.setResult({
         result: PredictionResultEnum.INCORRECT,
         accuracyScore: 0 as AccuracyScore,
-        reward: createPmpAmount(0) as any,
+        reward: createPmpAmount(0) as unknown as PmpAmount,
       });
     }
 

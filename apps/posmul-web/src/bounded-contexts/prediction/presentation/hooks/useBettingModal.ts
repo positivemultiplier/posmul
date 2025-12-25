@@ -2,16 +2,46 @@
 
 import { useCallback, useState } from "react";
 
-export const useBettingModal = (initialGameData = null) => {
+export type BettingTrend = "up" | "down" | "stable";
+
+export interface BettingOption {
+  readonly id: string;
+  readonly text: string;
+  readonly probability: number;
+  readonly totalBets?: number;
+  readonly participantCount?: number;
+  readonly trend?: BettingTrend;
+  readonly color?: string;
+}
+
+export interface BettingGameData {
+  readonly id: string;
+  readonly title: string;
+  readonly options: BettingOption[];
+  readonly endTime?: string;
+  readonly totalPool?: number;
+}
+
+export interface SubmitBetData {
+  readonly gameId: string;
+  readonly optionId: string;
+  readonly stakeAmount: number;
+  readonly confidence: number;
+  readonly expectedReturn: number;
+}
+
+export type SubmitBetHandler = (bet: SubmitBetData) => Promise<void> | void;
+
+export const useBettingModal = (initialGameData: BettingGameData | null = null) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [gameData, setGameData] = useState(initialGameData);
+  const [gameData, setGameData] = useState<BettingGameData | null>(initialGameData);
   const [step, setStep] = useState(1); // 1: 옵션 선택, 2: 베팅 설정, 3: 확인
-  const [selectedOption, setSelectedOption] = useState(null);
+  const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [stakeAmount, setStakeAmount] = useState(1000);
   const [confidence, setConfidence] = useState(50);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const openModal = useCallback((game) => {
+  const openModal = useCallback((game: BettingGameData) => {
     setGameData(game);
     setIsOpen(true);
     setStep(1);
@@ -42,29 +72,30 @@ export const useBettingModal = (initialGameData = null) => {
     }
   }, [step]);
 
-  const goToStep = useCallback((targetStep) => {
+  const goToStep = useCallback((targetStep: number) => {
     if (targetStep >= 1 && targetStep <= 3) {
       setStep(targetStep);
     }
   }, []);
 
-  const selectOption = useCallback((optionId) => {
+  const selectOption = useCallback((optionId: string) => {
     setSelectedOption(optionId);
   }, []);
 
-  const updateStakeAmount = useCallback((amount) => {
+  const updateStakeAmount = useCallback((amount: number) => {
     setStakeAmount(amount);
   }, []);
 
-  const updateConfidence = useCallback((confidenceLevel) => {
+  const updateConfidence = useCallback((confidenceLevel: number) => {
     setConfidence(confidenceLevel);
   }, []);
 
   const calculateExpectedReturn = useCallback(() => {
     if (!gameData || !selectedOption) return 0;
 
-    const option = gameData.options?.find((opt) => opt.id === selectedOption);
+    const option = gameData.options.find((opt) => opt.id === selectedOption);
     if (!option) return 0;
+    if (option.probability <= 0) return 0;
 
     // 기본 수익률 계산: (100 / 확률) - 1
     const baseMultiplier = 100 / option.probability;
@@ -77,13 +108,13 @@ export const useBettingModal = (initialGameData = null) => {
   }, [gameData, selectedOption, stakeAmount, confidence]);
 
   const submitBet = useCallback(
-    async (onSubmit) => {
+    async (onSubmit?: SubmitBetHandler) => {
       if (!selectedOption || !gameData || isSubmitting) return;
 
       setIsSubmitting(true);
 
       try {
-        const betData = {
+        const betData: SubmitBetData = {
           gameId: gameData.id,
           optionId: selectedOption,
           stakeAmount,
@@ -128,7 +159,7 @@ export const useBettingModal = (initialGameData = null) => {
 
   const getSelectedOptionData = useCallback(() => {
     if (!gameData || !selectedOption) return null;
-    return gameData.options?.find((opt) => opt.id === selectedOption) || null;
+    return gameData.options.find((opt) => opt.id === selectedOption) || null;
   }, [gameData, selectedOption]);
 
   return {

@@ -77,6 +77,26 @@ export interface GameSearchFilters {
 }
 
 /**
+ * 게임 목록 조회(UseCase findMany)용 필터 타입
+ * - Presentation(FilterOptions)와 분리하여 도메인 계층 순수성 유지
+ */
+export interface PredictionGameFindManyFilters {
+  readonly status?: "PENDING" | "CREATED" | "ACTIVE" | "ENDED" | "COMPLETED" | "CANCELLED";
+  readonly category?: string;
+  readonly createdBy?: string;
+  readonly importance?: "low" | "medium" | "high" | "critical";
+  readonly difficulty?: "easy" | "medium" | "hard" | "expert";
+  readonly startTimeFrom?: Date;
+  readonly startTimeTo?: Date;
+}
+
+export interface PredictionGameFindManyOptions {
+  readonly filters?: PredictionGameFindManyFilters;
+  readonly pagination?: { limit: number; offset: number };
+  readonly sorting?: { field: string; order: "asc" | "desc" };
+}
+
+/**
  * Prediction Game Repository 인터페이스
  *
  * Clean Architecture와 DDD 원칙을 준수하여 설계된 Repository 패턴
@@ -205,7 +225,7 @@ export interface IPredictionGameRepository {
    * @returns 성공 시 게임 목록, 실패 시 RepositoryError
    */
   findMany(options: {
-    filters?: any;
+    filters?: PredictionGameFindManyFilters;
     pagination?: { limit: number; offset: number };
     sorting?: { field: string; order: "asc" | "desc" };
   }): Promise<Result<PredictionGame[], RepositoryError>>;
@@ -216,7 +236,7 @@ export interface IPredictionGameRepository {
    * @param filters 필터 조건
    * @returns 성공 시 게임 수, 실패 시 RepositoryError
    */
-  countByFilters(filters: any): Promise<Result<number, RepositoryError>>;
+  countByFilters(filters: PredictionGameFindManyFilters): Promise<Result<number, RepositoryError>>;
 
   /**
    * 게임 통계 조회

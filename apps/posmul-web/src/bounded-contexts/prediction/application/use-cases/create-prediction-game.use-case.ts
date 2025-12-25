@@ -1,11 +1,11 @@
 import {
+  PmpAmount,
   PredictionGameId,
   Result,
   UseCaseError,
   UserId,
   isFailure,
 } from "@posmul/auth-economy-sdk";
-import { PmpAmount } from "@posmul/auth-economy-sdk/economy";
 
 import { MoneyWaveCalculatorService } from "../../../../shared/economy-kernel/services/money-wave-calculator.service";
 import { PredictionGame } from "../../domain/entities/prediction-game.aggregate";

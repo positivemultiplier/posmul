@@ -1,5 +1,5 @@
 import { Result, UserId } from "@posmul/auth-economy-sdk";
-import { PmpAmount } from "@posmul/auth-economy-sdk/economy";
+import type { PmpAmount } from "@posmul/auth-economy-sdk";
 
 import { PredictionType } from "../../domain/value-objects/prediction-types";
 import { CreatePredictionGameUseCase } from "../use-cases/create-prediction-game.use-case";

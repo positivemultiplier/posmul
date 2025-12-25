@@ -242,9 +242,15 @@ export class MCPInstituteRepository implements IInstituteRepository {
             const query = "SELECT COUNT(*) as count FROM donation.donation_institutes WHERE status = $status";
             const finalQuery = buildParameterizedQuery(query, { status });
             const result = await this.mcpAdapter.executeSQL(finalQuery);
+
+            const rawCount: unknown = result.data?.[0]?.count;
+            const normalizedCount =
+                typeof rawCount === "number" || typeof rawCount === "string"
+                    ? rawCount
+                    : 0;
             return {
                 success: true,
-                data: parseInt(result.data?.[0]?.count || "0"),
+                data: parseInt(String(normalizedCount), 10),
             };
         } catch (error) {
             return {
@@ -259,9 +265,15 @@ export class MCPInstituteRepository implements IInstituteRepository {
             const query = "SELECT COUNT(*) as count FROM donation.donation_institutes WHERE category = $category";
             const finalQuery = buildParameterizedQuery(query, { category });
             const result = await this.mcpAdapter.executeSQL(finalQuery);
+
+            const rawCount: unknown = result.data?.[0]?.count;
+            const normalizedCount =
+                typeof rawCount === "number" || typeof rawCount === "string"
+                    ? rawCount
+                    : 0;
             return {
                 success: true,
-                data: parseInt(result.data?.[0]?.count || "0"),
+                data: parseInt(String(normalizedCount), 10),
             };
         } catch (error) {
             return {

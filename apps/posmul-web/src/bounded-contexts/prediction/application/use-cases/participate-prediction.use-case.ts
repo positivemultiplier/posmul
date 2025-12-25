@@ -101,7 +101,12 @@ export class ParticipatePredictionUseCase {
       const gameResult = await this.predictionGameRepository.findById(
         request.gameId
       );
-      console.log("[UseCase] Game find result success:", gameResult.success, "hasData:", !!gameResult.data);
+      console.log(
+        "[UseCase] Game find result success:",
+        gameResult.success,
+        "hasData:",
+        gameResult.success ? !!gameResult.data : false
+      );
       
       if (!gameResult.success) {
         console.log("[UseCase] Game retrieval failed!");
@@ -167,7 +172,7 @@ export class ParticipatePredictionUseCase {
       console.log("[UseCase] Save result:", saveResult.success);
       
       if (!saveResult.success) {
-        console.log("[UseCase] Save failed!", saveResult.error);
+        console.log("[UseCase] Save failed!", isFailure(saveResult) ? saveResult.error : "unknown error");
         return failure(
           new UseCaseError("Failed to save prediction game state", {
             message: isFailure(saveResult) ? "save failed" : "unknown error",
@@ -207,11 +212,12 @@ export class ParticipatePredictionUseCase {
       });
     } catch (error) {
       console.log("[UseCase] Caught exception:", error);
+      const message = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         error: new UseCaseError(
           "Unexpected error in ParticipatePredictionUseCase",
-          { originalError: (error as any)?.message || "Unknown error" }
+          { originalError: message }
         ),
       };
     }

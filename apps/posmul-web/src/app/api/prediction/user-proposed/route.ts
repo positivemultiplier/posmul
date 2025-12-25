@@ -3,18 +3,11 @@ import { createClient as createSupabaseServerClient } from "../../../../lib/supa
 
 import { createClient } from "@supabase/supabase-js";
 
-type PredictionTypeInput = "binary" | "multiple" | "numeric";
+import {
+  userProposedPredictionGameRequestSchema,
+  type UserProposedPredictionGameRequest,
+} from "../../../../bounded-contexts/prediction/application/dto/user-proposed-prediction-game.dto";
 
-type RequestBody = {
-  title: string;
-  description: string;
-  predictionType: PredictionTypeInput;
-  options: string[];
-  endTime: string;
-  settlementTime: string;
-  minimumStake: number;
-  maximumStake: number;
-};
 
 const normalizeSlug = (value: string): string => {
   const trimmed = value.trim();
@@ -25,7 +18,9 @@ const normalizeSlug = (value: string): string => {
   return withoutEdge || "prediction";
 };
 
-const mapPredictionType = (value: PredictionTypeInput): "BINARY" | "RANKING" => {
+const mapPredictionType = (
+  value: UserProposedPredictionGameRequest["predictionType"]
+): "BINARY" | "RANKING" => {
   switch (value) {
     case "binary":
       return "BINARY";
@@ -37,26 +32,16 @@ const mapPredictionType = (value: PredictionTypeInput): "BINARY" | "RANKING" => 
 
 export async function POST(request: Request): Promise<NextResponse> {
   try {
-    const body = (await request.json()) as Partial<RequestBody>;
-
-    if (
-      typeof body.title !== "string" ||
-      typeof body.description !== "string" ||
-      (body.predictionType !== "binary" &&
-        body.predictionType !== "multiple" &&
-        body.predictionType !== "numeric") ||
-      !Array.isArray(body.options) ||
-      body.options.length < 2 ||
-      typeof body.endTime !== "string" ||
-      typeof body.settlementTime !== "string" ||
-      typeof body.minimumStake !== "number" ||
-      typeof body.maximumStake !== "number"
-    ) {
+    const rawBody = (await request.json()) as unknown;
+    const parsed = userProposedPredictionGameRequestSchema.safeParse(rawBody);
+    if (!parsed.success) {
       return NextResponse.json(
         { success: false, error: { message: "Invalid request body" } },
         { status: 400 }
       );
     }
+
+    const body = parsed.data;
 
     const supabase = await createSupabaseServerClient();
     const {
@@ -87,16 +72,7 @@ export async function POST(request: Request): Promise<NextResponse> {
       auth: { persistSession: false },
     });
 
-    const options = body.options
-      .map((v) => (typeof v === "string" ? v.trim() : ""))
-      .filter((v) => v.length > 0);
-
-    if (options.length < 2) {
-      return NextResponse.json(
-        { success: false, error: { message: "At least 2 options required" } },
-        { status: 400 }
-      );
-    }
+    const options = body.options;
 
     const baseSlug = normalizeSlug(body.title);
     const now = new Date();
@@ -116,12 +92,11 @@ export async function POST(request: Request): Promise<NextResponse> {
           description: body.description,
           category: "USER_PROPOSED",
           prediction_type: mapPredictionType(body.predictionType),
-          game_options: {
-            options: options.map((label, idx) => ({
-              id: `opt-${idx + 1}`,
-              label,
-            })),
-          },
+          // 다른 코드 경로(MCP Repository 등)와 동일하게 옵션 배열 형태로 저장
+          game_options: options.map((label, idx) => ({
+            id: `opt-${idx + 1}`,
+            label,
+          })),
           difficulty: 1.0,
           min_bet_amount: body.minimumStake,
           max_bet_amount: body.maximumStake,

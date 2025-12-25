@@ -18,7 +18,13 @@ import { IPredictionGameRepository } from "../../domain/repositories/prediction-
  */
 export interface GetPredictionGamesRequest {
   readonly filters?: {
-    readonly status?: "PENDING" | "ACTIVE" | "ENDED" | "SETTLED" | "CANCELLED";
+    readonly status?:
+      | "PENDING"
+      | "CREATED"
+      | "ACTIVE"
+      | "ENDED"
+      | "COMPLETED"
+      | "CANCELLED";
     readonly category?: string;
     readonly createdBy?: string;
     readonly importance?: "low" | "medium" | "high" | "critical";
@@ -140,11 +146,12 @@ export class GetPredictionGamesUseCase {
         },
       };
     } catch (error) {
+      const originalError = error instanceof Error ? error.message : String(error);
       return {
         success: false,
         error: new UseCaseError(
           "Unexpected error in GetPredictionGamesUseCase",
-          { originalError: (error as any)?.message || "Unknown error" }
+          { originalError }
         ),
       };
     }

@@ -5,15 +5,27 @@ import { PredictionOptionCard } from './PredictionOptionCard';
 import { StakeAmountInput } from './StakeAmountInput';
 import { ConfidenceSlider } from './ConfidenceSlider';
 import { BettingConfirmation } from './BettingConfirmation';
-import { useBettingModal } from '../../hooks/useBettingModal';
+import {
+  type BettingGameData,
+  type SubmitBetHandler,
+  useBettingModal,
+} from '../../hooks/useBettingModal';
+
+interface PredictionBettingModalProps {
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
+  readonly gameData: BettingGameData | null;
+  readonly onSubmitBet?: SubmitBetHandler;
+}
 
 export const PredictionBettingModal = ({
   isOpen,
   onClose,
   gameData,
-  onSubmitBet
-}) => {
+  onSubmitBet,
+}: PredictionBettingModalProps) => {
   const {
+    gameData: currentGameData,
     step,
     selectedOption,
     stakeAmount,
@@ -32,33 +44,7 @@ export const PredictionBettingModal = ({
 
   if (!isOpen) return null;
 
-  // Mock game data - 실제 구현에서는 props로 받은 gameData 사용
-  const mockGameData = gameData || {
-    id: 'game-1',
-    title: "2024 대선 결과 예측",
-    options: [
-      {
-        id: 1,
-        text: "민주당 승리",
-        probability: 52,
-        color: "#3b82f6",
-        totalBets: 1250000,
-        participantCount: 245,
-        trend: 'up'
-      },
-      {
-        id: 2,
-        text: "공화당 승리",
-        probability: 48,
-        color: "#ef4444",
-        totalBets: 980000,
-        participantCount: 198,
-        trend: 'down'
-      }
-    ],
-    endTime: "2024-11-05T08:00:00Z",
-    totalPool: 2230000
-  };
+  if (!currentGameData) return null;
 
   const handleSubmit = () => {
     submitBet(onSubmitBet);
@@ -70,7 +56,7 @@ export const PredictionBettingModal = ({
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">{mockGameData.title}</h2>
+            <h2 className="text-xl font-bold text-gray-900">{currentGameData.title}</h2>
             <p className="text-sm text-gray-600 mt-1">예측에 참여하세요</p>
           </div>
           <button
@@ -112,7 +98,7 @@ export const PredictionBettingModal = ({
             <div className="space-y-4">
               <h3 className="text-lg font-semibold mb-4">어떤 결과를 예측하시나요?</h3>
               <div className="space-y-3">
-                {mockGameData.options.map((option) => (
+                {currentGameData.options.map((option) => (
                   <PredictionOptionCard
                     key={option.id}
                     option={option}
@@ -165,7 +151,7 @@ export const PredictionBettingModal = ({
               stakeAmount={stakeAmount}
               confidence={confidence}
               expectedReturn={expectedReturn}
-              gameEndTime={mockGameData.endTime}
+              gameEndTime={currentGameData.endTime ?? ""}
               onConfirm={handleSubmit}
               onBack={prevStep}
               isLoading={isSubmitting}

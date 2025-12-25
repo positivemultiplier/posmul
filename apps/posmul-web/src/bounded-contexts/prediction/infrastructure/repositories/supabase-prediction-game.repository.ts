@@ -1,185 +1,101 @@
 /**
- * Supabase Prediction Game Repository Implementation (Simplified)
+ * Supabase Prediction Game Repository
+ *
+ * 기존 구현은 스텁(Not implemented)이었고, 실제 동작하는 MCPPredictionGameRepository가 이미 존재합니다.
+ * - API Routes에서 여전히 SupabasePredictionGameRepository를 사용하고 있어 호환성을 위해 클래스는 유지
+ * - 내부 구현은 MCPPredictionGameRepository로 위임하여 단일화
  */
 import { PredictionGameId, Result, UserId } from "@posmul/auth-economy-sdk";
 
 import { PredictionGame } from "../../domain/entities/prediction-game.aggregate";
 import {
+  GameSearchFilters,
   IPredictionGameRepository,
   PaginatedResult,
   PaginationRequest,
+  PredictionGameFindManyFilters,
   RepositoryError,
 } from "../../domain/repositories/prediction-game.repository";
 import { GameStatus } from "../../domain/value-objects/prediction-types";
 
-export class SupabasePredictionGameRepository
-  implements IPredictionGameRepository
-{
-  constructor(private readonly projectId: string) {}
+import { MCPPredictionGameRepository } from "./mcp-prediction-game.repository";
 
-  // IPredictionGameRepository 인터페이스 구현
-  async save(game: PredictionGame): Promise<Result<void, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+export class SupabasePredictionGameRepository implements IPredictionGameRepository {
+  private readonly delegate: IPredictionGameRepository;
+
+  constructor(private readonly projectId: string) {
+    this.delegate = new MCPPredictionGameRepository(projectId);
   }
 
-  async findById(
-    id: PredictionGameId
-  ): Promise<Result<PredictionGame | null, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  save(game: PredictionGame, options?: { skipGameUpdate?: boolean }): Promise<Result<void, RepositoryError>> {
+    return this.delegate.save(game, options);
   }
 
-  async findByIds(
-    ids: PredictionGameId[]
-  ): Promise<Result<Map<PredictionGameId, PredictionGame>, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  findById(id: PredictionGameId): Promise<Result<PredictionGame | null, RepositoryError>> {
+    return this.delegate.findById(id);
   }
 
-  async findByStatus(
-    status: GameStatus,
-    pagination?: PaginationRequest
-  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  findByIds(ids: PredictionGameId[]): Promise<Result<Map<PredictionGameId, PredictionGame>, RepositoryError>> {
+    return this.delegate.findByIds(ids);
   }
 
-  async findByCreator(
-    creatorId: UserId,
-    pagination?: PaginationRequest
-  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  findByStatus(status: GameStatus, pagination?: PaginationRequest): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
+    return this.delegate.findByStatus(status, pagination);
   }
 
-  async findByParticipant(
-    userId: UserId,
-    pagination?: PaginationRequest
-  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  findByCreator(creatorId: UserId, pagination?: PaginationRequest): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
+    return this.delegate.findByCreator(creatorId, pagination);
   }
 
-  async search(
-    filters: any,
-    pagination?: PaginationRequest
-  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  findByParticipant(userId: UserId, pagination?: PaginationRequest): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
+    return this.delegate.findByParticipant(userId, pagination);
   }
 
-  async findActiveGames(
-    pagination?: PaginationRequest
-  ): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  search(filters: GameSearchFilters, pagination?: PaginationRequest): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
+    return this.delegate.search(filters, pagination);
   }
 
-  async findPendingSettlement(
-    limit?: number
-  ): Promise<Result<PredictionGame[], RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  findActiveGames(pagination?: PaginationRequest): Promise<Result<PaginatedResult<PredictionGame>, RepositoryError>> {
+    return this.delegate.findActiveGames(pagination);
   }
 
-  async exists(
-    id: PredictionGameId
-  ): Promise<Result<boolean, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  findPendingSettlement(limit?: number): Promise<Result<PredictionGame[], RepositoryError>> {
+    return this.delegate.findPendingSettlement(limit);
   }
 
-  async delete(id: PredictionGameId): Promise<Result<void, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  exists(id: PredictionGameId): Promise<Result<boolean, RepositoryError>> {
+    return this.delegate.exists(id);
   }
 
-  async findMany(
-    options: any
-  ): Promise<Result<PredictionGame[], RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  delete(id: PredictionGameId): Promise<Result<void, RepositoryError>> {
+    return this.delegate.delete(id);
   }
 
-  async countByFilters(filters: any): Promise<Result<number, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  findMany(options: {
+    filters?: PredictionGameFindManyFilters;
+    pagination?: { limit: number; offset: number };
+    sorting?: { field: string; order: "asc" | "desc" };
+  }): Promise<Result<PredictionGame[], RepositoryError>> {
+    return this.delegate.findMany(options);
   }
 
-  async getStatistics(
-    id: PredictionGameId
-  ): Promise<Result<any, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  countByFilters(filters: PredictionGameFindManyFilters): Promise<Result<number, RepositoryError>> {
+    return this.delegate.countByFilters(filters);
   }
 
-  async saveWithVersion(
-    game: PredictionGame,
-    version: number
-  ): Promise<Result<number, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  getStatistics(id: PredictionGameId): ReturnType<IPredictionGameRepository["getStatistics"]> {
+    return this.delegate.getStatistics(id);
   }
 
-  async bulkUpdate(
-    games: PredictionGame[]
-  ): Promise<Result<number, RepositoryError>> {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented", "NOT_IMPLEMENTED"),
-    };
+  saveWithVersion(game: PredictionGame, version: number): Promise<Result<number, RepositoryError>> {
+    return this.delegate.saveWithVersion(game, version);
   }
 
-  async settleGame(
-    gameId: PredictionGameId,
-    correctOptionId: string
-  ): Promise<
-    Result<
-      {
-        gameId: string;
-        correctOptionId: string;
-        winnersCount: number;
-        losersCount: number;
-        totalRewardDistributed: number;
-        settledAt: Date;
-      },
-      RepositoryError
-    >
-  > {
-    return {
-      success: false,
-      error: new RepositoryError("Not implemented - use MCPPredictionGameRepository", "NOT_IMPLEMENTED"),
-    };
+  bulkUpdate(games: PredictionGame[]): Promise<Result<number, RepositoryError>> {
+    return this.delegate.bulkUpdate(games);
+  }
+
+  settleGame(gameId: PredictionGameId, correctOptionId: string): ReturnType<IPredictionGameRepository["settleGame"]> {
+    return this.delegate.settleGame(gameId, correctOptionId);
   }
 }

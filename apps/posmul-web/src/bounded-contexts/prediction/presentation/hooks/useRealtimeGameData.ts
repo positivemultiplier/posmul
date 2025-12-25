@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { createClientComponentClient } from "@supabase/auth-helpers-nextjs";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export interface GameUpdateData {
   gameId: string;
@@ -65,7 +66,7 @@ export function useRealtimeGameData({
   const [updateCount, setUpdateCount] = useState(0);
 
   const supabase = createClientComponentClient();
-  const channelRef = useRef<any>(null);
+  const channelRef = useRef<RealtimeChannel | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
@@ -84,7 +85,7 @@ export function useRealtimeGameData({
         recentBets: [],
       };
 
-      let updatedGameData = { ...currentGameData };
+      const updatedGameData = { ...currentGameData };
 
       switch (type) {
         case "PROBABILITY_UPDATE":

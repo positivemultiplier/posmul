@@ -4,12 +4,11 @@
  */
 import { createPmpAmount, isFailure } from "@posmul/auth-economy-sdk";
 
-import { MoneyWaveCalculatorService } from "../../shared/economy-kernel/services/money-wave-calculator.service";
-import { PredictionGame } from "./domain/entities/prediction-game.aggregate";
+import { MoneyWaveCalculatorService } from "../../../shared/economy-kernel/services/money-wave-calculator.service";
+import { PredictionGame } from "../domain/entities/prediction-game.aggregate";
 import {
-  GameStatus,
   PredictionType,
-} from "./domain/value-objects/prediction-types";
+} from "../domain/value-objects/prediction-types";
 
 async function testMoneyWaveIntegration() {
   console.log("🚀 MoneyWave Integration Test 시작...\n");

@@ -395,7 +395,6 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
 
     let currentStage: NetworkLifecycleStage;
     let stageCharacteristics: string[];
-    let recommendedStrategies: NetworkOptimizationRecommendation[];
     let nextStageRequirements: string[];
 
     // 단계 판별 로직
@@ -467,7 +466,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     }
 
     // 단계별 최적화 전략
-    recommendedStrategies = this.getStageSpecificStrategies(
+    const recommendedStrategies = this.getStageSpecificStrategies(
       currentStage,
       userCount
     );
