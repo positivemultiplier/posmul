@@ -10,9 +10,9 @@ import {
 } from "../entities/statistic.entity";
 import {
   RegionCode,
-  StatCategory,
-  PeriodType,
 } from "../../../forum/domain/value-objects/forum-value-objects";
+
+import { StatCategory, PeriodType } from "../value-objects/statistics-value-objects";
 
 // Result 타입 정의
 export type Result<T, E = Error> =

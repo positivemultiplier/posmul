@@ -14,19 +14,7 @@ export type {
   Result,
 } from "./repositories/statistic.repository";
 
-// Re-export Value Objects from Forum context
-export { 
-  RegionLevel,
-  StatCategory,
-  PeriodType,
-  createRegionCode,
-  createStatisticPeriod,
-  GWANGJU_REGION_CODES,
-} from "../../forum/domain/value-objects/forum-value-objects";
+// Value Objects
+export { StatCategory, PeriodType, createStatisticPeriod } from "./value-objects/statistics-value-objects";
 
-export type {
-  RegionCode,
-  RegionInfo,
-  StatisticPeriod,
-  StatisticDataPoint,
-} from "../../forum/domain/value-objects/forum-value-objects";
+export type { StatisticPeriod } from "./value-objects/statistics-value-objects";

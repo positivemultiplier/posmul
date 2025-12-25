@@ -21,9 +21,9 @@ import {
 } from "../../domain/repositories/statistic.repository";
 import {
   RegionCode,
-  StatCategory,
-  PeriodType,
 } from "../../../forum/domain/value-objects/forum-value-objects";
+
+import { StatCategory, PeriodType } from "../../domain/value-objects/statistics-value-objects";
 
 // Supabase 클라이언트 타입 (실제 구현 시 import)
 type SupabaseClient = {

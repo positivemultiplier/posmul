@@ -12,7 +12,7 @@ import {
   IDataSourceRepository,
   Result,
 } from "../../domain/repositories/statistic.repository";
-import { StatCategory, PeriodType } from "../../../forum/domain/value-objects/forum-value-objects";
+import { StatCategory, PeriodType } from "../../domain/value-objects/statistics-value-objects";
 import { KOSISClient, KOSISStatItem as _KOSISStatItem } from "../../infrastructure/api-clients/kosis.client";
 
 /**

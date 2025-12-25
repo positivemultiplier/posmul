@@ -4,12 +4,15 @@
  */
 import {
   RegionCode,
+  createRegionCode,
+} from "../../../forum/domain/value-objects/forum-value-objects";
+
+import {
   StatCategory,
   StatisticPeriod,
   PeriodType,
-  createRegionCode,
   createStatisticPeriod,
-} from "../../../forum/domain/value-objects/forum-value-objects";
+} from "../value-objects/statistics-value-objects";
 
 // Statistic ID 브랜드 타입
 export type StatisticId = string & { readonly __brand: "StatisticId" };

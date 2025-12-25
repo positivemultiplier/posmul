@@ -12,7 +12,7 @@
  * - 소비자물가지수: DT_1J20004
  */
 
-import { StatCategory, PeriodType } from "../../../forum/domain/value-objects/forum-value-objects";
+import { StatCategory, PeriodType } from "../../domain/value-objects/statistics-value-objects";
 
 /**
  * KOSIS API 응답 타입
