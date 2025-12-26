@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 
 import { PredictionDetailTabsClient } from "./PredictionDetailTabsClient";
 
+import { createClient } from "../../../lib/supabase/server";
+
 import {
   getPredictionGameBySlug,
   getPredictionGameStats,
@@ -9,6 +11,8 @@ import {
 } from "../../../bounded-contexts/public/infrastructure/repositories/prediction.repository";
 
 import { getUserBalance } from "../sports/soccer/[slug]/actions";
+
+import { getKstHourStartIso } from "../../../shared/utils/time/getKstHourStartIso";
 
 type MoneyWaveCategory = "sports" | "politics" | "entertainment" | "economy" | "all";
 
@@ -49,10 +53,42 @@ function toIsoOrFallback(value: unknown, fallbackMsFromNow: number): string {
 
 function getPrizePool(params: { game: unknown; totalBetAmount?: number }): number {
   const prizePool = (params.game as { allocated_prize_pool?: unknown }).allocated_prize_pool;
-  if (typeof prizePool === "number") return prizePool;
+  if (typeof prizePool === "number" && Number.isFinite(prizePool)) return prizePool;
+  if (typeof prizePool === "string" && prizePool.trim() !== "") {
+    const parsed = Number(prizePool);
+    if (Number.isFinite(parsed)) return parsed;
+  }
   if (typeof params.totalBetAmount === "number") return Math.floor(params.totalBetAmount * 0.5);
   return 0;
 }
+
+type HourlyGamePoolRow = { pool_pmc: number | string | null };
+
+const toFiniteNumberOrNull = (value: number | string | null): number | null => {
+  const n = typeof value === "string" ? Number(value) : value;
+  return typeof n === "number" && Number.isFinite(n) ? n : null;
+};
+
+const fetchHourlyGamePrizePool = async (params: {
+  gameId: string;
+}): Promise<number | null> => {
+  const supabase = await createClient();
+  const hourStart = getKstHourStartIso();
+
+  const { data, error } = await supabase
+    .schema("economy")
+    .from("money_wave_hourly_game_pools")
+    .select("pool_pmc")
+    .eq("domain", "prediction")
+    .eq("hour_start", hourStart)
+    .eq("game_id", params.gameId)
+    .limit(1);
+
+  if (error || !data || data.length === 0) return null;
+
+  const value = toFiniteNumberOrNull((data[0] as HourlyGamePoolRow).pool_pmc);
+  return value === null ? null : Math.floor(value);
+};
 
 const mapDbCategoryToMoneyWave = (value: unknown): MoneyWaveCategory => {
   const normalized = typeof value === "string" ? value.trim().toUpperCase() : "";
@@ -77,6 +113,8 @@ export async function renderPredictionDetailBySlug(slug: string) {
 
   const game = await getPredictionGameBySlug(decodedSlug);
   if (!game) notFound();
+
+  const truthPrizePool = await fetchHourlyGamePrizePool({ gameId: game.game_id });
 
   const stats = await getPredictionGameStats(game.game_id);
   const options = parseGameOptions(game.game_options);
@@ -122,7 +160,7 @@ export async function renderPredictionDetailBySlug(slug: string) {
       reputation: 0,
       avatar: "🎯",
     },
-    prizePool: getPrizePool({ game, totalBetAmount }),
+    prizePool: truthPrizePool ?? getPrizePool({ game, totalBetAmount }),
     minimumStake: game.min_bet_amount || 100,
     maximumStake: game.max_bet_amount || 10000,
   };

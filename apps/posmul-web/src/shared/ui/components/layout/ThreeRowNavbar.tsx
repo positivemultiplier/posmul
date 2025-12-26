@@ -341,6 +341,11 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
   const currentCategories = navigationData[selectedDomain].categories;
   const currentSubcategories = (currentCategories as any)[selectedCategory]?.subcategories || [];
 
+  const isActiveSubcategory = (path: string): boolean => {
+    const basePath = path.split("?")[0] ?? path;
+    return pathname === basePath || pathname.startsWith(`${basePath}/`);
+  };
+
   return (
     <div className="fixed top-0 w-full z-50 bg-[#0a0a0f]/90 backdrop-blur-xl border-b border-white/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -434,8 +439,8 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
                 href={(category as any).href}
                 onClick={() => setSelectedCategory(categoryKey)}
                 className={`px-3 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${selectedCategory === categoryKey
-                  ? 'bg-gradient-to-r from-blue-500/30 to-purple-500/30 text-white border border-blue-400/50 shadow-md shadow-blue-500/30'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5 hover:border hover:border-white/20'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/50'
+                  : 'text-gray-400 hover:text-white hover:bg-white/5'
                   }`}
               >
                 {category.title}
@@ -448,16 +453,26 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
         <div className="hidden md:flex items-center h-10">
           <div className="flex items-center space-x-4">
             {currentSubcategories.map((subcategory: any, index: number) => (
+              (() => {
+                const active = isActiveSubcategory(subcategory.path);
+                return (
               <Link
                 key={index}
                 href={subcategory.path}
-                className="text-xs text-gray-400 hover:text-blue-400 transition-all duration-200 flex items-center px-2 py-1 rounded hover:bg-blue-500/10 hover:border-b-2 hover:border-blue-400"
+                className={
+                  "px-3 py-1 text-sm font-medium rounded-lg transition-all duration-200 flex items-center " +
+                  (active
+                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/50"
+                    : "text-gray-400 hover:text-white hover:bg-white/5")
+                }
               >
                 {subcategory.title}
                 {index < currentSubcategories.length - 1 && (
-                  <ChevronRightIcon className="h-3 w-3 mx-1" />
+                  <ChevronRightIcon className={"h-3 w-3 mx-1 " + (active ? "text-white/80" : "text-gray-500")} />
                 )}
               </Link>
+                );
+              })()
             ))}
           </div>
         </div>

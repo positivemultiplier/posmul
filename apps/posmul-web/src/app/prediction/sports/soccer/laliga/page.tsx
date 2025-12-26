@@ -6,9 +6,7 @@ import { createClient } from "../../../../../lib/supabase/server";
 import { FadeIn, HoverLift } from "../../../../../shared/ui/components/animations";
 import { CompactMoneyWaveCard } from "../../../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { ClientPredictionGamesGrid } from "../../../components/ClientPredictionGamesGrid";
-import Link from "next/link";
-import { getAggregatedPrizePool } from "../../../../../bounded-contexts/prediction/application/prediction-pool.service";
-import { ArrowLeft } from "lucide-react";
+import { SoccerLeagueStickyHeaderClient } from "../../../components/soccer/SoccerLeagueStickyHeaderClient";
 import {
   attachHourlyGamePoolsToRows,
   mapPredictionGameRowToCardModel,
@@ -28,7 +26,10 @@ export default async function LaLigaPage() {
   const LEAGUE = "laliga";
 
   const { data: { user } } = await supabase.auth.getUser();
-  const leaguePool = await getAggregatedPrizePool(supabase, "SPORTS", "soccer");
+  const toFiniteNumber = (value: unknown): number | null => {
+    const n = typeof value === "string" ? Number(value) : value;
+    return typeof n === "number" && Number.isFinite(n) ? n : null;
+  };
 
   const query = supabase
     .schema("prediction")
@@ -48,6 +49,13 @@ export default async function LaLigaPage() {
   const games = (data ?? []) as PredictionGameRow[];
   const gamesWithPools = await attachHourlyGamePoolsToRows(supabase, games);
 
+  const leaguePool = Math.floor(
+    gamesWithPools.reduce((sum, game) => {
+      const v = toFiniteNumber(game.allocated_prize_pool);
+      return v === null ? sum : sum + v;
+    }, 0)
+  );
+
   let userPredictions: UserPrediction[] = [];
   if (user && games.length > 0) {
     const gameIds = games.map(g => g.game_id);
@@ -65,13 +73,8 @@ export default async function LaLigaPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
+      <SoccerLeagueStickyHeaderClient />
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-        <FadeIn>
-          <Link href="/prediction/sports/soccer" className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-8">
-            <ArrowLeft className="w-4 h-4" /><span>축구 예측으로 돌아가기</span>
-          </Link>
-        </FadeIn>
-
         <FadeIn>
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-400 to-red-500 bg-clip-text text-transparent mb-6">🇪🇸 라리가 (La Liga)</h1>
@@ -80,7 +83,15 @@ export default async function LaLigaPage() {
         </FadeIn>
 
         <div className="mb-12">
-          <HoverLift><CompactMoneyWaveCard depthLevel={4} category="sports" subcategory="soccer" league="laliga" initialPool={leaguePool} /></HoverLift>
+          <HoverLift>
+            <CompactMoneyWaveCard
+              depthLevel={4}
+              category="sports"
+              subcategory="soccer"
+              league="laliga"
+              initialPool={leaguePool}
+            />
+          </HoverLift>
         </div>
 
         <FadeIn delay={0.3}>

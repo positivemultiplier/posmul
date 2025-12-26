@@ -1,4 +1,5 @@
 import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
+import { getAggregatedPrizePool } from "../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { createClient } from "../../../lib/supabase/server";
 import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
 import Link from "next/link";
@@ -11,6 +12,8 @@ import {
 
 export default async function PredictionPoliticsPage() {
     const supabase = await createClient();
+
+    const politicsPool = await getAggregatedPrizePool(supabase, "POLITICS");
 
     const query = supabase
         .schema('prediction')
@@ -70,7 +73,11 @@ export default async function PredictionPoliticsPage() {
 
                     {/* MoneyWave Card (Level 1) */}
                     <div className="mb-12">
-                        <CompactMoneyWaveCard depthLevel={2} category="politics" />
+                                                <CompactMoneyWaveCard
+                                                    depthLevel={2}
+                                                    category="politics"
+                                                    initialPool={politicsPool}
+                                                />
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">

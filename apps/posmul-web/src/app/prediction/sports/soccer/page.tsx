@@ -4,6 +4,7 @@ import { CompactMoneyWaveCard } from "../../../../bounded-contexts/prediction/pr
 import { ClientPredictionGamesGrid } from "../../components/ClientPredictionGamesGrid";
 import Link from "next/link"; // Link import 추가
 import { getAggregatedPrizePool } from "../../../../bounded-contexts/prediction/application/prediction-pool.service";
+import { SoccerLeagueStickyHeaderClient } from "../../components/soccer/SoccerLeagueStickyHeaderClient";
 import {
   attachHourlyGamePoolsToRows,
   mapPredictionGameRowToCardModel,
@@ -125,6 +126,7 @@ export default async function SoccerPage({ searchParams }: PageProps) {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-20">
+      <SoccerLeagueStickyHeaderClient />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
 
         {/* Header */}
@@ -152,32 +154,6 @@ export default async function SoccerPage({ searchParams }: PageProps) {
               initialPool={soccerPool}
             />
           </HoverLift>
-        </div>
-
-        {/* League Navigation (Explicit Routing) */}
-        <div className="mb-8 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-          <div className="flex gap-2 min-w-max">
-            {[
-              { href: "/prediction/sports/soccer", label: "전체", isActive: !league },
-              { href: "/prediction/sports/soccer/epl", label: "🇬🇧 EPL", isActive: false },
-              { href: "/prediction/sports/soccer/laliga", label: "🇪🇸 라리가", isActive: false },
-              { href: "/prediction/sports/soccer/bundesliga", label: "🇩🇪 분데스리가", isActive: false },
-              { href: "/prediction/sports/soccer/seriea", label: "🇮🇹 세리에A", isActive: false },
-              { href: "/prediction/sports/soccer/kleague", label: "🇰🇷 K-리그", isActive: false },
-              { href: "/prediction/sports/soccer/champions", label: "🇪🇺 챔피언스리그", isActive: false },
-            ].map((lg) => (
-              <Link
-                key={lg.href}
-                href={lg.href}
-                className={`px-4 py-2 rounded-full text-sm font-medium border transition-all ${lg.isActive
-                  ? "bg-blue-600 border-blue-500 text-white shadow-lg shadow-blue-500/30"
-                  : "bg-slate-900 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-white"
-                  }`}
-              >
-                {lg.label}
-              </Link>
-            ))}
-          </div>
         </div>
 
         {/* Filter & Sort Tabs */}

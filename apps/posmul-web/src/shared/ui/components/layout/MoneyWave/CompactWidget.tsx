@@ -14,14 +14,6 @@ export function CompactWidget({ domain = 'prediction', category = 'all' }: Compa
     const [showModal, setShowModal] = useState(false);
     const { waveAmount, isSpinning, progressRatio, participantCount, activeGames } = useWaveCalculation({ domain, category });
 
-    // 다음 Wave까지 카운트다운
-    const getNextWaveCountdown = () => {
-        const now = new Date();
-        const minutes = 59 - now.getMinutes();
-        const seconds = 59 - now.getSeconds();
-        return `${minutes}분 ${seconds}초`;
-    };
-
     return (
         <>
             {/* Compact Button */}
@@ -80,6 +72,7 @@ export function CompactWidget({ domain = 'prediction', category = 'all' }: Compa
                                     value={waveAmount}
                                     isSpinning={isSpinning}
                                     progressRatio={progressRatio}
+                                    showMeta
                                     className="text-green-400"
                                 />
                             </div>
@@ -120,13 +113,6 @@ export function CompactWidget({ domain = 'prediction', category = 'all' }: Compa
                             </div>
                         </div>
 
-                        {/* Next Wave */}
-                        <div className="text-center">
-                            <p className="text-sm text-gray-400 mb-2">다음 Wave까지</p>
-                            <p className="text-2xl font-bold text-green-400">
-                                {getNextWaveCountdown()}
-                            </p>
-                        </div>
                     </div>
                 </div>
             )}

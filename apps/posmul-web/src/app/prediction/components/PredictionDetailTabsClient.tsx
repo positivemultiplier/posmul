@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { BarChart2, Info, Trophy } from "lucide-react";
 
+import { SoccerLeagueStickyHeaderClient } from "./soccer/SoccerLeagueStickyHeaderClient";
 import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { PredictionDetailView } from "../../../bounded-contexts/prediction/presentation/components/PredictionDetailView";
 import { PredictionChartView } from "../../../bounded-contexts/prediction/presentation/components/charts/PredictionChartView";
@@ -66,6 +67,9 @@ export function PredictionDetailTabsClient({ game, userBalance, moneyWave }: Pro
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-20">
+      {moneyWave.subcategory === "soccer" ? (
+        <SoccerLeagueStickyHeaderClient container="5xl" />
+      ) : null}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
         <div className="mb-6">
           <h1 className="text-2xl sm:text-4xl font-bold">{game.title}</h1>

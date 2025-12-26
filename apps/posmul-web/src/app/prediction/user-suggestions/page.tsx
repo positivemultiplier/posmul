@@ -1,8 +1,13 @@
 import Link from "next/link";
 
 import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
+import { getAggregatedPrizePool } from "../../../bounded-contexts/prediction/application/prediction-pool.service";
+import { createClient } from "../../../lib/supabase/server";
 
-export default function PredictionUserSuggestionsPage() {
+export default async function PredictionUserSuggestionsPage() {
+  const supabase = await createClient();
+  const userProposedPool = await getAggregatedPrizePool(supabase, "USER_PROPOSED");
+
   const items = [
     {
       title: "사용자 제안",
@@ -34,7 +39,11 @@ export default function PredictionUserSuggestionsPage() {
         </div>
 
         <div className="mb-10">
-          <CompactMoneyWaveCard depthLevel={2} category="all" />
+          <CompactMoneyWaveCard
+            depthLevel={2}
+            category="user_proposed"
+            initialPool={userProposedPool}
+          />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

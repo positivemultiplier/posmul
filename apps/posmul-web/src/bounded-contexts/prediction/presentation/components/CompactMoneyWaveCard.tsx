@@ -1,14 +1,23 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp, Zap, Activity } from "lucide-react";
 import { SlotMachine } from "./MoneyWave/SlotMachine";
 import { twMerge } from "tailwind-merge";
 
+import { computeRevealRatio, clamp01 } from "@/shared/ui/components/layout/MoneyWave/wave-math";
+import { getKstHourStartIso } from "@/shared/utils/time/getKstHourStartIso";
+
 // Depth와 Category 타입 정의
 // Depth 1: 예측 메인, Depth 2: 카테고리, Depth 3: 종목, Depth 4: 리그, Depth 5: 개별 게임
 type DepthLevel = 0 | 1 | 2 | 3 | 4 | 5;
-type CategoryType = "sports" | "politics" | "economy" | "entertainment" | "all";
+type CategoryType =
+  | "sports"
+  | "politics"
+  | "economy"
+  | "entertainment"
+  | "user_proposed"
+  | "all";
 
 interface CompactMoneyWaveCardProps {
   className?: string;
@@ -20,118 +29,7 @@ interface CompactMoneyWaveCardProps {
   initialPool?: number; // Server-side EBIT Pool
 }
 
-// ============================================================================
-// Internal Utils (Depth별 계산 로직)
-// ============================================================================
-
-const CATEGORY_WEIGHTS: Record<string, number> = {
-  "all": 1.0,
-  "sports": 0.25,
-  "politics": 0.25,
-  "economy": 0.25,
-  "entertainment": 0.25
-};
-
-const SUBCATEGORY_COUNTS: Record<string, number> = {
-  "soccer": 4, // sports has 4 major subcategories assumed
-  "baseball": 4,
-  "basketball": 4,
-  "esports": 4
-};
-
-// 가상의 총 상금풀 (EBIT 기반 PMC 할당량)
-const TOTAL_PLATFORM_POOL = 6912000000; // 69.12억원
-
-// 리그별 가중치 (예시)
-const LEAGUE_WEIGHTS: Record<string, number> = {
-  "epl": 0.30,
-  "laliga": 0.20,
-  "bundesliga": 0.15,
-  "seriea": 0.15,
-  "kleague": 0.10,
-  "champions": 0.10,
-};
-
-const computeSeed = (seedString: string): number => {
-  let seed = 0;
-  for (let i = 0; i < seedString.length; i++) {
-    seed = (seed << 5) - seed + seedString.charCodeAt(i);
-    seed |= 0;
-  }
-  return seed;
-};
-
-const computeVariance = (seed: number): number => {
-  return (Math.abs(seed) % 200) / 1000 + 0.9;
-};
-
-const applyCategoryWeight = (params: {
-  pool: number;
-  depth: DepthLevel;
-  category: CategoryType;
-  variance: number;
-}): number => {
-  const { pool, depth, category, variance } = params;
-  if (depth < 2 || category === "all") return pool;
-  return pool * (CATEGORY_WEIGHTS[category] || 0.25) * variance;
-};
-
-const applySubcategoryWeight = (params: {
-  pool: number;
-  depth: DepthLevel;
-  subcategory?: string;
-  seed: number;
-}): number => {
-  const { pool, depth, subcategory, seed } = params;
-  if (depth < 3 || !subcategory) return pool;
-  const subCount = SUBCATEGORY_COUNTS[subcategory] || 4;
-  return pool * (1 / subCount) * (0.8 + (Math.abs(seed % 40) / 100));
-};
-
-const applyLeagueWeight = (params: {
-  pool: number;
-  depth: DepthLevel;
-  league?: string;
-  seed: number;
-}): number => {
-  const { pool, depth, league, seed } = params;
-  if (depth < 4 || !league) return pool;
-  const leagueWeight = LEAGUE_WEIGHTS[league.toLowerCase()] || 0.1;
-  return pool * leagueWeight * (0.9 + (Math.abs(seed % 20) / 100));
-};
-
-const applyGameWeight = (params: {
-  pool: number;
-  depth: DepthLevel;
-  gameId?: string;
-  seed: number;
-}): number => {
-  const { pool, depth, gameId, seed } = params;
-  if (depth < 5 || !gameId) return pool;
-  let updatedPool = pool / 20;
-  updatedPool *= (Math.abs(seed) % 50) / 100 + 0.75;
-  return updatedPool;
-};
-
-const calculateDepthPool = (
-  depth: DepthLevel,
-  category: CategoryType = "all",
-  subcategory?: string,
-  league?: string,
-  gameId?: string
-): number => {
-  const seedString = `${depth}-${category}-${subcategory || ""}-${league || ""}-${gameId || ""}`;
-  const seed = computeSeed(seedString);
-  const variance = computeVariance(seed);
-
-  let pool = TOTAL_PLATFORM_POOL;
-  pool = applyCategoryWeight({ pool, depth, category, variance });
-  pool = applySubcategoryWeight({ pool, depth, subcategory, seed });
-  pool = applyLeagueWeight({ pool, depth, league, seed });
-  pool = applyGameWeight({ pool, depth, gameId, seed });
-
-  return Math.floor(pool);
-};
+const HOUR_MS = 60 * 60 * 1000;
 
 export function CompactMoneyWaveCard({
   className = "",
@@ -143,7 +41,7 @@ export function CompactMoneyWaveCard({
   initialPool
 }: CompactMoneyWaveCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [currentTime, setCurrentTime] = useState<number>(() => Date.now());
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -152,26 +50,17 @@ export function CompactMoneyWaveCard({
     return () => clearInterval(interval);
   }, []);
 
-  const timeLeft = "10시간 남음";
+  const truthPool = Number.isFinite(initialPool ?? NaN) ? (initialPool as number) : 0;
 
-  // Use initialPool if available, otherwise calculate fallback
-  // If initialPool is 0, we might still want to show the demo fallback if it's a dev env,
-  // but logically if server says 0, it should be 0.
-  // However, for the purpose of this "Rich UI" demo where DB might be empty,
-  // let's say: if initialPool is undefined, use fallback. If it is number (even 0), use it.
-  // Wait, if 0, the UI looks sad. Let's add a "demoMode" flag or just mix it?
-  // User asked for "Real summation". So we should respect the passed value.
-  // But purely for visual consistency in this potentially empty project:
-  const calculatedFallback = calculateDepthPool(depthLevel, category, subcategory, league, gameId);
-  const rawPool = initialPool !== undefined ? initialPool : calculatedFallback;
+  const { progressAdjusted, revealRatio } = useMemo(() => {
+    const now = new Date(currentTime);
+    const hourStartIso = getKstHourStartIso(now);
+    const hourStartMs = new Date(hourStartIso).getTime();
+    const progress = clamp01((currentTime - hourStartMs) / HOUR_MS);
+    return computeRevealRatio(progress, 0, 0);
+  }, [currentTime, depthLevel]);
 
-  const timeBasedIncrement = useMemo(() => {
-    const secondOfDay = (new Date().getSeconds()) + (new Date().getMinutes() * 60);
-    // Scale increment based on pool size to keep it relative
-    return Math.floor(rawPool * 0.00001 * secondOfDay);
-  }, [rawPool, currentTime]);
-
-  const totalPool = rawPool + timeBasedIncrement;
+  const totalPool = Math.round(truthPool * revealRatio);
 
   // MoneyWave Breakdown (확장 시 표시)
   const waveBreakdown = {
@@ -180,7 +69,7 @@ export function CompactMoneyWaveCard({
     wave3: Math.floor(totalPool * 0.1)  // 10% Entrepreneur
   };
 
-  const progressPercent = 63; // 데모용 고정 값
+  const progressPercent = Math.round(progressAdjusted * 100);
 
   return (
     <div className={twMerge("w-full mb-6", className)}>
@@ -218,8 +107,9 @@ export function CompactMoneyWaveCard({
                     {/* SlotMachine 적용: 에메랄드 색상, 텍스트 큼직하게 */}
                     <SlotMachine
                       value={totalPool}
-                      isSpinning={true}
-                      progressRatio={-1} // Ticking 효과 (슬롯 애니메이션 없이 숫자만 변경)
+                      isSpinning={progressAdjusted < 1}
+                      progressRatio={progressAdjusted}
+                      showMeta
                       className="text-xl md:text-2xl text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]"
                     />
                     <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20">
@@ -228,8 +118,6 @@ export function CompactMoneyWaveCard({
                     </div>
                   </div>
                   <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                    <span>{timeLeft}</span>
-                    <span className="text-slate-600">|</span>
                     <span className="text-slate-500">Wave 16</span>
                   </div>
                 </div>
@@ -246,7 +134,11 @@ export function CompactMoneyWaveCard({
                       ? league.toUpperCase()
                       : subcategory
                         ? subcategory.toUpperCase()
-                        : (category === 'all' ? '전체' : category.toUpperCase())
+                        : category === "all"
+                          ? "전체"
+                          : category === "user_proposed"
+                            ? "USER"
+                            : category.toUpperCase()
                   }
                 </span>
                 <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-900/30 text-green-400 border border-green-500/30 animate-pulse">
@@ -279,8 +171,8 @@ export function CompactMoneyWaveCard({
                   <div className="text-[10px] text-green-400/80 mb-1">Wave1 (60%)</div>
                   <SlotMachine
                     value={waveBreakdown.wave1}
-                    isSpinning={true}
-                    progressRatio={-1}
+                    isSpinning={progressAdjusted < 1}
+                    progressRatio={progressAdjusted}
                     className="text-sm font-bold text-green-400"
                   />
                   <div className="text-[10px] text-slate-500 mt-1">EBIT 기반</div>
@@ -289,8 +181,8 @@ export function CompactMoneyWaveCard({
                   <div className="text-[10px] text-blue-400/80 mb-1">Wave2 (30%)</div>
                   <SlotMachine
                     value={waveBreakdown.wave2}
-                    isSpinning={true}
-                    progressRatio={-1}
+                    isSpinning={progressAdjusted < 1}
+                    progressRatio={progressAdjusted}
                     className="text-sm font-bold text-blue-400"
                   />
                   <div className="text-[10px] text-slate-500 mt-1">PMC 재분배</div>
@@ -299,8 +191,8 @@ export function CompactMoneyWaveCard({
                   <div className="text-[10px] text-purple-400/80 mb-1">Wave3 (10%)</div>
                   <SlotMachine
                     value={waveBreakdown.wave3}
-                    isSpinning={true}
-                    progressRatio={-1}
+                    isSpinning={progressAdjusted < 1}
+                    progressRatio={progressAdjusted}
                     className="text-sm font-bold text-purple-400"
                   />
                   <div className="text-[10px] text-slate-500 mt-1">기업가 풀</div>

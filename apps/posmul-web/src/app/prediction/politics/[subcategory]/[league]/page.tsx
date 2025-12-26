@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { CompactMoneyWaveCard } from "../../../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
-import { getAggregatedPrizePool } from "../../../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { createClient } from "../../../../../lib/supabase/server";
 import { FadeIn, HoverLift } from "../../../../../shared/ui/components/animations";
 
@@ -42,11 +41,14 @@ export default async function PredictionPoliticsLeaguePage({ params }: PageProps
   const supabase = await createClient();
   const { subcategory, league } = await params;
 
+  const toFiniteNumber = (value: unknown): number | null => {
+    const n = typeof value === "string" ? Number(value) : value;
+    return typeof n === "number" && Number.isFinite(n) ? n : null;
+  };
+
   if (!isPoliticsSubcategory(subcategory) || !league) {
     notFound();
   }
-
-  const pool = await getAggregatedPrizePool(supabase, "POLITICS", subcategory);
 
   const {
     data: { user },
@@ -84,6 +86,13 @@ export default async function PredictionPoliticsLeaguePage({ params }: PageProps
   const gameRowsWithPools = await attachHourlyGamePoolsToRows(supabase, gameRows);
   const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
 
+  const leaguePool = Math.floor(
+    gameRowsWithPools.reduce((sum, game) => {
+      const v = toFiniteNumber(game.allocated_prize_pool);
+      return v === null ? sum : sum + v;
+    }, 0)
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -105,7 +114,7 @@ export default async function PredictionPoliticsLeaguePage({ params }: PageProps
                 category="politics"
                 subcategory={subcategory}
                 league={league}
-                initialPool={pool}
+                initialPool={leaguePool}
               />
             </HoverLift>
           </div>
