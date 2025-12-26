@@ -86,8 +86,8 @@ export function DirectDonationClient({
   // 필터링된 수혜자
   const filteredRecipients = selectedCategory
     ? recipients.filter((r) =>
-        r.neededCategories.some((c) => c.category === selectedCategory)
-      )
+      r.neededCategories.some((c) => c.category === selectedCategory)
+    )
     : recipients;
 
   return (
@@ -138,7 +138,7 @@ export function DirectDonationClient({
   );
 }
 
-// ===== Hero Section =====
+// ===== Hero Section - Unified Purple Tone =====
 function HeroSection({
   stats,
   isLoggedIn,
@@ -147,8 +147,10 @@ function HeroSection({
   isLoggedIn: boolean;
 }) {
   return (
-    <div className="bg-gradient-to-r from-orange-500 to-amber-600 text-white py-12 px-4">
-      <div className="max-w-6xl mx-auto text-center">
+    <div className="relative bg-gradient-to-r from-purple-600 to-violet-600 text-white py-12 px-4 overflow-hidden">
+      <div className="absolute top-0 right-0 w-96 h-96 bg-purple-400/20 blur-[100px] rounded-full" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-violet-400/20 blur-[80px] rounded-full" />
+      <div className="relative z-10 max-w-6xl mx-auto text-center">
         <h1 className="text-4xl font-bold mb-4">📦 직접 기부 (물품)</h1>
         <p className="text-lg text-white/90 mb-6">
           사용하지 않는 물품을 필요한 분들께 직접 전달하세요
@@ -182,7 +184,7 @@ function HeroSection({
         {isLoggedIn && (
           <Link
             href="/donation/direct/register"
-            className="inline-flex items-center gap-2 mt-6 bg-white text-orange-600 px-6 py-3 rounded-xl font-semibold hover:bg-orange-50 transition-colors"
+            className="inline-flex items-center gap-2 mt-6 bg-white text-purple-600 px-6 py-3 rounded-xl font-semibold hover:bg-purple-50 transition-colors"
           >
             <span>➕</span>
             <span>물품 등록하기</span>
@@ -224,21 +226,19 @@ function TabNavigation({
     <div className="flex gap-2 mb-6">
       <button
         onClick={() => setActiveTab("items")}
-        className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors ${
-          activeTab === "items"
-            ? "bg-orange-500 text-white"
-            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-        }`}
+        className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors ${activeTab === "items"
+          ? "bg-purple-500 text-white"
+          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          }`}
       >
         📦 기부 물품
       </button>
       <button
         onClick={() => setActiveTab("recipients")}
-        className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors ${
-          activeTab === "recipients"
-            ? "bg-orange-500 text-white"
-            : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-        }`}
+        className={`flex-1 py-3 px-4 rounded-xl font-semibold transition-colors ${activeTab === "recipients"
+          ? "bg-purple-500 text-white"
+          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+          }`}
       >
         👥 수혜자 목록
       </button>
@@ -266,11 +266,10 @@ function CategoryFilter({
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setSelectedCategory(null)}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-            selectedCategory === null
-              ? "bg-orange-500 text-white"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-          }`}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedCategory === null
+            ? "bg-purple-500 text-white"
+            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
         >
           전체 ({totalCount})
         </button>
@@ -278,11 +277,10 @@ function CategoryFilter({
           <button
             key={cat.category}
             onClick={() => setSelectedCategory(cat.category)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              selectedCategory === cat.category
-                ? "bg-orange-500 text-white"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-            }`}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedCategory === cat.category
+              ? "bg-purple-500 text-white"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+              }`}
           >
             {cat.icon} {cat.label} ({cat.count})
           </button>
@@ -315,11 +313,10 @@ function ConditionFilter({
       <div className="flex flex-wrap gap-2">
         <button
           onClick={() => setSelectedCondition(null)}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-            selectedCondition === null
-              ? "bg-amber-500 text-white"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-          }`}
+          className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedCondition === null
+            ? "bg-violet-500 text-white"
+            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+            }`}
         >
           전체
         </button>
@@ -327,11 +324,10 @@ function ConditionFilter({
           <button
             key={cond.value}
             onClick={() => setSelectedCondition(cond.value)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-              selectedCondition === cond.value
-                ? "bg-amber-500 text-white"
-                : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
-            }`}
+            className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedCondition === cond.value
+              ? "bg-violet-500 text-white"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600"
+              }`}
           >
             {cond.label}
           </button>
@@ -359,7 +355,7 @@ function ItemsGrid({
         {isLoggedIn && (
           <Link
             href="/donation/direct/register"
-            className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700"
+            className="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700"
           >
             첫 번째 물품을 등록해보세요 →
           </Link>
@@ -393,7 +389,7 @@ function ItemCard({ item }: { item: DonationItem }) {
       className="block bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden transition-all hover:shadow-xl hover:-translate-y-1"
     >
       {/* 이미지 또는 아이콘 */}
-      <div className="bg-gradient-to-r from-orange-400 to-amber-500 p-6 text-center">
+      <div className="bg-gradient-to-r from-purple-400 to-violet-500 p-6 text-center">
         <span className="text-5xl">{item.categoryIcon}</span>
       </div>
 
@@ -404,9 +400,8 @@ function ItemCard({ item }: { item: DonationItem }) {
             {item.title}
           </h3>
           <span
-            className={`text-xs px-2 py-1 rounded-full ${
-              statusColorMap[item.statusColor] || statusColorMap.gray
-            }`}
+            className={`text-xs px-2 py-1 rounded-full ${statusColorMap[item.statusColor] || statusColorMap.gray
+              }`}
           >
             {item.statusLabel}
           </span>
@@ -433,7 +428,7 @@ function ItemCard({ item }: { item: DonationItem }) {
             📍 {item.pickupLocation || "위치 미정"}
           </span>
           {item.estimatedValue > 0 && (
-            <span className="text-orange-600 dark:text-orange-400 font-semibold">
+            <span className="text-purple-600 dark:text-purple-400 font-semibold">
               약 {item.estimatedValue.toLocaleString()}원
             </span>
           )}

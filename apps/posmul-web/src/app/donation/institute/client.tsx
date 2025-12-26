@@ -25,11 +25,12 @@ export function InstituteClient({
   return (
     <div className="space-y-16 pb-20">
 
-      {/* Domain Hero Section */}
+      {/* Domain Hero Section - Unified Purple Tone */}
       <div className="relative py-12 px-4 bg-gray-900 rounded-3xl overflow-hidden shadow-2xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-green-900/50 to-emerald-900/50" />
+        <div className="absolute inset-0 bg-gradient-to-r from-purple-900/60 to-violet-900/60" />
+        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/20 blur-[100px] rounded-full" />
         <div className="relative z-10 text-center max-w-2xl mx-auto">
-          <span className="inline-block mb-3 text-emerald-400 font-medium tracking-wide">TRUSTED PARTNERS</span>
+          <span className="inline-block mb-3 text-purple-400 font-medium tracking-wide">TRUSTED PARTNERS</span>
           <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
             검증된 기부 기관
           </h1>
@@ -45,8 +46,8 @@ export function InstituteClient({
         <button
           onClick={() => setSelectedCategory(null)}
           className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all transform hover:scale-105 ${selectedCategory === null
-              ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-gray-900"
-              : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+            ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-gray-900"
+            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
             }`}
         >
           All Categories ({institutes.length})
@@ -59,8 +60,8 @@ export function InstituteClient({
               key={cat}
               onClick={() => setSelectedCategory(cat)}
               className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all transform hover:scale-105 ${selectedCategory === cat
-                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-gray-900"
-                  : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+                ? "bg-purple-500 text-white shadow-lg shadow-purple-500/30 ring-2 ring-purple-500 ring-offset-2 dark:ring-offset-gray-900"
+                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
                 }`}
             >
               {catInstitute?.categoryIcon} {catInstitute?.categoryLabel} ({count})
