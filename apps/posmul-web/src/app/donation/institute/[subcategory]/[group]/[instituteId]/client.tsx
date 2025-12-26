@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useToast } from "../../../../shared/ui/components/feedback/Toast";
+import { useToast } from "../../../../../../shared/ui/components/feedback/Toast";
 
 interface Institute {
   id: string;
@@ -607,11 +607,10 @@ function TabNavigation({
         <button
           key={tab.id}
           onClick={() => onChange(tab.id)}
-          className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${
-            activeTab === tab.id
+          className={`flex-1 py-4 px-6 text-center font-medium transition-colors ${activeTab === tab.id
               ? "text-green-600 dark:text-green-400 border-b-2 border-green-500 bg-green-50 dark:bg-green-900/20"
               : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-          }`}
+            }`}
         >
           <span className="mr-2">{tab.icon}</span>
           {tab.label}
@@ -740,11 +739,10 @@ function PresetAmountButtons({
         <button
           key={amount}
           onClick={() => onSelectAmount(amount)}
-          className={`py-2 rounded-lg text-sm font-medium transition-all ${
-            donationAmount === amount
+          className={`py-2 rounded-lg text-sm font-medium transition-all ${donationAmount === amount
               ? `bg-gradient-to-r ${institute.categoryColor} text-white shadow-md`
               : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-          }`}
+            }`}
         >
           {amount >= 10000 ? `${(amount / 10000).toFixed(0)}만` : amount.toLocaleString()}
         </button>
@@ -796,11 +794,10 @@ function DonateButton({
     <button
       onClick={onDonate}
       disabled={isDisabled}
-      className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
-        isDisabled
+      className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${isDisabled
           ? "bg-gray-300 dark:bg-gray-600 text-gray-500 cursor-not-allowed"
           : `bg-gradient-to-r ${institute.categoryColor} text-white hover:shadow-lg hover:scale-[1.02] active:scale-[0.98]`
-      }`}
+        }`}
     >
       {content}
     </button>

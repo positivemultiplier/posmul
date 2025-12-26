@@ -188,6 +188,48 @@ src\
 
 ## Domain-Specific Economic Integration Rules
 
+
+---
+
+## 🧭 라우팅 규칙: Depth 5 네비게이션 (중요)
+
+> 후임자/협업자를 위해 **Depth5 구조를 표준 규칙**으로 고정합니다.
+> 특히 **Consume / Prediction / Donation**은 “카드 기반 의사결정 UX”를 위해 Depth5를 유지합니다.
+
+### 정의
+
+- **Depth1**: Domain (예: `prediction`, `donation`, `consume`)
+- **Depth2**: Category (예: `sports`, `direct`, `major-league`)
+- **Depth3**: Subcategory (예: `soccer`, `institute`, `local-league`)
+- **Depth4**: Context/Group (예: `epl`, `environment`, `campaign`)
+- **Depth5**: Item Detail (개별 카드/아이템)
+
+```mermaid
+flowchart LR
+  D1[Depth1: domain] --> D2[Depth2: category]
+  D2 --> D3[Depth3: subcategory]
+  D3 --> D4[Depth4: group/context]
+  D4 --> D5[Depth5: item detail]
+```
+
+### 예시 (Prediction 기준)
+
+- `prediction/sports/soccer/epl/[predictionId]`
+
+### 예시 (Donation 권장 구조)
+
+- `donation/direct/[theme]/[regionOrGroup]/[donationId]`
+- `donation/institute/[category]/[instituteGroup]/[instituteId]`
+- `donation/opinion-leader/[category]/[leaderGroup]/[leaderId]`
+
+### 규칙 (실무 가이드)
+
+- Depth4는 “카드 리스트가 의미를 갖는 묶음”을 표현합니다. (리그/테마/지역/캠페인 등)
+- Depth5는 **반드시 디테일 페이지**(개별 카드 상세)로 끝나야 합니다.
+- Depth5 slug는 가능하면 **명확한 식별자**(예: DB id 또는 안정적인 slug)를 사용합니다.
+
+
+
 ### Prediction Domain
 
 ```typescript

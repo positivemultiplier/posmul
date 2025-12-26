@@ -1,5 +1,5 @@
 /**
- * 기부 기관 상세 페이지
+ * 기부 기관 상세 페이지 (Depth 5)
  * 
  * 기관 정보, 기부 현황, 투명성 보고서 등을 표시
  * 
@@ -7,7 +7,7 @@
  * @since 2024-12
  */
 import { notFound } from "next/navigation";
-import { createClient } from "../../../../lib/supabase/server";
+import { createClient } from "../../../../../../lib/supabase/server";
 import { InstituteDetailClient } from "./client";
 
 type SupabaseServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -73,9 +73,9 @@ async function fetchRecentDonations(supabase: SupabaseServerClient, instituteId:
 
   return toArray(
     recentDonations as
-      | { pmc_amount: number; created_at: string; is_anonymous: boolean }[]
-      | { pmc_amount: number; created_at: string; is_anonymous: boolean }
-      | null
+    | { pmc_amount: number; created_at: string; is_anonymous: boolean }[]
+    | { pmc_amount: number; created_at: string; is_anonymous: boolean }
+    | null
   );
 }
 
@@ -125,17 +125,17 @@ async function fetchOpinionLeaders(supabase: SupabaseServerClient, instituteId: 
 
   const endorsementList = toArray(
     endorsements as
-      | {
-          opinion_leader_id: string;
-          endorsement_message: string;
-          endorsed_at: string;
-        }[]
-      | {
-          opinion_leader_id: string;
-          endorsement_message: string;
-          endorsed_at: string;
-        }
-      | null
+    | {
+      opinion_leader_id: string;
+      endorsement_message: string;
+      endorsed_at: string;
+    }[]
+    | {
+      opinion_leader_id: string;
+      endorsement_message: string;
+      endorsed_at: string;
+    }
+    | null
   );
 
   const leaderIds = endorsementList.map((e) => e.opinion_leader_id);
@@ -159,23 +159,23 @@ async function fetchOpinionLeaders(supabase: SupabaseServerClient, instituteId: 
 
   const leaderList = toArray(
     leaders as
-      | {
-          id: string;
-          display_name: string;
-          bio: string | null;
-          avatar_url: string | null;
-          follower_count: number;
-          verified_at: string | null;
-        }[]
-      | {
-          id: string;
-          display_name: string;
-          bio: string | null;
-          avatar_url: string | null;
-          follower_count: number;
-          verified_at: string | null;
-        }
-      | null
+    | {
+      id: string;
+      display_name: string;
+      bio: string | null;
+      avatar_url: string | null;
+      follower_count: number;
+      verified_at: string | null;
+    }[]
+    | {
+      id: string;
+      display_name: string;
+      bio: string | null;
+      avatar_url: string | null;
+      follower_count: number;
+      verified_at: string | null;
+    }
+    | null
   );
 
   return leaderList.map((leader) => {
@@ -197,6 +197,8 @@ async function fetchOpinionLeaders(supabase: SupabaseServerClient, instituteId: 
 
 interface InstituteDetailPageProps {
   params: Promise<{
+    subcategory: string;
+    group: string;
     instituteId: string;
   }>;
 }

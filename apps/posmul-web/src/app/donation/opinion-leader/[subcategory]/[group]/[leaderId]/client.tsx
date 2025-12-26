@@ -11,6 +11,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { MotionDiv, fadeInVariants, staggerContainerVariants } from "@/shared/ui/components/motion/MotionComponents";
+import { SpotlightCard } from "@/shared/ui/components/motion/SpotlightCard";
 
 interface Institute {
   id: string;
@@ -312,15 +314,14 @@ export function OpinionLeaderProfileClient({
 
       {/* Action Buttons */}
       <div className="max-w-4xl mx-auto px-4 -mt-6">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 flex flex-col sm:flex-row gap-4">
+        <MotionDiv variants={fadeInVariants} initial="hidden" animate="visible" className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 flex flex-col sm:flex-row gap-4">
           <button
             onClick={handleFollowToggle}
             disabled={isFollowLoading}
-            className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all ${
-              isFollowing
-                ? "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                : `${colorClasses.bg} text-white hover:opacity-90`
-            } disabled:opacity-50`}
+            className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all ${isFollowing
+              ? "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+              : `${colorClasses.bg} text-white hover:opacity-90`
+              } disabled:opacity-50`}
           >
             {isFollowLoading ? (
               <span className="animate-pulse">처리중...</span>
@@ -336,46 +337,46 @@ export function OpinionLeaderProfileClient({
           >
             💜 직접 후원하기
           </button>
-        </div>
+        </MotionDiv>
       </div>
 
       {/* Content */}
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
+        <MotionDiv variants={staggerContainerVariants} initial="hidden" animate="visible" className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          <MotionDiv variants={fadeInVariants} className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
               {formatFollowerCount(followerCount)}
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
               팔로워
             </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
+          </MotionDiv>
+          <MotionDiv variants={fadeInVariants} className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
             <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
               {endorsements.length}
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
               후원 기관
             </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
+          </MotionDiv>
+          <MotionDiv variants={fadeInVariants} className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               ₩{formatAmount(leader.totalDonationsInfluenced)}
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
               기부 영향력
             </div>
-          </div>
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
+          </MotionDiv>
+          <MotionDiv variants={fadeInVariants} className="bg-white dark:bg-gray-800 rounded-xl p-4 text-center shadow-md">
             <div className="text-2xl font-bold text-gray-900 dark:text-white">
               {formatDate(leader.createdAt).split(" ")[0]}
             </div>
             <div className="text-sm text-gray-500 dark:text-gray-400">
               활동 시작
             </div>
-          </div>
-        </div>
+          </MotionDiv>
+        </MotionDiv>
 
         {/* Endorsed Institutes */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
@@ -390,59 +391,61 @@ export function OpinionLeaderProfileClient({
                 <Link
                   key={endorsement.id}
                   href={`/donation/institute/${endorsement.institute.id}`}
-                  className="block bg-gray-50 dark:bg-gray-700 rounded-xl p-5 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
+                  className="block group"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-2xl flex-shrink-0">
-                      {endorsement.institute.categoryIcon}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-gray-900 dark:text-white">
-                          {endorsement.institute.name}
-                        </h3>
-                        {endorsement.institute.isVerified && (
-                          <span className="text-green-500 text-sm">✓</span>
-                        )}
-                        <span className="text-xs bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
-                          {endorsement.institute.categoryLabel}
-                        </span>
+                  <SpotlightCard className="bg-gray-50 dark:bg-gray-700 rounded-xl border-transparent hover:border-purple-500/30 transition-colors">
+                    <div className="flex items-start gap-4 p-5">
+                      <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-full flex items-center justify-center text-2xl flex-shrink-0 shadow-sm">
+                        {endorsement.institute.categoryIcon}
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                        {endorsement.institute.description}
-                      </p>
-                      {endorsement.endorsementMessage && (
-                        <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-l-4 border-purple-500">
-                          <p className="text-sm text-gray-700 dark:text-gray-300 italic">
-                            &ldquo;{endorsement.endorsementMessage}&rdquo;
-                          </p>
-                          <p className="text-xs text-gray-500 mt-1">
-                            - {leader.displayName}
-                          </p>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-bold text-gray-900 dark:text-white group-hover:text-purple-600 transition-colors">
+                            {endorsement.institute.name}
+                          </h3>
+                          {endorsement.institute.isVerified && (
+                            <span className="text-green-500 text-sm">✓</span>
+                          )}
+                          <span className="text-xs bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded">
+                            {endorsement.institute.categoryLabel}
+                          </span>
                         </div>
-                      )}
-                      <div className="flex items-center gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
-                        <span className="flex items-center gap-1">
-                          <span className="text-yellow-500">⭐</span>
-                          {endorsement.institute.trustScore.toFixed(1)}
-                        </span>
-                        <span>{formatDate(endorsement.endorsedAt)} 추천</span>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                          {endorsement.institute.description}
+                        </p>
+                        {endorsement.endorsementMessage && (
+                          <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border-l-4 border-purple-500">
+                            <p className="text-sm text-gray-700 dark:text-gray-300 italic">
+                              &ldquo;{endorsement.endorsementMessage}&rdquo;
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              - {leader.displayName}
+                            </p>
+                          </div>
+                        )}
+                        <div className="flex items-center gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
+                          <span className="flex items-center gap-1">
+                            <span className="text-yellow-500">⭐</span>
+                            {endorsement.institute.trustScore.toFixed(1)}
+                          </span>
+                          <span>{formatDate(endorsement.endorsedAt)} 추천</span>
+                        </div>
                       </div>
+                      <svg
+                        className="w-5 h-5 text-gray-400 flex-shrink-0 group-hover:text-purple-500 transition-colors"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
                     </div>
-                    <svg
-                      className="w-5 h-5 text-gray-400 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
-                  </div>
+                  </SpotlightCard>
                 </Link>
               ))}
             </div>
@@ -511,11 +514,10 @@ export function OpinionLeaderProfileClient({
                   <button
                     key={amount}
                     onClick={() => setSupportAmount(amount)}
-                    className={`py-2 rounded-lg text-sm font-medium transition-colors ${
-                      supportAmount === amount
-                        ? "bg-purple-500 text-white"
-                        : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    }`}
+                    className={`py-2 rounded-lg text-sm font-medium transition-colors ${supportAmount === amount
+                      ? "bg-purple-500 text-white"
+                      : "bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                      }`}
                   >
                     {amount.toLocaleString()}
                   </button>

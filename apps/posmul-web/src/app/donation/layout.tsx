@@ -11,8 +11,6 @@
  */
 import { Suspense } from "react";
 
-import { MoneyWaveStatus } from "../../shared/ui";
-
 interface DonationLayoutProps {
   children: React.ReactNode;
 }
@@ -20,13 +18,6 @@ interface DonationLayoutProps {
 export default function DonationLayout({ children }: DonationLayoutProps) {
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* MoneyWave Status */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Suspense fallback={<div className="h-20 bg-red-50 animate-pulse" />}>
-          <MoneyWaveStatus />
-        </Suspense>
-      </div>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
         <Suspense

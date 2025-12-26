@@ -65,24 +65,9 @@ export default async function InstitutePage() {
     isVerified: inst.is_verified,
   }));
 
-  // 사용자 PMC 잔액 조회
-  let userPmcBalance = 0;
-  if (user) {
-    const { data: account } = await supabase
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .select("pmc_balance")
-      .eq("user_id", user.id)
-      .single();
-    
-    const accountData = Array.isArray(account) ? account[0] : account;
-    userPmcBalance = Number(accountData?.pmc_balance) || 0;
-  }
-
   return (
     <InstituteClient 
       institutes={institutesForClient}
-      userPmcBalance={userPmcBalance}
       isLoggedIn={!!user}
     />
   );

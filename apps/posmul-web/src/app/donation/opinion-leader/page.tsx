@@ -94,7 +94,6 @@ export default async function OpinionLeaderPage() {
       isFollowing: followedLeaderIds.includes(leader.id),
     })
   );
-
   // 사용자 PMC 잔액 조회
   let userPmcBalance = 0;
   if (user) {

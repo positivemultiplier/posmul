@@ -7,7 +7,7 @@
  * @since 2025-11
  */
 import { notFound } from "next/navigation";
-import { createClient } from "../../../../lib/supabase/server";
+import { createClient } from "../../../../../../lib/supabase/server";
 import { OpinionLeaderProfileClient } from "./client";
 
 // 카테고리 라벨 매핑
@@ -28,16 +28,16 @@ const categoryLabels: Record<
 
 // 기관 카테고리 라벨
 const instituteCategoryLabels: Record<string, { label: string; icon: string }> =
-  {
-    children: { label: "아동복지", icon: "👶" },
-    elderly: { label: "노인복지", icon: "👴" },
-    disaster: { label: "재난구호", icon: "🆘" },
-    environment: { label: "환경보전", icon: "🌿" },
-    education: { label: "교육지원", icon: "📚" },
-    medical: { label: "의료지원", icon: "🏥" },
-    animal: { label: "동물보호", icon: "🐾" },
-    other: { label: "기타", icon: "💝" },
-  };
+{
+  children: { label: "아동복지", icon: "👶" },
+  elderly: { label: "노인복지", icon: "👴" },
+  disaster: { label: "재난구호", icon: "🆘" },
+  environment: { label: "환경보전", icon: "🌿" },
+  education: { label: "교육지원", icon: "📚" },
+  medical: { label: "의료지원", icon: "🏥" },
+  animal: { label: "동물보호", icon: "🐾" },
+  other: { label: "기타", icon: "💝" },
+};
 
 interface PageProps {
   params: Promise<{
