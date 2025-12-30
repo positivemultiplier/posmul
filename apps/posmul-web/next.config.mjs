@@ -41,3 +41,5 @@ const nextConfig = {
 };
 
 export default nextConfig;
+
+// Force Rebuild Triggered - Cleanup of Legacy Routes

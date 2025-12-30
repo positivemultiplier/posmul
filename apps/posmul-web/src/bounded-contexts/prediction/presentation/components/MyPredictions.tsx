@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { Card } from "../../../../shared/ui";
 import { withdrawPrediction } from "./actions";
 
@@ -65,7 +66,7 @@ export function MyPredictions({ userId }: MyPredictionsProps) {
 
     try {
       setWithdrawing(predictionId);
-      
+
       // Server Action 사용 (인증 문제 해결)
       const result = await withdrawPrediction(predictionId);
 
@@ -130,7 +131,7 @@ export function MyPredictions({ userId }: MyPredictionsProps) {
     return (
       <Card className="p-8 text-center bg-white dark:bg-gray-800">
         <p className="text-red-500">{error}</p>
-        <button 
+        <button
           onClick={fetchMyPredictions}
           className="mt-4 text-blue-500 hover:underline"
         >
@@ -154,13 +155,12 @@ export function MyPredictions({ userId }: MyPredictionsProps) {
   return (
     <div className="space-y-4">
       {predictions.map((prediction) => (
-        <Card 
-          key={prediction.prediction_id} 
-          className={`p-4 bg-white dark:bg-gray-800 border-l-4 ${
-            prediction.is_active 
-              ? "border-l-blue-500" 
-              : "border-l-gray-300 opacity-75"
-          }`}
+        <Card
+          key={prediction.prediction_id}
+          className={`p-4 bg-white dark:bg-gray-800 border-l-4 ${prediction.is_active
+            ? "border-l-blue-500"
+            : "border-l-gray-300 opacity-75"
+            }`}
         >
           <div className="flex justify-between items-start">
             <div className="flex-1">
@@ -175,7 +175,7 @@ export function MyPredictions({ userId }: MyPredictionsProps) {
                   </span>
                 )}
               </div>
-              
+
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                 <div>
                   <span className="text-gray-500 dark:text-gray-400">선택:</span>
@@ -213,6 +213,17 @@ export function MyPredictions({ userId }: MyPredictionsProps) {
               >
                 {withdrawing === prediction.prediction_id ? "처리중..." : "철회"}
               </button>
+            )}
+
+            {/* 기부하기 숏컷 (정산 완료 시) */}
+            {prediction.game?.status === "SETTLED" && (
+              <Link
+                href="/donation"
+                className="ml-4 px-3 py-1.5 text-sm font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 rounded-lg transition-colors flex items-center gap-1"
+              >
+                <span>🤲</span>
+                <span>기부하기</span>
+              </Link>
             )}
           </div>
         </Card>

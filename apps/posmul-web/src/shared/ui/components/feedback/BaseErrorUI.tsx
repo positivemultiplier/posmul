@@ -13,12 +13,12 @@ interface CustomAction {
   label: string;
   action: () => void;
   variant?:
-    | "primary"
-    | "secondary"
-    | "default"
-    | "danger"
-    | "ghost"
-    | "outline";
+  | "primary"
+  | "secondary"
+  | "default"
+  | "danger"
+  | "ghost"
+  | "outline";
 }
 
 interface BaseErrorUIProps {
@@ -162,14 +162,30 @@ export function BaseErrorUI({
   const isOperational =
     error instanceof BaseError ? error.isOperational : false;
 
+  // Error Illustration Map
+  const errorIllustrations: Record<number, string> = {
+    404: "/images/error-404.png",
+    500: "/images/error-404.png", // Using 404 robot for generic error for now, or use a specific 500 one if generated
+  };
+
+  const illustrationSrc =
+    (error instanceof BaseError && error.statusCode ? errorIllustrations[error.statusCode] : null);
+
   return (
     <div
-      className={`max-w-2xl mx-auto p-8 rounded-lg border ${styles.container} ${className}`}
+      className={`max-w-2xl mx-auto p-8 rounded-lg border ${styles.container} ${className} relative overflow-hidden`}
       role="alert"
       aria-live="assertive"
     >
+      {/* Background Illustration for specific errors */}
+      {illustrationSrc && (
+        <div className="absolute top-0 right-0 w-64 h-64 opacity-20 pointer-events-none -mt-10 -mr-10">
+          <img src={illustrationSrc} alt="Error Illustration" className="w-full h-full object-contain" />
+        </div>
+      )}
+
       {/* 에러 아이콘 및 타입 */}
-      <div className="flex items-center mb-6">
+      <div className="flex items-center mb-6 relative z-10">
         <div className={`text-4xl mr-4 ${styles.icon}`} aria-hidden="true">
           {errorInfo.icon}
         </div>
@@ -184,12 +200,12 @@ export function BaseErrorUI({
       </div>
 
       {/* 에러 설명 */}
-      <p className={`text-lg mb-8 ${styles.description}`}>
+      <p className={`text-lg mb-8 ${styles.description} relative z-10`}>
         {errorInfo.description}
       </p>
 
       {/* 액션 버튼들 */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row gap-4 mb-6 relative z-10">
         {errorInfo.canRetry && onRetry && (
           <Button
             onClick={onRetry}
@@ -234,13 +250,13 @@ export function BaseErrorUI({
 
       {/* 에러 상세 정보 (개발용) */}
       {showDetails && (
-        <details className="mt-6">
+        <details className="mt-6 relative z-10">
           <summary
             className={`cursor-pointer text-sm font-medium ${styles.description} hover:underline`}
           >
             기술적 상세 정보
           </summary>
-          <div className="mt-3 p-4 bg-gray-100 rounded-md text-sm font-mono text-gray-800">
+          <div className="mt-3 p-4 bg-gray-100/80 backdrop-blur rounded-md text-sm font-mono text-gray-800">
             <div>
               <strong>에러 메시지:</strong> {error.message}
             </div>

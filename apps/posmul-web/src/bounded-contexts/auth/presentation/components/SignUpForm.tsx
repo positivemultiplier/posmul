@@ -4,6 +4,7 @@
 
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { Button, Card } from "../../../../shared/ui/components/base";
@@ -86,95 +87,108 @@ export function SignUpForm({
 
   const handleInputChange =
     (field: keyof typeof formData) =>
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      setFormData((prev) => ({
-        ...prev,
-        [field]: e.target.value,
-      }));
-
-      // 입력 시 해당 필드의 에러 제거
-      if (validationErrors[field]) {
-        setValidationErrors((prev) => ({
+      (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData((prev) => ({
           ...prev,
-          [field]: undefined,
+          [field]: e.target.value,
         }));
-      }
-    };
+
+        // 입력 시 해당 필드의 에러 제거
+        if (validationErrors[field]) {
+          setValidationErrors((prev) => ({
+            ...prev,
+            [field]: undefined,
+          }));
+        }
+      };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900">회원가입</h2>
-        <p className="text-gray-600 mt-2">새 계정을 만들어 시작하세요</p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <Input
-          label="이메일"
-          type="email"
-          value={formData.email}
-          onChange={handleInputChange("email")}
-          error={validationErrors.email}
-          className="w-full"
-          disabled={loading}
-          placeholder="your@email.com"
-        />
-
-        <Input
-          label="표시 이름 (선택)"
-          type="text"
-          value={formData.displayName}
-          onChange={handleInputChange("displayName")}
-          error={validationErrors.displayName}
-          className="w-full"
-          disabled={loading}
-          placeholder="다른 사용자에게 표시될 이름"
-        />
-
-        <Input
-          label="비밀번호"
-          type="password"
-          value={formData.password}
-          onChange={handleInputChange("password")}
-          error={validationErrors.password}
-          className="w-full"
-          disabled={loading}
-          placeholder="비밀번호를 입력하세요"
-        />
-
-        <Input
-          label="비밀번호 확인"
-          type="password"
-          value={formData.confirmPassword}
-          onChange={handleInputChange("confirmPassword")}
-          error={validationErrors.confirmPassword}
-          className="w-full"
-          disabled={loading}
-          placeholder="비밀번호를 다시 입력하세요"
-        />
+    <div className="flex w-full overflow-hidden rounded-2xl bg-white shadow-2xl overflow-hidden min-h-[600px]">
+      {/* Left: Form Section */}
+      <div className="w-full lg:w-1/2 p-8 md:p-12 flex flex-col justify-center">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            Get Started
+          </h1>
+          <p className="text-gray-500 mt-2">
+            새로운 경제 생태계의 일원이 되어보세요
+          </p>
+        </div>
 
         {error && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-            <p className="text-sm text-red-600">{error}</p>
+          <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center mb-6">
+            {error}
           </div>
         )}
 
-        <Button type="submit" fullWidth loading={loading} disabled={loading}>
-          회원가입
-        </Button>
-      </form>
+        <form onSubmit={handleSubmit} className="space-y-4 max-w-sm mx-auto w-full">
+          <Input
+            label="이메일"
+            type="email"
+            value={formData.email}
+            onChange={handleInputChange("email")}
+            error={validationErrors.email}
+            className="w-full"
+            disabled={loading}
+            placeholder="name@example.com"
+          />
 
-      <div className="mt-6 text-center">
-        <p className="text-sm text-gray-600">
-          이미 계정이 있으신가요?{" "}
-          <a
-            href="/login"
-            className="text-blue-600 hover:text-blue-700 font-medium"
+          <Input
+            label="비밀번호"
+            type="password"
+            value={formData.password}
+            onChange={handleInputChange("password")}
+            error={validationErrors.password}
+            className="w-full"
+            disabled={loading}
+            placeholder="8자 이상 입력해주세요"
+          />
+
+          <Input
+            label="비밀번호 확인"
+            type="password"
+            value={formData.confirmPassword}
+            onChange={handleInputChange("confirmPassword")}
+            error={validationErrors.confirmPassword}
+            className="w-full"
+            disabled={loading}
+            placeholder="비밀번호를 다시 입력해주세요"
+          />
+
+          <Button
+            type="submit"
+            className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2.5 mt-6"
+            loading={loading}
+            disabled={loading}
           >
+            회원가입
+          </Button>
+        </form>
+
+        <div className="mt-8 text-center text-sm text-gray-500">
+          이미 계정이 있으신가요?{" "}
+          <Link href="/auth/login" className="text-blue-600 hover:underline font-medium">
             로그인
-          </a>
-        </p>
+          </Link>
+        </div>
       </div>
-    </Card>
+
+      {/* Right: Hero Image Section */}
+      <div className="hidden lg:block w-1/2 relative bg-gray-50">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/images/auth-hero.png')" }}
+        />
+        <div className="absolute inset-0 bg-purple-900/10 backdrop-blur-[1px]" />
+        <div className="absolute bottom-12 left-12 right-12 text-white">
+          <blockquote className="space-y-2">
+            <p className="text-lg font-medium">
+              "함께 만들어가는 미래, PosMul에서 시작하세요."
+            </p>
+            <footer className="text-sm text-white/80">— PosMul Team</footer>
+          </blockquote>
+        </div>
+      </div>
+    </div>
   );
 }

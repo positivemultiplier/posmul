@@ -90,18 +90,21 @@ export const BettingConfirmation = ({
 
       {/* 수익 예측 */}
       <Card className="p-4 bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
-        <h3 className="font-semibold text-lg text-gray-900 mb-4">예상 수익</h3>
+        <h3 className="font-semibold text-lg text-gray-900 mb-2">예상 획득 포인트</h3>
+        <p className="text-xs text-gray-500 mb-4">
+          * 예측 성공 시 베팅한 PMP와 수익금은 모두 <strong className="text-green-700">PMC(기부/투자 재화)</strong>로 변환되어 지급됩니다.
+        </p>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <div className="text-sm text-gray-600 mb-1">예상 총 수익</div>
+            <div className="text-sm text-gray-600 mb-1">예상 총 획득</div>
             <div className="text-xl font-bold text-green-600">
-              {formatCurrency(expectedReturn)} PMP
+              {formatCurrency(expectedReturn)} PMC
             </div>
           </div>
           <div>
             <div className="text-sm text-gray-600 mb-1">순수익</div>
             <div className="text-xl font-bold text-green-600">
-              +{formatCurrency(potentialProfit)} PMP
+              +{formatCurrency(potentialProfit)} PMC
             </div>
           </div>
         </div>

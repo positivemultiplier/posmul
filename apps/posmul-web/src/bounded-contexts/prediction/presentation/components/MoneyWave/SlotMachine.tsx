@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { twMerge } from "tailwind-merge";
 
-// 슬롯머신 애니메이션 컴포넌트 (prediction 도메인 전용)
 export interface SlotMachineProps {
     value: number;
     isSpinning: boolean;
@@ -13,237 +12,141 @@ export interface SlotMachineProps {
     className?: string;
 }
 
-// 숫자 포맷팅
-const formatNumber = (num: number) => {
-    return new Intl.NumberFormat("ko-KR").format(Math.floor(num));
-};
+const formatNumber = (num: number) => new Intl.NumberFormat("ko-KR").format(Math.floor(num));
 
+// KST Countdown Logic
 const HOUR_MS = 60 * 60 * 1000;
-
-function clamp01(value: number): number {
-    return Math.max(0, Math.min(1, value));
-}
-
+function clamp01(value: number): number { return Math.max(0, Math.min(1, value)); }
 function formatCountdownMs(ms: number): string {
     const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
-    const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
-
     const pad2 = (n: number) => String(n).padStart(2, "0");
-    if (hours > 0) return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}`;
     return `${pad2(minutes)}:${pad2(seconds)}`;
 }
-
 function getKstCountdownAndProgress(nowMs: number): { remainingMs: number; timeProgress: number } {
-    // KST는 UTC+9이며 DST 없음. 로컬 타임존 영향 없이 계산하기 위해 ms를 +9h 쉬프트한다.
     const kstNow = new Date(nowMs + 9 * 60 * 60 * 1000);
     const kstNextHour = new Date(kstNow);
     kstNextHour.setMinutes(0, 0, 0);
     kstNextHour.setHours(kstNextHour.getHours() + 1);
-
     const remainingMs = Math.max(0, kstNextHour.getTime() - kstNow.getTime());
-    const timeProgress = clamp01(1 - remainingMs / HOUR_MS);
-    return { remainingMs, timeProgress };
+    return { remainingMs, timeProgress: clamp01(1 - remainingMs / HOUR_MS) };
 }
 
+// Fintech-style CountUp Component
+// No spinning animation, just rapid value updates with ease-out.
 export function SlotMachine({
     value,
     isSpinning,
     totalAmount = 0,
-    progressRatio = 0,
     showMeta = false,
     className = ""
 }: SlotMachineProps) {
-    const [displayValue, setDisplayValue] = useState<number>(value);
+    const [displayValue, setDisplayValue] = useState<number>(isSpinning ? 0 : value);
+    const requestRef = useRef<number | null>(null);
+    const startTimeRef = useRef<number | null>(null);
 
-    // 숫자를 자릿수별로 분리
-    const formatAndSplit = (num: number) => {
-        const formatted = formatNumber(num);
-        return formatted.split('').map((char, index) => ({
-            char,
-            isComma: char === ',',
-            digitValue: isNaN(parseInt(char)) ? 0 : parseInt(char),
-            position: index
-        }));
-    };
-
-    const progress = useMemo(() => {
-        const normalized = typeof progressRatio === "number" && Number.isFinite(progressRatio) ? progressRatio : 0;
-        return Math.min(1, Math.max(0, normalized));
-    }, [progressRatio]);
-
-    // 어제 감성: 숫자 자체를 target(value)까지 롤링으로 따라가게 함
+    // Animation Loop
     useEffect(() => {
         if (!isSpinning) {
             setDisplayValue(value);
             return;
         }
 
-        const updateInterval = 30;
-        let currentValue = displayValue;
-        const targetValue = value;
+        const startValue = 0; // Start from 0% (Full count-up)
+        const endValue = value;
+        const duration = 2000; // 2 seconds
 
-        const interval = setInterval(() => {
-            if (currentValue < targetValue) {
-                const remaining = targetValue - currentValue;
-                const progressToTarget = targetValue > 0 ? currentValue / targetValue : 1;
-                const baseIncrement = Math.max(1, Math.floor(remaining * 0.08));
-                const speedMultiplier = Math.max(0.1, 1 - progressToTarget * 0.9);
-                const increment = Math.floor(baseIncrement * speedMultiplier);
+        // Reset
+        setDisplayValue(startValue);
+        startTimeRef.current = null;
 
-                currentValue = Math.min(currentValue + Math.max(1, increment), targetValue);
-                setDisplayValue(currentValue);
+        const animate = (time: number) => {
+            if (!startTimeRef.current) startTimeRef.current = time;
+            const progress = time - startTimeRef.current;
+            const percentage = Math.min(progress / duration, 1);
+
+            // Ease Out Expo: Starts fast, slows down gently (standard for financial counts)
+            const ease = percentage === 1 ? 1 : 1 - Math.pow(2, -10 * percentage);
+
+            // Current value calculation
+            const current = startValue + (endValue - startValue) * ease;
+            setDisplayValue(current);
+
+            if (progress < duration) {
+                requestRef.current = requestAnimationFrame(animate);
+            } else {
+                setDisplayValue(endValue);
             }
-        }, updateInterval);
-
-        return () => clearInterval(interval);
-    }, [isSpinning, value, displayValue]);
-
-    // 어제 감성: 큰 자리수(왼쪽)일수록 늦게 스핀에 합류 (막판 임팩트)
-    const calculateDigitSpinState = (
-        digitPosition: number,
-        totalDigits: number,
-        p: number
-    ): { shouldSpin: boolean; spinSpeed: number } => {
-        const digitFromRight = totalDigits - digitPosition - 1;
-        const startSpinAt = digitFromRight * 0.1;
-        const shouldSpin = p >= startSpinAt;
-        const spinSpeed = shouldSpin ? 0.3 + digitFromRight * 0.2 : 0;
-
-        return {
-            shouldSpin: shouldSpin && isSpinning,
-            spinSpeed,
         };
-    };
 
+        requestRef.current = requestAnimationFrame(animate);
+
+        return () => {
+            if (requestRef.current) cancelAnimationFrame(requestRef.current);
+        };
+    }, [value, isSpinning]);
+
+    // Metadata Timer
     const [remainingMs, setRemainingMs] = useState<number | null>(null);
     const [timeProgress, setTimeProgress] = useState<number>(0);
-
     useEffect(() => {
         if (!showMeta) return;
-
         const tick = () => {
-            const { remainingMs: nextRemainingMs, timeProgress: nextTimeProgress } = getKstCountdownAndProgress(Date.now());
-            setRemainingMs(nextRemainingMs);
-            setTimeProgress(nextTimeProgress);
+            const { remainingMs: r, timeProgress: t } = getKstCountdownAndProgress(Date.now());
+            setRemainingMs(r);
+            setTimeProgress(t);
         };
-
         tick();
         const interval = setInterval(tick, 1000);
         return () => clearInterval(interval);
     }, [showMeta]);
 
-    const digits = formatAndSplit(displayValue);
-    const numericDigits = digits.filter((d) => !d.isComma).length;
-
-    // totalAmount는 API 호환을 위해 유지(현재 UI에서는 미사용)
     void totalAmount;
 
-    if (!isSpinning && !showMeta) {
-        return (
-            <span className={twMerge("font-bold font-mono transition-all duration-500 text-green-400", className)}>
-                💰{formatNumber(value)}
-            </span>
-        );
-    }
-
     return (
-        <span className={twMerge("slot-container", isSpinning ? 'spinning' : '', "text-green-400 font-bold font-mono", className)}>
-            <span className="flex items-center">
-                <span className="text-inherit">💰</span>
-                {digits.map((digitInfo, index) => {
-                    if (digitInfo.isComma) {
-                        return (
-                            <span key={index} className="text-inherit">,</span>
-                        );
-                    }
-
-                    const numericIndex = digits.slice(0, index + 1).filter(d => !d.isComma).length - 1;
-                    const spinState = calculateDigitSpinState(numericIndex, numericDigits, progress);
-
-                    return (
-                        <span
-                            key={index}
-                            className="slot-digit inline-block relative overflow-hidden text-inherit border-white/10"
-                            style={{
-                                height: '1.2em',
-                                width: '0.8em',
-                                verticalAlign: 'top'
-                            }}
-                        >
-                            {isSpinning && spinState.shouldSpin ? (
-                                <span
-                                    className="absolute inset-0 flex flex-col text-inherit"
-                                    style={{
-                                        animation: `slotSpin ${spinState.spinSpeed}s linear infinite`,
-                                    }}
-                                >
-                                    {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((num, i) => (
-                                        <span key={i} className="h-[1.2em] flex items-center justify-center text-inherit font-bold font-mono">
-                                            {num}
-                                        </span>
-                                    ))}
-                                </span>
-                            ) : (
-                                <span className="h-[1.2em] flex items-center justify-center text-inherit font-bold font-mono">
-                                    {digitInfo.digitValue}
-                                </span>
-                            )}
-                        </span>
-                    );
-                })}
-                <span className="text-inherit ml-2"></span>
-            </span>
+        <span className={twMerge(
+            "slot-container font-mono transition-colors duration-300 inline-flex flex-col",
+            isSpinning ? "border-emerald-500/50 bg-emerald-900/10" : "border-slate-700 bg-slate-800",
+            className
+        )}>
+            {/* 
+               tabular-nums logic: 
+               Uses font-feature-settings to ensure all digits have the same width.
+               This prevents the text from jittering horizontally as numbers change (e.g. 1 vs 0).
+            */}
+            <div className="flex items-center gap-1.5" style={{ height: "1.2em" }}>
+                <span className="text-inherit translate-y-[1px]">💰</span>
+                <span className="text-inherit font-bold tracking-tight" style={{ fontVariantNumeric: "tabular-nums" }}>
+                    {formatNumber(displayValue)}
+                </span>
+            </div>
 
             {showMeta && (
-                <span className="mt-1 w-full">
-                    <span className="flex w-full items-center justify-between text-[10px] text-white/70">
-                        <span>다음 웨이브까지</span>
-                        <span className="font-mono" suppressHydrationWarning>
+                <div className="mt-2 w-full border-t border-white/10 pt-1">
+                    <div className="flex w-full items-center justify-between text-[10px] text-white/70">
+                        <span>Next Wave</span>
+                        <span className="font-mono" style={{ fontVariantNumeric: "tabular-nums" }} suppressHydrationWarning>
                             {remainingMs === null ? "--:--" : formatCountdownMs(remainingMs)}
                         </span>
-                    </span>
-                    <span className="mt-1 block h-1 w-full overflow-hidden rounded bg-white/10">
-                        <span
-                            className="block h-full bg-white/30"
+                    </div>
+                    <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-slate-900/50">
+                        <div
+                            className="h-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] transition-all duration-1000 ease-linear"
                             style={{ width: `${Math.round(timeProgress * 100)}%` }}
                         />
-                    </span>
-                </span>
+                    </div>
+                </div>
             )}
 
             <style jsx>{`
-        @keyframes slotSpin {
-          0% { transform: translateY(0%); }
-          100% { transform: translateY(-200%); }
-        }
-
                 .slot-container {
-                    position: relative;
-                    display: inline-block;
-                    padding: 4px 8px;
+                    padding: 8px 12px;
                     border-radius: 8px;
-                    background: linear-gradient(135deg, #1e293b, #334155);
-                    border: 2px solid #475569;
-                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.1);
+                    border-width: 1px;
+                    min-width: 140px;
                 }
-
-        .slot-container.spinning {
-          border-color: #10b981;
-          background: linear-gradient(135deg, #065f46, #047857);
-        }
-
-        .slot-digit {
-          background: #0f172a;
-          border-radius: 4px;
-          margin: 0 1px;
-          box-shadow:
-            inset 0 2px 4px rgba(0,0,0,0.4),
-            inset 0 -1px 2px rgba(255,255,255,0.1);
-          border: 1px solid #1e293b;
-        }
-      `}</style>
+            `}</style>
         </span>
     );
 }

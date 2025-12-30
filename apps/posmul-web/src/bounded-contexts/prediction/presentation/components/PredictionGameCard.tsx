@@ -653,6 +653,16 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
       {/* My Prediction Badge */}
       <MyPredictionBadgeSection myPrediction={myPrediction} />
 
+      {/* Background Pattern */}
+      <div
+        className="absolute inset-0 opacity-[0.03] pointer-events-none"
+        style={{
+          backgroundImage: "url('/images/prediction-card-pattern.png')",
+          backgroundSize: '300px',
+          backgroundRepeat: 'repeat'
+        }}
+      />
+
       {/* Error Display */}
       <ErrorSection error={error} onDismiss={() => setError(null)} />
 

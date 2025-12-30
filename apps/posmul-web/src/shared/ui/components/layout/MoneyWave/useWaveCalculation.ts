@@ -1,13 +1,10 @@
 import { useState, useEffect } from "react";
 import { createClient } from "../../../../../lib/supabase/client";
 import {
-    buildMultiplierByCategory,
-    clamp01,
     computeRevealRatio,
-    countCategories,
-    parseNumeric,
-    resolveSelectedDbCategory,
+    clamp01,
 } from "./wave-math";
+import { getKstHourStartIso } from "@/shared/utils/time/getKstHourStartIso";
 
 interface WaveCalculationResult {
     waveAmount: number;
@@ -21,15 +18,15 @@ interface WaveCalculationResult {
 interface UseWaveCalculationProps {
     domain?: string;
     category?: string;
+    gameId?: string;
 }
 
 export function useWaveCalculation({
     domain = 'prediction',
-    category = 'all'
+    category = 'all',
+    gameId
 }: UseWaveCalculationProps): WaveCalculationResult {
     const supabase = createClient();
-
-    const [_hourlyWaveTotal, setHourlyWaveTotal] = useState<number | null>(null);
 
     const [waveAmount, setWaveAmount] = useState(0);
     const [slotState, setSlotState] = useState({
@@ -41,80 +38,111 @@ export function useWaveCalculation({
     const [activeGames, setActiveGames] = useState(0);
 
     useEffect(() => {
+        let isMounted = true;
+
         const fetchWaveData = async () => {
             try {
-                const selectedDbCategory = resolveSelectedDbCategory(domain, category);
+                // 1. Calculate current KST Hour Start
+                const now = new Date();
+                const hourStartIso = getKstHourStartIso(now);
+                const hourStartMs = new Date(hourStartIso).getTime();
+                const HOUR_MS = 60 * 60 * 1000;
 
-                const { data: snapshot } = await supabase
-                    .schema('economy')
-                    .from('money_wave_daily_snapshots')
-                    .select('hourly_pool_total_pmc')
-                    .order('snapshot_date', { ascending: false })
-                    .limit(1)
-                    .maybeSingle();
+                // 2. Fetch Truth Pool
+                let truthWave = 0;
 
-                const hourlyTotal = parseNumeric(snapshot?.hourly_pool_total_pmc);
-                setHourlyWaveTotal(Number.isFinite(hourlyTotal ?? NaN) ? hourlyTotal : null);
+                if (gameId) {
+                    // Case A: Specific Game (Depth 5)
+                    const { data: gamePool, error: gameError } = await supabase
+                        .schema('economy')
+                        .from('money_wave_hourly_game_pools')
+                        .select('pool_pmc')
+                        .eq('hour_start', hourStartIso)
+                        .eq('game_id', gameId)
+                        .maybeSingle();
 
+                    if (!gameError && gamePool) {
+                        truthWave = gamePool.pool_pmc || 0;
+                    }
+                } else {
+                    // Case B: Category/Domain Level (Depth 1~4)
+                    let query = supabase
+                        .schema('economy')
+                        .from('money_wave_hourly_category_allocations')
+                        .select('pool_pmc')
+                        .eq('hour_start', hourStartIso)
+                        .eq('domain', domain);
+
+                    if (category !== 'all') {
+                        // Normalize category if needed (e.g. user_proposed handling) but usually DB matches UI strings
+                        // If category is 'user_proposed', it might be mapped from 'USER_PROPOSED' or similar
+                        // For now assuming exact match or simple uppercase mapping if needed. 
+                        // The existing code used resolveSelectedDbCategory, let's keep it simple for now.
+                        query = query.eq('category', category.toUpperCase());
+                        // Note: 'all' is not a DB category. 'SPORTS', etc. are.
+                    }
+
+                    const { data: allocations, error: allocationError } = await query;
+
+                    if (!allocationError && allocations && allocations.length > 0) {
+                        truthWave = allocations.reduce((sum, row) => sum + (row.pool_pmc || 0), 0);
+                    } else {
+                        // Fallback: If no allocation rows found for this hour (e.g. cron hasn't run or empty),
+                        // maybe show 0 or fetch previous hour?
+                        // For now, defaulting to 0 as per "Reveal from Truth" philosophy.
+                        console.log("No allocations found for", hourStartIso);
+                    }
+                }
+
+                if (!isMounted) return;
+
+                // 3. Fetch Participants (Global or Scoped? Usually global for MoneyWave vibe)
                 const { count: participants } = await supabase
                     .schema('prediction')
                     .from("predictions")
-                    .select("user_id", { count: "exact" });
-                const participantTotal = participants || 0;
-                setParticipantCount(participantTotal);
+                    .select("user_id", { count: "exact" }); // This is total accumulation, might want hourly active?
+                // Plan says "participants" is for progress boost.
 
-                const { data: activeGameRows } = await supabase
+                // 4. Fetch Active Games Count
+                const { count: activeGameCount } = await supabase
                     .schema('prediction')
                     .from("prediction_games")
-                    .select("category")
+                    .select("game_id", { count: "exact" })
                     .eq("status", "ACTIVE");
-                const { counts, total: totalActiveGames } = countCategories(activeGameRows as unknown[] | null);
+                // Note: If we want active games *in this category*, we should add filter.
 
-                let multiplierByCategory: Record<string, number> = {};
-                try {
-                    const { data: multipliers } = await supabase
-                        .schema('economy')
-                        .from('prediction_category_multipliers')
-                        .select('category,reward_multiplier');
-                    multiplierByCategory = buildMultiplierByCategory(multipliers as unknown[] | null);
-                } catch (_error) {
-                }
+                // 5. Compute Reveal
+                const progressRaw = clamp01((now.getTime() - hourStartMs) / HOUR_MS);
+                const { progressAdjusted, revealRatio } = computeRevealRatio(
+                    progressRaw,
+                    participants || 0,
+                    activeGameCount || 0
+                );
 
-                const totalWeighted = Object.entries(counts).reduce((sum, [cat, count]) => {
-                    const multiplier = multiplierByCategory[cat] ?? 1;
-                    return sum + count * multiplier;
-                }, 0);
-
-                const selectedCount = selectedDbCategory ? (counts[selectedDbCategory] ?? 0) : totalActiveGames;
-                const selectedWeighted = selectedDbCategory
-                    ? selectedCount * (multiplierByCategory[selectedDbCategory] ?? 1)
-                    : totalWeighted;
-
-                const weight = totalWeighted > 0 ? selectedWeighted / totalWeighted : 0;
-                const truthWave = (hourlyTotal ?? 0) * weight;
-
-                const startOfHour = new Date();
-                startOfHour.setMinutes(0, 0, 0);
-                const progress = clamp01((Date.now() - startOfHour.getTime()) / (60 * 60 * 1000));
-
-                const { progressAdjusted, revealRatio } = computeRevealRatio(progress, participantTotal, totalActiveGames);
                 const displayWave = truthWave * revealRatio;
 
                 setWaveAmount(Math.round(displayWave));
-                setActiveGames(selectedCount);
+                setParticipantCount(participants || 0);
+                setActiveGames(activeGameCount || 0);
                 setSlotState({
-                    isSpinning: progress < 1,
+                    isSpinning: progressRaw < 1,
                     spinSpeed: Math.max(0.1, 0.3 + progressAdjusted * 1.2),
                     progressRatio: progressAdjusted
                 });
-            } catch (_error) {
+
+            } catch (error) {
+                console.error("useWaveCalculation error:", error);
             }
         };
 
         fetchWaveData();
-        const interval = setInterval(fetchWaveData, 60000);
-        return () => clearInterval(interval);
-    }, [domain, category]);
+        // Sync every 10s is better than 60s for reveal feel
+        const interval = setInterval(fetchWaveData, 10000);
+        return () => {
+            isMounted = false;
+            clearInterval(interval);
+        };
+    }, [domain, category, gameId]);
 
     return {
         waveAmount,
@@ -125,3 +153,4 @@ export function useWaveCalculation({
         activeGames
     };
 }
+

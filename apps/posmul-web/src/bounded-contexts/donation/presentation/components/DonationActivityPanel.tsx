@@ -11,71 +11,44 @@ import {
   CardTitle,
 } from "../../../../shared/ui/components/base";
 
+import { useDonationData } from "../hooks/useDonationData";
+import { AlertCircle } from "lucide-react";
+
 interface DonationActivityPanelProps {
   userId: string;
 }
 
-// Mock 데이터
-const mockDonationData = {
-  totalDonated: 1250,
-  donationCount: 8,
-  favoriteCategories: ["환경보호", "교육지원", "지역발전"],
-  currentRanking: 42,
-  totalUsers: 1847,
-  socialImpactScore: 78,
-  recentDonations: [
-    {
-      id: "don-1",
-      recipient: "서울시 미세먼지 저감 프로젝트",
-      amount: 200,
-      category: "환경보호",
-      date: "2024-01-20",
-      impact: "대기질 개선에 기여",
-      verified: true,
-    },
-    {
-      id: "don-2",
-      recipient: "부산 지역 소상공인 지원",
-      amount: 150,
-      category: "지역발전",
-      date: "2024-01-18",
-      impact: "15개 소상공인 매출 증대",
-      verified: true,
-    },
-    {
-      id: "don-3",
-      recipient: "디지털 격차 해소 교육",
-      amount: 180,
-      category: "교육지원",
-      date: "2024-01-15",
-      impact: "120명 어르신 디지털 교육",
-      verified: true,
-    },
-    {
-      id: "don-4",
-      recipient: "청년 창업 지원 펀드",
-      amount: 100,
-      category: "경제활성화",
-      date: "2024-01-12",
-      impact: "3개 스타트업 시드 투자",
-      verified: false,
-    },
-    {
-      id: "don-5",
-      recipient: "독거노인 돌봄 서비스",
-      amount: 120,
-      category: "사회복지",
-      date: "2024-01-10",
-      impact: "50명 어르신 생활 지원",
-      verified: true,
-    },
-  ],
-};
 
 export const DonationActivityPanel: React.FC<DonationActivityPanelProps> = ({
-  userId: _userId,
+  userId,
 }) => {
-  const data = mockDonationData;
+  // Data Fetching
+  const { data: donationData, loading, error } = useDonationData(userId);
+
+  if (loading) {
+    return (
+      <Card className="w-full h-96 flex items-center justify-center bg-white/80 backdrop-blur border-emerald-100">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-gray-500 text-sm">기부 활동을 불러오고 있어요...</p>
+        </div>
+      </Card>
+    );
+  }
+
+  if (error || !donationData) {
+    return (
+      <Card className="w-full h-96 flex items-center justify-center bg-white/80 backdrop-blur border-red-100">
+        <div className="flex flex-col items-center gap-4 text-center">
+          <AlertCircle className="w-8 h-8 text-red-400" />
+          <p className="text-gray-600 font-medium">데이터를 불러올 수 없습니다</p>
+          <p className="text-xs text-gray-400">{error?.message}</p>
+        </div>
+      </Card>
+    );
+  }
+
+  const data = donationData;
 
   const getCategoryColor = (category: string) => {
     const colors: { [key: string]: string } = {
@@ -89,6 +62,7 @@ export const DonationActivityPanel: React.FC<DonationActivityPanelProps> = ({
   };
 
   const getRankingPercentile = () => {
+    if (data.totalUsers === 0) return "0.0";
     return (
       ((data.totalUsers - data.currentRanking) / data.totalUsers) *
       100
@@ -97,11 +71,24 @@ export const DonationActivityPanel: React.FC<DonationActivityPanelProps> = ({
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">❤️ 기부 활동</CardTitle>
-        <CardDescription>
-          PmcAmount를 통한 사회적 기여와 영향력 분석
-        </CardDescription>
+      <div className="relative h-48 overflow-hidden rounded-t-xl">
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-700 hover:scale-105"
+          style={{ backgroundImage: "url('/images/donation-warmth.png')" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+        <div className="absolute bottom-4 left-6 text-white z-10">
+          <h3 className="text-2xl font-bold flex items-center gap-2">
+            ❤️ 기부 활동
+          </h3>
+          <p className="text-white/90 text-sm mt-1">
+            PmcAmount를 통한 사회적 기여와 영향력 분석
+          </p>
+        </div>
+      </div>
+      <CardHeader className="sr-only">
+        <CardTitle>기부 활동</CardTitle>
+        <CardDescription>PmcAmount를 통한 사회적 기여</CardDescription>
       </CardHeader>
       <CardContent>
         {/* 기부 요약 */}

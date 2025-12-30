@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { ChevronDown, ChevronUp, Zap, Activity } from "lucide-react";
 import { SlotMachine } from "./MoneyWave/SlotMachine";
 import { twMerge } from "tailwind-merge";
 
-import { computeRevealRatio, clamp01 } from "@/shared/ui/components/layout/MoneyWave/wave-math";
-import { getKstHourStartIso } from "@/shared/utils/time/getKstHourStartIso";
+import { useWaveCalculation } from "@/shared/ui/components/layout/MoneyWave/useWaveCalculation";
 
 // Depth와 Category 타입 정의
 // Depth 1: 예측 메인, Depth 2: 카테고리, Depth 3: 종목, Depth 4: 리그, Depth 5: 개별 게임
@@ -26,10 +25,8 @@ interface CompactMoneyWaveCardProps {
   subcategory?: string;
   league?: string; // Depth 4: 리그 (EPL, K-League 등)
   gameId?: string; // Depth 5: 개별 게임 ID
-  initialPool?: number; // Server-side EBIT Pool
+  initialPool?: number; // Server-side EBIT Pool (Optional fallback/initial data)
 }
-
-const HOUR_MS = 60 * 60 * 1000;
 
 export function CompactMoneyWaveCard({
   className = "",
@@ -41,26 +38,24 @@ export function CompactMoneyWaveCard({
   initialPool
 }: CompactMoneyWaveCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [currentTime, setCurrentTime] = useState<number>(() => Date.now());
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentTime(Date.now());
-    }, 1000);
-    return () => clearInterval(interval);
-  }, []);
+  // Hook handles data fetching and reveal logic
+  const {
+    waveAmount,
+    progressRatio: progressAdjusted,
+    isSpinning
+  } = useWaveCalculation({
+    domain: 'prediction',
+    category,
+    gameId
+  });
 
-  const truthPool = Number.isFinite(initialPool ?? NaN) ? (initialPool as number) : 0;
-
-  const { progressAdjusted, revealRatio } = useMemo(() => {
-    const now = new Date(currentTime);
-    const hourStartIso = getKstHourStartIso(now);
-    const hourStartMs = new Date(hourStartIso).getTime();
-    const progress = clamp01((currentTime - hourStartMs) / HOUR_MS);
-    return computeRevealRatio(progress, 0, 0);
-  }, [currentTime, depthLevel]);
-
-  const totalPool = Math.round(truthPool * revealRatio);
+  // Fallback to initialPool if hook hasn't loaded (waveAmount is 0) but initialPool exists
+  // For now, if waveAmount is 0 and initialPool is > 0, we might want to use initialPool with some reveal.
+  // However, useWaveCalculation computes reveal based on time. 
+  // Let's stick to using waveAmount from hook as primary truth + reveal.
+  const totalPool = waveAmount;
+  const progressPercent = Math.round(progressAdjusted * 100);
 
   // MoneyWave Breakdown (확장 시 표시)
   const waveBreakdown = {
@@ -68,8 +63,6 @@ export function CompactMoneyWaveCard({
     wave2: Math.floor(totalPool * 0.3), // 30% PMC Redistribution
     wave3: Math.floor(totalPool * 0.1)  // 10% Entrepreneur
   };
-
-  const progressPercent = Math.round(progressAdjusted * 100);
 
   return (
     <div className={twMerge("w-full mb-6", className)}>
@@ -80,12 +73,23 @@ export function CompactMoneyWaveCard({
         )}
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        {/* 배경 그라데이션 (MoneyWave Green Theme) */}
-        <div className={twMerge(
-          "absolute inset-0 bg-gradient-to-r opacity-10 transition-opacity duration-300",
-          "from-green-600 via-emerald-600 to-teal-600",
-          isExpanded ? "opacity-20" : "group-hover:opacity-15"
-        )} />
+        {/* 배경 이미지 & 그라데이션 오버레이 */}
+        <div className="absolute inset-0">
+          <div
+            className="absolute inset-0 bg-cover bg-center opacity-30 transition-transform duration-700 group-hover:scale-105"
+            style={{ backgroundImage: "url('/images/money-wave-bg.png')" }}
+          />
+          <div className={twMerge(
+            "absolute inset-0 bg-gradient-to-r transition-opacity duration-300",
+            "from-slate-900/90 via-slate-900/80 to-slate-900/90",
+            isExpanded ? "opacity-95" : "opacity-80 group-hover:opacity-70"
+          )} />
+          <div className={twMerge(
+            "absolute inset-0 bg-gradient-to-r opacity-10 transition-opacity duration-300",
+            "from-green-600 via-emerald-600 to-teal-600",
+            isExpanded ? "opacity-20" : "group-hover:opacity-15"
+          )} />
+        </div>
 
         {/* 상단 프로그레스 바 (데코레이션) */}
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-slate-800/50">
@@ -107,7 +111,7 @@ export function CompactMoneyWaveCard({
                     {/* SlotMachine 적용: 에메랄드 색상, 텍스트 큼직하게 */}
                     <SlotMachine
                       value={totalPool}
-                      isSpinning={progressAdjusted < 1}
+                      isSpinning={isSpinning}
                       progressRatio={progressAdjusted}
                       showMeta
                       className="text-xl md:text-2xl text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]"
@@ -171,7 +175,7 @@ export function CompactMoneyWaveCard({
                   <div className="text-[10px] text-green-400/80 mb-1">Wave1 (60%)</div>
                   <SlotMachine
                     value={waveBreakdown.wave1}
-                    isSpinning={progressAdjusted < 1}
+                    isSpinning={isSpinning}
                     progressRatio={progressAdjusted}
                     className="text-sm font-bold text-green-400"
                   />
@@ -181,7 +185,7 @@ export function CompactMoneyWaveCard({
                   <div className="text-[10px] text-blue-400/80 mb-1">Wave2 (30%)</div>
                   <SlotMachine
                     value={waveBreakdown.wave2}
-                    isSpinning={progressAdjusted < 1}
+                    isSpinning={isSpinning}
                     progressRatio={progressAdjusted}
                     className="text-sm font-bold text-blue-400"
                   />
@@ -191,7 +195,7 @@ export function CompactMoneyWaveCard({
                   <div className="text-[10px] text-purple-400/80 mb-1">Wave3 (10%)</div>
                   <SlotMachine
                     value={waveBreakdown.wave3}
-                    isSpinning={progressAdjusted < 1}
+                    isSpinning={isSpinning}
                     progressRatio={progressAdjusted}
                     className="text-sm font-bold text-purple-400"
                   />

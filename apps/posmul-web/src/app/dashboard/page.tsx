@@ -4,6 +4,7 @@ import EconomicBalance from "../../bounded-contexts/economy/presentation/compone
 import TransactionHistory from "../../bounded-contexts/economy/presentation/components/TransactionHistory";
 import { MoneyWaveDashboard } from "../../bounded-contexts/economy/presentation/components/MoneyWaveDashboard";
 import MyPredictions from "../../bounded-contexts/prediction/presentation/components/MyPredictions";
+import { DonationActivityPanel } from "../../bounded-contexts/donation/presentation/components/DonationActivityPanel";
 
 export default async function DashboardPage() {
     const supabase = await createClient();
@@ -29,36 +30,52 @@ export default async function DashboardPage() {
                     </p>
                 </div>
 
-                {/* Economic Balance Section */}
-                <section className="mb-12">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                {/* Top Section: Balance */}
+                <section className="mb-8">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
                         💰 자산 현황
                     </h2>
                     <EconomicBalance userId={user.id} />
                 </section>
 
-                {/* MoneyWave Section */}
-                <section className="mb-12">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                        🌊 MoneyWave
-                    </h2>
-                    <MoneyWaveDashboard />
-                </section>
+                {/* Main Content Grid */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-8">
+                    {/* Left Column (8/12): MoneyWave & Predictions */}
+                    <div className="lg:col-span-8 space-y-8">
+                        <section>
+                            {/* MoneyWave has its own header style, so we remove the outer header or keep it minimal */}
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                                    🌊 MoneyWave
+                                </h2>
+                            </div>
+                            <MoneyWaveDashboard />
+                        </section>
 
-                {/* Transaction History Section */}
+                        <section>
+                            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                                🎯 나의 예측 내역
+                            </h2>
+                            <MyPredictions userId={user.id} />
+                        </section>
+                    </div>
+
+                    {/* Right Column (4/12): Donation & Side Widgets */}
+                    <div className="lg:col-span-4 space-y-8">
+                        <section>
+                            {/* Donation Panel handles its own header visual, but we can add a section title if needed. 
+                                Since it has a banner, let's omit the text header to avoid duplication/clutter. */}
+                            <DonationActivityPanel userId={user.id} />
+                        </section>
+                    </div>
+                </div>
+
+                {/* Bottom Section: History */}
                 <section className="mb-12">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                         📊 거래 내역
                     </h2>
                     <TransactionHistory userId={user.id} />
-                </section>
-
-                {/* My Predictions Section */}
-                <section>
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                        🎯 나의 예측 내역
-                    </h2>
-                    <MyPredictions userId={user.id} />
                 </section>
             </div>
         </div>
