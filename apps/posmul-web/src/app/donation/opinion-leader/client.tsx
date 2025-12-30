@@ -2,8 +2,22 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { MotionDiv, staggerContainerVariants, fadeInVariants } from "@/shared/ui/components/motion/MotionComponents";
-import { OpinionLeaderCard, OpinionLeader } from "../../../bounded-contexts/donation/presentation/components/OpinionLeaderCard";
+import { Star, Users, Heart, Search, TrendingUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent } from "@/shared/ui/components/base/Card";
+
+export interface OpinionLeader {
+  id: string;
+  displayName: string;
+  bio: string;
+  category: string;
+  categoryLabel: string;
+  categoryIcon: string;
+  avatarUrl: string | null;
+  followerCount: number;
+  totalDonationsInfluenced: number;
+  isVerified: boolean;
+}
 
 interface OpinionLeaderClientProps {
   leaders: OpinionLeader[];
@@ -12,61 +26,29 @@ interface OpinionLeaderClientProps {
   userId: string | null;
 }
 
-type SortOption = "followers" | "donations" | "name";
+// 카테고리 목록
+const CATEGORIES = [
+  { key: "all", label: "전체", icon: "🌟" },
+  { key: "environment", label: "환경", icon: "🌿" },
+  { key: "education", label: "교육", icon: "📚" },
+  { key: "animal", label: "동물", icon: "🐾" },
+  { key: "welfare", label: "복지", icon: "🤝" },
+  { key: "culture", label: "문화", icon: "🎭" },
+];
 
-export function OpinionLeaderClient({
-  leaders,
-  userPmcBalance,
-  isLoggedIn,
-}: OpinionLeaderClientProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<SortOption>("followers");
+export function OpinionLeaderClient({ leaders }: OpinionLeaderClientProps) {
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 카테고리 목록 추출
-  const categories = useMemo(() => {
-    return [...new Set(leaders.map((l) => l.category))];
-  }, [leaders]);
+  const filteredLeaders = useMemo(() => {
+    return leaders.filter((leader) => {
+      const matchCategory = selectedCategory === "all" || leader.category === selectedCategory;
+      const matchSearch = leader.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        leader.bio.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchCategory && matchSearch;
+    });
+  }, [leaders, selectedCategory, searchQuery]);
 
-  // 필터링 및 정렬된 리더 목록
-  const filteredAndSortedLeaders = useMemo(() => {
-    let result = [...leaders];
-
-    // 카테고리 필터
-    if (selectedCategory) {
-      result = result.filter((l) => l.category === selectedCategory);
-    }
-
-    // 검색 필터
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (l) =>
-          l.displayName.toLowerCase().includes(query) ||
-          l.bio.toLowerCase().includes(query) ||
-          l.categoryLabel.toLowerCase().includes(query)
-      );
-    }
-
-    // 정렬
-    switch (sortBy) {
-      case "followers":
-        result.sort((a, b) => b.followerCount - a.followerCount);
-        break;
-      case "donations":
-        result.sort(
-          (a, b) => b.totalDonationsInfluenced - a.totalDonationsInfluenced
-        );
-        break;
-      case "name":
-        result.sort((a, b) => a.displayName.localeCompare(b.displayName));
-        break;
-    }
-
-    return result;
-  }, [leaders, selectedCategory, sortBy, searchQuery]);
-
-  // Helper stats
   const totalFollowers = leaders.reduce((sum, l) => sum + l.followerCount, 0);
   const totalImpact = leaders.reduce((sum, l) => sum + l.totalDonationsInfluenced, 0);
 
@@ -83,119 +65,154 @@ export function OpinionLeaderClient({
   };
 
   return (
-    <div className="space-y-16 pb-20">
-
-      {/* Hero Section */}
-      <div className="relative py-12 px-4 bg-gray-900 rounded-3xl overflow-hidden shadow-2xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-900/50 to-indigo-900/50" />
-        <div className="relative z-10 max-w-4xl mx-auto text-center">
-          <span className="inline-block mb-3 text-purple-400 font-medium tracking-wide">LEADERS OF CHANGE</span>
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            오피니언 리더
-          </h1>
-          <p className="text-gray-300 text-lg mb-8">
-            사회적 영향력을 가진 리더들과 함께 의미 있는 기부에 참여하세요.
-          </p>
-
-          <div className="grid grid-cols-3 gap-4 max-w-lg mx-auto bg-white/5 backdrop-blur-md p-4 rounded-xl border border-white/10">
+    <div className="min-h-screen bg-gradient-to-b from-purple-950 to-slate-950 text-slate-200">
+      {/* Header - Forum 스타일 */}
+      <header className="sticky top-0 z-10 backdrop-blur-xl bg-purple-950/80 border-b border-purple-800/50">
+        <div className="max-w-4xl mx-auto p-4">
+          <div className="flex items-center justify-between mb-4">
             <div>
-              <div className="text-2xl font-bold text-white">{leaders.length}</div>
-              <div className="text-xs text-gray-400">활동 리더</div>
+              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                🌟 Leader
+              </h1>
+              <p className="text-sm text-purple-400/70">오피니언 리더 · 선한 영향력</p>
             </div>
-            <div>
-              <div className="text-2xl font-bold text-white">{formatCount(totalFollowers)}</div>
-              <div className="text-xs text-gray-400">총 팔로워</div>
-            </div>
-            <div>
-              <div className="text-2xl font-bold text-purple-400">{formatAmount(totalImpact)}</div>
-              <div className="text-xs text-gray-400">영향력 기부금</div>
+            <div className="text-right">
+              <p className="text-xs text-slate-400">활동 리더</p>
+              <p className="text-xl font-bold text-purple-400">
+                <span className="text-2xl">{leaders.length}</span>
+                <span className="text-sm ml-1">명</span>
+              </p>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Filter Bar */}
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-        <div className="flex flex-col md:flex-row gap-6 justify-between items-center">
-
-          {/* Search */}
-          <div className="relative w-full md:w-96">
+          {/* 검색 */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
             <input
               type="text"
               placeholder="리더 이름 검색..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700 
+                         text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-purple-500
+                         focus:ring-1 focus:ring-purple-500/50 transition-all"
             />
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-          </div>
-
-          {/* Sort */}
-          <div className="flex items-center gap-2 w-full md:w-auto">
-            <span className="text-sm text-gray-500 whitespace-nowrap">정렬:</span>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-              className="w-full md:w-auto px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="followers">팔로워순</option>
-              <option value="donations">기부 영향력순</option>
-              <option value="name">이름순</option>
-            </select>
           </div>
         </div>
+      </header>
 
-        {/* Category Filter */}
-        <div className="mt-6 flex flex-wrap gap-2">
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${selectedCategory === null
-                ? "bg-purple-500 text-white"
-                : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200"
-              }`}
-          >
-            All
-          </button>
-          {categories.map((cat) => {
-            const catLeader = leaders.find((l) => l.category === cat);
-            return (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-colors ${selectedCategory === cat
-                    ? "bg-purple-500 text-white"
-                    : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200"
-                  }`}
-              >
-                {catLeader?.categoryIcon} {catLeader?.categoryLabel}
-              </button>
-            );
-          })}
+      {/* Stats */}
+      <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 text-center">
+            <p className="text-xs text-slate-500">총 팔로워</p>
+            <p className="text-lg font-bold text-white">{formatCount(totalFollowers)}</p>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 text-center">
+            <p className="text-xs text-slate-500">영향력 기부금</p>
+            <p className="text-lg font-bold text-purple-400">{formatAmount(totalImpact)} PMC</p>
+          </div>
         </div>
       </div>
 
-      {/* Grid */}
-      <MotionDiv
-        variants={staggerContainerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-      >
-        {filteredAndSortedLeaders.map((leader) => (
-          <MotionDiv key={leader.id} variants={fadeInVariants}>
-            <OpinionLeaderCard leader={leader} />
-          </MotionDiv>
-        ))}
-      </MotionDiv>
-
-      {/* Empty State */}
-      {filteredAndSortedLeaders.length === 0 && (
-        <div className="text-center py-20 bg-gray-50 dark:bg-gray-800/50 rounded-2xl">
-          <span className="text-4xl block mb-4">🔍</span>
-          <p className="text-gray-500">조건에 맞는 오피니언 리더가 없습니다.</p>
+      {/* Category Tabs */}
+      <div className="max-w-4xl mx-auto px-4 py-2 overflow-x-auto">
+        <div className="flex gap-2">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.key}
+              onClick={() => setSelectedCategory(cat.key)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all
+                ${selectedCategory === cat.key
+                  ? "bg-purple-500 text-white shadow-lg shadow-purple-500/25"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300"
+                }`}
+            >
+              {cat.icon} {cat.label}
+            </button>
+          ))}
         </div>
-      )}
+      </div>
 
+      {/* Leader Grid */}
+      <main className="max-w-4xl mx-auto px-4 py-4 pb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AnimatePresence mode="popLayout">
+            {filteredLeaders.map((leader) => (
+              <motion.div
+                key={leader.id}
+                layout
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Link href={`/donation/opinion-leader/${leader.category}/${leader.id}`}>
+                  <Card className="bg-slate-900/70 border-slate-800 hover:border-purple-700/50 transition-all cursor-pointer group overflow-hidden h-full">
+                    {/* 아바타 영역 */}
+                    <div className="relative aspect-video bg-gradient-to-br from-purple-900/50 to-slate-900 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="w-20 h-20 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-4xl border-4 border-purple-500/30">
+                          {leader.avatarUrl ? (
+                            <img src={leader.avatarUrl} alt={leader.displayName} className="w-full h-full rounded-full object-cover" />
+                          ) : (
+                            leader.categoryIcon
+                          )}
+                        </div>
+                        {leader.isVerified && (
+                          <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded bg-purple-500/80 text-white text-xs">
+                            ✓ 인증됨
+                          </span>
+                        )}
+                      </div>
+                      {/* 팔로워 수 */}
+                      <div className="absolute top-2 right-2 px-2 py-1 rounded bg-black/60 text-white text-xs flex items-center gap-1">
+                        <Users className="w-3 h-3" />
+                        {formatCount(leader.followerCount)}
+                      </div>
+                    </div>
+
+                    <CardContent className="p-4 space-y-2">
+                      {/* 카테고리 */}
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <span className="px-2 py-0.5 rounded-full bg-purple-900/30 text-purple-400">
+                          {leader.categoryIcon} {leader.categoryLabel}
+                        </span>
+                      </div>
+
+                      {/* 이름 */}
+                      <h3 className="font-bold text-white group-hover:text-purple-400 transition-colors">
+                        {leader.displayName}
+                      </h3>
+
+                      {/* 소개 */}
+                      <p className="text-sm text-slate-400 line-clamp-2">{leader.bio}</p>
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between pt-2 text-xs text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <Heart className="w-3 h-3 text-pink-400" />
+                          영향력 {formatAmount(leader.totalDonationsInfluenced)} PMC
+                        </span>
+                        <span className="flex items-center gap-1 text-purple-400 font-medium">
+                          함께하기 →
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+
+        {filteredLeaders.length === 0 && (
+          <div className="text-center py-16 text-slate-500">
+            <Star className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>조건에 맞는 리더가 없습니다.</p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

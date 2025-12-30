@@ -1,180 +1,137 @@
-/**
- * AdView Entity
- * TimeConsume 광고 시청 기록 도메인 엔티티
- */
+import {
+  Result,
+  UserId,
+  success,
+  failure,
+  createUserId
+} from "@posmul/auth-economy-sdk";
+import { Entity } from "../../../../shared/domain/entity";
 
 export interface AdViewProps {
+  userId: UserId;
+  advertisementId: string;
+  completed: boolean;
+  rewardClaimed: boolean;
+  rewardAmount: number;
+}
+
+// DB 레코드 타입
+export interface AdViewDbRecord {
   id: string;
-  userId: string;
-  campaignId: string;
-  viewDate: Date;
-  startedAt: Date;
-  endedAt: Date | null;
-  watchDurationSeconds: number;
-  completionRate: number;
-  isCompleted: boolean;
-  surveyCompleted: boolean;
-  pmpEarned: number;
-  deviceInfo: Record<string, unknown> | null;
-  createdAt: Date;
+  user_id: string;
+  campaign_id: string;
+  view_date: string;
+  started_at: string;
+  ended_at?: string | null;
+  watch_duration_seconds: number;
+  completion_rate: number;
+  is_completed: boolean;
+  survey_completed: boolean;
+  pmp_earned: number;
+  device_info?: Record<string, unknown> | null;
 }
 
-export interface CreateAdViewInput {
-  userId: string;
-  campaignId: string;
-  deviceInfo?: Record<string, unknown>;
-}
+export class AdView extends Entity<string> {
+  private _userId: UserId;
+  private _advertisementId: string;
+  private _viewedAt: Date;
+  private _completed: boolean;
+  private _rewardClaimed: boolean;
+  private _rewardAmount: number;
+  private _watchDurationSeconds: number;
+  private _completionRate: number;
+  private _surveyCompleted: boolean;
 
-export interface CompleteAdViewInput {
-  endedAt: Date;
-  watchDurationSeconds: number;
-  campaignDuration: number;
-  pmpReward: number;
-  pmpRewardFull: number;
-  surveyPmpBonus: number;
-  surveyCompleted: boolean;
-}
-
-export class AdView {
-  private constructor(private props: AdViewProps) {}
-
-  get id(): string {
-    return this.props.id;
+  private constructor(
+    id: string,
+    props: AdViewProps,
+    viewedAt?: Date,
+    watchDurationSeconds: number = 0,
+    completionRate: number = 0,
+    surveyCompleted: boolean = false
+  ) {
+    super(id);
+    this._userId = props.userId;
+    this._advertisementId = props.advertisementId;
+    this._completed = props.completed;
+    this._rewardClaimed = props.rewardClaimed;
+    this._rewardAmount = props.rewardAmount;
+    this._viewedAt = viewedAt || new Date();
+    this._watchDurationSeconds = watchDurationSeconds;
+    this._completionRate = completionRate;
+    this._surveyCompleted = surveyCompleted;
   }
 
-  get userId(): string {
-    return this.props.userId;
-  }
-
-  get campaignId(): string {
-    return this.props.campaignId;
-  }
-
-  get viewDate(): Date {
-    return this.props.viewDate;
-  }
-
-  get startedAt(): Date {
-    return this.props.startedAt;
-  }
-
-  get endedAt(): Date | null {
-    return this.props.endedAt;
-  }
-
-  get watchDurationSeconds(): number {
-    return this.props.watchDurationSeconds;
-  }
-
-  get completionRate(): number {
-    return this.props.completionRate;
-  }
-
-  get isCompleted(): boolean {
-    return this.props.isCompleted;
-  }
-
-  get surveyCompleted(): boolean {
-    return this.props.surveyCompleted;
-  }
-
-  get pmpEarned(): number {
-    return this.props.pmpEarned;
-  }
-
-  get deviceInfo(): Record<string, unknown> | null {
-    return this.props.deviceInfo;
+  public static create(
+    props: AdViewProps,
+    id?: string
+  ): Result<AdView, Error> {
+    const viewId = id || crypto.randomUUID();
+    return success(new AdView(viewId, props));
   }
 
   /**
-   * 광고 시청 완료 처리
+   * DB 레코드로부터 AdView 엔티티 생성
    */
-  complete(input: CompleteAdViewInput): AdView {
-    const completionRate = Math.min(
-      (input.watchDurationSeconds / input.campaignDuration) * 100,
-      100
+  public static fromDatabase(row: Record<string, unknown>): AdView {
+    const userId = createUserId(String(row.user_id));
+    const props: AdViewProps = {
+      userId,
+      advertisementId: String(row.campaign_id),
+      completed: Boolean(row.is_completed),
+      rewardClaimed: Boolean(row.pmp_earned && Number(row.pmp_earned) > 0),
+      rewardAmount: Number(row.pmp_earned) || 0,
+    };
+
+    return new AdView(
+      String(row.id),
+      props,
+      row.started_at ? new Date(String(row.started_at)) : new Date(),
+      Number(row.watch_duration_seconds) || 0,
+      Number(row.completion_rate) || 0,
+      Boolean(row.survey_completed)
     );
-
-    let pmpEarned = 0;
-    
-    // 30초 이상 시청해야 PMP 지급
-    if (input.watchDurationSeconds >= 30) {
-      pmpEarned = input.watchDurationSeconds >= input.campaignDuration
-        ? input.pmpRewardFull
-        : input.pmpReward;
-    }
-
-    // 설문 참여 시 추가 보상
-    if (input.surveyCompleted && input.watchDurationSeconds >= 30) {
-      pmpEarned += input.surveyPmpBonus;
-    }
-
-    return new AdView({
-      ...this.props,
-      endedAt: input.endedAt,
-      watchDurationSeconds: input.watchDurationSeconds,
-      completionRate,
-      isCompleted: input.watchDurationSeconds >= input.campaignDuration,
-      surveyCompleted: input.surveyCompleted,
-      pmpEarned,
-    });
   }
 
-  static create(input: CreateAdViewInput): AdView {
-    const now = new Date();
-    return new AdView({
-      id: crypto.randomUUID(),
-      userId: input.userId,
-      campaignId: input.campaignId,
-      viewDate: now,
-      startedAt: now,
-      endedAt: null,
-      watchDurationSeconds: 0,
-      completionRate: 0,
-      isCompleted: false,
-      surveyCompleted: false,
-      pmpEarned: 0,
-      deviceInfo: input.deviceInfo ?? null,
-      createdAt: now,
-    });
-  }
-
-  static fromDatabase(row: Record<string, unknown>): AdView {
-    return new AdView({
-      id: row.id as string,
-      userId: row.user_id as string,
-      campaignId: row.campaign_id as string,
-      viewDate: new Date(row.view_date as string),
-      startedAt: new Date(row.started_at as string),
-      endedAt: row.ended_at ? new Date(row.ended_at as string) : null,
-      watchDurationSeconds: row.watch_duration_seconds as number,
-      completionRate: Number(row.completion_rate),
-      isCompleted: row.is_completed as boolean,
-      surveyCompleted: row.survey_completed as boolean,
-      pmpEarned: row.pmp_earned as number,
-      deviceInfo: row.device_info as Record<string, unknown> | null,
-      createdAt: new Date(row.created_at as string),
-    });
-  }
-
-  toDatabase(): Record<string, unknown> {
+  /**
+   * DB 저장용 레코드로 변환
+   */
+  public toDatabase(): AdViewDbRecord {
     return {
-      id: this.props.id,
-      user_id: this.props.userId,
-      campaign_id: this.props.campaignId,
-      view_date: this.props.viewDate.toISOString().split('T')[0],
-      started_at: this.props.startedAt.toISOString(),
-      ended_at: this.props.endedAt?.toISOString() ?? null,
-      watch_duration_seconds: this.props.watchDurationSeconds,
-      completion_rate: this.props.completionRate,
-      is_completed: this.props.isCompleted,
-      survey_completed: this.props.surveyCompleted,
-      pmp_earned: this.props.pmpEarned,
-      device_info: this.props.deviceInfo,
+      id: this.id.toString(),
+      user_id: String(this._userId),
+      campaign_id: this._advertisementId,
+      view_date: this._viewedAt.toISOString().split("T")[0],
+      started_at: this._viewedAt.toISOString(),
+      ended_at: this._completed ? new Date().toISOString() : null,
+      watch_duration_seconds: this._watchDurationSeconds,
+      completion_rate: this._completionRate,
+      is_completed: this._completed,
+      survey_completed: this._surveyCompleted,
+      pmp_earned: this._rewardAmount,
+      device_info: null,
     };
   }
 
-  toJSON(): AdViewProps {
-    return { ...this.props };
+  public claimReward(): Result<void, Error> {
+    if (!this._completed) {
+      return failure(new Error("Cannot claim reward for incomplete view"));
+    }
+    if (this._rewardClaimed) {
+      return failure(new Error("Reward already claimed"));
+    }
+    this._rewardClaimed = true;
+    return success(undefined);
   }
+
+  // Getters
+  get rewardClaimed(): boolean { return this._rewardClaimed; }
+  get userId(): UserId { return this._userId; }
+  get advertisementId(): string { return this._advertisementId; }
+  get viewedAt(): Date { return this._viewedAt; }
+  get completed(): boolean { return this._completed; }
+  get rewardAmount(): number { return this._rewardAmount; }
+  get watchDurationSeconds(): number { return this._watchDurationSeconds; }
+  get completionRate(): number { return this._completionRate; }
+  get surveyCompleted(): boolean { return this._surveyCompleted; }
 }

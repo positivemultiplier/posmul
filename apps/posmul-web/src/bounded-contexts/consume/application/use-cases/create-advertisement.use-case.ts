@@ -21,7 +21,7 @@ import {
 export class CreateAdvertisementUseCase {
   constructor(
     private readonly advertisementRepository: IAdvertisementRepository
-  ) {}
+  ) { }
 
   async execute(
     advertiserId: UserId,
@@ -71,19 +71,18 @@ export class CreateAdvertisementUseCase {
           success: false,
           error: new Error("처리에 실패했습니다."),
         };
-      } // Advertisement 엔티티 생성 (기존 create 메서드 시그니처에 맞춤)
-      const advertisementResult = Advertisement.create(
-        validData.title,
-        validData.description,
-        validData.category,
-        validData.content.videoUrl || validData.content.imageUrl || "",
-        validData.content.imageUrl || "", // thumbnail
-        viewingDurationResult.data,
-        validData.targetAudience?.regions || [],
-        rewardRateResult.data,
-        advertiserId,
-        { budget: validData.budget, maxViews: validData.maxViews }
-      );
+      } // Advertisement 엔티티 생성 (AdvertisementProps 시그니처 사용)
+      const advertisementResult = Advertisement.create({
+        campaignId: crypto.randomUUID(), // 새 캠페인 ID 생성
+        title: validData.title,
+        description: validData.description,
+        videoUrl: validData.content.videoUrl || "",
+        thumbnailUrl: validData.content.imageUrl || "",
+        durationSeconds: validData.viewingDuration,
+        rewardPmpAmount: validData.budget || 0,
+        predictionTopicId: undefined,
+        rewardRate: rewardRateResult.data,
+      }, advertisementIdResult.data.getValue());
 
       if (!advertisementResult.success) {
         return {
@@ -105,7 +104,7 @@ export class CreateAdvertisementUseCase {
 
       return {
         success: true,
-        data: { advertisementId: advertisementResult.data.getId().getValue() },
+        data: { advertisementId: advertisementResult.data.id.toString() },
       };
     } catch (error) {
       return {

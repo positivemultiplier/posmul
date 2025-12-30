@@ -1,17 +1,14 @@
 /**
  * Forum Layout
  *
- * Layout for forum domain with navigation structure:
- * 1단: Forum (포럼)
- * 2단: brainstorming, debate, common
- * 3단: Category-specific subcategories
+ * Layout for forum domain:
+ * - News: 공공 뉴스, 지식 획득
+ * - Budget: 예산 감시
+ * - Brainstorming & Debate: 공론화
  *
  * @author PosMul Development Team
  * @since 2024-12
  */
-import { Suspense } from "react";
-
-import { MoneyWaveStatus } from "../../shared/ui";
 
 interface ForumLayoutProps {
   children: React.ReactNode;
@@ -19,28 +16,9 @@ interface ForumLayoutProps {
 
 export default function ForumLayout({ children }: ForumLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* MoneyWave Status */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        <Suspense
-          fallback={<div className="h-20 bg-purple-50 animate-pulse" />}
-        >
-          <MoneyWaveStatus />
-        </Suspense>
-      </div>
-
+    <div className="min-h-screen">
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <Suspense
-          fallback={
-            <div className="flex justify-center items-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-            </div>
-          }
-        >
-          {children}
-        </Suspense>
-      </main>
+      <main>{children}</main>
     </div>
   );
 }

@@ -6,7 +6,8 @@ import { ChevronRightIcon, Menu, X } from "lucide-react";
 import { createClient } from "../../../../lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { useRouter, usePathname } from "next/navigation";
-import { CompactWidget } from "./MoneyWave";
+import { JourneyBarContainer } from "./JourneyBarContainer";
+import { CompactBalanceWidget } from "./CompactBalanceWidget";
 
 type ThreeRowNavbarProps = {
   hideNav?: boolean;
@@ -18,31 +19,33 @@ const navigationData = {
     title: "소비",
     href: "/consume",
     categories: {
-      time: {
-        title: "⏰ TimeConsume",
-        href: "/consume/time",
+      major: {
+        title: "🎬 Major League",
+        href: "/consume/major-league",
         subcategories: [
-          { title: "광고 시청", path: "/consume/time?type=video" },
-          { title: "설문 참여", path: "/consume/time?type=survey" },
-          { title: "브랜드 체험", path: "/consume/time?type=experience" },
+          { title: "오늘의 추천", path: "/consume/major-league" },
+          { title: "광고 시청", path: "/consume/major-league?type=video" },
+          { title: "설문 참여", path: "/consume/major-league?type=survey" },
         ]
       },
-      money: {
-        title: "💳 MoneyConsume",
-        href: "/consume/money",
+      minor: {
+        title: "🏪 Minor League",
+        href: "/consume/minor-league",
         subcategories: [
-          { title: "식품", path: "/consume/money?category=food" },
-          { title: "카페", path: "/consume/money?category=cafe" },
-          { title: "생활", path: "/consume/money?category=living" },
+          { title: "전체 상점", path: "/consume/minor-league" },
+          { title: "카페", path: "/consume/minor-league?category=cafe" },
+          { title: "음식점", path: "/consume/minor-league?category=restaurant" },
+          { title: "서점", path: "/consume/minor-league?category=bookstore" },
         ]
       },
       cloud: {
-        title: "☁️ CloudConsume",
-        href: "/consume/cloud",
+        title: "💡 Cloud Funding",
+        href: "/consume/cloud-funding",
         subcategories: [
-          { title: "환경", path: "/consume/cloud?category=environment" },
-          { title: "창작", path: "/consume/cloud?category=creative" },
-          { title: "기술", path: "/consume/cloud?category=tech" },
+          { title: "전체 프로젝트", path: "/consume/cloud-funding" },
+          { title: "창업", path: "/consume/cloud-funding?category=startup" },
+          { title: "출판", path: "/consume/cloud-funding?category=publish" },
+          { title: "농업", path: "/consume/cloud-funding?category=agriculture" },
         ]
       }
     }
@@ -141,40 +144,33 @@ const navigationData = {
     href: "/forum",
     categories: {
       news: {
-        title: "News",
+        title: "📰 News",
         href: "/forum/news",
         subcategories: [
-          { title: "Cosmos", path: "/forum/news?level=cosmos" },
-          { title: "Nation", path: "/forum/news?level=nation" },
-          { title: "Region", path: "/forum/news?level=region" },
-          { title: "Local", path: "/forum/news?level=local" },
-        ]
-      },
-      debate: {
-        title: "Debate",
-        href: "/forum/debate",
-        subcategories: [
-          { title: "정책토론", path: "/forum/debate?topic=policy" },
-          { title: "경제토론", path: "/forum/debate?topic=economy" },
-          { title: "사회토론", path: "/forum/debate?topic=society" },
-        ]
-      },
-      brainstorm: {
-        title: "Brainstorming",
-        href: "/forum/brainstorming",
-        subcategories: [
-          { title: "아이디어", path: "/forum/brainstorming?type=ideas" },
-          { title: "프로젝트", path: "/forum/brainstorming?type=projects" },
-          { title: "혁신", path: "/forum/brainstorming?type=innovation" },
+          { title: "전체 뉴스", path: "/forum/news" },
+          { title: "정책·법률", path: "/forum/news?category=policy" },
+          { title: "경제·재정", path: "/forum/news?category=economy" },
+          { title: "사회·복지", path: "/forum/news?category=society" },
         ]
       },
       budget: {
-        title: "Budget",
+        title: "💰 Budget",
         href: "/forum/budget",
         subcategories: [
-          { title: "Colony", path: "/forum/budget?level=colony" },
-          { title: "National", path: "/forum/budget?level=national" },
-          { title: "Region", path: "/forum/budget?level=region" },
+          { title: "예산 감시", path: "/forum/budget" },
+          { title: "국가 예산", path: "/forum/budget?level=national" },
+          { title: "지역 예산", path: "/forum/budget?level=regional" },
+          { title: "이슈 리포트", path: "/forum/budget?type=report" },
+        ]
+      },
+      agora: {
+        title: "💬 Agora",
+        href: "/forum/agora",
+        subcategories: [
+          { title: "공론장", path: "/forum/agora" },
+          { title: "브레인스토밍", path: "/forum/agora?type=brainstorm" },
+          { title: "정책 토론", path: "/forum/agora?type=debate" },
+          { title: "시민 제안", path: "/forum/agora?type=proposal" },
         ]
       }
     }
@@ -263,6 +259,65 @@ const navigationData = {
       }
     }
   }
+};
+
+// 도메인별 Tone on Tone 컬러 시스템
+const domainColors: Record<keyof typeof navigationData, {
+  active: string;
+  hover: string;
+  border: string;
+  shadow: string;
+  categoryActive: string;
+  categoryHover: string;
+}> = {
+  consume: {
+    active: "bg-gradient-to-r from-indigo-600 to-purple-600 text-white",
+    hover: "hover:bg-indigo-900/30 hover:text-indigo-300",
+    border: "border-indigo-500/50",
+    shadow: "shadow-indigo-500/30",
+    categoryActive: "bg-indigo-500 text-white",
+    categoryHover: "hover:bg-indigo-900/30 hover:text-indigo-300",
+  },
+  prediction: {
+    active: "bg-gradient-to-r from-blue-600 to-cyan-600 text-white",
+    hover: "hover:bg-blue-900/30 hover:text-blue-300",
+    border: "border-blue-500/50",
+    shadow: "shadow-blue-500/30",
+    categoryActive: "bg-blue-500 text-white",
+    categoryHover: "hover:bg-blue-900/30 hover:text-blue-300",
+  },
+  donation: {
+    active: "bg-gradient-to-r from-purple-600 to-pink-600 text-white",
+    hover: "hover:bg-purple-900/30 hover:text-purple-300",
+    border: "border-purple-500/50",
+    shadow: "shadow-purple-500/30",
+    categoryActive: "bg-purple-500 text-white",
+    categoryHover: "hover:bg-purple-900/30 hover:text-purple-300",
+  },
+  forum: {
+    active: "bg-gradient-to-r from-emerald-600 to-teal-600 text-white",
+    hover: "hover:bg-emerald-900/30 hover:text-emerald-300",
+    border: "border-emerald-500/50",
+    shadow: "shadow-emerald-500/30",
+    categoryActive: "bg-emerald-500 text-white",
+    categoryHover: "hover:bg-emerald-900/30 hover:text-emerald-300",
+  },
+  ranking: {
+    active: "bg-gradient-to-r from-amber-600 to-orange-600 text-white",
+    hover: "hover:bg-amber-900/30 hover:text-amber-300",
+    border: "border-amber-500/50",
+    shadow: "shadow-amber-500/30",
+    categoryActive: "bg-amber-500 text-white",
+    categoryHover: "hover:bg-amber-900/30 hover:text-amber-300",
+  },
+  other: {
+    active: "bg-gradient-to-r from-slate-600 to-gray-600 text-white",
+    hover: "hover:bg-slate-900/30 hover:text-slate-300",
+    border: "border-slate-500/50",
+    shadow: "shadow-slate-500/30",
+    categoryActive: "bg-slate-500 text-white",
+    categoryHover: "hover:bg-slate-900/30 hover:text-slate-300",
+  },
 };
 
 function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
@@ -358,32 +413,33 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
           </Link>
 
           {/* Desktop: 메인 도메인 (Invest, Prediction, Donation, Forum) */}
-          <div className="hidden md:flex items-center space-x-6 flex-1">
-            {Object.entries(navigationData).map(([domain, data]) => (
-              <Link
-                key={domain}
-                href={data.href}
-                onClick={() => {
-                  setSelectedDomain(domain as keyof typeof navigationData);
-                  setSelectedCategory(Object.keys(data.categories)[0]);
-                }}
-                className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${selectedDomain === domain
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/50'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                {data.title}
-              </Link>
-            ))}
+          <div className="hidden md:flex items-center space-x-4 flex-1">
+            {Object.entries(navigationData).map(([domain, data]) => {
+              const colors = domainColors[domain as keyof typeof navigationData];
+              const isSelected = selectedDomain === domain;
+              return (
+                <Link
+                  key={domain}
+                  href={data.href}
+                  onClick={() => {
+                    setSelectedDomain(domain as keyof typeof navigationData);
+                    setSelectedCategory(Object.keys(data.categories)[0]);
+                  }}
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isSelected
+                    ? `${colors.active} shadow-lg ${colors.shadow}`
+                    : `text-gray-400 ${colors.hover}`
+                    }`}
+                >
+                  {data.title}
+                </Link>
+              );
+            })}
           </div>
 
-          {/* Desktop: Auth Header */}
+          {/* Desktop: Auth Header + Balance Widget */}
           <div className="hidden md:flex items-center gap-3">
-            {/* MoneyWave Compact Widget */}
-            <CompactWidget
-              domain={selectedDomain}
-              category={selectedCategory}
-            />
+            {/* Compact Balance Widget */}
+            <CompactBalanceWidget />
 
             {user ? (
               <>
@@ -432,48 +488,51 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
 
         {/* Row 2: 카테고리 (Desktop만) */}
         <div className="hidden md:flex items-center h-12 border-b border-white/10">
-          <div className="flex items-center space-x-6">
-            {Object.entries(currentCategories).map(([categoryKey, category]) => (
-              <Link
-                key={categoryKey}
-                href={(category as any).href}
-                onClick={() => setSelectedCategory(categoryKey)}
-                className={`px-3 py-1 text-sm font-medium rounded-lg transition-all duration-200 ${selectedCategory === categoryKey
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/50'
-                  : 'text-gray-400 hover:text-white hover:bg-white/5'
-                  }`}
-              >
-                {category.title}
-              </Link>
-            ))}
+          <div className="flex items-center space-x-4">
+            {Object.entries(currentCategories).map(([categoryKey, category]) => {
+              const colors = domainColors[selectedDomain];
+              const isSelected = selectedCategory === categoryKey;
+              return (
+                <Link
+                  key={categoryKey}
+                  href={(category as any).href}
+                  onClick={() => setSelectedCategory(categoryKey)}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 ${isSelected
+                    ? colors.categoryActive
+                    : `text-gray-400 ${colors.categoryHover}`
+                    }`}
+                >
+                  {category.title}
+                </Link>
+              );
+            })}
           </div>
         </div>
 
         {/* Row 3: 서브카테고리 (Desktop만) */}
         <div className="hidden md:flex items-center h-10">
           <div className="flex items-center space-x-4">
-            {currentSubcategories.map((subcategory: any, index: number) => (
-              (() => {
-                const active = isActiveSubcategory(subcategory.path);
-                return (
-              <Link
-                key={index}
-                href={subcategory.path}
-                className={
-                  "px-3 py-1 text-sm font-medium rounded-lg transition-all duration-200 flex items-center " +
-                  (active
-                    ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg shadow-blue-500/50"
-                    : "text-gray-400 hover:text-white hover:bg-white/5")
-                }
-              >
-                {subcategory.title}
-                {index < currentSubcategories.length - 1 && (
-                  <ChevronRightIcon className={"h-3 w-3 mx-1 " + (active ? "text-white/80" : "text-gray-500")} />
-                )}
-              </Link>
-                );
-              })()
-            ))}
+            {currentSubcategories.map((subcategory: any, index: number) => {
+              const colors = domainColors[selectedDomain];
+              const active = isActiveSubcategory(subcategory.path);
+              return (
+                <Link
+                  key={index}
+                  href={subcategory.path}
+                  className={
+                    "px-3 py-1 text-sm font-medium rounded-lg transition-all duration-200 flex items-center " +
+                    (active
+                      ? `${colors.categoryActive} shadow-sm`
+                      : `text-gray-400 ${colors.categoryHover}`)
+                  }
+                >
+                  {subcategory.title}
+                  {index < currentSubcategories.length - 1 && (
+                    <ChevronRightIcon className={"h-3 w-3 mx-1 " + (active ? "text-white/80" : "text-gray-500")} />
+                  )}
+                </Link>
+              );
+            })}
           </div>
         </div>
 
@@ -535,6 +594,9 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
           </div>
         </div>
       )}
+
+      {/* Journey Bar - 추후 Row1에 통합 예정 */}
+      {/* <JourneyBarContainer /> */}
     </div>
   );
 }

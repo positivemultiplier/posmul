@@ -4,7 +4,7 @@
  * URL 예시:
  * /donation/direct/:subcategory/:group/:itemId
  */
-import ItemDetailPage from "../../../item/[itemId]/page";
+import { redirect } from "next/navigation";
 
 interface PageProps {
   params: Promise<{
@@ -16,5 +16,7 @@ interface PageProps {
 
 export default async function DirectItemDepth5Page({ params }: PageProps) {
   const { itemId } = await params;
-  return ItemDetailPage({ params: Promise.resolve({ itemId }) });
+  // 실제 상세 페이지로 리다이렉트
+  redirect(`/donation/direct/item/${itemId}`);
 }
+

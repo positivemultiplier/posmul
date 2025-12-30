@@ -1,171 +1,191 @@
-import { Suspense } from "react";
+"use client";
+
+import React from "react";
+import { Building2, Star, Gift, Award, ArrowRight, Users, Heart, TrendingUp } from "lucide-react";
+import { motion } from "framer-motion";
 import Link from "next/link";
-import { ShinyText } from "@/shared/ui/components/motion/ShinyText";
-import { SpotlightCard } from "@/shared/ui/components/motion/SpotlightCard";
-import { NumberTicker } from "@/shared/ui/components/motion/NumberTicker";
-import { MotionDiv, fadeInVariants, staggerContainerVariants, slideUpVariants } from "@/shared/ui/components/motion/MotionComponents";
-import { createClient } from "../../lib/supabase/server";
+import { Card, CardContent } from "@/shared/ui/components/base/Card";
 
-// --- Types ---
-interface DonationStats {
-  totalAmount: number;
-  totalDonors: number;
-  todaysDonationCount: number;
-}
+// 3-Pillar 데이터
+const PILLARS = [
+  {
+    key: "institute",
+    title: "🏛️ Institute",
+    subtitle: "검증된 기관 기부",
+    description: "NGO, 비영리 단체의 캠페인에 직접 후원하세요. 투명성 보고서로 기부금 사용 내역을 확인할 수 있습니다.",
+    href: "/donation/institute",
+    color: "from-blue-500 to-indigo-500",
+    bgColor: "from-blue-900/50 to-slate-900",
+    stats: { count: 42, label: "개 기관" },
+    icon: <Building2 className="w-8 h-8" />,
+  },
+  {
+    key: "leader",
+    title: "🌟 Leader",
+    subtitle: "오피니언 리더 후원",
+    description: "신뢰하는 인플루언서가 추천하는 캠페인에 동참하세요. 리더와 함께 선한 영향력을 확산하세요.",
+    href: "/donation/opinion-leader",
+    color: "from-purple-500 to-pink-500",
+    bgColor: "from-purple-900/50 to-slate-900",
+    stats: { count: 128, label: "명 리더" },
+    icon: <Star className="w-8 h-8" />,
+  },
+  {
+    key: "direct",
+    title: "🎁 Direct",
+    subtitle: "물품 직접 기부",
+    description: "필요한 곳에 필요한 물품을 직접 전달하세요. 의류, 식품, 교육용품 등 다양한 펀딩에 참여할 수 있습니다.",
+    href: "/donation/direct",
+    color: "from-emerald-500 to-teal-500",
+    bgColor: "from-emerald-900/50 to-slate-900",
+    stats: { count: 56, label: "개 프로젝트" },
+    icon: <Gift className="w-8 h-8" />,
+  },
+];
 
-// --- Server Actions (Mock for now, will integrate later) ---
-async function getDonationStats(): Promise<DonationStats> {
-  // Simulate delay
-  // await new Promise((resolve) => setTimeout(resolve, 1000));
-  return {
-    totalAmount: 124500000,
-    totalDonors: 15420,
-    todaysDonationCount: 142,
-  };
-}
+// 실시간 기부 현황 (Mock)
+const LIVE_DONATIONS = [
+  { id: 1, user: "User***21", amount: 10000, target: "환경재단", time: "1분 전" },
+  { id: 2, user: "User***87", amount: 5000, target: "아동복지센터", time: "3분 전" },
+  { id: 3, user: "User***45", amount: 25000, target: "김OO 리더 캠페인", time: "5분 전" },
+];
 
-// --- Components ---
+export default function DonationPage() {
+  const totalDonation = 124500000; // Mock
+  const totalDonors = 15420; // Mock
+  const todayCount = 142; // Mock
 
-function HeroSection({ stats }: { stats: DonationStats }) {
   return (
-    <div className="relative py-20 px-4 overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-purple-500/20 blur-[120px] rounded-full pointer-events-none" />
+    <div className="min-h-screen bg-gradient-to-b from-purple-950 to-slate-950 text-slate-200">
+      {/* Header - Forum 스타일 */}
+      <header className="sticky top-0 z-10 backdrop-blur-xl bg-purple-950/80 border-b border-purple-800/50">
+        <div className="max-w-4xl mx-auto p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+                💜 Donation
+              </h1>
+              <p className="text-sm text-purple-400/70">세상을 바꾸는 따뜻한 마음</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-400">오늘 참여</p>
+              <p className="text-xl font-bold text-purple-400">
+                <span className="text-2xl">{todayCount}</span>
+                <span className="text-sm ml-1">명</span>
+              </p>
+            </div>
+          </div>
+        </div>
+      </header>
 
-      <div className="relative z-10 max-w-5xl mx-auto text-center space-y-8">
-        <MotionDiv
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm mb-6">
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
+        {/* Stats Summary */}
+        <section className="grid grid-cols-2 gap-4">
+          <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 text-center">
+            <p className="text-xs text-slate-500 mb-1">총 누적 기부금</p>
+            <p className="text-2xl font-bold text-white">
+              {(totalDonation / 100000000).toFixed(1)}억
+              <span className="text-sm text-purple-400 ml-1">PMC</span>
+            </p>
+          </div>
+          <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 text-center">
+            <p className="text-xs text-slate-500 mb-1">함께한 기부자</p>
+            <p className="text-2xl font-bold text-white">
+              {totalDonors.toLocaleString()}
+              <span className="text-sm text-slate-400 ml-1">명</span>
+            </p>
+          </div>
+        </section>
+
+        {/* Live Ticker */}
+        <section className="p-4 rounded-xl bg-slate-900/50 border border-slate-800">
+          <div className="flex items-center gap-2 mb-3">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            <span className="text-sm font-medium text-gray-200">오늘 {stats.todaysDonationCount}명이 참여했습니다</span>
+            <span className="text-sm font-medium text-slate-400">실시간 기부</span>
           </div>
+          <div className="space-y-2">
+            {LIVE_DONATIONS.map((donation) => (
+              <div key={donation.id} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <Heart className="w-4 h-4 text-pink-400" />
+                  <span className="text-slate-300">{donation.user}</span>
+                  <span className="text-purple-400 font-medium">{donation.amount.toLocaleString()} PMC</span>
+                  <span className="text-slate-500">→</span>
+                  <span className="text-slate-300">{donation.target}</span>
+                </div>
+                <span className="text-xs text-slate-500">{donation.time}</span>
+              </div>
+            ))}
+          </div>
+        </section>
 
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white mb-6">
-            세상을 바꾸는 힘, <br />
-            <ShinyText text="당신의 따뜻한 마음" speed={4} className="mt-2" />
-          </h1>
+        {/* 3-Pillar Cards - Forum 카드 스타일 */}
+        <section>
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-purple-400" />
+            기부 방법 선택
+          </h2>
+          <div className="grid gap-4 md:grid-cols-3">
+            {PILLARS.map((pillar, index) => (
+              <motion.div
+                key={pillar.key}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <Link href={pillar.href}>
+                  <Card className="bg-slate-900/70 border-slate-800 hover:border-purple-700/50 transition-all cursor-pointer group overflow-hidden h-full">
+                    {/* 히어로 영역 */}
+                    <div className={`relative aspect-[4/3] bg-gradient-to-br ${pillar.bgColor} flex flex-col items-center justify-center p-4`}>
+                      <div className={`text-transparent bg-clip-text bg-gradient-to-r ${pillar.color}`}>
+                        {pillar.icon}
+                      </div>
+                      <h3 className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${pillar.color} mt-2`}>
+                        {pillar.title}
+                      </h3>
+                      <p className="text-xs text-slate-400 text-center">{pillar.subtitle}</p>
+                      <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/60 text-white text-xs">
+                        {pillar.stats.count}{pillar.stats.label}
+                      </div>
+                    </div>
+                    <CardContent className="p-4 space-y-2">
+                      <p className="text-sm text-slate-400 line-clamp-2">{pillar.description}</p>
+                      <div className="flex items-center justify-end text-xs text-slate-500 group-hover:text-purple-400 transition-colors">
+                        바로가기 <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+        </section>
 
-          <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
-            PosMul과 함께 더 나은 미래를 만들어가세요. <br />
-            투명한 기부 생태계가 당신의 선한 영향력을 증명합니다.
-          </p>
-        </MotionDiv>
-
-        {/* Stats Grid */}
-        <MotionDiv
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.5 }}
-          className="grid grid-cols-1 md:grid-cols-2 gap-4 max-w-3xl mx-auto mt-12"
-        >
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <div className="text-sm text-gray-400 mb-1">총 누적 기부금</div>
-            <div className="text-4xl font-bold text-white flex items-center justify-center gap-1">
-              <NumberTicker value={stats.totalAmount} />
-              <span className="text-2xl text-purple-400">PMC</span>
+        {/* 기부 가이드 */}
+        <section>
+          <h2 className="text-lg font-bold text-white mb-4">💡 기부 가이드</h2>
+          <div className="grid gap-3 md:grid-cols-3">
+            <div className="p-4 rounded-xl bg-blue-900/20 border border-blue-800/30 text-center">
+              <Building2 className="w-6 h-6 text-blue-400 mx-auto mb-2" />
+              <p className="font-medium text-white text-sm">기관 기부</p>
+              <p className="text-xs text-slate-400">검증된 단체 후원</p>
+            </div>
+            <div className="p-4 rounded-xl bg-purple-900/20 border border-purple-800/30 text-center">
+              <Star className="w-6 h-6 text-purple-400 mx-auto mb-2" />
+              <p className="font-medium text-white text-sm">리더 후원</p>
+              <p className="text-xs text-slate-400">인플루언서 캠페인</p>
+            </div>
+            <div className="p-4 rounded-xl bg-emerald-900/20 border border-emerald-800/30 text-center">
+              <Gift className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
+              <p className="font-medium text-white text-sm">직접 기부</p>
+              <p className="text-xs text-slate-400">물품 펀딩 참여</p>
             </div>
           </div>
-          <div className="p-6 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md">
-            <div className="text-sm text-gray-400 mb-1">함께한 기부자</div>
-            <div className="text-4xl font-bold text-white">
-              <NumberTicker value={stats.totalDonors} />
-              <span className="text-2xl text-gray-500 ml-1">명</span>
-            </div>
-          </div>
-        </MotionDiv>
-      </div>
+        </section>
+      </main>
     </div>
-  );
-}
-
-function DominionGateway() {
-  return (
-    <div className="max-w-6xl mx-auto px-4 py-16">
-      <h2 className="text-2xl font-bold text-white mb-8 text-center">어디에 기부하시겠습니까?</h2>
-      <MotionDiv
-        variants={staggerContainerVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true }}
-        className="grid grid-cols-1 md:grid-cols-2 gap-8"
-      >
-        <Link href="/donation/institute">
-          <SpotlightCard className="h-full p-8 group cursor-pointer border-gray-800 bg-gray-900/50 hover:border-gray-700 transition-colors">
-            <div className="flex flex-col h-full">
-              <div className="w-16 h-16 rounded-2xl bg-blue-500/20 flex items-center justify-center text-4xl mb-6 group-hover:scale-110 transition-transform duration-300">
-                🏛️
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-3">기부 단체 (Institutes)</h3>
-              <p className="text-gray-400 flex-1 leading-relaxed">
-                검증된 NGO와 비영리 단체의 캠페인에 직접 후원하세요.
-                투명성 보고서를 통해 기부금 사용 내역을 확인할 수 있습니다.
-              </p>
-              <div className="mt-6 flex items-center text-blue-400 font-medium opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0">
-                단체 찾아보기 →
-              </div>
-            </div>
-          </SpotlightCard>
-        </Link>
-
-        <Link href="/donation/opinion-leader">
-          <SpotlightCard className="h-full p-8 group cursor-pointer border-gray-800 bg-gray-900/50 hover:border-gray-700 transition-colors">
-            <div className="flex flex-col h-full">
-              <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center text-4xl mb-6 group-hover:scale-110 transition-transform duration-300">
-                🌟
-              </div>
-              <h3 className="text-2xl font-bold text-white mb-3">오피니언 리더 (Leaders)</h3>
-              <p className="text-gray-400 flex-1 leading-relaxed">
-                내가 신뢰하는 인플루언서가 추천하는 캠페인에 동참하세요.
-                리더의 영향력과 함께 선한 영향력을 확산할 수 있습니다.
-              </p>
-              <div className="mt-6 flex items-center text-purple-400 font-medium opacity-0 group-hover:opacity-100 transition-all transform translate-x-[-10px] group-hover:translate-x-0">
-                리더 찾아보기 →
-              </div>
-            </div>
-          </SpotlightCard>
-        </Link>
-      </MotionDiv>
-    </div>
-  );
-}
-
-function LiveTickerMock() {
-  return (
-    <div className="bg-black/20 border-y border-white/5 py-3 overflow-hidden">
-      <div className="flex whitespace-nowrap animate-marquee">
-        {[1, 2, 3, 4, 5].map((i) => (
-          <div key={i} className="inline-flex items-center mx-8 text-sm text-gray-400">
-            <span className="w-2 h-2 rounded-full bg-green-500 mr-2"></span>
-            <span className="font-bold text-gray-200 mr-2">User{100 + i}</span>님이
-            <span className="text-white font-medium mx-1">10,000 PMC</span>를
-            <span className="text-gray-300 mx-1">환경재단</span>에 기부했습니다.
-            <span className="text-xs text-gray-600 ml-2">{i}분 전</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-export default async function DonationPage() {
-  const stats = await getDonationStats();
-
-  return (
-    <main className="min-h-screen bg-gray-950 text-white selection:bg-purple-500/30">
-      <HeroSection stats={stats} />
-      <LiveTickerMock />
-      <DominionGateway />
-
-      {/* Footer Area / Additional Info */}
-      <div className="py-20 text-center text-gray-600 text-sm">
-        <p>PosMul Donation Platform &copy; 2025</p>
-      </div>
-    </main>
   );
 }

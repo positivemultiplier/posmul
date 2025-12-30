@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "../../lib/supabase/server";
 import { FadeIn } from "../HomeClientComponents";
-import { Activity, Vote, Film, Store } from "lucide-react";
+import { Activity, Vote, Film, Store, TrendingUp, Target } from "lucide-react";
 import { ClientPredictionGamesGrid } from "./components/ClientPredictionGamesGrid";
 import { CompactMoneyWaveCard } from "../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { getAggregatedPrizePool } from "../../bounded-contexts/prediction/application/prediction-pool.service";
@@ -34,6 +34,8 @@ export default async function PredictionPage() {
     ENTERTAINMENT: games?.filter(g => g.category === 'ENTERTAINMENT').length || 0,
   };
 
+  const totalActiveGames = (games?.length || 0);
+
   const categories = [
     {
       href: "/prediction/sports",
@@ -41,8 +43,8 @@ export default async function PredictionPage() {
       emoji: "⚽",
       title: "스포츠",
       count: categoryCounts.SPORTS,
-      gradient: "from-blue-500/10 to-cyan-500/10",
-      iconColor: "text-blue-400",
+      color: "from-blue-500 to-cyan-500",
+      bgColor: "from-blue-900/50 to-slate-900",
     },
     {
       href: "/prediction/politics",
@@ -50,8 +52,8 @@ export default async function PredictionPage() {
       emoji: "🗳️",
       title: "정치",
       count: categoryCounts.POLITICS,
-      gradient: "from-purple-500/10 to-pink-500/10",
-      iconColor: "text-purple-400",
+      color: "from-purple-500 to-pink-500",
+      bgColor: "from-purple-900/50 to-slate-900",
     },
     {
       href: "/prediction/consume",
@@ -59,8 +61,8 @@ export default async function PredictionPage() {
       emoji: "💳",
       title: "소비",
       count: categoryCounts.INVEST,
-      gradient: "from-green-500/10 to-emerald-500/10",
-      iconColor: "text-green-400",
+      color: "from-green-500 to-emerald-500",
+      bgColor: "from-green-900/50 to-slate-900",
     },
     {
       href: "/prediction/entertainment",
@@ -68,8 +70,8 @@ export default async function PredictionPage() {
       emoji: "🎭",
       title: "엔터테인먼트",
       count: categoryCounts.ENTERTAINMENT,
-      gradient: "from-orange-500/10 to-red-500/10",
-      iconColor: "text-orange-400",
+      color: "from-orange-500 to-red-500",
+      bgColor: "from-orange-900/50 to-slate-900",
     },
   ];
 
@@ -107,65 +109,81 @@ export default async function PredictionPage() {
   }
 
   return (
-    <div className="bg-gradient-to-b from-[#0a0a0f] via-[#1a1a2e] to-[#0a0a0f] min-h-screen text-white">
-      {/* Hero */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-        <FadeIn>
-          <div className="text-center mb-12">
-            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-              🎯 예측 게임
-            </h1>
-            <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-              AI 시대 직접민주주의를 위한 예측 게임 플랫폼
-            </p>
+    <div className="min-h-screen bg-gradient-to-b from-indigo-950 to-slate-950 text-white">
+      {/* Header - Forum 스타일 */}
+      <header className="sticky top-0 z-10 backdrop-blur-xl bg-indigo-950/80 border-b border-indigo-800/50">
+        <div className="max-w-4xl mx-auto p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
+                🎯 Prediction
+              </h1>
+              <p className="text-sm text-indigo-400/70">예측 게임 · PMP 배팅</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-400">진행 중</p>
+              <p className="text-xl font-bold text-indigo-400">
+                <span className="text-2xl">{totalActiveGames}</span>
+                <span className="text-sm ml-1">게임</span>
+              </p>
+            </div>
           </div>
-        </FadeIn>
-
-        {/* MoneyWave 상금풀 현황 (Level 0: 전체) */}
-        <FadeIn delay={0.2}>
-          <div className="mb-8">
-            <CompactMoneyWaveCard depthLevel={1} initialPool={platformTotalPool} />
-          </div>
-        </FadeIn>
-
-        {/* Category Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          {categories.map((category, index) => {
-            const Icon = category.icon;
-            return (
-              <FadeIn key={category.href} delay={index * 0.1}>
-                <Link href={category.href}>
-                  <div className={`p-6 bg-gradient-to-br ${category.gradient} backdrop-blur-xl border border-white/10 rounded-2xl hover:border-white/20 transition-all cursor-pointer`}>
-                    <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/5 mb-4 mx-auto">
-                      <Icon className={`w-6 h-6 ${category.iconColor}`} />
-                    </div>
-                    <h3 className="font-semibold text-lg text-center mb-2">{category.title}</h3>
-                    <div className="text-center">
-                      <span className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                        {category.count}
-                      </span>
-                      <span className="text-sm text-gray-400 ml-1">개</span>
-                    </div>
-                  </div>
-                </Link>
-              </FadeIn>
-            );
-          })}
         </div>
-      </section>
+      </header>
 
-      {/* Recent Games */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
+        {/* MoneyWave 상금풀 (룰렛 컴포넌트) - 유지 */}
         <FadeIn>
-          <h2 className="text-3xl font-bold mb-8 text-center">최근 게임</h2>
+          <CompactMoneyWaveCard depthLevel={1} initialPool={platformTotalPool} />
         </FadeIn>
 
-        <ClientPredictionGamesGrid
-          games={mappedGames}
-          userId={user?.id}
-          userPredictions={userPredictions}
-        />
-      </section>
+        {/* Category Grid - Forum 카드 스타일 */}
+        <section>
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-indigo-400" />
+            카테고리별 예측
+          </h2>
+          <div className="grid grid-cols-2 gap-4">
+            {categories.map((category) => {
+              const Icon = category.icon;
+              return (
+                <FadeIn key={category.href}>
+                  <Link href={category.href}>
+                    <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${category.bgColor} border border-slate-800 hover:border-indigo-700/50 transition-all cursor-pointer group`}>
+                      <div className="p-4 flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center`}>
+                          <Icon className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-bold text-white group-hover:text-indigo-400 transition-colors">
+                            {category.emoji} {category.title}
+                          </h3>
+                          <p className="text-sm text-slate-400">
+                            {category.count}개 게임
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                </FadeIn>
+              );
+            })}
+          </div>
+        </section>
+
+        {/* Recent Games */}
+        <section>
+          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <Target className="w-5 h-5 text-indigo-400" />
+            최근 게임
+          </h2>
+          <ClientPredictionGamesGrid
+            games={mappedGames}
+            userId={user?.id}
+            userPredictions={userPredictions}
+          />
+        </section>
+      </main>
     </div>
   );
 }

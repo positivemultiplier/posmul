@@ -3,7 +3,7 @@
  * TimeConsume 광고 캠페인 리포지토리 인터페이스
  */
 
-import type { AdCampaign } from '../entities/ad-campaign.entity';
+import type { AdCampaign } from '../entities/ad-campaign.aggregate';
 
 export type Result<T, E = Error> =
   | { success: true; data: T }

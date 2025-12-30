@@ -2,10 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MotionDiv, staggerContainerVariants } from "@/shared/ui/components/motion/MotionComponents";
-import { SpotlightCard } from "@/shared/ui/components/motion/SpotlightCard";
-import { NumberTicker } from "@/shared/ui/components/motion/NumberTicker";
-import { ShinyText } from "@/shared/ui/components/motion/ShinyText";
+import { Gift, Target, Users, Search, TrendingUp, Package } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent } from "@/shared/ui/components/base/Card";
 
 interface FundingProject {
   id: string;
@@ -30,170 +29,197 @@ interface DirectDonationClientProps {
   currentUserId: string | null;
 }
 
-export function DirectDonationClient({
-  projects,
-  isLoggedIn,
-}: DirectDonationClientProps) {
+// 카테고리 목록
+const CATEGORIES = [
+  { key: "all", label: "전체", icon: "🎁" },
+  { key: "clothing", label: "의류/잡화", icon: "👕" },
+  { key: "food", label: "식품/생필품", icon: "🍚" },
+  { key: "education", label: "교육/도서", icon: "📚" },
+  { key: "electronics", label: "가전/디지털", icon: "🔌" },
+  { key: "medical", label: "의료/건강", icon: "💊" },
+];
+
+export function DirectDonationClient({ projects }: DirectDonationClientProps) {
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredProjects = projects.filter((project) => {
+    const matchCategory = selectedCategory === "all" || project.category === selectedCategory;
+    const matchSearch = project.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCategory && matchSearch;
+  });
+
+  const totalDelivered = 1240; // Mock
+  const totalBeneficiaries = 382; // Mock
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
-      {/* Hero Section */}
-      <div className="relative bg-gradient-to-r from-purple-800 to-indigo-900 text-white py-20 px-4 overflow-hidden">
-        {/* Background Decor */}
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-purple-500/20 blur-[120px] rounded-full pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-500/20 blur-[100px] rounded-full pointer-events-none" />
-
-        <div className="relative z-10 max-w-6xl mx-auto text-center">
-          <MotionDiv
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 backdrop-blur-md mb-6 shadow-lg">
-              <span className="text-xl">🌏</span>
-              <span className="text-sm font-semibold text-purple-100">World's Best Technology, Delivered with Heart</span>
+    <div className="min-h-screen bg-gradient-to-b from-emerald-950 to-slate-950 text-slate-200">
+      {/* Header - Forum 스타일 */}
+      <header className="sticky top-0 z-10 backdrop-blur-xl bg-emerald-950/80 border-b border-emerald-800/50">
+        <div className="max-w-4xl mx-auto p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-400">
+                🎁 Direct
+              </h1>
+              <p className="text-sm text-emerald-400/70">물품 직접 기부 · 펀딩 참여</p>
             </div>
-
-            <h1 className="text-4xl md:text-6xl font-bold mb-6 tracking-tight leading-tight">
-              당신의 후원이 <br className="md:hidden" />
-              <ShinyText text="World Class Quality" speed={3} className="text-purple-300" />
-              로 전달됩니다
-            </h1>
-
-            <p className="text-lg md:text-xl text-gray-300 max-w-3xl mx-auto mb-10 leading-relaxed">
-              삼성, LG 등 세계 최고의 기술력을 가진 한국 기업의 제품을 기부하세요.<br />
-              최고의 품질이 담긴 선물이 아이들의 꿈을 더 크게 키워줍니다.
-            </p>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-              {[
-                { label: "진행중인 펀딩", value: projects.length, icon: "🔥" },
-                { label: "전달된 물품", value: 1240, icon: "🎁" }, // Mock data
-                { label: "함께한 기업", value: 15, icon: "🏭" },
-                { label: "수혜 이웃", value: 382, icon: "🥰" },
-              ].map((stat, idx) => (
-                <div key={idx} className="bg-white/5 border border-white/10 rounded-2xl p-4 backdrop-blur-sm">
-                  <div className="text-2xl mb-1">{stat.icon}</div>
-                  <div className="text-2xl font-bold"><NumberTicker value={stat.value} /></div>
-                  <div className="text-xs text-gray-400">{stat.label}</div>
-                </div>
-              ))}
-            </div>
-          </MotionDiv>
-        </div>
-      </div>
-
-      {/* Projects Grid */}
-      <div className="max-w-7xl mx-auto px-4 py-16">
-        <div className="flex items-center justify-between mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <span>진행 중인 프로젝트</span>
-            <span className="bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-300 text-sm px-2 py-0.5 rounded-full">
-              {projects.length}
-            </span>
-          </h2>
-        </div>
-
-        <MotionDiv
-          variants={staggerContainerVariants}
-          initial="hidden"
-          animate="visible"
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-        >
-          {projects.length > 0 ? (
-            projects.map((project) => (
-              <FundingCard key={project.id} project={project} />
-            ))
-          ) : (
-            <div className="col-span-3 text-center py-20 text-gray-500">
-              진행 중인 펀딩 프로젝트가 없습니다.
-            </div>
-          )}
-        </MotionDiv>
-      </div>
-    </div>
-  );
-}
-
-function FundingCard({ project }: { project: FundingProject }) {
-  const isUrgent = project.achievementRate >= 80 && project.achievementRate < 100;
-
-  return (
-    <Link href={`/donation/direct/item/${project.id}`} className="block h-full group">
-      <SpotlightCard className="h-full bg-white dark:bg-gray-800 rounded-3xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:border-purple-500/50 transition-colors">
-        <div className="flex flex-col h-full">
-          {/* Image Area */}
-          <div className="relative h-48 bg-gray-200 dark:bg-gray-700 overflow-hidden">
-            {/* Placeholder for real image */}
-            <div className="absolute inset-0 flex items-center justify-center text-6xl opacity-30 bg-purple-100 dark:bg-purple-900/30">
-              {project.categoryIcon}
-            </div>
-
-            <div className="absolute top-4 left-4 bg-white/90 dark:bg-gray-900/90 backdrop-blur px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1 z-10">
-              <span>{project.categoryIcon}</span>
-              <span>{project.categoryLabel}</span>
-            </div>
-
-            {isUrgent && (
-              <div className="absolute top-4 right-4 bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm animate-pulse z-10">
-                마감임박
-              </div>
-            )}
-          </div>
-
-          {/* Content Area */}
-          <div className="p-6 flex-1 flex flex-col">
-            <div className="mb-4">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 min-h-[3.5rem] group-hover:text-purple-600 transition-colors">
-                {project.title}
-              </h3>
-              <p className="text-gray-500 dark:text-gray-400 text-sm line-clamp-2 mb-4">
-                {project.description}
+            <div className="text-right">
+              <p className="text-xs text-slate-400">진행 중</p>
+              <p className="text-xl font-bold text-emerald-400">
+                <span className="text-2xl">{projects.length}</span>
+                <span className="text-sm ml-1">개</span>
               </p>
-
-              <div className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700/50 p-3 rounded-xl border border-gray-100 dark:border-gray-600">
-                <span className="flex-1 border-r border-gray-200 dark:border-gray-600 pr-3">
-                  <span className="block text-xs text-gray-400 mb-0.5">수혜처</span>
-                  <span className="font-semibold truncate block" title={project.target_beneficiary}>{project.target_beneficiary}</span>
-                </span>
-                <span className="flex-1 pl-1">
-                  <span className="block text-xs text-gray-400 mb-0.5">Manufacturer (Global Top Tier 🏆)</span>
-                  <span className="font-semibold text-purple-600 dark:text-purple-400 truncate block" title={project.manufacturer}>
-                    {project.manufacturer}
-                  </span>
-                </span>
-              </div>
-            </div>
-
-            <div className="mt-auto space-y-4">
-              {/* Progress Bar */}
-              <div>
-                <div className="flex justify-between text-sm mb-1.5">
-                  <span className="font-bold text-purple-600 dark:text-purple-400">{project.achievementRate}% 달성</span>
-                  <span className="text-gray-500 text-xs mt-0.5">{project.current_quantity} / {project.target_quantity}개</span>
-                </div>
-                <div className="h-2.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-1000 ease-out"
-                    style={{ width: `${project.achievementRate}%` }}
-                  />
-                </div>
-              </div>
-
-              {/* Action Button */}
-              <div className="flex items-center justify-between gap-4 pt-2">
-                <div className="font-bold text-lg dark:text-white">
-                  {project.unit_price.toLocaleString()}원
-                  <span className="text-xs font-normal text-gray-400 ml-1">/ 1개</span>
-                </div>
-                <div className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-xl transition-all active:scale-95 shadow-lg shadow-purple-500/20 text-center">
-                  선물하기 🎁
-                </div>
-              </div>
             </div>
           </div>
+
+          {/* 검색 */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+            <input
+              type="text"
+              placeholder="프로젝트명 또는 제품 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700 
+                         text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500
+                         focus:ring-1 focus:ring-emerald-500/50 transition-all"
+            />
+          </div>
         </div>
-      </SpotlightCard>
-    </Link>
+      </header>
+
+      {/* Stats */}
+      <div className="max-w-4xl mx-auto px-4 py-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 text-center">
+            <p className="text-xs text-slate-500">전달된 물품</p>
+            <p className="text-lg font-bold text-white">{totalDelivered.toLocaleString()}개</p>
+          </div>
+          <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 text-center">
+            <p className="text-xs text-slate-500">수혜 이웃</p>
+            <p className="text-lg font-bold text-emerald-400">{totalBeneficiaries}명</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Category Tabs */}
+      <div className="max-w-4xl mx-auto px-4 py-2 overflow-x-auto">
+        <div className="flex gap-2">
+          {CATEGORIES.map((cat) => (
+            <button
+              key={cat.key}
+              onClick={() => setSelectedCategory(cat.key)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all
+                ${selectedCategory === cat.key
+                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300"
+                }`}
+            >
+              {cat.icon} {cat.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Project Grid */}
+      <main className="max-w-4xl mx-auto px-4 py-4 pb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AnimatePresence mode="popLayout">
+            {filteredProjects.map((project) => {
+              const isUrgent = project.achievementRate >= 80 && project.achievementRate < 100;
+              return (
+                <motion.div
+                  key={project.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Link href={`/donation/direct/item/${project.id}`}>
+                    <Card className="bg-slate-900/70 border-slate-800 hover:border-emerald-700/50 transition-all cursor-pointer group overflow-hidden h-full">
+                      {/* 이미지 영역 */}
+                      <div className="relative aspect-video bg-gradient-to-br from-emerald-900/50 to-slate-900 flex items-center justify-center">
+                        <span className="text-6xl opacity-50">{project.categoryIcon}</span>
+
+                        {/* 카테고리 뱃지 */}
+                        <span className="absolute top-2 left-2 px-2 py-0.5 rounded bg-slate-800/80 text-white text-xs flex items-center gap-1">
+                          {project.categoryIcon} {project.categoryLabel}
+                        </span>
+
+                        {isUrgent && (
+                          <span className="absolute top-2 right-2 px-2 py-0.5 rounded bg-red-500 text-white text-xs font-bold animate-pulse">
+                            마감임박
+                          </span>
+                        )}
+
+                        {/* 진행률 */}
+                        <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-slate-800">
+                          <motion.div
+                            className="h-full bg-gradient-to-r from-emerald-500 to-teal-500"
+                            initial={{ width: 0 }}
+                            animate={{ width: `${project.achievementRate}%` }}
+                            transition={{ duration: 0.5 }}
+                          />
+                        </div>
+                      </div>
+
+                      <CardContent className="p-4 space-y-3">
+                        {/* 제목 */}
+                        <h3 className="font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2">
+                          {project.title}
+                        </h3>
+
+                        {/* 정보 */}
+                        <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
+                          <div className="flex items-center gap-1">
+                            <Users className="w-3 h-3" />
+                            <span className="truncate">{project.target_beneficiary}</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Package className="w-3 h-3" />
+                            <span className="truncate">{project.manufacturer}</span>
+                          </div>
+                        </div>
+
+                        {/* 진행 상황 */}
+                        <div className="flex items-center justify-between pt-2">
+                          <div>
+                            <span className="text-emerald-400 font-bold">{project.achievementRate}%</span>
+                            <span className="text-xs text-slate-500 ml-1">
+                              ({project.current_quantity}/{project.target_quantity})
+                            </span>
+                          </div>
+                          <span className="text-sm font-bold text-white">
+                            {project.unit_price.toLocaleString()}원
+                            <span className="text-xs font-normal text-slate-500">/개</span>
+                          </span>
+                        </div>
+
+                        {/* CTA */}
+                        <div className="pt-2">
+                          <div className="w-full py-2 rounded-lg bg-emerald-600/20 border border-emerald-600/50 text-center text-emerald-400 text-sm font-medium group-hover:bg-emerald-600 group-hover:text-white transition-all">
+                            선물하기 🎁
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+
+        {filteredProjects.length === 0 && (
+          <div className="text-center py-16 text-slate-500">
+            <Gift className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>진행 중인 프로젝트가 없습니다.</p>
+          </div>
+        )}
+      </main>
+    </div>
   );
 }

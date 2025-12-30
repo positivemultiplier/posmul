@@ -4,7 +4,7 @@
  */
 
 import type { Result, IAdCampaignRepository } from '../../domain/repositories/ad-campaign.repository';
-import { AdCampaign } from '../../domain/entities/ad-campaign.entity';
+import { AdCampaign } from '../../domain/entities/ad-campaign.aggregate';
 
 // MCP 실행 함수 타입
 type McpExecuteSql = (projectId: string, query: string) => Promise<{ data?: unknown[]; error?: Error }>;
@@ -12,7 +12,7 @@ type McpExecuteSql = (projectId: string, query: string) => Promise<{ data?: unkn
 const PROJECT_ID = process.env.SUPABASE_PROJECT_ID ?? 'fabyagohqqnusmnwekuc';
 
 export class MCPAdCampaignRepository implements IAdCampaignRepository {
-  constructor(private readonly mcpExecuteSql: McpExecuteSql) {}
+  constructor(private readonly mcpExecuteSql: McpExecuteSql) { }
 
   async findActiveCampaigns(): Promise<Result<AdCampaign[]>> {
     try {
@@ -23,9 +23,9 @@ export class MCPAdCampaignRepository implements IAdCampaignRepository {
           AND used_budget < total_budget
         ORDER BY created_at DESC
       `;
-      
+
       const result = await this.mcpExecuteSql(PROJECT_ID, query);
-      
+
       if (result.error) {
         return { success: false, error: result.error };
       }
@@ -44,7 +44,7 @@ export class MCPAdCampaignRepository implements IAdCampaignRepository {
     try {
       const query = `SELECT * FROM consume.ad_campaigns WHERE id = '${id}'`;
       const result = await this.mcpExecuteSql(PROJECT_ID, query);
-      
+
       if (result.error) {
         return { success: false, error: result.error };
       }
@@ -68,9 +68,9 @@ export class MCPAdCampaignRepository implements IAdCampaignRepository {
             updated_at = now()
         WHERE id = '${campaignId}'
       `;
-      
+
       const result = await this.mcpExecuteSql(PROJECT_ID, query);
-      
+
       if (result.error) {
         return { success: false, error: result.error };
       }

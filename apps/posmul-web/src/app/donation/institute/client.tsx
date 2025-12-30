@@ -2,128 +2,183 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MotionDiv, staggerContainerVariants, fadeInVariants } from "@/shared/ui/components/motion/MotionComponents";
-import { InstituteCard, Institute } from "../../../bounded-contexts/donation/presentation/components/InstituteCard";
-import { DonationLeaderboard } from "../../../bounded-contexts/donation/presentation/components/DonationLeaderboard";
+import { Building2, Shield, Search, Eye, Award, ExternalLink, TrendingUp } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent } from "@/shared/ui/components/base/Card";
+
+export interface Institute {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  categoryLabel: string;
+  categoryIcon: string;
+  websiteUrl: string | null;
+  trustScore: number;
+  isVerified: boolean;
+}
 
 interface InstituteClientProps {
   institutes: Institute[];
   isLoggedIn: boolean;
 }
 
-export function InstituteClient({
-  institutes,
-}: InstituteClientProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+// 카테고리 목록
+const CATEGORIES = [
+  { key: "all", label: "전체", icon: "🏛️" },
+  { key: "children", label: "아동복지", icon: "👶" },
+  { key: "elderly", label: "노인복지", icon: "👴" },
+  { key: "disaster", label: "재난구호", icon: "🆘" },
+  { key: "environment", label: "환경보전", icon: "🌿" },
+  { key: "education", label: "교육지원", icon: "📚" },
+  { key: "medical", label: "의료지원", icon: "🏥" },
+  { key: "animal", label: "동물보호", icon: "🐾" },
+];
 
-  // 카테고리 필터링
-  const categories = [...new Set(institutes.map((i) => i.category))];
-  const filteredInstitutes = selectedCategory
-    ? institutes.filter((i) => i.category === selectedCategory)
-    : institutes;
+export function InstituteClient({ institutes }: InstituteClientProps) {
+  const [selectedCategory, setSelectedCategory] = useState("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredInstitutes = institutes.filter((inst) => {
+    const matchCategory = selectedCategory === "all" || inst.category === selectedCategory;
+    const matchSearch = inst.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      inst.description.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchCategory && matchSearch;
+  });
 
   return (
-    <div className="space-y-16 pb-20">
+    <div className="min-h-screen bg-gradient-to-b from-blue-950 to-slate-950 text-slate-200">
+      {/* Header - Forum 스타일 */}
+      <header className="sticky top-0 z-10 backdrop-blur-xl bg-blue-950/80 border-b border-blue-800/50">
+        <div className="max-w-4xl mx-auto p-4">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400">
+                🏛️ Institute
+              </h1>
+              <p className="text-sm text-blue-400/70">검증된 기관 · 투명한 기부</p>
+            </div>
+            <div className="text-right">
+              <p className="text-xs text-slate-400">등록 기관</p>
+              <p className="text-xl font-bold text-blue-400">
+                <span className="text-2xl">{institutes.length}</span>
+                <span className="text-sm ml-1">개</span>
+              </p>
+            </div>
+          </div>
 
-      {/* Domain Hero Section - Unified Purple Tone */}
-      <div className="relative py-12 px-4 bg-gray-900 rounded-3xl overflow-hidden shadow-2xl">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-900/60 to-violet-900/60" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-purple-500/20 blur-[100px] rounded-full" />
-        <div className="relative z-10 text-center max-w-2xl mx-auto">
-          <span className="inline-block mb-3 text-purple-400 font-medium tracking-wide">TRUSTED PARTNERS</span>
-          <h1 className="text-3xl md:text-5xl font-bold text-white mb-4">
-            검증된 기부 기관
-          </h1>
-          <p className="text-gray-300 text-lg">
-            PosMul의 엄격한 기준으로 검증된 기관들을 만나보세요. <br />
-            모든 기부 내역은 투명하게 공개됩니다.
-          </p>
+          {/* 검색 */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+            <input
+              type="text"
+              placeholder="기관명 또는 키워드 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700 
+                         text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-blue-500
+                         focus:ring-1 focus:ring-blue-500/50 transition-all"
+            />
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Category Filter Pills */}
-      <div className="flex flex-wrap gap-3 justify-center">
-        <button
-          onClick={() => setSelectedCategory(null)}
-          className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all transform hover:scale-105 ${selectedCategory === null
-            ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-gray-900"
-            : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
-            }`}
-        >
-          All Categories ({institutes.length})
-        </button>
-        {categories.map((cat) => {
-          const catInstitute = institutes.find((i) => i.category === cat);
-          const count = institutes.filter((i) => i.category === cat).length;
-          return (
+      {/* Category Tabs */}
+      <div className="max-w-4xl mx-auto px-4 py-4 overflow-x-auto">
+        <div className="flex gap-2">
+          {CATEGORIES.map((cat) => (
             <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all transform hover:scale-105 ${selectedCategory === cat
-                ? "bg-purple-500 text-white shadow-lg shadow-purple-500/30 ring-2 ring-purple-500 ring-offset-2 dark:ring-offset-gray-900"
-                : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+              key={cat.key}
+              onClick={() => setSelectedCategory(cat.key)}
+              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all
+                ${selectedCategory === cat.key
+                  ? "bg-blue-500 text-white shadow-lg shadow-blue-500/25"
+                  : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300"
                 }`}
             >
-              {catInstitute?.categoryIcon} {catInstitute?.categoryLabel} ({count})
+              {cat.icon} {cat.label}
             </button>
-          );
-        })}
-      </div>
-
-      {/* Filters & Options Row */}
-      <div className="flex items-center justify-between px-2">
-        <div className="text-sm text-gray-500">
-          총 <strong className="text-gray-900 dark:text-white">{filteredInstitutes.length}</strong>개의 기관
-        </div>
-        <div className="flex items-center gap-2 text-sm text-gray-500">
-          <span>정렬:</span>
-          <select className="bg-transparent border-none font-medium text-gray-900 dark:text-white focus:ring-0 cursor-pointer">
-            <option>신뢰도순</option>
-            <option>최신순</option>
-            <option>인기순</option>
-          </select>
+          ))}
         </div>
       </div>
 
-      {/* Institute Grid with Staggered Animation */}
-      <MotionDiv
-        variants={staggerContainerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-      >
-        {filteredInstitutes.map((institute) => (
-          <MotionDiv key={institute.id} variants={fadeInVariants}>
-            <InstituteCard institute={institute} />
-          </MotionDiv>
-        ))}
-      </MotionDiv>
+      {/* Institute Grid */}
+      <main className="max-w-4xl mx-auto px-4 pb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <AnimatePresence mode="popLayout">
+            {filteredInstitutes.map((institute) => (
+              <motion.div
+                key={institute.id}
+                layout
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+              >
+                <Link href={`/donation/institute/${institute.category}/${institute.id}`}>
+                  <Card className="bg-slate-900/70 border-slate-800 hover:border-blue-700/50 transition-all cursor-pointer group overflow-hidden h-full">
+                    {/* 히어로 영역 */}
+                    <div className="relative aspect-video bg-gradient-to-br from-blue-900/50 to-slate-900 flex items-center justify-center">
+                      <div className="text-center">
+                        <span className="text-5xl">{institute.categoryIcon}</span>
+                        <div className="mt-2 flex items-center justify-center gap-2">
+                          {institute.isVerified && (
+                            <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-emerald-500/80 text-white text-xs">
+                              <Shield className="w-3 h-3" /> 검증됨
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {/* Trust Score */}
+                      <div className="absolute top-2 right-2 px-2 py-1 rounded bg-black/60 text-white text-xs flex items-center gap-1">
+                        <TrendingUp className="w-3 h-3 text-emerald-400" />
+                        신뢰도 {institute.trustScore}%
+                      </div>
+                    </div>
 
-      {/* Empty State */}
-      {filteredInstitutes.length === 0 && (
-        <div className="text-center py-24 bg-gray-50 dark:bg-gray-800/50 rounded-3xl border-2 border-dashed border-gray-200 dark:border-gray-700">
-          <span className="text-6xl block mb-6 opacity-30">🔍</span>
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">조건에 맞는 기관이 없습니다</h3>
-          <p className="text-gray-500 dark:text-gray-400 mb-8">
-            다른 카테고리를 선택하거나 필터를 초기화해보세요.
-          </p>
-          <button
-            onClick={() => setSelectedCategory(null)}
-            className="px-6 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-medium transition-colors"
-          >
-            필터 초기화
-          </button>
-        </div>
-      )}
+                    <CardContent className="p-4 space-y-2">
+                      {/* 카테고리 */}
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400">
+                          {institute.categoryLabel}
+                        </span>
+                      </div>
 
-      {/* Ranking Board Section */}
-      <div className="mt-20">
-        <div className="flex items-center gap-2 mb-8">
-          <span className="text-2xl">🏆</span>
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white">이달의 우수 기관</h2>
+                      {/* 기관명 */}
+                      <h3 className="font-bold text-white group-hover:text-blue-400 transition-colors line-clamp-1">
+                        {institute.name}
+                      </h3>
+
+                      {/* 설명 */}
+                      <p className="text-sm text-slate-400 line-clamp-2">{institute.description}</p>
+
+                      {/* Footer */}
+                      <div className="flex items-center justify-between pt-2 text-xs text-slate-500">
+                        {institute.websiteUrl && (
+                          <span className="flex items-center gap-1">
+                            <ExternalLink className="w-3 h-3" />
+                            공식 사이트
+                          </span>
+                        )}
+                        <span className="flex items-center gap-1 text-blue-400 font-medium ml-auto">
+                          기부하기 →
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
-        <DonationLeaderboard />
-      </div>
+
+        {filteredInstitutes.length === 0 && (
+          <div className="text-center py-16 text-slate-500">
+            <Building2 className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>조건에 맞는 기관이 없습니다.</p>
+          </div>
+        )}
+      </main>
     </div>
   );
 }

@@ -23,11 +23,13 @@ interface FundingProject {
 interface DirectDonationDetailClientProps {
     project: FundingProject;
     isLoggedIn: boolean;
+    currentUserId: string | null;
 }
 
 export function DirectDonationDetailClient({
     project,
     isLoggedIn,
+    currentUserId,
 }: DirectDonationDetailClientProps) {
     const [donateQuantity, setDonateQuantity] = useState(1);
 
