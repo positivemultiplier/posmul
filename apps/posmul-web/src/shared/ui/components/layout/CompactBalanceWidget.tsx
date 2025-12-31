@@ -56,7 +56,16 @@ export function CompactBalanceWidget({ className = "" }: CompactBalanceWidgetPro
             }
         };
 
+        // Initial fetch
         fetchData();
+
+        // Listen for custom balance update events (triggered by betting, etc.)
+        const handleBalanceUpdate = () => {
+            console.log("CompactBalanceWidget: Received balanceUpdate event");
+            fetchData();
+        };
+
+        window.addEventListener('balanceUpdate', handleBalanceUpdate);
 
         // 인증 상태 변경 감지
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -65,11 +74,17 @@ export function CompactBalanceWidget({ className = "" }: CompactBalanceWidgetPro
                 if (!session?.user) {
                     setPmpBalance(0);
                     setPmcBalance(0);
+                } else {
+                    // Update balance on auth change (login/resume)
+                    fetchData();
                 }
             }
         );
 
-        return () => subscription.unsubscribe();
+        return () => {
+            subscription.unsubscribe();
+            window.removeEventListener('balanceUpdate', handleBalanceUpdate);
+        };
     }, []);
 
     // 로딩 중이거나 로그인하지 않은 경우 표시하지 않음

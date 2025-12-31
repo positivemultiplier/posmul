@@ -10,9 +10,11 @@ import {
   parseGameOptions,
 } from "../../../bounded-contexts/public/infrastructure/repositories/prediction.repository";
 
-import { getUserBalance } from "../sports/soccer/[slug]/actions";
+import { getUserBalance, getUserBets } from "../sports/soccer/[slug]/actions";
 
 import { getKstHourStartIso } from "../../../shared/utils/time/getKstHourStartIso";
+
+import { getGameHistory, type ChartDataPoint } from "../../../bounded-contexts/prediction/infrastructure/repositories/get-game-history";
 
 type MoneyWaveCategory = "sports" | "politics" | "entertainment" | "economy" | "all";
 
@@ -131,6 +133,15 @@ export async function renderPredictionDetailBySlug(slug: string) {
   const totalBetAmount = stats?.total_bet_amount ?? 0;
   const participantCount = stats?.total_participants ?? 0;
 
+  // 사용자의 기존 베팅 내역 조회
+  const userBets = await getUserBets(game.game_id);
+
+  // 차트 초기 데이터 조회 (SSR)
+  const initialChartData = await getGameHistory(
+    game.game_id,
+    gameOptions.map(opt => ({ id: opt.id }))
+  );
+
   const gameForView = {
     id: game.game_id,
     title: game.title || "제목 없음",
@@ -154,6 +165,7 @@ export async function renderPredictionDetailBySlug(slug: string) {
     endTime: toIsoOrFallback(game.registration_end, 7 * 24 * 60 * 60 * 1000),
     settlementTime: toIsoOrFallback(game.settlement_date, 14 * 24 * 60 * 60 * 1000),
     status: mapStatus(game.status),
+    createdAt: toIsoOrFallback(game.created_at, 0),
     category: game.category || "예측",
     creator: {
       name: "PosMul",
@@ -169,6 +181,8 @@ export async function renderPredictionDetailBySlug(slug: string) {
     <PredictionDetailTabsClient
       game={gameForView}
       userBalance={userBalance}
+      userBets={userBets}
+      initialChartData={initialChartData}
       moneyWave={{
         category: moneyWaveCategory,
         subcategory,

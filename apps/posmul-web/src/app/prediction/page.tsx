@@ -45,6 +45,7 @@ export default async function PredictionPage() {
       count: categoryCounts.SPORTS,
       color: "from-blue-500 to-cyan-500",
       bgColor: "from-blue-900/50 to-slate-900",
+      image: "/images/cards/prediction-sports.png",
     },
     {
       href: "/prediction/politics",
@@ -54,6 +55,7 @@ export default async function PredictionPage() {
       count: categoryCounts.POLITICS,
       color: "from-purple-500 to-pink-500",
       bgColor: "from-purple-900/50 to-slate-900",
+      image: "/images/cards/prediction-politics.png",
     },
     {
       href: "/prediction/consume",
@@ -63,6 +65,7 @@ export default async function PredictionPage() {
       count: categoryCounts.INVEST,
       color: "from-green-500 to-emerald-500",
       bgColor: "from-green-900/50 to-slate-900",
+      image: "/images/cards/prediction_consume.png",
     },
     {
       href: "/prediction/entertainment",
@@ -72,6 +75,7 @@ export default async function PredictionPage() {
       count: categoryCounts.ENTERTAINMENT,
       color: "from-orange-500 to-red-500",
       bgColor: "from-orange-900/50 to-slate-900",
+      image: "/images/cards/prediction_entertainment.png",
     },
   ];
 
@@ -132,7 +136,6 @@ export default async function PredictionPage() {
       </header>
 
       <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
-        {/* MoneyWave 상금풀 (룰렛 컴포넌트) - 유지 */}
         <FadeIn>
           <CompactMoneyWaveCard depthLevel={1} initialPool={platformTotalPool} />
         </FadeIn>
@@ -149,16 +152,23 @@ export default async function PredictionPage() {
               return (
                 <FadeIn key={category.href}>
                   <Link href={category.href}>
-                    <div className={`relative overflow-hidden rounded-xl bg-gradient-to-br ${category.bgColor} border border-slate-800 hover:border-indigo-700/50 transition-all cursor-pointer group`}>
-                      <div className="p-4 flex items-center gap-4">
-                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center`}>
+                    <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-slate-800 hover:border-indigo-400/50 transition-all cursor-pointer group">
+                      <img
+                        src={category.image}
+                        alt={category.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <div className={`absolute inset-0 bg-gradient-to-r ${category.bgColor} opacity-80`} />
+
+                      <div className="absolute inset-0 p-4 flex items-center gap-4">
+                        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center shadow-lg`}>
                           <Icon className="w-6 h-6 text-white" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="font-bold text-white group-hover:text-indigo-400 transition-colors">
+                          <h3 className="font-bold text-white text-lg group-hover:text-indigo-300 transition-colors drop-shadow-md">
                             {category.emoji} {category.title}
                           </h3>
-                          <p className="text-sm text-slate-400">
+                          <p className="text-sm text-slate-300 font-medium">
                             {category.count}개 게임
                           </p>
                         </div>

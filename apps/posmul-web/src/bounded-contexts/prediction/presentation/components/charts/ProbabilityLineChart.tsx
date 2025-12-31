@@ -32,6 +32,7 @@ export const ProbabilityLineChart = ({ data, lines, isDarkMode = true }: Probabi
             showTooltip={true}
             showLegend={true}
             gradientFill={true}
+            animate={false}
             isDarkMode={isDarkMode}
             className="w-full"
         />

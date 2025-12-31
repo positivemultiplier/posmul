@@ -1,35 +1,8 @@
-/**
- * Advanced Prediction Detail View Component
- *
- * Polymarket 스타일의 고급 예측 상세페이지
- * Binary, WDL, Ranking 예측 타입을 모두 지원
- *
- * @author PosMul Development Team
- * @since 2024-12
- */
-
 "use client";
 
-import { useEffect, useState } from "react";
-
-import {
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "../../../../shared/ui/components/base";
-
-/**
- * Advanced Prediction Detail View Component
- *
- * Polymarket 스타일의 고급 예측 상세페이지
- * Binary, WDL, Ranking 예측 타입을 모두 지원
- *
- * @author PosMul Development Team
- * @since 2024-12
- */
+import { useEffect, useState, forwardRef, useImperativeHandle, useRef } from "react";
+import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/components/base";
+import { Wallet, Info } from "lucide-react";
 
 // Types
 interface PredictionOption {
@@ -47,20 +20,9 @@ interface PredictionGameDetail {
   description: string;
   predictionType: "binary" | "wdl" | "ranking";
   options: PredictionOption[];
-  totalVolume: number;
-  participantCount: number;
-  endTime: Date;
-  settlementTime: Date;
-  status: "ACTIVE" | "ENDED" | "SETTLED";
-  category: string;
-  creator: {
-    name: string;
-    reputation: number;
-    avatar: string;
-  };
-  prizePool: number;
   minimumStake: number;
   maximumStake: number;
+  status: "ACTIVE" | "ENDED" | "SETTLED";
 }
 
 interface PredictionDetailViewProps {
@@ -69,17 +31,36 @@ interface PredictionDetailViewProps {
     pmp: number;
     pmc: number;
   };
-  onParticipate?: (optionId: string, amount: number) => void;
+  onBetAction?: (optionId: string, amount: number) => void;
+  isSubmitting?: boolean;
 }
 
-export function PredictionDetailView({
+export type PredictionDetailViewHandle = {
+  selectOption: (optionId: string) => void;
+};
+
+export const PredictionDetailView = forwardRef<PredictionDetailViewHandle, PredictionDetailViewProps>(({
   game,
   userBalance,
-  onParticipate,
-}: PredictionDetailViewProps) {
+  onBetAction,
+  isSubmitting = false,
+}, ref) => {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [stakeAmount, setStakeAmount] = useState<number>(game.minimumStake);
   const [expectedReturn, setExpectedReturn] = useState<number>(0);
+
+  // Expose selectOption method to parent
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    selectOption: (optionId: string) => {
+      setSelectedOption(optionId);
+      // Wait for state update and render, then focus
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 0);
+    }
+  }));
 
   // Calculate expected return
   useEffect(() => {
@@ -91,69 +72,34 @@ export function PredictionDetailView({
     }
   }, [selectedOption, stakeAmount, game.options]);
 
-  const formatTimeRemaining = (endTime: Date) => {
-    const now = new Date();
-    const diff = endTime.getTime() - now.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-
-    if (days > 0) return `${days}일 ${hours}시간`;
-    if (hours > 0) return `${hours}시간 ${minutes}분`;
-    return `${minutes}분`;
-  };
-
-  const renderPredictionChart = () => {
+  const renderOptionSelector = () => {
     if (game.predictionType === "binary") {
       return (
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           {game.options.map((option) => (
             <div
               key={option.id}
-              className={`relative p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                selectedOption === option.id
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-200 hover:border-blue-300"
-              }`}
+              className={`relative p-4 border-2 rounded-xl cursor-pointer transition-all flex flex-col items-center justify-center text-center ${selectedOption === option.id
+                ? option.id === 'yes' || option.id === 'option-0' // Simple heuristic for Yes/Blue
+                  ? "border-blue-500 bg-blue-500/10"
+                  : "border-red-500 bg-red-500/10"
+                : "border-white/10 hover:border-white/30 bg-white/5"
+                }`}
               onClick={() => setSelectedOption(option.id)}
             >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3">
-                    <span className="text-lg font-semibold">
-                      {option.label}
-                    </span>
-                    <Badge
-                      variant={
-                        option.change24h >= 0 ? "default" : "destructive"
-                      }
-                      className="text-xs"
-                    >
-                      {option.change24h >= 0 ? "+" : ""}
-                      {option.change24h.toFixed(1)}%
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    {option.volume.toLocaleString()} PmpAmount 거래량
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-2xl font-bold text-green-600">
-                    {(option.probability * 100).toFixed(1)}%
-                  </div>
-                  <div className="text-sm text-gray-500">
-                    {option.odds.toFixed(2)}x 배당
-                  </div>
-                </div>
+              <div className="text-sm text-slate-400 mb-1">{option.label}</div>
+              <div className={`text-2xl font-bold ${option.id === 'yes' || option.id === 'option-0' ? 'text-blue-400' : 'text-red-400'
+                }`}>
+                {(option.probability * 100).toFixed(0)}%
               </div>
+              <div className="text-xs text-slate-500">{option.odds.toFixed(2)}x</div>
 
-              {/* Probability Bar */}
-              <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full transition-all duration-500"
-                  style={{ width: `${option.probability * 100}%` }}
-                />
-              </div>
+              {selectedOption === option.id && (
+                <div className="absolute top-2 right-2">
+                  <div className={`w-3 h-3 rounded-full ${option.id === 'yes' || option.id === 'option-0' ? 'bg-blue-500' : 'bg-red-500'
+                    }`} />
+                </div>
+              )}
             </div>
           ))}
         </div>
@@ -162,29 +108,22 @@ export function PredictionDetailView({
 
     if (game.predictionType === "wdl") {
       return (
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2">
           {game.options.map((option) => (
             <div
               key={option.id}
-              className={`p-4 border-2 rounded-lg cursor-pointer transition-all text-center ${
-                selectedOption === option.id
-                  ? "border-blue-500 bg-blue-50"
-                  : "border-gray-200 hover:border-blue-300"
-              }`}
+              className={`p-3 border-2 rounded-xl cursor-pointer transition-all text-center flex flex-col justify-between h-24 ${selectedOption === option.id
+                ? "border-green-500 bg-green-500/10"
+                : "border-white/10 hover:border-white/30 bg-white/5"
+                }`}
               onClick={() => setSelectedOption(option.id)}
             >
-              <div className="text-lg font-semibold mb-2">{option.label}</div>
-              <div className="text-2xl font-bold text-green-600 mb-1">
-                {(option.probability * 100).toFixed(1)}%
+              <div className="text-xs font-semibold text-slate-300">{option.label}</div>
+              <div className="text-lg font-bold text-green-400">
+                {(option.probability * 100).toFixed(0)}%
               </div>
-              <div className="text-sm text-gray-500">
+              <div className="text-xs text-slate-500">
                 {option.odds.toFixed(2)}x
-              </div>
-              <div className="mt-2 w-full bg-gray-200 rounded-full h-1">
-                <div
-                  className="bg-blue-500 h-1 rounded-full"
-                  style={{ width: `${option.probability * 100}%` }}
-                />
               </div>
             </div>
           ))}
@@ -194,30 +133,28 @@ export function PredictionDetailView({
 
     if (game.predictionType === "ranking") {
       return (
-        <div className="space-y-2">
+        <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
           {game.options
             .sort((a, b) => b.probability - a.probability)
             .map((option, index) => (
               <div
                 key={option.id}
-                className={`flex items-center justify-between p-3 border-2 rounded-lg cursor-pointer transition-all ${
-                  selectedOption === option.id
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-blue-300"
-                }`}
+                className={`flex items-center justify-between p-3 border rounded-lg cursor-pointer transition-all ${selectedOption === option.id
+                  ? "border-blue-500 bg-blue-500/10"
+                  : "border-white/10 hover:border-white/30 bg-white/5"
+                  }`}
                 onClick={() => setSelectedOption(option.id)}
               >
                 <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center font-bold">
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${index < 3 ? 'bg-yellow-500 text-black' : 'bg-slate-700 text-slate-300'
+                    }`}>
                     {index + 1}
                   </div>
-                  <span className="font-medium">{option.label}</span>
+                  <span className="font-medium text-slate-200">{option.label}</span>
                 </div>
-                <div className="flex items-center space-x-4">
-                  <Badge variant="outline">
-                    {(option.probability * 100).toFixed(1)}%
-                  </Badge>
-                  <span className="font-bold text-green-600">
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm text-slate-400">{(option.probability * 100).toFixed(1)}%</span>
+                  <span className="font-bold text-blue-400 text-sm">
                     {option.odds.toFixed(2)}x
                   </span>
                 </div>
@@ -231,212 +168,146 @@ export function PredictionDetailView({
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header */}
-      <div className="bg-white rounded-lg p-6 shadow-sm border">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <div className="flex items-center space-x-3 mb-2">
-              <h1 className="text-2xl font-bold">{game.title}</h1>
-              <Badge className="bg-green-100 text-green-800">
-                {game.status === "ACTIVE" ? "진행중" : game.status}
-              </Badge>
-              <Badge variant="outline">{game.category}</Badge>
+    <Card className="border-0 shadow-none bg-transparent">
+      <CardHeader className="px-0 pt-0 pb-4">
+        <CardTitle className="text-lg flex items-center justify-between text-white">
+          <span>{selectedOption ? '포지션 설정' : '포지션 선택'}</span>
+          {userBalance && (
+            <div className="flex items-center gap-2 text-xs font-normal px-3 py-1 bg-slate-800 rounded-full border border-white/10">
+              <Wallet className="w-3 h-3 text-slate-400" />
+              <span className="text-slate-300">보유:</span>
+              <span className="text-green-400">{userBalance.pmp.toLocaleString()} PMP</span>
             </div>
-            <p className="text-gray-600 mb-4">{game.description}</p>
+          )}
+        </CardTitle>
+      </CardHeader>
 
-            <div className="flex items-center space-x-6 text-sm text-gray-500">
-              <div className="flex items-center space-x-2">
-                <span>{game.creator.avatar}</span>
-                <span>{game.creator.name}</span>
-                <span>⭐ {game.creator.reputation}</span>
-              </div>
-              <div>마감: {formatTimeRemaining(game.endTime)}</div>
-            </div>
-          </div>
-        </div>
+      <CardContent className="px-0 pb-0 space-y-6">
+        {renderOptionSelector()}
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="text-sm text-blue-600 font-medium">총 거래량</div>
-            <div className="text-2xl font-bold text-blue-900">
-              ${game.totalVolume.toLocaleString()}
-            </div>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg">
-            <div className="text-sm text-green-600 font-medium">참여자</div>
-            <div className="text-2xl font-bold text-green-900">
-              {game.participantCount.toLocaleString()}
-            </div>
-          </div>
-          <div className="bg-purple-50 p-4 rounded-lg">
-            <div className="text-sm text-purple-600 font-medium">상금 풀</div>
-            <div className="text-2xl font-bold text-purple-900">
-              {game.prizePool.toLocaleString()} PMC
-            </div>
-          </div>
-          <div className="bg-orange-50 p-4 rounded-lg">
-            <div className="text-sm text-orange-600 font-medium">남은 시간</div>
-            <div className="text-2xl font-bold text-orange-900">
-              {formatTimeRemaining(game.endTime)}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - Prediction Interface */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <span>🎯</span>
-                <span>예측 참여</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {renderPredictionChart()}
-
-              {/* Stake Input */}
-              {selectedOption && (
-                <div className="mt-6 space-y-4 border-t pt-6">
-                  <div>
-                    <label className="block text-sm font-medium mb-2">
-                      투자 금액 (PmpAmount)
+        {/* Stake Input Area - Only valid if active */}
+        {game.status === 'ACTIVE' ? (
+          <div className={`transition-all duration-300 ${selectedOption ? 'opacity-100 translate-y-0' : 'opacity-50 translate-y-4 pointer-events-none'}`}>
+            {selectedOption && (
+              <div className="space-y-6 pt-4 border-t border-white/10">
+                {/* Stake Input Control */}
+                <div>
+                  <div className="flex justify-between items-center mb-4">
+                    <label className="text-sm font-medium text-slate-300">
+                      투자 금액
                     </label>
-                    <input
-                      type="number"
-                      value={stakeAmount}
-                      onChange={(e) => setStakeAmount(Number(e.target.value))}
-                      min={game.minimumStake}
-                      max={Math.min(game.maximumStake, userBalance.pmp)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                    <div className="text-xs text-gray-500 mt-1">
-                      보유: {userBalance.pmp.toLocaleString()} PmpAmount • 최소:{" "}
-                      {game.minimumStake.toLocaleString()} • 최대:{" "}
-                      {game.maximumStake.toLocaleString()}
+                    <span className="text-xs text-slate-400">
+                      최소 {game.minimumStake.toLocaleString()} PMP
+                    </span>
+                  </div>
+
+                  {/* Main Input & Slider Group */}
+                  <div className="bg-slate-900 rounded-xl border border-white/10 p-4 space-y-4">
+                    <div className="relative">
+                      <input
+                        ref={inputRef}
+                        type="number"
+                        value={stakeAmount || ''}
+                        onChange={(e) => setStakeAmount(Math.min(userBalance.pmp, Math.max(0, Number(e.target.value))))}
+                        className="w-full bg-transparent text-2xl font-bold text-white focus:outline-none placeholder:text-slate-600"
+                        placeholder="0"
+                      />
+                      <span className="absolute right-0 top-1/2 -translate-y-1/2 text-slate-500 font-medium">PMP</span>
+                    </div>
+
+                    {/* Slider */}
+                    <div className="relative h-6 flex items-center">
+                      <input
+                        type="range"
+                        min={game.minimumStake}
+                        max={userBalance.pmp}
+                        step={100}
+                        value={stakeAmount}
+                        onChange={(e) => setStakeAmount(Number(e.target.value))}
+                        className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500 hover:accent-blue-400 transition-all"
+                      />
+                    </div>
+
+                    {/* Percentage Presets */}
+                    <div className="grid grid-cols-4 gap-2">
+                      {[0.25, 0.5, 0.75, 1].map((ratio) => (
+                        <button
+                          key={ratio}
+                          onClick={() => setStakeAmount(Math.floor(userBalance.pmp * ratio))}
+                          className="text-xs py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors border border-white/5 active:bg-blue-500/20 active:border-blue-500/50"
+                        >
+                          {ratio === 1 ? 'MAX' : `${ratio * 100}%`}
+                        </button>
+                      ))}
                     </div>
                   </div>
 
-                  {/* Expected Return */}
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="text-sm text-green-600 font-medium mb-1">
-                      예상 수익
-                    </div>
-                    <div className="text-xl font-bold text-green-900">
-                      {expectedReturn.toLocaleString()} PmpAmount
-                    </div>
-                    <div className="text-xs text-green-600">
-                      수익률: +
-                      {(
-                        ((expectedReturn - stakeAmount) / stakeAmount) *
-                        100
-                      ).toFixed(1)}
-                      %
-                    </div>
+                  {/* Balance Impact Simulation */}
+                  <div className="mt-2 flex justify-between px-1 text-xs text-slate-400">
+                    <span>참여 후 잔액</span>
+                    <span className={`font-medium ${userBalance.pmp - stakeAmount < 0 ? 'text-red-400' : 'text-slate-300'}`}>
+                      {(userBalance.pmp - stakeAmount).toLocaleString()} PMP
+                    </span>
                   </div>
-
-                  <Button
-                    className={`w-full transition-all duration-200 ${
-                      stakeAmount >= game.minimumStake && stakeAmount <= userBalance.pmp
-                        ? "bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/30"
-                        : "bg-slate-600 text-slate-400 cursor-not-allowed"
-                    }`}
-                    size="lg"
-                    onClick={() => {
-                      if (onParticipate) {
-                        onParticipate(selectedOption, stakeAmount);
-                      } else {
-                        // Default behavior: show alert or handle locally
-                        alert(
-                          `${selectedOption} 옵션에 ${stakeAmount} PmpAmount로 참여하였습니다!`
-                        );
-                      }
-                    }}
-                    disabled={
-                      stakeAmount < game.minimumStake ||
-                      stakeAmount > userBalance.pmp
-                    }
-                  >
-                    {stakeAmount >= game.minimumStake && stakeAmount <= userBalance.pmp 
-                      ? `🎯 ${stakeAmount.toLocaleString()} PMP로 예측 참여`
-                      : `예측 참여 불가 (잔액 부족 또는 최소 금액 미달)`}
-                  </Button>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Right Column - Additional Info */}
-        <div className="space-y-6">
-          {/* User Balance */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">내 잔고</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">PmpAmount (Risk-free)</span>
-                <span className="font-bold">
-                  {userBalance.pmp.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">PMC (Risky)</span>
-                <span className="font-bold">
-                  {userBalance.pmc.toLocaleString()}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
+                {/* Return Simulation */}
+                <div className="bg-slate-800/50 p-4 rounded-xl border border-white/5 space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-slate-400">예상 수익</span>
+                    <span className="text-lg font-bold text-green-400">
+                      {expectedReturn.toLocaleString()} PMP
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-slate-500">수익률</span>
+                    <span className="text-green-500">
+                      +{(expectedReturn > 0 && stakeAmount > 0 ? ((expectedReturn - stakeAmount) / stakeAmount * 100).toFixed(1) : 0)}%
+                    </span>
+                  </div>
+                </div>
 
-          {/* Market Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">시장 정보</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-gray-600">예측 타입</span>
-                <span className="font-medium">
-                  {game.predictionType === "binary" && "이진 예측"}
-                  {game.predictionType === "wdl" && "승무패 예측"}
-                  {game.predictionType === "ranking" && "순위 예측"}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">총 거래량</span>
-                <span className="font-medium">
-                  ${game.totalVolume.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-600">24시간 변동</span>
-                <span className="font-medium text-green-600">+12.3%</span>
-              </div>
-            </CardContent>
-          </Card>
+                <Button
+                  type="button"
+                  className={`w-full py-6 text-lg font-bold shadow-lg transition-all flex items-center justify-center gap-2 ${stakeAmount >= game.minimumStake && stakeAmount <= userBalance.pmp && !isSubmitting
+                    ? "bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white shadow-blue-500/20"
+                    : "bg-slate-800 text-slate-500 cursor-not-allowed"
+                    }`}
+                  onClick={() => selectedOption && onBetAction?.(selectedOption, stakeAmount)}
+                  disabled={!selectedOption || stakeAmount < game.minimumStake || stakeAmount > userBalance.pmp || isSubmitting || !onBetAction}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                      처리중...
+                    </>
+                  ) : stakeAmount > userBalance.pmp ? (
+                    "잔액 부족"
+                  ) : stakeAmount < game.minimumStake ? (
+                    "최소 금액 미달"
+                  ) : (
+                    "예측 확정하기"
+                  )}
+                </Button>
 
-          {/* Agency Theory Info */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm">Agency Theory 적용</CardTitle>
-            </CardHeader>
-            <CardContent className="text-sm text-gray-600 space-y-2">
-              <div>• 정보 비대칭 해결을 통한 민주적 의사결정</div>
-              <div>• 전문가와 일반 사용자의 예측 비교</div>
-              <div>• 집단 지성 활용한 정확도 향상</div>
-              <div>• 투명한 보상 시스템</div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    </div>
+                <p className="text-center text-xs text-slate-500">
+                  결과는 정산 시점의 배당률에 따라 달라질 수 있습니다.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="p-4 bg-slate-800/50 rounded-xl text-center text-slate-400 text-sm border border-white/5">
+            이 게임은 현재 {game.status === 'ENDED' ? '종료되었습니다' : '정산되었습니다'}.
+            <br />
+            더 이상 참여할 수 없습니다.
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
-}
+});
+
+PredictionDetailView.displayName = "PredictionDetailView";
 
 export default PredictionDetailView;

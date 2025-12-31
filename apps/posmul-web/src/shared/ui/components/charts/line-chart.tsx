@@ -128,7 +128,7 @@ export function LineChart({
             {gradientFill && chartLines.map((line, index) => (
               <linearGradient
                 key={`gradient-${chartId}-${index}`}
-                id={`gradient-${chartId}-${line.dataKey}`}
+                id={`gradient-${chartId}-${index}`}
                 x1="0"
                 y1="0"
                 x2="0"
@@ -158,6 +158,8 @@ export function LineChart({
               fontSize: 12,
             }}
             dy={10}
+            interval="preserveStartEnd"
+            minTickGap={30}
           />
 
           <YAxis
@@ -182,7 +184,7 @@ export function LineChart({
             />
           )}
 
-          {chartLines.map((line) => (
+          {chartLines.map((line, index) => (
             <Line
               key={line.dataKey}
               type="monotone"
@@ -190,7 +192,7 @@ export function LineChart({
               name={line.name || line.dataKey}
               stroke={line.color}
               strokeWidth={line.strokeWidth || 2}
-              fill={gradientFill ? `url(#gradient-${chartId}-${line.dataKey})` : "none"}
+              fill={gradientFill ? `url(#gradient-${chartId}-${index})` : "none"}
               dot={false}
               activeDot={{
                 r: 6,

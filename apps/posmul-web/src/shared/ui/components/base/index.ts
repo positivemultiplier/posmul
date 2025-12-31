@@ -10,6 +10,7 @@ export {
   type CardProps,
 } from "./Card";
 export { Badge, type BadgeProps } from "./Badge";
+export * from "./Dialog";
 
 // Error Classes
 export {

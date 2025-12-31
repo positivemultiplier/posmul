@@ -18,6 +18,7 @@ const PILLARS = [
     bgColor: "from-blue-900/50 to-slate-900",
     stats: { count: 156, label: "개 기사" },
     icon: <Newspaper className="w-8 h-8" />,
+    image: "/images/cards/forum_news.png",
   },
   {
     key: "budget",
@@ -29,6 +30,7 @@ const PILLARS = [
     bgColor: "from-amber-900/50 to-slate-900",
     stats: { count: 42, label: "개 감시 중" },
     icon: <PieChart className="w-8 h-8" />,
+    image: "/images/cards/forum_budget.png",
   },
   {
     key: "agora",
@@ -40,6 +42,7 @@ const PILLARS = [
     bgColor: "from-purple-900/50 to-slate-900",
     stats: { count: 1234, label: "명 참여" },
     icon: <MessageSquare className="w-8 h-8" />,
+    image: "/images/cards/forum_agora.png",
   },
 ];
 
@@ -94,15 +97,26 @@ export default function ForumPage() {
                 <Link href={pillar.href}>
                   <Card className="bg-slate-900/70 border-slate-800 hover:border-slate-600 transition-all cursor-pointer group overflow-hidden h-full">
                     {/* 히어로 영역 */}
-                    <div className={`relative aspect-[4/3] bg-gradient-to-br ${pillar.bgColor} flex flex-col items-center justify-center p-4`}>
-                      <div className={`text-transparent bg-clip-text bg-gradient-to-r ${pillar.color}`}>
-                        {pillar.icon}
+                    <div className="relative aspect-[4/3] overflow-hidden">
+                      <img
+                        src={pillar.image}
+                        alt={pillar.title}
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <div className={`absolute inset-0 bg-gradient-to-t ${pillar.bgColor} opacity-90`} />
+
+                      {/* Content Overlay */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-10">
+                        <div className={`text-transparent bg-clip-text bg-gradient-to-r ${pillar.color}`}>
+                          {pillar.icon}
+                        </div>
+                        <h3 className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${pillar.color} mt-2`}>
+                          {pillar.title}
+                        </h3>
+                        <p className="text-xs text-slate-300 text-center mt-1">{pillar.subtitle}</p>
                       </div>
-                      <h3 className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${pillar.color} mt-2`}>
-                        {pillar.title}
-                      </h3>
-                      <p className="text-xs text-slate-400 text-center">{pillar.subtitle}</p>
-                      <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/60 text-white text-xs">
+
+                      <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/60 text-white text-xs z-10 backdrop-blur-sm border border-white/10">
                         {pillar.stats.count}{pillar.stats.label}
                       </div>
                     </div>

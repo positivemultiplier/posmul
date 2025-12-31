@@ -79,6 +79,7 @@ function buildGameForView(game: GameRow, stats: GameStats, gameOptions: ParsedOp
     settlementTime: toIsoOrFuture(game.settlement_date, 14),
     status: toGameStatusView(game.status),
     category: game.category || "스포츠",
+    createdAt: game.created_at || new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
     creator: {
       name: "축구분석가",
       reputation: 4.7,

@@ -19,7 +19,7 @@ export async function getPredictionGames(options?: {
   offset?: number;
 }) {
   const supabase = await createClient();
-  
+
   let query = supabase
     .schema("prediction")
     .from("prediction_games")
@@ -114,7 +114,7 @@ export async function getPredictionGameStats(gameId: string) {
     .from("prediction_statistics")
     .select("*")
     .eq("game_id", gameId)
-    .single();
+    .maybeSingle();
 
   if (error) {
     return null;
@@ -131,14 +131,14 @@ export function parseGameOptions(gameOptions: any) {
     if (Array.isArray(gameOptions)) {
       return gameOptions;
     }
-    
+
     if (typeof gameOptions === "object" && gameOptions !== null) {
       if (gameOptions.options) {
         return gameOptions.options;
       }
       return Object.values(gameOptions);
     }
-    
+
     return [];
   } catch (error) {
     void error;

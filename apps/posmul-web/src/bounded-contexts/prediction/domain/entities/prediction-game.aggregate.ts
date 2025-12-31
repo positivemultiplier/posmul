@@ -177,9 +177,8 @@ export class PredictionGame extends AggregateRoot {
       return failure(new DomainError("GAME_NOT_ACTIVE"));
     }
 
-    if (this._predictions.some((p) => p.userId === prediction.userId)) {
-      return failure(new DomainError("DUPLICATE_PREDICTION"));
-    }
+    // NOTE: 사용자는 동일 게임에 여러 번 베팅 가능 (추가 베팅 기능)
+    // 기존 중복 체크 제거됨 - 같은 옵션에 중복 베팅도 허용
 
     const hasOption = this._options.some(
       (option) => option.id === prediction.selectedOptionId
@@ -536,16 +535,16 @@ export class PredictionGame extends AggregateRoot {
     if (this._status !== GameStatus.CREATED && this._status !== GameStatus.PENDING) {
       return failure(new DomainError("GAME_ALREADY_STARTED"));
     }
-    
+
     // 금액 유효성 검증 (음수 불가)
     const amountValue = typeof amount === 'number' ? amount : Number(amount);
     if (amountValue < 0) {
       return failure(new DomainError("INVALID_PRIZE_AMOUNT"));
     }
-    
+
     this._allocatedPrizePool = amount;
     this.touch(); // 업데이트 시간 갱신
-    
+
     return success(undefined);
   }
 
@@ -554,10 +553,10 @@ export class PredictionGame extends AggregateRoot {
     if (score < 1.0 || score > 5.0) {
       return failure(new DomainError("INVALID_IMPORTANCE_SCORE"));
     }
-    
+
     this._gameImportanceScore = score;
     this.touch();
-    
+
     return success(undefined);
   }
 
