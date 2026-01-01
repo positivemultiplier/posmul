@@ -10,6 +10,15 @@ description: 새로운 Bounded Context를 추가하는 워크플로우. 새 도�
 
 ## 워크플로우
 
+```mermaid
+flowchart TD
+	A[New Domain] --> B[Design: name + entities + schema]
+	B --> C[Create folders (DDD layers)]
+	C --> D[Write context.md]
+	D --> E[DB schema via MCP migration]
+	E --> F[Generate types]
+```
+
 ### Step 1: 도메인 설계
 
 1. 도메인 이름 결정 (영문 소문자, kebab-case)
@@ -21,7 +30,7 @@ description: 새로운 Bounded Context를 추가하는 워크플로우. 새 도�
 // turbo
 ```powershell
 $domain = "new-domain"
-$base = "apps/posmul-web/src/bounded-contexts/$domain"
+$base = "C:\\G\\posmul\\apps\\posmul-web\\src\\bounded-contexts\\$domain"
 New-Item -ItemType Directory -Path "$base/domain/entities" -Force
 New-Item -ItemType Directory -Path "$base/domain/value-objects" -Force
 New-Item -ItemType Directory -Path "$base/domain/repositories" -Force
@@ -31,6 +40,19 @@ New-Item -ItemType Directory -Path "$base/infrastructure/repositories" -Force
 New-Item -ItemType Directory -Path "$base/presentation/components" -Force
 New-Item -ItemType Directory -Path "$base/presentation/hooks" -Force
 New-Item -ItemType Directory -Path "$base/__tests__" -Force
+```
+
+```mermaid
+graph TD
+	BC[bounded-contexts/<domain>] --> DL[domain]
+	BC --> AL[application]
+	BC --> IL[infrastructure]
+	BC --> PL[presentation]
+	DL --> E[entities]
+	DL --> VO[value-objects]
+	DL --> R[repositories]
+	PL --> C[components]
+	PL --> H[hooks]
 ```
 
 ### Step 3: context.md 생성
@@ -52,7 +74,7 @@ New-Item -ItemType Directory -Path "$base/__tests__" -Force
 
 ### Step 4: DB 스키마 생성
 
-MCP 도구로 스키마 생성:
+MCP 도구로 스키마 생성(DDL은 MCP로만):
 ```sql
 CREATE SCHEMA IF NOT EXISTS {domain_name};
 ```
@@ -61,7 +83,7 @@ CREATE SCHEMA IF NOT EXISTS {domain_name};
 
 // turbo
 ```powershell
-타입 생성: VS Code(MCP)에서 `mcp_com_supabase__generate_typescript_types`
+pnpm generate-types
 ```
 
 ## 체크리스트

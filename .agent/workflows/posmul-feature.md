@@ -46,6 +46,24 @@ presentation/
 └── hooks/           # Custom Hooks
 ```
 
+**UI 원칙(Local First)**
+- `shared/ui`는 Button/Input/Modal shell/Layout shell 같은 **프리미티브** 중심으로만 사용
+- 카드/섹션/도메인 의미가 담긴 조합 UI는 `bounded-contexts/{domain}/presentation/components`에 생성
+
+```mermaid
+flowchart TD
+	A[Feature UI] --> B[Use shared/ui primitives]
+	B --> C[Compose domain UI in presentation]
+	C --> D[Expose only via domain route/page]
+```
+
+```mermaid
+graph TD
+	S[shared/ui] --> P[presentation/components]
+	D[domain/application] --> P
+	P --> R[route/page]
+```
+
 ### Step 3: 테스트
 
 // turbo

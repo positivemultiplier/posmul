@@ -140,20 +140,22 @@ export function PredictionDetailTabsClient({ game, userBalance, userBets, initia
     };
   }, [game]);
 
+  // stable reference for options to prevent re-render loop
+  const memoizedOptions = useMemo(() =>
+    game.options.map(opt => ({ id: opt.id, label: opt.label })),
+    [game.options]
+  );
+
   // Realtime 통계 구독 - 실시간 베팅 분포 데이터
   const { stats: realtimeStats, chartData: realtimeChartData, isConnected: isRealtimeConnected } = usePredictionRealtimeStats({
     gameId: game.id,
-    options: game.options.map(opt => ({ id: opt.id, label: opt.label })),
+    options: memoizedOptions,
     enabled: true,
     initialData: initialChartData,
   });
 
   // 차트 데이터: Realtime 데이터가 있으면 사용, 없으면 옵션 기반 기본값
   const probabilityData = useMemo(() => {
-    // Debugging logs
-    console.log("[PredictionChart] CreatedAt:", game.createdAt);
-    console.log("[PredictionChart] Realtime Data Length:", realtimeChartData.length);
-
     if (realtimeChartData.length > 0) {
       // Realtime 데이터를 차트 형식으로 변환
       return realtimeChartData.map((point) => {
@@ -250,11 +252,6 @@ export function PredictionDetailTabsClient({ game, userBalance, userBets, initia
       strokeWidth: 2,
     }));
   }, [game]);
-
-  // 디버깅 로그
-  console.log("[PredictionDetailTabsClient] probabilityData:", probabilityData);
-  console.log("[PredictionDetailTabsClient] chartLines:", chartLines);
-  console.log("[PredictionDetailTabsClient] game.predictionType:", game.predictionType);
 
   return (
     <div className="min-h-screen bg-slate-950 text-white pb-20 font-sans">
