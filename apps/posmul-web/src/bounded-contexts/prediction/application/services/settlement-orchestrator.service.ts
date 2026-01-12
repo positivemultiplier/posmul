@@ -11,42 +11,17 @@ import { createClient } from "@/lib/supabase/client";
 // Types
 // ============================================================
 
-export type SettlementSourceType = "football_data" | "kosis" | "manual" | "thesportsdb";
-export type SettlementMethod = "auto" | "semi_auto" | "manual";
+import { IOracleProvider } from "../../domain/services/oracle/oracle.interface";
+import { DartOracleAdapter } from "../../infrastructure/oracle/dart.adapter";
+import { FootballDataOracleAdapter } from "../../infrastructure/oracle/football-data.adapter";
+import { KosisOracleAdapter } from "../../infrastructure/oracle/kosis.adapter";
+import {
+    GameResult,
+    SettlementMethod,
+    SettlementSource,
+    SettlementSourceType
+} from "../../domain/value-objects/settlement-types";
 
-export interface SettlementSource {
-    id: string;
-    gameId: string;
-    sourceType: SettlementSourceType;
-    sourceConfig: Record<string, unknown>;
-    externalId?: string;
-    scheduledAt?: Date;
-}
-
-export interface GameResult {
-    winningOptionId: string;
-    sourceData: Record<string, unknown>;
-    confidence: number; // 0-1, 결과 신뢰도
-    fetchedAt: Date;
-}
-
-interface FootballDataMatch {
-    id: number;
-    status: string;
-    score: {
-        fullTime: {
-            home: number;
-            away: number;
-        };
-        winner: "HOME_TEAM" | "AWAY_TEAM" | "DRAW" | null;
-    };
-}
-
-interface KosisIndicator {
-    indicatorCode: string;
-    value: number;
-    referenceDate: string;
-}
 
 // ============================================================
 // Settlement Orchestrator
@@ -54,6 +29,15 @@ interface KosisIndicator {
 
 export class SettlementOrchestratorService {
     private supabase = createClient();
+    private adapters: IOracleProvider[];
+
+    constructor(adapters?: IOracleProvider[]) {
+        this.adapters = adapters ?? [
+            new KosisOracleAdapter(),
+            new FootballDataOracleAdapter(),
+            new DartOracleAdapter(),
+        ];
+    }
 
     /**
      * 예정된 정산 소스 조회
@@ -85,220 +69,26 @@ export class SettlementOrchestratorService {
      * 외부 API에서 게임 결과 조회
      */
     async fetchGameResult(source: SettlementSource): Promise<GameResult | null> {
-        switch (source.sourceType) {
-            case "football_data":
-                return this.fetchFootballDataResult(source);
-            case "kosis":
-                return this.fetchKosisResult(source);
-            case "thesportsdb":
-                return this.fetchTheSportsDbResult(source);
-            case "manual":
+        const adapter = this.adapters.find(a => a.supports(source.sourceType));
+
+        if (!adapter) {
+            if (source.sourceType === "manual") {
                 return null; // 수동 정산은 별도 처리
-            default:
-                console.warn(`[SettlementOrchestrator] Unknown source type: ${source.sourceType}`);
-                return null;
-        }
-    }
-
-    /**
-     * football-data.org에서 경기 결과 조회
-     */
-    private async fetchFootballDataResult(source: SettlementSource): Promise<GameResult | null> {
-        const matchId = source.externalId;
-        if (!matchId) {
-            console.error("[FootballData] No externalId (matchId) provided");
+            }
+            console.warn(`[SettlementOrchestrator] No adapter found for source type: ${source.sourceType}`);
             return null;
         }
 
-        const apiKey = process.env.FOOTBALL_DATA_API_KEY;
-        if (!apiKey) {
-            console.error("[FootballData] FOOTBALL_DATA_API_KEY not set");
-            return null;
-        }
+        const result = await adapter.fetchResult(source);
+        if (!result) return null;
 
-        try {
-            const res = await fetch(`https://api.football-data.org/v4/matches/${matchId}`, {
-                headers: { "X-Auth-Token": apiKey },
-            });
-
-            if (!res.ok) {
-                console.error("[FootballData] API error:", res.status);
-                return null;
-            }
-
-            const match: FootballDataMatch = await res.json();
-
-            if (match.status !== "FINISHED") {
-                console.log("[FootballData] Match not finished yet:", match.status);
-                return null;
-            }
-
-            // 게임 옵션과 매칭 (sourceConfig에 매핑 정보 필요)
-            const optionMapping = source.sourceConfig.optionMapping as Record<string, string> | undefined;
-            if (!optionMapping) {
-                console.error("[FootballData] No optionMapping in sourceConfig");
-                return null;
-            }
-
-            const winnerKey = match.score.winner ?? "DRAW";
-            const winningOptionId = optionMapping[winnerKey];
-
-            if (!winningOptionId) {
-                console.error("[FootballData] No option mapped for:", winnerKey);
-                return null;
-            }
-
-            return {
-                winningOptionId,
-                sourceData: {
-                    matchId: match.id,
-                    score: match.score,
-                    status: match.status,
-                },
-                confidence: 1.0, // API 결과는 확실
-                fetchedAt: new Date(),
-            };
-        } catch (err) {
-            console.error("[FootballData] Fetch error:", err);
-            return null;
-        }
-    }
-
-    /**
-     * KOSIS에서 경제지표 조회
-     */
-    private async fetchKosisResult(source: SettlementSource): Promise<GameResult | null> {
-        const apiKey = process.env.KOSIS_API_KEY;
-        if (!apiKey) {
-            console.error("[KOSIS] KOSIS_API_KEY not set");
-            return null;
-        }
-
-        const { indicatorCode, comparisonType, threshold, optionMapping } = source.sourceConfig as {
-            indicatorCode: string;
-            comparisonType: "greater" | "less" | "equal" | "range";
-            threshold?: number;
-            optionMapping: Record<string, string>;
+        // OracleResult -> GameResult 변환 (타입 호환성)
+        return {
+            winningOptionId: result.winningOptionId,
+            sourceData: result.sourceData,
+            confidence: result.confidence,
+            fetchedAt: result.fetchedAt
         };
-
-        if (!indicatorCode || !optionMapping) {
-            console.error("[KOSIS] Missing indicatorCode or optionMapping");
-            return null;
-        }
-
-        try {
-            // KOSIS API 호출 (실제 API 스펙에 맞게 수정 필요)
-            const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${apiKey}&itmId=${indicatorCode}&format=json`;
-            const res = await fetch(url);
-
-            if (!res.ok) {
-                console.error("[KOSIS] API error:", res.status);
-                return null;
-            }
-
-            const data = await res.json();
-            const latestValue = data?.item?.[0]?.DT ?? null;
-
-            if (latestValue === null) {
-                console.log("[KOSIS] No data available yet");
-                return null;
-            }
-
-            // 조건에 따라 승리 옵션 결정
-            let resultKey = "unknown";
-            const numValue = parseFloat(latestValue);
-
-            if (comparisonType === "greater" && threshold !== undefined) {
-                resultKey = numValue > threshold ? "above" : "below";
-            } else if (comparisonType === "less" && threshold !== undefined) {
-                resultKey = numValue < threshold ? "below" : "above";
-            }
-
-            const winningOptionId = optionMapping[resultKey];
-            if (!winningOptionId) {
-                console.error("[KOSIS] No option mapped for:", resultKey);
-                return null;
-            }
-
-            return {
-                winningOptionId,
-                sourceData: {
-                    indicatorCode,
-                    value: numValue,
-                    comparisonType,
-                    threshold,
-                },
-                confidence: 1.0,
-                fetchedAt: new Date(),
-            };
-        } catch (err) {
-            console.error("[KOSIS] Fetch error:", err);
-            return null;
-        }
-    }
-
-    /**
-     * TheSportsDB에서 결과 조회 (무료 대안)
-     */
-    private async fetchTheSportsDbResult(source: SettlementSource): Promise<GameResult | null> {
-        const eventId = source.externalId;
-        if (!eventId) {
-            console.error("[TheSportsDB] No externalId (eventId) provided");
-            return null;
-        }
-
-        try {
-            const res = await fetch(
-                `https://www.thesportsdb.com/api/v1/json/3/lookupevent.php?id=${eventId}`
-            );
-
-            if (!res.ok) {
-                console.error("[TheSportsDB] API error:", res.status);
-                return null;
-            }
-
-            const data = await res.json();
-            const event = data?.events?.[0];
-
-            if (!event || !event.strStatus || event.strStatus !== "Match Finished") {
-                console.log("[TheSportsDB] Match not finished yet");
-                return null;
-            }
-
-            const homeScore = parseInt(event.intHomeScore ?? "0", 10);
-            const awayScore = parseInt(event.intAwayScore ?? "0", 10);
-
-            const optionMapping = source.sourceConfig.optionMapping as Record<string, string> | undefined;
-            if (!optionMapping) {
-                console.error("[TheSportsDB] No optionMapping in sourceConfig");
-                return null;
-            }
-
-            let winnerKey = "DRAW";
-            if (homeScore > awayScore) winnerKey = "HOME_TEAM";
-            else if (awayScore > homeScore) winnerKey = "AWAY_TEAM";
-
-            const winningOptionId = optionMapping[winnerKey];
-            if (!winningOptionId) {
-                console.error("[TheSportsDB] No option mapped for:", winnerKey);
-                return null;
-            }
-
-            return {
-                winningOptionId,
-                sourceData: {
-                    eventId: event.idEvent,
-                    eventName: event.strEvent,
-                    homeScore,
-                    awayScore,
-                },
-                confidence: 1.0,
-                fetchedAt: new Date(),
-            };
-        } catch (err) {
-            console.error("[TheSportsDB] Fetch error:", err);
-            return null;
-        }
     }
 
     /**
@@ -383,10 +173,6 @@ export class SettlementOrchestratorService {
         if (!updated) {
             return { success: false, error: "게임 상태 업데이트 실패" };
         }
-
-        // 4. TODO: PredictionSettlementService.settlePrediction() 호출하여 보상 분배
-        // const settlementService = new PredictionSettlementService();
-        // await settlementService.settlePrediction(source.gameId, { winningOptionId: result.winningOptionId, ... }, participants);
 
         return { success: true, result };
     }
