@@ -1067,6 +1067,7 @@ export class Donation {
   static createOpinionLeaderDonation = Donation.createOpinionLeaderSupport;
 
   // DB 데이터로부터 엔티티 재구성
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static reconstitute(data: any): Donation {
     const donation = new Donation(
       new DonationId(data.id),

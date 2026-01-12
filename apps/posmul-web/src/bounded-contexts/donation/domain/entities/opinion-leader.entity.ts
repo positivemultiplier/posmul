@@ -484,6 +484,7 @@ export class OpinionLeader {
   }
 
   // DB 데이터로부터 엔티티 재구성
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static reconstitute(data: any): OpinionLeader {
     const leader = new OpinionLeader(
       new OpinionLeaderId(data.id),

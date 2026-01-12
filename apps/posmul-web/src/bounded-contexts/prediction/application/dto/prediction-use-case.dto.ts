@@ -71,7 +71,7 @@ export interface SettlePredictionGameRequest {
   readonly gameId: PredictionGameId;
   readonly correctOptionId: string;
   readonly adminUserId: UserId; // 정산을 실행하는 관리자
-  readonly finalResults?: Record<string, any>; // 추가 결과 데이터
+  readonly finalResults?: Record<string, unknown>; // 추가 결과 데이터
 }
 
 /**
@@ -113,8 +113,8 @@ export interface DistributeMoneyWaveRequest {
   readonly triggerUserId: UserId; // 분배를 트리거한 사용자 (시스템일 경우 admin)
   readonly targetGameIds?: PredictionGameId[]; // 대상 게임들 (Wave 1용)
   readonly targetUserIds?: UserId[]; // 대상 사용자들 (Wave 2용)
-  readonly customCriteria?: Record<string, any>; // 맞춤형 기준 (Wave 3용)
-  readonly metadata?: Record<string, any>; // 추가 메타데이터
+  readonly customCriteria?: Record<string, unknown>; // 맞춤형 기준 (Wave 3용)
+  readonly metadata?: Record<string, unknown>; // 추가 메타데이터
 }
 
 /**
@@ -138,7 +138,12 @@ export interface DistributeMoneyWaveResponse {
     poolAmount?: number;
     targetGames?: number;
     selectedUsers?: number;
-    [key: string]: any;
+    // Wave2 specific
+    redistributionAmount?: number;
+    targetUsers?: number;
+    // Wave3 specific
+    entrepreneurId?: UserId;
+    incentiveAmount?: number;
   };
 }
 
@@ -151,7 +156,7 @@ export interface UseCaseResponse<T> {
   readonly error?: {
     readonly code: string;
     readonly message: string;
-    readonly details?: Record<string, any>;
+    readonly details?: Record<string, unknown>;
   };
   readonly metadata?: {
     readonly timestamp: Date;

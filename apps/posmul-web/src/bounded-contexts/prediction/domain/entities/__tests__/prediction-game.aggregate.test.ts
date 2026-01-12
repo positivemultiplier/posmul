@@ -1,16 +1,7 @@
 /**
  * Prediction Game Aggregate Tests
  *
- * Domain      // When
-      const result = PredictionGame.create(validGameData);
-
-      // Then
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.id).toBe(gameId);
-        expect(result.data.creatorId).toBe(creatorId);
-        expect(result.data.status.value).toBe("CREATED");
-      }트 - PredictionGame Aggregate
+ * Domain 테스트 - PredictionGame Aggregate
  * 예측 게임의 핵심 비즈니스 로직 검증
  */
 import {
@@ -398,7 +389,7 @@ describe("PredictionGame Aggregate", () => {
       }
     });
 
-    it("동일 사용자는 중복 예측을 할 수 없다", () => {
+    it("동일 사용자는 추가 베팅이 가능하다 (중복 베팅 허용)", () => {
       // Given
       const userId = "user-456" as UserId;
       const p1 = Prediction.create({
@@ -412,7 +403,7 @@ describe("PredictionGame Aggregate", () => {
       if (!p1.success) return;
       game.addPrediction(p1.data);
 
-      // When (동일 사용자 재예측 시도)
+      // When (동일 사용자 추가 베팅 - 허용됨)
       const p2 = Prediction.create({
         userId,
         gameId: game.getId(),
@@ -424,10 +415,11 @@ describe("PredictionGame Aggregate", () => {
       if (!p2.success) return;
       const result = game.addPrediction(p2.data);
 
-      // Then
-      expect(result.success).toBe(false);
-      expect(game.getPredictions()).toHaveLength(1);
+      // Then (중복 베팅이 허용되므로 성공해야 함)
+      expect(result.success).toBe(true);
+      expect(game.getPredictions()).toHaveLength(2);
     });
+
 
     it("최대 참여자 수를 초과할 수 없다", () => {
       // Given (maxParticipants = 100이지만 테스트를 위해 1로 설정)

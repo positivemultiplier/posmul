@@ -373,6 +373,7 @@ export class Institute {
   }
 
   // DB 데이터로부터 엔티티 재구성
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   static reconstitute(data: any): Institute {
     const institute = new Institute(
       new InstituteId(data.id),

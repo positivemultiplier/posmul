@@ -188,7 +188,11 @@ export interface INetworkEconomicsEngine {
       timestamp: Date;
       userCount: number;
       value: PmpAmount;
-      engagementMetrics: any;
+      engagementMetrics: {
+        sessionDuration: number;
+        pageViews: number;
+        interactionRate: number;
+      };
     }>
   ): {
     estimatedCriticalMass: number;
@@ -227,7 +231,7 @@ export interface INetworkEconomicsEngine {
       userCount: number;
       connections: number;
       value: PmpAmount;
-      characteristics: Record<string, any>;
+      characteristics: Record<string, string | number | boolean>;
     }>
   ): {
     segmentValues: Map<string, PmpAmount>;
@@ -295,7 +299,11 @@ export interface INetworkEconomicsEngine {
       name: string;
       userGrowthRate: number;
       features: string[];
-      marketConditions: any;
+      marketConditions: {
+        competitionLevel: number;
+        marketTrend: 'growing' | 'stable' | 'declining';
+        regulatoryRisk: number;
+      };
       timeHorizon: number; // months
     }>
   ): Array<{

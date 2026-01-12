@@ -118,9 +118,9 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
         const expectedValueIncrease = createPmpAmount(
           Math.round(
             (Number(network1.value) + Number(network2.value)) *
-              interactionStrength *
-              synergyCoefficient *
-              0.1
+            interactionStrength *
+            synergyCoefficient *
+            0.1
           )
         );
 
@@ -270,7 +270,11 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
       timestamp: Date;
       userCount: number;
       value: PmpAmount;
-      engagementMetrics: any;
+      engagementMetrics: {
+        sessionDuration: number;
+        pageViews: number;
+        interactionRate: number;
+      };
     }>
   ): {
     estimatedCriticalMass: number;
@@ -492,7 +496,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
       userCount: number;
       connections: number;
       value: PmpAmount;
-      characteristics: Record<string, any>;
+      characteristics: Record<string, string | number | boolean>;
     }>
   ): {
     segmentValues: Map<string, PmpAmount>;
@@ -536,8 +540,8 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
         const synergyValue = createPmpAmount(
           Math.round(
             crossConnections *
-              ((Number(seg1.value) + Number(seg2.value)) / 2) *
-              0.05
+            ((Number(seg1.value) + Number(seg2.value)) / 2) *
+            0.05
           )
         );
 
@@ -558,7 +562,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
       const potentialGrowth = Math.max(
         0,
         segments.reduce((max, s) => Math.max(max, s.userCount), 0) -
-          segment.userCount
+        segment.userCount
       );
 
       return {
@@ -699,7 +703,7 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
     const avgCompetitorPrice =
       competitorPricing.length > 0
         ? competitorPricing.reduce((sum, price) => sum + Number(price), 0) /
-          competitorPricing.length
+        competitorPricing.length
         : basePriceNum;
 
     // 수요 기반 조정
@@ -769,7 +773,11 @@ export class NetworkEconomicsEngine implements INetworkEconomicsEngine {
       name: string;
       userGrowthRate: number;
       features: string[];
-      marketConditions: any;
+      marketConditions: {
+        competitionLevel: number;
+        marketTrend: 'growing' | 'stable' | 'declining';
+        regulatoryRisk: number;
+      };
       timeHorizon: number;
     }>
   ): Array<{

@@ -25,15 +25,14 @@ import {
   PredictionParticipatedEvent,
 } from "../../../prediction/domain/events/prediction-game-events";
 
-const noop = (..._args: unknown[]): void => {};
+const noop = (..._args: unknown[]): void => { };
 
 /**
  * ?占쎌륫 李몄뿬 ?占쎈깽???占쎈뱾??
  * PmpAmount 李④컧 ?占쎈깽?占쏙옙? 寃쎌젣 ?占쎌뒪?占쎌쑝占??占쏀뙆?占쎈땲??
  */
 export class PredictionParticipatedEventHandler
-  implements IDomainEventSubscriber<PredictionParticipatedEvent>
-{
+  implements IDomainEventSubscriber<PredictionParticipatedEvent> {
   readonly eventType = "PredictionParticipated";
   readonly subscriberId = "prediction-participated-handler";
 
@@ -105,8 +104,7 @@ export class PredictionParticipatedEventHandler
  * 寃쎌젣 ?占쎌뒪?占쎌쓽 PmpAmount 吏異쒖쓣 泥섎━?占쎈땲??
  */
 export class PmpSpentForPredictionEventHandler
-  implements IDomainEventSubscriber<PmpSpentForPredictionEvent>
-{
+  implements IDomainEventSubscriber<PmpSpentForPredictionEvent> {
   readonly eventType = "PmpSpentForPrediction";
   readonly subscriberId = "pmp-spent-prediction-handler";
 
@@ -180,8 +178,7 @@ export class PmpSpentForPredictionEventHandler
  * 寃뚯엫 ?占쎌궛 ??PmcAmount 蹂댁긽 遺꾨같占?泥섎━?占쎈땲??
  */
 export class PredictionGameSettledEventHandler
-  implements IDomainEventSubscriber<PredictionGameSettledEvent>
-{
+  implements IDomainEventSubscriber<PredictionGameSettledEvent> {
   readonly eventType = "PredictionGameSettled";
   readonly subscriberId = "prediction-game-settled-handler";
 
@@ -263,8 +260,7 @@ export class PredictionGameSettledEventHandler
  * ?占쎌륫 ?占쎄났?占쎈줈 ?占쏀븳 PmcAmount 蹂댁긽??泥섎━?占쎈땲??
  */
 export class PmcEarnedFromPredictionEventHandler
-  implements IDomainEventSubscriber<PmcEarnedFromPredictionEvent>
-{
+  implements IDomainEventSubscriber<PmcEarnedFromPredictionEvent> {
   readonly eventType = "PmcEarnedFromPrediction";
   readonly subscriberId = "pmc-earned-prediction-handler";
 
@@ -346,8 +342,7 @@ export class PmcEarnedFromPredictionEventHandler
  * MoneyWave ?占쎌뒪?占쎌쓽 遺꾨같 ?占쎈즺占?泥섎━?占쎈땲??
  */
 export class MoneyWaveDistributionCompletedEventHandler
-  implements IDomainEventSubscriber<MoneyWaveDistributionCompletedEvent>
-{
+  implements IDomainEventSubscriber<MoneyWaveDistributionCompletedEvent> {
   readonly eventType = "MoneyWaveDistributionCompleted";
   readonly subscriberId = "money-wave-distribution-completed-handler";
 
@@ -430,10 +425,9 @@ export class MoneyWaveDistributionCompletedEventHandler
  */
 export class EconomicEventHandler
   implements
-    IDomainEventSubscriber<
-      PmpEarnedEvent | PmcEarnedEvent | PmpSpentEvent | PmcSpentEvent
-    >
-{
+  IDomainEventSubscriber<
+    PmpEarnedEvent | PmcEarnedEvent | PmpSpentEvent | PmcSpentEvent
+  > {
   readonly eventType = "EconomicEvent";
   readonly subscriberId = "prediction-economic-event-handler";
 
@@ -515,7 +509,9 @@ export const createPredictionEventHandlers = () => {
 /**
  * ?占쎈깽???占쎈뱾???占쎈줉 ?占쏀띁
  */
-export const registerPredictionEventHandlers = (eventPublisher: any) => {
+export const registerPredictionEventHandlers = (eventPublisher: {
+  subscribe: (handler: ReturnType<typeof createPredictionEventHandlers>[number]) => void;
+}) => {
   const handlers = createPredictionEventHandlers();
 
   handlers.forEach((handler) => {

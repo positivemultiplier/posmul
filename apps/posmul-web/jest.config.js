@@ -12,7 +12,7 @@ module.exports = {
         lib: ['ES2017'],
         esModuleInterop: true,
         skipLibCheck: true,
-        strict: false,
+        strict: true,
         resolveJsonModule: true,
         isolatedModules: true,
         allowSyntheticDefaultImports: true,

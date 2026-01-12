@@ -28,7 +28,7 @@ export class MoneyWave2Aggregate {
   constructor(
     private readonly id: string,
     private readonly targetGiniCoefficient: number = 0.3
-  ) {}
+  ) { }
 
   /**
    * MoneyWave2Aggregate 생성 팩토리 메서드
@@ -39,8 +39,8 @@ export class MoneyWave2Aggregate {
       dormancyPeriodMonths: number;
       redistributionRate: number;
       giniThreshold: number;
-      minimumPoolSize: any;
-      maxRedistributionPerCycle: any;
+      minimumPoolSize: number;
+      maxRedistributionPerCycle: number;
     }
   ): Result<MoneyWave2Aggregate, DomainError> {
     try {
@@ -147,7 +147,7 @@ export class MoneyWave2Aggregate {
   }
 
   calculateDistribution(
-    recipients: any[],
+    recipients: Array<{ id: string; score?: number }>,
     redistributionRate?: number
   ): Result<
     {
@@ -208,7 +208,7 @@ export class MoneyWave2Aggregate {
       amount: number;
       priority: number;
     }>
-  ): Result<any[], DomainError> {
+  ): Result<Array<{ id: string; recipientId: string; amount: number; executedAt: Date }>, DomainError> {
     try {
       if (this.status !== MoneyWave2Status.REDISTRIBUTING) {
         return {
