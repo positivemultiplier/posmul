@@ -230,6 +230,112 @@ export class GameSchedulingService {
         optionMapping: { above: "above", below: "below" },
       },
     });
+
+    // ============================================================
+    // DART 기업 공시 기반 예측 게임 템플릿
+    // ============================================================
+
+    // 삼성전자 분기 영업이익 예측 (분기별 실적 발표)
+    this.templates.push({
+      id: "dart-samsung-quarterly",
+      title: "삼성전자 분기 영업이익 예측",
+      description:
+        "삼성전자 분기 실적 발표 영업이익을 예측하세요. DART 공시 기반 정확한 정산!",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "above", label: "10조원 초과", description: "실적 호조" },
+        { id: "below", label: "10조원 이하", description: "실적 부진" },
+      ],
+      scheduledTime: this.getNextQuarterlySchedule(1, 9), // 분기 시작 1일 09:00
+      duration: 720, // 30일간 참여 가능
+      settlementDelay: 24, // 발표 후 24시간 내 정산
+      minimumStake: 5000 as PmpAmount,
+      maximumStake: 200000 as PmpAmount,
+      maxParticipants: 2000,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "critical",
+      recurrence: "monthly", // 분기별이지만 monthly로 관리
+      isActive: true,
+      sourceType: "dart",
+      sourceConfig: {
+        corpCode: "00126380", // 삼성전자 고유번호
+        bsnsYear: new Date().getFullYear().toString(),
+        reprtCode: "11013", // 1분기 보고서
+        accountName: "영업이익",
+        comparisonType: "greater",
+        threshold: 10000000000000, // 10조원
+        optionMapping: { above: "above", below: "below" },
+      },
+    });
+
+    // 현대자동차 분기 영업이익 예측
+    this.templates.push({
+      id: "dart-hyundai-quarterly",
+      title: "현대자동차 분기 영업이익 예측",
+      description:
+        "현대자동차 분기 실적 발표 영업이익을 예측하세요. 자동차 산업 동향 파악!",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "above", label: "3조원 초과", description: "실적 호조" },
+        { id: "below", label: "3조원 이하", description: "실적 부진" },
+      ],
+      scheduledTime: this.getNextQuarterlySchedule(5, 9),
+      duration: 720,
+      settlementDelay: 24,
+      minimumStake: 5000 as PmpAmount,
+      maximumStake: 200000 as PmpAmount,
+      maxParticipants: 2000,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "high",
+      recurrence: "monthly",
+      isActive: true,
+      sourceType: "dart",
+      sourceConfig: {
+        corpCode: "00164742", // 현대자동차 고유번호
+        bsnsYear: new Date().getFullYear().toString(),
+        reprtCode: "11013",
+        accountName: "영업이익",
+        comparisonType: "greater",
+        threshold: 3000000000000, // 3조원
+        optionMapping: { above: "above", below: "below" },
+      },
+    });
+
+    // SK하이닉스 분기 순이익 예측
+    this.templates.push({
+      id: "dart-skhynix-quarterly",
+      title: "SK하이닉스 분기 순이익 예측",
+      description:
+        "SK하이닉스 분기 순이익을 예측하세요. 반도체 업황 흑자/적자 전환 게임!",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "profit", label: "흑자", description: "순이익 0 초과" },
+        { id: "loss", label: "적자", description: "순이익 0 이하" },
+      ],
+      scheduledTime: this.getNextQuarterlySchedule(10, 9),
+      duration: 720,
+      settlementDelay: 24,
+      minimumStake: 5000 as PmpAmount,
+      maximumStake: 200000 as PmpAmount,
+      maxParticipants: 2000,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "high",
+      recurrence: "monthly",
+      isActive: true,
+      sourceType: "dart",
+      sourceConfig: {
+        corpCode: "00164779", // SK하이닉스 고유번호
+        bsnsYear: new Date().getFullYear().toString(),
+        reprtCode: "11013",
+        accountName: "당기순이익",
+        comparisonType: "greater",
+        threshold: 0, // 흑자/적자 판단
+        optionMapping: { above: "profit", below: "loss" },
+      },
+    });
   }
 
   /**
@@ -242,6 +348,27 @@ export class GameSchedulingService {
       result.setMonth(result.getMonth() + 1);
     }
     return result;
+  }
+
+  /**
+   * 다음 분기 스케줄 날짜 계산 (1, 4, 7, 10월)
+   */
+  private getNextQuarterlySchedule(dayOfMonth: number, hour: number): Date {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const quarterStartMonths = [0, 3, 6, 9]; // 1월, 4월, 7월, 10월
+
+    // 현재 월 이후의 다음 분기 시작월 찾기
+    let nextQuarterMonth = quarterStartMonths.find(m => m > currentMonth);
+    if (nextQuarterMonth === undefined) {
+      nextQuarterMonth = 0; // 다음 해 1월
+    }
+
+    const year = nextQuarterMonth === 0 && currentMonth >= 9
+      ? now.getFullYear() + 1
+      : now.getFullYear();
+
+    return new Date(year, nextQuarterMonth, dayOfMonth, hour, 0, 0);
   }
 
   /**
