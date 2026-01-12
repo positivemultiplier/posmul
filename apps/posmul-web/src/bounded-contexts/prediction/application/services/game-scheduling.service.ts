@@ -4,6 +4,7 @@ import type { PmpAmount } from "@posmul/auth-economy-sdk";
 import { PredictionType } from "../../domain/value-objects/prediction-types";
 import type { GameOptions } from "../../domain/value-objects/prediction-types";
 import { CreatePredictionGameUseCase } from "../use-cases/create-prediction-game.use-case";
+import { SettlementSourceType } from "../../domain/value-objects/settlement-types";
 
 export interface ScheduledGameTemplate {
   id: string;
@@ -19,15 +20,18 @@ export interface ScheduledGameTemplate {
   maxParticipants: number;
   creatorId: UserId;
   category:
-    | "sports"
-    | "politics"
-    | "economy"
-    | "entertainment"
-    | "weather"
-    | "technology";
+  | "sports"
+  | "politics"
+  | "economy"
+  | "entertainment"
+  | "weather"
+  | "technology";
   importance: "low" | "medium" | "high" | "critical";
   recurrence?: "once" | "daily" | "weekly" | "monthly";
   isActive: boolean;
+  // 정산 소스 연동 (KOSIS, DART 등)
+  sourceType?: SettlementSourceType;
+  sourceConfig?: Record<string, unknown>;
 }
 
 export interface GameSchedulingConfig {
@@ -160,6 +164,84 @@ export class GameSchedulingService {
       recurrence: "daily",
       isActive: true,
     });
+
+    // ============================================================
+    // KOSIS 경제지표 기반 예측 게임 템플릿
+    // ============================================================
+
+    // 소비자물가지수 예측 (매월 10일 발표)
+    this.templates.push({
+      id: "kosis-cpi-monthly",
+      title: "이번 달 소비자물가 상승률 예측",
+      description:
+        "통계청 발표 소비자물가지수 전년동월대비 상승률을 예측하세요. 정확한 경제 지표 기반 정산!",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "above", label: "3% 초과", description: "물가 상승 심화" },
+        { id: "below", label: "3% 이하", description: "물가 안정" },
+      ],
+      scheduledTime: this.getNextMonthlySchedule(1, 9), // 매월 1일 09:00 시작
+      duration: 240, // 10일간 참여 가능
+      settlementDelay: 1, // 발표 후 1시간 내 정산
+      minimumStake: 2000 as PmpAmount,
+      maximumStake: 100000 as PmpAmount,
+      maxParticipants: 1000,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "high",
+      recurrence: "monthly",
+      isActive: true,
+      sourceType: "kosis",
+      sourceConfig: {
+        indicatorCode: "CPI_RATE", // KOSIS 소비자물가지수 코드
+        comparisonType: "greater",
+        threshold: 3.0,
+        optionMapping: { above: "above", below: "below" },
+      },
+    });
+
+    // 월간 실업률 예측 (매월 15일 발표)
+    this.templates.push({
+      id: "kosis-unemployment-monthly",
+      title: "이번 달 실업률 예측",
+      description:
+        "통계청 발표 실업률을 예측하세요. 고용 시장 동향을 읽어보세요!",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "above", label: "3.5% 초과", description: "고용 시장 악화" },
+        { id: "below", label: "3.5% 이하", description: "고용 시장 안정" },
+      ],
+      scheduledTime: this.getNextMonthlySchedule(5, 9), // 매월 5일 09:00 시작
+      duration: 240, // 10일간 참여 가능
+      settlementDelay: 1,
+      minimumStake: 2000 as PmpAmount,
+      maximumStake: 100000 as PmpAmount,
+      maxParticipants: 1000,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "high",
+      recurrence: "monthly",
+      isActive: true,
+      sourceType: "kosis",
+      sourceConfig: {
+        indicatorCode: "UNEMPLOYMENT_RATE",
+        comparisonType: "greater",
+        threshold: 3.5,
+        optionMapping: { above: "above", below: "below" },
+      },
+    });
+  }
+
+  /**
+   * 다음 월간 스케줄 날짜 계산
+   */
+  private getNextMonthlySchedule(dayOfMonth: number, hour: number): Date {
+    const now = new Date();
+    const result = new Date(now.getFullYear(), now.getMonth(), dayOfMonth, hour, 0, 0);
+    if (result <= now) {
+      result.setMonth(result.getMonth() + 1);
+    }
+    return result;
   }
 
   /**
