@@ -15,6 +15,8 @@ import { IOracleProvider } from "../../domain/services/oracle/oracle.interface";
 import { DartOracleAdapter } from "../../infrastructure/oracle/dart.adapter";
 import { FootballDataOracleAdapter } from "../../infrastructure/oracle/football-data.adapter";
 import { KosisOracleAdapter } from "../../infrastructure/oracle/kosis.adapter";
+import { AlphaVantageOracleAdapter } from "../../infrastructure/oracle/alpha-vantage.adapter";
+import { FmpOracleAdapter } from "../../infrastructure/oracle/fmp.adapter";
 import {
     GameResult,
     SettlementMethod,
@@ -36,6 +38,8 @@ export class SettlementOrchestratorService {
             new KosisOracleAdapter(),
             new FootballDataOracleAdapter(),
             new DartOracleAdapter(),
+            new AlphaVantageOracleAdapter(),
+            new FmpOracleAdapter(),
         ];
     }
 

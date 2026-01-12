@@ -336,6 +336,150 @@ export class GameSchedulingService {
         optionMapping: { above: "profit", below: "loss" },
       },
     });
+
+    // ============================================================
+    // 미국 주식 시장 예측 (Alpha Vantage)
+    // ============================================================
+
+    // 나스닥 100 지수 (QQQ) 등락 예측 (매일)
+    this.templates.push({
+      id: "us-nasdaq-daily",
+      title: "오늘의 나스닥(QQQ) 등락 예측",
+      description:
+        "나스닥 100 지수(QQQ)가 어제보다 오를까요? 내릴까요? 미국 기술주 시장 예측!",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "up", label: "상승", description: "어제 종가보다 상승" },
+        { id: "down", label: "하락", description: "어제 종가보다 하락" },
+      ],
+      scheduledTime: this.getNextDailyUSMarketOpen(), // 미국 장 시작 전 생성
+      duration: 24, // 24시간
+      settlementDelay: 1, // 장 마감 1시간 후 정산
+      minimumStake: 1000 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 5000,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "medium",
+      recurrence: "daily",
+      isActive: true,
+      sourceType: "alpha-vantage",
+      sourceConfig: {
+        symbol: "QQQ", // Invesco QQQ Trust (나스닥 100 추종 ETF)
+        comparisonType: "price_change_direction",
+        optionMapping: { up: "up", down: "down" },
+      },
+    });
+
+    // 엔비디아 (NVDA) 주가 등락 예측 (매일)
+    this.templates.push({
+      id: "us-nvda-daily",
+      title: "엔비디아(NVDA) 주가 등락 예측",
+      description:
+        "AI 대장주 엔비디아, 오늘 주가는? 상승/하락을 예측해보세요.",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "up", label: "상승", description: "전일 대비 상승" },
+        { id: "down", label: "하락", description: "전일 대비 하락" },
+      ],
+      scheduledTime: this.getNextDailyUSMarketOpen(),
+      duration: 24,
+      settlementDelay: 1,
+      minimumStake: 1000 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 5000,
+      creatorId: systemUserId,
+      category: "technology",
+      importance: "high",
+      recurrence: "daily",
+      isActive: true,
+      sourceType: "alpha-vantage",
+      sourceConfig: {
+        symbol: "NVDA", // NVIDIA Corporation
+        comparisonType: "price_change_direction",
+        optionMapping: { up: "up", down: "down" },
+      },
+    });
+
+    // ============================================================
+    // 미국 기업 실적 예측 (FMP)
+    // ============================================================
+
+    // 애플 (AAPL) 분기 매출 예측
+    this.templates.push({
+      id: "us-aapl-revenue-quarterly",
+      title: "애플(AAPL) 분기 매출 예측",
+      description: "애플의 이번 분기 매출이 1,000억 달러를 넘을까요? 실적 시즌 빅이벤트!",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "above", label: "1,000억 달러 초과", description: "매출 호조" },
+        { id: "below", label: "1,000억 달러 이하", description: "예상 하회" },
+      ],
+      scheduledTime: this.getNextQuarterlySchedule(1, 22), // 분기초 1일 22:00
+      duration: 720,
+      settlementDelay: 24,
+      minimumStake: 5000 as PmpAmount,
+      maximumStake: 200000 as PmpAmount,
+      maxParticipants: 5000,
+      creatorId: systemUserId,
+      category: "technology",
+      importance: "critical",
+      recurrence: "monthly",
+      isActive: true,
+      sourceType: "fmp",
+      sourceConfig: {
+        symbol: "AAPL",
+        period: "quarter",
+        accountName: "revenue",
+        comparisonType: "greater",
+        threshold: 100000000000, // 1000억 달러
+        optionMapping: { above: "above", below: "below" },
+      },
+    });
+
+    // 테슬라 (TSLA) 분기 순이익 예측
+    this.templates.push({
+      id: "us-tsla-income-quarterly",
+      title: "테슬라(TSLA) 분기 순이익 예측",
+      description: "테슬라가 이번 분기에 흑자를 낼 수 있을까요? 순이익 20억 달러 기준!",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "above", label: "20억 달러 초과", description: "이익 급증" },
+        { id: "below", label: "20억 달러 이하", description: "이익 감소" },
+      ],
+      scheduledTime: this.getNextQuarterlySchedule(1, 22),
+      duration: 720,
+      settlementDelay: 24,
+      minimumStake: 5000 as PmpAmount,
+      maximumStake: 200000 as PmpAmount,
+      maxParticipants: 5000,
+      creatorId: systemUserId,
+      category: "technology",
+      importance: "high",
+      recurrence: "monthly",
+      isActive: true,
+      sourceType: "fmp",
+      sourceConfig: {
+        symbol: "TSLA",
+        period: "quarter",
+        accountName: "netIncome",
+        comparisonType: "greater",
+        threshold: 2000000000, // 20억 달러
+        optionMapping: { above: "above", below: "below" },
+      },
+    });
+  }
+
+  /**
+   * 다음 미국 주식 시장 개장 시간 전 (한국 시간 기준 매일 20:00)
+   */
+  private getNextDailyUSMarketOpen(): Date {
+    const now = new Date();
+    const result = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0, 0);
+    if (result <= now) {
+      result.setDate(result.getDate() + 1);
+    }
+    return result;
   }
 
   /**

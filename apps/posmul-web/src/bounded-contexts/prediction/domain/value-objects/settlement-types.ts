@@ -2,7 +2,7 @@
  * 정산 관련 공통 타입 정의
  */
 
-export type SettlementSourceType = "football_data" | "kosis" | "manual" | "dart" | "thesportsdb";
+export type SettlementSourceType = "football_data" | "kosis" | "manual" | "dart" | "thesportsdb" | "alpha-vantage" | "fmp";
 export type SettlementMethod = "auto" | "semi_auto" | "manual";
 
 export interface SettlementSource {
