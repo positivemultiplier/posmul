@@ -20,8 +20,8 @@ import { AchievementBadge, type AchievementBadgeData } from "../../shared/ui/com
 import { LeaderboardCard, type LeaderEntry } from "../../shared/ui/components/LeaderboardCard";
 import { UserLevelProgress, type LevelData } from "../../shared/ui/components/UserLevelProgress";
 
-// 기존 MoneyWave 컴포넌트
-import { MoneyWaveStatus } from "../../shared/ui/components/layout/MoneyWaveStatus";
+// MoneyWave 컴포넌트 (prediction 도메인)
+import { CompactMoneyWaveCard } from "../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 
 /** 섹션 Props */
 interface SectionProps {
@@ -253,12 +253,19 @@ export default function ComponentPreviewClient() {
                 </div>
             </Section>
 
-            {/* 기존 MoneyWave 컴포넌트 */}
-            <Section title="기존 컴포넌트: MoneyWaveStatus" description="shared/ui/components/layout/MoneyWaveStatus.tsx (기존 구현)">
-                <div className="max-w-md">
-                    <MoneyWaveStatus />
+            {/* MoneyWave 컴포넌트 비교 */}
+            <Section title="MoneyWave 컴포넌트" description="CompactMoneyWaveCard (prediction 도메인 전용 - 개선 버전)">
+                <div className="space-y-6">
+                    <div>
+                        <h3 className="text-white font-medium mb-4">CompactMoneyWaveCard (개선됨)</h3>
+                        <p className="text-slate-400 text-sm mb-4">
+                            Wave 번호/타입, 게임 수, 참여자 수, 진행률이 명확하게 표시됩니다.
+                        </p>
+                        <CompactMoneyWaveCard category="all" />
+                    </div>
                 </div>
             </Section>
         </div>
     );
 }
+

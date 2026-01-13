@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { ChevronDown, ChevronUp, Zap, Activity } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ChevronDown, ChevronUp, Zap, Activity, Users, Gamepad2 } from "lucide-react";
 import { SlotMachine } from "./MoneyWave/SlotMachine";
 import { twMerge } from "tailwind-merge";
 
@@ -28,6 +28,23 @@ interface CompactMoneyWaveCardProps {
   initialPool?: number; // Server-side EBIT Pool (Optional fallback/initial data)
 }
 
+// Wave 타입 정보
+const WAVE_TYPES = {
+  1: { label: "EBIT 발행", color: "text-green-400", bgColor: "bg-green-500/10", borderColor: "border-green-500/30" },
+  2: { label: "재분배", color: "text-blue-400", bgColor: "bg-blue-500/10", borderColor: "border-blue-500/30" },
+  3: { label: "기업가 투자", color: "text-purple-400", bgColor: "bg-purple-500/10", borderColor: "border-purple-500/30" },
+} as const;
+
+// 현재 Wave 번호 계산 (1-24)
+const getCurrentWaveNumber = (): number => {
+  return new Date().getHours() + 1;
+};
+
+// Wave 타입 계산 (1, 2, 3 순환)
+const getWaveType = (waveNumber: number): 1 | 2 | 3 => {
+  return (((waveNumber - 1) % 3) + 1) as 1 | 2 | 3;
+};
+
 export function CompactMoneyWaveCard({
   className = "",
   depthLevel = 0,
@@ -38,24 +55,34 @@ export function CompactMoneyWaveCard({
   initialPool
 }: CompactMoneyWaveCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [waveNumber, setWaveNumber] = useState<number>(1);
+
+  // 클라이언트에서만 Wave 번호 계산 (하이드레이션 에러 방지)
+  useEffect(() => {
+    setWaveNumber(getCurrentWaveNumber());
+    const interval = setInterval(() => {
+      setWaveNumber(getCurrentWaveNumber());
+    }, 60000); // 1분마다 업데이트
+    return () => clearInterval(interval);
+  }, []);
 
   // Hook handles data fetching and reveal logic
   const {
     waveAmount,
     progressRatio: progressAdjusted,
-    isSpinning
+    isSpinning,
+    participantCount,
+    activeGames
   } = useWaveCalculation({
     domain: 'prediction',
     category,
     gameId
   });
 
-  // Fallback to initialPool if hook hasn't loaded (waveAmount is 0) but initialPool exists
-  // For now, if waveAmount is 0 and initialPool is > 0, we might want to use initialPool with some reveal.
-  // However, useWaveCalculation computes reveal based on time. 
-  // Let's stick to using waveAmount from hook as primary truth + reveal.
   const totalPool = waveAmount;
   const progressPercent = Math.round(progressAdjusted * 100);
+  const waveType = getWaveType(waveNumber);
+  const waveTypeInfo = WAVE_TYPES[waveType];
 
   // MoneyWave Breakdown (확장 시 표시)
   const waveBreakdown = {
@@ -121,14 +148,45 @@ export function CompactMoneyWaveCard({
                       <span className="text-[10px] font-bold text-green-400 whitespace-nowrap">실시간 적립 중</span>
                     </div>
                   </div>
-                  <div className="text-xs text-slate-400 flex items-center gap-1 mt-0.5">
-                    <span className="text-slate-500">Wave 16</span>
+
+                  {/* Wave 정보 라인 - 개선된 표시 */}
+                  <div className="flex items-center gap-2 mt-1">
+                    {/* Wave 번호 + 타입 */}
+                    <span className={`text-sm font-bold ${waveTypeInfo.color}`}>
+                      Wave {waveNumber}
+                    </span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${waveTypeInfo.bgColor} ${waveTypeInfo.color} border ${waveTypeInfo.borderColor}`}>
+                      {waveTypeInfo.label}
+                    </span>
+
+                    {/* 구분선 */}
+                    <span className="text-slate-600">|</span>
+
+                    {/* 게임 수 */}
+                    <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <Gamepad2 className="w-3 h-3" />
+                      <span className="text-white font-medium">{activeGames}</span>
+                      <span>게임</span>
+                    </span>
+
+                    {/* 참여자 수 */}
+                    <span className="flex items-center gap-1 text-xs text-slate-400">
+                      <Users className="w-3 h-3" />
+                      <span className="text-white font-medium">{participantCount.toLocaleString()}</span>
+                      <span>명</span>
+                    </span>
                   </div>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center gap-3">
+              {/* 진행률 표시 - 명확하게 */}
+              <div className="hidden sm:flex flex-col items-end">
+                <span className="text-[10px] text-slate-500">진행률</span>
+                <span className="text-lg font-bold text-green-400">{progressPercent}%</span>
+              </div>
+
               <div className="hidden sm:flex items-center gap-2 text-xs">
                 <span className="px-2 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
                   {/* Depth 5: Game ID, Depth 4: League, Depth 3: Subcategory, Depth 2: Category */}
