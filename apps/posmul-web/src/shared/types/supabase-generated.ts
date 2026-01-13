@@ -233,6 +233,7 @@ export type Database = {
       game_status: "DRAFT" | "ACTIVE" | "CLOSED" | "SETTLED" | "CANCELLED"
       prediction_category:
       | "INVEST"
+      | "ECONOMY"
       | "SPORTS"
       | "ENTERTAINMENT"
       | "POLITICS"
