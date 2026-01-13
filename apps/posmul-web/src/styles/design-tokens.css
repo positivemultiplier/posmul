@@ -16,12 +16,31 @@
   --accent-purple: #a855f7;
   --accent-pink: #ec4899;
   
+  /* === PMP/PMC 전용 색상 === */
+  --pmp-primary: #3b82f6;
+  --pmp-light: #60a5fa;
+  --pmp-dark: #2563eb;
+  --pmc-primary: #8b5cf6;
+  --pmc-light: #a78bfa;
+  --pmc-dark: #7c3aed;
+  
+  /* === 차트 색상 팔레트 === */
+  --chart-option-1: #6366f1;
+  --chart-option-2: #ec4899;
+  --chart-option-3: #10b981;
+  --chart-option-4: #f59e0b;
+  --chart-option-5: #06b6d4;
+  --chart-win: #10b981;
+  --chart-lose: #ef4444;
+  --chart-draw: #94a3b8;
+  
   /* === Semantic Colors === */
   --success: #10b981;
   --success-light: #34d399;
   --danger: #ef4444;
   --danger-light: #f87171;
   --warning: #f59e0b;
+  --warning-light: #fbbf24;
   --info: #3b82f6;
   
   /* === Text Colors === */
@@ -56,6 +75,8 @@
   --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1);
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --shadow-glow-pmp: 0 0 20px rgba(59, 130, 246, 0.3);
+  --shadow-glow-pmc: 0 0 20px rgba(139, 92, 246, 0.3);
   
   /* === Typography === */
   --font-heading: 'Bricolage Grotesque', system-ui, sans-serif;
@@ -77,6 +98,13 @@
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  
+  /* === 애니메이션 토큰 === */
+  --animation-count-up: 1.5s ease-out;
+  --animation-chart-reveal: 1s ease-in-out;
+  --animation-pulse: 2s ease-in-out infinite;
+  --animation-shimmer: 2s linear infinite;
   
   /* === Z-Index === */
   --z-dropdown: 1000;
