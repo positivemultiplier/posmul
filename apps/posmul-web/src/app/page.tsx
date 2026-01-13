@@ -7,12 +7,17 @@ import {
   HoverLiftClient,
   StaggerContainerClient
 } from "./HomeClientComponents";
+import {
+  PlatformStatsSection,
+  HotPredictionsSection,
+  UserFlowSection
+} from "./HomeSections";
 
 export default function HomePage() {
   return (
     <div className="bg-gradient-to-b from-[#0a0a0f] via-[#1a1a2e] to-[#0a0a0f] min-h-screen text-white">
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
         <div className="text-center">
           <FadeInClient>
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 mb-8">
@@ -34,14 +39,18 @@ export default function HomePage() {
           </FadeInClient>
 
           <FadeInClient delay={0.3}>
-            <p className="text-base text-gray-400 max-w-3xl mx-auto mb-12">
+            <p className="text-base text-gray-400 max-w-3xl mx-auto mb-8">
               예측 게임과 지역 경제 연동을 통한 혁신적인 직접민주주의 실험 플랫폼입니다.
-              PMP와 PMC를 활용하여 더 나은 사회를 만들어가세요.
             </p>
           </FadeInClient>
 
+          {/* 실시간 통계 */}
+          <FadeInClient delay={0.35}>
+            <PlatformStatsSection />
+          </FadeInClient>
+
           <FadeInClient delay={0.4}>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
               <HoverLiftClient>
                 <Link
                   href="/prediction"
@@ -61,6 +70,20 @@ export default function HomePage() {
             </div>
           </FadeInClient>
         </div>
+      </section>
+
+      {/* 사용자 자산 흐름 (로그인 시) */}
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
+        <FadeInClient delay={0.45}>
+          <UserFlowSection isLoggedIn={false} />
+        </FadeInClient>
+      </section>
+
+      {/* 인기 예측 캐러셀 */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <FadeInClient>
+          <HotPredictionsSection />
+        </FadeInClient>
       </section>
 
       {/* Features Section */}
