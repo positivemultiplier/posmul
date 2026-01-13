@@ -18,6 +18,22 @@ import {
 
 // Prediction Navigation (현재 구현됨)
 const predictionNav: PredictionNavigation = {
+  all: {
+    slug: "all",
+    title: "전체",
+    description: "모든 예측 게임 보기",
+  },
+  economy: {
+    slug: "economy",
+    title: "경제",
+    description: "경제 지표 및 기업 실적 예측",
+    subcategories: [
+      { slug: "stocks", title: "주식", description: "주가 등락 예측" },
+      { slug: "earnings", title: "기업 실적", description: "분기 실적 예측" },
+      { slug: "indicators", title: "경제 지표", description: "GDP, 물가, 금리" },
+      { slug: "crypto", title: "암호화폐", description: "비트코인, 이더리움" },
+    ],
+  },
   invest: {
     slug: "invest",
     title: "참여",

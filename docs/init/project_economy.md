@@ -13,7 +13,7 @@
 ## MoneyWave1
 
 - PosMul plateform 에서는 예상 기반으로 PMC가 발행된다.
-- 예상Return일별 MoneyWave가 계산되고, 이를기반으로 하루 생성 Expect Game 별로 PMC가 배분된다.
+- 예상Return일별,시간별 MoneyWave가 계산되고, 이를기반으로 하루 생성 Expect Game 별로 PMC가 배분된다.
 - User는 PMP를 소모하여 Expect Game에 참여하고 Expect 에따른 보상으로 PMC를 획득한다.
 
 ## MoneyWave2
@@ -23,7 +23,7 @@
 
 ## MoneyWave3
 
-- 기업가는 PosMul Plateform 에서 홍보서비스(Invest/MajorLeague)와 PMC를 일정기간 제공받는다. 대가로 일정금액을 지불한다.
+- 기업가는 PosMul Plateform 에서 홍보서비스(MajorLeague)와 PMC를 일정기간 제공받는다. 대가로 일정금액을 지불한다.
 - 기업가는 PosMul 3LC와 상호협력하여 홍보서비스의 방향(ESG Marketing)을 결정한다.
 - 기업가는 PMC를 활용하여 자신의 의지에 맞게 Donate를 할 수 있다. Ranking을 획득할 수 있다. PosMul은 기업의 ESG홍보에 적극 동참한다.
 - 기업가는 PMC를 활용하여 Target User에게 Expect Game을 제안 할 수 있다. PosMul은 기업의 관련Data획득에 적극 동참한다.
@@ -163,7 +163,7 @@ PosMul Platform의 전체 시스템을 **경제학적 이론**과 **실제 구�
 
 **MoneyWave1**: EBIT 기반 PMC 발행
 
-- 예상 EBIT를 365일로 나누어 일일 PMC 생성
+- 예상 EBIT를 365일로 나누어 일일/시간별 PMC 생성
 - Jensen & Meckling의 Agency Theory 적용
 
 **MoneyWave2**: 미사용 PMC 재분배

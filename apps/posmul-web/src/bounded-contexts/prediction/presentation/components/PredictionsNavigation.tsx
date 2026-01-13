@@ -32,6 +32,37 @@ import { usePathname } from "next/navigation";
 
 // Navigation Data Structure based on Project_Features.md
 const navigationData = {
+  all: {
+    title: "📋 전체",
+    description: "모든 예측 게임 보기",
+    subcategories: [],
+  },
+  economy: {
+    title: "📈 경제",
+    description: "경제 지표 및 기업 실적 예측",
+    subcategories: [
+      {
+        slug: "stocks",
+        title: "주식",
+        description: "주가 등락 예측",
+      },
+      {
+        slug: "earnings",
+        title: "기업 실적",
+        description: "분기 실적 발표 예측",
+      },
+      {
+        slug: "indicators",
+        title: "경제 지표",
+        description: "GDP, 물가, 금리 예측",
+      },
+      {
+        slug: "crypto",
+        title: "암호화폐",
+        description: "비트코인, 이더리움 예측",
+      },
+    ],
+  },
   consume: {
     title: "💳 소비 예측",
     description: "Time/Money/Cloud 소비 영역 예측",
@@ -156,10 +187,9 @@ export function PredictionsNavigation() {
                 href={`/prediction/${key}`}
                 className={`
                   flex items-center space-x-2 py-4 px-2 text-sm font-medium border-b-2 transition-colors duration-200
-                  ${
-                    currentCategory === key
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ${currentCategory === key
+                    ? "border-blue-500 text-blue-600"
+                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                   }
                 `}
               >
@@ -199,10 +229,9 @@ export function PredictionsNavigation() {
                           href={`/prediction/${key}/${subcategory.slug}`}
                           className={`
                             block p-3 rounded-md transition-colors duration-200
-                            ${
-                              currentSubcategory === subcategory.slug
-                                ? "bg-blue-50 border-l-4 border-blue-500"
-                                : "hover:bg-gray-50"
+                            ${currentSubcategory === subcategory.slug
+                              ? "bg-blue-50 border-l-4 border-blue-500"
+                              : "hover:bg-gray-50"
                             }
                           `}
                         >

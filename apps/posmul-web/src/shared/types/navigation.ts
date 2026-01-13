@@ -39,6 +39,8 @@ export interface SidebarLink extends NavigationItem {
 
 // Domain-specific navigation structures
 export interface PredictionNavigation {
+  all: NavigationCategory;
+  economy: NavigationCategory;
   invest: NavigationCategory;
   sports: NavigationCategory;
   entertainment: NavigationCategory;
@@ -84,10 +86,10 @@ export interface DomainNavigationConfig {
   icon: string;
   primaryColor: string;
   navigation:
-    | PredictionNavigation
-    | InvestmentNavigation
-    | DonationNavigation
-    | ForumNavigation;
+  | PredictionNavigation
+  | InvestmentNavigation
+  | DonationNavigation
+  | ForumNavigation;
 }
 
 // Route patterns for each domain

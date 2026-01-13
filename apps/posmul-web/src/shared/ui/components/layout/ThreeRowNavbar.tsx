@@ -54,6 +54,21 @@ const navigationData = {
     title: "예측",
     href: "/prediction",
     categories: {
+      all: {
+        title: "전체",
+        href: "/prediction",
+        subcategories: []
+      },
+      economy: {
+        title: "경제",
+        href: "/prediction/economy",
+        subcategories: [
+          { title: "주식", path: "/prediction/economy/stocks" },
+          { title: "기업 실적", path: "/prediction/economy/earnings" },
+          { title: "경제 지표", path: "/prediction/economy/indicators" },
+          { title: "암호화폐", path: "/prediction/economy/crypto" },
+        ]
+      },
       consume: {
         title: "소비",
         href: "/prediction/consume",
