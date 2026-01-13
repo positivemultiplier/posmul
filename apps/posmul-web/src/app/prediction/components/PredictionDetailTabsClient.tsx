@@ -261,61 +261,75 @@ export function PredictionDetailTabsClient({ game, userBalance, userBets, initia
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
 
-        {/* Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-0.5 rounded bg-blue-500/20 text-blue-300 text-xs font-bold border border-blue-500/30">
-              {game.category}
-            </span>
-            <span className="text-slate-400 text-xs">{new Date(game.endTime).toLocaleDateString()} 마감</span>
-            <div className="ml-auto flex gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 text-xs text-slate-400 hover:text-white"
-                onClick={() => setIsShareModalOpen(true)}
-              >
-                <Share2 className="w-3 h-3 mr-1" /> 공유
-              </Button>
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold mb-4">{game.title}</h1>
-          {game.description && <p className="text-slate-400 max-w-3xl mb-6">{game.description}</p>}
+        {/* Premium Hero Section */}
+        <div className="relative mb-8 rounded-3xl overflow-hidden">
+          {/* Gradient Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-purple-900/40 via-blue-900/30 to-slate-900 -z-10" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent -z-10" />
 
-          {/* Game Stats Bar */}
-          <div className="flex flex-wrap gap-4 text-sm mb-6">
-            <div className="bg-slate-900/50 px-4 py-3 rounded-xl border border-white/5 flex items-center gap-3">
-              <div className="p-1.5 bg-purple-500/10 rounded-lg text-purple-400">
-                <Trophy className="w-4 h-4" />
+          {/* Content */}
+          <div className="p-8">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="px-3 py-1 rounded-full bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-blue-300 text-xs font-bold border border-blue-400/30 backdrop-blur-sm">
+                {game.category}
+              </span>
+              <span className="text-slate-400 text-xs">{new Date(game.endTime).toLocaleDateString()} 마감</span>
+              <div className="ml-auto flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-slate-400 hover:text-white bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-full px-4"
+                  onClick={() => setIsShareModalOpen(true)}
+                >
+                  <Share2 className="w-3 h-3 mr-1" /> 공유
+                </Button>
               </div>
-              <div>
-                <div className="text-slate-400 text-xs font-medium">누적 상금 풀</div>
-                <div className="text-white font-bold text-lg leading-none mt-0.5">
-                  {game.prizePool.toLocaleString()} <span className="text-xs font-normal text-purple-400">PMC</span>
+            </div>
+
+            <h1 className="text-4xl font-bold mb-4 bg-gradient-to-r from-white via-blue-100 to-purple-200 bg-clip-text text-transparent">
+              {game.title}
+            </h1>
+            {game.description && (
+              <p className="text-slate-300/80 max-w-3xl mb-8 text-lg leading-relaxed">
+                {game.description}
+              </p>
+            )}
+
+            {/* Premium Stats Cards */}
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="group bg-white/5 backdrop-blur-xl px-5 py-4 rounded-2xl border border-white/10 flex items-center gap-4 hover:border-purple-500/30 hover:bg-purple-500/5 transition-all duration-300">
+                <div className="p-2.5 bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl text-purple-400 group-hover:scale-110 transition-transform">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-slate-400 text-xs font-medium">누적 상금 풀</div>
+                  <div className="text-white font-bold text-xl leading-none mt-1">
+                    {game.prizePool.toLocaleString()} <span className="text-sm font-normal text-purple-400">PMC</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-slate-900/50 px-4 py-3 rounded-xl border border-white/5 flex items-center gap-3">
-              <div className="p-1.5 bg-blue-500/10 rounded-lg text-blue-400">
-                <TrendingUp className="w-4 h-4" />
-              </div>
-              <div>
-                <div className="text-slate-400 text-xs font-medium">총 거래량</div>
-                <div className="text-white font-bold text-lg leading-none mt-0.5">
-                  {game.totalVolume.toLocaleString()} <span className="text-xs font-normal text-slate-500">PMP</span>
+              <div className="group bg-white/5 backdrop-blur-xl px-5 py-4 rounded-2xl border border-white/10 flex items-center gap-4 hover:border-blue-500/30 hover:bg-blue-500/5 transition-all duration-300">
+                <div className="p-2.5 bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl text-blue-400 group-hover:scale-110 transition-transform">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-slate-400 text-xs font-medium">총 거래량</div>
+                  <div className="text-white font-bold text-xl leading-none mt-1">
+                    {game.totalVolume.toLocaleString()} <span className="text-sm font-normal text-slate-500">PMP</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bg-slate-900/50 px-4 py-3 rounded-xl border border-white/5 flex items-center gap-3">
-              <div className="p-1.5 bg-green-500/10 rounded-lg text-green-400">
-                <Info className="w-4 h-4" /> {/* Fallback icon if Users not imported, but wait, let's fix imports */}
-              </div>
-              <div>
-                <div className="text-slate-400 text-xs font-medium">참여자</div>
-                <div className="text-white font-bold text-lg leading-none mt-0.5">
-                  {game.participantCount.toLocaleString()}
+              <div className="group bg-white/5 backdrop-blur-xl px-5 py-4 rounded-2xl border border-white/10 flex items-center gap-4 hover:border-green-500/30 hover:bg-green-500/5 transition-all duration-300">
+                <div className="p-2.5 bg-gradient-to-br from-green-500/20 to-green-600/10 rounded-xl text-green-400 group-hover:scale-110 transition-transform">
+                  <Info className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-slate-400 text-xs font-medium">참여자</div>
+                  <div className="text-white font-bold text-xl leading-none mt-1">
+                    {game.participantCount.toLocaleString()}
+                  </div>
                 </div>
               </div>
             </div>
@@ -339,18 +353,29 @@ export function PredictionDetailTabsClient({ game, userBalance, userBets, initia
 
           {/* Left Column (Chart + Tabs) */}
           <div className="lg:col-span-8 space-y-8">
-            {/* Main Chart */}
-            <Card className="p-6 border-white/5 bg-slate-900/50 hover:border-white/10 transition-colors">
-              <div className="flex items-center space-x-2 mb-6">
-                <TrendingUp className="w-5 h-5 text-blue-400" />
-                <h3 className="text-lg font-bold text-white">실시간 확률 트렌드</h3>
-              </div>
-              <ProbabilityLineChart
-                data={probabilityData}
-                lines={chartLines}
-                isDarkMode={true}
-              />
-            </Card>
+            {/* Main Chart with Premium Glow */}
+            <div className="relative group">
+              {/* Glow Effect */}
+              <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-blue-500/20 rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+
+              <Card className="relative p-6 border-white/10 bg-slate-900/80 backdrop-blur-sm hover:border-blue-500/30 transition-all duration-300 rounded-2xl">
+                <div className="flex items-center space-x-2 mb-6">
+                  <div className="p-2 bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-lg">
+                    <TrendingUp className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <h3 className="text-lg font-bold text-white">실시간 확률 트렌드</h3>
+                  <span className="ml-auto text-xs text-green-400 flex items-center gap-1">
+                    <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    LIVE
+                  </span>
+                </div>
+                <ProbabilityLineChart
+                  data={probabilityData}
+                  lines={chartLines}
+                  isDarkMode={true}
+                />
+              </Card>
+            </div>
 
             {/* Tabs */}
             <div className="mt-4">
@@ -420,31 +445,35 @@ export function PredictionDetailTabsClient({ game, userBalance, userBets, initia
             </div>
           </div>
 
-          {/* Right Column (Sticky Betting) */}
+          {/* Right Column (Sticky Betting) - Premium */}
           <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-24 space-y-6">
-              <div className="bg-slate-900/80 backdrop-blur-xl border border-blue-500/20 rounded-2xl p-2 shadow-2xl shadow-blue-500/5 ring-1 ring-blue-500/10 space-y-4">
-                {/* Position Management (New) */}
-                {bets.length > 0 && (
-                  <div className="px-2 pt-2">
-                    <UserPositionCard
-                      userBets={bets}
-                      gameOptions={game.options}
-                      onAddBetAction={(optionId) => {
-                        predictionViewRef.current?.selectOption(optionId);
-                      }}
-                    />
-                    <div className="h-px bg-white/10 my-4" />
-                  </div>
-                )}
+              {/* Premium Betting Panel with Glow */}
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/30 via-purple-500/30 to-pink-500/30 rounded-2xl blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-500 animate-pulse" />
+                <div className="relative bg-slate-900/90 backdrop-blur-xl border border-blue-500/20 rounded-2xl p-3 shadow-2xl shadow-blue-500/10 ring-1 ring-blue-500/10 space-y-4">
+                  {/* Position Management (New) */}
+                  {bets.length > 0 && (
+                    <div className="px-2 pt-2">
+                      <UserPositionCard
+                        userBets={bets}
+                        gameOptions={game.options}
+                        onAddBetAction={(optionId) => {
+                          predictionViewRef.current?.selectOption(optionId);
+                        }}
+                      />
+                      <div className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent my-4" />
+                    </div>
+                  )}
 
-                <PredictionDetailView
-                  ref={predictionViewRef}
-                  game={gameWithDates}
-                  userBalance={balance}
-                  onBetAction={handleBetRequest}
-                  isSubmitting={isPending}
-                />
+                  <PredictionDetailView
+                    ref={predictionViewRef}
+                    game={gameWithDates}
+                    userBalance={balance}
+                    onBetAction={handleBetRequest}
+                    isSubmitting={isPending}
+                  />
+                </div>
               </div>
 
               {/* Order Book Widget Integration */}

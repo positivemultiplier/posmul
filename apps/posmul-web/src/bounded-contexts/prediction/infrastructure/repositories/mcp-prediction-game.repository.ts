@@ -69,7 +69,7 @@ interface PredictionRow {
  * MCP 기반 Prediction Game Repository 구현체
  */
 export class MCPPredictionGameRepository implements IPredictionGameRepository {
-  constructor(private readonly projectId: string = "fabyagohqqnusmnwekuc") {}
+  constructor(private readonly projectId: string = "fabyagohqqnusmnwekuc") { }
 
   /**
    * 게임 저장 (Upsert) - 게임 생성자만 게임 데이터를 수정할 수 있음
@@ -907,6 +907,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
       PENDING: GameStatus.PENDING,
       ACTIVE: GameStatus.ACTIVE,
       CLOSED: GameStatus.ENDED,
+      SETTLING: GameStatus.SETTLING,
       SETTLED: GameStatus.COMPLETED,
       CANCELLED: GameStatus.CANCELLED,
     };
@@ -922,6 +923,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
       [GameStatus.CREATED]: "DRAFT",
       [GameStatus.ACTIVE]: "ACTIVE",
       [GameStatus.ENDED]: "CLOSED",
+      [GameStatus.SETTLING]: "SETTLING",
       [GameStatus.COMPLETED]: "SETTLED",
       [GameStatus.CANCELLED]: "CANCELLED",
     };
@@ -969,7 +971,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
       // Supabase .schema()와 .single() 조합 시 배열로 반환되는 문제 처리
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const actualRow: PredictionGameRow = Array.isArray(row) ? (row as any)[0] : row;
-      
+
       if (!actualRow) {
         return null;
       }
@@ -984,10 +986,10 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
 
         // 형식 1: [{ id, label }, ...] - 직접 배열
         // 형식 2: { options: [{ id, label }, ...] } - options 키 안에 배열
-        const optionsArray = Array.isArray(parsed) 
-          ? parsed 
-          : (parsed?.options && Array.isArray(parsed.options)) 
-            ? parsed.options 
+        const optionsArray = Array.isArray(parsed)
+          ? parsed
+          : (parsed?.options && Array.isArray(parsed.options))
+            ? parsed.options
             : [];
 
         options = optionsArray.map((opt: { id?: string; label?: string; text?: string; currentOdds?: number; description?: string }, idx: number) => ({
@@ -1007,14 +1009,14 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
 
       // PredictionGame.create 대신 직접 reconstruct 방식 사용
       // (create는 검증이 있어서 기존 데이터 로딩에 부적합)
-      
+
       // DB에서 Decimal로 반환되므로 정수로 변환 (parseInt 사용)
       const minBetParsed = parseInt(String(actualRow.min_bet_amount), 10);
       const maxBetParsed = parseInt(String(actualRow.max_bet_amount), 10);
-      
+
       // DB status를 도메인 GameStatus로 변환
       const gameStatus = this.mapStatusFromDB(actualRow.status);
-      
+
       const gameResult = PredictionGame.create({
         id: createPredictionGameId(actualRow.game_id), // DB에서 로딩한 ID 사용
         creatorId: actualRow.creator_id as UserId,

@@ -50,6 +50,7 @@ export class PredictionGame extends AggregateRoot {
   private _allocatedPrizePool: PmpAmount;
   private _timestamps: Timestamps;
   private _predictions: Prediction[];
+  private _correctOptionId: string | null = null;  // 정산 시 정답 옵션
   private _isDeleted: boolean = false;
 
   private constructor(
@@ -225,52 +226,29 @@ export class PredictionGame extends AggregateRoot {
     return this._predictions.find((p) => p.id === predictionId);
   }
 
+  /**
+   * 정산 실행 (레거시 - 하위 호환성)
+   * @deprecated startSettlement() + completeSettlement() 사용 권장
+   */
   public settle(
     correctOptionId: string
     // IUserRepository is not actually used, removing for now to reduce dependencies
   ): Result<void, DomainError> {
-    if (this._status !== GameStatus.ENDED) {
-      return failure(new DomainError("SETTLEMENT_INVALID_STATE"));
-    }
-
-    const hasOption = this._options.some((option) => option.id === correctOptionId);
-    if (!hasOption) {
-      return failure(new DomainError("INVALID_OPTION"));
-    }
-
-    const winningPredictions = this._predictions.filter(
-      (p) => p.selectedOptionId === correctOptionId
-    );
-    const losingPredictions = this._predictions.filter(
-      (p) => p.selectedOptionId !== correctOptionId
-    );
-
-    const totalStake = this._predictions.reduce((sum, p) => sum + p.stake, 0);
-
-    if (winningPredictions.length > 0) {
-      const totalWinningStake = winningPredictions.reduce(
-        (sum, p) => sum + p.stake,
-        0
-      );
-      for (const prediction of winningPredictions) {
-        const reward = (prediction.stake / totalWinningStake) * totalStake;
-        prediction.setResult({
-          result: PredictionResultEnum.CORRECT,
-          accuracyScore: 1 as AccuracyScore, // Simplified
-          reward: createPmpAmount(Math.floor(reward)) as unknown as PmpAmount,
-        });
+    // 새로운 2단계 정산 메서드 사용
+    const startResult = this.startSettlement(correctOptionId);
+    if (!startResult.success) {
+      // ENDED 상태가 아닌 경우 기존 에러 메시지 유지
+      if (this._status !== GameStatus.ENDED) {
+        return failure(new DomainError("SETTLEMENT_INVALID_STATE"));
       }
+      return startResult;
     }
 
-    for (const prediction of losingPredictions) {
-      prediction.setResult({
-        result: PredictionResultEnum.INCORRECT,
-        accuracyScore: 0 as AccuracyScore,
-        reward: createPmpAmount(0) as unknown as PmpAmount,
-      });
+    const completeResult = this.completeSettlement();
+    if (!completeResult.success) {
+      return completeResult;
     }
 
-    this._status = GameStatus.COMPLETED;
     return success(undefined);
   }
 
@@ -494,6 +472,101 @@ export class PredictionGame extends AggregateRoot {
     this._status = GameStatus.ENDED;
     this.touch();
     return success(undefined);
+  }
+
+  /**
+   * 정산 시작 - ENDED → SETTLING
+   * 정답 옵션을 지정하고 정산 프로세스 시작
+   */
+  public startSettlement(correctOptionId: string): Result<void, DomainError> {
+    if (this._status !== GameStatus.ENDED) {
+      return failure(new DomainError("CANNOT_START_SETTLEMENT"));
+    }
+
+    // 정답 옵션 검증
+    const hasOption = this._options.some((option) => option.id === correctOptionId);
+    if (!hasOption) {
+      return failure(new DomainError("INVALID_OPTION"));
+    }
+
+    this._correctOptionId = correctOptionId;
+    this._status = GameStatus.SETTLING;
+    this.touch();
+
+    return success(undefined);
+  }
+
+  /**
+   * 정산 완료 - SETTLING → COMPLETED
+   * 보상 계산 후 정산 완료 처리
+   */
+  public completeSettlement(): Result<void, DomainError> {
+    if (this._status !== GameStatus.SETTLING) {
+      return failure(new DomainError("CANNOT_COMPLETE_SETTLEMENT"));
+    }
+
+    if (!this._correctOptionId) {
+      return failure(new DomainError("NO_CORRECT_OPTION_SET"));
+    }
+
+    // 보상 계산 수행
+    const winningPredictions = this._predictions.filter(
+      (p) => p.selectedOptionId === this._correctOptionId
+    );
+    const losingPredictions = this._predictions.filter(
+      (p) => p.selectedOptionId !== this._correctOptionId
+    );
+
+    const totalStake = this._predictions.reduce((sum, p) => sum + p.stake, 0);
+
+    if (winningPredictions.length > 0) {
+      const totalWinningStake = winningPredictions.reduce(
+        (sum, p) => sum + p.stake,
+        0
+      );
+      for (const prediction of winningPredictions) {
+        const reward = (prediction.stake / totalWinningStake) * totalStake;
+        prediction.setResult({
+          result: PredictionResultEnum.CORRECT,
+          accuracyScore: 1 as AccuracyScore,
+          reward: createPmpAmount(Math.floor(reward)) as unknown as PmpAmount,
+        });
+      }
+    }
+
+    for (const prediction of losingPredictions) {
+      prediction.setResult({
+        result: PredictionResultEnum.INCORRECT,
+        accuracyScore: 0 as AccuracyScore,
+        reward: createPmpAmount(0) as unknown as PmpAmount,
+      });
+    }
+
+    this._status = GameStatus.COMPLETED;
+    this.touch();
+
+    return success(undefined);
+  }
+
+  /**
+   * 정산 취소 (롤백) - SETTLING → ENDED
+   * 재정산이 필요한 경우 사용
+   */
+  public cancelSettlement(): Result<void, DomainError> {
+    if (this._status !== GameStatus.SETTLING) {
+      return failure(new DomainError("CANNOT_CANCEL_SETTLEMENT"));
+    }
+
+    this._correctOptionId = null;
+    this._status = GameStatus.ENDED;
+    this.touch();
+
+    return success(undefined);
+  }
+
+  /** 정답 옵션 ID 조회 */
+  public getCorrectOptionId(): string | null {
+    return this._correctOptionId;
   }
 
   /** Helper to update timestamp & version */

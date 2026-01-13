@@ -13,7 +13,7 @@ import { GameStatus as GameStatusEnum } from "./prediction-types";
 type GameStatusLiteral = GameStatusEnum;
 
 export class GameStatus {
-  private constructor(private readonly _value: GameStatusLiteral) {}
+  private constructor(private readonly _value: GameStatusLiteral) { }
 
   // ----- Static factory -----
 
@@ -45,6 +45,10 @@ export class GameStatus {
     return this._value === "ENDED";
   }
 
+  public isSettling(): boolean {
+    return this._value === "SETTLING";
+  }
+
   public isCompleted(): boolean {
     return this._value === "COMPLETED";
   }
@@ -68,6 +72,7 @@ export class GameStatus {
   public static readonly CREATED = new GameStatus(GameStatusEnum.CREATED);
   public static readonly ACTIVE = new GameStatus(GameStatusEnum.ACTIVE);
   public static readonly ENDED = new GameStatus(GameStatusEnum.ENDED);
+  public static readonly SETTLING = new GameStatus(GameStatusEnum.SETTLING);
   public static readonly COMPLETED = new GameStatus(GameStatusEnum.COMPLETED);
   public static readonly CANCELLED = new GameStatus(GameStatusEnum.CANCELLED);
 
@@ -77,6 +82,7 @@ export class GameStatus {
     GameStatusEnum.CREATED,
     GameStatusEnum.ACTIVE,
     GameStatusEnum.ENDED,
+    GameStatusEnum.SETTLING,
     GameStatusEnum.COMPLETED,
     GameStatusEnum.CANCELLED,
   ];

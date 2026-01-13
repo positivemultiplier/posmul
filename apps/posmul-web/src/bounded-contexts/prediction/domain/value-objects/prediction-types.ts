@@ -47,6 +47,7 @@ export enum GameStatus {
   CREATED = "CREATED",
   ACTIVE = "ACTIVE",
   ENDED = "ENDED",
+  SETTLING = "SETTLING",  // 정산중 상태 추가
   COMPLETED = "COMPLETED",
   CANCELLED = "CANCELLED",
 }
@@ -55,7 +56,7 @@ export enum GameStatus {
  * GameStatus 유틸리티 클래스
  */
 export class GameStatusUtil {
-  constructor(public readonly value: GameStatus) {}
+  constructor(public readonly value: GameStatus) { }
 
   isActive(): boolean {
     return this.value === "ACTIVE";
@@ -63,6 +64,10 @@ export class GameStatusUtil {
 
   isEnded(): boolean {
     return this.value === "ENDED";
+  }
+
+  isSettling(): boolean {
+    return this.value === "SETTLING";
   }
 
   isSettled(): boolean {

@@ -301,11 +301,14 @@ const LoginRequiredSection = (props: { status: GameStatus; userId?: string }) =>
   );
 };
 
+import { PredictionStockCard } from "./PredictionStockCard";
+
 // Types (aligned with domain model)
 interface PredictionGame {
   id: string;
   title: string;
   description: string;
+  category?: string; // Added category
   predictionType: PredictionType;
   options: Array<{
     id: string;
@@ -324,6 +327,8 @@ interface PredictionGame {
   gameImportanceScore: number;
   allocatedPrizePool: number;
   createdAt: Date;
+  metadata?: { symbol?: string; name?: string }; // Added metadata
+  trend_data?: any[]; // Added trend_data from DB
 }
 
 interface UserPrediction {
@@ -351,6 +356,22 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
   onDetailsClick: _onDetailsClick,
   className,
 }) => {
+  // Premium UI for Invest Category
+  if (game.category === "INVEST" && game.metadata?.symbol) {
+    return (
+      <PredictionStockCard
+        symbol={game.metadata.symbol}
+        name={game.metadata.name || game.title}
+        description={game.description}
+        currentParticipants={game.currentParticipants}
+        totalStake={game.totalStake}
+        predictionType={game.predictionType}
+        trendData={game.trend_data || []} // Use real trend data
+        onPredict={() => onBetClick?.(game)}
+      />
+    );
+  }
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
@@ -360,16 +381,17 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
 
   const getStatusBadge = (status: GameStatus) => {
     const statusConfig = {
-      [GameStatus.PENDING]: { label: "시작 예정", variant: "secondary" as const },
-      [GameStatus.CREATED]: { label: "생성됨", variant: "secondary" as const },
-      [GameStatus.ACTIVE]: { label: "참여 가능", variant: "default" as const },
-      [GameStatus.ENDED]: { label: "종료", variant: "outline" as const },
-      [GameStatus.COMPLETED]: { label: "정산 완료", variant: "success" as const },
-      [GameStatus.CANCELLED]: { label: "취소됨", variant: "destructive" as const },
+      [GameStatus.PENDING]: { label: "시작 예정", variant: "secondary" as const, className: "" },
+      [GameStatus.CREATED]: { label: "생성됨", variant: "secondary" as const, className: "" },
+      [GameStatus.ACTIVE]: { label: "참여 가능", variant: "default" as const, className: "" },
+      [GameStatus.ENDED]: { label: "마감", variant: "outline" as const, className: "" },
+      [GameStatus.SETTLING]: { label: "정산중", variant: "outline" as const, className: "bg-yellow-100 text-yellow-800 border-yellow-300" },
+      [GameStatus.COMPLETED]: { label: "정산 완료", variant: "success" as const, className: "" },
+      [GameStatus.CANCELLED]: { label: "취소됨", variant: "destructive" as const, className: "" },
     };
 
     const config = statusConfig[status];
-    return <Badge variant={config.variant}>{config.label}</Badge>;
+    return <Badge variant={config.variant} className={config.className}>{config.label}</Badge>;
   };
 
   const getImportanceIcon = (score: number) => {

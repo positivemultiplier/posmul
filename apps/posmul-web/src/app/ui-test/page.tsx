@@ -2,70 +2,81 @@
 "use client";
 
 import { PredictionStockCard } from "@/bounded-contexts/prediction/presentation/components/PredictionStockCard";
+import { PredictionType } from "@/bounded-contexts/prediction/domain/value-objects/prediction-types";
+
+// Mock Data Generators
+const generateTrendData = (type: PredictionType) => {
+    const points = [];
+    const now = new Date();
+
+    for (let i = 0; i < 24; i++) {
+        const time = new Date(now.getTime() - (23 - i) * 60 * 60 * 1000).toISOString();
+        let snapshotData = {};
+
+        if (type === PredictionType.BINARY) {
+            const seed = Math.sin(i / 5) * 20 + 50;
+            snapshotData = {
+                "상승": Math.min(100, Math.max(0, seed + Math.random() * 10)),
+                "하락": Math.min(100, Math.max(0, 100 - (seed + Math.random() * 10)))
+            };
+        } else if (type === PredictionType.RANKING) {
+            snapshotData = {
+                "OpA": 20 + Math.random() * 10,
+                "OpB": 30 + Math.sin(i / 3) * 20,
+                "OpC": 10 + Math.cos(i / 4) * 5,
+                "OpD": 40 - Math.sin(i / 3) * 10
+            };
+        }
+        points.push({ timestamp: time, snapshot_data: snapshotData });
+    }
+    return points;
+};
 
 export default function UiTestPage() {
     return (
         <div className="min-h-screen bg-slate-950 p-10 font-sans">
             <h1 className="text-4xl font-bold text-white mb-10 text-center">
-                PosMul Premium UI Showcase
+                PosMul Prediction Trend Showcase
             </h1>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-                {/* 1. Nasdaq 100 Card */}
+                {/* 1. QQQ (Binary) */}
                 <PredictionStockCard
                     symbol="QQQ"
-                    name="Nasdaq 100 ETF"
-                    description="Invesco QQQ Trust. Tracks the Nasdaq-100 index."
-                    currentPrice={485.32}
-                    priceChange={2.45}
-                    priceChangePercent={0.51}
-                    chartData={[
-                        { time: '09:30', price: 483.0 },
-                        { time: '11:00', price: 484.2 },
-                        { time: '13:00', price: 483.8 },
-                        { time: '15:00', price: 485.1 },
-                        { time: '16:00', price: 485.32 },
-                    ]}
+                    name="Nasdaq 100 Forecast"
+                    description="Will QQQ close higher today? Crowd sentiment is shifting."
+                    currentParticipants={1240}
+                    totalStake={5000000}
+                    predictionType={PredictionType.BINARY}
+                    trendData={generateTrendData(PredictionType.BINARY)}
                 />
 
-                {/* 2. NVIDIA Card */}
+                {/* 2. Top Sector (Ranking) */}
                 <PredictionStockCard
-                    symbol="NVDA"
-                    name="NVIDIA Corp."
-                    description="AI computing leader. The most valuable company."
-                    currentPrice={138.20}
-                    priceChange={-1.50}
-                    priceChangePercent={-1.07}
-                    chartData={[
-                        { time: '09:30', price: 140.0 },
-                        { time: '11:00', price: 139.5 },
-                        { time: '13:00', price: 138.8 },
-                        { time: '15:00', price: 137.9 },
-                        { time: '16:00', price: 138.2 },
-                    ]}
+                    symbol="SECTOR"
+                    name="Top Performers"
+                    description="Which sector will lead the market next week?"
+                    currentParticipants={850}
+                    totalStake={3200000}
+                    predictionType={PredictionType.RANKING}
+                    trendData={generateTrendData(PredictionType.RANKING)}
                 />
 
-                {/* 3. Tesla Card */}
+                {/* 3. TSLA (Binary) */}
                 <PredictionStockCard
                     symbol="TSLA"
-                    name="Tesla Inc."
-                    description="Electric vehicle and clean energy company."
-                    currentPrice={245.80}
-                    priceChange={5.20}
-                    priceChangePercent={2.16}
-                    chartData={[
-                        { time: '09:30', price: 239.0 },
-                        { time: '11:00', price: 241.5 },
-                        { time: '13:00', price: 243.8 },
-                        { time: '15:00', price: 245.1 },
-                        { time: '16:00', price: 245.8 },
-                    ]}
+                    name="Tesla Q4 Earnings"
+                    description="Beat or Miss? Community predictions are volatile."
+                    currentParticipants={3200}
+                    totalStake={12500000}
+                    predictionType={PredictionType.BINARY}
+                    trendData={generateTrendData(PredictionType.BINARY)}
                 />
             </div>
 
             <div className="mt-20 text-center text-slate-500">
                 <p>Scroll or Hover over cards to see 3D effect.</p>
-                <p className="text-sm mt-2">Powered by React Bits x Recharts</p>
+                <p className="text-sm mt-2">Powered by PredictionTrends (Internal Data)</p>
             </div>
         </div>
     );
