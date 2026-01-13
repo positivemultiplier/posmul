@@ -12,7 +12,6 @@ import { PredictionComments } from "../../../bounded-contexts/prediction/present
 import { SharePredictionModal } from "../../../bounded-contexts/prediction/presentation/components/SharePredictionModal";
 import { ProbabilityLineChart } from "../../../bounded-contexts/prediction/presentation/components/charts/ProbabilityLineChart";
 import { BettingDistributionChart } from "../../../bounded-contexts/prediction/presentation/components/charts/BettingDistributionChart";
-import { OddsChart } from "../../../shared/ui/charts/OddsChart";
 import { usePredictionRealtimeStats } from "../../../bounded-contexts/prediction/presentation/hooks/use-prediction-realtime-stats";
 import { Card, Button } from "../../../shared/ui/components/base";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../../../shared/ui/components/base/Dialog";
@@ -405,25 +404,6 @@ export function PredictionDetailTabsClient({ game, userBalance, userBets, initia
               <div className="min-h-[300px] space-y-8">
                 {activeTab === "analysis" && (
                   <>
-                    {/* 옵션별 확률 차트 */}
-                    <Card className="p-6 border-white/5 bg-slate-900/50">
-                      <div className="flex items-center space-x-2 mb-6">
-                        <PieChart className="w-5 h-5 text-purple-400" />
-                        <h3 className="text-lg font-bold text-white">옵션별 확률</h3>
-                      </div>
-                      <OddsChart
-                        options={game.options.map((opt, idx) => ({
-                          id: opt.id,
-                          label: opt.label,
-                          odds: opt.probability,
-                          color: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'][idx % 5],
-                        }))}
-                        variant="horizontal-bar"
-                        height={140}
-                        showLabels
-                      />
-                    </Card>
-
                     {/* 베팅 분포 차트 */}
                     <Card className="p-6 border-white/5 bg-slate-900/50">
                       <div className="flex items-center space-x-2 mb-6">

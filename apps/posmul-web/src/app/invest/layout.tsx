@@ -11,7 +11,7 @@
  */
 import { Suspense } from "react";
 
-import { MoneyWaveStatus } from "../../shared/ui";
+import { CompactMoneyWaveCard } from "../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 
 interface InvestmentLayoutProps {
   children: React.ReactNode;
@@ -23,7 +23,7 @@ export default function InvestmentLayout({ children }: InvestmentLayoutProps) {
       {/* MoneyWave Status */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <Suspense fallback={<div className="h-20 bg-green-50 animate-pulse" />}>
-          <MoneyWaveStatus />
+          <CompactMoneyWaveCard category="all" />
         </Suspense>
       </div>
 

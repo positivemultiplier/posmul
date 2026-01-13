@@ -1,187 +1,127 @@
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
-import EconomyStats from "../bounded-contexts/economy/presentation/components/EconomyStats";
-import {
-  FadeInClient,
-  ScaleInClient,
-  HoverLiftClient,
-  StaggerContainerClient
-} from "./HomeClientComponents";
-import {
-  PlatformStatsSection,
-  HotPredictionsSection,
-  UserFlowSection
-} from "./HomeSections";
+import { Card } from "../shared/ui/components/base";
 
-export default function HomePage() {
+export default function Home() {
   return (
-    <div className="bg-gradient-to-b from-[#0a0a0f] via-[#1a1a2e] to-[#0a0a0f] min-h-screen text-white">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {/* Hero Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-12">
-        <div className="text-center">
-          <FadeInClient>
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 mb-8">
-              <Sparkles className="w-4 h-4 text-blue-400" />
-              <span className="text-sm text-gray-300">AI 시대 예측 마켓 플랫폼</span>
-            </div>
-          </FadeInClient>
-
-          <FadeInClient delay={0.1}>
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              PosMul
-            </h1>
-          </FadeInClient>
-
-          <FadeInClient delay={0.2}>
-            <p className="text-xl md:text-2xl text-gray-300 mb-4 max-w-2xl mx-auto">
-              직접민주주의를 실현하는 예측 플랫폼
-            </p>
-          </FadeInClient>
-
-          <FadeInClient delay={0.3}>
-            <p className="text-base text-gray-400 max-w-3xl mx-auto mb-8">
-              예측 게임과 지역 경제 연동을 통한 혁신적인 직접민주주의 실험 플랫폼입니다.
-            </p>
-          </FadeInClient>
-
-          {/* 실시간 통계 */}
-          <FadeInClient delay={0.35}>
-            <PlatformStatsSection />
-          </FadeInClient>
-
-          <FadeInClient delay={0.4}>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mt-10">
-              <HoverLiftClient>
-                <Link
-                  href="/prediction"
-                  className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-lg font-semibold rounded-xl hover:shadow-2xl hover:shadow-blue-500/50 transition-all duration-300"
-                >
-                  🎯 예측 게임 시작하기
-                </Link>
-              </HoverLiftClient>
-              <HoverLiftClient>
-                <Link
-                  href="/consume"
-                  className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white text-lg font-semibold rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300"
-                >
-                  � 소비로 시작하기
-                </Link>
-              </HoverLiftClient>
-            </div>
-          </FadeInClient>
+      <section className="text-center py-20">
+        <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
+          AI 시대 <span className="text-blue-600">직접민주주의</span> 플랫폼
+        </h1>
+        <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+          예측 게임과 지역 경제 연동을 통해 시민이 직접 참여하는 새로운
+          민주주의를 경험해보세요.
+        </p>
+        <div className="flex justify-center space-x-4">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 px-6 py-3 text-lg bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
+          >
+            지금 시작하기
+          </Link>
+          <Link
+            href="/about"
+            className="inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 px-6 py-3 text-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-blue-500"
+          >
+            더 알아보기
+          </Link>
         </div>
       </section>
 
-      {/* 사용자 자산 흐름 (로그인 시) */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-8">
-        <FadeInClient delay={0.45}>
-          <UserFlowSection isLoggedIn={false} />
-        </FadeInClient>
-      </section>
-
-      {/* 인기 예측 캐러셀 */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <FadeInClient>
-          <HotPredictionsSection />
-        </FadeInClient>
-      </section>
-
       {/* Features Section */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <FadeInClient>
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-gray-100 to-gray-400 bg-clip-text text-transparent">
-              ✨ 주요 기능
-            </h2>
-            <p className="text-xl text-gray-400">
-              PosMul이 제공하는 혁신적인 기능들을 경험해보세요
+      <section className="py-20">
+        <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+          주요 기능
+        </h2>
+        <div className="grid md:grid-cols-3 gap-8">
+          <Card className="text-center hover:shadow-lg transition-shadow">
+            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-8 h-8 bg-blue-600 rounded"></div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              예측 게임
+            </h3>
+            <p className="text-gray-600">
+              다양한 사회적 이슈에 대한 예측에 참여하고, 정확도에 따라 포인트를
+              획득하세요.
             </p>
-          </div>
-        </FadeInClient>
+          </Card>
 
-        <StaggerContainerClient
-          features={[
-            {
-              icon: "Sparkles",
-              title: "소비 시스템",
-              description: "광고 시청, 포럼 토론, 지역 소비를 통해 PMP와 PMC를 획득하세요.",
-              badges: ["광고", "포럼", "지역소비"],
-              link: "/consume",
-              gradient: "from-green-500/10 to-emerald-500/10",
-            },
-            {
-              icon: "TrendingUp",
-              title: "예측 게임",
-              description: "정책, 경제, 사회 이슈를 예측하고 PMP를 PMC로 전환하세요.",
-              badges: ["정치", "경제", "사회"],
-              link: "/prediction",
-              gradient: "from-blue-500/10 to-purple-500/10",
-            },
-            {
-              icon: "MessageCircle",
-              title: "기부",
-              description: "예측 성공으로 얻은 PMC를 지역사회와 오피니언 리더에게 기부하세요.",
-              badges: ["직접기부", "기관기부", "후원"],
-              link: "/donation",
-              gradient: "from-purple-500/10 to-pink-500/10",
-            },
-          ]}
-        />
+          <Card className="text-center hover:shadow-lg transition-shadow">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-8 h-8 bg-green-600 rounded"></div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              Local League
+            </h3>
+            <p className="text-gray-600">
+              지역 소상공인과의 거래를 통해 PMC 포인트를 적립하고 지역 경제에
+              기여하세요.
+            </p>
+          </Card>
+
+          <Card className="text-center hover:shadow-lg transition-shadow">
+            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="w-8 h-8 bg-purple-600 rounded"></div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">
+              Major League
+            </h3>
+            <p className="text-gray-600">
+              기업 광고를 시청하고 참여하여 PMP 포인트를 획득하고 의견을
+              제시하세요.
+            </p>
+          </Card>
+        </div>
       </section>
 
-      {/* Economy Stats Section */}
-      <section className="bg-black/20 backdrop-blur-sm py-16 border-y border-white/5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <FadeInClient>
-            <div className="text-center mb-12">
-              <h2 className="text-4xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                📊 경제 현황
-              </h2>
-              <p className="text-xl text-gray-400">
-                실시간 PosMul 경제 생태계 현황
-              </p>
-            </div>
-          </FadeInClient>
+      {/* Point System Section */}
+      <section className="py-20 bg-gray-900 text-white rounded-2xl">
+        <div className="max-w-4xl mx-auto px-8 text-center">
+          <h2 className="text-3xl font-bold mb-6">포인트 시스템</h2>
+          <p className="text-xl text-gray-300 mb-12">
+            PMC와 PMP 두 가지 포인트로 다양한 활동에 참여하고 보상을 받으세요.
+          </p>
 
-          <ScaleInClient delay={0.2}>
-            <EconomyStats />
-          </ScaleInClient>
+          <div className="grid md:grid-cols-2 gap-8">
+            <div className="bg-gray-800 rounded-lg p-8">
+              <h3 className="text-2xl font-bold text-blue-400 mb-4">PMC</h3>
+              <p className="text-gray-300 mb-4">Posmul Coin</p>
+              <ul className="text-left space-y-2 text-gray-300">
+                <li>• Local League 거래 시 적립</li>
+                <li>• 리뷰 작성 시 보너스</li>
+                <li>• 월 구독자 특별 혜택</li>
+              </ul>
+            </div>
+
+            <div className="bg-gray-800 rounded-lg p-8">
+              <h3 className="text-2xl font-bold text-green-400 mb-4">PMP</h3>
+              <p className="text-gray-300 mb-4">Posmul Point</p>
+              <ul className="text-left space-y-2 text-gray-300">
+                <li>• Major League 광고 시청</li>
+                <li>• 설문조사 참여</li>
+                <li>• 완전 시청 보너스</li>
+              </ul>
+            </div>
+          </div>
         </div>
       </section>
 
       {/* CTA Section */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-        <FadeInClient>
-          <div className="relative overflow-hidden rounded-3xl p-12 bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-xl border border-white/10">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-500/10 -z-10"></div>
-
-            <h2 className="text-4xl font-bold mb-6 bg-gradient-to-r from-blue-300 to-purple-300 bg-clip-text text-transparent">
-              🌟 지금 시작하세요!
-            </h2>
-            <p className="text-xl text-gray-300 mb-8">
-              AI 시대 직접민주주의의 새로운 경험을 시작해보세요.
-              당신의 참여가 더 나은 미래를 만들어갑니다.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <HoverLiftClient>
-                <Link
-                  href="/auth/signup"
-                  className="px-8 py-4 bg-white text-blue-600 text-lg font-semibold rounded-xl hover:bg-gray-100 transition-all duration-300 shadow-xl"
-                >
-                  회원가입하기
-                </Link>
-              </HoverLiftClient>
-              <HoverLiftClient>
-                <Link
-                  href="/auth/login"
-                  className="px-8 py-4 border-2 border-white/30 text-white text-lg font-semibold rounded-xl hover:bg-white/10 transition-all duration-300"
-                >
-                  로그인하기
-                </Link>
-              </HoverLiftClient>
-            </div>
-          </div>
-        </FadeInClient>
+      <section className="py-20 text-center">
+        <h2 className="text-3xl font-bold text-gray-900 mb-6">
+          지금 바로 시작하세요
+        </h2>
+        <p className="text-xl text-gray-600 mb-8">
+          새로운 형태의 민주주의 참여를 경험해보세요.
+        </p>
+        <Link
+          href="/auth/register"
+          className="inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 text-lg px-8 py-4 bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
+        >
+          회원가입하기
+        </Link>
       </section>
     </div>
   );
