@@ -251,17 +251,36 @@ graph TD
 
 ## 🌊 MoneyWave 시스템
 
-### MoneyWave1: EBIT 기반 PMC 생성
+### MoneyWave1: EBIT 기반 PMC 시간별 생성
 
 ```mermaid
 flowchart LR
-    EBIT["예상 EBIT"] --> CALC["일별 계산<br/>EBIT/365"]
-    CALC --> MWAVE["MoneyWave1"]
+    EBIT["예상 EBIT"] --> DAILY["일별 계산<br/>EBIT/365"]
+    DAILY --> HOURLY["시간별 계산<br/>일별/24"]
+    HOURLY --> WEIGHT["활동자 가중치<br/>적용"]
+    WEIGHT --> MWAVE["MoneyWave1<br/>(시간별 Wave)"]
     MWAVE --> EXP["Expect 게임별<br/>PMC 배분"]
 ```
 
-- **공식**: `일일 PMC 발행량 = 예상EBIT / 365`
-- **배분**: 당일 생성된 Expect 게임에 PMC 풀 배분
+**공식**:
+```
+기본 시간 풀 = (예상EBIT / 365) / 24
+가중치 = 해당 시간 활동자 수 / 일일 평균 활동자 수
+시간별 PMC 발행량 = 기본 시간 풀 × 가중치
+```
+
+**예시** (EBIT = 36.5억):
+| 구분 | 계산 | 값 |
+|------|------|-----|
+| 일별 PMC | 36.5억 / 365 | 1,000만 |
+| 시간별 기본 | 1,000만 / 24 | 41.7만 |
+| 피크 시간 (2x 가중치) | 41.7만 × 2.0 | 83.3만 |
+| 비수기 (0.5x 가중치) | 41.7만 × 0.5 | 20.8만 |
+
+**배분 로직**:
+1. 매 정각마다 해당 시간의 PMC 풀 산정
+2. 해당 시간에 진행 중인 Expect 게임에 배분
+3. 활동자 수 많은 시간대에 더 많은 PMC 배분
 
 ### MoneyWave2: 미사용 PMC 재분배
 
