@@ -61,10 +61,10 @@ export default function HomePage() {
               </HoverLiftClient>
               <HoverLiftClient>
                 <Link
-                  href="/investment"
+                  href="/consume"
                   className="px-8 py-4 bg-white/10 backdrop-blur-sm text-white text-lg font-semibold rounded-xl border border-white/20 hover:bg-white/20 transition-all duration-300"
                 >
-                  💰 투자 참여하기
+                  � 소비로 시작하기
                 </Link>
               </HoverLiftClient>
             </div>
@@ -102,27 +102,27 @@ export default function HomePage() {
         <StaggerContainerClient
           features={[
             {
+              icon: "Sparkles",
+              title: "소비 시스템",
+              description: "광고 시청, 포럼 토론, 지역 소비를 통해 PMP와 PMC를 획득하세요.",
+              badges: ["광고", "포럼", "지역소비"],
+              link: "/consume",
+              gradient: "from-green-500/10 to-emerald-500/10",
+            },
+            {
               icon: "TrendingUp",
               title: "예측 게임",
-              description: "스포츠, 정치, 경제 등 다양한 분야의 예측 게임에 참여하고 PMP를 획득하세요.",
-              badges: ["스포츠", "정치", "경제"],
+              description: "정책, 경제, 사회 이슈를 예측하고 PMP를 PMC로 전환하세요.",
+              badges: ["정치", "경제", "사회"],
               link: "/prediction",
               gradient: "from-blue-500/10 to-purple-500/10",
             },
             {
-              icon: "Sparkles",
-              title: "투자 시스템",
-              description: "지역 경제와 연동된 투자 시스템으로 실제 가치를 창출하세요.",
-              badges: ["PMP", "PMC", "지역경제"],
-              link: "/investment",
-              gradient: "from-green-500/10 to-emerald-500/10",
-            },
-            {
               icon: "MessageCircle",
-              title: "포럼 & 토론",
-              description: "직접민주주의의 핵심인 토론과 의견 교환을 통해 더 나은 결정을 내리세요.",
-              badges: ["토론", "투표", "의견수렴"],
-              link: "/forum",
+              title: "기부",
+              description: "예측 성공으로 얻은 PMC를 지역사회와 오피니언 리더에게 기부하세요.",
+              badges: ["직접기부", "기관기부", "후원"],
+              link: "/donation",
               gradient: "from-purple-500/10 to-pink-500/10",
             },
           ]}
