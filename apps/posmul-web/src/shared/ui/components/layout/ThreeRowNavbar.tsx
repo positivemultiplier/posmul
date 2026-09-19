@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { ChevronRightIcon, Menu, X } from "lucide-react";
 import { createClient } from "../../../../lib/supabase/client";
 import { User } from "@supabase/supabase-js";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { JourneyBarContainer } from "./JourneyBarContainer";
 import { CompactBalanceWidget } from "./CompactBalanceWidget";
 
@@ -337,12 +337,17 @@ const domainColors: Record<keyof typeof navigationData, {
 
 function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
   const [user, setUser] = useState<User | null>(null);
-  const [selectedDomain, setSelectedDomain] = useState<keyof typeof navigationData>('consume');
-  const [selectedCategory, setSelectedCategory] = useState<string>('time');
+  const [selectedDomain, setSelectedDomain] = useState<keyof typeof navigationData>('prediction');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [mobileOpen, setMobileOpen] = useState(false);
-  const router = useRouter();
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const supabase = createClient();
+
+  // 소분류(카테고리) 공사중 판별 (구현 완료된 페이지 정상 활성화)
+  const isCategoryUnderConstruction = (_domain: string, _categoryKey: string): boolean => {
+    return false; // 모든 주요 도메인 및 카테고리 정상 연결
+  };
 
   const getDefaultCategoryKey = (domain: keyof typeof navigationData): string => {
     const keys = Object.keys(navigationData[domain].categories);
@@ -352,6 +357,11 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
   const isDomainKey = (value: string): value is keyof typeof navigationData => {
     return value in navigationData;
   };
+
+  // Hydration 안전: mounted 이후에만 라우터 사용
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 인증 상태 확인
   useEffect(() => {
@@ -402,8 +412,9 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+    if (mounted) {
+      window.location.href = '/';
+    }
   };
 
   if (hideNav) return null;
@@ -507,7 +518,18 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
             {Object.entries(currentCategories).map(([categoryKey, category]) => {
               const colors = domainColors[selectedDomain];
               const isSelected = selectedCategory === categoryKey;
-              return (
+              const catUnderConstruction = isCategoryUnderConstruction(selectedDomain, categoryKey);
+              return catUnderConstruction ? (
+                <button
+                  key={categoryKey}
+                  onClick={() => {
+                    alert('🚧 준비 중입니다! 곧 오픈 예정입니다.');
+                  }}
+                  className={`px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 opacity-50 cursor-not-allowed`}
+                >
+                  {category.title} 🚧
+                </button>
+              ) : (
                 <Link
                   key={categoryKey}
                   href={(category as any).href}

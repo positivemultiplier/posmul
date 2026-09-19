@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 
 const adminNavItems = [
     { href: "/admin/prediction", label: "대시보드", icon: "📊" },
+    { href: "/admin/feed", label: "AI 피드 & 초안", icon: "🤖" },
     { href: "/admin/prediction/games", label: "게임 목록", icon: "🎮" },
     { href: "/admin/prediction/games/create", label: "게임 생성", icon: "➕" },
     { href: "/admin/prediction/templates", label: "템플릿 관리", icon: "📝" },
