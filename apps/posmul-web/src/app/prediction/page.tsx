@@ -4,6 +4,7 @@ import { FadeIn } from "../HomeClientComponents";
 import { Activity, Vote, Film, Store, TrendingUp, Target } from "lucide-react";
 import { ClientPredictionGamesGrid } from "./components/ClientPredictionGamesGrid";
 import { CompactMoneyWaveCard } from "../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
+import { JobCurationMorningBanner } from "../../bounded-contexts/prediction/presentation/components/JobCurationMorningBanner";
 import { getAggregatedPrizePool } from "../../bounded-contexts/prediction/application/prediction-pool.service";
 import {
   attachHourlyGamePoolsToRows,
@@ -58,24 +59,24 @@ export default async function PredictionPage() {
       image: "/images/cards/prediction-politics.png",
     },
     {
-      href: "/prediction/consume",
-      icon: Store,
-      emoji: "💳",
-      title: "소비",
+      href: "/prediction/invest",
+      icon: TrendingUp,
+      emoji: "📈",
+      title: "투자/경제",
       count: categoryCounts.INVEST,
-      color: "from-green-500 to-emerald-500",
-      bgColor: "from-green-900/50 to-slate-900",
-      image: "/images/cards/prediction_consume.png",
+      color: "from-emerald-500 to-teal-500",
+      bgColor: "from-emerald-900/50 to-slate-900",
+      image: "/images/cards/prediction-invest.png",
     },
     {
       href: "/prediction/entertainment",
       icon: Film,
-      emoji: "🎭",
-      title: "엔터테인먼트",
+      emoji: "🎬",
+      title: "엔터/문화",
       count: categoryCounts.ENTERTAINMENT,
-      color: "from-orange-500 to-red-500",
-      bgColor: "from-orange-900/50 to-slate-900",
-      image: "/images/cards/prediction_entertainment.png",
+      color: "from-pink-500 to-rose-500",
+      bgColor: "from-pink-900/50 to-slate-900",
+      image: "/images/cards/prediction-entertainment.png",
     },
   ];
 
@@ -96,7 +97,7 @@ export default async function PredictionPage() {
   let userPredictions: Array<{
     prediction_id: string;
     game_id: string;
-    bet_amount: number | null;
+    bet_amount: number;
     is_active: boolean;
     prediction_data: Record<string, unknown> | null;
   }> = [];
@@ -113,29 +114,32 @@ export default async function PredictionPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-950 to-slate-950 text-white">
-      {/* Header - Forum 스타일 */}
-      <header className="sticky top-0 z-10 backdrop-blur-xl bg-indigo-950/80 border-b border-indigo-800/50">
-        <div className="max-w-4xl mx-auto p-4">
+    <div className="min-h-screen bg-slate-950 text-white">
+      {/* Header */}
+      <header className="sticky top-0 z-10 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80">
+        <div className="max-w-6xl mx-auto p-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
-                🎯 Prediction
+              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">
+                🎯 Prediction Market
               </h1>
-              <p className="text-sm text-indigo-400/70">예측 게임 · PMP 배팅</p>
+              <p className="text-xs sm:text-sm text-slate-400">직접민주주의 정책·산업 예측 & PMP 참여</p>
             </div>
             <div className="text-right">
               <p className="text-xs text-slate-400">진행 중</p>
-              <p className="text-xl font-bold text-indigo-400">
+              <p className="text-xl font-bold text-blue-400">
                 <span className="text-2xl">{totalActiveGames}</span>
-                <span className="text-sm ml-1">게임</span>
+                <span className="text-sm ml-1 text-slate-300">게임</span>
               </p>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
+      <main className="max-w-6xl mx-auto px-4 py-6 space-y-8">
+        {/* 오늘 아침 직업 맞춤 예측 브리핑 5선 */}
+        <JobCurationMorningBanner />
+
         <FadeIn>
           <CompactMoneyWaveCard depthLevel={1} initialPool={platformTotalPool} />
         </FadeIn>

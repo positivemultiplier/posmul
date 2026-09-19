@@ -15,6 +15,10 @@ export interface RankingEntry {
   userId: string;
   displayName: string;
   score: number;
+  sido?: string;
+  sigungu?: string;
+  dong?: string;
+  jobGroup?: string;
   details: {
     forumPmp?: number;
     consumePmc?: number;
@@ -46,50 +50,98 @@ export function useRanking(initialCategory: RankingCategory = 'overall') {
   const [category, setCategory] = useState<RankingCategory>(initialCategory);
   const [period, setPeriod] = useState<RankingPeriod>('all');
 
-  const fetchRankings = useCallback(async (cat?: RankingCategory, per?: RankingPeriod) => {
-    setLoading(true);
-    setError(null);
-    
-    const currentCategory = cat ?? category;
-    const currentPeriod = per ?? period;
-    
-    try {
-      const params = new URLSearchParams({
-        category: currentCategory,
-        period: currentPeriod,
-        limit: '20',
-      });
+  // 지역 및 직업군 필터 상태
+  const [sido, setSido] = useState<string>('전국');
+  const [sigungu, setSigungu] = useState<string>('전체');
+  const [dong, setDong] = useState<string>('전체');
+  const [jobGroup, setJobGroup] = useState<string>('전체');
 
-      const response = await fetch(`/api/ranking?${params.toString()}`);
-      const result = await response.json();
+  const fetchRankings = useCallback(
+    async (
+      cat?: RankingCategory,
+      per?: RankingPeriod,
+      s?: string,
+      sgg?: string,
+      d?: string,
+      jg?: string
+    ) => {
+      setLoading(true);
+      setError(null);
 
-      if (!response.ok) {
-        throw new Error(result.error ?? '랭킹을 불러오는 데 실패했습니다.');
+      const currentCategory = cat ?? category;
+      const currentPeriod = per ?? period;
+      const currentSido = s ?? sido;
+      const currentSigungu = sgg ?? sigungu;
+      const currentDong = d ?? dong;
+      const currentJobGroup = jg ?? jobGroup;
+
+      try {
+        const params = new URLSearchParams({
+          category: currentCategory,
+          period: currentPeriod,
+          sido: currentSido,
+          sigungu: currentSigungu,
+          dong: currentDong,
+          jobGroup: currentJobGroup,
+          limit: '30',
+        });
+
+        const response = await fetch(`/api/ranking?${params.toString()}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.error ?? '랭킹을 불러오는 데 실패했습니다.');
+        }
+
+        setRankings(result.data.rankings);
+        setCurrentUser(result.data.currentUser);
+        setMeta(result.data.meta);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
+      } finally {
+        setLoading(false);
       }
-
-      setRankings(result.data.rankings);
-      setCurrentUser(result.data.currentUser);
-      setMeta(result.data.meta);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : '오류가 발생했습니다.');
-    } finally {
-      setLoading(false);
-    }
-  }, [category, period]);
+    },
+    [category, period, sido, sigungu, dong, jobGroup]
+  );
 
   useEffect(() => {
     fetchRankings();
   }, [fetchRankings]);
 
-  const changeCategory = useCallback((newCategory: RankingCategory) => {
-    setCategory(newCategory);
-    fetchRankings(newCategory, period);
-  }, [period, fetchRankings]);
+  const changeCategory = useCallback(
+    (newCategory: RankingCategory) => {
+      setCategory(newCategory);
+      fetchRankings(newCategory, period, sido, sigungu, dong, jobGroup);
+    },
+    [period, sido, sigungu, dong, jobGroup, fetchRankings]
+  );
 
-  const changePeriod = useCallback((newPeriod: RankingPeriod) => {
-    setPeriod(newPeriod);
-    fetchRankings(category, newPeriod);
-  }, [category, fetchRankings]);
+  const changePeriod = useCallback(
+    (newPeriod: RankingPeriod) => {
+      setPeriod(newPeriod);
+      fetchRankings(category, newPeriod, sido, sigungu, dong, jobGroup);
+    },
+    [category, sido, sigungu, dong, jobGroup, fetchRankings]
+  );
+
+  const changeRegion = useCallback(
+    (newSido: string, newSigungu: string = '전체', newDong: string = '전체') => {
+      setSido(newSido);
+      setSigungu(newSigungu);
+      setDong(newDong);
+      fetchRankings(category, period, newSido, newSigungu, newDong, jobGroup);
+    },
+    [category, period, jobGroup, fetchRankings]
+  );
+
+  const changeJobGroup = useCallback(
+    (newJobGroup: string) => {
+      setJobGroup(newJobGroup);
+      fetchRankings(category, period, sido, sigungu, dong, newJobGroup);
+    },
+    [category, period, sido, sigungu, dong, fetchRankings]
+  );
 
   return {
     rankings,
@@ -99,8 +151,14 @@ export function useRanking(initialCategory: RankingCategory = 'overall') {
     error,
     category,
     period,
+    sido,
+    sigungu,
+    dong,
+    jobGroup,
     changeCategory,
     changePeriod,
+    changeRegion,
+    changeJobGroup,
     refetch: fetchRankings,
   };
 }

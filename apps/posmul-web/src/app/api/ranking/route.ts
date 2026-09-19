@@ -15,6 +15,10 @@ interface RankingEntry {
   userId: string;
   displayName: string;
   score: number;
+  sido?: string;
+  sigungu?: string;
+  dong?: string;
+  jobGroup?: string;
   details: {
     forumPmp?: number;
     consumePmc?: number;
@@ -35,6 +39,10 @@ interface UserProfile {
 
 interface ScoreEntry {
   user_id: string;
+  sido?: string;
+  sigungu?: string;
+  dong?: string;
+  job_group?: string;
   contribution_score: number;
   forum_pmp_earned: number;
   forum_posts_count: number;
@@ -120,6 +128,10 @@ function formatRankingEntry(
     userId: entry.user_id,
     displayName: profile?.display_name ?? profile?.username ?? `시민_${entry.user_id.substring(0, 5)}`,
     score,
+    sido: entry.sido,
+    sigungu: entry.sigungu,
+    dong: entry.dong,
+    jobGroup: entry.job_group,
     details: {
       forumPmp: entry.forum_pmp_earned,
       consumePmc: (entry.money_consume_pmc ?? 0) + (entry.cloud_consume_pmc ?? 0),
@@ -140,7 +152,13 @@ export async function GET(request: NextRequest) {
     
     const category = (searchParams.get('category') ?? 'overall') as RankingCategory;
     const period = (searchParams.get('period') ?? 'all') as RankingPeriod;
-    const limit = parseInt(searchParams.get('limit') ?? '20');
+    const limit = parseInt(searchParams.get('limit') ?? '30');
+
+    // 지역 및 직업군 필터 파라미터
+    const sido = searchParams.get('sido');
+    const sigungu = searchParams.get('sigungu');
+    const dong = searchParams.get('dong');
+    const jobGroup = searchParams.get('jobGroup');
 
     // 현재 사용자 확인
     const { data: { user } } = await supabase.auth.getUser();
@@ -149,13 +167,28 @@ export async function GET(request: NextRequest) {
     // 카테고리별 정렬 기준
     const orderColumn = getOrderColumn(category);
 
-    // 랭킹 데이터 조회 (supabaseAdmin 사용으로 안전한 조회)
-    const { data: rankings, error } = await supabaseAdmin
+    // 랭킹 쿼리 빌더 (supabaseAdmin 사용으로 안전한 조회)
+    let query = supabaseAdmin
       .schema('ranking')
       .from('user_scores')
       .select('*')
-      .order(orderColumn, { ascending: false })
-      .limit(limit);
+      .order(orderColumn, { ascending: false });
+
+    // 지역 필터 조건 적용 (전국 / 전체가 아닐 때)
+    if (sido && sido !== '전국' && sido !== 'all') {
+      query = query.eq('sido', sido);
+    }
+    if (sigungu && sigungu !== '전체' && sigungu !== 'all') {
+      query = query.eq('sigungu', sigungu);
+    }
+    if (dong && dong !== '전체' && dong !== 'all') {
+      query = query.eq('dong', dong);
+    }
+    if (jobGroup && jobGroup !== '전체' && jobGroup !== 'all') {
+      query = query.eq('job_group', jobGroup);
+    }
+
+    const { data: rankings, error } = await query.limit(limit);
 
     if (error) {
       console.error('[API /api/ranking] Database error:', error);
