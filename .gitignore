@@ -49,6 +49,9 @@ build-output.txt
 type-check-output.txt
 test_output.txt
 test_output_utf8.txt
+*-output.txt
+*.output.txt
+test-result.json
 
 # --- Env & Secrets ---
 .env
