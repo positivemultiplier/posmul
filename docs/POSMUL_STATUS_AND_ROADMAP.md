@@ -78,14 +78,16 @@ flowchart TD
         AI --> DraftGen
     end
 
-    subgraph BlockPoint ["⚠️ 현재 멈춰있는 핵심 지점"]
-        AdminUI["[미완성] 관리자 Draft 검토 & 원클릭 승인 UI<br>(/admin/feed)"]
-        AutoSettle["[미완성] 국회 본회의 통과 감지 시<br>자동 게임 종료 및 정산 트리거"]
+    subgraph BlockPoint ["🎉 구현 완료된 핵심 기능들"]
+        AdminUI["[완료] 관리자 AI Draft 검토 & 원클릭 승인 UI<br>(/admin/feed)"]
+        AutoSettle["[완료] 국회 본회의 통과/부결 감지<br>자동 게임 종료 및 승패 정산 엔진"]
+        DonationFlow["[완료] PMC 기부 라우트 정상화 및<br>공익 기관 1,000 PMC 기부 검증"]
+        HomeRenew["[완료] 다크 글래스모피즘 메인 홈 리뉴얼<br>(실시간 마켓 & 지표 틱커)"]
     end
 
     subgraph Core ["기존 완성 도메인 (456개 테스트 PASS)"]
         PredGame["Prediction 게임 생성 / 실시간 배팅"]
-        Chart["Polymarket 스타일 확률 시계열 차트"]
+        Chart["Polymarket 스타일 동적 확률 시계열 차트"]
         MW["MoneyWave 1·2·3 부의 재분배 엔진"]
         DonationContext["기부(Donation) / 포럼(Forum) 시스템"]
     end
@@ -100,14 +102,13 @@ flowchart TD
     PredGame --> AutoSettle
     AutoSettle -->|"보상 지급"| MW
     MW --> DonationContext
+    DonationContext --> DonationFlow
 
     classDef done fill:#064e3b,stroke:#059669,stroke-width:2px,color:#fff
-    classDef paused fill:#7c2d12,stroke:#ea580c,stroke-width:3px,color:#fff
     classDef external fill:#1e293b,stroke:#475569,stroke-width:1px,color:#94a3b8
 
     class RSS,API,DART external
-    class Ingest,DB_Feed,AI,DraftGen,PredGame,Chart,MW,DonationContext done
-    class AdminUI,AutoSettle paused
+    class Ingest,DB_Feed,AI,DraftGen,PredGame,Chart,MW,DonationContext,AdminUI,AutoSettle,DonationFlow,HomeRenew done
 ```
 
 ---
@@ -118,14 +119,15 @@ flowchart TD
 | :--- | :--- | :---: | :--- |
 | **품질 검증** | `TypeScript Strict` | ✅ 정상 | `any` 타입 없이 모든 타입 정의 완료 (`tsc --noEmit` PASS) |
 | | `Jest Unit Tests` | ✅ 100% PASS | 35개 스위트, 456개 테스트 전부 통과 |
-| | `Next.js Build` | ✅ 성공 | 전체 라우트 번들링 정상 완료 |
+| | `Next.js Build` | ✅ 성공 | 전체 라우트 번들링 및 렌더링 정상 완료 |
 | **데이터베이스** | Supabase Project | ✅ 활성 | `fabyagohqqnusmnwekuc` (PostgreSQL 17.4) |
 | | 도메인별 스키마 분리 | ✅ 완료 | `economy`, `prediction`, `donation`, `forum`, `feed`, `user` 등 |
 | | 수집 데이터 적재 | ✅ 완료 | `feed.items` (53건), `feed.bills` (5건), `game_snapshots` (22건) |
-| **진행 중 작업** | Polymarket 차트 고도화 | 🔄 미커밋 | `ProbabilityLineChart.tsx` (Glow 필터, 커스텀 툴팁 구현 완료) |
-| | 차트 히스토리 쿼리 최적화 | 🔄 미커밋 | `get-game-history.ts` (스냅샷 우선 조회 + 실시간 폴백) |
-| | AI 자동 콘텐츠 파이프라인 | 🔄 진행중 | Phase 1~2(수집, AI생성) 완료, **Phase 4(관리자 UI) 대기 중** |
-| | 네비게이션바 연결 | ⚠️ 임시 차단 | `ThreeRowNavbar.tsx`에서 prediction 외 메뉴 alert 처리됨 |
+| **핵심 완료 기능** | 관리자 AI 피드 대시보드 | ✅ 완료 | `/admin/feed`에서 뉴스/의안 초안 검토 및 원클릭 게임 발행 연동 |
+| | Polymarket 차트 고도화 | ✅ 완료 | 50% 고정 버그 완벽 해결, 실제 베팅 볼륨(80%:20%) 반영 꺾은선 렌더링 |
+| | 국회 의안 자동 정산 | ✅ 완료 | `rgs_conf_rslt` 본회의 결과 판정 기반 자동 정산 유스케이스 구축 |
+| | 기부(Donation) E2E 완결 | ✅ 완료 | 3단계 라우트 매칭 수정, 유니세프 1,000 PMC 기부 및 영수증 실시간 발급 확인 |
+| | 메인 홈 랜딩페이지 리뉴얼 | ✅ 완료 | 다크 글래스모피즘, 실시간 핫 예측 마켓, 4단계 선순환 플라이휠 적용 |
 
 ---
 
