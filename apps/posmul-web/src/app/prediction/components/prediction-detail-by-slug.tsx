@@ -130,8 +130,32 @@ export async function renderPredictionDetailBySlug(slug: string) {
   const league = normalizeLowerOrAll((game as unknown as { league?: unknown }).league);
 
   const moneyWaveCategory = mapDbCategoryToMoneyWave((game as unknown as { category?: unknown }).category);
-  const totalBetAmount = stats?.total_bet_amount ?? 0;
-  const participantCount = stats?.total_participants ?? 0;
+  const supabase = await createClient();
+  // 실제 베팅 내역 집계 (각 옵션별 실제 볼륨 및 확률 계산)
+  const { data: betsData } = await supabase
+    .schema("prediction")
+    .from("predictions")
+    .select("bet_amount, prediction_data")
+    .eq("game_id", game.game_id)
+    .eq("is_active", true);
+
+  const optionVolumes: Record<string, number> = {};
+  let calculatedTotalVolume = 0;
+  gameOptions.forEach(opt => { optionVolumes[opt.id] = 0; });
+
+  (betsData || []).forEach(bet => {
+    const optId = (bet.prediction_data as any)?.selectedOptionId;
+    const amt = Number(bet.bet_amount) || 0;
+    if (optId && optionVolumes[optId] !== undefined) {
+      optionVolumes[optId] += amt;
+    } else if (optId) {
+      optionVolumes[optId] = amt;
+    }
+    calculatedTotalVolume += amt;
+  });
+
+  const finalTotalVolume = calculatedTotalVolume > 0 ? calculatedTotalVolume : (stats?.total_bet_amount ?? 0);
+  const participantCount = (betsData && betsData.length > 0) ? betsData.length : (stats?.total_participants ?? 0);
 
   // 사용자의 기존 베팅 내역 조회
   const userBets = await getUserBets(game.game_id);
@@ -151,16 +175,24 @@ export async function renderPredictionDetailBySlug(slug: string) {
       (
         opt: { id: string; label: string; currentOdds?: number },
         idx: number
-      ) => ({
-        id: opt.id || `option-${idx}`,
-        label: opt.label || `옵션 ${idx + 1}`,
-        probability: opt.currentOdds || 0.5,
-        odds: opt.currentOdds && opt.currentOdds > 0 ? 1 / opt.currentOdds : 2.0,
-        volume: totalBetAmount ? Math.floor(totalBetAmount / gameOptions.length) : 0,
-        change24h: 0,
-      })
+      ) => {
+        const optVol = optionVolumes[opt.id] || 0;
+        const prob = finalTotalVolume > 0
+          ? optVol / finalTotalVolume
+          : (opt.currentOdds || (1 / gameOptions.length));
+        const odds = prob > 0 ? Number((1 / prob).toFixed(2)) : 2.0;
+
+        return {
+          id: opt.id || `option-${idx}`,
+          label: opt.label || `옵션 ${idx + 1}`,
+          probability: Number(prob.toFixed(4)),
+          odds: Math.min(Math.max(odds, 1.01), 99),
+          volume: optVol,
+          change24h: 0,
+        };
+      }
     ),
-    totalVolume: totalBetAmount,
+    totalVolume: finalTotalVolume,
     participantCount,
     endTime: toIsoOrFallback(game.registration_end, 7 * 24 * 60 * 60 * 1000),
     settlementTime: toIsoOrFallback(game.settlement_date, 14 * 24 * 60 * 60 * 1000),
@@ -172,7 +204,7 @@ export async function renderPredictionDetailBySlug(slug: string) {
       reputation: 0,
       avatar: "🎯",
     },
-    prizePool: truthPrizePool ?? getPrizePool({ game, totalBetAmount }),
+    prizePool: truthPrizePool ?? getPrizePool({ game, totalBetAmount: finalTotalVolume }),
     minimumStake: game.min_bet_amount || 100,
     maximumStake: game.max_bet_amount || 10000,
   };

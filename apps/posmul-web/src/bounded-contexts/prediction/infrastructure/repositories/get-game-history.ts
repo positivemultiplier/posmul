@@ -102,6 +102,18 @@ async function getGameHistoryFallback(
 
     options.forEach(opt => { optionInvestments[opt.id] = 0; });
 
+    // 시작점 (베팅 이전 기본 균등 확률)
+    if (bets.length > 0) {
+        const firstBetTime = new Date(bets[0].created_at);
+        const startTime = new Date(firstBetTime.getTime() - 5 * 60 * 1000);
+        const startPoint: ChartDataPoint = {
+            time: startTime.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })
+        };
+        const initialProb = Math.round(100 / options.length);
+        options.forEach(opt => { startPoint[opt.id] = initialProb; });
+        points.push(startPoint);
+    }
+
     bets.forEach((bet) => {
         const pData = bet.prediction_data as { selectedOptionId: string };
         const optionId = pData.selectedOptionId;
@@ -116,7 +128,8 @@ async function getGameHistoryFallback(
         const point: ChartDataPoint = {
             time: createdAt.toLocaleTimeString("ko-KR", {
                 hour: "2-digit",
-                minute: "2-digit"
+                minute: "2-digit",
+                second: "2-digit"
             }),
         };
 
@@ -135,7 +148,8 @@ async function getGameHistoryFallback(
         const now = new Date();
         const nowTimeLabel = now.toLocaleTimeString("ko-KR", {
             hour: "2-digit",
-            minute: "2-digit"
+            minute: "2-digit",
+            second: "2-digit"
         });
 
         if (lastPoint.time !== nowTimeLabel) {

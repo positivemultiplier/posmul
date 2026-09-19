@@ -87,8 +87,8 @@ export async function placeBet(request: PlaceBetRequest): Promise<PlaceBetRespon
       .eq("user_id", user.id)
       .single();
 
-    // 4. 페이지 새로고침
-    revalidatePath(`/prediction/sports/soccer/${request.gameId}`);
+    // 4. 페이지 새로고침 (전체 예측 경로 갱신)
+    revalidatePath('/prediction', 'layout');
 
     return {
       success: true,
