@@ -2,696 +2,810 @@
 
 import React, { useState, useEffect, useTransition } from "react";
 import {
-    getFeedStats,
-    getFeedItems,
-    getBills,
-    publishToPredictionGame,
-    ignoreFeedItem,
-    autoSettleBillsAction,
-    FeedItemDTO,
-    BillDTO,
-    FeedStatsDTO,
-    PublishGameInput,
+  getFeedStats,
+  getFeedItems,
+  getBills,
+  publishToPredictionGame,
+  ignoreFeedItem,
+  autoSettleBillsAction,
+  fetchFeedsByCategoryAction,
+  fetchMarketIndicatorsAction,
+  fetchBoxOfficeAction,
+  fetchBillsAction,
+  fetchAllFeedsAction,
+  generateAiDraftForFeedItemAction,
+  FeedItemDTO,
+  BillDTO,
+  FeedStatsDTO,
+  PublishGameInput,
 } from "./actions";
 import {
-    Sparkles,
-    FileText,
-    CheckCircle2,
-    Clock,
-    RefreshCw,
-    ExternalLink,
-    Send,
-    EyeOff,
-    SlidersHorizontal,
-    Layers,
-    TrendingUp,
-    Vote,
-    AlertCircle,
-    Coins,
+  Sparkles,
+  FileText,
+  CheckCircle2,
+  Clock,
+  RefreshCw,
+  ExternalLink,
+  Send,
+  EyeOff,
+  SlidersHorizontal,
+  Layers,
+  TrendingUp,
+  Vote,
+  AlertCircle,
+  Coins,
+  Activity,
+  Film,
+  Zap,
+  DollarSign,
+  Tv,
 } from "lucide-react";
 
+type CategoryFilter = "ALL" | "BILLS" | "SPORTS" | "ECONOMY" | "ENTERTAINMENT" | "POLICY";
+
 export default function AdminFeedPage() {
-    const [stats, setStats] = useState<FeedStatsDTO>({
-        totalItems: 0,
-        predictionCandidates: 0,
-        publishedGames: 0,
-        totalBills: 0,
-    });
-    const [activeTab, setActiveTab] = useState<"drafts" | "bills" | "all">("drafts");
-    const [feedItems, setFeedItems] = useState<FeedItemDTO[]>([]);
-    const [bills, setBills] = useState<BillDTO[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [isPending, startTransition] = useTransition();
-    const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [stats, setStats] = useState<FeedStatsDTO>({
+    totalItems: 0,
+    predictionCandidates: 0,
+    publishedGames: 0,
+    totalBills: 0,
+    categoryCounts: { ALL: 0, SPORTS: 0, ECONOMY: 0, ENTERTAINMENT: 0, POLICY: 0 },
+  });
+  const [activeCategory, setActiveCategory] = useState<CategoryFilter>("ALL");
+  const [feedItems, setFeedItems] = useState<FeedItemDTO[]>([]);
+  const [bills, setBills] = useState<BillDTO[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-    // 모달 상태
-    const [selectedItem, setSelectedItem] = useState<FeedItemDTO | null>(null);
-    const [selectedBill, setSelectedBill] = useState<BillDTO | null>(null);
-    const [modalTitle, setModalTitle] = useState("");
-    const [modalDescription, setModalDescription] = useState("");
-    const [modalCategory, setModalCategory] = useState("POLITICS");
-    const [modalDays, setModalDays] = useState(7);
-    const [modalOption1, setModalOption1] = useState("찬성 / 실현된다");
-    const [modalOption2, setModalOption2] = useState("반대 / 실현되지 않는다");
-    const [isModalOpen, setIsModalOpen] = useState(false);
+  // 모달 상태
+  const [selectedItem, setSelectedItem] = useState<FeedItemDTO | null>(null);
+  const [selectedBill, setSelectedBill] = useState<BillDTO | null>(null);
+  const [modalTitle, setModalTitle] = useState("");
+  const [modalDescription, setModalDescription] = useState("");
+  const [modalCategory, setModalCategory] = useState("POLITICS");
+  const [modalDays, setModalDays] = useState(7);
+  const [modalOption1, setModalOption1] = useState("찬성 / 실현된다");
+  const [modalOption2, setModalOption2] = useState("반대 / 실현되지 않는다");
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAiDrafting, setIsAiDrafting] = useState(false);
 
-    const loadData = async () => {
-        setIsLoading(true);
-        try {
-            const [s, items, b] = await Promise.all([
-                getFeedStats(),
-                getFeedItems({ limit: 60 }),
-                getBills(30),
-            ]);
-            setStats(s);
-            setFeedItems(items);
-            setBills(b);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  const loadData = async (cat: CategoryFilter = activeCategory) => {
+    setIsLoading(true);
+    try {
+      const [s, items, b] = await Promise.all([
+        getFeedStats(),
+        getFeedItems({
+          category: cat === "BILLS" ? undefined : cat,
+          limit: 100,
+        }),
+        getBills(50),
+      ]);
+      setStats(s);
+      setFeedItems(items);
+      setBills(b);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    useEffect(() => {
-        loadData();
-    }, []);
+  useEffect(() => {
+    loadData(activeCategory);
+  }, [activeCategory]);
 
-    // 빠른 즉시 발행 (One-Click Publish)
-    const handleQuickPublish = (item: FeedItemDTO) => {
-        if (!confirm(`'${item.title}' 기사를 기반으로 예측 게임을 즉시 발행하시겠습니까?`)) {
-            return;
-        }
+  // 카테고리 전환
+  const handleCategoryChange = (cat: CategoryFilter) => {
+    setActiveCategory(cat);
+  };
 
-        startTransition(async () => {
-            const res = await publishToPredictionGame({
-                feedItemId: item.id,
-                title: item.title,
-                description: `${item.content_summary || item.title}\n\n[출처]\n${item.link}`,
-                category: "POLITICS",
-                durationDays: 7,
-                sourceUrl: item.link,
-            });
+  // 수집 액션 핸들러들
+  const handleTriggerCollect = async (
+    type: "ALL" | "SPORTS" | "ECONOMY" | "ENTERTAINMENT" | "MARKET" | "BILLS"
+  ) => {
+    setIsFetching(true);
+    setStatusMessage("수집 엔진이 동작 중입니다...");
+    try {
+      let res: { success: boolean; message: string };
+      if (type === "ALL") {
+        res = await fetchAllFeedsAction();
+      } else if (type === "SPORTS") {
+        res = await fetchFeedsByCategoryAction("SPORTS");
+      } else if (type === "ECONOMY") {
+        res = await fetchFeedsByCategoryAction("ECONOMY");
+      } else if (type === "ENTERTAINMENT") {
+        res = await fetchFeedsByCategoryAction("ENTERTAINMENT");
+      } else if (type === "MARKET") {
+        res = await fetchMarketIndicatorsAction();
+      } else {
+        res = await fetchBillsAction();
+      }
 
-            if (res.success) {
-                setStatusMessage(`✅ 예측 게임이 성공적으로 등록되었습니다! (ID: ${res.gameId})`);
-                await loadData();
-            } else {
-                alert(`발행 실패: ${res.error}`);
-            }
-        });
-    };
+      setStatusMessage(res.message);
+      await loadData();
+    } catch (e: any) {
+      setStatusMessage(`❌ 수집 실패: ${e?.message}`);
+    } finally {
+      setIsFetching(false);
+    }
+  };
 
-    // 모달 열기 (상세 편집 후 발행)
-    const openEditModal = (item: FeedItemDTO) => {
-        setSelectedItem(item);
-        setSelectedBill(null);
-        setModalTitle(item.title);
-        setModalDescription(item.content_summary || item.title);
-        setModalCategory("POLITICS");
-        setModalDays(7);
-        setModalOption1("찬성 / 가결된다");
-        setModalOption2("반대 / 부결된다");
-        setIsModalOpen(true);
-    };
+  // 모달 열기 (기사 피드)
+  const openItemModal = (item: FeedItemDTO) => {
+    setSelectedItem(item);
+    setSelectedBill(null);
+    setModalTitle(item.title);
+    setModalDescription(
+      item.content_summary ||
+        `${item.title} 관련 예측 게임입니다.\n\n[출처]\n${item.link}`
+    );
 
-    // 의안으로 게임 생성 모달 열기
-    const openBillModal = (bill: BillDTO) => {
-        setSelectedItem(null);
-        setSelectedBill(bill);
-        setModalTitle(`[국회 의안] ${bill.bill_name} 본회의 통과 여부`);
+    // 도메인에 맞는 기본 카테고리 & 옵션 추천
+    const cat = item.source_category || "POLICY";
+    if (cat === "SPORTS") {
+      setModalCategory("SPORTS");
+      setModalOption1("A팀 승리 / 달성");
+      setModalOption2("B팀 승리 / 미달");
+    } else if (cat === "ECONOMY") {
+      setModalCategory("INVEST");
+      setModalOption1("상승 / 목표 돌파");
+      setModalOption2("하락 / 돌파 실패");
+    } else if (cat === "ENTERTAINMENT") {
+      setModalCategory("ENTERTAINMENT");
+      setModalOption1("1위 / 기준 시청률 돌파");
+      setModalOption2("순위 하락 / 기준 미달");
+    } else {
+      setModalCategory("POLITICS");
+      setModalOption1("가결 / 실현된다");
+      setModalOption2("부결 / 실현되지 않는다");
+    }
+
+    setModalDays(7);
+    setIsModalOpen(true);
+  };
+
+  // 모달 열기 (의안 피드)
+  const openBillModal = (bill: BillDTO) => {
+    setSelectedBill(bill);
+    setSelectedItem(null);
+    setModalTitle(`[의안 심의 예측] ${bill.bill_name} (의안번호 ${bill.bill_no}) 본회의 가결될까?`);
+    setModalDescription(
+      `의안번호: ${bill.bill_no}\n제안자: ${bill.proposer || "미정"}\n소관위원회: ${
+        bill.committee || "미정"
+      }\n현재상태: ${bill.proc_result || "심사의뢰"}\n\n국회 본회의 최종 심의에서 원안가결 또는 수정가결될 것인지 예측합니다.`
+    );
+    setModalCategory("POLITICS");
+    setModalOption1("가결 (원안/수정가결)");
+    setModalOption2("부결 / 폐기 / 철회");
+    setModalDays(14);
+    setIsModalOpen(true);
+  };
+
+  // AI 자동 분석 및 옵션 초안 생성
+  const handleGenerateAiDraft = async () => {
+    if (!selectedItem) return;
+    setIsAiDrafting(true);
+    try {
+      const res = await generateAiDraftForFeedItemAction(selectedItem.id);
+      if (res.success && res.draft) {
+        setModalTitle(res.draft.title);
         setModalDescription(
-            `제안자: ${bill.proposer || "미상"}\n소관위원회: ${bill.committee || "미상"}\n의안번호: ${bill.bill_no}\n현재 심의상태: ${bill.rgs_conf_rslt || bill.proc_result || "심의 중"}`
+          `${res.draft.summary}\n\n[판정 기준]\n${res.draft.resolutionCriteria}\n\n[출처]\n${selectedItem.link}`
         );
-        setModalCategory("POLITICS");
-        setModalDays(14);
-        setModalOption1("가결 (통과)");
-        setModalOption2("부결 또는 임기만료 폐기");
-        setIsModalOpen(true);
-    };
-
-    // 모달 제출
-    const handleModalSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        startTransition(async () => {
-            const res = await publishToPredictionGame({
-                feedItemId: selectedItem?.id,
-                billId: selectedBill?.bill_id,
-                billNo: selectedBill?.bill_no,
-                title: modalTitle,
-                description: modalDescription,
-                category: modalCategory,
-                durationDays: modalDays,
-                options: [
-                    { id: "opt_1", label: modalOption1 },
-                    { id: "opt_2", label: modalOption2 },
-                ],
-                sourceUrl: selectedItem?.link,
-            });
-
-            if (res.success) {
-                setIsModalOpen(false);
-                setStatusMessage("✅ 정식 예측 게임으로 발행되었습니다!");
-                await loadData();
-            } else {
-                alert(`발행 오류: ${res.error}`);
-            }
-        });
-    };
-
-    // 의안 처리 결과 기반 자동 정산 실행
-    const handleAutoSettleBills = () => {
-        if (!confirm("국회 의안 본회의 심의 결과를 확인하여 연계된 예측 게임들을 자동으로 정산하고 PMC 보상을 지급할까요?")) {
-            return;
+        if (res.draft.options.length >= 2) {
+          setModalOption1(res.draft.options[0]);
+          setModalOption2(res.draft.options[1]);
         }
+        setStatusMessage("✨ Gemini AI가 도메인에 특화된 예측 문항과 판정 기준을 완성했습니다!");
+      } else {
+        alert(`AI 초안 생성 실패: ${res.error}`);
+      }
+    } catch (e: any) {
+      alert(`오류: ${e?.message}`);
+    } finally {
+      setIsAiDrafting(false);
+    }
+  };
 
-        startTransition(async () => {
-            setIsLoading(true);
-            const res = await autoSettleBillsAction();
-            setIsLoading(false);
+  // 정식 발행 제출
+  const handleSubmitPublish = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!modalTitle.trim()) {
+      alert("게임 제목을 입력해주세요.");
+      return;
+    }
 
-            if (res.success && res.data) {
-                const count = res.data.settledGamesCount;
-                if (count > 0) {
-                    setStatusMessage(
-                        `🎉 ${count}건의 의안 예측 게임이 자동 정산 완료되었습니다! 승자들에게 PMC 보상이 지급되었습니다.`
-                    );
-                } else {
-                    setStatusMessage(
-                        "ℹ️ 현재 가결/부결 처리되어 정산 대기 중인 의안 예측 게임이 없습니다."
-                    );
-                }
-                await loadData();
-            } else {
-                alert(`자동 정산 오류: ${res.error}`);
-            }
-        });
-    };
+    startTransition(async () => {
+      const input: PublishGameInput = {
+        feedItemId: selectedItem?.id,
+        billId: selectedBill?.bill_id,
+        billNo: selectedBill?.bill_no,
+        title: modalTitle,
+        description: modalDescription,
+        category: modalCategory,
+        durationDays: modalDays,
+        options: [
+          { id: "opt_1", label: modalOption1 },
+          { id: "opt_2", label: modalOption2 },
+        ],
+        sourceUrl: selectedItem?.link || (selectedBill ? `https://likms.assembly.go.kr` : undefined),
+      };
 
-    // 제외/보관 처리
-    const handleIgnore = (item: FeedItemDTO) => {
-        startTransition(async () => {
-            await ignoreFeedItem(item.id);
-            setStatusMessage("기사가 목록에서 제외(보관)되었습니다.");
-            await loadData();
-        });
-    };
+      const res = await publishToPredictionGame(input);
+      if (res.success) {
+        setIsModalOpen(false);
+        setStatusMessage(`🎉 예측 게임이 성공적으로 정식 발행되었습니다! (게임 ID: ${res.gameId})`);
+        await loadData();
+      } else {
+        alert(`발행 실패: ${res.error}`);
+      }
+    });
+  };
 
-    // AI 수집 파이프라인 트리거
-    const handleTriggerIngest = async () => {
-        if (!confirm("새로운 RSS 뉴스 및 국회 의안을 즉시 수집하고 AI 분류를 실행할까요? (약 10~20초 소요)")) {
-            return;
-        }
-        setIsLoading(true);
-        setStatusMessage("🤖 AI 콘텐츠 수집 파이프라인을 실행 중입니다...");
-        try {
-            const res = await fetch("/api/ingest");
-            const data = await res.json();
-            setStatusMessage("🎉 수집 및 AI 분류가 완료되었습니다!");
-            await loadData();
-        } catch (e: any) {
-            alert(`수집 실행 실패: ${e?.message}`);
-        } finally {
-            setIsLoading(false);
-        }
-    };
+  // 기사 제외(무시) 처리
+  const handleIgnore = (feedItemId: string) => {
+    if (!confirm("이 피드를 후보에서 제외하시겠습니까?")) return;
+    startTransition(async () => {
+      const res = await ignoreFeedItem(feedItemId);
+      if (res.success) {
+        setStatusMessage("피드가 제외 처리되었습니다.");
+        await loadData();
+      } else {
+        alert(`처리 실패: ${res.error}`);
+      }
+    });
+  };
 
-    // 필터링된 예측 추천 목록
-    const draftCandidates = feedItems.filter(
-        (i) => i.ai_classification === "PREDICTION" && i.process_status !== "PUBLISHED" && i.process_status !== "IGNORED"
-    );
+  // 의안 자동 정산 실행
+  const handleAutoSettle = async () => {
+    if (!confirm("국회 본회의 처리 결과(rgs_conf_rslt)를 확인하고 해당하는 예측 게임들을 자동 정산하시겠습니까?")) {
+      return;
+    }
+    startTransition(async () => {
+      const res = await autoSettleBillsAction();
+      if (res.success) {
+        setStatusMessage(`⚡ 자동 정산 완료: ${JSON.stringify(res.data)}`);
+        await loadData();
+      } else {
+        alert(`정산 실패: ${res.error}`);
+      }
+    });
+  };
 
-    return (
-        <div className="p-8 max-w-7xl mx-auto space-y-8">
-            {/* 상단 헤더 */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-                        <span className="p-2 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl shadow-md">
-                            🤖
-                        </span>
-                        AI 콘텐츠 파이프라인 & 초안 관리
-                    </h1>
-                    <p className="text-gray-500 mt-1">
-                        대한민국 정책브리핑 RSS 및 국회 의안 API로부터 수집된 데이터를 AI로 검토하고 즉시 예측 게임으로 발행합니다.
-                    </p>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button
-                        onClick={loadData}
-                        disabled={isLoading}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-300 rounded-xl hover:bg-gray-50 text-gray-700 font-medium transition shadow-sm"
-                    >
-                        <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
-                        새로고침
-                    </button>
-                    <button
-                        onClick={handleTriggerIngest}
-                        disabled={isLoading}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition shadow-md hover:shadow-lg disabled:opacity-50"
-                    >
-                        <Sparkles className="w-4 h-4" />
-                        AI 즉시 수집/분류 실행
-                    </button>
-                </div>
-            </div>
+  // 카테고리 뱃지 헬퍼
+  const getCategoryBadge = (cat?: string) => {
+    switch (cat?.toUpperCase()) {
+      case "SPORTS":
+        return { label: "스포츠", bg: "bg-blue-500/10 text-blue-400 border-blue-500/30", icon: "⚽" };
+      case "ECONOMY":
+        return { label: "경제/증권", bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", icon: "📈" };
+      case "ENTERTAINMENT":
+        return { label: "엔터/영화", bg: "bg-pink-500/10 text-pink-400 border-pink-500/30", icon: "🎬" };
+      default:
+        return { label: "정책/시사", bg: "bg-purple-500/10 text-purple-400 border-purple-500/30", icon: "🏛️" };
+    }
+  };
 
-            {/* 알림 메시지 */}
-            {statusMessage && (
-                <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl flex items-center justify-between animate-fadeIn">
-                    <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                        <span className="font-medium">{statusMessage}</span>
-                    </div>
-                    <button
-                        onClick={() => setStatusMessage(null)}
-                        className="text-emerald-600 hover:text-emerald-800 text-sm font-bold"
-                    >
-                        닫기
-                    </button>
-                </div>
-            )}
-
-            {/* 통계 요약 카드 */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">수집된 정책 뉴스</p>
-                        <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalItems}건</p>
-                    </div>
-                    <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center">
-                        <FileText className="w-6 h-6" />
-                    </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-2xl border border-indigo-100 shadow-sm flex items-center justify-between bg-gradient-to-br from-indigo-50/50 to-white">
-                    <div>
-                        <p className="text-sm font-medium text-indigo-600">AI 예측 게임 추천 후보</p>
-                        <p className="text-3xl font-bold text-indigo-950 mt-1">{stats.predictionCandidates}건</p>
-                    </div>
-                    <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-xl flex items-center justify-center">
-                        <Sparkles className="w-6 h-6" />
-                    </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">연동된 국회 의안</p>
-                        <p className="text-3xl font-bold text-gray-900 mt-1">{stats.totalBills}건</p>
-                    </div>
-                    <div className="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center">
-                        <Vote className="w-6 h-6" />
-                    </div>
-                </div>
-
-                <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">정식 게임 발행 완료</p>
-                        <p className="text-3xl font-bold text-emerald-600 mt-1">{stats.publishedGames}건</p>
-                    </div>
-                    <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center">
-                        <CheckCircle2 className="w-6 h-6" />
-                    </div>
-                </div>
-            </div>
-
-            {/* 탭 네비게이션 */}
-            <div className="flex border-b border-gray-200 space-x-8">
-                <button
-                    onClick={() => setActiveTab("drafts")}
-                    className={`pb-4 px-2 font-semibold text-base transition flex items-center gap-2 border-b-2 ${
-                        activeTab === "drafts"
-                            ? "border-indigo-600 text-indigo-600"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
-                >
-                    <Sparkles className="w-5 h-5" />
-                    AI 추천 예측 초안 ({draftCandidates.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("bills")}
-                    className={`pb-4 px-2 font-semibold text-base transition flex items-center gap-2 border-b-2 ${
-                        activeTab === "bills"
-                            ? "border-indigo-600 text-indigo-600"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
-                >
-                    <Vote className="w-5 h-5" />
-                    국회 의안 모니터링 ({bills.length})
-                </button>
-                <button
-                    onClick={() => setActiveTab("all")}
-                    className={`pb-4 px-2 font-semibold text-base transition flex items-center gap-2 border-b-2 ${
-                        activeTab === "all"
-                            ? "border-indigo-600 text-indigo-600"
-                            : "border-transparent text-gray-500 hover:text-gray-700"
-                    }`}
-                >
-                    <Layers className="w-5 h-5" />
-                    수집 피드 전체 ({feedItems.length})
-                </button>
-            </div>
-
-            {/* 탭 1: AI 추천 예측 게임 초안 목록 */}
-            {activeTab === "drafts" && (
-                <div className="space-y-6">
-                    {draftCandidates.length === 0 ? (
-                        <div className="bg-white rounded-2xl p-12 text-center border border-gray-200">
-                            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                            <h3 className="text-lg font-bold text-gray-800">현재 대기 중인 AI 추천 초안이 없습니다</h3>
-                            <p className="text-gray-500 mt-1 text-sm">
-                                상단의 [AI 즉시 수집/분류 실행] 버튼을 눌러 새로운 정책 뉴스를 가져와 보세요!
-                            </p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {draftCandidates.map((item) => (
-                                <div
-                                    key={item.id}
-                                    className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm hover:shadow-md transition flex flex-col justify-between"
-                                >
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
-                                                <Sparkles className="w-3 h-3" />
-                                                예측 추천
-                                            </span>
-                                            <span className="text-xs text-gray-400 flex items-center gap-1">
-                                                <Clock className="w-3.5 h-3.5" />
-                                                {new Date(item.created_at).toLocaleDateString("ko-KR")}
-                                            </span>
-                                        </div>
-
-                                        <h3 className="text-lg font-bold text-gray-900 leading-snug line-clamp-2">
-                                            {item.title}
-                                        </h3>
-
-                                        <p className="text-sm text-gray-600 line-clamp-3 leading-relaxed">
-                                            {item.content_summary || "요약 데이터가 없습니다."}
-                                        </p>
-
-                                        <div className="pt-2">
-                                            <a
-                                                href={item.link}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 font-medium"
-                                            >
-                                                원문 기사 확인하기 (korea.kr)
-                                                <ExternalLink className="w-3 h-3" />
-                                            </a>
-                                        </div>
-                                    </div>
-
-                                    {/* 카드 액션 버튼들 */}
-                                    <div className="pt-6 mt-4 border-t border-gray-100 flex items-center gap-2">
-                                        <button
-                                            onClick={() => handleQuickPublish(item)}
-                                            disabled={isPending}
-                                            className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold shadow-sm transition disabled:opacity-50"
-                                        >
-                                            <Send className="w-3.5 h-3.5" />
-                                            즉시 발행
-                                        </button>
-                                        <button
-                                            onClick={() => openEditModal(item)}
-                                            disabled={isPending}
-                                            className="px-3.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-sm font-medium transition"
-                                            title="옵션 및 설명 편집 후 발행"
-                                        >
-                                            <SlidersHorizontal className="w-4 h-4" />
-                                        </button>
-                                        <button
-                                            onClick={() => handleIgnore(item)}
-                                            disabled={isPending}
-                                            className="px-3.5 py-2.5 bg-gray-50 hover:bg-red-50 hover:text-red-600 text-gray-400 rounded-xl text-sm transition"
-                                            title="제외/보관"
-                                        >
-                                            <EyeOff className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
-
-            {/* 탭 2: 국회 의안 목록 */}
-            {activeTab === "bills" && (
-                <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                        <div>
-                            <h3 className="font-bold text-gray-800">제22대 국회 주요 의안 현황</h3>
-                            <p className="text-xs text-gray-500 mt-0.5">열린국회정보 Open API와 실시간 연동된 의안 목록입니다.</p>
-                        </div>
-                        <button
-                            onClick={handleAutoSettleBills}
-                            disabled={isLoading}
-                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl text-xs shadow-sm transition disabled:opacity-50"
-                        >
-                            <Coins className="w-4 h-4" />
-                            ⚡ 본회의 결과 기반 자동 정산 실행
-                        </button>
-                    </div>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm text-gray-600">
-                            <thead className="bg-gray-50 text-gray-700 uppercase font-semibold text-xs">
-                                <tr>
-                                    <th className="px-6 py-3.5">의안번호</th>
-                                    <th className="px-6 py-3.5">법안명</th>
-                                    <th className="px-6 py-3.5">제안자</th>
-                                    <th className="px-6 py-3.5">소관위원회</th>
-                                    <th className="px-6 py-3.5">본회의 심의결과</th>
-                                    <th className="px-6 py-3.5 text-right">액션</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {bills.map((bill) => (
-                                    <tr key={bill.bill_id} className="hover:bg-gray-50/80 transition">
-                                        <td className="px-6 py-4 font-mono font-bold text-gray-800">
-                                            {bill.bill_no}
-                                        </td>
-                                        <td className="px-6 py-4 font-medium text-gray-900 max-w-md">
-                                            {bill.bill_name}
-                                        </td>
-                                        <td className="px-6 py-4 text-gray-600">
-                                            {bill.proposer || "-"}
-                                        </td>
-                                        <td className="px-6 py-4 text-gray-600">
-                                            {bill.committee || "-"}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                                                {bill.rgs_conf_rslt || bill.proc_result || "심의 계류 중"}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={() => openBillModal(bill)}
-                                                className="px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-lg text-xs transition"
-                                            >
-                                                예측 게임 생성
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {/* 탭 3: 전체 피드 목록 */}
-            {activeTab === "all" && (
-                <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-sm text-gray-600">
-                            <thead className="bg-gray-50 text-gray-700 uppercase font-semibold text-xs">
-                                <tr>
-                                    <th className="px-6 py-3.5">수집일자</th>
-                                    <th className="px-6 py-3.5">기사 제목</th>
-                                    <th className="px-6 py-3.5">AI 분류</th>
-                                    <th className="px-6 py-3.5">처리 상태</th>
-                                    <th className="px-6 py-3.5 text-right">바로가기</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                                {feedItems.map((item) => (
-                                    <tr key={item.id} className="hover:bg-gray-50/80 transition">
-                                        <td className="px-6 py-4 text-xs text-gray-400 whitespace-nowrap">
-                                            {new Date(item.created_at).toLocaleDateString("ko-KR")}
-                                        </td>
-                                        <td className="px-6 py-4 font-medium text-gray-900 max-w-lg">
-                                            {item.title}
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span
-                                                className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                                                    item.ai_classification === "PREDICTION"
-                                                        ? "bg-indigo-50 text-indigo-700"
-                                                        : "bg-gray-100 text-gray-700"
-                                                }`}
-                                            >
-                                                {item.ai_classification || "미분류"}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <span
-                                                className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                                                    item.process_status === "PUBLISHED"
-                                                        ? "bg-emerald-50 text-emerald-700"
-                                                        : item.process_status === "IGNORED"
-                                                        ? "bg-gray-100 text-gray-400"
-                                                        : "bg-blue-50 text-blue-700"
-                                                }`}
-                                            >
-                                                {item.process_status}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <a
-                                                href={item.link}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="text-blue-600 hover:text-blue-800 text-xs font-medium inline-flex items-center gap-1"
-                                            >
-                                                링크
-                                                <ExternalLink className="w-3 h-3" />
-                                            </a>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
-
-            {/* 예측 게임 편집 및 발행 모달 */}
-            {isModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-fadeIn">
-                    <div className="bg-white rounded-3xl max-w-xl w-full p-8 shadow-2xl border border-gray-100 space-y-6 max-h-[90vh] overflow-y-auto">
-                        <div className="flex items-center justify-between border-b pb-4">
-                            <h2 className="text-xl font-extrabold text-gray-900 flex items-center gap-2">
-                                <span>🚀</span>
-                                예측 게임 발행 설정
-                            </h2>
-                            <button
-                                onClick={() => setIsModalOpen(false)}
-                                className="text-gray-400 hover:text-gray-600 font-bold text-lg"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <form onSubmit={handleModalSubmit} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                    예측 게임 제목
-                                </label>
-                                <input
-                                    type="text"
-                                    value={modalTitle}
-                                    onChange={(e) => setModalTitle(e.target.value)}
-                                    required
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm text-gray-900"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                    상세 설명 및 판정 기준
-                                </label>
-                                <textarea
-                                    rows={4}
-                                    value={modalDescription}
-                                    onChange={(e) => setModalDescription(e.target.value)}
-                                    required
-                                    className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:outline-none text-sm text-gray-900"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                        카테고리
-                                    </label>
-                                    <select
-                                        value={modalCategory}
-                                        onChange={(e) => setModalCategory(e.target.value)}
-                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm text-gray-900"
-                                    >
-                                        <option value="POLITICS">정치 / 정책</option>
-                                        <option value="ECONOMY">경제 / 금융</option>
-                                        <option value="SPORTS">스포츠</option>
-                                        <option value="ENTERTAINMENT">엔터테인먼트</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                        참여 기간 (마감일)
-                                    </label>
-                                    <select
-                                        value={modalDays}
-                                        onChange={(e) => setModalDays(Number(e.target.value))}
-                                        className="w-full px-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm text-gray-900"
-                                    >
-                                        <option value={3}>3일 후 마감</option>
-                                        <option value={7}>7일 후 마감 (기본)</option>
-                                        <option value={14}>14일 후 마감</option>
-                                        <option value={30}>30일 후 마감</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4 pt-2">
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                        선택지 1 (Option A)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={modalOption1}
-                                        onChange={(e) => setModalOption1(e.target.value)}
-                                        required
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-semibold text-gray-700 mb-1">
-                                        선택지 2 (Option B)
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={modalOption2}
-                                        onChange={(e) => setModalOption2(e.target.value)}
-                                        required
-                                        className="w-full px-4 py-2 border border-gray-300 rounded-xl text-sm"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="pt-6 flex justify-end gap-3 border-t">
-                                <button
-                                    type="button"
-                                    onClick={() => setIsModalOpen(false)}
-                                    className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition"
-                                >
-                                    취소
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={isPending}
-                                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold shadow-md transition disabled:opacity-50"
-                                >
-                                    {isPending ? "발행 중..." : "정식 게임으로 발행하기"}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* 헤더 & 통계 영역 */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-6">
+        <div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-semibold mb-2">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Multi-Channel Ingestion & AI Oracle</span>
+          </div>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight flex items-center gap-3">
+            다채널 자동 수집 & 예측 발행 센터
+          </h1>
+          <p className="text-sm text-slate-400 mt-1">
+            스포츠, 경제/환율/코인, 영화/박스오피스, 국회 의안을 실시간 수집하고 AI 도메인 맞춤 예측 게임으로 발행합니다.
+          </p>
         </div>
-    );
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => loadData()}
+            disabled={isLoading}
+            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-sm font-medium flex items-center gap-2 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} />
+            새로고침
+          </button>
+        </div>
+      </div>
+
+      {/* 상태 메시지 알림 바 */}
+      {statusMessage && (
+        <div className="p-4 rounded-xl bg-blue-950/40 border border-blue-500/40 text-blue-200 text-sm flex items-center justify-between shadow-lg">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-blue-400" />
+            <span>{statusMessage}</span>
+          </div>
+          <button
+            onClick={() => setStatusMessage(null)}
+            className="text-xs text-blue-400 hover:text-white"
+          >
+            닫기
+          </button>
+        </div>
+      )}
+
+      {/* 실시간 다채널 수집 실행 컨트롤 바 (Ingestion Trigger Bar) */}
+      <div className="p-5 rounded-2xl bg-gradient-to-r from-slate-900/90 via-slate-900/60 to-slate-900/90 border border-slate-800 shadow-xl space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-300 flex items-center gap-2">
+            <Zap className="w-4 h-4 text-yellow-400" />
+            실시간 다채널 원클릭 수집 트리거
+          </span>
+          <span className="text-xs text-slate-500">
+            {isFetching ? "수집 진행 중..." : "버튼 클릭 시 외부 소스에서 최신 데이터를 즉시 동기화합니다"}
+          </span>
+        </div>
+
+        <div className="flex flex-wrap gap-2.5">
+          <button
+            onClick={() => handleTriggerCollect("ALL")}
+            disabled={isFetching}
+            className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/20 disabled:opacity-50 transition-all"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            전체 통합 수집 (All)
+          </button>
+
+          <button
+            onClick={() => handleTriggerCollect("SPORTS")}
+            disabled={isFetching}
+            className="px-3.5 py-2.5 rounded-xl bg-blue-950/40 hover:bg-blue-900/50 border border-blue-500/30 text-blue-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
+          >
+            <Activity className="w-3.5 h-3.5 text-blue-400" />
+            ⚽ 스포츠 뉴스 수집
+          </button>
+
+          <button
+            onClick={() => handleTriggerCollect("ECONOMY")}
+            disabled={isFetching}
+            className="px-3.5 py-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
+          >
+            <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
+            📈 경제/증권 뉴스 수집
+          </button>
+
+          <button
+            onClick={() => handleTriggerCollect("MARKET")}
+            disabled={isFetching}
+            className="px-3.5 py-2.5 rounded-xl bg-yellow-950/40 hover:bg-yellow-900/50 border border-yellow-500/30 text-yellow-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
+          >
+            <DollarSign className="w-3.5 h-3.5 text-yellow-400" />
+            💰 실시간 환율 & BTC 시세 수집
+          </button>
+
+          <button
+            onClick={() => handleTriggerCollect("ENTERTAINMENT")}
+            disabled={isFetching}
+            className="px-3.5 py-2.5 rounded-xl bg-pink-950/40 hover:bg-pink-900/50 border border-pink-500/30 text-pink-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
+          >
+            <Film className="w-3.5 h-3.5 text-pink-400" />
+            🎬 영화/박스오피스 & 시청률 수집
+          </button>
+
+          <button
+            onClick={() => handleTriggerCollect("BILLS")}
+            disabled={isFetching}
+            className="px-3.5 py-2.5 rounded-xl bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
+          >
+            <Vote className="w-3.5 h-3.5 text-purple-400" />
+            🏛️ 국회 의안 수집
+          </button>
+        </div>
+      </div>
+
+      {/* 통계 카드 그리드 */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
+          <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
+            <Layers className="w-4 h-4 text-blue-400" />
+            <span>수집된 총 피드</span>
+          </div>
+          <div className="text-2xl font-black text-white">{stats.totalItems}건</div>
+          <div className="text-xs text-slate-500 mt-1">스포츠/경제/엔터/정책</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
+          <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
+            <Vote className="w-4 h-4 text-purple-400" />
+            <span>국회 의안 DB</span>
+          </div>
+          <div className="text-2xl font-black text-purple-300">{stats.totalBills}건</div>
+          <div className="text-xs text-slate-500 mt-1">열린국회정보 본회의 연동</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
+          <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
+            <Sparkles className="w-4 h-4 text-yellow-400" />
+            <span>예측 후보 Draft</span>
+          </div>
+          <div className="text-2xl font-black text-yellow-400">{stats.predictionCandidates}건</div>
+          <div className="text-xs text-slate-500 mt-1">AI 도메인 적합 판정 완료</div>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800">
+          <div className="flex items-center gap-2 text-xs text-slate-400 mb-1">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <span>발행된 정식 게임</span>
+          </div>
+          <div className="text-2xl font-black text-emerald-400">{stats.publishedGames}건</div>
+          <div className="text-xs text-slate-500 mt-1">플랫폼 라이브 베팅 중</div>
+        </div>
+      </div>
+
+      {/* 카테고리 필터 탭 네비게이션 */}
+      <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => handleCategoryChange("ALL")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              activeCategory === "ALL"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/25"
+                : "bg-slate-900 text-slate-400 hover:text-white"
+            }`}
+          >
+            🌟 전체 피드 ({stats.totalItems})
+          </button>
+
+          <button
+            onClick={() => handleCategoryChange("SPORTS")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${
+              activeCategory === "SPORTS"
+                ? "bg-blue-600 text-white shadow-lg shadow-blue-500/25"
+                : "bg-slate-900 text-slate-400 hover:text-white"
+            }`}
+          >
+            ⚽ 스포츠 ({stats.categoryCounts.SPORTS || 0})
+          </button>
+
+          <button
+            onClick={() => handleCategoryChange("ECONOMY")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${
+              activeCategory === "ECONOMY"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/25"
+                : "bg-slate-900 text-slate-400 hover:text-white"
+            }`}
+          >
+            📈 경제/증권 ({stats.categoryCounts.ECONOMY || 0})
+          </button>
+
+          <button
+            onClick={() => handleCategoryChange("ENTERTAINMENT")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${
+              activeCategory === "ENTERTAINMENT"
+                ? "bg-pink-600 text-white shadow-lg shadow-pink-500/25"
+                : "bg-slate-900 text-slate-400 hover:text-white"
+            }`}
+          >
+            🎬 영화/시청률 ({stats.categoryCounts.ENTERTAINMENT || 0})
+          </button>
+
+          <button
+            onClick={() => handleCategoryChange("POLICY")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${
+              activeCategory === "POLICY"
+                ? "bg-purple-600 text-white shadow-lg shadow-purple-500/25"
+                : "bg-slate-900 text-slate-400 hover:text-white"
+            }`}
+          >
+            📰 정책/사회 ({stats.categoryCounts.POLICY || 0})
+          </button>
+
+          <button
+            onClick={() => handleCategoryChange("BILLS")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${
+              activeCategory === "BILLS"
+                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/25"
+                : "bg-slate-900 text-slate-400 hover:text-white"
+            }`}
+          >
+            🏛️ 국회 의안 ({stats.totalBills})
+          </button>
+        </div>
+
+        {/* 의안 탭일 때 자동 정산 버튼 노출 */}
+        {activeCategory === "BILLS" && (
+          <button
+            onClick={handleAutoSettle}
+            disabled={isPending}
+            className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-500/20 transition-all disabled:opacity-50"
+          >
+            <Zap className="w-3.5 h-3.5 text-yellow-400" />
+            ⚡ 본회의 결과 기반 자동 정산 실행
+          </button>
+        )}
+      </div>
+
+      {/* 리스트 영역 */}
+      {isLoading ? (
+        <div className="py-20 text-center text-slate-500">
+          <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-500" />
+          데이터를 불러오는 중입니다...
+        </div>
+      ) : activeCategory === "BILLS" ? (
+        /* 국회 의안 목록 */
+        <div className="space-y-4">
+          {bills.map((bill) => (
+            <div
+              key={bill.bill_id}
+              className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-purple-500/40 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg"
+            >
+              <div className="space-y-1.5 flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                    의안번호 {bill.bill_no}
+                  </span>
+                  <span className="text-xs text-slate-400">{bill.committee || "위원회 미정"}</span>
+                  {bill.proc_result && (
+                    <span className="px-2 py-0.5 rounded text-xs bg-emerald-500/10 text-emerald-400 font-semibold">
+                      {bill.proc_result}
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-base font-bold text-white truncate leading-snug">
+                  {bill.bill_name}
+                </h3>
+                <p className="text-xs text-slate-400">
+                  제안자: {bill.proposer || "미정"} | 심의결과: {bill.rgs_conf_rslt || "심의 대기 중"}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <button
+                  onClick={() => openBillModal(bill)}
+                  className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-purple-500/20 transition-all"
+                >
+                  <Send className="w-3.5 h-3.5" />
+                  예측 게임으로 발행
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        /* 피드 아이템 목록 */
+        <div className="space-y-4">
+          {feedItems.length === 0 ? (
+            <div className="py-16 text-center text-slate-500">
+              수집된 피드가 없습니다. 상단의 '수집' 버튼을 눌러 피드를 동기화해주세요.
+            </div>
+          ) : (
+            feedItems.map((item) => {
+              const badge = getCategoryBadge(item.source_category);
+              const isPublished = item.process_status === "PUBLISHED";
+              const isIgnored = item.process_status === "IGNORED";
+
+              return (
+                <div
+                  key={item.id}
+                  className={`p-5 rounded-2xl bg-slate-900/70 border ${
+                    isPublished
+                      ? "border-emerald-500/40 bg-emerald-950/10"
+                      : isIgnored
+                      ? "border-slate-800 opacity-50"
+                      : "border-slate-800 hover:border-blue-500/40"
+                  } transition-all shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4`}
+                >
+                  <div className="space-y-2 flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`px-2.5 py-0.5 rounded text-xs font-bold border ${badge.bg}`}>
+                        {badge.icon} {badge.label}
+                      </span>
+                      <span className="text-xs text-slate-400">{item.source_title}</span>
+                      {item.ai_classification && (
+                        <span className="px-2 py-0.5 rounded text-xs font-semibold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
+                          {item.ai_classification === "PREDICTION" ? "🎯 예측 적합" : "💬 포럼 적합"}
+                        </span>
+                      )}
+                      {isPublished && (
+                        <span className="px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3" /> 정식 발행 완료
+                        </span>
+                      )}
+                    </div>
+
+                    <h3 className="text-base font-bold text-white line-clamp-1 leading-snug">
+                      {item.title}
+                    </h3>
+
+                    {item.content_summary && (
+                      <p className="text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                        {item.content_summary}
+                      </p>
+                    )}
+
+                    <div className="flex items-center gap-4 text-xs text-slate-500 pt-1">
+                      <span>{item.published_at ? new Date(item.published_at).toLocaleString() : "시간 미상"}</span>
+                      <a
+                        href={item.link}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-400 hover:underline flex items-center gap-1"
+                      >
+                        원문 보기 <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* 액션 버튼 */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {!isPublished && (
+                      <>
+                        <button
+                          onClick={() => openItemModal(item)}
+                          className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all"
+                        >
+                          <Send className="w-3.5 h-3.5" />
+                          발행 설정 (AI 초안)
+                        </button>
+                        <button
+                          onClick={() => handleIgnore(item.id)}
+                          title="후보 제외"
+                          className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-red-400 border border-slate-700 transition-colors"
+                        >
+                          <EyeOff className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* 예측 게임 발행 모달 */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto text-slate-100">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Sparkles className="w-5 h-5 text-blue-400" />
+                  정식 예측 게임 발행 설정
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  AI 도메인 가이드에 따라 질문, 판정 기준, 선택지를 구성합니다.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:text-white text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* AI 자동 초안 완성 버튼 (기사 모달일 때) */}
+            {selectedItem && (
+              <div className="p-3 rounded-xl bg-blue-950/30 border border-blue-500/30 flex items-center justify-between">
+                <span className="text-xs text-blue-300">
+                  도메인(스포츠/경제/엔터) 특화 Gemini AI로 최적의 옵션과 판정 기준을 자동 생성합니다.
+                </span>
+                <button
+                  type="button"
+                  onClick={handleGenerateAiDraft}
+                  disabled={isAiDrafting}
+                  className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1 disabled:opacity-50"
+                >
+                  <Sparkles className={`w-3.5 h-3.5 ${isAiDrafting ? "animate-spin" : ""}`} />
+                  {isAiDrafting ? "분석 중..." : "AI 초안 자동 생성"}
+                </button>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitPublish} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  예측 게임 제목 (질문)
+                </label>
+                <input
+                  type="text"
+                  value={modalTitle}
+                  onChange={(e) => setModalTitle(e.target.value)}
+                  required
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">
+                  상세 설명 및 판정 기준 (Settlement Criteria)
+                </label>
+                <textarea
+                  rows={4}
+                  value={modalDescription}
+                  onChange={(e) => setModalDescription(e.target.value)}
+                  className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">카테고리</label>
+                  <select
+                    value={modalCategory}
+                    onChange={(e) => setModalCategory(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    <option value="SPORTS">스포츠 (SPORTS)</option>
+                    <option value="INVEST">경제/투자 (INVEST)</option>
+                    <option value="ENTERTAINMENT">엔터테인먼트 (ENTERTAINMENT)</option>
+                    <option value="POLITICS">정치/의안 (POLITICS)</option>
+                    <option value="SOCIAL">사회 (SOCIAL)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    베팅 마감 기간
+                  </label>
+                  <select
+                    value={modalDays}
+                    onChange={(e) => setModalDays(Number(e.target.value))}
+                    className="w-full px-3.5 py-2.5 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500"
+                  >
+                    <option value={3}>3일 후 마감</option>
+                    <option value={7}>7일 후 마감 (1주일)</option>
+                    <option value={14}>14일 후 마감 (2주일)</option>
+                    <option value={30}>30일 후 마감 (1개월)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label className="block text-xs font-semibold text-blue-400 mb-1">옵션 1 라벨</label>
+                  <input
+                    type="text"
+                    value={modalOption1}
+                    onChange={(e) => setModalOption1(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-pink-400 mb-1">옵션 2 라벨</label>
+                  <input
+                    type="text"
+                    value={modalOption2}
+                    onChange={(e) => setModalOption2(e.target.value)}
+                    required
+                    className="w-full px-3.5 py-2 rounded-xl bg-slate-800 border border-slate-700 text-white text-sm focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold flex items-center gap-2 shadow-lg shadow-blue-500/25 transition-all disabled:opacity-50"
+                >
+                  <Send className="w-4 h-4" />
+                  {isPending ? "발행 중..." : "정식 예측 게임으로 발행"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }

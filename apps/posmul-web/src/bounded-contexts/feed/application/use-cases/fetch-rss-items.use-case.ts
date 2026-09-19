@@ -21,7 +21,7 @@ export class FetchRssItemsUseCase {
         });
     }
 
-    async execute(): Promise<Result<void, UseCaseError>> {
+    async execute(options?: { category?: string }): Promise<Result<{ fetchedCount: number; sourceCount: number }, UseCaseError>> {
         try {
             // 1. 활성 RSS 소스 조회
             const sourcesResult = await this.rssSourceRepository.findAllActive();
@@ -29,9 +29,18 @@ export class FetchRssItemsUseCase {
                 console.error("[FetchRss] Repository Error:", sourcesResult.error);
                 return failure(new UseCaseError(`Failed to fetch RSS sources: ${sourcesResult.error.message}`));
             }
-            const sources = sourcesResult.data;
+            let sources = sourcesResult.data;
 
-            console.log(`[FetchRss] Found ${sources.length} active sources`);
+            // 카테고리 필터링 (지정된 경우)
+            if (options?.category && options.category !== "ALL") {
+                sources = sources.filter(
+                    (s) => s.category.toUpperCase() === options.category!.toUpperCase()
+                );
+            }
+
+            console.log(`[FetchRss] Found ${sources.length} active sources for category '${options?.category || "ALL"}'`);
+
+            let totalFetched = 0;
 
             // 2. 각 소스별로 Fetching
             for (const source of sources) {
@@ -60,6 +69,7 @@ export class FetchRssItemsUseCase {
                         });
 
                         await this.feedItemRepository.save(newItem);
+                        totalFetched++;
                     }
                 } catch (error) {
                     console.error(`[FetchRss] Error fetching ${source.url}:`, error);
@@ -67,7 +77,7 @@ export class FetchRssItemsUseCase {
                 }
             }
 
-            return success(undefined);
+            return success({ fetchedCount: totalFetched, sourceCount: sources.length });
         } catch (error) {
             return failure(new UseCaseError("Unexpected error in FetchRssItemsUseCase"));
         }

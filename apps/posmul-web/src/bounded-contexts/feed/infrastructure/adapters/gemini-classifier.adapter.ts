@@ -73,9 +73,13 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
         if (classification === ContentClassification.PREDICTION) {
             specializedPrompt = `
             Focus on extracting:
-            1. A prediction question (title).
-            2. Resolution criteria (how to determine the outcome).
-            3. Binary options (e.g., Yes/No, Pass/Reject).
+            1. A prediction question (title) tailored to its domain in natural Korean:
+               - SPORTS: Team A win vs Team B win, or match outcome (e.g., "주말 빅매치 A팀 승리할까?", "손흥민 소속팀 경기 승리할까?").
+               - ECONOMY/FINANCE: Target value breakthrough or financial milestone (e.g., "원/달러 환율 1,400원 돌파할까?", "비트코인 1억 2천만 원 달성할까?").
+               - ENTERTAINMENT: Box office rank #1, audience count milestone, or TV viewership rating 10% breakthrough.
+               - POLICY/BILLS: Bill pass/reject in National Assembly or policy implementation.
+            2. Resolution criteria (clear, verifiable objective criteria with target date).
+            3. Binary options in Korean (e.g., ["A팀 승리", "B팀 승리"], ["돌파 (달성)", "미달 (실패)"], ["가결 (통과)", "부결 (폐기)"], ["예 (Yes)", "아니오 (No)"]).
             `;
         } else if (classification === ContentClassification.FORUM) {
             specializedPrompt = `
