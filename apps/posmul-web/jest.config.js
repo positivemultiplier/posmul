@@ -32,6 +32,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^@posmul/shared-types/(.*)$': '<rootDir>/../../packages/shared-types/src/$1',
     '^@posmul/shared-types$': '<rootDir>/../../packages/shared-types/src/index.ts',
+    '^@posmul/auth-economy-sdk/(.*)$': '<rootDir>/../../packages/auth-economy-sdk/src/$1',
     '^@posmul/auth-economy-sdk$': '<rootDir>/../../packages/auth-economy-sdk/src/index.ts',
     '^@posmul/study-cycle-core$': '<rootDir>/../../packages/study-cycle-core/src/index.ts',
   },

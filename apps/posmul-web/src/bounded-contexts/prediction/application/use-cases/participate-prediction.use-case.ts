@@ -52,7 +52,7 @@ export class ParticipatePredictionUseCase {
   constructor(
     private readonly predictionGameRepository: IPredictionGameRepository,
     private readonly predictionEconomicService: PredictionEconomicService
-  ) {}
+  ) { }
 
   private fail(message: string, details?: Record<string, unknown>) {
     return failure(new UseCaseError(message, details));
@@ -140,7 +140,7 @@ export class ParticipatePredictionUseCase {
     if (!participationResult.success) {
       return this.fail("Failed to add prediction to game", {
         message: isFailure(participationResult)
-          ? "participation failed"
+          ? participationResult.error.message || "participation failed"
           : "unknown error",
       });
     }
@@ -155,7 +155,7 @@ export class ParticipatePredictionUseCase {
     });
     if (!saveResult.success) {
       return this.fail("Failed to save prediction game state", {
-        message: isFailure(saveResult) ? "save failed" : "unknown error",
+        message: isFailure(saveResult) ? saveResult.error?.message || "save failed" : "unknown error",
       });
     }
     return { success: true, data: undefined };

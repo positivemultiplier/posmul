@@ -37,7 +37,7 @@ export class CreatePredictionGameUseCase {
   constructor(
     private readonly predictionGameRepository: IPredictionGameRepository,
     private readonly moneyWaveCalculator: MoneyWaveCalculatorService
-  ) {}
+  ) { }
 
   async execute(
     request: CreatePredictionGameRequest
@@ -109,7 +109,22 @@ export class CreatePredictionGameUseCase {
         void error;
       }
 
-      // 3. Repository에 저장
+      // 3. 게임 시작 시간이 지났으면 활성화
+      const now = new Date();
+      if (request.startTime <= now) {
+        const activationResult = predictionGame.activate();
+        if (isFailure(activationResult)) {
+          return {
+            success: false,
+            error: new UseCaseError("Failed to activate game", {
+              // passing the domain error string or message roughly
+              originalError: activationResult.error,
+            } as any),
+          };
+        }
+      }
+
+      // 4. Repository에 저장
       const saveResult =
         await this.predictionGameRepository.save(predictionGame);
       if (isFailure(saveResult)) {

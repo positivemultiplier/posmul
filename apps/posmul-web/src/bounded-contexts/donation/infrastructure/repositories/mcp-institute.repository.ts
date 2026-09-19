@@ -20,11 +20,11 @@ export class MCPInstituteRepository implements IInstituteRepository {
             const query = `
         INSERT INTO donation.donation_institutes (
           id, name, description, category, contact_email, contact_phone,
-          contact_website, contact_address, status, trust_level,
+          contact_website, contact_address, is_active, is_verified,
           registration_number, logo_url, created_at, updated_at
         ) VALUES (
           $id, $name, $description, $category, $contactEmail, $contactPhone,
-          $contactWebsite, $contactAddress, $status, $trustLevel,
+          $contactWebsite, $contactAddress, $isActive, $isVerified,
           $registrationNumber, $logoUrl, $createdAt, $updatedAt
         )
         ON CONFLICT (id) DO UPDATE SET
@@ -35,8 +35,8 @@ export class MCPInstituteRepository implements IInstituteRepository {
           contact_phone = EXCLUDED.contact_phone,
           contact_website = EXCLUDED.contact_website,
           contact_address = EXCLUDED.contact_address,
-          status = EXCLUDED.status,
-          trust_level = EXCLUDED.trust_level,
+          is_active = EXCLUDED.is_active,
+          is_verified = EXCLUDED.is_verified,
           registration_number = EXCLUDED.registration_number,
           logo_url = EXCLUDED.logo_url,
           updated_at = EXCLUDED.updated_at
@@ -53,8 +53,8 @@ export class MCPInstituteRepository implements IInstituteRepository {
                 contactPhone: contact.phone || null,
                 contactWebsite: contact.website || null,
                 contactAddress: contact.address || null,
-                status: institute.getStatus(),
-                trustLevel: institute.getTrustLevel(),
+                isActive: institute.getStatus() === 'ACTIVE',
+                isVerified: institute.getTrustLevel() !== 'BASIC',
                 registrationNumber: institute.getRegistrationNumber() || null,
                 logoUrl: institute.getLogoUrl() || null,
                 createdAt: institute.getCreatedAt().toISOString(),
@@ -87,6 +87,8 @@ export class MCPInstituteRepository implements IInstituteRepository {
             const row = result.data[0];
             const mappedData = {
                 ...row,
+                status: row.is_active ? 'ACTIVE' : 'SUSPENDED',
+                trust_level: row.is_verified ? 'VERIFIED' : 'BASIC',
                 contact_info: {
                     email: row.contact_email,
                     phone: row.contact_phone,
@@ -205,6 +207,8 @@ export class MCPInstituteRepository implements IInstituteRepository {
             const items = (result.data || []).map((row: any) => {
                 const mappedData = {
                     ...row,
+                    status: row.is_active ? 'ACTIVE' : 'SUSPENDED',
+                    trust_level: row.is_verified ? 'VERIFIED' : 'BASIC',
                     contact_info: {
                         email: row.contact_email,
                         phone: row.contact_phone,

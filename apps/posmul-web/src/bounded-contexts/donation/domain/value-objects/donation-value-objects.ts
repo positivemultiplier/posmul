@@ -25,9 +25,7 @@ export class DonationId {
   }
 
   static generate(): DonationId {
-    return new DonationId(
-      `donation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-    );
+    return new DonationId(crypto.randomUUID());
   }
 
   static create(value?: string): DonationId {
@@ -331,7 +329,7 @@ export const DONOR_TIER_THRESHOLDS: Record<DonorTier, number> = {
 
 // 기부자 등급 계산
 export class DonorRating {
-  constructor(private readonly tier: DonorTier) {}
+  constructor(private readonly tier: DonorTier) { }
 
   getTier(): DonorTier {
     return this.tier;

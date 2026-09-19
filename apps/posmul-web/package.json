@@ -16,6 +16,7 @@
     "clean": "rimraf .next"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@heroicons/react": "^2.2.0",
     "@hookform/resolvers": "^5.1.1",
     "@posmul/auth-economy-sdk": "workspace:*",
@@ -27,6 +28,7 @@
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.89.0",
     "@types/uuid": "^10.0.0",
+    "axios": "^1.13.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
@@ -42,6 +44,7 @@
     "react-window": "^1.8.11",
     "react-window-infinite-loader": "^1.0.10",
     "recharts": "^3.6.0",
+    "rss-parser": "^3.13.0",
     "socket.io-client": "^4.8.1",
     "tailwind-merge": "^3.3.1",
     "uuid": "^11.1.0",

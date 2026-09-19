@@ -1,8 +1,8 @@
 /**
  * 게임 히스토리 조회 (Server-side only)
  * 
- * Server Component에서 직접 호출하여 초기 차트 데이터를 가져옵니다.
- * "use server" 없이 일반 함수로 사용하여 POST 요청을 방지합니다.
+ * 스냅샷 테이블에서 사전 계산된 확률 데이터를 가져옵니다.
+ * 스냅샷이 없으면 실시간 계산으로 폴백합니다.
  */
 
 import { createClient } from "@/lib/supabase/server";
@@ -12,13 +12,78 @@ export interface ChartDataPoint {
     [key: string]: string | number;
 }
 
+/**
+ * 스냅샷 기반 게임 히스토리 조회 (최적화)
+ * - 1차: prediction.game_snapshots 조회 (사전 계산, 초고속)
+ * - 2차: 스냅샷 없으면 실시간 계산 폴백
+ */
 export async function getGameHistory(
     gameId: string,
     options: { id: string }[]
 ): Promise<ChartDataPoint[]> {
     const supabase = await createClient();
 
-    // 해당 게임의 모든 유효 베팅 조회 (시간순)
+    // 1차: 스냅샷에서 조회 (최적화 경로)
+    const { data: snapshots, error: snapError } = await supabase
+        .schema("prediction")
+        .from("game_snapshots")
+        .select("snapshot_time, option_id, probability")
+        .eq("game_id", gameId)
+        .order("snapshot_time", { ascending: true });
+
+    if (!snapError && snapshots && snapshots.length > 0) {
+        return convertSnapshotsToChartData(snapshots, options);
+    }
+
+    // 2차: 폴백 - 실시간 계산 (스냅샷 없는 경우)
+    return getGameHistoryFallback(gameId, options, supabase);
+}
+
+/**
+ * 스냅샷 데이터를 ChartDataPoint 배열로 변환
+ */
+function convertSnapshotsToChartData(
+    snapshots: Array<{ snapshot_time: string; option_id: string; probability: number }>,
+    options: { id: string }[]
+): ChartDataPoint[] {
+    // 시간별로 그룹핑
+    const timeGroups = new Map<string, ChartDataPoint>();
+
+    for (const snap of snapshots) {
+        const time = new Date(snap.snapshot_time).toLocaleTimeString("ko-KR", {
+            hour: "2-digit",
+            minute: "2-digit"
+        });
+
+        if (!timeGroups.has(snap.snapshot_time)) {
+            const point: ChartDataPoint = { time };
+            // 모든 옵션 초기화
+            options.forEach(opt => { point[opt.id] = 0; });
+            timeGroups.set(snap.snapshot_time, point);
+        }
+
+        const point = timeGroups.get(snap.snapshot_time)!;
+        point[snap.option_id] = Number(snap.probability);
+    }
+
+    const points = Array.from(timeGroups.values());
+
+    // 100개 넘으면 샘플링
+    if (points.length > 100) {
+        return samplePoints(points);
+    }
+
+    return points;
+}
+
+/**
+ * 폴백: 실시간 계산 (스냅샷 없을 때만 사용)
+ */
+async function getGameHistoryFallback(
+    gameId: string,
+    options: { id: string }[],
+    supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<ChartDataPoint[]> {
     const { data: bets, error } = await supabase
         .schema("prediction")
         .from("predictions")
@@ -27,30 +92,16 @@ export async function getGameHistory(
         .eq("is_active", true)
         .order("created_at", { ascending: true });
 
-    if (error) {
-        console.error("[getGameHistory] Error fetching bets:", error);
+    if (error || !bets || bets.length === 0) {
         return [];
     }
 
-    console.log("[getGameHistory] gameId:", gameId);
-    console.log("[getGameHistory] options:", options);
-    console.log("[getGameHistory] bets count:", bets?.length ?? 0);
-
-    if (!bets || bets.length === 0) {
-        console.log("[getGameHistory] No bets found, returning empty array");
-        return [];
-    }
-
-    // 시간대별 확률 추이 계산
     const points: ChartDataPoint[] = [];
     const optionInvestments: Record<string, number> = {};
     let totalInvestment = 0;
 
-    options.forEach(opt => {
-        optionInvestments[opt.id] = 0;
-    });
+    options.forEach(opt => { optionInvestments[opt.id] = 0; });
 
-    // 베팅 내역 순회하며 누적 확률 계산
     bets.forEach((bet) => {
         const pData = bet.prediction_data as { selectedOptionId: string };
         const optionId = pData.selectedOptionId;
@@ -71,21 +122,15 @@ export async function getGameHistory(
 
         options.forEach(opt => {
             const invest = optionInvestments[opt.id] || 0;
-            const percentage = totalInvestment > 0
+            point[opt.id] = totalInvestment > 0
                 ? Math.round((invest / totalInvestment) * 100)
                 : 0;
-            point[opt.id] = percentage;
         });
 
         points.push(point);
     });
 
-    console.log("[getGameHistory] Generated points:", points.length);
     if (points.length > 0) {
-        console.log("[getGameHistory] First point:", points[0]);
-        console.log("[getGameHistory] Last point:", points[points.length - 1]);
-
-        // 마지막 베팅 이후 현재 시점까지 그래프 연장
         const lastPoint = points[points.length - 1];
         const now = new Date();
         const nowTimeLabel = now.toLocaleTimeString("ko-KR", {
@@ -93,29 +138,29 @@ export async function getGameHistory(
             minute: "2-digit"
         });
 
-        // 마지막 포인트와 현재 시간이 다르면 현재 포인트 추가
         if (lastPoint.time !== nowTimeLabel) {
             const currentPoint: ChartDataPoint = { time: nowTimeLabel };
             options.forEach(opt => {
                 currentPoint[opt.id] = lastPoint[opt.id];
             });
             points.push(currentPoint);
-            console.log("[getGameHistory] Added current point:", currentPoint);
         }
     }
 
-    // 데이터 포인트가 너무 많으면 샘플링
-    if (points.length > 100) {
-        const sampledPoints: ChartDataPoint[] = [];
-        const step = Math.ceil(points.length / 100);
-        for (let i = 0; i < points.length; i += step) {
-            sampledPoints.push(points[i]);
-        }
-        if (sampledPoints[sampledPoints.length - 1] !== points[points.length - 1]) {
-            sampledPoints.push(points[points.length - 1]);
-        }
-        return sampledPoints;
-    }
+    return points.length > 100 ? samplePoints(points) : points;
+}
 
-    return points;
+/**
+ * 데이터 포인트 샘플링 (100개 이하로)
+ */
+function samplePoints(points: ChartDataPoint[]): ChartDataPoint[] {
+    const sampled: ChartDataPoint[] = [];
+    const step = Math.ceil(points.length / 100);
+    for (let i = 0; i < points.length; i += step) {
+        sampled.push(points[i]);
+    }
+    if (sampled[sampled.length - 1] !== points[points.length - 1]) {
+        sampled.push(points[points.length - 1]);
+    }
+    return sampled;
 }

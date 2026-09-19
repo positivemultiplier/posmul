@@ -95,6 +95,8 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
           registration_end: game.endTime.toISOString(),
           settlement_date: game.settlementTime.toISOString(),
           status: this.mapStatusToDB(game.getStatus()),
+          category: (game as any).category || "POLITICS", // Default category to prevent NOT NULL constraint error
+          difficulty: (game as any).difficulty || 1, // Default difficulty to prevent NOT NULL constraint error
           metadata: { maxParticipants: game.maxParticipants },
           updated_at: new Date().toISOString(),
         };
@@ -105,6 +107,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
           .upsert(gameData, { onConflict: "game_id" });
 
         if (error) {
+          console.error("Game Upsert Error:", error, gameData);
           // RLS 오류인 경우 게임 데이터 업데이트 실패지만, predictions 저장은 계속 진행
           void error;
         }
@@ -1034,6 +1037,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
       });
 
       if (!gameResult.success) {
+        console.error("mapRowToAggregate Failed:", (gameResult as any).error, actualRow);
         return null;
       }
 
@@ -1060,6 +1064,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
 
       return game;
     } catch (error) {
+      console.error("mapRowToAggregate Exception:", error, row);
       return null;
     }
   }

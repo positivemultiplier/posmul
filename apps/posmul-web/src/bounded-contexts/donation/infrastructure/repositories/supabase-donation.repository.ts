@@ -34,18 +34,21 @@ export class SupabaseDonationRepository implements IDonationRepository {
             .upsert({
                 id: data.id,
                 donor_id: data.donorId,
-                donation_type: data.donationType,
+                donation_type: data.donationType?.toLowerCase(),
                 amount: data.amount,
-                category: data.category,
+                pmc_amount: data.amount,
+                title: data.description || 'Donation',
+                category: data.category?.toLowerCase(),
                 description: data.description,
-                frequency: data.frequency,
-                status: data.status,
+                status: data.status?.toLowerCase(),
+                is_recurring: data.frequency && data.frequency !== 'ONE_TIME',
+                recurring_period: data.frequency === 'ONE_TIME' ? null : (data.frequency?.toLowerCase() || null),
+                is_anonymous: data.metadata?.isAnonymous || false,
+                support_message: data.metadata?.message || null,
                 metadata: data.metadata,
                 institute_id: data.instituteId || null,
                 opinion_leader_id: data.opinionLeaderId || null,
-                beneficiary_info: data.beneficiaryInfo,
-                processing_info: data.processingInfo,
-                scheduled_at: data.scheduledAt?.toISOString(),
+                recipient_info: data.beneficiaryInfo || null,
                 completed_at: data.completedAt?.toISOString(),
                 cancelled_at: data.cancelledAt?.toISOString(),
                 created_at: data.createdAt.toISOString(),
@@ -148,7 +151,13 @@ export class SupabaseDonationRepository implements IDonationRepository {
         if (criteria.status) query = query.eq('status', criteria.status);
         if (criteria.type) query = query.eq('donation_type', criteria.type);
         if (criteria.category) query = query.eq('category', criteria.category);
-        if (criteria.frequency) query = query.eq('frequency', criteria.frequency);
+        if (criteria.frequency) {
+            if (criteria.frequency === DonationFrequency.ONE_TIME) {
+                query = query.eq('is_recurring', false);
+            } else {
+                query = query.eq('recurring_period', criteria.frequency);
+            }
+        }
         if (criteria.instituteId) query = query.eq('institute_id', criteria.instituteId.getValue());
         if (criteria.opinionLeaderId) query = query.eq('opinion_leader_id', criteria.opinionLeaderId.getValue());
         if (criteria.startDate) query = query.gte('created_at', criteria.startDate.toISOString());
@@ -262,7 +271,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
     // --- Recurring & Stats (Placeholders / Simplified) ---
 
     async findRecurringDonations(page: number = 1, limit: number = 10): Promise<Result<PaginatedResult<Donation>>> {
-        return this.findByCriteria({ frequency: DonationFrequency.MONTHLY }, page, limit);
+        return this.findByCriteria({ frequency: DonationFrequency.MONTHLY } as any, page, limit);
     }
 
     async findDueRecurringDonations(dueDate: Date): Promise<Result<Donation[]>> {
@@ -367,17 +376,16 @@ export class SupabaseDonationRepository implements IDonationRepository {
             id: row.id,
             donorId: row.donor_id,
             donationType: row.donation_type,
-            amount: row.amount,
+            amount: row.amount || row.pmc_amount,
             category: row.category,
             description: row.description,
-            frequency: row.frequency,
+            frequency: row.is_recurring ? (row.recurring_period || 'MONTHLY') : 'ONE_TIME',
             status: row.status,
-            metadata: row.metadata,
+            metadata: row.metadata || { isAnonymous: row.is_anonymous || false, message: row.support_message },
             instituteId: row.institute_id,
             opinionLeaderId: row.opinion_leader_id,
-            beneficiaryInfo: row.beneficiary_info,
-            processingInfo: row.processing_info,
-            scheduledAt: row.scheduled_at ? new Date(row.scheduled_at) : undefined,
+            beneficiaryInfo: row.recipient_info,
+            processingInfo: {},
             completedAt: row.completed_at ? new Date(row.completed_at) : undefined,
             cancelledAt: row.cancelled_at ? new Date(row.cancelled_at) : undefined,
             createdAt: row.created_at ? new Date(row.created_at) : undefined,
