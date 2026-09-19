@@ -1,13 +1,14 @@
 'use client';
 
 /**
- * Ranking Page
- * 통합 랭킹 페이지 - Forum 스타일 UI/UX
+ * PosMul Unified Ranking & Hall of Fame Page
+ * 통합 랭킹 & 명예의 전당 대시보드
  */
 
 import { useState } from 'react';
-import { Trophy, Medal, Award, TrendingUp, Users, Clock, Eye } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Trophy, Medal, Award, TrendingUp, Users, Clock, Eye, Sparkles, Heart, MessageSquare, Compass, ShieldCheck, ArrowUpRight } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import Link from 'next/link';
 import {
   useRanking,
   RANKING_CATEGORIES,
@@ -17,77 +18,230 @@ import {
   type RankingEntry,
 } from '@/bounded-contexts/ranking/presentation/hooks/use-ranking';
 
-// 랭킹 카드 컴포넌트
-function RankingCard({ entry, showDetails, rank }: { entry: RankingEntry; showDetails: boolean; rank: number }) {
-  const getRankStyle = (r: number) => {
-    switch (r) {
-      case 1:
-        return 'bg-gradient-to-r from-yellow-500 to-amber-500 text-white';
-      case 2:
-        return 'bg-gradient-to-r from-slate-400 to-slate-500 text-white';
-      case 3:
-        return 'bg-gradient-to-r from-amber-700 to-amber-800 text-white';
+// 티어 계산 헬퍼
+function getTierInfo(score: number) {
+  if (score >= 10000) return { name: '레전드', color: 'from-amber-400 to-yellow-300', nextScore: 10000, progress: 100, icon: '👑' };
+  if (score >= 5000) return { name: '마스터', color: 'from-purple-400 to-pink-400', nextScore: 10000, progress: Math.min(100, Math.round(((score - 5000) / 5000) * 100)), icon: '⭐' };
+  if (score >= 2000) return { name: '열정 시민', color: 'from-blue-400 to-cyan-400', nextScore: 5000, progress: Math.min(100, Math.round(((score - 2000) / 3000) * 100)), icon: '🔥' };
+  if (score >= 500) return { name: '성장 시민', color: 'from-emerald-400 to-teal-400', nextScore: 2000, progress: Math.min(100, Math.round(((score - 500) / 1500) * 100)), icon: '🌱' };
+  return { name: '새싹 시민', color: 'from-slate-400 to-zinc-400', nextScore: 500, progress: Math.min(100, Math.round((score / 500) * 100)), icon: '🐣' };
+}
+
+// 상단 TOP 3 포디움 (명예의 전당) 컴포넌트
+function HallOfFamePodium({ top3, category }: { top3: RankingEntry[]; category: RankingCategory }) {
+  if (top3.length === 0) return null;
+
+  // 포디움 배치 순서: 2위(좌측), 1위(중앙/최고높이), 3위(우측)
+  const first = top3.find((r) => r.rank === 1) || top3[0];
+  const second = top3.find((r) => r.rank === 2) || top3[1];
+  const third = top3.find((r) => r.rank === 3) || top3[2];
+
+  const getScoreUnit = (cat: RankingCategory) => {
+    switch (cat) {
+      case 'forum':
+        return 'PMP';
+      case 'donation':
+      case 'consume':
+      case 'expect':
+        return 'PMC';
       default:
-        return 'bg-slate-800 text-slate-300';
+        return '점';
     }
   };
 
-  const getRankIcon = (r: number) => {
+  const unit = getScoreUnit(category);
+
+  return (
+    <div className="relative pt-6 pb-2 px-2 overflow-hidden">
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold mb-2">
+          <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+          <span>HALL OF FAME · 명예의 전당</span>
+        </div>
+        <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
+          대한민국을 변화시키는 <span className="bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 bg-clip-text text-transparent">Top 3 명예 시민</span>
+        </h2>
+        <p className="text-xs md:text-sm text-slate-400 mt-1">
+          예측 분석과 선한 기부, 사회적 연대로 집단지성을 이끄는 선구자들입니다.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 md:gap-6 items-end max-w-2xl mx-auto">
+        {/* 2위 포디움 */}
+        {second ? (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
+            className="flex flex-col items-center"
+          >
+            <div className="relative mb-3 flex flex-col items-center">
+              <span className="text-2xl mb-1 filter drop-shadow">🥈</span>
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-slate-300 to-slate-600 p-[2px] shadow-lg shadow-slate-500/20">
+                <div className="w-full h-full bg-slate-900/90 rounded-2xl flex items-center justify-center font-bold text-white text-lg">
+                  {second.displayName.slice(0, 2)}
+                </div>
+              </div>
+              <span className="mt-2 text-xs md:text-sm font-bold text-slate-200 truncate max-w-[90px] md:max-w-[120px] text-center">
+                {second.displayName}
+              </span>
+              <span className="text-[11px] md:text-xs text-slate-400 font-semibold">
+                {second.score.toLocaleString()} {unit}
+              </span>
+            </div>
+            <div className="w-full h-28 md:h-36 bg-gradient-to-t from-slate-800 to-slate-800/60 rounded-t-2xl border-t border-x border-slate-700/80 flex flex-col items-center justify-center shadow-inner">
+              <span className="text-2xl md:text-3xl font-black text-slate-400">2nd</span>
+              <span className="text-[10px] text-slate-400 font-medium">Silver Citizen</span>
+            </div>
+          </motion.div>
+        ) : (
+          <div className="h-28" />
+        )}
+
+        {/* 1위 포디움 (가장 높고 화려함) */}
+        {first && (
+          <motion.div
+            initial={{ opacity: 0, y: 40 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="flex flex-col items-center -mt-6 z-10"
+          >
+            <div className="relative mb-3 flex flex-col items-center">
+              <span className="text-3xl md:text-4xl mb-1 filter drop-shadow-lg animate-bounce">👑</span>
+              <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-yellow-300 via-amber-400 to-amber-600 p-[3px] shadow-2xl shadow-amber-500/40">
+                <div className="w-full h-full bg-slate-900 rounded-2xl flex items-center justify-center font-black text-amber-300 text-xl md:text-2xl">
+                  {first.displayName.slice(0, 2)}
+                </div>
+                <div className="absolute -top-1 -right-1 w-5 h-5 bg-amber-400 rounded-full flex items-center justify-center text-[10px] text-black font-black">
+                  1
+                </div>
+              </div>
+              <span className="mt-2 text-sm md:text-base font-extrabold text-amber-200 truncate max-w-[100px] md:max-w-[140px] text-center">
+                {first.displayName}
+              </span>
+              <span className="text-xs md:text-sm text-amber-400 font-bold">
+                {first.score.toLocaleString()} {unit}
+              </span>
+            </div>
+            <div className="w-full h-36 md:h-48 bg-gradient-to-t from-amber-950/80 via-amber-900/60 to-amber-600/30 rounded-t-2xl border-t-2 border-x border-amber-400/80 flex flex-col items-center justify-center shadow-xl shadow-amber-500/10">
+              <span className="text-3xl md:text-4xl font-black text-amber-300">1st</span>
+              <span className="text-xs text-amber-200 font-bold">Gold Champion</span>
+            </div>
+          </motion.div>
+        )}
+
+        {/* 3위 포디움 */}
+        {third ? (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="flex flex-col items-center"
+          >
+            <div className="relative mb-3 flex flex-col items-center">
+              <span className="text-2xl mb-1 filter drop-shadow">🥉</span>
+              <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-amber-700 to-amber-900 p-[2px] shadow-lg shadow-amber-900/30">
+                <div className="w-full h-full bg-slate-900/90 rounded-2xl flex items-center justify-center font-bold text-amber-500 text-lg">
+                  {third.displayName.slice(0, 2)}
+                </div>
+              </div>
+              <span className="mt-2 text-xs md:text-sm font-bold text-slate-300 truncate max-w-[90px] md:max-w-[120px] text-center">
+                {third.displayName}
+              </span>
+              <span className="text-[11px] md:text-xs text-slate-400 font-semibold">
+                {third.score.toLocaleString()} {unit}
+              </span>
+            </div>
+            <div className="w-full h-24 md:h-28 bg-gradient-to-t from-slate-800 to-slate-800/60 rounded-t-2xl border-t border-x border-amber-800/50 flex flex-col items-center justify-center shadow-inner">
+              <span className="text-xl md:text-2xl font-black text-amber-600">3rd</span>
+              <span className="text-[10px] text-slate-400 font-medium">Bronze Citizen</span>
+            </div>
+          </motion.div>
+        ) : (
+          <div className="h-24" />
+        )}
+      </div>
+    </div>
+  );
+}
+
+// 랭킹 카드 컴포넌트
+function RankingCard({ entry, showDetails, rank, category }: { entry: RankingEntry; showDetails: boolean; rank: number; category: RankingCategory }) {
+  const getRankBadge = (r: number) => {
     switch (r) {
       case 1:
-        return '🥇';
+        return 'bg-gradient-to-r from-yellow-400 to-amber-500 text-slate-950 font-black shadow-lg shadow-amber-500/30';
       case 2:
-        return '🥈';
+        return 'bg-gradient-to-r from-slate-300 to-slate-400 text-slate-950 font-black shadow-md';
       case 3:
-        return '🥉';
+        return 'bg-gradient-to-r from-amber-700 to-amber-800 text-white font-black';
       default:
-        return `${r}`;
+        return 'bg-slate-800/80 text-slate-400 font-semibold border border-slate-700/50';
     }
   };
+
+  const tier = getTierInfo(entry.score);
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: rank * 0.05 }}
-      className={`p-4 rounded-xl border ${entry.isCurrentUser
-        ? 'border-amber-500/50 bg-amber-900/20'
-        : 'border-slate-800 bg-slate-900/70'
-        } hover:border-amber-700/50 transition-all`}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: Math.min(rank * 0.04, 0.4) }}
+      className={`p-4 md:p-5 rounded-2xl border transition-all duration-300 ${
+        entry.isCurrentUser
+          ? 'border-amber-400/60 bg-gradient-to-r from-amber-950/40 via-slate-900/90 to-slate-900/90 shadow-xl shadow-amber-500/10 ring-1 ring-amber-400/40'
+          : 'border-slate-800/80 bg-slate-900/50 hover:bg-slate-900/80 hover:border-slate-700'
+      }`}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 md:gap-4 min-w-0">
           {/* 순위 배지 */}
           <div
-            className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg ${getRankStyle(entry.rank)}`}
+            className={`w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center text-sm md:text-base shrink-0 ${getRankBadge(
+              entry.rank
+            )}`}
           >
-            {entry.rank <= 3 ? getRankIcon(entry.rank) : entry.rank}
+            {entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : entry.rank}
           </div>
 
-          {/* 사용자 정보 */}
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-white">
+          {/* 유저 아바타 및 정보 */}
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`font-bold text-sm md:text-base truncate ${entry.isCurrentUser ? 'text-amber-200' : 'text-white'}`}>
                 {entry.displayName}
-                {entry.isCurrentUser && (
-                  <span className="ml-2 text-xs bg-amber-500 text-white px-2 py-0.5 rounded">나</span>
-                )}
               </span>
-              {entry.badge && <span className="text-lg">{entry.badge}</span>}
+              {entry.isCurrentUser && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-gradient-to-r from-amber-400 to-orange-400 text-slate-950 uppercase tracking-wider">
+                  나 (ME)
+                </span>
+              )}
+              {entry.badge && (
+                <span className="px-2 py-0.5 rounded-md text-[11px] font-semibold bg-slate-800 text-slate-300 border border-slate-700/60">
+                  {entry.badge}
+                </span>
+              )}
             </div>
+
+            {/* 상세 지표 칩 */}
             {showDetails && (
-              <div className="text-xs text-slate-500 mt-1 flex flex-wrap gap-2">
-                {entry.details.forumPmp !== undefined && (
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-900/30 text-emerald-400">Forum {entry.details.forumPmp.toLocaleString()}</span>
+              <div className="text-[11px] md:text-xs text-slate-400 mt-1.5 flex flex-wrap items-center gap-1.5 md:gap-2">
+                {entry.details.donationPmc !== undefined && entry.details.donationPmc > 0 && (
+                  <span className="px-2 py-0.5 rounded-md bg-rose-950/40 text-rose-300 border border-rose-800/30 flex items-center gap-1">
+                    <Heart className="w-2.5 h-2.5 text-rose-400" />
+                    기부 {entry.details.donationPmc.toLocaleString()} PMC
+                  </span>
                 )}
-                {entry.details.consumePmc !== undefined && (
-                  <span className="px-2 py-0.5 rounded-full bg-indigo-900/30 text-indigo-400">Consume {entry.details.consumePmc.toLocaleString()}</span>
+                {entry.details.expectPmc !== undefined && entry.details.expectPmc > 0 && (
+                  <span className="px-2 py-0.5 rounded-md bg-blue-950/40 text-blue-300 border border-blue-800/30 flex items-center gap-1">
+                    <Compass className="w-2.5 h-2.5 text-blue-400" />
+                    예측 {entry.details.expectPmc.toLocaleString()} PMC
+                  </span>
                 )}
-                {entry.details.expectPmc !== undefined && (
-                  <span className="px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-400">Expect {entry.details.expectPmc.toLocaleString()}</span>
-                )}
-                {entry.details.donationPmc !== undefined && (
-                  <span className="px-2 py-0.5 rounded-full bg-purple-900/30 text-purple-400">Donation {entry.details.donationPmc.toLocaleString()}</span>
+                {entry.details.forumPmp !== undefined && entry.details.forumPmp > 0 && (
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-950/40 text-emerald-300 border border-emerald-800/30 flex items-center gap-1">
+                    <MessageSquare className="w-2.5 h-2.5 text-emerald-400" />
+                    포럼 {entry.details.forumPmp.toLocaleString()} PMP
+                  </span>
                 )}
               </div>
             )}
@@ -95,84 +249,68 @@ function RankingCard({ entry, showDetails, rank }: { entry: RankingEntry; showDe
         </div>
 
         {/* 점수 */}
-        <div className="text-right">
-          <div className="text-xl font-bold text-amber-400">{entry.score.toLocaleString()}</div>
-          <div className="text-xs text-slate-500">포인트</div>
+        <div className="text-right shrink-0">
+          <div className="text-lg md:text-xl font-extrabold text-amber-400">
+            {entry.score.toLocaleString()}
+          </div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
+            {category === 'forum' ? 'PMP 활동' : category === 'donation' ? '기부 PMC' : '종합 점수'}
+          </div>
         </div>
       </div>
     </motion.div>
   );
 }
 
-// 카테고리 탭 컴포넌트
-function CategoryTabs({
-  current,
-  onChange,
-}: {
-  current: RankingCategory;
-  onChange: (cat: RankingCategory) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2 mb-4">
-      {RANKING_CATEGORIES.map((cat) => (
-        <button
-          key={cat.id}
-          onClick={() => onChange(cat.id)}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${current === cat.id
-            ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/25'
-            : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300'
-            }`}
-        >
-          <span className="mr-1">{cat.icon}</span>
-          {cat.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+// 현재 사용자 카드 및 티어 진행률 컴포넌트
+function CurrentUserDashboardCard({ user }: { user: RankingEntry }) {
+  const tier = getTierInfo(user.score);
 
-// 기간 필터 컴포넌트
-function PeriodFilter({
-  current,
-  onChange,
-}: {
-  current: RankingPeriod;
-  onChange: (period: RankingPeriod) => void;
-}) {
   return (
-    <div className="flex gap-2">
-      {RANKING_PERIODS.map((p) => (
-        <button
-          key={p.id}
-          onClick={() => onChange(p.id)}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${current === p.id
-            ? 'bg-slate-700 text-white'
-            : 'bg-slate-800/50 text-slate-500 hover:bg-slate-700 hover:text-slate-300'
-            }`}
-        >
-          <span className="mr-1">{p.icon}</span>
-          {p.label}
-        </button>
-      ))}
-    </div>
-  );
-}
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-950/80 via-slate-900/90 to-slate-950 border border-amber-500/40 p-5 md:p-6 shadow-2xl shadow-amber-950/50">
+      <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-// 현재 사용자 랭킹 카드
-function CurrentUserCard({ user }: { user: RankingEntry }) {
-  return (
-    <div className="bg-gradient-to-r from-amber-600 to-orange-600 text-white p-4 rounded-xl mb-6 shadow-lg shadow-amber-500/20">
-      <div className="flex items-center justify-between">
+      <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <div className="text-sm opacity-80 flex items-center gap-1">
-            <Trophy className="w-4 h-4" />
-            내 랭킹
+          <div className="flex items-center gap-2 text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">
+            <Trophy className="w-3.5 h-3.5" />
+            <span>나의 시민 위상 (My Ranking Status)</span>
           </div>
-          <div className="text-3xl font-bold">#{user.rank}</div>
+          <div className="flex items-center gap-3">
+            <h3 className="text-3xl md:text-4xl font-black text-white tracking-tight">
+              #{user.rank} <span className="text-lg font-semibold text-slate-400">위</span>
+            </h3>
+            <div className={`px-2.5 py-1 rounded-lg bg-gradient-to-r ${tier.color} text-slate-950 text-xs font-extrabold flex items-center gap-1`}>
+              <span>{tier.icon}</span>
+              <span>{tier.name}</span>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 mt-1">
+            대한민국 긍정승수 형성에 기여한 총 누적 포인트입니다.
+          </p>
         </div>
-        <div className="text-right">
-          <div className="text-sm opacity-80">내 점수</div>
-          <div className="text-2xl font-bold">{user.score.toLocaleString()}</div>
+
+        <div className="text-left md:text-right w-full md:w-auto">
+          <div className="text-xs text-slate-400 font-medium">활동 누적 포인트</div>
+          <div className="text-2xl md:text-3xl font-black text-amber-300">
+            {user.score.toLocaleString()} <span className="text-sm font-semibold text-amber-500">pts</span>
+          </div>
+        </div>
+      </div>
+
+      {/* 티어 진행률 바 */}
+      <div className="mt-5 pt-4 border-t border-slate-800/80">
+        <div className="flex justify-between text-xs font-medium mb-1.5">
+          <span className="text-slate-400 flex items-center gap-1">
+            다음 등급 승급까지 <span className="text-amber-300 font-bold">{Math.max(0, tier.nextScore - user.score).toLocaleString()} 점</span> 남음
+          </span>
+          <span className="text-amber-400 font-bold">{tier.progress}%</span>
+        </div>
+        <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden p-[1px] border border-slate-700/50">
+          <div
+            className="h-full bg-gradient-to-r from-amber-500 to-yellow-300 rounded-full transition-all duration-700"
+            style={{ width: `${tier.progress}%` }}
+          />
         </div>
       </div>
     </div>
@@ -196,100 +334,150 @@ export default function RankingPage() {
 
   const currentCategoryInfo = RANKING_CATEGORIES.find((c) => c.id === category);
 
+  // 상위 3명 추출
+  const top3 = rankings.slice(0, 3);
+  const others = rankings.slice(3);
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-amber-950 to-slate-950 text-slate-200">
-      {/* Header - Forum 스타일 */}
-      <header className="sticky top-0 z-10 backdrop-blur-xl bg-amber-950/80 border-b border-amber-800/50">
-        <div className="max-w-4xl mx-auto p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">
-                🏆 Ranking
-              </h1>
-              <p className="text-sm text-amber-400/70">통합 랭킹 · 활동 점수</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-400">총 참여자</p>
-              <p className="text-xl font-bold text-amber-400">
-                <span className="text-2xl">{meta?.totalParticipants.toLocaleString() || 0}</span>
-                <span className="text-sm ml-1">명</span>
-              </p>
-            </div>
+    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500 selection:text-black">
+      {/* 배경 은은한 오로라 글로우 */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-gradient-to-b from-amber-500/10 via-amber-900/5 to-transparent rounded-full blur-3xl opacity-70" />
+      </div>
+
+      {/* 헤더 섹션 */}
+      <div className="border-b border-slate-800/60 bg-slate-900/40 backdrop-blur-md sticky top-0 z-20">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <h1 className="text-xl md:text-2xl font-black text-white flex items-center gap-2">
+              <Trophy className="w-6 h-6 text-amber-400" />
+              <span>PosMul 시민 명예의 전당</span>
+            </h1>
+            <p className="text-xs text-slate-400">집단지성 예측 · 기부 참여 · 성숙한 공론장을 만든 시민 랭킹</p>
           </div>
-        </div>
-      </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* 카테고리 탭 */}
-        <CategoryTabs current={category} onChange={changeCategory} />
-
-        {/* 현재 카테고리 설명 */}
-        {currentCategoryInfo && (
-          <div className="bg-slate-900/70 rounded-xl p-4 border border-slate-800">
-            <div className="flex items-center gap-3">
-              <span className="text-3xl">{currentCategoryInfo.icon}</span>
-              <div>
-                <h2 className="font-semibold text-lg text-white">{currentCategoryInfo.label} 랭킹</h2>
-                <p className="text-slate-400 text-sm">{currentCategoryInfo.description}</p>
+          <div className="flex items-center gap-3 self-end sm:self-auto">
+            <div className="text-right">
+              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">총 참여 시민</div>
+              <div className="text-base md:text-lg font-black text-amber-400">
+                {meta?.totalParticipants.toLocaleString() || rankings.length} <span className="text-xs text-slate-300">명</span>
               </div>
             </div>
+            <Link
+              href="/prediction"
+              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-amber-500/20 flex items-center gap-1"
+            >
+              <span>예측 참여하기</span>
+              <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
+        </div>
+      </div>
+
+      <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+        {/* 상단 TOP 3 명예의 전당 포디움 */}
+        {!loading && rankings.length > 0 && (
+          <HallOfFamePodium top3={top3} category={category} />
         )}
 
-        {/* 필터 및 옵션 */}
-        <div className="flex flex-wrap justify-between items-center gap-4">
-          <PeriodFilter current={period} onChange={changePeriod} />
+        {/* 현재 사용자 랭킹 카드 */}
+        {currentUser && <CurrentUserDashboardCard user={currentUser} />}
 
-          <label className="flex items-center gap-2 text-sm text-slate-400">
-            <input
-              type="checkbox"
-              checked={showDetails}
-              onChange={(e) => setShowDetails(e.target.checked)}
-              className="rounded bg-slate-800 border-slate-700 text-amber-500 focus:ring-amber-500"
-            />
-            <Eye className="w-4 h-4" />
-            상세 점수
-          </label>
+        {/* 카테고리 네비게이션 탭 */}
+        <div className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            {RANKING_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => changeCategory(cat.id)}
+                className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all duration-200 flex items-center gap-1.5 ${
+                  category === cat.id
+                    ? 'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20 ring-2 ring-amber-300/40'
+                    : 'bg-slate-900/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-slate-800'
+                }`}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* 카테고리 설명 배너 */}
+          {currentCategoryInfo && (
+            <div className="p-3.5 rounded-xl bg-slate-900/60 border border-slate-800/80 flex items-center justify-between gap-3 text-xs text-slate-400">
+              <div className="flex items-center gap-2">
+                <span className="text-base">{currentCategoryInfo.icon}</span>
+                <span>
+                  <strong className="text-slate-200 font-semibold">{currentCategoryInfo.label} 랭킹:</strong> {currentCategoryInfo.description}
+                </span>
+              </div>
+              <label className="flex items-center gap-1.5 text-xs text-slate-400 cursor-pointer select-none hover:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={showDetails}
+                  onChange={(e) => setShowDetails(e.target.checked)}
+                  className="rounded bg-slate-800 border-slate-700 text-amber-500 focus:ring-amber-500"
+                />
+                <Eye className="w-3.5 h-3.5" />
+                <span>상세 지표</span>
+              </label>
+            </div>
+          )}
         </div>
 
-        {/* 현재 사용자 랭킹 */}
-        {currentUser && <CurrentUserCard user={currentUser} />}
-
-        {/* 로딩 상태 */}
+        {/* 로딩 인디케이터 */}
         {loading && (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-500"></div>
+          <div className="flex flex-col justify-center items-center py-20 space-y-3">
+            <div className="animate-spin rounded-full h-10 w-10 border-2 border-amber-400 border-t-transparent"></div>
+            <p className="text-xs text-slate-400">명예의 전당 시민 순위를 집계하고 있습니다...</p>
           </div>
         )}
 
-        {/* 에러 상태 */}
+        {/* 에러 피드백 */}
         {error && (
-          <div className="bg-red-900/30 border border-red-800 text-red-400 px-4 py-3 rounded-xl">
+          <div className="bg-rose-950/30 border border-rose-800 text-rose-300 px-4 py-3 rounded-xl text-sm">
             {error}
           </div>
         )}
 
-        {/* 랭킹 목록 */}
+        {/* 랭킹 리스트 (전체 목록) */}
         {!loading && !error && (
           <div className="space-y-3">
+            <div className="flex justify-between items-center px-1">
+              <h3 className="text-sm font-bold text-slate-300 flex items-center gap-1.5">
+                <Users className="w-4 h-4 text-amber-400" />
+                <span>시민 랭킹 순위표</span>
+              </h3>
+              <span className="text-xs text-slate-500">실시간 반영 중</span>
+            </div>
+
             {rankings.length === 0 ? (
-              <div className="text-center py-16 text-slate-500">
-                <Trophy className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>아직 랭킹 데이터가 없습니다.</p>
+              <div className="text-center py-16 text-slate-500 bg-slate-900/30 rounded-2xl border border-slate-800/50">
+                <Trophy className="w-12 h-12 mx-auto mb-3 opacity-30 text-amber-400" />
+                <p className="text-sm font-semibold text-slate-400">아직 등록된 랭킹 데이터가 없습니다.</p>
+                <p className="text-xs text-slate-500 mt-1">예측에 참여하거나 포럼 토론에 참여해 첫 점수를 획득해보세요!</p>
               </div>
             ) : (
-              rankings.map((entry, index) => (
-                <RankingCard key={entry.userId} entry={entry} showDetails={showDetails} rank={index} />
-              ))
+              <div className="space-y-2.5">
+                {rankings.map((entry, index) => (
+                  <RankingCard
+                    key={entry.userId}
+                    entry={entry}
+                    showDetails={showDetails}
+                    rank={index}
+                    category={category}
+                  />
+                ))}
+              </div>
             )}
           </div>
         )}
 
-        {/* 메타 정보 */}
+        {/* 푸터 메타 정보 */}
         {meta && (
-          <div className="text-center text-sm text-slate-500 flex items-center justify-center gap-2">
-            <Clock className="w-4 h-4" />
-            마지막 업데이트: {new Date(meta.lastUpdated).toLocaleString('ko-KR')}
+          <div className="pt-4 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5">
+            <Clock className="w-3.5 h-3.5" />
+            <span>최근 업데이트: {new Date(meta.lastUpdated).toLocaleString('ko-KR')}</span>
           </div>
         )}
       </main>

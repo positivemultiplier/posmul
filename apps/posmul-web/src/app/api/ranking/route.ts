@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { supabaseAdmin } from '@/lib/supabase/admin';
 
 type RankingCategory = 'overall' | 'forum' | 'consume' | 'expect' | 'donation';
 type RankingPeriod = 'all' | 'monthly' | 'weekly';
@@ -53,7 +54,7 @@ function getOrderColumn(category: RankingCategory): string {
     donation: 'donation_total_pmc',
     overall: 'contribution_score',
   };
-  return columns[category];
+  return columns[category] || 'contribution_score';
 }
 
 // 카테고리별 점수 계산
@@ -65,7 +66,7 @@ function getScoreByCategory(entry: ScoreEntry, category: RankingCategory): numbe
     donation: entry.donation_total_pmc ?? 0,
     overall: entry.contribution_score ?? 0,
   };
-  return scores[category];
+  return scores[category] ?? 0;
 }
 
 // 배지 계산 - 기부
@@ -117,7 +118,7 @@ function formatRankingEntry(
   return {
     rank: index + 1,
     userId: entry.user_id,
-    displayName: profile?.display_name ?? profile?.username ?? `사용자 ${index + 1}`,
+    displayName: profile?.display_name ?? profile?.username ?? `시민_${entry.user_id.substring(0, 5)}`,
     score,
     details: {
       forumPmp: entry.forum_pmp_earned,
@@ -148,8 +149,8 @@ export async function GET(request: NextRequest) {
     // 카테고리별 정렬 기준
     const orderColumn = getOrderColumn(category);
 
-    // 랭킹 데이터 조회
-    const { data: rankings, error } = await supabase
+    // 랭킹 데이터 조회 (supabaseAdmin 사용으로 안전한 조회)
+    const { data: rankings, error } = await supabaseAdmin
       .schema('ranking')
       .from('user_scores')
       .select('*')
@@ -157,22 +158,45 @@ export async function GET(request: NextRequest) {
       .limit(limit);
 
     if (error) {
+      console.error('[API /api/ranking] Database error:', error);
       return NextResponse.json(
-        { error: '랭킹을 불러오는 데 실패했습니다.' },
+        { error: '랭킹을 불러오는 데 실패했습니다: ' + error.message },
         { status: 500 }
       );
     }
 
     // 사용자 프로필 조회
     const userIds = rankings?.map(r => r.user_id) ?? [];
-    const { data: profiles } = await supabase
-      .from('user_profiles')
-      .select('id, username, display_name')
-      .in('id', userIds);
+    const profileMap = new Map<string, UserProfile>();
 
-    const profileMap = new Map(
-      (profiles as UserProfile[] | null)?.map(p => [p.id, p]) ?? []
-    );
+    if (userIds.length > 0) {
+      // 1. user_profiles 조회
+      const { data: profiles } = await supabaseAdmin
+        .from('user_profiles')
+        .select('id, username, display_name')
+        .in('id', userIds);
+
+      (profiles as UserProfile[] | null)?.forEach(p => {
+        profileMap.set(p.id, p);
+      });
+
+      // 2. user.users 테이블에서 추가 정보 보강
+      const { data: users } = await supabaseAdmin
+        .schema('user')
+        .from('users')
+        .select('id, username, full_name')
+        .in('id', userIds);
+
+      users?.forEach((u: any) => {
+        if (!profileMap.has(u.id)) {
+          profileMap.set(u.id, {
+            id: u.id,
+            username: u.username,
+            display_name: u.full_name || u.username,
+          });
+        }
+      });
+    }
 
     // 랭킹 데이터 포맷팅
     const formattedRankings = (rankings as ScoreEntry[] ?? []).map((entry, index) =>
@@ -180,7 +204,7 @@ export async function GET(request: NextRequest) {
     );
 
     // 통계 계산
-    const { count: totalParticipants } = await supabase
+    const { count: totalParticipants } = await supabaseAdmin
       .schema('ranking')
       .from('user_scores')
       .select('*', { count: 'exact', head: true });
@@ -198,9 +222,10 @@ export async function GET(request: NextRequest) {
         },
       },
     });
-  } catch {
+  } catch (err: any) {
+    console.error('[API /api/ranking] Server exception:', err);
     return NextResponse.json(
-      { error: '서버 오류가 발생했습니다.' },
+      { error: '서버 오류가 발생했습니다: ' + (err?.message || '알 수 없는 오류') },
       { status: 500 }
     );
   }
