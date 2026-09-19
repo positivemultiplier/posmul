@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/feed-ingest",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/prediction-settle",
+      "schedule": "0 * * * *"
+    }
+  ]
+}

@@ -1,0 +1,92 @@
+name: PosMul 무인 자동 수집 & 정산 스케줄러
+
+on:
+  schedule:
+    # 매 30분마다 무인 자동 실행 (UTC 기준: 매시 0분, 30분)
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '실행할 작업 (all, ingest_only, settle_only)'
+        required: true
+        default: 'all'
+        type: choice
+        options:
+          - all
+          - ingest_only
+          - settle_only
+
+jobs:
+  cron_runner:
+    name: Cron Runner
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set Target Base URL
+        id: config
+        run: |
+          # Secrets에 APP_URL이 지정되어 있으면 사용, 없으면 기본 Vercel 배포 URL
+          BASE_URL="${{ secrets.APP_URL }}"
+          if [ -z "$BASE_URL" ]; then
+            BASE_URL="https://posmul.vercel.app"
+          fi
+          echo "BASE_URL=${BASE_URL}" >> $GITHUB_ENV
+
+      - name: 1. 다채널 데이터 자동 수집 (Feed Ingest)
+        if: ${{ github.event.inputs.action == 'all' || github.event.inputs.action == 'ingest_only' || github.event_name == 'schedule' }}
+        run: |
+          echo "📡 다채널 피드 자동 수집 시작: ${BASE_URL}/api/cron/feed-ingest"
+          
+          AUTH_HEADER=""
+          if [ -n "${{ secrets.CRON_SECRET }}" ]; then
+            AUTH_HEADER="Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          fi
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "${BASE_URL}/api/cron/feed-ingest?category=all" \
+            -H "${AUTH_HEADER}" \
+            -H "Content-Type: application/json" || echo "curl_error\n000")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "Response HTTP Code: $HTTP_CODE"
+          echo "Response Body: $BODY"
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ 다채널 피드 수집 성공"
+          else
+            echo "⚠️ 수집 경고 (HTTP $HTTP_CODE)"
+          fi
+
+      - name: 2. 만료 예측 게임 오라클 자동 정산 (Prediction Auto Settle)
+        if: ${{ github.event.inputs.action == 'all' || github.event.inputs.action == 'settle_only' || github.event_name == 'schedule' }}
+        run: |
+          echo "⚖️ 만료 예측 게임 자동 정산 시작: ${BASE_URL}/api/cron/prediction-settle"
+          
+          AUTH_HEADER=""
+          if [ -n "${{ secrets.CRON_SECRET }}" ]; then
+            AUTH_HEADER="Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+          fi
+
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "${BASE_URL}/api/cron/prediction-settle" \
+            -H "${AUTH_HEADER}" \
+            -H "Content-Type: application/json" || echo "curl_error\n000")
+
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "Response HTTP Code: $HTTP_CODE"
+          echo "Response Body: $BODY"
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ 자동 정산 성공"
+          else
+            echo "⚠️ 정산 경고 (HTTP $HTTP_CODE)"
+          fi
+
+      - name: 3. 실행 요약 리포트 (Job Summary)
+        run: |
+          echo "### 🚀 PosMul 무인 스케줄러 실행 완료" >> $GITHUB_STEP_SUMMARY
+          echo "- **타겟 주소**: \`${BASE_URL}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **트리거 유형**: \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **실행 시간**: $(date -u)" >> $GITHUB_STEP_SUMMARY
+          echo "- **포함 작업**: 피드 수집, 오라클 의안 자동 정산" >> $GITHUB_STEP_SUMMARY

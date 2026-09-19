@@ -39,6 +39,7 @@ import {
   Zap,
   DollarSign,
   Tv,
+  Scale,
 } from "lucide-react";
 
 type CategoryFilter = "ALL" | "BILLS" | "SPORTS" | "ECONOMY" | "ENTERTAINMENT" | "POLICY";
@@ -399,6 +400,34 @@ export default function AdminFeedPage() {
             <Vote className="w-3.5 h-3.5 text-purple-400" />
             🏛️ 국회 의안 수집
           </button>
+
+          {/* 무인 자동 정산 (Auto-Settle) 원클릭 트리거 */}
+          <button
+            onClick={handleAutoSettle}
+            disabled={isPending}
+            className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition-all disabled:opacity-50 ml-auto"
+          >
+            <Scale className="w-3.5 h-3.5 text-amber-200" />
+            ⚖️ 오라클 만료 게임 자동 정산 (Auto-Settle)
+          </button>
+        </div>
+
+        {/* Cron 무인 스케줄러 가동 상태 정보 바 */}
+        <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400">
+          <div className="flex items-center gap-3">
+            <span className="flex items-center gap-1 text-emerald-400 font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              <span>무인 Cron 스케줄러 가동 중</span>
+            </span>
+            <span>·</span>
+            <span>Vercel Cron: <strong>매 30분</strong> (/api/cron/feed-ingest)</span>
+            <span>·</span>
+            <span>GitHub Actions: <strong>24/7 정기 스케줄</strong> (cron-scheduler.yml)</span>
+          </div>
+
+          <div className="text-slate-500">
+            만료 게임 및 의안 통과 결과 발생 시 오라클이 당첨자에게 PMC를 자동 지급합니다.
+          </div>
         </div>
       </div>
 
