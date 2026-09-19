@@ -22,6 +22,7 @@ import {
 } from "./domain/services/prediction-economic.service";
 import { ParticipatePredictionUseCase } from "./application/use-cases/participate-prediction.use-case";
 import { SettlePredictionGameUseCase } from "./application/use-cases/settle-prediction-game.use-case";
+import { AutoSettleByBillUseCase } from "./application/use-cases/auto-settle-by-bill.use-case";
 import { CreatePredictionGameUseCase } from "./application/use-cases/create-prediction-game.use-case";
 import { GetPredictionGameByIdUseCase } from "./application/use-cases/get-prediction-game-by-id.use-case";
 import { GetPredictionGamesUseCase } from "./application/use-cases/get-prediction-games.use-case";
@@ -134,6 +135,12 @@ class PredictionDIContainer {
     );
   }
 
+  getAutoSettleByBillUseCase(): AutoSettleByBillUseCase {
+    return new AutoSettleByBillUseCase(
+      this.getSettlePredictionGameUseCase()
+    );
+  }
+
   getCreatePredictionGameUseCase(): CreatePredictionGameUseCase {
     return new CreatePredictionGameUseCase(
       this.predictionGameRepository,
@@ -190,6 +197,10 @@ export function getParticipatePredictionUseCase(): ParticipatePredictionUseCase 
 
 export function getSettlePredictionGameUseCase(): SettlePredictionGameUseCase {
   return getPredictionDIContainer().getSettlePredictionGameUseCase();
+}
+
+export function getAutoSettleByBillUseCase(): AutoSettleByBillUseCase {
+  return getPredictionDIContainer().getAutoSettleByBillUseCase();
 }
 
 export function getCreatePredictionGameUseCase(): CreatePredictionGameUseCase {

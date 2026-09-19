@@ -7,6 +7,7 @@ import {
     getBills,
     publishToPredictionGame,
     ignoreFeedItem,
+    autoSettleBillsAction,
     FeedItemDTO,
     BillDTO,
     FeedStatsDTO,
@@ -26,6 +27,7 @@ import {
     TrendingUp,
     Vote,
     AlertCircle,
+    Coins,
 } from "lucide-react";
 
 export default function AdminFeedPage() {
@@ -44,6 +46,7 @@ export default function AdminFeedPage() {
 
     // 모달 상태
     const [selectedItem, setSelectedItem] = useState<FeedItemDTO | null>(null);
+    const [selectedBill, setSelectedBill] = useState<BillDTO | null>(null);
     const [modalTitle, setModalTitle] = useState("");
     const [modalDescription, setModalDescription] = useState("");
     const [modalCategory, setModalCategory] = useState("POLITICS");
@@ -102,6 +105,7 @@ export default function AdminFeedPage() {
     // 모달 열기 (상세 편집 후 발행)
     const openEditModal = (item: FeedItemDTO) => {
         setSelectedItem(item);
+        setSelectedBill(null);
         setModalTitle(item.title);
         setModalDescription(item.content_summary || item.title);
         setModalCategory("POLITICS");
@@ -114,6 +118,7 @@ export default function AdminFeedPage() {
     // 의안으로 게임 생성 모달 열기
     const openBillModal = (bill: BillDTO) => {
         setSelectedItem(null);
+        setSelectedBill(bill);
         setModalTitle(`[국회 의안] ${bill.bill_name} 본회의 통과 여부`);
         setModalDescription(
             `제안자: ${bill.proposer || "미상"}\n소관위원회: ${bill.committee || "미상"}\n의안번호: ${bill.bill_no}\n현재 심의상태: ${bill.rgs_conf_rslt || bill.proc_result || "심의 중"}`
@@ -131,6 +136,8 @@ export default function AdminFeedPage() {
         startTransition(async () => {
             const res = await publishToPredictionGame({
                 feedItemId: selectedItem?.id,
+                billId: selectedBill?.bill_id,
+                billNo: selectedBill?.bill_no,
                 title: modalTitle,
                 description: modalDescription,
                 category: modalCategory,
@@ -148,6 +155,35 @@ export default function AdminFeedPage() {
                 await loadData();
             } else {
                 alert(`발행 오류: ${res.error}`);
+            }
+        });
+    };
+
+    // 의안 처리 결과 기반 자동 정산 실행
+    const handleAutoSettleBills = () => {
+        if (!confirm("국회 의안 본회의 심의 결과를 확인하여 연계된 예측 게임들을 자동으로 정산하고 PMC 보상을 지급할까요?")) {
+            return;
+        }
+
+        startTransition(async () => {
+            setIsLoading(true);
+            const res = await autoSettleBillsAction();
+            setIsLoading(false);
+
+            if (res.success && res.data) {
+                const count = res.data.settledGamesCount;
+                if (count > 0) {
+                    setStatusMessage(
+                        `🎉 ${count}건의 의안 예측 게임이 자동 정산 완료되었습니다! 승자들에게 PMC 보상이 지급되었습니다.`
+                    );
+                } else {
+                    setStatusMessage(
+                        "ℹ️ 현재 가결/부결 처리되어 정산 대기 중인 의안 예측 게임이 없습니다."
+                    );
+                }
+                await loadData();
+            } else {
+                alert(`자동 정산 오류: ${res.error}`);
             }
         });
     };
@@ -404,11 +440,19 @@ export default function AdminFeedPage() {
             {/* 탭 2: 국회 의안 목록 */}
             {activeTab === "bills" && (
                 <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                    <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
+                    <div className="px-6 py-4 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
                             <h3 className="font-bold text-gray-800">제22대 국회 주요 의안 현황</h3>
                             <p className="text-xs text-gray-500 mt-0.5">열린국회정보 Open API와 실시간 연동된 의안 목록입니다.</p>
                         </div>
+                        <button
+                            onClick={handleAutoSettleBills}
+                            disabled={isLoading}
+                            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-xl text-xs shadow-sm transition disabled:opacity-50"
+                        >
+                            <Coins className="w-4 h-4" />
+                            ⚡ 본회의 결과 기반 자동 정산 실행
+                        </button>
                     </div>
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm text-gray-600">

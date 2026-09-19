@@ -139,6 +139,8 @@ export async function getBills(limit: number = 30): Promise<BillDTO[]> {
 
 export interface PublishGameInput {
     feedItemId?: string;
+    billId?: string;
+    billNo?: string;
     title: string;
     description: string;
     category?: string;
@@ -183,9 +185,12 @@ export async function publishToPredictionGame(input: PublishGameInput): Promise<
             status: "ACTIVE", // 정식 게임 활성화
             is_official: true,
             slug: safeSlug,
+            external_id: input.billId || null,
             data_source: input.sourceUrl || "대한민국 정책브리핑 / 열린국회정보",
             metadata: {
                 feed_item_id: input.feedItemId,
+                bill_id: input.billId,
+                bill_no: input.billNo,
                 published_via: "ADMIN_AI_PIPELINE",
             },
             created_at: now.toISOString(),
@@ -250,5 +255,39 @@ export async function ignoreFeedItem(feedItemId: string): Promise<{ success: boo
         return { success: true };
     } catch (e: any) {
         return { success: false, error: e?.message };
+    }
+}
+
+/**
+ * 국회 의안 처리 결과 기반 자동 정산 실행 액션
+ */
+export async function autoSettleBillsAction() {
+    try {
+        const { getAutoSettleByBillUseCase } = await import(
+            "@/bounded-contexts/prediction/di-container"
+        );
+        const useCase = getAutoSettleByBillUseCase();
+        const result = await useCase.execute();
+
+        revalidatePath("/admin/feed");
+        revalidatePath("/prediction", "layout");
+
+        if (result.success === false) {
+            return {
+                success: false,
+                error: (result as any).error?.message || "정산 실패",
+            };
+        }
+
+        return {
+            success: true,
+            data: result.data,
+        };
+    } catch (e: any) {
+        console.error("autoSettleBillsAction exception:", e);
+        return {
+            success: false,
+            error: e?.message || "자동 정산 실행 중 오류가 발생했습니다.",
+        };
     }
 }
