@@ -390,7 +390,7 @@ export function OpinionLeaderProfileClient({
               {endorsements.map((endorsement) => (
                 <Link
                   key={endorsement.id}
-                  href={`/donation/institute/${endorsement.institute.id}`}
+                  href={`/donation/institute/${endorsement.institute.category}/general/${endorsement.institute.id}`}
                   className="block group"
                 >
                   <SpotlightCard className="bg-gray-50 dark:bg-gray-700 rounded-xl border-transparent hover:border-purple-500/30 transition-colors">

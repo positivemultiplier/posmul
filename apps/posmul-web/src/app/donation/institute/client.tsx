@@ -115,7 +115,7 @@ export function InstituteClient({ institutes }: InstituteClientProps) {
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.2 }}
               >
-                <Link href={`/donation/institute/${institute.category}/${institute.id}`}>
+                <Link href={`/donation/institute/${institute.category}/general/${institute.id}`}>
                   <Card className="bg-slate-900/70 border-slate-800 hover:border-blue-700/50 transition-all cursor-pointer group overflow-hidden h-full">
                     {/* 히어로 영역 */}
                     <div className="relative aspect-video bg-gradient-to-br from-blue-900/50 to-slate-900 flex items-center justify-center">
