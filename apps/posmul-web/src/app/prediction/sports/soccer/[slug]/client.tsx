@@ -14,6 +14,7 @@ import { BettingDistributionChart } from "../../../../../bounded-contexts/predic
 import { ParticipantTimelineChart } from "../../../../../bounded-contexts/prediction/presentation/components/charts/ParticipantTimelineChart";
 
 import { CompactMoneyWaveCard } from "../../../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
+import { PredictionComments } from "../../../../../bounded-contexts/prediction/presentation/components/PredictionComments";
 import { placeBet, withdrawBet } from "./actions";
 import { FadeIn } from "../../../../../shared/ui/components/animations";
 import { Users, BarChart2, Info, ArrowLeft, Trophy, Calendar, Clock, Activity, TrendingUp, PieChart, History } from "lucide-react";
@@ -411,6 +412,15 @@ export function SoccerPredictionDetailClient({
                   </div>
                 )}
               </FadeIn>
+
+              {/* 실시간 시민 공론장 & 예측 토론 */}
+              <div className="mt-8">
+                <PredictionComments
+                  gameId={game.id}
+                  predictionType={game.predictionType}
+                  options={game.options}
+                />
+              </div>
             </div>
           </div>
 
