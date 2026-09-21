@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 
 import { ThreeRowNavbar } from "../shared/ui/components/layout/ThreeRowNavbar";
+import { BottomNavigation } from "../shared/ui/components/BottomNavigation";
 import { ThemeProvider } from "../bounded-contexts/prediction/presentation/utils/ThemeProvider";
 import { ToastProvider } from "../shared/ui/components/feedback/Toast";
 import "./globals.css";
@@ -17,18 +18,24 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Posmul - AI 시대 직접민주주의 플랫폼",
-  description: "예측 게임과 지역 경제 연동을 통한 직접민주주의 실험 플랫폼",
+  title: "PosMul - AI 시대 직접민주주의 & 소셜 임팩트 플랫폼",
+  description: "AI 뉴스 예측 게임, 아고라 찬반 투표·의결권 위임, 기부 및 지역 소비 선순환 서비스",
   keywords: [
     "예측게임",
     "직접민주주의",
     "지역경제",
     "PMC",
     "PMP",
-    "포인트시스템",
+    "PMG",
+    "소셜임팩트",
   ],
-  authors: [{ name: "Posmul Team" }],
-  // viewport: "width=device-width, initial-scale=1",
+  authors: [{ name: "PosMul Team" }],
+  openGraph: {
+    title: "PosMul - AI 시대 직접민주주의 & 소셜 임팩트 플랫폼",
+    description: "집단 지성 예측 게임과 기부/소비 선순환 통합 경제 플랫폼",
+    siteName: "PosMul",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -48,17 +55,18 @@ export default function RootLayout({
               <ThreeRowNavbar />
 
               {/*
-                ThreeRowNavbar가 fixed top-0 이므로,
-                전역적으로 헤더 높이만큼 상단 패딩을 확보한다.
-                - mobile: Row1(h-16)=64px
-                - md+: Row1(h-16)+Row2(h-12)+Row3(h-10)=152px
+                ThreeRowNavbar가 fixed top-0 이므로 상단 패딩 확보,
+                모바일 환경 하단 탭 바 확보를 위해 pb-16 추가.
               */}
-              <main className="flex-1 pt-16 md:pt-[152px]">{children}</main>
+              <main className="flex-1 pt-16 md:pt-[152px] pb-16 md:pb-0">{children}</main>
 
-              <footer className="bg-[#0a0a0f] border-t border-white/10">
+              {/* Mobile Bottom Navigation Bar */}
+              <BottomNavigation />
+
+              <footer className="bg-[#0a0a0f] border-t border-white/10 hidden md:block">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                   <div className="text-center text-sm text-gray-400">
-                    © 2024 Posmul. AI 시대 직접민주주의 실험 플랫폼
+                    © 2026 PosMul. AI 시대 직접민주주의 & 소셜 임팩트 플랫폼
                   </div>
                 </div>
               </footer>
@@ -74,4 +82,6 @@ export default function RootLayout({
 export const viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#0a0a0f",
 };
+
