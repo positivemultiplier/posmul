@@ -694,49 +694,42 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
       {/* Participation Badge */}
       <MyPredictionBadgeSection myPrediction={myPrediction} />
 
-      <div className="p-5 space-y-4">
+      <div className="p-3.5 space-y-2.5">
         {/* Error Display */}
         <ErrorSection error={error} onDismiss={() => setError(null)} />
 
         {/* Card Header & Status */}
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-950/80 text-blue-300 border border-blue-800/50 flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-950/80 text-blue-300 border border-blue-800/50 flex items-center gap-1">
               <span>{getPredictionTypeIcon(game.predictionType)}</span>
               <span>{getPredictionTypeLabel(game.predictionType)}</span>
             </span>
             {getStatusBadge(game.status)}
           </div>
-          <span className="text-xs font-semibold text-amber-400/90 bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-800/40">
+          <span className="text-[10px] font-semibold text-amber-400/90 bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-800/40">
             ⏳ {calculateTimeRemaining(game.endTime)}
           </span>
         </div>
 
-        {/* Title */}
-        <h3 className="font-extrabold text-base md:text-lg text-white group-hover:text-blue-300 transition-colors line-clamp-2 leading-snug">
+        {/* Title - 콤팩트 폰트 */}
+        <h3 className="font-bold text-sm text-white group-hover:text-blue-300 transition-colors line-clamp-2 leading-snug">
           {game.title}
         </h3>
 
-        {/* Description */}
-        {game.description && (
-          <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed">
-            {game.description}
-          </p>
-        )}
-
-        {/* Polymarket Style Probability Bar */}
+        {/* Polymarket Style Probability Bar - 콤팩트 높이 */}
         {game.options && game.options.length >= 2 && (
-          <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-2">
-            <div className="flex justify-between items-center text-xs font-bold">
+          <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-1.5">
+            <div className="flex justify-between items-center text-[11px] font-bold">
               <span className="text-blue-400 truncate max-w-[45%]">
-                {game.options[0]?.text || '찬성 (YES)'} {( (game.options[0]?.currentOdds || 0.5) * 100 ).toFixed(0)}%
+                {game.options[0]?.text || '찬성 (YES)'} {((game.options[0]?.currentOdds || 0.5) * 100).toFixed(0)}%
               </span>
               <span className="text-rose-400 truncate max-w-[45%] text-right">
-                {game.options[1]?.text || '반대 (NO)'} {( (game.options[1]?.currentOdds || 0.5) * 100 ).toFixed(0)}%
+                {game.options[1]?.text || '반대 (NO)'} {((1 - (game.options[0]?.currentOdds || 0.5)) * 100).toFixed(0)}%
               </span>
             </div>
             {/* Split Progress Bar */}
-            <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden flex p-[1px]">
+            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden flex p-[1px]">
               <div
                 className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-l-full transition-all duration-500"
                 style={{ width: `${Math.min(100, Math.max(5, (game.options[0]?.currentOdds || 0.5) * 100))}%` }}
@@ -750,10 +743,9 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
         )}
 
         {/* MoneyPool & Stakes Info Bar */}
-        <div className="flex items-center justify-between pt-2 border-t border-slate-800/70 text-xs">
-          <div className="flex items-center gap-1.5 text-amber-300 font-bold">
-            <span className="text-sm">💎</span>
-            <span>Moneypool: {formatCurrency(game.allocatedPrizePool || game.totalStake || 0)} PMC</span>
+        <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/70 text-[11px]">
+          <div className="flex items-center gap-1 text-amber-300 font-bold">
+            <span>💎 Pool: {formatCurrency(game.allocatedPrizePool || game.totalStake || 0)} PMC</span>
           </div>
           <div className="text-slate-400 font-medium">
             👥 {game.currentParticipants}명 참여
@@ -786,16 +778,6 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
         />
 
         <LoginRequiredSection status={game.status} userId={userId} />
-
-        {/* Context Shortcuts: Debate & Donation */}
-        <div className="flex items-center justify-between pt-2 text-[11px] font-semibold text-slate-400 border-t border-slate-800/50">
-          <span className="hover:text-blue-300 transition-colors flex items-center gap-1 cursor-pointer">
-            💬 토론 참여 (+10 PMP)
-          </span>
-          <span className="hover:text-rose-300 transition-colors flex items-center gap-1 cursor-pointer">
-            🎁 기부 연계 (PMC)
-          </span>
-        </div>
       </div>
     </Card>
   );

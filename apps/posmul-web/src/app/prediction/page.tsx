@@ -262,50 +262,30 @@ export default async function PredictionPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-10 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800/80">
-        <div className="max-w-6xl mx-auto p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">
-                🎯 Prediction Market
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-400">직접민주주의 정책·산업 예측 & PMP 참여</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-400">진행 중</p>
-              <p className="text-xl font-bold text-blue-400">
-                <span className="text-2xl">{totalActiveGames}</span>
-                <span className="text-sm ml-1 text-slate-300">게임</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-6xl mx-auto px-4 py-4 space-y-4">
-        {/* Sleek Top Info Bar (1-Line Compact Strip) */}
-        <div className="flex flex-wrap items-center justify-between gap-2 p-3 rounded-2xl bg-slate-900/80 border border-slate-800/80 text-xs text-slate-300">
+      <main className="max-w-7xl mx-auto px-4 py-3 space-y-3">
+        {/* Ultra-Slim Single Control Bar (AI 큐레이션 + 카테고리 필터 + Moneypool 통합) */}
+        <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-900/90 backdrop-blur-xl border border-purple-900/40 text-xs shadow-lg">
           <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30 flex items-center gap-1">
-              <span>🌅</span>
-              <span>AI 아침 큐레이션</span>
-            </span>
-            <span className="font-semibold text-slate-200">
-              오늘의 [소상공인·자영업·외식업] 맞춤 정책 예측 5선 가동 중
+            <h1 className="text-base font-black bg-gradient-to-r from-purple-400 to-indigo-400 bg-clip-text text-transparent mr-2 shrink-0">
+              🎯 Prediction Market
+            </h1>
+            <span className="hidden sm:inline-block px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
+              🌅 AI 큐레이션 가동 중
             </span>
           </div>
 
-          <div className="flex items-center gap-3 font-bold text-amber-400">
+          <div className="flex items-center gap-3 font-extrabold text-amber-400">
             <span className="flex items-center gap-1">
-              <span>💰 Moneypool:</span>
+              <span>💎 Pool:</span>
               <span className="text-amber-300">{(platformTotalPool || 66461).toLocaleString()} PMC</span>
             </span>
+            <span className="text-slate-500">|</span>
+            <span className="text-purple-300">🔥 진행 중 {totalActiveGames}개</span>
           </div>
         </div>
 
-        {/* Pure Card Grid Feed (카테고리 수평 칩 + 카드리드 바로 노출) */}
-        <section className="space-y-4 pt-1">
+        {/* Pure Card Grid Feed */}
+        <section className="pt-1">
           <ClientPredictionGamesGrid
             games={mappedGames}
             userId={user?.id}
