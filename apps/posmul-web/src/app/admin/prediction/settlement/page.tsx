@@ -105,14 +105,41 @@ export default function PredictionSettlementDashboardPage() {
             </p>
           </div>
 
-          <button
-            onClick={fetchGames}
-            disabled={loading}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-800 flex items-center gap-1.5 shadow-md"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-amber-400" : ""}`} />
-            {loading ? "불러오는 중..." : "목록 새로고침"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={async () => {
+                if (!confirm("AI 크론 파이프라인(뉴스 수집 -> 초안 생성 -> 게임 발행 -> 자동 정산)을 실행하시겠습니까?")) return;
+                setLoading(true);
+                try {
+                  const res = await fetch("/api/cron/prediction-pipeline");
+                  const data = await res.json();
+                  if (data.success) {
+                    alert(`✅ AI 파이프라인 크론 실행 완료!\n${data.message}\n(자동 정산 게임: ${data.autoSettledGamesCount}건)`);
+                    fetchGames();
+                  } else {
+                    alert(`❌ 파이프라인 실행 실패: ${data.error}`);
+                  }
+                } catch (e: any) {
+                  alert(`오류 발생: ${e.message}`);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-md border border-purple-500/30"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
+              AI 크론 파이프라인 트리거
+            </button>
+            <button
+              onClick={fetchGames}
+              disabled={loading}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-800 flex items-center gap-1.5 shadow-md"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-amber-400" : ""}`} />
+              {loading ? "불러오는 중..." : "목록 새로고침"}
+            </button>
+          </div>
         </div>
 
         {/* Summary Stats */}
