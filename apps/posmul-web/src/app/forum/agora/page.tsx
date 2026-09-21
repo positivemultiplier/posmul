@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { MessageSquare, Lightbulb, Vote, Users, Search, Award, Clock } from "lucide-react";
+import { MessageSquare, Lightbulb, Vote, Users, Search, Award, Clock, ShieldCheck, CheckCircle2, UserCheck } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Card, CardContent } from "@/shared/ui/components/base/Card";
@@ -18,6 +18,8 @@ interface AgoraTopic {
     participantCount: number;
     commentCount: number;
     voteCount: number;
+    agreeVotes?: number;
+    disagreeVotes?: number;
     status: "active" | "voting" | "concluded";
     pmpReward: number;
     isHot?: boolean;
@@ -36,6 +38,8 @@ const MOCK_TOPICS: AgoraTopic[] = [
         participantCount: 342,
         commentCount: 156,
         voteCount: 890,
+        agreeVotes: 620,
+        disagreeVotes: 270,
         status: "active",
         pmpReward: 30,
         isHot: true,
@@ -50,6 +54,8 @@ const MOCK_TOPICS: AgoraTopic[] = [
         participantCount: 128,
         commentCount: 67,
         voteCount: 245,
+        agreeVotes: 180,
+        disagreeVotes: 65,
         status: "active",
         pmpReward: 20,
     },
@@ -63,6 +69,8 @@ const MOCK_TOPICS: AgoraTopic[] = [
         participantCount: 567,
         commentCount: 234,
         voteCount: 1200,
+        agreeVotes: 950,
+        disagreeVotes: 250,
         status: "voting",
         pmpReward: 50,
         isHot: true,
@@ -77,6 +85,8 @@ const MOCK_TOPICS: AgoraTopic[] = [
         participantCount: 89,
         commentCount: 45,
         voteCount: 320,
+        agreeVotes: 200,
+        disagreeVotes: 120,
         status: "concluded",
         pmpReward: 25,
     },
@@ -112,7 +122,14 @@ export default function ForumAgoraPage() {
     const [selectedCategory, setSelectedCategory] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [totalPmpEarned] = useState(580);
+    const [userPmgPower, setUserPmgPower] = useState(320);
     const [realTopics, setRealTopics] = useState<AgoraTopic[]>([]);
+
+    // Delegation Modal State
+    const [isDelegateModalOpen, setIsDelegateModalOpen] = useState(false);
+    const [delegateTarget, setDelegateTarget] = useState("김OO 정책전문가");
+    const [isDelegating, setIsDelegating] = useState(false);
+    const [delegatedLeader, setDelegatedLeader] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchRealForumPosts = async () => {
@@ -130,6 +147,8 @@ export default function ForumAgoraPage() {
                         participantCount: 150,
                         commentCount: 42,
                         voteCount: 300,
+                        agreeVotes: 210,
+                        disagreeVotes: 90,
                         status: "active",
                         pmpReward: 30,
                         isHot: true,
@@ -144,6 +163,61 @@ export default function ForumAgoraPage() {
         fetchRealForumPosts();
     }, []);
 
+    const handleVote = async (e: React.MouseEvent, topicId: string, voteType: "AGREE" | "DISAGREE") => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        try {
+            const res = await fetch("/api/forum/vote", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    topicId,
+                    voteType,
+                    pmgWeight: userPmgPower,
+                }),
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                alert(`🗳️ 표결 완료! (${voteType === "AGREE" ? "찬성" : "반대"} 표결, 의결권 ${userPmgPower} PMG 반영 완료)`);
+            } else {
+                alert(`투표 실패: ${data.error}`);
+            }
+        } catch (err: any) {
+            alert(`오류 발생: ${err.message}`);
+        }
+    };
+
+    const handleDelegateSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsDelegating(true);
+
+        try {
+            const res = await fetch("/api/forum/delegate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    delegateToName: delegateTarget,
+                    pmgAmount: userPmgPower,
+                }),
+            });
+
+            const data = await res.json();
+            if (data.success) {
+                setDelegatedLeader(delegateTarget);
+                alert(data.message);
+                setIsDelegateModalOpen(false);
+            } else {
+                alert(data.error || "위임 실패");
+            }
+        } catch (err: any) {
+            alert("위임 도중 오류 발생");
+        } finally {
+            setIsDelegating(false);
+        }
+    };
+
     const allTopics = [...realTopics, ...MOCK_TOPICS];
 
     const filteredTopics = allTopics.filter((topic) => {
@@ -155,7 +229,7 @@ export default function ForumAgoraPage() {
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-purple-950 to-slate-950 text-slate-200">
-            {/* Header - Consume 스타일 */}
+            {/* Header */}
             <header className="sticky top-0 z-10 backdrop-blur-xl bg-purple-950/80 border-b border-purple-800/50">
                 <div className="max-w-4xl mx-auto p-4">
                     <div className="flex items-center justify-between mb-4">
@@ -163,14 +237,23 @@ export default function ForumAgoraPage() {
                             <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
                                 💬 Agora
                             </h1>
-                            <p className="text-sm text-purple-400/70">브레인스토밍 · 토론 · 공론화</p>
+                            <p className="text-sm text-purple-400/70">직접민주주의 · 의결권 표결 & 위임 (Liquid Democracy)</p>
                         </div>
-                        <div className="text-right">
-                            <p className="text-xs text-slate-400">내 누적 획득</p>
-                            <p className="text-xl font-bold text-purple-400">
-                                <span className="text-2xl">{totalPmpEarned}</span>
-                                <span className="text-sm ml-1">PMP</span>
-                            </p>
+                        <div className="flex items-center gap-3">
+                            <button
+                                onClick={() => setIsDelegateModalOpen(true)}
+                                className="px-3.5 py-1.5 rounded-xl bg-indigo-900/60 hover:bg-indigo-800/80 border border-indigo-500/40 text-xs font-semibold text-indigo-300 transition flex items-center gap-1.5 shadow"
+                            >
+                                <UserCheck className="w-4 h-4 text-indigo-400" />
+                                {delegatedLeader ? `위임 중: ${delegatedLeader}` : "의결권 위임하기"}
+                            </button>
+                            <div className="text-right hidden sm:block">
+                                <p className="text-xs text-slate-400">내 PMG 의결권</p>
+                                <p className="text-xl font-bold text-indigo-400">
+                                    <span className="text-2xl">{userPmgPower}</span>
+                                    <span className="text-sm ml-1">PMG</span>
+                                </p>
+                            </div>
                         </div>
                     </div>
 
@@ -209,12 +292,17 @@ export default function ForumAgoraPage() {
                 </div>
             </div>
 
-            {/* Topic Grid - Consume 카드 스타일 */}
+            {/* Topic Grid */}
             <main className="max-w-4xl mx-auto px-4 pb-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <AnimatePresence mode="popLayout">
                         {filteredTopics.map((topic) => {
                             const statusInfo = getStatusStyle(topic.status);
+                            const agree = topic.agreeVotes || 100;
+                            const disagree = topic.disagreeVotes || 50;
+                            const totalV = agree + disagree;
+                            const agreeRatio = Math.round((agree / totalV) * 100);
+
                             return (
                                 <motion.div
                                     key={topic.id}
@@ -224,7 +312,6 @@ export default function ForumAgoraPage() {
                                     exit={{ opacity: 0, scale: 0.95 }}
                                     transition={{ duration: 0.2 }}
                                 >
-                                    {/* 라우팅 수정: /forum/agora/[type]/[topicId] */}
                                     <Link href={`/forum/agora/${topic.type}/${topic.id}`}>
                                         <Card className={`bg-slate-900/70 border-slate-800 hover:border-purple-700/50 transition-all cursor-pointer group overflow-hidden h-full ${topic.status === "concluded" ? "opacity-70" : ""
                                             }`}>
@@ -257,15 +344,9 @@ export default function ForumAgoraPage() {
                                                 <span className={`absolute top-2 right-2 px-2 py-0.5 rounded ${statusInfo.bg} text-white text-xs font-bold`}>
                                                     {statusInfo.text}
                                                 </span>
-                                                {topic.endDate && topic.status !== "concluded" && (
-                                                    <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/60 text-white text-xs flex items-center gap-1">
-                                                        <Clock className="w-3 h-3" />
-                                                        ~{topic.endDate}
-                                                    </div>
-                                                )}
                                             </div>
 
-                                            <CardContent className="p-4 space-y-2">
+                                            <CardContent className="p-4 space-y-3">
                                                 {/* 유형 & 작성자 */}
                                                 <div className="flex items-center gap-2 text-xs text-slate-500">
                                                     <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-900/30 text-purple-400">
@@ -280,16 +361,32 @@ export default function ForumAgoraPage() {
                                                     {topic.title}
                                                 </h3>
 
-                                                {/* 설명 */}
-                                                <p className="text-sm text-slate-400 line-clamp-2">{topic.description}</p>
+                                                {/* 찬반 게이지 프로그레스 바 */}
+                                                <div className="space-y-1 pt-1">
+                                                    <div className="flex justify-between text-[11px] font-semibold">
+                                                        <span className="text-emerald-400">찬성 {agreeRatio}%</span>
+                                                        <span className="text-pink-400">반대 {100 - agreeRatio}%</span>
+                                                    </div>
+                                                    <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden flex">
+                                                        <div className="bg-emerald-500 h-full transition-all" style={{ width: `${agreeRatio}%` }} />
+                                                        <div className="bg-pink-500 h-full transition-all" style={{ width: `${100 - agreeRatio}%` }} />
+                                                    </div>
+                                                </div>
 
-                                                {/* Stats */}
-                                                <div className="flex items-center justify-between pt-2 text-xs text-slate-500">
-                                                    <span>{topic.createdAt}</span>
-                                                    <span className="flex items-center gap-1 text-purple-400 font-medium">
-                                                        <Award className="w-3 h-3" />
-                                                        +{topic.pmpReward} PMP
-                                                    </span>
+                                                {/* 찬반 바로 투표 버튼 */}
+                                                <div className="grid grid-cols-2 gap-2 pt-2">
+                                                    <button
+                                                        onClick={(e) => handleVote(e, topic.id, "AGREE")}
+                                                        className="py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-800/60 text-emerald-300 text-xs font-bold transition flex items-center justify-center gap-1"
+                                                    >
+                                                        👍 찬성 투표
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleVote(e, topic.id, "DISAGREE")}
+                                                        className="py-1.5 rounded-lg bg-pink-950/60 hover:bg-pink-900 border border-pink-800/60 text-pink-300 text-xs font-bold transition flex items-center justify-center gap-1"
+                                                    >
+                                                        👎 반대 투표
+                                                    </button>
                                                 </div>
                                             </CardContent>
                                         </Card>
@@ -299,14 +396,70 @@ export default function ForumAgoraPage() {
                         })}
                     </AnimatePresence>
                 </div>
+            </main>
 
-                {filteredTopics.length === 0 && (
-                    <div className="text-center py-16 text-slate-500">
-                        <MessageSquare className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>검색 결과가 없습니다.</p>
+            {/* Delegation Modal */}
+            <AnimatePresence>
+                {isDelegateModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="bg-slate-900 border border-indigo-800/60 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4"
+                        >
+                            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <ShieldCheck className="w-5 h-5 text-indigo-400" /> Liquid Democracy 의결권 위임
+                                </h3>
+                                <button
+                                    onClick={() => setIsDelegateModalOpen(false)}
+                                    className="text-slate-400 hover:text-white text-sm"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleDelegateSubmit} className="space-y-4">
+                                <p className="text-xs text-slate-300">
+                                    보유하신 <strong className="text-indigo-400">{userPmgPower} PMG</strong> 의결권을 신뢰하는 정책 전문가나 대표 리더에게 일임하여 안건 표결 시 대리권을 부여합니다. (언제든지 철회 가능)
+                                </p>
+
+                                <div>
+                                    <label className="block text-xs font-semibold text-slate-400 mb-1">위임 대상 리더 선택</label>
+                                    <select
+                                        value={delegateTarget}
+                                        onChange={(e) => setDelegateTarget(e.target.value)}
+                                        className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                                    >
+                                        <option value="김OO 정책전문가">🏛️ 김OO 정책전문가 (청년주거 전문)</option>
+                                        <option value="환경시민연대 대표">🌱 환경시민연대 대표 (기후위기 전문)</option>
+                                        <option value="박OO 경제학 박사">📊 박OO 경제학 박사 (지역경제 전문)</option>
+                                    </select>
+                                </div>
+
+                                <div className="pt-2 flex items-center justify-end gap-2">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsDelegateModalOpen(false)}
+                                        className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"
+                                    >
+                                        취소
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isDelegating}
+                                        className="px-5 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white shadow disabled:opacity-50"
+                                    >
+                                        {isDelegating ? "위임 처리 중..." : "의결권 위임 완료"}
+                                    </button>
+                                </div>
+                            </form>
+                        </motion.div>
                     </div>
                 )}
-            </main>
+            </AnimatePresence>
         </div>
     );
 }
+
