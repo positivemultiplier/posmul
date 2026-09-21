@@ -34,20 +34,18 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, gameId, optionId, amount, userId } = body;
 
-    // 1. RSS 뉴스 수집 + AI 분석 게임 자동 생성 트리거
+    // 1. RSS 뉴스 수집 + AI 분석 게임 자동 생성 트리거 (단일 파이프라인 활용)
     if (action === "ingest-and-draft") {
-      const logs: string[] = [];
-
-      // Step A: RSS 가져오기
       const fetchRss = getFetchRssItemsUseCase();
       const rssRes = await fetchRss.execute({ category: "ALL" });
+      const logs: string[] = [];
+
       if (isFailure(rssRes)) {
         logs.push(`RSS fetch failed: ${rssRes.error.message}`);
       } else {
         logs.push(`RSS fetched: ${rssRes.data.fetchedCount} items from ${rssRes.data.sourceCount} sources`);
       }
 
-      // Step B: Gemini 초안/예측게임 자동 생성
       const draftUseCase = getCreatePredictionDraftUseCase();
       const draftRes = await draftUseCase.execute(5);
 
@@ -59,7 +57,7 @@ export async function POST(req: NextRequest) {
         success: true,
         message: "Pipeline completed successfully!",
         data: draftRes.data,
-        logs: [...logs, ...draftRes.data.logs],
+        logs: [...logs, ...(draftRes.data.logs || [])],
       });
     }
 

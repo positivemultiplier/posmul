@@ -14,7 +14,7 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
             throw new Error("GOOGLE_GEMINI_API_KEY is not set");
         }
         this.genAI = new GoogleGenerativeAI(process.env.GOOGLE_GEMINI_API_KEY);
-        this.model = this.genAI.getGenerativeModel({ model: "gemini-pro" });
+        this.model = this.genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
     }
 
     async classify(content: string): Promise<Result<ClassificationResult>> {
