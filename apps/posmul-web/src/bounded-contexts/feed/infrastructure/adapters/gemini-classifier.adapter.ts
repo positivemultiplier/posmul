@@ -101,6 +101,7 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
             "summary": "3-sentence summary of the content",
             "keywords": ["keyword1", "keyword2", "keyword3"],
             "predictionDraft": {
+                "category": "INVEST | SPORTS | ENTERTAINMENT | POLITICS",
                 "resolutionCriteria": "Criteria for prediction settlement",
                 "options": ["Option A", "Option B"]
             } (only if classification is PREDICTION),
@@ -137,6 +138,7 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
                     summary: fallbackSummary,
                     keywords: ["fallback", "prediction"],
                     predictionDraft: {
+                        category: "POLITICS",
                         resolutionCriteria: "This is a fallback resolution criteria.",
                         options: ["Yes", "No"]
                     }

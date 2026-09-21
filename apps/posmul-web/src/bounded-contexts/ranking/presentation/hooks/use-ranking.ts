@@ -41,7 +41,7 @@ export interface RankingMeta {
 /**
  * 통합 랭킹 조회 hook
  */
-export function useRanking(initialCategory: RankingCategory = 'overall') {
+export function useRanking(initialCategory: RankingCategory = 'expect') {
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [currentUser, setCurrentUser] = useState<RankingEntry | null>(null);
   const [meta, setMeta] = useState<RankingMeta | null>(null);
@@ -165,11 +165,11 @@ export function useRanking(initialCategory: RankingCategory = 'overall') {
 
 // 카테고리 정보
 export const RANKING_CATEGORIES: { id: RankingCategory; label: string; icon: string; description: string }[] = [
-  { id: 'overall', label: '종합', icon: '🏆', description: '모든 활동 점수 합산' },
-  { id: 'forum', label: 'Forum', icon: '💬', description: '토론 및 글 작성 PMP' },
-  { id: 'consume', label: 'Consume', icon: '💳', description: '소비 활동 PMC' },
-  { id: 'expect', label: 'Expect', icon: '🎯', description: '예측 게임 PMC' },
-  { id: 'donation', label: 'Donation', icon: '❤️', description: '기부 PMC' },
+  { id: 'expect', label: '🔮 예측의 신 ("내가 그랬제!")', icon: '🔮', description: '미래 예측 적중 및 통찰력 랭킹' },
+  { id: 'overall', label: '🏆 종합', icon: '🏆', description: '모든 활동 점수 합산' },
+  { id: 'donation', label: '❤️ 기부 엔젤', icon: '❤️', description: '공익 기부 PMC 랭킹' },
+  { id: 'forum', label: '💬 공론장', icon: '💬', description: '토론 및 이슈 리포트 PMP' },
+  { id: 'consume', label: '💳 소비', icon: '💳', description: '소비 활동 PMC' },
 ];
 
 export const RANKING_PERIODS: { id: RankingPeriod; label: string; icon: string }[] = [

@@ -25,13 +25,13 @@ export const BettingDistributionChart = ({ data, isDarkMode = true }: BettingDis
   return (
     <DonutChart
       data={chartData}
-      height={300}
-      innerRadius={60}
-      outerRadius={90}
+      height={170}
+      innerRadius={45}
+      outerRadius={70}
       centerText={`${(totalAmount / 10000).toFixed(1)}만`}
       centerSubText="총 베팅액"
       showTooltip={true}
-      showLegend={false} // 범례는 외부에서 커스텀하게 보여주는 경우가 많음
+      showLegend={false}
       isDarkMode={isDarkMode}
       animate={true}
     />

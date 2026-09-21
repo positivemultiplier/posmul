@@ -85,6 +85,16 @@ export async function GET(request: NextRequest) {
         : { error: (billsRes as any).error?.message || "Failed" };
     }
 
+    // 수집 완료 후 자동으로 AI 예측 게임 카드로 승격/생성
+    try {
+      const { getCreatePredictionDraftUseCase } = await import("@/bounded-contexts/feed/di-container");
+      const draftUseCase = getCreatePredictionDraftUseCase();
+      const draftRes = await draftUseCase.execute(5);
+      results.autoCreatedGames = draftRes.success ? draftRes.data : { error: "Failed to create drafts" };
+    } catch (draftErr: any) {
+      results.autoCreatedGames = { error: draftErr?.message || "Auto creation skipped" };
+    }
+
     return NextResponse.json({
       success: true,
       timestamp: new Date().toISOString(),

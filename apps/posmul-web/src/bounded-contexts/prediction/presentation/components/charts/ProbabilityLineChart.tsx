@@ -124,16 +124,16 @@ export const ProbabilityLineChart = ({ data, lines, isDarkMode = true }: Probabi
     }
 
     return (
-        <div className="w-full">
+        <div className="w-full flex flex-col justify-between h-full">
             {/* Polymarket 스타일 범례 (차트 상단) */}
             <PolyLegend lines={chartLines} data={data} />
 
             {/* 차트 본체 */}
-            <div className="relative">
-                <ResponsiveContainer width="100%" height={280}>
+            <div className="relative w-full h-48 md:h-52">
+                <ResponsiveContainer width="100%" height="100%">
                     <RechartsLineChart
                         data={data}
-                        margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                        margin={{ top: 10, right: 15, left: -20, bottom: 20 }}
                     >
                         <defs>
                             {/* 각 라인별 그라디언트 (glow 효과) */}

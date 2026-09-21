@@ -14,6 +14,7 @@ export interface DraftResult {
     summary: string; // 3줄 요약
     keywords: string[]; // 핵심 키워드 3~5개
     predictionDraft?: {
+        category?: string;
         resolutionCriteria: string; // 판정 기준
         options: string[]; // 선택지 (예/아니오 등)
     };

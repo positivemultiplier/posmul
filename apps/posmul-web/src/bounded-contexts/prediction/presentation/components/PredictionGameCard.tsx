@@ -670,118 +670,121 @@ const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
 
   return (
     <Card
-      className={getCardClassName({ myPrediction, className })}
+      className={`group relative overflow-hidden rounded-2xl border transition-all duration-300 ${
+        myPrediction
+          ? 'border-purple-500/60 bg-gradient-to-b from-purple-950/30 via-slate-900/90 to-slate-950 shadow-xl shadow-purple-500/10 ring-1 ring-purple-500/40'
+          : 'border-slate-800 bg-slate-900/70 hover:bg-slate-900/90 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-500/10'
+      } ${className ?? ''}`}
     >
-      {/* My Prediction Badge */}
+      {/* Top Gradient Banner / Image Accent */}
+      <div className="h-2 w-full bg-gradient-to-r from-blue-500 via-purple-500 to-amber-500 opacity-80 group-hover:opacity-100 transition-opacity" />
+
+      {/* Participation Badge */}
       <MyPredictionBadgeSection myPrediction={myPrediction} />
 
-      {/* Background Pattern */}
-      <div
-        className="absolute inset-0 opacity-[0.03] pointer-events-none"
-        style={{
-          backgroundImage: "url('/images/prediction-card-pattern.png')",
-          backgroundSize: '300px',
-          backgroundRepeat: 'repeat'
-        }}
-      />
+      <div className="p-5 space-y-4">
+        {/* Error Display */}
+        <ErrorSection error={error} onDismiss={() => setError(null)} />
 
-      {/* Error Display */}
-      <ErrorSection error={error} onDismiss={() => setError(null)} />
-
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">
-            {getImportanceIcon(game.gameImportanceScore)}
+        {/* Card Header & Status */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-blue-950/80 text-blue-300 border border-blue-800/50 flex items-center gap-1">
+              <span>{getPredictionTypeIcon(game.predictionType)}</span>
+              <span>{getPredictionTypeLabel(game.predictionType)}</span>
+            </span>
+            {getStatusBadge(game.status)}
+          </div>
+          <span className="text-xs font-semibold text-amber-400/90 bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-800/40">
+            ⏳ {calculateTimeRemaining(game.endTime)}
           </span>
-          <div>
-            <h3 className="font-semibold text-gray-900 text-lg leading-tight">
-              {game.title}
-            </h3>
-            <div className="flex items-center gap-2 mt-1">
-              {getStatusBadge(game.status)}
-              <Badge variant="outline" className="text-xs">
-                {getPredictionTypeIcon(game.predictionType)} {getPredictionTypeLabel(game.predictionType)}
-              </Badge>
-              <span className="text-xs text-gray-500">
-                {calculateTimeRemaining(game.endTime)}
+        </div>
+
+        {/* Title */}
+        <h3 className="font-extrabold text-base md:text-lg text-white group-hover:text-blue-300 transition-colors line-clamp-2 leading-snug">
+          {game.title}
+        </h3>
+
+        {/* Description */}
+        {game.description && (
+          <p className="text-slate-400 text-xs line-clamp-2 leading-relaxed">
+            {game.description}
+          </p>
+        )}
+
+        {/* Polymarket Style Probability Bar */}
+        {game.options && game.options.length >= 2 && (
+          <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-2">
+            <div className="flex justify-between items-center text-xs font-bold">
+              <span className="text-blue-400 truncate max-w-[45%]">
+                {game.options[0]?.text || '찬성 (YES)'} {( (game.options[0]?.currentOdds || 0.5) * 100 ).toFixed(0)}%
+              </span>
+              <span className="text-rose-400 truncate max-w-[45%] text-right">
+                {game.options[1]?.text || '반대 (NO)'} {( (game.options[1]?.currentOdds || 0.5) * 100 ).toFixed(0)}%
               </span>
             </div>
+            {/* Split Progress Bar */}
+            <div className="w-full h-2.5 bg-slate-800 rounded-full overflow-hidden flex p-[1px]">
+              <div
+                className="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-l-full transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(5, (game.options[0]?.currentOdds || 0.5) * 100))}%` }}
+              />
+              <div
+                className="h-full bg-gradient-to-r from-rose-500 to-pink-500 rounded-r-full transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(5, (1 - (game.options[0]?.currentOdds || 0.5)) * 100))}%` }}
+              />
+            </div>
           </div>
-        </div>
-      </div>
+        )}
 
-      {/* Description */}
-      <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-        {game.description}
-      </p>
-
-      {/* Economics Info */}
-      <div className="bg-gray-50 rounded-lg p-3 mb-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <span className="text-gray-500">💰 상금 풀</span>
-            <div className="font-medium text-purple-600">
-              {formatCurrency(game.allocatedPrizePool)} PMC
-            </div>
+        {/* MoneyPool & Stakes Info Bar */}
+        <div className="flex items-center justify-between pt-2 border-t border-slate-800/70 text-xs">
+          <div className="flex items-center gap-1.5 text-amber-300 font-bold">
+            <span className="text-sm">💎</span>
+            <span>Moneypool: {formatCurrency(game.allocatedPrizePool || game.totalStake || 0)} PMC</span>
           </div>
-          <div>
-            <span className="text-gray-500">🎯 참여 범위</span>
-            <div className="font-medium text-blue-600">
-              {formatCurrency(game.minimumStake)} -{" "}
-              {formatCurrency(game.maximumStake)} PMP
-            </div>
-          </div>
-          <div>
-            <span className="text-gray-500">👥 참여자</span>
-            <div className="font-medium">
-              {game.currentParticipants}명
-              {game.maxParticipants && ` / ${game.maxParticipants}명`}
-            </div>
-          </div>
-          <div>
-            <span className="text-gray-500">📈 총 베팅액</span>
-            <div className="font-medium text-green-600">
-              {formatCurrency(game.totalStake)} PMP
-            </div>
+          <div className="text-slate-400 font-medium">
+            👥 {game.currentParticipants}명 참여
           </div>
         </div>
 
-        {/* Progress Bar */}
-        <ProgressBarSection
-          maxParticipants={game.maxParticipants}
-          progressPercentage={getProgressPercentage()}
+        {/* My Prediction Info (if participated) */}
+        <MyPredictionInfoSection myPrediction={myPrediction} formatCurrency={formatCurrency} />
+
+        {/* Options & Participation Section */}
+        <OptionsSection
+          predictionType={game.predictionType}
+          optionsLength={game.options.length}
+          isExpanded={isExpanded}
+          onToggleExpanded={() => setIsExpanded(!isExpanded)}
+          renderOptions={renderOptions}
         />
+
+        <ParticipationSection
+          game={game}
+          userId={userId}
+          myPrediction={myPrediction}
+          stakeAmount={stakeAmount}
+          isLoading={isLoading}
+          isValidSelection={isValidSelection()}
+          selectedOptionsCount={selectedOptions.length}
+          onStakeAmountChange={(next) => setStakeAmount(next)}
+          onParticipate={handleParticipate}
+          formatCurrency={formatCurrency}
+        />
+
+        <LoginRequiredSection status={game.status} userId={userId} />
+
+        {/* Context Shortcuts: Debate & Donation */}
+        <div className="flex items-center justify-between pt-2 text-[11px] font-semibold text-slate-400 border-t border-slate-800/50">
+          <span className="hover:text-blue-300 transition-colors flex items-center gap-1 cursor-pointer">
+            💬 토론 참여 (+10 PMP)
+          </span>
+          <span className="hover:text-rose-300 transition-colors flex items-center gap-1 cursor-pointer">
+            🎁 기부 연계 (PMC)
+          </span>
+        </div>
       </div>
-
-      {/* Options Section */}
-      <OptionsSection
-        predictionType={game.predictionType}
-        optionsLength={game.options.length}
-        isExpanded={isExpanded}
-        onToggleExpanded={() => setIsExpanded(!isExpanded)}
-        renderOptions={renderOptions}
-      />
-
-      {/* My Prediction Info (if participated) */}
-      <MyPredictionInfoSection myPrediction={myPrediction} formatCurrency={formatCurrency} />
-
-      {/* Participation Section */}
-      <ParticipationSection
-        game={game}
-        userId={userId}
-        myPrediction={myPrediction}
-        stakeAmount={stakeAmount}
-        isLoading={isLoading}
-        isValidSelection={isValidSelection()}
-        selectedOptionsCount={selectedOptions.length}
-        onStakeAmountChange={(next) => setStakeAmount(next)}
-        onParticipate={handleParticipate}
-        formatCurrency={formatCurrency}
-      />
-
-      {/* Login Required */}
-      <LoginRequiredSection status={game.status} userId={userId} />
     </Card>
   );
 };

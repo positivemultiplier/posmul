@@ -79,11 +79,27 @@ export class CreatePredictionDraftUseCase {
                 // 3. Save Draft (To Prediction Context or Forum Context)
                 if (item.aiClassification === ContentClassification.PREDICTION && draft.predictionDraft) {
                     const slug = `${draft.title.substring(0, 20).replace(/\s+/g, '-').toLowerCase()}-${Date.now()}`;
+                    
+                    // Supabase prediction_category enum validation: 'INVEST' | 'SPORTS' | 'ENTERTAINMENT' | 'POLITICS' | 'USER_PROPOSED'
+                    let targetCategory = 'POLITICS';
+                    if (draft.predictionDraft.category) {
+                        const upper = draft.predictionDraft.category.toUpperCase();
+                        if (['INVEST', 'SPORTS', 'ENTERTAINMENT', 'POLITICS', 'USER_PROPOSED'].includes(upper)) {
+                            targetCategory = upper;
+                        } else if (upper.includes('SPORTS') || upper.includes('축구') || upper.includes('야구')) {
+                            targetCategory = 'SPORTS';
+                        } else if (upper.includes('INVEST') || upper.includes('STOCK') || upper.includes('주식') || upper.includes('경제')) {
+                            targetCategory = 'INVEST';
+                        } else if (upper.includes('ENTERTAINMENT') || upper.includes('연예') || upper.includes('영화')) {
+                            targetCategory = 'ENTERTAINMENT';
+                        }
+                    }
+
                     const { error } = await supabaseAdmin.schema('prediction').from('prediction_games').insert({
                         title: draft.title,
                         description: `${draft.summary}\n\n[결과 판정 기준]\n${draft.predictionDraft.resolutionCriteria}`,
-                        status: 'DRAFT', // ENUM 값 준수 (DRAFT, ACTIVE 등) -> Schema default is DRAFT
-                        category: 'POLITICS',
+                        status: 'ACTIVE', // 즉시 활성 상태로 피드에 자동 노출
+                        category: targetCategory,
                         creator_id: this.SYSTEM_USER_ID,
                         prediction_type: 'BINARY',
                         game_options: { options: ["Yes", "No"] },

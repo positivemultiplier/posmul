@@ -63,9 +63,10 @@ function HallOfFamePodium({
     switch (cat) {
       case 'forum':
         return 'PMP';
+      case 'expect':
+        return 'PMC (적중 보상)';
       case 'donation':
       case 'consume':
-      case 'expect':
         return 'PMC';
       default:
         return '점';
@@ -79,16 +80,22 @@ function HallOfFamePodium({
       <div className="text-center mb-8">
         <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold mb-2">
           <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-          <span>HALL OF FAME · {regionText} 명예의 전당</span>
+          <span>
+            {category === 'expect'
+              ? '🔮 PREDICTION MASTERS · "내가 그랬제!" 명예의 전당'
+              : `HALL OF FAME · ${regionText} 명예의 전당`}
+          </span>
         </div>
         <h2 className="text-2xl md:text-3xl font-black text-white tracking-tight">
-          {regionText}를 이끄는{' '}
+          {regionText}를 대표하는{' '}
           <span className="bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-500 bg-clip-text text-transparent">
-            Top 3 명예 시민
+            {category === 'expect' ? 'Top 3 예측의 신' : 'Top 3 명예 시민'}
           </span>
         </h2>
         <p className="text-xs md:text-sm text-slate-400 mt-1">
-          풀뿌리 자치와 집단지성, 선한 기부로 우리 동네 긍정승수를 높이는 선구자들입니다.
+          {category === 'expect'
+            ? '"내 말이 맞았잖아!" 정확한 직관과 통찰력으로 미래 이슈를 적중시킨 명사수들입니다.'
+            : '풀뿌리 자치와 집단지성, 선한 기부로 우리 동네 긍정승수를 높이는 선구자들입니다.'}
         </p>
       </div>
 
@@ -306,7 +313,7 @@ function RankingCard({
             {entry.score.toLocaleString()}
           </div>
           <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
-            {category === 'forum' ? 'PMP 활동' : category === 'donation' ? '기부 PMC' : '종합 점수'}
+            {category === 'expect' ? '🔮 예측 적중 PMC' : category === 'forum' ? 'PMP 활동' : category === 'donation' ? '기부 PMC' : '종합 점수'}
           </div>
         </div>
       </div>
@@ -390,7 +397,7 @@ export default function RankingPage() {
     changeCategory,
     changeRegion,
     changeJobGroup,
-  } = useRanking('overall');
+  } = useRanking('expect');
 
   const [showDetails, setShowDetails] = useState(true);
 
