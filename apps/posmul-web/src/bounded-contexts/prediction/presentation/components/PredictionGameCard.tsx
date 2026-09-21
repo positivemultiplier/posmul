@@ -69,15 +69,27 @@ const participateInPredictionGame = async (args: {
 }): Promise<void> => {
   const { gameId, predictionData, stakeAmount } = args;
 
-  const { error } = await supabase.rpc("participate_in_prediction_game", {
-    p_game_id: gameId,
-    p_prediction_data: predictionData,
-    p_bet_amount: stakeAmount,
-    p_confidence_level: 50, // 기본값 설정 (UI에 슬라이더 추가 가능)
+  const selectedOptionId =
+    "selectedOptionId" in predictionData && predictionData.selectedOptionId
+      ? predictionData.selectedOptionId
+      : "selectedOptionIds" in predictionData && predictionData.selectedOptionIds[0]
+      ? predictionData.selectedOptionIds[0]
+      : "Yes";
+
+  const response = await fetch("/api/dev/pipeline", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "participate",
+      gameId,
+      optionId: selectedOptionId,
+      amount: stakeAmount,
+    }),
   });
 
-  if (error) {
-    throw new Error(error.message);
+  const data = await response.json();
+  if (!data.success) {
+    throw new Error(data.error || "Prediction participation failed");
   }
 };
 
@@ -240,7 +252,7 @@ const ParticipationSection = (props: {
     formatCurrency,
   } = props;
 
-  const isVisible = game.status === GameStatus.ACTIVE && Boolean(userId) && !myPrediction;
+  const isVisible = game.status === GameStatus.ACTIVE && !myPrediction;
   if (!isVisible) return null;
 
   const isRanking = game.predictionType === PredictionType.RANKING;

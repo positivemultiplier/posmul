@@ -8,6 +8,7 @@ export type PredictionGameCardModel = {
   href?: string;
   title: string;
   description: string;
+  category?: string;
   predictionType: PredictionType;
   options: Array<{
     id: string;
@@ -168,10 +169,18 @@ export const mapDbGameStatus = (value: unknown): GameStatus => {
 };
 
 const mapGameOptions = (value: unknown): PredictionGameCardModel["options"] => {
+  if (isRecord(value) && Array.isArray(value.options)) {
+    return value.options.map((opt: any, idx: number) => ({
+      id: typeof opt === "string" ? opt : `opt-${idx + 1}`,
+      text: typeof opt === "string" ? opt : String(opt),
+      currentOdds: 0.5,
+    }));
+  }
+
   if (!Array.isArray(value)) {
     return [
-      { id: "1", text: "예", currentOdds: 0.5 },
-      { id: "2", text: "아니오", currentOdds: 0.5 },
+      { id: "Yes", text: "예 (Yes)", currentOdds: 0.5 },
+      { id: "No", text: "아니오 (No)", currentOdds: 0.5 },
     ];
   }
 
@@ -210,8 +219,8 @@ const mapGameOptions = (value: unknown): PredictionGameCardModel["options"] => {
   return mapped.length
     ? mapped
     : [
-        { id: "1", text: "예", currentOdds: 0.5 },
-        { id: "2", text: "아니오", currentOdds: 0.5 },
+        { id: "Yes", text: "예 (Yes)", currentOdds: 0.5 },
+        { id: "No", text: "아니오 (No)", currentOdds: 0.5 },
       ];
 };
 
@@ -240,6 +249,7 @@ export const mapPredictionGameRowToCardModel = (
     href,
     title: row.title,
     description: row.description,
+    category: typeof row.category === "string" ? row.category : undefined,
     predictionType: mapDbPredictionType(row.prediction_type),
     options: mapGameOptions(row.game_options),
     startTime: row.registration_start ?? defaultStart,

@@ -116,6 +116,38 @@ export default function DevDashboardPage() {
     }
   };
 
+  // 4. 승부 정산 제출 처리
+  const handleSettleSubmit = async (game: PredictionGame, winningOption: string) => {
+    const targetGameId = game.game_id || game.id;
+    if (!targetGameId) return;
+
+    if (!confirm(`'${winningOption}' 옵션을 승리로 확정하고 정산을 완료하시겠습니까?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/dev/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "settle",
+          gameId: targetGameId,
+          winningOption,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert(`🏆 정산 완료! (총 ${data.settledCount}건 정산 완료, 적중 유저 ${data.winnerCount}명)`);
+        fetchGames();
+      } else {
+        alert(`❌ 정산 실패: ${data.error}`);
+      }
+    } catch (e: any) {
+      alert(`Error settling game: ${e.message}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100 p-8 font-sans">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -205,9 +237,16 @@ export default function DevDashboardPage() {
                   >
                     <div>
                       <div className="flex justify-between items-start gap-2 mb-3">
-                        <span className="px-2.5 py-1 bg-indigo-950 text-indigo-400 border border-indigo-800/60 rounded text-xs font-semibold">
-                          {game.category || "GENERAL"}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-1 bg-indigo-950 text-indigo-400 border border-indigo-800/60 rounded text-xs font-semibold">
+                            {game.category || "GENERAL"}
+                          </span>
+                          {game.status === "SETTLED" && (
+                            <span className="px-2.5 py-1 bg-amber-950 text-amber-400 border border-amber-800/60 rounded text-xs font-semibold">
+                              🏆 정산 완료
+                            </span>
+                          )}
+                        </div>
                         <span className="text-xs text-slate-400">
                           {new Date(game.created_at).toLocaleString("ko-KR")}
                         </span>
@@ -219,7 +258,7 @@ export default function DevDashboardPage() {
                       </p>
                     </div>
 
-                    {/* Betting Controls */}
+                    {/* Betting & Settle Controls */}
                     <div className="mt-4 pt-4 border-t border-slate-700/60 space-y-3">
                       <div className="text-xs font-semibold text-slate-300">🎯 베팅 선택지</div>
 
@@ -263,11 +302,36 @@ export default function DevDashboardPage() {
                         />
                         <button
                           onClick={() => handleBetSubmit(game)}
-                          disabled={betLoading === targetGameId}
-                          className="whitespace-nowrap px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-bold transition shadow-md shadow-emerald-900/30"
+                          disabled={betLoading === targetGameId || game.status === "SETTLED"}
+                          className={`whitespace-nowrap px-4 py-2 text-white rounded-lg text-xs font-bold transition shadow-md ${
+                            game.status === "SETTLED"
+                              ? "bg-slate-700 cursor-not-allowed"
+                              : "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30"
+                          }`}
                         >
-                          {betLoading === targetGameId ? "처리 중..." : "참여하기"}
+                          {betLoading === targetGameId ? "처리 중..." : game.status === "SETTLED" ? "마감됨" : "참여하기"}
                         </button>
+                      </div>
+
+                      {/* Settle Section */}
+                      <div className="pt-2 border-t border-slate-800 flex justify-between items-center text-xs">
+                        <span className="text-slate-400">🏆 승부 정산 테스트:</span>
+                        <div className="flex gap-1">
+                          {options.map((opt, idx) => (
+                            <button
+                              key={`settle-${targetGameId}-${opt}-${idx}`}
+                              onClick={() => handleSettleSubmit(game, opt)}
+                              disabled={game.status === "SETTLED"}
+                              className={`px-2 py-1 text-xs rounded border transition ${
+                                game.status === "SETTLED"
+                                  ? "bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed"
+                                  : "bg-amber-950 hover:bg-amber-900 border-amber-800 text-amber-300"
+                              }`}
+                            >
+                              [{opt}] 승리 확정
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
