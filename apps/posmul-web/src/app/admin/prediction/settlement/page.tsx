@@ -1,160 +1,222 @@
-/**
- * 정산 관리 페이지 (관리자)
- * 
- * 게임 정산 상태 확인 및 수동 정산 처리
- */
+"use client";
 
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { ArrowLeft, Award, CheckCircle2, Clock, RefreshCw, Trophy, Users, Coins } from "lucide-react";
 
-// 임시 데이터
-const pendingSettlements = [
-    { id: "1", title: "어제 코스피 등락", endedAt: "2026-01-12 18:00", participants: 156, totalStake: "890,000 PMP", source: "alpha-vantage" },
-    { id: "2", title: "EPL 맨유 vs 첼시", endedAt: "2026-01-12 23:00", participants: 234, totalStake: "1,250,000 PMP", source: "football-data" },
-];
-
-const completedSettlements = [
-    { id: "3", title: "비트코인 20시 등락", settledAt: "2026-01-12 21:30", result: "상승", winners: 89, distributed: "450,000 PMC" },
-    { id: "4", title: "삼성전자 Q4 실적", settledAt: "2026-01-10 18:00", result: "10조 초과", winners: 342, distributed: "2,890,000 PMC" },
-    { id: "5", title: "챔피언스리그 결승", settledAt: "2026-01-08 05:00", result: "레알 마드리드 승", winners: 567, distributed: "4,560,000 PMC" },
-];
-
-export default function SettlementPage() {
-    return (
-        <div className="min-h-screen bg-gray-100">
-            <header className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <h1 className="text-2xl font-bold text-gray-900">💰 정산 관리</h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        게임 결과 확정 및 상금 분배
-                    </p>
-                </div>
-            </header>
-
-            <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-                {/* 정산 대기 */}
-                <section className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <span className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></span>
-                        정산 대기 ({pendingSettlements.length})
-                    </h2>
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">게임명</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">종료 시간</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">참여자</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">총 베팅</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">데이터 소스</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">액션</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {pendingSettlements.map((game) => (
-                                    <tr key={game.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-4 font-medium text-gray-900">{game.title}</td>
-                                        <td className="px-4 py-4 text-gray-600">{game.endedAt}</td>
-                                        <td className="px-4 py-4 text-gray-600">{game.participants}명</td>
-                                        <td className="px-4 py-4 text-gray-600">{game.totalStake}</td>
-                                        <td className="px-4 py-4">
-                                            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs">
-                                                {game.source}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4 space-x-2">
-                                            <button className="px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700">
-                                                자동 정산
-                                            </button>
-                                            <button className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700">
-                                                수동 정산
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                {/* 정산 완료 */}
-                <section className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                        정산 완료
-                    </h2>
-
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">게임명</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">정산 시간</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">결과</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">당첨자</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">분배 금액</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">액션</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {completedSettlements.map((game) => (
-                                    <tr key={game.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-4 font-medium text-gray-900">{game.title}</td>
-                                        <td className="px-4 py-4 text-gray-600">{game.settledAt}</td>
-                                        <td className="px-4 py-4">
-                                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm">
-                                                {game.result}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4 text-gray-600">{game.winners}명</td>
-                                        <td className="px-4 py-4 text-gray-600">{game.distributed}</td>
-                                        <td className="px-4 py-4">
-                                            <button className="text-blue-600 hover:underline text-sm">상세보기</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-
-                {/* 정산 통계 */}
-                <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <StatCard title="총 정산 건수" value="156" suffix="건" color="blue" />
-                    <StatCard title="총 분배 금액" value="12,450,000" suffix="PMC" color="green" />
-                    <StatCard title="평균 당첨률" value="42.3" suffix="%" color="purple" />
-                    <StatCard title="대기 중" value="2" suffix="건" color="yellow" />
-                </section>
-            </main>
-        </div>
-    );
+interface GameSettlementItem {
+  game_id: string;
+  id?: string;
+  title: string;
+  category: string;
+  status: string;
+  game_options?: { options: string[] };
+  created_at: string;
+  actual_result?: { winningOption?: string };
 }
 
-function StatCard({
-    title,
-    value,
-    suffix,
-    color,
-}: {
-    title: string;
-    value: string;
-    suffix: string;
-    color: "blue" | "green" | "purple" | "yellow";
-}) {
-    const colors = {
-        blue: "text-blue-600",
-        green: "text-green-600",
-        purple: "text-purple-600",
-        yellow: "text-yellow-600",
-    };
+export default function PredictionSettlementDashboardPage() {
+  const [games, setGames] = useState<GameSettlementItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [settlingGameId, setSettlingGameId] = useState<string | null>(null);
 
-    return (
-        <div className="bg-white rounded-lg shadow p-6">
-            <p className="text-sm text-gray-500">{title}</p>
-            <p className="mt-2">
-                <span className={`text-3xl font-bold ${colors[color]}`}>{value}</span>
-                <span className="text-gray-500 ml-1">{suffix}</span>
-            </p>
+  // 게임 목록 조회
+  const fetchGames = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/dev/pipeline");
+      const data = await res.json();
+      if (data.success) {
+        setGames(data.games || []);
+      } else {
+        alert(`Failed to fetch games: ${data.error}`);
+      }
+    } catch (e: any) {
+      alert(`Error fetching games: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchGames();
+  }, []);
+
+  // 정산 처리
+  const handleSettle = async (gameId: string, winningOption: string) => {
+    if (!confirm(`'${winningOption}' 옵션을 최종 승리로 확정하고 정산을 집행하시겠습니까?`)) {
+      return;
+    }
+
+    setSettlingGameId(gameId);
+
+    try {
+      const res = await fetch("/api/dev/pipeline", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "settle",
+          gameId,
+          winningOption,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert(`🏆 정산 완료! (총 ${data.settledCount}건 베팅 정산 완료, 적중 유저 ${data.winnerCount}명)`);
+        fetchGames();
+      } else {
+        alert(`❌ 정산 실패: ${data.error}`);
+      }
+    } catch (e: any) {
+      alert(`Error settling: ${e.message}`);
+    } finally {
+      setSettlingGameId(null);
+    }
+  };
+
+  const activeGames = games.filter((g) => g.status === "ACTIVE");
+  const settledGames = games.filter((g) => g.status === "SETTLED");
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans">
+      <div className="max-w-6xl mx-auto space-y-8">
+        
+        {/* Navigation Top */}
+        <div className="flex justify-between items-center border-b border-slate-800 pb-4">
+          <Link
+            href="/admin/prediction"
+            className="text-xs font-semibold text-slate-400 hover:text-slate-100 transition flex items-center gap-1.5"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> /admin/prediction 관리자로 돌아가기
+          </Link>
+          <span className="text-xs text-slate-500 font-mono">PREDICTION SETTLEMENT CENTER</span>
         </div>
-    );
+
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-orange-300 to-yellow-400 flex items-center gap-2">
+              <Trophy className="w-8 h-8 text-amber-400" />
+              상세 승부 정산 및 배당금 집행 센터
+            </h1>
+            <p className="text-slate-400 text-sm mt-1">
+              마감된 예측 게임의 최종 승리 옵션을 판정하고, 적중 유저에게 배당금(PMC/PMP) 포인트를 집행합니다.
+            </p>
+          </div>
+
+          <button
+            onClick={fetchGames}
+            disabled={loading}
+            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-800 flex items-center gap-1.5 shadow-md"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-amber-400" : ""}`} />
+            {loading ? "불러오는 중..." : "목록 새로고침"}
+          </button>
+        </div>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-amber-950/80 text-amber-400 border border-amber-800/60">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-xs text-slate-400">정산 대기 중인 게임</div>
+              <div className="text-2xl font-black text-amber-400">{activeGames.length}개</div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-emerald-950/80 text-emerald-400 border border-emerald-800/60">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-xs text-slate-400">정산 완료된 게임</div>
+              <div className="text-2xl font-black text-emerald-400">{settledGames.length}개</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Games Settlement List */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-slate-200 flex items-center gap-2">
+            📊 예측 게임 정산 관리 목록 ({games.length}개)
+          </h2>
+
+          <div className="space-y-4">
+            {games.map((game, idx) => {
+              const gId = game.game_id || game.id || `game-${idx}`;
+              const options = game.game_options?.options || ["Yes", "No"];
+              const isSettled = game.status === "SETTLED";
+              const winningOption = game.actual_result?.winningOption;
+
+              return (
+                <div
+                  key={gId}
+                  className={`bg-slate-900 border rounded-2xl p-6 transition shadow-lg ${
+                    isSettled ? "border-slate-800 bg-slate-900/60" : "border-amber-900/40 hover:border-amber-500/50"
+                  }`}
+                >
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800/80 pb-4 mb-4">
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="px-2.5 py-1 bg-indigo-950 text-indigo-400 border border-indigo-800/60 rounded-lg text-xs font-semibold">
+                          {game.category || "GENERAL"}
+                        </span>
+                        {isSettled ? (
+                          <span className="px-2.5 py-1 bg-amber-950 text-amber-400 border border-amber-800/60 rounded-lg text-xs font-semibold flex items-center gap-1">
+                            <Award className="w-3.5 h-3.5" /> 승부 정산 완료 (결과: '{winningOption}')
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800/60 rounded-lg text-xs font-semibold flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5" /> 진행 중 / 정산 가능
+                          </span>
+                        )}
+                      </div>
+                      <h3 className="text-lg font-bold text-slate-100">{game.title}</h3>
+                    </div>
+
+                    <div className="text-xs text-slate-500 font-mono">
+                      생성일: {new Date(game.created_at).toLocaleString("ko-KR")}
+                    </div>
+                  </div>
+
+                  {/* Options Settlement Execution Panel */}
+                  <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-950/80 p-4 rounded-xl border border-slate-800">
+                    <div className="text-xs text-slate-400">
+                      <span className="font-semibold text-slate-200">정산 집행:</span> 해당 옵션을 클릭하면 즉시 승리로 확정하고 적중 유저에게 보상을 집행합니다.
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {options.map((opt, optIdx) => {
+                        const isWinOpt = isSettled && winningOption === opt;
+
+                        return (
+                          <button
+                            key={optIdx}
+                            onClick={() => handleSettle(gId, opt)}
+                            disabled={isSettled || settlingGameId === gId}
+                            className={`px-4 py-2 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 shadow ${
+                              isSettled
+                                ? isWinOpt
+                                  ? "bg-amber-500 text-slate-950 border-amber-400"
+                                  : "bg-slate-900 border-slate-800 text-slate-600 cursor-not-allowed"
+                                : "bg-amber-950 hover:bg-amber-900 border-amber-800 text-amber-300"
+                            }`}
+                          >
+                            {isWinOpt ? "🏆 [승리 옵션 확정됨]" : `[${opt}] 승리로 정산`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -185,14 +185,28 @@ export default function AdminPredictionDashboard() {
               AI 뉴스 피드 자동 수집 ➔ 예측 게임 생성 ➔ 베팅 모니터링 및 승부 정산(Settlement) 통합 파이프라인
             </p>
           </div>
-          <button
-            onClick={fetchGames}
-            disabled={loading}
-            className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-800 flex items-center gap-1.5 shadow-md"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-indigo-400" : ""}`} />
-            {loading ? "목록 불러오는 중..." : "목록 새로고침"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/prediction/games/create"
+              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md shadow-indigo-600/30"
+            >
+              + 새 게임 생성
+            </Link>
+            <Link
+              href="/admin/prediction/settlement"
+              className="px-4 py-2 bg-amber-950 hover:bg-amber-900 border border-amber-800 text-amber-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md"
+            >
+              🏆 정산 센터
+            </Link>
+            <button
+              onClick={fetchGames}
+              disabled={loading}
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-slate-200 rounded-xl text-xs font-semibold transition border border-slate-800 flex items-center gap-1.5 shadow-md"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin text-indigo-400" : ""}`} />
+              {loading ? "불러오는 중..." : "새로고침"}
+            </button>
+          </div>
         </div>
 
         {/* Live DB Stats Cards */}
