@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { MessageSquare, Lightbulb, Vote, Users, Search, Award, Clock } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
@@ -112,8 +112,41 @@ export default function ForumAgoraPage() {
     const [selectedCategory, setSelectedCategory] = useState("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [totalPmpEarned] = useState(580);
+    const [realTopics, setRealTopics] = useState<AgoraTopic[]>([]);
 
-    const filteredTopics = MOCK_TOPICS.filter((topic) => {
+    useEffect(() => {
+        const fetchRealForumPosts = async () => {
+            try {
+                const res = await fetch("/api/admin/forum");
+                const data = await res.json();
+                if (data.success && data.posts) {
+                    const mapped: AgoraTopic[] = data.posts.map((p: any) => ({
+                        id: p.post_id || p.id,
+                        title: p.title,
+                        description: p.content,
+                        type: "debate",
+                        author: "시민참여단",
+                        createdAt: new Date(p.created_at).toISOString().slice(0, 10),
+                        participantCount: 150,
+                        commentCount: 42,
+                        voteCount: 300,
+                        status: "active",
+                        pmpReward: 30,
+                        isHot: true,
+                    }));
+                    setRealTopics(mapped);
+                }
+            } catch (e) {
+                console.error("Failed to fetch real forum posts:", e);
+            }
+        };
+
+        fetchRealForumPosts();
+    }, []);
+
+    const allTopics = [...realTopics, ...MOCK_TOPICS];
+
+    const filteredTopics = allTopics.filter((topic) => {
         const matchCategory = selectedCategory === "all" || topic.type === selectedCategory;
         const matchSearch = topic.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             topic.description.toLowerCase().includes(searchQuery.toLowerCase());

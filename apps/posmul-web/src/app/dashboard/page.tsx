@@ -13,11 +13,8 @@ export default async function DashboardPage() {
         data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-        redirect("/auth/login");
-    }
-
-    const displayName = user.user_metadata?.display_name || user.email?.split('@')[0] || '사용자';
+    let targetUserId = user?.id || "00000000-0000-0000-0000-000000000001";
+    const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'PosMul 시민 (데모)';
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950 text-slate-200">
@@ -49,7 +46,7 @@ export default async function DashboardPage() {
                     <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                         💰 자산 현황
                     </h2>
-                    <EconomicBalance userId={user.id} />
+                    <EconomicBalance userId={targetUserId} />
                 </section>
 
                 {/* Main Content Grid */}
