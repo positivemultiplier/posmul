@@ -428,18 +428,18 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
   };
 
   return (
-    <div className="fixed top-0 w-full z-50 bg-[#0a0a0f]/90 backdrop-blur-xl border-b border-white/10">
+    <div className="fixed top-0 w-full z-50 bg-slate-950/80 backdrop-blur-2xl border-b border-purple-900/30 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Row 1: Logo + 메인 도메인 + Auth */}
-        <div className="flex justify-between items-center h-16 border-b border-white/10">
+        <div className="flex justify-between items-center h-16 border-b border-white/5">
           {/* Logo */}
-          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mr-8">
+          <Link href="/" className="text-2xl font-black bg-gradient-to-r from-purple-400 via-pink-400 to-indigo-400 bg-clip-text text-transparent mr-8 tracking-tight drop-shadow-[0_0_12px_rgba(192,132,252,0.3)]">
             PosMul
           </Link>
 
-          {/* Desktop: 메인 도메인 (Invest, Prediction, Donation, Forum) */}
-          <div className="hidden md:flex items-center space-x-4 flex-1">
+          {/* Desktop: 메인 도메인 */}
+          <div className="hidden md:flex items-center space-x-2 flex-1">
             {Object.entries(navigationData).map(([domain, data]) => {
               const colors = domainColors[domain as keyof typeof navigationData];
               const isSelected = selectedDomain === domain;
@@ -451,9 +451,9 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
                     setSelectedDomain(domain as keyof typeof navigationData);
                     setSelectedCategory(Object.keys(data.categories)[0]);
                   }}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${isSelected
-                    ? `${colors.active} shadow-lg ${colors.shadow}`
-                    : `text-gray-400 ${colors.hover}`
+                  className={`px-4 py-2 text-xs font-bold rounded-xl transition-all duration-300 relative ${isSelected
+                    ? `${colors.active} shadow-[0_0_20px_rgba(168,85,247,0.35)] scale-105 border border-purple-400/40`
+                    : `text-slate-400 hover:text-white hover:bg-white/5`
                     }`}
                 >
                   {data.title}
@@ -471,16 +471,16 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
               <>
                 <Link
                   href="/dashboard"
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-all duration-200 border border-white/20 text-sm"
+                  className="px-3.5 py-1.5 bg-purple-950/50 hover:bg-purple-900/70 text-purple-300 rounded-xl transition-all duration-200 border border-purple-800/40 text-xs font-semibold shadow"
                 >
                   대시보드
                 </Link>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-400 to-purple-400 flex items-center justify-center text-xs font-bold">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-r from-purple-500 to-indigo-500 flex items-center justify-center text-xs font-black shadow-md border border-purple-300/30">
                   {user.email?.[0].toUpperCase()}
                 </div>
                 <button
                   onClick={handleSignOut}
-                  className="px-4 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-300 rounded-lg transition-all duration-200 border border-red-500/30 text-sm"
+                  className="px-3 py-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 rounded-xl transition-all duration-200 border border-red-800/30 text-xs font-medium"
                 >
                   로그아웃
                 </button>
@@ -489,13 +489,13 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
               <>
                 <Link
                   href="/auth/login"
-                  className="px-4 py-2 text-white hover:text-blue-300 transition-colors text-sm"
+                  className="px-3.5 py-1.5 text-slate-300 hover:text-white transition-colors text-xs font-semibold"
                 >
                   로그인
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className="px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-300 font-semibold text-sm"
+                  className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl shadow-[0_0_15px_rgba(147,51,234,0.4)] transition-all duration-300 font-bold text-xs"
                 >
                   회원가입
                 </Link>
@@ -506,15 +506,15 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
           {/* Mobile: Hamburger */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
-            className="md:hidden text-white"
+            className="md:hidden text-slate-300 p-2 rounded-xl bg-slate-900 border border-slate-800"
           >
-            {mobileOpen ? <X /> : <Menu />}
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
 
         {/* Row 2: 카테고리 (Desktop만) */}
-        <div className="hidden md:flex items-center h-12 border-b border-white/10">
-          <div className="flex items-center space-x-4">
+        <div className="hidden md:flex items-center h-12 border-b border-white/5">
+          <div className="flex items-center space-x-2">
             {Object.entries(currentCategories).map(([categoryKey, category]) => {
               const colors = domainColors[selectedDomain];
               const isSelected = selectedCategory === categoryKey;
@@ -525,7 +525,7 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
                   onClick={() => {
                     alert('🚧 준비 중입니다! 곧 오픈 예정입니다.');
                   }}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 text-gray-600 opacity-50 cursor-not-allowed`}
+                  className={`px-3 py-1 text-xs font-medium rounded-full transition-all duration-200 text-gray-600 opacity-50 cursor-not-allowed`}
                 >
                   {category.title} 🚧
                 </button>
@@ -534,9 +534,9 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
                   key={categoryKey}
                   href={(category as any).href}
                   onClick={() => setSelectedCategory(categoryKey)}
-                  className={`px-3 py-1.5 text-sm font-medium rounded-full transition-all duration-200 ${isSelected
-                    ? colors.categoryActive
-                    : `text-gray-400 ${colors.categoryHover}`
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-full transition-all duration-200 ${isSelected
+                    ? `${colors.categoryActive} shadow-md border border-white/20`
+                    : `text-slate-400 hover:text-slate-200 hover:bg-slate-900/60`
                     }`}
                 >
                   {category.title}
@@ -548,7 +548,7 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
 
         {/* Row 3: 서브카테고리 (Desktop만) */}
         <div className="hidden md:flex items-center h-10">
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             {currentSubcategories.map((subcategory: any, index: number) => {
               const colors = domainColors[selectedDomain];
               const active = isActiveSubcategory(subcategory.path);
@@ -557,15 +557,15 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
                   key={index}
                   href={subcategory.path}
                   className={
-                    "px-3 py-1 text-sm font-medium rounded-lg transition-all duration-200 flex items-center " +
+                    "px-2.5 py-1 text-xs font-medium rounded-lg transition-all duration-200 flex items-center " +
                     (active
-                      ? `${colors.categoryActive} shadow-sm`
-                      : `text-gray-400 ${colors.categoryHover}`)
+                      ? `${colors.categoryActive} shadow-sm font-bold`
+                      : `text-slate-400 hover:text-slate-200 hover:bg-white/5`)
                   }
                 >
                   {subcategory.title}
                   {index < currentSubcategories.length - 1 && (
-                    <ChevronRightIcon className={"h-3 w-3 mx-1 " + (active ? "text-white/80" : "text-gray-500")} />
+                    <ChevronRightIcon className={"h-3 w-3 mx-1 " + (active ? "text-white/80" : "text-slate-600")} />
                   )}
                 </Link>
               );
@@ -577,34 +577,34 @@ function ThreeRowNavbar({ hideNav = false }: ThreeRowNavbarProps) {
 
       {/* Mobile Menu */}
       {mobileOpen && (
-        <div className="md:hidden bg-[#1a1a2e] border-t border-white/10">
-          <div className="px-4 py-4 space-y-4">
+        <div className="md:hidden bg-slate-950/95 backdrop-blur-2xl border-t border-purple-900/40">
+          <div className="px-4 py-4 space-y-3">
             {/* Mobile: Domains */}
             {Object.entries(navigationData).map(([domain, data]) => (
               <Link
                 key={domain}
                 href={data.href}
                 onClick={() => setMobileOpen(false)}
-                className="block text-gray-400 hover:text-white py-2"
+                className="block text-slate-300 hover:text-purple-300 py-2 font-bold text-sm border-b border-slate-900"
               >
                 {data.title}
               </Link>
             ))}
 
             {/* Mobile: Auth */}
-            <div className="pt-4 border-t border-white/10 space-y-3">
+            <div className="pt-2 space-y-2">
               {user ? (
                 <>
                   <Link
                     href="/dashboard"
                     onClick={() => setMobileOpen(false)}
-                    className="block px-4 py-2 bg-white/10 rounded-lg text-center"
+                    className="block px-4 py-2 bg-purple-950/60 text-purple-300 rounded-xl text-center text-xs font-semibold"
                   >
                     대시보드
                   </Link>
                   <button
                     onClick={() => { handleSignOut(); setMobileOpen(false); }}
-                    className="block w-full px-4 py-2 bg-red-500/20 text-red-300 rounded-lg text-center"
+                    className="block w-full px-4 py-2 bg-red-950/40 text-red-300 rounded-xl text-center text-xs font-semibold"
                   >
                     로그아웃
                   </button>
