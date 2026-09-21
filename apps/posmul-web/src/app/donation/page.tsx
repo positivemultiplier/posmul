@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
-import { Building2, Star, Gift, Award, ArrowRight, Users, Heart, TrendingUp } from "lucide-react";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
+import { Building2, Star, Gift, ArrowRight, Heart, TrendingUp, DollarSign, CheckCircle2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Card, CardContent } from "@/shared/ui/components/base/Card";
 
@@ -46,31 +46,93 @@ const PILLARS = [
   },
 ];
 
-// 실시간 기부 현황 (Mock)
-const LIVE_DONATIONS = [
+// 초기 기부 목록
+const INITIAL_DONATIONS = [
   { id: 1, user: "User***21", amount: 10000, target: "환경재단", time: "1분 전" },
   { id: 2, user: "User***87", amount: 5000, target: "아동복지센터", time: "3분 전" },
   { id: 3, user: "User***45", amount: 25000, target: "김OO 리더 캠페인", time: "5분 전" },
 ];
 
 export default function DonationPage() {
-  const totalDonation = 124500000; // Mock
-  const totalDonors = 15420; // Mock
-  const todayCount = 142; // Mock
+  const [totalDonation, setTotalDonation] = useState(124500000);
+  const [totalDonors, setTotalDonors] = useState(15420);
+  const [todayCount, setTodayCount] = useState(142);
+  const [liveDonations, setLiveDonations] = useState(INITIAL_DONATIONS);
+
+  // Quick Donation Form Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [targetName, setTargetName] = useState("환경재단");
+  const [amount, setAmount] = useState<number>(1000);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  const handleDonateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (amount <= 0) return;
+    setIsSubmitting(true);
+    setSuccessMessage(null);
+
+    try {
+      const res = await fetch("/api/donation/donate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: "00000000-0000-0000-0000-000000000001", // Demo System User
+          targetName,
+          amount,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setTotalDonation((prev) => prev + amount);
+        setTotalDonors((prev) => prev + 1);
+        setTodayCount((prev) => prev + 1);
+
+        const newDonation = {
+          id: Date.now(),
+          user: "나 (User***01)",
+          amount,
+          target: targetName,
+          time: "방금 전",
+        };
+        setLiveDonations((prev) => [newDonation, ...prev]);
+
+        setSuccessMessage(`성공적으로 ${amount.toLocaleString()} PMC를 기부하셨습니다!`);
+        setTimeout(() => {
+          setIsModalOpen(false);
+          setSuccessMessage(null);
+        }, 1500);
+      } else {
+        alert(data.error || "기부에 실패했습니다.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      alert("기부 처리 도중 오류가 발생했습니다.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-purple-950 to-slate-950 text-slate-200">
-      {/* Header - Forum 스타일 */}
+      {/* Header */}
       <header className="sticky top-0 z-10 backdrop-blur-xl bg-purple-950/80 border-b border-purple-800/50">
-        <div className="max-w-4xl mx-auto p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                💜 Donation
-              </h1>
-              <p className="text-sm text-purple-400/70">세상을 바꾸는 따뜻한 마음</p>
-            </div>
-            <div className="text-right">
+        <div className="max-w-4xl mx-auto p-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
+              💜 Donation
+            </h1>
+            <p className="text-sm text-purple-400/70">세상을 바꾸는 따뜻한 마음</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setIsModalOpen(true)}
+              className="px-4 py-2 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg transition-all flex items-center gap-1.5"
+            >
+              <Heart className="w-4 h-4 fill-white" /> 즉시 기부하기
+            </button>
+            <div className="text-right hidden sm:block">
               <p className="text-xs text-slate-400">오늘 참여</p>
               <p className="text-xl font-bold text-purple-400">
                 <span className="text-2xl">{todayCount}</span>
@@ -87,7 +149,7 @@ export default function DonationPage() {
           <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 text-center">
             <p className="text-xs text-slate-500 mb-1">총 누적 기부금</p>
             <p className="text-2xl font-bold text-white">
-              {(totalDonation / 100000000).toFixed(1)}억
+              {(totalDonation / 100000000).toFixed(2)}억
               <span className="text-sm text-purple-400 ml-1">PMC</span>
             </p>
           </div>
@@ -107,15 +169,15 @@ export default function DonationPage() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
             </span>
-            <span className="text-sm font-medium text-slate-400">실시간 기부</span>
+            <span className="text-sm font-medium text-slate-400">실시간 기부 현황</span>
           </div>
           <div className="space-y-2">
-            {LIVE_DONATIONS.map((donation) => (
+            {liveDonations.map((donation) => (
               <div key={donation.id} className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
                   <Heart className="w-4 h-4 text-pink-400" />
-                  <span className="text-slate-300">{donation.user}</span>
-                  <span className="text-purple-400 font-medium">{donation.amount.toLocaleString()} PMC</span>
+                  <span className="text-slate-300 font-medium">{donation.user}</span>
+                  <span className="text-purple-400 font-semibold">{donation.amount.toLocaleString()} PMC</span>
                   <span className="text-slate-500">→</span>
                   <span className="text-slate-300">{donation.target}</span>
                 </div>
@@ -125,7 +187,7 @@ export default function DonationPage() {
           </div>
         </section>
 
-        {/* 3-Pillar Cards - Forum 카드 스타일 */}
+        {/* 3-Pillar Cards */}
         <section>
           <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
             <TrendingUp className="w-5 h-5 text-purple-400" />
@@ -200,6 +262,102 @@ export default function DonationPage() {
           </div>
         </section>
       </main>
+
+      {/* Quick Donation Modal */}
+      <AnimatePresence>
+        {isModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-slate-900 border border-purple-800/50 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4"
+            >
+              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Heart className="w-5 h-5 text-pink-400 fill-pink-400" /> 즉시 기부 동참
+                </h3>
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-slate-400 hover:text-white text-sm"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {successMessage ? (
+                <div className="py-8 text-center space-y-3">
+                  <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
+                  <p className="text-emerald-300 font-semibold">{successMessage}</p>
+                </div>
+              ) : (
+                <form onSubmit={handleDonateSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">기부 대상 선택</label>
+                    <select
+                      value={targetName}
+                      onChange={(e) => setTargetName(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-purple-500"
+                    >
+                      <option value="환경재단">🌱 환경재단 (지구 온난화 방지)</option>
+                      <option value="아동복지센터">👶 아동복지센터 (미래 세대 지원)</option>
+                      <option value="김OO 리더 캠페인">🌟 김OO 리더 기후변화 프로젝트</option>
+                      <option value="독거노인 도시락 펀딩">🍱 독거노인 따뜻한 도시락</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">기부 금액 (PMC)</label>
+                    <div className="relative">
+                      <DollarSign className="w-4 h-4 text-purple-400 absolute left-3 top-3" />
+                      <input
+                        type="number"
+                        min="100"
+                        step="100"
+                        value={amount}
+                        onChange={(e) => setAmount(Number(e.target.value))}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-2.5 text-sm text-white focus:outline-none focus:border-purple-500"
+                        placeholder="기부할 PMC 입력"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {[1000, 5000, 10000].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setAmount(preset)}
+                        className="py-1.5 rounded bg-purple-950/50 border border-purple-800/40 text-xs text-purple-300 hover:bg-purple-900/60"
+                      >
+                        +{preset.toLocaleString()} PMC
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setIsModalOpen(false)}
+                      className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs text-slate-300"
+                    >
+                      취소
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-xs font-semibold text-white shadow disabled:opacity-50"
+                    >
+                      {isSubmitting ? "처리 중..." : "기부 완료하기"}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
+
