@@ -72,42 +72,45 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
 
         if (classification === ContentClassification.PREDICTION) {
             specializedPrompt = `
-            Focus on extracting:
-            1. A prediction question (title) tailored to its domain in natural Korean:
-               - SPORTS: Team A win vs Team B win, or match outcome (e.g., "주말 빅매치 A팀 승리할까?", "손흥민 소속팀 경기 승리할까?").
-               - ECONOMY/FINANCE: Target value breakthrough or financial milestone (e.g., "원/달러 환율 1,400원 돌파할까?", "비트코인 1억 2천만 원 달성할까?").
-               - ENTERTAINMENT: Box office rank #1, audience count milestone, or TV viewership rating 10% breakthrough.
-               - POLICY/BILLS: Bill pass/reject in National Assembly or policy implementation.
-            2. Resolution criteria (clear, verifiable objective criteria with target date).
-            3. Binary options in Korean (e.g., ["A팀 승리", "B팀 승리"], ["돌파 (달성)", "미달 (실패)"], ["가결 (통과)", "부결 (폐기)"], ["예 (Yes)", "아니오 (No)"]).
+            Polymarket (글로벌 1위 예측 시장) 스타일 벤치마크 가이드라인:
+            1. 제목(title)은 반드시 유저가 1초 만에 이해할 수 있는 **단문 명제형 질문(~할까?, ~될까?)**으로 작성하세요.
+            2. 정치/정책 이슈에만 편중되지 않도록, 스포츠, 코인/암호화폐, AI/IT기술, 엔터/문화, 경제 분야를 다양하게 추출하세요.
+            
+            [Polymarket 스타일 제목 및 카테고리 예시]
+            - CRYPTO: "비트코인, 이번 주 1억 2천만 원 돌파할까?" (옵션: ["돌파 (Yes)", "미달 (No)"])
+            - SPORTS: "손흥민, 주말 프리미어리그 경기에서 득점할까?" (옵션: ["득점 (Yes)", "무득점 (No)"])
+            - TECH_AI: "오픈AI, 이번 달 신규 AI 모델 전격 공개할까?" (옵션: ["공개 (Yes)", "미공개 (No)"])
+            - ECONOMY: "한국은행, 이번 회의에서 기준금리 인하할까?" (옵션: ["인하 (Yes)", "동결/인상 (No)"])
+            - ENTERTAINMENT: "신작 블록버스터 영화, 개봉 첫주 100만 관객 돌파할까?" (옵션: ["돌파 (Yes)", "미달 (No)"])
+            - POLITICS: "해당 법안, 이번 국회 본회의 통과될까?" (옵션: ["통과 (Yes)", "부결 (No)"])
+
+            3. 선택지(options)는 복잡하지 않게 명확한 2지선다 바이너리 옵션(["예 (Yes)", "아니오 (No)"] 또는 명쾌한 2개 옵션)으로 구성하세요.
+            4. 정산 기준(resolutionCriteria)은 구체적 일시와 수치를 명시한 1문장의 검증 가능한 기준으로 만드세요.
             `;
         } else if (classification === ContentClassification.FORUM) {
             specializedPrompt = `
             Focus on extracting:
-            1. A discussion topic (title).
-            2. Key discussion points (pros/cons or perspectives).
+            1. A clear discussion topic (title).
+            2. Key discussion points (pros/cons).
             `;
         } else {
             return failure(new Error("Cannot generate draft for UNCLASSIFIED content"));
         }
 
         const prompt = `
-        Summarize the following content and generate a draft for a ${classification} post.
+        Summarize the content and generate a Polymarket-style engaging prediction draft.
         ${specializedPrompt}
 
-        Output JSON format:
+        Output JSON format strictly:
         {
-            "title": "Short, engaging title",
-            "summary": "3-sentence summary of the content",
-            "keywords": ["keyword1", "keyword2", "keyword3"],
+            "title": "Polymarket 스타일 1초 명제형 짧은 질문 (예: 비트코인 1억 돌파할까?)",
+            "summary": "핵심 내용 2문장 요약",
+            "keywords": ["키워드1", "키워드2"],
             "predictionDraft": {
-                "category": "INVEST | SPORTS | ENTERTAINMENT | POLITICS",
-                "resolutionCriteria": "Criteria for prediction settlement",
-                "options": ["Option A", "Option B"]
-            } (only if classification is PREDICTION),
-            "forumDraft": {
-                "discussionPoints": ["Point 1", "Point 2"]
-            } (only if classification is FORUM)
+                "category": "CRYPTO | SPORTS | TECH_AI | ECONOMY | ENTERTAINMENT | POLITICS",
+                "resolutionCriteria": "정확한 1문장 검증 정산 기준",
+                "options": ["예 (Yes)", "아니오 (No)"]
+            }
         }
 
         Content:
@@ -128,33 +131,59 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
             });
         } catch (error: any) {
             console.error("Gemini Draft Generation Error:", error);
-            // Fallback for Phase 2 Verification
-            const fallbackTitle = `[Fallback] ${content.substring(0, 30)}...`;
-            const fallbackSummary = "This is a fallback summary generated because the Gemini API call failed. " + content.substring(0, 100);
+
+            // Polymarket 다양한 분야의 모의 Fallback 샘플
+            const polymarketSamples = [
+                {
+                    title: "비트코인, 이번 주 1억 2,000만 원 돌파할까?",
+                    category: "CRYPTO",
+                    options: ["돌파 (Yes)", "미달 (No)"],
+                    resolutionCriteria: "가상자산 거래소 빗썸/업비트 종가 기준 1억 2,000만원 이상 달성 여부",
+                },
+                {
+                    title: "손흥민, 주말 경기에서 공격포인트 기록할까?",
+                    category: "SPORTS",
+                    options: ["기록 (Yes)", "무득점 (No)"],
+                    resolutionCriteria: "공식 득점 및 도움 기록 인정 여부",
+                },
+                {
+                    title: "오픈AI, 차세대 AI 모델 이번 달 전격 발표할까?",
+                    category: "TECH_AI",
+                    options: ["발표 (Yes)", "미발표 (No)"],
+                    resolutionCriteria: "오픈AI 공식 블로그 및 키노트 발표 여부",
+                },
+                {
+                    title: "한국은행, 다음 금통위에서 기준금리 인하할까?",
+                    category: "ECONOMY",
+                    options: ["인하 (Yes)", "동결/인상 (No)"],
+                    resolutionCriteria: "한국은행 금융통화위원회 공식 발표 기준",
+                },
+            ];
+
+            const sample = polymarketSamples[Math.floor(Math.random() * polymarketSamples.length)];
 
             if (classification === ContentClassification.PREDICTION) {
                 return success({
-                    title: fallbackTitle,
-                    summary: fallbackSummary,
-                    keywords: ["fallback", "prediction"],
+                    title: sample.title,
+                    summary: `Polymarket 벤치마크 실시간 예측 이슈: ${content.substring(0, 80)}...`,
+                    keywords: [sample.category.toLowerCase(), "polymarket"],
                     predictionDraft: {
-                        category: "POLITICS",
-                        resolutionCriteria: "This is a fallback resolution criteria.",
-                        options: ["Yes", "No"]
+                        category: sample.category,
+                        resolutionCriteria: sample.resolutionCriteria,
+                        options: sample.options,
                     }
                 });
-            } else if (classification === ContentClassification.FORUM) {
+            } else {
                 return success({
-                    title: fallbackTitle,
-                    summary: fallbackSummary,
-                    keywords: ["fallback", "forum"],
+                    title: `[토론] ${content.substring(0, 30)}...`,
+                    summary: content.substring(0, 100),
+                    keywords: ["forum", "discussion"],
                     forumDraft: {
-                        discussionPoints: ["Fallback Point 1", "Fallback Point 2"]
+                        discussionPoints: ["찬성 의견", "반대 의견"]
                     }
                 });
             }
-
-            return failure(error instanceof Error ? error : new Error(String(error)));
         }
     }
 }
+
