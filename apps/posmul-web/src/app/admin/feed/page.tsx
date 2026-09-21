@@ -291,6 +291,16 @@ export default function AdminFeedPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+      {/* Navigation Top */}
+      <div className="flex justify-between items-center">
+        <a
+          href="/admin"
+          className="text-xs font-semibold text-slate-400 hover:text-slate-100 transition flex items-center gap-1.5"
+        >
+          ← /admin 메인 포털로 돌아가기
+        </a>
+      </div>
+
       {/* 헤더 & 통계 영역 */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
