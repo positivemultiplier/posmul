@@ -11,7 +11,6 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,js,jsx,json,css,scss,md}\"",
     "test": "jest --passWithNoTests",
-    "test:prediction": "tsx scripts/test-prediction-engine.ts",
     "verify:moneywave:depth5": "tsx scripts/verify-moneywave-depth5.ts",
     "type-check": "tsc --noEmit",
     "clean": "rimraf .next"
@@ -38,7 +37,7 @@
     "lucide-react": "^0.562.0",
     "mermaid": "^11.12.2",
     "motion": "^12.23.26",
-    "next": "15.3.4",
+    "next": "^15.3.6",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
     "react-hook-form": "^7.60.0",
