@@ -75,7 +75,7 @@ export async function placeBet(request: PlaceBetRequest): Promise<PlaceBetRespon
       return {
         success: false,
         message: errorMessage,
-        error: result.error.message,
+        error: errorMessage,
       };
     }
 
@@ -115,8 +115,23 @@ export async function placeBet(request: PlaceBetRequest): Promise<PlaceBetRespon
  */
 function getKoreanErrorMessage(errorMessage: string): string {
   const errorMap: Record<string, string> = {
+    "GAME_NOT_ACTIVE": "현재 베팅이 마감되었거나 정산 진행 중인 게임입니다.",
+    "game_not_active": "현재 베팅이 마감되었거나 정산 진행 중인 게임입니다.",
+    "registration_closed": "게임 참여 마감 시각이 지났습니다.",
+    "STAKE_BELOW_MINIMUM": "최소 베팅 금액 이상이어야 합니다.",
+    "STAKE_ABOVE_MAXIMUM": "최대 베팅 금액을 초과할 수 없습니다.",
+    "bet_amount_out_of_range": "베팅 금액이 허용 범위를 벗어났습니다.",
+    "invalid_bet_amount": "유효하지 않은 베팅 금액입니다.",
+    "INVALID_OPTION": "유효하지 않은 선택지입니다.",
+    "MAX_PARTICIPANTS": "게임 참여 정원이 마감되었습니다.",
     "Insufficient PmpAmount balance": "PMP 잔액이 부족합니다.",
+    "insufficient_pmp_balance": "PMP 잔액이 부족합니다.",
+    "INSUFFICIENT_PMP_BALANCE": "PMP 잔액이 부족합니다.",
+    "account_not_found": "PMP 계좌를 찾을 수 없습니다. 다시 로그인해주세요.",
+    "not_authenticated": "로그인이 필요합니다.",
+    "UNAUTHORIZED": "로그인이 필요합니다.",
     "Prediction game not found": "예측 게임을 찾을 수 없습니다.",
+    "game_not_found": "예측 게임을 찾을 수 없습니다.",
     "Failed to retrieve prediction game": "게임 정보를 불러올 수 없습니다.",
     "Failed to check PmpAmount participation eligibility": "참여 자격을 확인할 수 없습니다.",
     "Failed to create prediction entity": "예측 생성에 실패했습니다.",

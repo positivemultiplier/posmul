@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState, useTransition, useRef, useEffect } from "react";
 import { BarChart2, Info, Trophy, TrendingUp, PieChart, Share2 } from "lucide-react";
@@ -120,7 +120,7 @@ export function PredictionDetailTabsClient({ game, userBalance, userBets, initia
           }
 
         } else {
-          alert(`참여 실패: ${result.error || '알 수 없는 오류'}`);
+          alert(`참여 실패: ${result.message || result.error || "알 수 없는 오류"}`);
         }
       } catch (e) {
         console.error("Error in handleParticipate:", e);

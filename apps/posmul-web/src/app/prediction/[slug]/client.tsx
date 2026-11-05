@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Universal Prediction Game Detail Client Component
  * 모든 예측 카드의 클릭에 대응하는 범용 상세페이지 클라이언트 컴포넌트
  */
@@ -99,7 +99,7 @@ export function UniversalPredictionDetailClient({
             },
           ]);
         } else {
-          setFeedbackMsg(result.error || "베팅 참여에 실패하였습니다.");
+          setFeedbackMsg(result.message || result.error || "베팅 참여에 실패하였습니다.");
         }
       } catch (err: any) {
         setFeedbackMsg(err.message || "오류가 발생했습니다.");
@@ -330,7 +330,7 @@ export function UniversalPredictionDetailClient({
 
               {/* Quick Amount Buttons */}
               <div className="flex gap-2">
-                {[500, 1000, 5000, 10000].map((amt) => (
+                {[100, 500, 1000, 5000].map((amt) => (
                   <button
                     key={amt}
                     onClick={() => setStakeAmount(amt)}
@@ -353,10 +353,22 @@ export function UniversalPredictionDetailClient({
               {/* Submit Button */}
               <button
                 onClick={handlePlaceBet}
-                disabled={isPending}
-                className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 text-white font-extrabold text-sm shadow-xl shadow-blue-500/20 hover:from-blue-500 hover:to-purple-500 transition-all disabled:opacity-50"
+                disabled={game.status !== "ACTIVE" || stakeAmount > balance.pmp || stakeAmount < (game.minimumStake || 100) || isPending}
+                className={`w-full py-3.5 rounded-xl text-white font-extrabold text-sm shadow-xl transition-all ${
+                  game.status !== "ACTIVE" || stakeAmount > balance.pmp || stakeAmount < (game.minimumStake || 100) || isPending
+                    ? "bg-slate-800 text-slate-500 cursor-not-allowed opacity-60"
+                    : "bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 shadow-blue-500/20 hover:from-blue-500 hover:to-purple-500"
+                }`}
               >
-                {isPending ? "참여 처리 중..." : "🎯 예측 참여하기"}
+                {game.status !== "ACTIVE"
+                  ? "🛑 베팅 마감된 게임"
+                  : isPending
+                  ? "참여 처리 중..."
+                  : stakeAmount > balance.pmp
+                  ? "⚠️ PMP 잔액 부족"
+                  : stakeAmount < (game.minimumStake || 100)
+                  ? `최소 ${(game.minimumStake || 100).toLocaleString()} PMP 이상 필요`
+                  : "🎯 예측 참여하기"}
               </button>
             </Card>
 

@@ -90,3 +90,5 @@ next-env.d.ts
 # --- Misc ---
 .ipynb_checkpoints/
 
+.vercel
+.env*

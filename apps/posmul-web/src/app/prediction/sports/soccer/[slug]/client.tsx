@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Soccer Prediction Detail Client Component
  *
  * Immersive Redesign applied (2025-12-30)
@@ -107,7 +107,7 @@ export function SoccerPredictionDetailClient({
             createdAt: new Date().toISOString(),
           }, ...prev]);
         } else {
-          alert(`참여 실패: ${result.error || '알 수 없는 오류'}`);
+          alert(`참여 실패: ${result.message || result.error || "알 수 없는 오류"}`);
         }
       } catch (e) {
         console.error("[Client] Error in handleParticipate:", e);

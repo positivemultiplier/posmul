@@ -138,10 +138,14 @@ export class ParticipatePredictionUseCase {
   ): Result<void, UseCaseError> {
     const participationResult = game.addPrediction(prediction);
     if (!participationResult.success) {
-      return this.fail("Failed to add prediction to game", {
-        message: isFailure(participationResult)
-          ? participationResult.error.message || "participation failed"
-          : "unknown error",
+      const errorCode = isFailure(participationResult)
+        ? participationResult.error.message || "ADD_PREDICTION_FAILED"
+        : "UNKNOWN_ERROR";
+      return this.fail(errorCode, {
+        code: errorCode,
+        originalMessage: isFailure(participationResult)
+          ? participationResult.error.message
+          : undefined,
       });
     }
     return { success: true, data: undefined };
@@ -154,8 +158,11 @@ export class ParticipatePredictionUseCase {
       skipGameUpdate: true,
     });
     if (!saveResult.success) {
-      return this.fail("Failed to save prediction game state", {
-        message: isFailure(saveResult) ? saveResult.error?.message || "save failed" : "unknown error",
+      const saveErrMsg = isFailure(saveResult)
+        ? saveResult.error?.message || "SAVE_FAILED"
+        : "UNKNOWN_ERROR";
+      return this.fail(saveErrMsg, {
+        code: saveErrMsg,
       });
     }
     return { success: true, data: undefined };

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState, forwardRef, useImperativeHandle, useRef } from "react";
 import { Badge, Button, Card, CardContent, CardHeader, CardTitle } from "../../../../shared/ui/components/base";
@@ -298,7 +298,7 @@ export const PredictionDetailView = forwardRef<PredictionDetailViewHandle, Predi
           </div>
         ) : (
           <div className="p-4 bg-slate-800/50 rounded-xl text-center text-slate-400 text-sm border border-white/5">
-            이 게임은 현재 {game.status === 'ENDED' ? '종료되었습니다' : '정산되었습니다'}.
+            이 게임은 현재 {game.status === 'ENDED' || (game.status as string) === 'CLOSED' ? '마감되었습니다' : '정산되었습니다'}.
             <br />
             더 이상 참여할 수 없습니다.
           </div>

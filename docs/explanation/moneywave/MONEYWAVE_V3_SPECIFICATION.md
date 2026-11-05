@@ -187,3 +187,4 @@ $$\text{MoneyWave Bonus} = \min\left( \text{User Bet} \times 2.0,\; \frac{\text{
   - [prediction-comment.actions.ts](file:///c:/G/posmul/apps/posmul-web/src/app/prediction/components/prediction-comment.actions.ts): 공론장 댓글 작성 및 +10 PMP 지급 액션
   - [settlement-orchestrator.service.ts](file:///c:/G/posmul/apps/posmul-web/src/bounded-contexts/prediction/application/services/settlement-orchestrator.service.ts): 오라클 자동 정산 오케스트레이터
   - [settle-prediction-game.use-case.ts](file:///c:/G/posmul/apps/posmul-web/src/bounded-contexts/prediction/application/use-cases/settle-prediction-game.use-case.ts): 정산 유스케이스 (`CLOSED`/`SETTLING` 지원)
+
