@@ -4,11 +4,11 @@
  * Infrastructure Layer Repository 테스트
  * MCP 패턴을 사용하는 PMP/PMC 계정 관리 Repository 검증
  */
-import { createDefaultMCPAdapter } from "../../../../../shared/legacy-compatibility";
+import { createDefaultMCPAdapter } from "../../../../../shared/mcp";
 import { SupabasePmpPmcAccountRepository } from "../supabase-pmp-pmc-account.repository";
 
 // MCP Adapter 모킹
-jest.mock("../../../../../shared/legacy-compatibility", () => ({
+jest.mock("../../../../../shared/mcp", () => ({
   createDefaultMCPAdapter: jest.fn(),
 }));
 

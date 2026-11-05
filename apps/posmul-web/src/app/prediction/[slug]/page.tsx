@@ -3,7 +3,7 @@
  * 모든 예측 카드를 클릭했을 때 이동하는 범용 상세페이지 라우트 (/prediction/[slug])
  */
 
-import { getPredictionGameBySlug, getPredictionGameStats, parseGameOptions } from "@/bounded-contexts/public/infrastructure/repositories/prediction.repository";
+import { getPredictionGameBySlug, getPredictionGameStats, parseGameOptions } from "@/bounded-contexts/prediction/infrastructure/repositories/prediction-query.repository";
 import { UniversalPredictionDetailClient } from "./client";
 import { getUserBalance, getUserBets } from "../sports/soccer/[slug]/actions";
 

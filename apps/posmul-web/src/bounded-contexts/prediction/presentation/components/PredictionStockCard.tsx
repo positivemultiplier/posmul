@@ -2,8 +2,8 @@
 "use client";
 
 import React from "react";
-import { Badge } from "@/shared/ui/badge";
-import { Button } from "@/shared/ui/button";
+import { Badge } from "@/shared/ui";
+import { Button } from "@/shared/ui";
 import { TiltedCard } from "@/shared/ui/fancy/TiltedCard";
 import { PredictionTrendChart, TrendPoint } from "./PredictionTrendChart";
 import { PredictionType } from "../../domain/value-objects/prediction-types";

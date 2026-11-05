@@ -2,7 +2,7 @@ name: PosMul CI
 
 on:
   push:
-    branches: [main, "phase*"]
+    branches: [main, develop]
   pull_request:
     types: [opened, synchronize, reopened]
 

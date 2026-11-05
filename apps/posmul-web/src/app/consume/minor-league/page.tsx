@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { MapPin, Store, Star, Award, QrCode, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/components/base/Card";
 import { Button } from "@/shared/ui/components/base";
 
-// 임시 Mock 데이터 타입
 interface MerchantData {
     id: string;
     name: string;
@@ -15,12 +15,11 @@ interface MerchantData {
     address: string;
     rating: number;
     reviewCount: number;
-    rewardRate: number; // % PMC 적립률
+    rewardRate: number;
     isOpen: boolean;
     imageUrl?: string;
 }
 
-// Mock Merchant 데이터
 const MOCK_MERCHANTS: MerchantData[] = [
     {
         id: "m-001",
@@ -68,31 +67,69 @@ const MOCK_MERCHANTS: MerchantData[] = [
     },
 ];
 
-// 카테고리 필터
 const CATEGORIES = ["전체", "카페", "음식점", "서점", "베이커리", "기타"];
 
 export default function MinorLeaguePage() {
+    const router = useRouter();
     const [merchants, setMerchants] = useState<MerchantData[]>(MOCK_MERCHANTS);
     const [selectedCategory, setSelectedCategory] = useState("전체");
     const [searchQuery, setSearchQuery] = useState("");
-    const [totalPmcEarned] = useState(2450); // Mock 누적 적립 PMC
+    const [totalPmcEarned, setTotalPmcEarned] = useState(2450);
 
-    // 필터링 로직
+    useEffect(() => {
+        async function fetchStoresAndPayments() {
+            try {
+                const [storesRes, paymentsRes] = await Promise.all([
+                    fetch("/api/consume/money/stores"),
+                    fetch("/api/consume/money/payment"),
+                ]);
+
+                if (storesRes.ok) {
+                    const data = await storesRes.json();
+                    const list = Array.isArray(data.stores) ? data.stores : [];
+                    if (list.length > 0) {
+                        const mapped: MerchantData[] = list.map((item: Record<string, unknown>) => ({
+                            id: String(item.id ?? ""),
+                            name: String(item.name ?? "상생 매장"),
+                            category: String(item.category ?? "기타"),
+                            description: String(item.description ?? ""),
+                            address: String(item.address ?? ""),
+                            rating: Number(item.rating ?? 4.8),
+                            reviewCount: Number(item.review_count ?? 10),
+                            rewardRate: Math.round(Number(item.pmc_rate ?? 0.05) * 100),
+                            isOpen: Boolean(item.is_active ?? true),
+                        }));
+                        setMerchants(mapped);
+                    }
+                }
+
+                if (paymentsRes.ok) {
+                    const payData = await paymentsRes.json();
+                    if (typeof payData.totalPmcEarned === "number") {
+                        setTotalPmcEarned(payData.totalPmcEarned);
+                    }
+                }
+            } catch {
+                // Keep fallback MOCK_MERCHANTS
+            }
+        }
+        fetchStoresAndPayments();
+    }, []);
+
     const filteredMerchants = merchants.filter((m) => {
         const matchCategory = selectedCategory === "전체" || m.category === selectedCategory;
-        const matchSearch = m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        const matchSearch =
+            m.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             m.description.toLowerCase().includes(searchQuery.toLowerCase());
         return matchCategory && matchSearch;
     });
 
     const handleQrPayment = (merchantId: string) => {
-        // TODO: QR 결제 플로우 연동
-        alert(`QR 결제 시작: ${merchantId}`);
+        router.push(`/consume/minor-league/${merchantId}`);
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-emerald-950 to-slate-950 text-slate-200">
-            {/* Header */}
             <header className="sticky top-0 z-10 backdrop-blur-xl bg-emerald-950/80 border-b border-emerald-800/50">
                 <div className="max-w-4xl mx-auto p-4">
                     <div className="flex items-center justify-between mb-4">
@@ -111,7 +148,6 @@ export default function MinorLeaguePage() {
                         </div>
                     </div>
 
-                    {/* 검색 */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                         <input
@@ -127,7 +163,6 @@ export default function MinorLeaguePage() {
                 </div>
             </header>
 
-            {/* Category Tabs */}
             <div className="max-w-4xl mx-auto px-4 py-4 overflow-x-auto">
                 <div className="flex gap-2">
                     {CATEGORIES.map((cat) => (
@@ -135,10 +170,11 @@ export default function MinorLeaguePage() {
                             key={cat}
                             onClick={() => setSelectedCategory(cat)}
                             className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all
-                ${selectedCategory === cat
-                                    ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
-                                    : "bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300"
-                                }`}
+                ${
+                    selectedCategory === cat
+                        ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/25"
+                        : "bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300"
+                }`}
                         >
                             {cat}
                         </button>
@@ -146,7 +182,6 @@ export default function MinorLeaguePage() {
                 </div>
             </div>
 
-            {/* Merchant List */}
             <main className="max-w-4xl mx-auto px-4 pb-8">
                 <div className="grid gap-4 md:grid-cols-2">
                     <AnimatePresence mode="popLayout">
@@ -159,12 +194,21 @@ export default function MinorLeaguePage() {
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ duration: 0.2 }}
                             >
-                                <Card className="bg-slate-900/70 border-slate-800 hover:border-emerald-700/50 transition-all group overflow-hidden">
+                                <Card
+                                    onClick={() => handleQrPayment(merchant.id)}
+                                    className="bg-slate-900/70 border-slate-800 hover:border-emerald-700/50 transition-all group overflow-hidden cursor-pointer"
+                                >
                                     <CardHeader className="pb-2">
                                         <div className="flex items-start justify-between">
                                             <div className="flex items-center gap-2">
-                                                <span className={`w-2 h-2 rounded-full ${merchant.isOpen ? "bg-emerald-400" : "bg-slate-500"}`} />
-                                                <span className="text-xs text-slate-500">{merchant.isOpen ? "영업 중" : "영업 종료"}</span>
+                                                <span
+                                                    className={`w-2 h-2 rounded-full ${
+                                                        merchant.isOpen ? "bg-emerald-400" : "bg-slate-500"
+                                                    }`}
+                                                />
+                                                <span className="text-xs text-slate-500">
+                                                    {merchant.isOpen ? "영업 중" : "영업 종료"}
+                                                </span>
                                             </div>
                                             <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-emerald-900/40 text-emerald-400 text-xs font-medium">
                                                 <Award className="w-3 h-3" />
@@ -189,7 +233,10 @@ export default function MinorLeaguePage() {
                                                 </span>
                                             </div>
                                             <Button
-                                                onClick={() => handleQrPayment(merchant.id)}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleQrPayment(merchant.id);
+                                                }}
                                                 disabled={!merchant.isOpen}
                                                 className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-700 disabled:text-slate-500"
                                                 size="sm"

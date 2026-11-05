@@ -2,7 +2,7 @@
  * MCP Donation Repository Implementation
  */
 import { PaginatedResult, Result, UserId } from "@posmul/auth-economy-sdk";
-import { createDefaultMCPAdapter, buildParameterizedQuery } from "../../../../shared/legacy-compatibility";
+import { createDefaultMCPAdapter, buildParameterizedQuery } from "../../../../shared/mcp";
 import { Donation } from "../../domain/entities/donation.entity";
 import {
   DonationSearchCriteria,

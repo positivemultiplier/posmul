@@ -3,7 +3,7 @@ import { UserId } from "@posmul/auth-economy-sdk";
 import {
   CompatibleBaseError,
   Result,
-} from "../../../../shared/legacy-compatibility";
+} from "../../../../shared/mcp";
 import { InvestmentOpportunity } from "../entities/investment-opportunity.entity";
 import {
   InvestmentCategory,

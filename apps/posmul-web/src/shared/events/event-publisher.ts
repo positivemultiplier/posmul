@@ -7,9 +7,7 @@
  * @author PosMul Development Team
  * @since 2024-12
  */
-import { isFailure } from "@posmul/auth-economy-sdk";
-
-import { DomainEvent, Result } from "../types/common";
+import { DomainEvent, Result, isFailure } from "@posmul/auth-economy-sdk";
 
 /**
  * 도메인 이벤트 발행자 인터페이스
@@ -299,7 +297,7 @@ export class SupabaseEventPublisher implements IDomainEventPublisher {
           success: false,
           error: new PublishError(
             "Invalid state",
-            isFailure(storeResult) ? storeResult.error : undefined,
+            isFailure(storeResult) ? (storeResult.error as Error) : undefined,
             event.type
           ),
         };

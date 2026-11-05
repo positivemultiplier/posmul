@@ -2,7 +2,7 @@
  * MCP Opinion Leader Repository Implementation
  */
 import { PaginatedResult, Result, UserId } from "@posmul/auth-economy-sdk";
-import { createDefaultMCPAdapter, buildParameterizedQuery } from "../../../../shared/legacy-compatibility";
+import { createDefaultMCPAdapter, buildParameterizedQuery } from "../../../../shared/mcp";
 import { OpinionLeader, OpinionLeaderStatus, VerificationStatus } from "../../domain/entities/opinion-leader.entity";
 import {
     IOpinionLeaderRepository,

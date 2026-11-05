@@ -13,7 +13,7 @@ const mockMCPAdapter = {
 const mockCreateDefaultMCPAdapter = jest.fn(() => mockMCPAdapter);
 
 // Mock 설정
-jest.mock("../../../../shared/legacy-compatibility", () => ({
+jest.mock("../../../../shared/mcp", () => ({
   createDefaultMCPAdapter: mockCreateDefaultMCPAdapter,
   adaptErrorToBaseError: jest.fn((error: any) => ({
     message: error instanceof Error ? error.message : "Unknown error",

@@ -1,4 +1,4 @@
-import { createDefaultMCPAdapter } from "../../shared/legacy-compatibility";
+import { createDefaultMCPAdapter } from "../../shared/mcp";
 
 export type MCPClientType = {
   executeSql: (query: string) => Promise<any[]>;

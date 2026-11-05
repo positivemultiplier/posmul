@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Play, Clock, Gift, Eye, Search, TrendingUp } from "lucide-react";
+import { Play, Clock, Gift, Eye, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/components/base/Card";
+import { Card, CardContent } from "@/shared/ui/components/base/Card";
 import { Button } from "@/shared/ui/components/base";
 
-// 임시 Mock 데이터 타입
 interface AdData {
     id: string;
     title: string;
@@ -21,7 +20,6 @@ interface AdData {
     isNew?: boolean;
 }
 
-// Mock 광고 데이터
 const MOCK_ADS: AdData[] = [
     {
         id: "ad-001",
@@ -67,26 +65,65 @@ const MOCK_ADS: AdData[] = [
     },
 ];
 
-// 카테고리 필터
 const CATEGORIES = ["전체", "라이프스타일", "교육", "문화", "건강", "기타"];
 
 export default function MajorLeaguePage() {
     const [ads, setAds] = useState<AdData[]>(MOCK_ADS);
     const [selectedCategory, setSelectedCategory] = useState("전체");
     const [searchQuery, setSearchQuery] = useState("");
-    const [totalPmpEarned] = useState(350); // Mock 누적 획득 PMP
+    const [totalPmpEarned, setTotalPmpEarned] = useState(350);
 
-    // 필터링 로직
+    useEffect(() => {
+        async function fetchCampaignsAndStats() {
+            try {
+                const [campaignsRes, statsRes] = await Promise.all([
+                    fetch("/api/consume/time/campaigns"),
+                    fetch("/api/consume/time/stats"),
+                ]);
+
+                if (campaignsRes.ok) {
+                    const data = await campaignsRes.json();
+                    const list = Array.isArray(data.campaigns) ? data.campaigns : [];
+                    if (list.length > 0) {
+                        const mapped: AdData[] = list.map((item: Record<string, unknown>) => ({
+                            id: String(item.id ?? ""),
+                            title: String(item.title ?? "캠페인"),
+                            advertiserName: String(item.advertiser_name ?? "파트너 브랜드"),
+                            category: String(item.category ?? "라이프스타일"),
+                            description: String(item.description ?? ""),
+                            thumbnailUrl: typeof item.thumbnail_url === "string" ? item.thumbnail_url : undefined,
+                            durationSeconds: Number(item.duration_seconds ?? 30),
+                            rewardPmpAmount: Number(item.pmp_reward_full ?? item.pmp_reward ?? 50),
+                            viewCount: Number(item.view_count ?? 0),
+                            isNew: Boolean(item.canWatch ?? true),
+                        }));
+                        setAds(mapped);
+                    }
+                }
+
+                if (statsRes.ok) {
+                    const statsData = await statsRes.json();
+                    if (typeof statsData.totalPmpEarned === "number") {
+                        setTotalPmpEarned(statsData.totalPmpEarned);
+                    }
+                }
+            } catch {
+                // Fallback to MOCK_ADS when offline or unauthenticated
+            }
+        }
+        fetchCampaignsAndStats();
+    }, []);
+
     const filteredAds = ads.filter((ad) => {
         const matchCategory = selectedCategory === "전체" || ad.category === selectedCategory;
-        const matchSearch = ad.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        const matchSearch =
+            ad.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
             ad.description.toLowerCase().includes(searchQuery.toLowerCase());
         return matchCategory && matchSearch;
     });
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-indigo-950 to-slate-950 text-slate-200">
-            {/* Header */}
             <header className="sticky top-0 z-10 backdrop-blur-xl bg-indigo-950/80 border-b border-indigo-800/50">
                 <div className="max-w-4xl mx-auto p-4">
                     <div className="flex items-center justify-between mb-4">
@@ -105,7 +142,6 @@ export default function MajorLeaguePage() {
                         </div>
                     </div>
 
-                    {/* 검색 */}
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
                         <input
@@ -118,82 +154,83 @@ export default function MajorLeaguePage() {
                          focus:ring-1 focus:ring-indigo-500/50 transition-all"
                         />
                     </div>
+
+                    <div className="flex gap-2 mt-3 overflow-x-auto pb-1 scrollbar-hide">
+                        {CATEGORIES.map((cat) => (
+                            <button
+                                key={cat}
+                                onClick={() => setSelectedCategory(cat)}
+                                className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
+                                    selectedCategory === cat
+                                        ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
+                                        : "bg-slate-800/80 text-slate-400 hover:bg-slate-700"
+                                }`}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </header>
 
-            {/* Category Tabs */}
-            <div className="max-w-4xl mx-auto px-4 py-4 overflow-x-auto">
-                <div className="flex gap-2">
-                    {CATEGORIES.map((cat) => (
-                        <button
-                            key={cat}
-                            onClick={() => setSelectedCategory(cat)}
-                            className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all
-                ${selectedCategory === cat
-                                    ? "bg-indigo-500 text-white shadow-lg shadow-indigo-500/25"
-                                    : "bg-slate-800/50 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300"
-                                }`}
-                        >
-                            {cat}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            {/* Ad List */}
-            <main className="max-w-4xl mx-auto px-4 pb-8">
+            <main className="max-w-4xl mx-auto px-4 py-6">
                 <div className="grid gap-4 md:grid-cols-2">
                     <AnimatePresence mode="popLayout">
-                        {filteredAds.map((ad) => (
+                        {filteredAds.map((ad, index) => (
                             <motion.div
                                 key={ad.id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.95 }}
-                                transition={{ duration: 0.2 }}
+                                transition={{ delay: index * 0.05 }}
                             >
-                                <Link href={`/consume/major-league/${ad.id}`}>
-                                    <Card className="bg-slate-900/70 border-slate-800 hover:border-indigo-700/50 transition-all group overflow-hidden cursor-pointer">
-                                        {/* Thumbnail */}
-                                        <div className="aspect-video bg-slate-800 relative flex items-center justify-center">
-                                            <Play className="w-12 h-12 text-slate-600 group-hover:text-indigo-400 transition-colors" />
-                                            {ad.isNew && (
-                                                <span className="absolute top-2 left-2 px-2 py-0.5 rounded-full bg-indigo-500 text-white text-xs font-bold">
-                                                    NEW
-                                                </span>
-                                            )}
-                                            <span className="absolute bottom-2 right-2 px-2 py-0.5 rounded bg-black/60 text-white text-xs">
-                                                {ad.durationSeconds}초
+                                <Card className="bg-slate-900/70 border-slate-800 hover:border-indigo-700/50 transition-all group overflow-hidden">
+                                    <div className="aspect-video bg-slate-800 relative flex items-center justify-center">
+                                        <div className="text-4xl text-slate-600">🎬</div>
+                                        {ad.isNew && (
+                                            <span className="absolute top-2 left-2 px-2 py-0.5 bg-indigo-500 text-white text-xs font-bold rounded">
+                                                NEW
                                             </span>
+                                        )}
+                                        <div className="absolute bottom-2 right-2 px-2 py-0.5 bg-black/70 text-white text-xs rounded flex items-center gap-1">
+                                            <Clock className="w-3 h-3" />
+                                            {ad.durationSeconds}초
                                         </div>
-                                        <CardHeader className="pb-2">
-                                            <div className="flex items-start justify-between">
-                                                <span className="text-xs text-slate-500">{ad.advertiserName}</span>
-                                                <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-indigo-900/40 text-indigo-400 text-xs font-medium">
-                                                    <Gift className="w-3 h-3" />
-                                                    +{ad.rewardPmpAmount} PMP
-                                                </div>
+                                        <div className="absolute inset-0 bg-indigo-600/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                            <div className="w-14 h-14 rounded-full bg-indigo-500 flex items-center justify-center shadow-lg">
+                                                <Play className="w-6 h-6 text-white ml-1" />
                                             </div>
-                                            <CardTitle className="text-lg text-white group-hover:text-indigo-400 transition-colors line-clamp-1">
+                                        </div>
+                                    </div>
+                                    <CardContent className="p-4 space-y-3">
+                                        <div>
+                                            <p className="text-xs text-indigo-400 mb-1">{ad.advertiserName}</p>
+                                            <h3 className="font-bold text-white group-hover:text-indigo-300 transition-colors line-clamp-1">
                                                 {ad.title}
-                                            </CardTitle>
-                                            <p className="text-sm text-slate-400 line-clamp-2">{ad.description}</p>
-                                        </CardHeader>
-                                        <CardContent className="pt-2">
-                                            <div className="flex items-center gap-4 text-sm text-slate-500">
+                                            </h3>
+                                            <p className="text-sm text-slate-400 line-clamp-2 mt-1">
+                                                {ad.description}
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                                            <div className="flex items-center gap-3 text-xs text-slate-500">
                                                 <span className="flex items-center gap-1">
-                                                    <Eye className="w-4 h-4" />
-                                                    {ad.viewCount.toLocaleString()}회
-                                                </span>
-                                                <span className="flex items-center gap-1">
-                                                    <Clock className="w-4 h-4" />
-                                                    {ad.durationSeconds}초
+                                                    <Eye className="w-3.5 h-3.5" />
+                                                    {ad.viewCount.toLocaleString()}
                                                 </span>
                                             </div>
-                                        </CardContent>
-                                    </Card>
-                                </Link>
+                                            <div className="flex items-center gap-1 text-indigo-400 font-bold text-sm">
+                                                <Gift className="w-4 h-4" />
+                                                +{ad.rewardPmpAmount} PMP
+                                            </div>
+                                        </div>
+                                        <Link href={`/consume/major-league/${ad.id}`} className="block">
+                                            <Button className="w-full bg-indigo-600 hover:bg-indigo-500 text-white">
+                                                시청하고 PMP 받기
+                                            </Button>
+                                        </Link>
+                                    </CardContent>
+                                </Card>
                             </motion.div>
                         ))}
                     </AnimatePresence>
@@ -201,8 +238,8 @@ export default function MajorLeaguePage() {
 
                 {filteredAds.length === 0 && (
                     <div className="text-center py-16 text-slate-500">
-                        <Play className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>검색 결과가 없습니다.</p>
+                        <Play className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>해당 조건의 광고가 없습니다.</p>
                     </div>
                 )}
             </main>

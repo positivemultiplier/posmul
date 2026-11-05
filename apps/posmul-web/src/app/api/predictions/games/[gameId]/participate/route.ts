@@ -17,10 +17,6 @@ import {
   InMemoryEventPublisher,
   PublishError as LocalPublishError,
 } from "../../../../../../shared/events/event-publisher";
-import {
-  toLegacyPredictionGameId,
-  toLegacyUserId,
-} from "../../../../../../shared/type-bridge";
 
 // EventPublisher 어댑터 클래스 - 타입 변환 처리
 class EventPublisherAdapter implements IDomainEventPublisher {
@@ -141,8 +137,8 @@ export async function POST(
 
     // 요청 DTO 생성
     const participationRequest = {
-      userId: toLegacyUserId(body.userId as UserId),
-      gameId: toLegacyPredictionGameId(gameId as PredictionGameId),
+      userId: body.userId as UserId,
+      gameId: gameId as PredictionGameId,
       selectedOptionId: body.selectedOptionId,
       stakeAmount: body.stakeAmount,
       confidence: body.confidence,

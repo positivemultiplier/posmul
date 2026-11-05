@@ -2,7 +2,7 @@
  * MCP Institute Repository Implementation
  */
 import { PaginatedResult, Result } from "@posmul/auth-economy-sdk";
-import { createDefaultMCPAdapter, buildParameterizedQuery } from "../../../../shared/legacy-compatibility";
+import { createDefaultMCPAdapter, buildParameterizedQuery } from "../../../../shared/mcp";
 import { Institute, InstituteStatus, TrustLevel } from "../../domain/entities/institute.entity";
 import {
     IInstituteRepository,

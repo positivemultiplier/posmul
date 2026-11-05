@@ -1,4 +1,4 @@
-import { Result } from "../../types/common";
+import { Result } from "@posmul/auth-economy-sdk";
 import { EconomyKernelError } from "./economy-kernel.service";
 
 export interface DailyPrizePoolResult {

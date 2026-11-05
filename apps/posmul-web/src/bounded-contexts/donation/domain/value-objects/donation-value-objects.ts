@@ -2,7 +2,7 @@
  * Donation Domain Value Objects
  * 기부 도메인의 값 객체들
  */
-import { Result } from "../../../../shared/types/common";
+import { Result } from "@posmul/auth-economy-sdk";
 
 // 기부 식별자
 export class DonationId {

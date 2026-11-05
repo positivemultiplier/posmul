@@ -6,7 +6,6 @@ import { DeletePredictionGameUseCase } from "../../../../../bounded-contexts/pre
 import { GetPredictionGameByIdUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/get-prediction-game-by-id.use-case";
 import { UpdatePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/update-prediction-game.use-case";
 import { SupabasePredictionGameRepository } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
-import { toLegacyUserId } from "../../../../../shared/type-bridge";
 
 /**
  * GET /api/predictions/games/[gameId]
@@ -146,7 +145,7 @@ export async function PUT(
     // UseCase 실행
     const result = await useCase.execute({
       gameId: gameId as PredictionGameId,
-      updatedBy: toLegacyUserId(parsedBody.updatedBy as UserId),
+      updatedBy: parsedBody.updatedBy as UserId,
       updates: {
         title: parsedBody.updates.title,
         description: parsedBody.updates.description,
@@ -269,7 +268,7 @@ export async function DELETE(
     // UseCase 실행
     const result = await useCase.execute({
       gameId: gameId as PredictionGameId,
-      deletedBy: toLegacyUserId(deletedBy as UserId),
+      deletedBy: deletedBy as UserId,
       reason,
     });
 

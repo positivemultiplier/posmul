@@ -6,7 +6,7 @@ import {
   adaptErrorToBaseError,
   failure,
   success,
-} from "../../../../shared/legacy-compatibility";
+} from "../../../../shared/mcp";
 import { InvestmentOpportunity } from "../../domain/entities/investment-opportunity.entity";
 import { IInvestmentOpportunityRepository } from "../../domain/repositories/investment-opportunity.repository";
 import {

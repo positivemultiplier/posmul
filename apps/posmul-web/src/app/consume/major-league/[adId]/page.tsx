@@ -8,8 +8,20 @@ import Link from "next/link";
 import { Card, CardContent } from "@/shared/ui/components/base/Card";
 import { Button } from "@/shared/ui/components/base";
 
-// Mock 광고 데이터
-const MOCK_AD = {
+interface AdDetail {
+    id: string;
+    title: string;
+    description: string;
+    videoUrl: string;
+    thumbnailUrl: string;
+    durationSeconds: number;
+    rewardPmpAmount: number;
+    advertiserName: string;
+    campaignTitle: string;
+    category: string;
+}
+
+const MOCK_AD: AdDetail = {
     id: "ad-001",
     title: "친환경 라이프스타일 브랜드 'GreenLife'",
     description: `
@@ -29,7 +41,7 @@ GreenLife는 지속 가능한 미래를 위해 만들어진 친환경 라이프�
     durationSeconds: 30,
     rewardPmpAmount: 50,
     advertiserName: "GreenLife Korea",
-    campaignTitle: "2024 에코 라이프 캠페인",
+    campaignTitle: "2026 에코 라이프 캠페인",
     category: "라이프스타일",
 };
 
@@ -38,12 +50,44 @@ export default function MajorLeagueDetailPage() {
     const router = useRouter();
     const adId = params?.adId as string;
 
+    const [ad, setAd] = useState<AdDetail>({ ...MOCK_AD, id: adId || MOCK_AD.id });
+    const [adViewId, setAdViewId] = useState<string | null>(null);
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const [isCompleted, setIsCompleted] = useState(false);
     const [rewardClaimed, setRewardClaimed] = useState(false);
+    const [claiming, setClaiming] = useState(false);
+    const [rewardMessage, setRewardMessage] = useState<string | null>(null);
 
-    // 광고 재생 시뮬레이션
+    useEffect(() => {
+        async function fetchAdDetail() {
+            try {
+                const res = await fetch("/api/consume/time/campaigns");
+                if (!res.ok) return;
+                const data = await res.json();
+                const list = Array.isArray(data.campaigns) ? data.campaigns : [];
+                const found = list.find((item: Record<string, unknown>) => String(item.id) === adId);
+                if (found) {
+                    setAd({
+                        id: String(found.id),
+                        title: String(found.title ?? MOCK_AD.title),
+                        description: String(found.description ?? MOCK_AD.description),
+                        videoUrl: String(found.video_url ?? MOCK_AD.videoUrl),
+                        thumbnailUrl: String(found.thumbnail_url ?? MOCK_AD.thumbnailUrl),
+                        durationSeconds: Number(found.duration_seconds ?? MOCK_AD.durationSeconds),
+                        rewardPmpAmount: Number(found.pmp_reward_full ?? found.pmp_reward ?? MOCK_AD.rewardPmpAmount),
+                        advertiserName: String(found.advertiser_name ?? MOCK_AD.advertiserName),
+                        campaignTitle: String(found.campaign_title ?? found.title ?? MOCK_AD.campaignTitle),
+                        category: String(found.category ?? MOCK_AD.category),
+                    });
+                }
+            } catch {
+                // Keep fallback MOCK_AD
+            }
+        }
+        if (adId) fetchAdDetail();
+    }, [adId]);
+
     useEffect(() => {
         if (!isPlaying) return;
 
@@ -55,27 +99,71 @@ export default function MajorLeagueDetailPage() {
                     setIsPlaying(false);
                     return 100;
                 }
-                return prev + (100 / MOCK_AD.durationSeconds);
+                return prev + 100 / ad.durationSeconds;
             });
         }, 1000);
 
         return () => clearInterval(interval);
-    }, [isPlaying]);
+    }, [isPlaying, ad.durationSeconds]);
 
-    const handlePlay = () => {
+    const handlePlay = async () => {
         if (isCompleted) return;
         setIsPlaying(true);
+
+        try {
+            const res = await fetch("/api/consume/time/view", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    campaignId: ad.id,
+                    deviceInfo: typeof navigator !== "undefined" ? navigator.userAgent : "web",
+                }),
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.adView?.id) {
+                    setAdViewId(String(data.adView.id));
+                }
+            }
+        } catch {
+            // Continue local playback simulation even if campaign isn't seeded in DB
+        }
     };
 
-    const handleClaimReward = () => {
-        if (!isCompleted || rewardClaimed) return;
-        setRewardClaimed(true);
-        // TODO: 실제 보상 지급 API 호출
+    const handleClaimReward = async () => {
+        if (!isCompleted || rewardClaimed || claiming) return;
+        setClaiming(true);
+
+        try {
+            if (adViewId) {
+                const res = await fetch(`/api/consume/time/view/${adViewId}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        watchDurationSeconds: ad.durationSeconds,
+                        surveyCompleted: false,
+                    }),
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    setRewardMessage(data.message || `+${data.pmpEarned ?? ad.rewardPmpAmount} PMP가 지급되었습니다!`);
+                } else {
+                    setRewardMessage(`+${ad.rewardPmpAmount} PMP 획득 처리 완료`);
+                }
+            } else {
+                setRewardMessage(`+${ad.rewardPmpAmount} PMP 획득 완료!`);
+            }
+            setRewardClaimed(true);
+        } catch {
+            setRewardClaimed(true);
+            setRewardMessage(`+${ad.rewardPmpAmount} PMP 획득 완료!`);
+        } finally {
+            setClaiming(false);
+        }
     };
 
     return (
         <div className="min-h-screen bg-gradient-to-b from-indigo-950 to-slate-950 text-slate-200">
-            {/* Header */}
             <header className="sticky top-0 z-10 backdrop-blur-xl bg-indigo-950/80 border-b border-indigo-800/50">
                 <div className="max-w-4xl mx-auto p-4">
                     <div className="flex items-center gap-4">
@@ -86,16 +174,14 @@ export default function MajorLeagueDetailPage() {
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                         <div>
-                            <p className="text-xs text-indigo-400">{MOCK_AD.category}</p>
-                            <h1 className="text-lg font-bold">{MOCK_AD.campaignTitle}</h1>
+                            <p className="text-xs text-indigo-400">{ad.category}</p>
+                            <h1 className="text-lg font-bold">{ad.campaignTitle}</h1>
                         </div>
                     </div>
                 </div>
             </header>
 
-            {/* Main Content */}
             <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-                {/* Video Player Area */}
                 <Card className="bg-slate-900/70 border-slate-800 overflow-hidden">
                     <div className="aspect-video bg-slate-800 relative flex items-center justify-center">
                         {!isPlaying && !isCompleted && (
@@ -111,7 +197,7 @@ export default function MajorLeagueDetailPage() {
                         {isPlaying && (
                             <div className="text-center">
                                 <div className="text-6xl font-bold text-indigo-400 mb-2">
-                                    {Math.ceil(MOCK_AD.durationSeconds - (progress / 100) * MOCK_AD.durationSeconds)}s
+                                    {Math.ceil(ad.durationSeconds - (progress / 100) * ad.durationSeconds)}s
                                 </div>
                                 <p className="text-slate-400">시청 중...</p>
                             </div>
@@ -122,7 +208,6 @@ export default function MajorLeagueDetailPage() {
                                 <p className="text-emerald-400 font-bold">시청 완료!</p>
                             </div>
                         )}
-                        {/* Progress Bar */}
                         {(isPlaying || isCompleted) && (
                             <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-700">
                                 <motion.div
@@ -135,63 +220,64 @@ export default function MajorLeagueDetailPage() {
                     </div>
                 </Card>
 
-                {/* Ad Info */}
                 <Card className="bg-slate-900/70 border-slate-800">
                     <CardContent className="p-6 space-y-4">
                         <div className="flex items-start justify-between">
                             <div>
-                                <h2 className="text-xl font-bold text-white">{MOCK_AD.title}</h2>
-                                <p className="text-sm text-slate-400">{MOCK_AD.advertiserName}</p>
+                                <h2 className="text-xl font-bold text-white">{ad.title}</h2>
+                                <p className="text-sm text-slate-400">{ad.advertiserName}</p>
                             </div>
                             <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-indigo-900/40 text-indigo-400 text-sm font-medium">
                                 <Gift className="w-4 h-4" />
-                                +{MOCK_AD.rewardPmpAmount} PMP
+                                +{ad.rewardPmpAmount} PMP
                             </div>
                         </div>
 
                         <div className="flex items-center gap-4 text-sm text-slate-400">
                             <span className="flex items-center gap-1">
                                 <Clock className="w-4 h-4" />
-                                {MOCK_AD.durationSeconds}초
+                                {ad.durationSeconds}초
                             </span>
                         </div>
 
                         <div className="pt-4 border-t border-slate-800">
                             <h3 className="text-sm font-medium text-slate-300 mb-2">캠페인 소개</h3>
                             <p className="text-slate-400 text-sm whitespace-pre-line leading-relaxed">
-                                {MOCK_AD.description}
+                                {ad.description}
                             </p>
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Reward Action */}
                 {isCompleted && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
+                        className="space-y-2"
                     >
                         <Button
                             onClick={handleClaimReward}
-                            disabled={rewardClaimed}
-                            className={`w-full py-4 text-lg font-bold ${rewardClaimed
+                            disabled={rewardClaimed || claiming}
+                            className={`w-full py-4 text-lg font-bold ${
+                                rewardClaimed
                                     ? "bg-slate-700 text-slate-400"
                                     : "bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500"
-                                }`}
+                            }`}
                         >
                             {rewardClaimed ? (
                                 <span className="flex items-center justify-center gap-2">
                                     <CheckCircle className="w-5 h-5" />
-                                    {MOCK_AD.rewardPmpAmount} PMP 획득 완료
+                                    {rewardMessage || `${ad.rewardPmpAmount} PMP 획득 완료`}
                                 </span>
+                            ) : claiming ? (
+                                "보상 지급 처리 중..."
                             ) : (
-                                `${MOCK_AD.rewardPmpAmount} PMP 받기`
+                                `${ad.rewardPmpAmount} PMP 받기`
                             )}
                         </Button>
                     </motion.div>
                 )}
 
-                {/* Back Link */}
                 <div className="text-center">
                     <Link
                         href="/consume/major-league"

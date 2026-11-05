@@ -8,7 +8,7 @@ import {
   getPredictionGameBySlug,
   getPredictionGameStats,
   parseGameOptions,
-} from "../../../bounded-contexts/public/infrastructure/repositories/prediction.repository";
+} from "../../../bounded-contexts/prediction/infrastructure/repositories/prediction-query.repository";
 
 import { getUserBalance, getUserBets } from "../sports/soccer/[slug]/actions";
 

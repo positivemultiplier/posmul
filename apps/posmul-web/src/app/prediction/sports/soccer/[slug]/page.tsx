@@ -8,7 +8,7 @@
  * @since 2024-12
  */
 import { notFound } from "next/navigation";
-import { getPredictionGameBySlug, getPredictionGameStats, parseGameOptions } from "../../../../../bounded-contexts/public/infrastructure/repositories/prediction.repository";
+import { getPredictionGameBySlug, getPredictionGameStats, parseGameOptions } from "../../../../../bounded-contexts/prediction/infrastructure/repositories/prediction-query.repository";
 import { SoccerPredictionDetailClient } from "./client";
 import { getUserBalance, getUserBets } from "./actions";
 

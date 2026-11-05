@@ -49,8 +49,8 @@ export type {
   PredictionGameId,
   PredictionId,
   UserId,
-} from "../../../../shared/types/branded-types";
-export type { Result } from "@posmul/auth-economy-sdk";
+  Result,
+} from "@posmul/auth-economy-sdk";
 
 /**
  * Repository 패턴의 주요 원칙:

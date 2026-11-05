@@ -6,7 +6,7 @@ import React, { HTMLAttributes, ReactNode } from "react";
 import { cn } from "../../utils/cn";
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  children: ReactNode;
+  children?: ReactNode;
   padding?: "none" | "sm" | "md" | "lg";
   shadow?: "none" | "sm" | "md" | "lg";
 }

@@ -18,9 +18,9 @@ PMP(무료 획득) → 예측 게임(학습) → PMC(성공 보상) → 기부(�
 
 | 영역 | 기술 |
 |------|------|
-| **Frontend** | Next.js 15, React 19, TypeScript 5.4, Tailwind CSS |
+| **Frontend** | Next.js 15, React 19, TypeScript 5.9, Tailwind CSS |
 | **Backend** | Supabase (PostgreSQL), MCP 도구 |
-| **패키지** | pnpm 10.12.4, Turborepo 2.0.4 |
+| **패키지** | pnpm 10.12.4, Turborepo 2.7 |
 | **아키텍처** | DDD + Clean Architecture |
 
 ---
@@ -62,19 +62,22 @@ PMP(무료 획득) → 예측 게임(학습) → PMC(성공 보상) → 기부(�
 posmul/
 ├── apps/posmul-web/
 │   └── src/
-│       ├── app/                    # Next.js 라우트
-│       ├── bounded-contexts/       # DDD 도메인
+│       ├── app/                    # Next.js App Router
+│       ├── bounded-contexts/       # DDD 9개 도메인 컨텍스트
 │       │   ├── auth/
-│       │   ├── consume/            # 구 investment
+│       │   ├── consume/
+│       │   ├── demographic-data/
 │       │   ├── donation/
 │       │   ├── economy/
+│       │   ├── feed/
 │       │   ├── forum/
 │       │   ├── prediction/
-│       │   ├── ranking/
-│       │   └── user/
-│       └── shared/                 # 공용 코드
-├── packages/auth-economy-sdk/      # 생태계 SDK
-└── docs/                           # 문서
+│       │   └── ranking/
+│       ├── lib/                    # Supabase 클라이언트 및 유틸
+│       └── shared/                 # 공용 UI, Economy Kernel, Events, MCP
+├── packages/auth-economy-sdk/      # 생태계 통합 SDK
+├── supabase/                       # Edge Functions 및 DB Migrations
+└── docs/                           # 공식 문서 허브 (Diataxis + Archive)
 ```
 
 ---
@@ -106,6 +109,6 @@ pnpm -F @posmul/posmul-web type-check
 
 ---
 
-**상세 규칙**: `.agent/rules/projectrule.md` 참조  
+**상세 규칙**: `.agent/rules/Posmul_projectrule.md` 참조  
 **워크플로우**: `.agent/workflows/` 참조  
-**아키텍처**: `docs/architecture/` 참조
+**문서 허브**: `docs/README.md` 참조

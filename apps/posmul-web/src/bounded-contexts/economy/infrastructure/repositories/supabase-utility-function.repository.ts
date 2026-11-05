@@ -5,7 +5,7 @@ import {
   CompatibleBaseError,
   Result,
   createDefaultMCPAdapter,
-} from "../../../../shared/legacy-compatibility";
+} from "../../../../shared/mcp";
 
 export class SupabaseUtilityFunctionRepository {
   private readonly mcpAdapter = createDefaultMCPAdapter();

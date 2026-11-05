@@ -1,7 +1,7 @@
 /**
  * MoneyWave2 Aggregate
  */
-import { Result } from "../../../../shared/legacy-compatibility";
+import { Result } from "@posmul/auth-economy-sdk";
 
 class DomainError extends Error {
   constructor(

@@ -62,7 +62,7 @@ pie title "Project Focus"
 - Ubiquitous Language: 도메인 전문가와 개발자 간 동일 용어
 - Bounded Context 격리: 각 컨텍스트 독립 진화
 
-**Bounded Contexts (코드 기준 11개)**
+**Bounded Contexts (코드 기준 9개)**
 
 > 기준: `apps/posmul-web/src/bounded-contexts/` 디렉토리
 
@@ -72,12 +72,10 @@ consume
 demographic-data
 donation
 economy
+feed
 forum
 prediction
-public
 ranking
-study_cycle
-user
 ```
 
 ```mermaid
@@ -87,12 +85,10 @@ graph TD
   BC --> demographic_data[demographic-data]
   BC --> donation
   BC --> economy
+  BC --> feed
   BC --> forum
   BC --> prediction
-  BC --> public
   BC --> ranking
-  BC --> study_cycle
-  BC --> user
 ```
 
 **도메인 계층**

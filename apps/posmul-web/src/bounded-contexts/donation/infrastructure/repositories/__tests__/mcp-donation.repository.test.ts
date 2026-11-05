@@ -4,12 +4,12 @@
  * Infrastructure Layer Repository 테스트
  * 기부 관련 MCP Repository 검증
  */
-import { createDefaultMCPAdapter } from "../../../../../shared/legacy-compatibility";
+import { createDefaultMCPAdapter } from "../../../../../shared/mcp";
 import { MCPDonationRepository } from "../mcp-donation.repository";
 import { DonationId, DonationStatus } from "../../../domain/value-objects/donation-value-objects";
 
 // MCP Adapter 모킹
-jest.mock("../../../../../shared/legacy-compatibility", () => ({
+jest.mock("../../../../../shared/mcp", () => ({
   createDefaultMCPAdapter: jest.fn(),
   buildParameterizedQuery: (query: string) => query,
 }));

@@ -1,4 +1,4 @@
-import { createDefaultMCPAdapter } from "../../../../shared/legacy-compatibility";
+import { createDefaultMCPAdapter } from "../../../../shared/mcp";
 import { IAuthRepository } from '../../domain/repositories';
 import { AuthSession, Permission, Role, UserCredentials } from '../../domain/entities';
 import { Result, UserId } from '@posmul/auth-economy-sdk';
