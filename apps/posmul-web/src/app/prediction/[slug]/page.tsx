@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Universal Prediction Game Detail Page
  * 모든 예측 카드를 클릭했을 때 이동하는 범용 상세페이지 라우트 (/prediction/[slug])
  */
@@ -148,7 +148,7 @@ export default async function PredictionDetailPage({ params }: PredictionDetailP
       category: dbGame.category || "예측",
       createdAt: dbGame.created_at || new Date().toISOString(),
       creator: { name: "PosMul AI 분석가", reputation: 4.9, avatar: "🎯" },
-      prizePool: dbGame.allocated_prize_pool || 30000,
+      prizePool: Math.round(dbGame.allocated_prize_pool || 30000),
       minimumStake: dbGame.min_bet_amount || 100,
       maximumStake: dbGame.max_bet_amount || 50000,
     };

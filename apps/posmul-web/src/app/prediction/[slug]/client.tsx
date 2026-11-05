@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Universal Prediction Game Detail Client Component
  * 모든 예측 카드의 클릭에 대응하는 범용 상세페이지 클라이언트 컴포넌트
  */
@@ -110,7 +110,7 @@ export function UniversalPredictionDetailClient({
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-blue-500 selection:text-white">
       {/* Top Header Bar */}
-      <header className="sticky top-0 z-20 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800">
+      <header className="sticky top-[60px] md:top-[142px] z-20 backdrop-blur-xl bg-slate-950/80 border-b border-slate-800">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link href="/prediction" className="flex items-center gap-2 text-slate-400 hover:text-white text-xs font-bold transition-colors">
             <ArrowLeft className="w-4 h-4" />
@@ -164,11 +164,29 @@ export function UniversalPredictionDetailClient({
               <div className="h-64 w-full overflow-hidden flex flex-col justify-end">
                 <ProbabilityLineChart
                   data={[
-                    { time: "00:00", [game.options[0]?.label || "찬성"]: 50, [game.options[1]?.label || "반대"]: 50 },
-                    { time: "06:00", [game.options[0]?.label || "찬성"]: 55, [game.options[1]?.label || "반대"]: 45 },
-                    { time: "12:00", [game.options[0]?.label || "찬성"]: 62, [game.options[1]?.label || "반대"]: 38 },
-                    { time: "18:00", [game.options[0]?.label || "찬성"]: 65, [game.options[1]?.label || "반대"]: 35 },
+                    {
+                      time: "00:00",
+                      ...(game.options.reduce((acc, opt) => ({ ...acc, [opt.label]: Math.round((opt.probability || 0.5) * 100) }), {})),
+                    },
+                    {
+                      time: "06:00",
+                      ...(game.options.reduce((acc, opt, idx) => ({ ...acc, [opt.label]: Math.min(95, Math.max(5, Math.round((opt.probability || 0.5) * 100) + (idx === 0 ? 4 : -4))) }), {})),
+                    },
+                    {
+                      time: "12:00",
+                      ...(game.options.reduce((acc, opt, idx) => ({ ...acc, [opt.label]: Math.min(95, Math.max(5, Math.round((opt.probability || 0.5) * 100) + (idx === 0 ? 8 : -8))) }), {})),
+                    },
+                    {
+                      time: "현재",
+                      ...(game.options.reduce((acc, opt) => ({ ...acc, [opt.label]: Math.round((opt.probability || 0.5) * 100) }), {})),
+                    },
                   ]}
+                  lines={game.options.map((opt, i) => ({
+                    dataKey: opt.label,
+                    name: opt.label,
+                    color: i === 0 ? "#2797FF" : i === 1 ? "#EF4444" : "#FDC503",
+                    strokeWidth: 2,
+                  }))}
                   isDarkMode={true}
                 />
               </div>
@@ -279,7 +297,7 @@ export function UniversalPredictionDetailClient({
                   <span>🎯 예측 참여 패널</span>
                 </span>
                 <span className="text-xs font-bold text-amber-400">
-                  💎 상금 팟: {game.prizePool.toLocaleString()} PMC
+                  💎 상금 팟: {Math.round(game.prizePool || 0).toLocaleString()} PMC
                 </span>
               </div>
 
@@ -373,7 +391,7 @@ export function UniversalPredictionDetailClient({
             </Card>
 
             {/* Moneypool Widget Card */}
-            <CompactMoneyWaveCard depthLevel={1} initialPool={game.prizePool} />
+            <CompactMoneyWaveCard depthLevel={1} initialPool={Math.round(game.prizePool || 0)} />
           </div>
         </div>
       </main>
