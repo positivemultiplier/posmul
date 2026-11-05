@@ -1,7 +1,6 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { createClient } from '@supabase/supabase-js';
 import type { User } from '@supabase/supabase-js';
-import { cookies } from 'next/headers';
 import { NextResponse, type NextRequest } from 'next/server';
 
 // 개발 보너스 금액
@@ -15,36 +14,6 @@ function getCallbackParams(request: NextRequest) {
         code: requestUrl.searchParams.get('code'),
         next: requestUrl.searchParams.get('next') ?? '/dashboard',
     };
-}
-
-async function createSupabaseServerClient() {
-    const cookieStore = await cookies();
-
-    return createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-        {
-            cookies: {
-                get(name: string) {
-                    return cookieStore.get(name)?.value;
-                },
-                set(name: string, value: string, options: CookieOptions) {
-                    try {
-                        cookieStore.set({ name, value, ...options });
-                    } catch {
-                        // Server Component 환경에서는 set이 실패할 수 있음
-                    }
-                },
-                remove(name: string, options: CookieOptions) {
-                    try {
-                        cookieStore.set({ name, value: '', ...options });
-                    } catch {
-                        // Server Component 환경에서는 remove가 실패할 수 있음
-                    }
-                },
-            },
-        }
-    );
 }
 
 function createAdminSupabaseClient() {
@@ -144,7 +113,7 @@ async function upsertDevBonusAccount(adminSupabase: ReturnType<typeof createAdmi
     }
 }
 
-async function awardDevBonusIfNeeded(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>) {
+async function awardDevBonusIfNeeded(supabase: ReturnType<typeof createServerClient>) {
     if (!isDevelopment()) return;
 
     const { data } = await supabase.auth.getUser();
@@ -159,22 +128,49 @@ async function awardDevBonusIfNeeded(supabase: Awaited<ReturnType<typeof createS
 
 export async function GET(request: NextRequest) {
     const { requestUrl, code, next } = getCallbackParams(request);
+
+    // Vercel 프록시 환경 대응: x-forwarded-host 우선 사용
+    const forwardedHost = request.headers.get('x-forwarded-host');
+    const isLocalEnv = process.env.NODE_ENV === 'development';
+    const redirectOrigin = forwardedHost && !isLocalEnv ? `https://${forwardedHost}` : requestUrl.origin;
+    const targetUrl = `${redirectOrigin}${next.startsWith('/') ? next : '/' + next}`;
+
     if (!code) {
-        return NextResponse.redirect(new URL('/auth/login?error=no_code', request.url));
+        return NextResponse.redirect(`${redirectOrigin}/auth/login?error=no_code`);
     }
 
-    const supabase = await createSupabaseServerClient();
+    let response = NextResponse.redirect(targetUrl);
+
+    const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+            cookies: {
+                getAll() {
+                    return request.cookies.getAll();
+                },
+                setAll(cookiesToSet) {
+                    cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+                    response = NextResponse.redirect(targetUrl);
+                    cookiesToSet.forEach(({ name, value, options }) =>
+                        response.cookies.set(name, value, options)
+                    );
+                },
+            },
+        }
+    );
+
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
-        return NextResponse.redirect(new URL('/auth/login?error=auth_error', request.url));
+        void error;
+        return NextResponse.redirect(`${redirectOrigin}/auth/login?error=auth_error`);
     }
 
     try {
         await awardDevBonusIfNeeded(supabase);
-    } catch (bonusError) {
-        void bonusError;
+    } catch {
         // 보너스 지급 실패해도 로그인은 계속 진행
     }
 
-    return NextResponse.redirect(new URL(next, requestUrl));
+    return response;
 }
