@@ -1,185 +1,213 @@
 /**
  * 마스터 게임 스케줄러 서비스
- * 
- * 모든 데이터 소스를 통합하여 정기 게임을 자동 생성
- * - Football Data: 축구 경기
- * - FMP Earnings: 기업 실적 발표
- * - 기존 GameSchedulingService의 템플릿
+ *
+ * 모든 데이터 소스를 통합하여 정기 예측 게임을 자동 생성 및 동기화
+ * - 한국은행 ECOS: 기준금리, 실질 GDP, 경상수지
+ * - 통계청 KOSIS: 소비자물가지수(CPI), 실업률
+ * - 금융감독원 DART: 국내 시총 상위 상장사 분기 실적
+ * - K-콘텐츠 (KOBIS/시청률/음원): 주말 박스오피스, 주말 드라마 시청률, 일요 예능, K-POP 차트
+ * - Football Data: 유럽 축구 6대 리그
+ * - FMP Earnings: 미국 빅테크 분기 실적 발표
  */
 
 import { CreatePredictionGameUseCase } from "../use-cases/create-prediction-game.use-case";
-import { GameSchedulingService, ScheduledGameTemplate } from "./game-scheduling.service";
-import { FootballMatchSchedulerService } from "./football-match-scheduler.service";
 import { EarningsCalendarSchedulerService } from "./earnings-calendar-scheduler.service";
+import { FootballMatchSchedulerService } from "./football-match-scheduler.service";
+import {
+  GameSchedulingService,
+  ScheduledGameTemplate,
+} from "./game-scheduling.service";
 
 export interface MasterSchedulerConfig {
-    enableFootball: boolean;
-    enableEarnings: boolean;
-    enableDynamicGames: boolean;
-    syncIntervalMinutes: number;
+  enableFootball: boolean;
+  enableEarnings: boolean;
+  enableDynamicGames: boolean;
+  syncIntervalMinutes: number;
 }
 
 export class MasterGameSchedulerService {
-    private readonly gameScheduler: GameSchedulingService;
-    private footballScheduler: FootballMatchSchedulerService | null = null;
-    private earningsScheduler: EarningsCalendarSchedulerService | null = null;
-    private config: MasterSchedulerConfig;
-    private syncInterval: NodeJS.Timeout | null = null;
+  private readonly gameScheduler: GameSchedulingService;
+  private footballScheduler: FootballMatchSchedulerService | null = null;
+  private earningsScheduler: EarningsCalendarSchedulerService | null = null;
+  private config: MasterSchedulerConfig;
+  private syncInterval: NodeJS.Timeout | null = null;
 
-    constructor(
-        createGameUseCase: CreatePredictionGameUseCase,
-        config?: Partial<MasterSchedulerConfig>
-    ) {
-        this.config = {
-            enableFootball: true,
-            enableEarnings: true,
-            enableDynamicGames: true,
-            syncIntervalMinutes: 60, // 1시간마다 동기화
-            ...config,
-        };
+  constructor(
+    createGameUseCase: CreatePredictionGameUseCase,
+    config?: Partial<MasterSchedulerConfig>
+  ) {
+    this.config = {
+      enableFootball: true,
+      enableEarnings: true,
+      enableDynamicGames: true,
+      syncIntervalMinutes: 60,
+      ...config,
+    };
 
-        this.gameScheduler = new GameSchedulingService(createGameUseCase);
+    this.gameScheduler = new GameSchedulingService(createGameUseCase);
 
-        // 조건부 초기화 (API 키 없으면 스킵)
-        try {
-            if (this.config.enableFootball && process.env.FOOTBALL_DATA_API_KEY) {
-                this.footballScheduler = new FootballMatchSchedulerService();
-            }
-        } catch (error) {
-            console.warn("[MasterScheduler] Football scheduler disabled:", error);
+    try {
+      if (this.config.enableFootball && process.env.FOOTBALL_DATA_API_KEY) {
+        this.footballScheduler = new FootballMatchSchedulerService();
+      }
+    } catch {
+      this.footballScheduler = null;
+    }
+
+    try {
+      if (this.config.enableEarnings && process.env.FMP_API_KEY) {
+        this.earningsScheduler = new EarningsCalendarSchedulerService();
+      }
+    } catch {
+      this.earningsScheduler = null;
+    }
+  }
+
+  async start(): Promise<void> {
+    await this.syncAllSources();
+    await this.gameScheduler.startScheduling();
+
+    this.syncInterval = setInterval(
+      () => this.syncAllSources(),
+      this.config.syncIntervalMinutes * 60 * 1000
+    );
+  }
+
+  stop(): void {
+    if (this.syncInterval) {
+      clearInterval(this.syncInterval);
+      this.syncInterval = null;
+    }
+    this.gameScheduler.stopScheduling();
+  }
+
+  /**
+   * 모든 외부 캘린더 소스(축구 경기 + 미국 실적 발표) 동기화
+   */
+  async syncAllSources(): Promise<{
+    footballAdded: number;
+    earningsAdded: number;
+    totalTemplates: number;
+  }> {
+    let footballAdded = 0;
+    let earningsAdded = 0;
+    const newTemplates: ScheduledGameTemplate[] = [];
+
+    if (this.footballScheduler) {
+      try {
+        const footballTemplates =
+          await this.footballScheduler.generateDailyGameTemplates();
+        newTemplates.push(...footballTemplates);
+        footballAdded = footballTemplates.length;
+      } catch {
+        // Ignore API failure during sync
+      }
+    }
+
+    if (this.earningsScheduler) {
+      try {
+        const earningsTemplates =
+          await this.earningsScheduler.generateWeeklyEarningsGames();
+        newTemplates.push(...earningsTemplates);
+        earningsAdded = earningsTemplates.length;
+      } catch {
+        // Ignore API failure during sync
+      }
+    }
+
+    for (const template of newTemplates) {
+      const existing = this.gameScheduler
+        .getActiveTemplates()
+        .find((t) => t.id === template.id);
+
+      if (!existing) {
+        this.gameScheduler.addTemplate(template);
+      }
+    }
+
+    return {
+      footballAdded,
+      earningsAdded,
+      totalTemplates: this.gameScheduler.getActiveTemplates().length,
+    };
+  }
+
+  /**
+   * 수동 동기화 트리거 및 지정 카테고리 템플릿 즉시 발행
+   */
+  async triggerSync(options?: {
+    materializeTemplates?: boolean;
+    category?: string;
+  }): Promise<{
+    footballAdded: number;
+    earningsAdded: number;
+    totalTemplates: number;
+    createdGameIds: string[];
+  }> {
+    const syncStats = await this.syncAllSources();
+    const createdGameIds: string[] = [];
+
+    if (options?.materializeTemplates) {
+      const targetTemplates = options.category
+        ? this.getTemplatesByCategory(options.category)
+        : this.getActiveTemplates();
+
+      for (const template of targetTemplates) {
+        const createdId =
+          await this.gameScheduler.createGameFromTemplate(template);
+        if (createdId) {
+          createdGameIds.push(createdId);
         }
-
-        try {
-            if (this.config.enableEarnings && process.env.FMP_API_KEY) {
-                this.earningsScheduler = new EarningsCalendarSchedulerService();
-            }
-        } catch (error) {
-            console.warn("[MasterScheduler] Earnings scheduler disabled:", error);
-        }
+      }
     }
 
-    /**
-     * 마스터 스케줄러 시작
-     */
-    async start(): Promise<void> {
-        console.log("[MasterScheduler] Starting...");
+    return {
+      ...syncStats,
+      createdGameIds,
+    };
+  }
 
-        // 초기 동기화
-        await this.syncAllSources();
+  getStatus() {
+    const activeTemplates = this.gameScheduler.getActiveTemplates();
+    return {
+      isRunning: this.syncInterval !== null,
+      config: this.config,
+      schedulingStats: this.gameScheduler.getSchedulingStats(),
+      footballEnabled: this.footballScheduler !== null,
+      earningsEnabled: this.earningsScheduler !== null,
+      templatesCount: activeTemplates.length,
+      upcomingGames: activeTemplates.slice(0, 10).map((t) => ({
+        id: t.id,
+        title: t.title,
+        category: t.category,
+        sourceType: t.sourceType ?? "manual",
+        scheduledAt: t.scheduledTime.toISOString(),
+      })),
+    };
+  }
 
-        // 기존 스케줄링 시스템 시작
-        await this.gameScheduler.startScheduling();
+  getActiveTemplates(): ScheduledGameTemplate[] {
+    return this.gameScheduler.getActiveTemplates();
+  }
 
-        // 주기적 동기화 설정
-        this.syncInterval = setInterval(
-            () => this.syncAllSources(),
-            this.config.syncIntervalMinutes * 60 * 1000
-        );
-
-        console.log("[MasterScheduler] Started successfully");
-    }
-
-    /**
-     * 마스터 스케줄러 중지
-     */
-    stop(): void {
-        if (this.syncInterval) {
-            clearInterval(this.syncInterval);
-            this.syncInterval = null;
-        }
-        this.gameScheduler.stopScheduling();
-        console.log("[MasterScheduler] Stopped");
-    }
-
-    /**
-     * 모든 데이터 소스 동기화
-     */
-    async syncAllSources(): Promise<void> {
-        console.log("[MasterScheduler] Syncing all sources...");
-
-        const newTemplates: ScheduledGameTemplate[] = [];
-
-        // Football 경기 동기화
-        if (this.footballScheduler) {
-            try {
-                const footballTemplates = await this.footballScheduler.generateDailyGameTemplates();
-                newTemplates.push(...footballTemplates);
-                console.log(`[MasterScheduler] Added ${footballTemplates.length} football games`);
-            } catch (error) {
-                console.error("[MasterScheduler] Football sync error:", error);
-            }
-        }
-
-        // 실적 발표 동기화
-        if (this.earningsScheduler) {
-            try {
-                const earningsTemplates = await this.earningsScheduler.generateWeeklyEarningsGames();
-                newTemplates.push(...earningsTemplates);
-                console.log(`[MasterScheduler] Added ${earningsTemplates.length} earnings games`);
-            } catch (error) {
-                console.error("[MasterScheduler] Earnings sync error:", error);
-            }
-        }
-
-        // 중복 제거 후 추가
-        for (const template of newTemplates) {
-            const existing = this.gameScheduler.getActiveTemplates()
-                .find(t => t.id === template.id);
-
-            if (!existing) {
-                this.gameScheduler.addTemplate(template);
-            }
-        }
-
-        console.log(`[MasterScheduler] Sync complete. Total templates: ${this.gameScheduler.getActiveTemplates().length
-            }`);
-    }
-
-    /**
-     * 수동 동기화 트리거
-     */
-    async triggerSync(): Promise<void> {
-        await this.syncAllSources();
-    }
-
-    /**
-     * 현재 상태 조회
-     */
-    getStatus() {
-        return {
-            isRunning: this.syncInterval !== null,
-            config: this.config,
-            schedulingStats: this.gameScheduler.getSchedulingStats(),
-            footballEnabled: this.footballScheduler !== null,
-            earningsEnabled: this.earningsScheduler !== null,
-        };
-    }
-
-    /**
-     * 활성 템플릿 목록 조회
-     */
-    getActiveTemplates(): ScheduledGameTemplate[] {
-        return this.gameScheduler.getActiveTemplates();
-    }
-
-    /**
-     * 카테고리별 활성 템플릿 조회
-     */
-    getTemplatesByCategory(category: string): ScheduledGameTemplate[] {
-        return this.gameScheduler.getActiveTemplates()
-            .filter(t => t.category === category);
-    }
+  getTemplatesByCategory(category: string): ScheduledGameTemplate[] {
+    return this.gameScheduler
+      .getActiveTemplates()
+      .filter((t) => t.category === category);
+  }
 }
 
-// 싱글톤 인스턴스 (선택적)
 let masterSchedulerInstance: MasterGameSchedulerService | null = null;
 
 export function getMasterScheduler(
-    createGameUseCase: CreatePredictionGameUseCase,
-    config?: Partial<MasterSchedulerConfig>
+  createGameUseCase: CreatePredictionGameUseCase,
+  config?: Partial<MasterSchedulerConfig>
 ): MasterGameSchedulerService {
-    if (!masterSchedulerInstance) {
-        masterSchedulerInstance = new MasterGameSchedulerService(createGameUseCase, config);
-    }
-    return masterSchedulerInstance;
+  if (!masterSchedulerInstance) {
+    masterSchedulerInstance = new MasterGameSchedulerService(
+      createGameUseCase,
+      config
+    );
+  }
+  return masterSchedulerInstance;
 }

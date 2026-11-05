@@ -1,79 +1,84 @@
-/**
- * 스케줄러 동기화 API 엔드포인트
- * 
- * Cron Job 또는 관리자 수동 트리거용
- */
-
 import { NextRequest, NextResponse } from "next/server";
 
-// 임시: 실제로는 DI 컨테이너에서 가져와야 함
-// import { getMasterScheduler } from "@/bounded-contexts/prediction/application/services/master-game-scheduler.service";
+import { getMasterScheduler } from "@/bounded-contexts/prediction/application/services/master-game-scheduler.service";
+import { getCreatePredictionGameUseCase } from "@/bounded-contexts/prediction/di-container";
 
+/**
+ * POST /api/admin/scheduler/sync
+ * 정기 경제지표(한국은행 ECOS, 통계청 KOSIS, 금감원 DART), K-콘텐츠(KOBIS/드라마/예능/가요),
+ * 글로벌 실적(FMP) 및 축구 경기(Football-Data) 스케줄러 동기화 엔드포인트
+ */
 export async function POST(request: NextRequest) {
-    try {
-        // 인증 확인 (Cron 시크릿 또는 관리자 세션)
-        const authHeader = request.headers.get("authorization");
-        const cronSecret = process.env.CRON_SECRET;
+  try {
+    const authHeader = request.headers.get("authorization");
+    const cronSecret = process.env.CRON_SECRET;
 
-        // 관리자 세션 확인 (TODO: 실제 인증 로직)
-        const isAdmin = true; // 임시
-
-        if (cronSecret && authHeader !== `Bearer ${cronSecret}` && !isAdmin) {
-            return NextResponse.json(
-                { success: false, error: "Unauthorized" },
-                { status: 401 }
-            );
-        }
-
-        // 스케줄러 동기화 실행
-        // const scheduler = getMasterScheduler(createGameUseCase);
-        // await scheduler.triggerSync();
-
-        // 임시 응답 (실제 구현 시 교체)
-        const result = {
-            success: true,
-            message: "스케줄러 동기화 완료",
-            syncedAt: new Date().toISOString(),
-            stats: {
-                footballGames: 3,
-                earningsGames: 2,
-                templateGames: 5,
-            },
-        };
-
-        return NextResponse.json(result);
-    } catch (error) {
-        console.error("[Scheduler Sync API] Error:", error);
-        return NextResponse.json(
-            { success: false, error: "Internal Server Error" },
-            { status: 500 }
-        );
+    if (cronSecret && authHeader && authHeader !== `Bearer ${cronSecret}`) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized" },
+        { status: 401 }
+      );
     }
+
+    let body: { materializeTemplates?: boolean; category?: string } = {};
+    try {
+      body = await request.json();
+    } catch {
+      body = {};
+    }
+
+    const createGameUseCase = getCreatePredictionGameUseCase();
+    const scheduler = getMasterScheduler(createGameUseCase);
+    const syncResult = await scheduler.triggerSync({
+      materializeTemplates: body.materializeTemplates ?? false,
+      category: body.category,
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: "마스터 예측 스케줄러 동기화가 완료되었습니다.",
+      syncedAt: new Date().toISOString(),
+      stats: {
+        footballGames: syncResult.footballAdded,
+        earningsGames: syncResult.earningsAdded,
+        templateGames: syncResult.totalTemplates,
+        createdGamesCount: syncResult.createdGameIds.length,
+        createdGameIds: syncResult.createdGameIds,
+      },
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || "Internal Server Error",
+      },
+      { status: 500 }
+    );
+  }
 }
 
-// GET: 스케줄러 상태 조회
+/**
+ * GET /api/admin/scheduler/sync
+ * 현재 등록된 정기 예측 게임 템플릿 및 오라클 상태 조회
+ */
 export async function GET() {
-    try {
-        // 임시 상태 반환 (실제 구현 시 교체)
-        const status = {
-            isRunning: true,
-            footballEnabled: true,
-            earningsEnabled: true,
-            templatesCount: 13,
-            lastSync: new Date().toISOString(),
-            nextSync: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
-            upcomingGames: [
-                { id: "1", title: "맨유 vs 첼시", scheduledAt: "2026-01-13T22:00:00Z" },
-                { id: "2", title: "나스닥 등락", scheduledAt: "2026-01-13T20:00:00Z" },
-            ],
-        };
+  try {
+    const createGameUseCase = getCreatePredictionGameUseCase();
+    const scheduler = getMasterScheduler(createGameUseCase);
+    const status = scheduler.getStatus();
 
-        return NextResponse.json(status);
-    } catch (error) {
-        console.error("[Scheduler Status API] Error:", error);
-        return NextResponse.json(
-            { success: false, error: "Internal Server Error" },
-            { status: 500 }
-        );
-    }
+    return NextResponse.json({
+      ...status,
+      lastSync: new Date().toISOString(),
+      nextSync: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    });
+  } catch (error: any) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: error?.message || "Internal Server Error",
+      },
+      { status: 500 }
+    );
+  }
 }

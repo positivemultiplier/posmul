@@ -1,121 +1,139 @@
 import { IOracleProvider } from "../../domain/services/oracle/oracle.interface";
-import { OracleResult, SettlementSource } from "../../domain/value-objects/settlement-types";
+import {
+  OracleResult,
+  SettlementSource,
+} from "../../domain/value-objects/settlement-types";
 
-interface DartConfig {
-    corpCode: string; // 고유번호 (8자리)
-    bsnsYear: string; // 사업연도
-    reprtCode: "11013" | "11012" | "11014" | "11011"; // 1분기/반기/3분기/사업보고서
-    accountName: string; // "영업이익", "매출액", "당기순이익" 등
-    comparisonType: "greater" | "less";
-    threshold: number; // 비교 기준 금액 (원 단위)
-    optionMapping: Record<string, string>; // { "above": "opt_1", "below": "opt_2" }
+export type DartReportCode = "11013" | "11012" | "11014" | "11011";
+
+export interface DartConfig {
+  /** 고유번호 8자리 (예: 삼성전자 00126380, SK하이닉스 00164779, 현대차 00164742, NAVER 00266961, 카카오 00258801) */
+  corpCode: string;
+  /** 사업연도 (미지정 또는 'auto' 시 현재 날짜 기준 자동 산출) */
+  bsnsYear?: string;
+  /** 보고서 코드: 11013(1Q), 11012(반기/2Q), 11014(3Q), 11011(사업보고서/4Q) */
+  reprtCode?: DartReportCode | "auto";
+  /** 계정과목명 ('영업이익', '매출액', '당기순이익') */
+  accountName: string;
+  comparisonType: "greater" | "less";
+  /** 비교 기준 금액 (원 단위) */
+  threshold: number;
+  optionMapping: Record<string, string>;
+}
+
+interface DartAccountItem {
+  account_nm: string;
+  thstrm_amount: string;
 }
 
 interface DartApiResponse {
-    status: string;
-    message: string;
-    list?: Array<{
-        account_nm: string; // 계정과목명
-        thstrm_amount: string; // 당기금액 (문자열, 콤마 포함 가능)
-        // ... 기타 필드 생략
-    }>;
+  status: string;
+  message: string;
+  list?: DartAccountItem[];
+}
+
+/**
+ * 현재 시점 기준 가장 최근 공시 대상 사업연도 및 분기 보고서 코드 자동 산출
+ * - 1~3월: 전년도 사업보고서(11011)
+ * - 4~5월: 당해 1분기보고서(11013)
+ * - 6~8월: 당해 반기보고서(11012)
+ * - 9~12월: 당해 3분기보고서(11014)
+ */
+export function resolveDartPeriod(
+  bsnsYear?: string,
+  reprtCode?: DartReportCode | "auto"
+): { year: string; code: DartReportCode } {
+  const now = new Date();
+  const month = now.getMonth() + 1;
+  const currentYear = now.getFullYear();
+
+  const defaultYear = month <= 3 ? String(currentYear - 1) : String(currentYear);
+  let defaultCode: DartReportCode = "11014";
+  if (month <= 3) defaultCode = "11011";
+  else if (month <= 5) defaultCode = "11013";
+  else if (month <= 8) defaultCode = "11012";
+
+  return {
+    year: !bsnsYear || bsnsYear === "auto" ? defaultYear : bsnsYear,
+    code: !reprtCode || reprtCode === "auto" ? defaultCode : reprtCode,
+  };
+}
+
+function findTargetDartAccount(
+  list: DartAccountItem[],
+  accountName: string
+): DartAccountItem | undefined {
+  const normalizedTarget = accountName.replace(/\s/g, "");
+  return list.find(
+    (item) =>
+      item.account_nm.replace(/\s/g, "") === normalizedTarget ||
+      item.account_nm.includes(accountName)
+  );
 }
 
 export class DartOracleAdapter implements IOracleProvider {
-    supports(sourceType: string): boolean {
-        return sourceType === "dart";
+  supports(sourceType: string): boolean {
+    return sourceType === "dart";
+  }
+
+  async fetchResult(source: SettlementSource): Promise<OracleResult | null> {
+    const apiKey =
+      process.env.DART_API_KEY || process.env.NEXT_PUBLIC_DART_API_KEY;
+    if (!apiKey) return null;
+
+    const config = source.sourceConfig as unknown as DartConfig;
+    if (!config?.corpCode || !config?.accountName || !config?.optionMapping) {
+      return null;
     }
 
-    async fetchResult(source: SettlementSource): Promise<OracleResult | null> {
-        const apiKey = process.env.DART_API_KEY || process.env.NEXT_PUBLIC_DART_API_KEY;
-        if (!apiKey) {
-            console.error("[DART] DART_API_KEY not set");
-            return null;
-        }
+    const { year, code } = resolveDartPeriod(config.bsnsYear, config.reprtCode);
+    const url = `https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json?crtfc_key=${apiKey}&corp_code=${config.corpCode}&bsns_year=${year}&reprt_code=${code}&fs_div=CFS`;
 
-        const config = source.sourceConfig as unknown as DartConfig;
-        console.log("[DART DEBUG] Config Parsed:", JSON.stringify(config));
-        const { corpCode, bsnsYear, reprtCode, accountName, comparisonType, threshold, optionMapping } = config;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return null;
 
-        if (!corpCode || !bsnsYear || !reprtCode || !accountName || !optionMapping) {
-            console.error("[DART] Missing required config fields");
-            return null;
-        }
+      const data: DartApiResponse = await res.json();
+      if (data.status !== "000" || !data.list || data.list.length === 0) {
+        return null;
+      }
 
-        try {
-            // 단일회사 전체 재무제표 조회 (fnlttSinglAcntAll)
-            // JSON 포맷 요청을 위해 API URL 구성
-            const url = `https://opendart.fss.or.kr/api/fnlttSinglAcntAll.json?crtfc_key=${apiKey}&corp_code=${corpCode}&bsns_year=${bsnsYear}&reprt_code=${reprtCode}&fs_div=CFS`; // CFS: 연결재무제표
+      const targetAccount = findTargetDartAccount(
+        data.list,
+        config.accountName
+      );
+      if (!targetAccount) return null;
 
-            const res = await fetch(url);
-            if (!res.ok) {
-                console.error("[DART] API error:", res.status);
-                return null;
-            }
+      const amount = parseFloat(targetAccount.thstrm_amount.replace(/,/g, ""));
+      if (Number.isNaN(amount)) return null;
 
-            const data: DartApiResponse = await res.json();
+      const resultKey =
+        config.comparisonType === "less"
+          ? amount < config.threshold
+            ? "below"
+            : "above"
+          : amount > config.threshold
+            ? "above"
+            : "below";
 
-            if (data.status !== "000") {
-                console.log(`[DART] API Message: ${data.message} (Status: ${data.status})`);
-                return null;
-            }
+      const winningOptionId = config.optionMapping[resultKey];
+      if (!winningOptionId) return null;
 
-            if (!data.list || data.list.length === 0) {
-                console.log("[DART] No financial data list found");
-                return null;
-            }
-
-            // 목표 계정과목 찾기 (정확한 매칭 or 포함 검색)
-            // DART 데이터는 '영업이익', '영업이익(손실)' 등으로 표기될 수 있음
-            const targetAccount = data.list.find((item) =>
-                item.account_nm.replace(/\s/g, "") === accountName.replace(/\s/g, "") ||
-                item.account_nm.includes(accountName)
-            );
-
-            if (!targetAccount) {
-                console.error(`[DART] Account '${accountName}' not found in report`);
-                return null;
-            }
-
-            // 금액 파싱 (콤마 제거)
-            const amountStr = targetAccount.thstrm_amount.replace(/,/g, "");
-            const amount = parseFloat(amountStr);
-
-            if (isNaN(amount)) {
-                console.error(`[DART] Invalid amount value: ${targetAccount.thstrm_amount}`);
-                return null;
-            }
-
-            // 결과 판정
-            let resultKey = "unknown";
-            if (comparisonType === "greater") {
-                resultKey = amount > threshold ? "above" : "below";
-            } else if (comparisonType === "less") {
-                resultKey = amount < threshold ? "below" : "above";
-            }
-
-            const winningOptionId = optionMapping[resultKey];
-            if (!winningOptionId) {
-                console.error("[DART] No option mapped for:", resultKey);
-                return null;
-            }
-
-            return {
-                winningOptionId,
-                sourceData: {
-                    corpCode,
-                    accountName: targetAccount.account_nm,
-                    amount,
-                    threshold,
-                    raw: targetAccount
-                },
-                confidence: 1.0,
-                fetchedAt: new Date(),
-            };
-
-        } catch (err) {
-            console.error("[DART] Fetch error:", err);
-            return null;
-        }
+      return {
+        winningOptionId,
+        sourceData: {
+          corpCode: config.corpCode,
+          bsnsYear: year,
+          reprtCode: code,
+          accountName: targetAccount.account_nm,
+          amount,
+          threshold: config.threshold,
+        },
+        confidence: 1.0,
+        fetchedAt: new Date(),
+      };
+    } catch {
+      return null;
     }
+  }
 }

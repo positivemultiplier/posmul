@@ -1,10 +1,11 @@
 import { UserId } from "@posmul/auth-economy-sdk";
 import type { PmpAmount } from "@posmul/auth-economy-sdk";
 
-import { PredictionType } from "../../domain/value-objects/prediction-types";
 import type { GameOptions } from "../../domain/value-objects/prediction-types";
-import { CreatePredictionGameUseCase } from "../use-cases/create-prediction-game.use-case";
+import { PredictionType } from "../../domain/value-objects/prediction-types";
 import { SettlementSourceType } from "../../domain/value-objects/settlement-types";
+import { CreatePredictionGameUseCase } from "../use-cases/create-prediction-game.use-case";
+import { settlementOrchestrator } from "./settlement-orchestrator.service";
 
 export interface ScheduledGameTemplate {
   id: string;
@@ -12,47 +13,45 @@ export interface ScheduledGameTemplate {
   description: string;
   predictionType: PredictionType;
   options: GameOptions;
-  scheduledTime: Date; // 생성될 시간
-  duration: number; // 게임 지속 시간 (시간 단위)
-  settlementDelay: number; // 정산까지의 지연 시간 (시간 단위)
+  scheduledTime: Date; // 게임 오픈 시간 (openAt)
+  duration: number; // 게임 지속 시간 (시간 단위, openAt + duration = closeAt: 발표/방영 1시간 전 마감)
+  settlementDelay: number; // 마감 후 정산까지의 지연 시간 (시간 단위, closeAt + settlementDelay = settleAt)
   minimumStake: PmpAmount;
   maximumStake: PmpAmount;
   maxParticipants: number;
   creatorId: UserId;
   category:
-  | "sports"
-  | "politics"
-  | "economy"
-  | "entertainment"
-  | "weather"
-  | "technology";
+    | "sports"
+    | "politics"
+    | "economy"
+    | "entertainment"
+    | "weather"
+    | "technology";
   importance: "low" | "medium" | "high" | "critical";
   recurrence?: "once" | "daily" | "weekly" | "monthly";
   isActive: boolean;
-  // 정산 소스 연동 (KOSIS, DART 등)
+  /** 정산 오라클 소스 타입 (ECOS, KOSIS, DART, KOBIS, FMP, AlphaVantage, Football-Data 등) */
   sourceType?: SettlementSourceType;
+  /** 오라클 판정 설정 */
   sourceConfig?: Record<string, unknown>;
 }
 
 export interface GameSchedulingConfig {
-  // 시간별 게임 생성 정책
-  gamesPerHour: number; // 시간당 생성할 게임 수
-  peakHours: number[]; // 피크 시간대 (더 많은 게임 생성)
-  quietHours: number[]; // 조용한 시간대 (적은 게임 생성)
-
-  // MoneyWave 기반 스케줄링
-  minHourlyPoolThreshold: number; // 최소 시간당 상금 풀
+  gamesPerHour: number;
+  peakHours: number[];
+  quietHours: number[];
+  minHourlyPoolThreshold: number;
   gameAllocationStrategy: "balanced" | "peak_focused" | "importance_weighted";
-
-  // 자동 게임 생성 규칙
   autoGenerateEnabled: boolean;
-  categoryRotation: string[]; // 카테고리 순환 배치
-  difficultyDistribution: { [key: string]: number }; // 난이도별 비율
+  categoryRotation: string[];
+  difficultyDistribution: { [key: string]: number };
 }
 
 /**
- * Phase 2: 게임 생성 스케줄링 시스템
- * MoneyWave와 연동하여 최적의 게임 생성 시간과 배치를 결정
+ * 정기 경제지표(한국은행 ECOS · 통계청 KOSIS · 금감원 DART),
+ * 글로벌 증시(FMP · AlphaVantage), 스포츠(Football-Data),
+ * K-콘텐츠(영진위 KOBIS 영화 · 드라마 시청률 · 예능 · K-POP 음원 차트)를
+ * 표준 타임라인(발표/방영 1시간 전 마감 + 오라클 자동 등록)으로 생성하는 스케줄링 엔진
  */
 export class GameSchedulingService {
   private templates: ScheduledGameTemplate[] = [];
@@ -65,17 +64,17 @@ export class GameSchedulingService {
   ) {
     this.config = {
       gamesPerHour: 2,
-      peakHours: [9, 12, 15, 18, 21], // 오전 9시, 정오, 오후 3시, 6시, 9시
-      quietHours: [1, 2, 3, 4, 5, 6], // 새벽 시간
-      minHourlyPoolThreshold: 158400000, // 1.5억 (Phase 2 기준)
+      peakHours: [9, 12, 15, 18, 21],
+      quietHours: [1, 2, 3, 4, 5, 6],
+      minHourlyPoolThreshold: 158400000,
       gameAllocationStrategy: "importance_weighted",
       autoGenerateEnabled: true,
-      categoryRotation: ["sports", "politics", "economy", "entertainment"],
+      categoryRotation: ["economy", "entertainment", "sports", "politics"],
       difficultyDistribution: {
-        easy: 0.4, // 40%
-        medium: 0.4, // 40%
-        hard: 0.15, // 15%
-        expert: 0.05, // 5%
+        easy: 0.4,
+        medium: 0.4,
+        hard: 0.15,
+        expert: 0.05,
       },
       ...config,
     };
@@ -83,109 +82,141 @@ export class GameSchedulingService {
     this.initializeDefaultTemplates();
   }
 
-  /**
-   * 기본 게임 템플릿들 초기화
-   */
   private initializeDefaultTemplates(): void {
-    const now = new Date();
-    const systemUserId = "system-scheduler" as UserId;
+    const systemUserId = "00000000-0000-0000-0000-000000000001" as UserId;
 
-    // 스포츠 카테고리 템플릿들
+    this.registerBOKTemplates(systemUserId);
+    this.registerKosisTemplates(systemUserId);
+    this.registerDartTemplates(systemUserId);
+    this.registerKContentTemplates(systemUserId);
+    this.registerGlobalMarketTemplates(systemUserId);
+  }
+
+  /**
+   * 1. 한국은행(ECOS) 공식 통화정책 & 거시경제 지표 정기 템플릿
+   */
+  private registerBOKTemplates(systemUserId: UserId): void {
+    // 1-1. 금융통화위원회 기준금리 결정 (인상 / 동결 / 인하 3지선다, 발표일 09:00 마감 -> 11:00 정산)
     this.templates.push({
-      id: "daily-soccer-match",
-      title: "오늘의 축구 경기 예측",
+      id: "ecos-bok-base-rate",
+      title: "[금통위] 한국은행 이번 금융통화위원회 기준금리 결정은?",
       description:
-        "프리미어리그 주요 경기 결과를 예측해보세요. MoneyWave 기반 상금 지급!",
+        "한국은행 금융통화위원회 본회의 기준금리 결정(인상·동결·인하)을 예측하세요.\n📅 마감: 금통위 발표 1시간 전(09:00) | 🏛️ 정산: 한국은행 ECOS 공식 통계표(722Y001)",
       predictionType: PredictionType.WIN_DRAW_LOSE,
       options: [
-        { id: "home", label: "홈팀 승", description: "odds: 2.1" },
-        { id: "draw", label: "무승부", description: "odds: 3.2" },
-        { id: "away", label: "원정팀 승", description: "odds: 3.8" },
+        { id: "hike", label: "금리 인상 (Hike)", description: "직전 기준금리 대비 인상" },
+        { id: "hold", label: "금리 동결 (Hold)", description: "직전 기준금리 유지" },
+        { id: "cut", label: "금리 인하 (Cut)", description: "직전 기준금리 대비 인하" },
       ],
-      scheduledTime: new Date(now.getTime() + 60 * 60 * 1000), // 1시간 후
-      duration: 12, // 12시간 지속
-      settlementDelay: 2, // 2시간 후 정산
-      minimumStake: 1000 as PmpAmount,
-      maximumStake: 50000 as PmpAmount,
-      maxParticipants: 500,
-      creatorId: systemUserId,
-      category: "sports",
-      importance: "medium",
-      recurrence: "daily",
-      isActive: true,
-    });
-
-    // 정치 카테고리 템플릿
-    this.templates.push({
-      id: "weekly-approval-rating",
-      title: "대통령 지지율 예측",
-      description:
-        "이번 주 대통령 지지율 변동을 예측하세요. 고난이도 고수익 게임!",
-      predictionType: PredictionType.RANKING,
-      options: [
-        { id: "up", label: "상승 (2%p 이상)", description: "rank: 1" },
-        { id: "slight_up", label: "소폭 상승 (1%p)", description: "rank: 2" },
-        { id: "stable", label: "현상 유지 (±0.5%p)", description: "rank: 3" },
-        { id: "slight_down", label: "소폭 하락 (-1%p)", description: "rank: 4" },
-        { id: "down", label: "하락 (-2%p 이상)", description: "rank: 5" },
-      ],
-      scheduledTime: new Date(now.getTime() + 2 * 60 * 60 * 1000), // 2시간 후
-      duration: 168, // 1주일 지속
-      settlementDelay: 24, // 24시간 후 정산
-      minimumStake: 5000 as PmpAmount,
+      scheduledTime: this.getNextMonthlySchedule(15, 9),
+      duration: 168, // 7일간 오픈 후 발표일 09:00 마감
+      settlementDelay: 2, // 마감 2시간 후(11:00) ECOS 정산
+      minimumStake: 2000 as PmpAmount,
       maximumStake: 200000 as PmpAmount,
-      maxParticipants: 1000,
-      creatorId: systemUserId,
-      category: "politics",
-      importance: "high",
-      recurrence: "weekly",
-      isActive: true,
-    });
-
-    // 경제 카테고리 템플릿
-    this.templates.push({
-      id: "hourly-crypto-price",
-      title: "비트코인 시간별 가격 예측",
-      description: "다음 시간 비트코인 가격 방향을 예측하세요. 단기 고수익!",
-      predictionType: PredictionType.BINARY,
-      options: [
-        { id: "up", label: "상승", description: "odds: 1.95" },
-        { id: "down", label: "하락", description: "odds: 1.95" },
-      ],
-      scheduledTime: new Date(now.getTime() + 30 * 60 * 1000), // 30분 후
-      duration: 1, // 1시간 지속
-      settlementDelay: 0.5, // 30분 후 정산
-      minimumStake: 500 as PmpAmount,
-      maximumStake: 30000 as PmpAmount,
-      maxParticipants: 200,
+      maxParticipants: 5000,
       creatorId: systemUserId,
       category: "economy",
-      importance: "low",
-      recurrence: "daily",
+      importance: "critical",
+      recurrence: "monthly",
       isActive: true,
+      sourceType: "ecos",
+      sourceConfig: {
+        statCode: "722Y001",
+        cycle: "M",
+        itemCode1: "0101000",
+        comparisonType: "change_direction",
+        optionMapping: { hike: "hike", hold: "hold", cut: "cut" },
+      },
     });
 
-    // ============================================================
-    // KOSIS 경제지표 기반 예측 게임 템플릿
-    // ============================================================
-
-    // 소비자물가지수 예측 (매월 10일 발표)
+    // 1-2. 한국 분기 실질 GDP 성장률(전기대비) 속보치 예측
     this.templates.push({
-      id: "kosis-cpi-monthly",
-      title: "이번 달 소비자물가 상승률 예측",
+      id: "ecos-bok-gdp-quarterly",
+      title: "[한국은행] 이번 분기 실질 GDP 성장률(전기비) 0.5% 돌파할까?",
       description:
-        "통계청 발표 소비자물가지수 전년동월대비 상승률을 예측하세요. 정확한 경제 지표 기반 정산!",
+        "한국은행이 발표하는 분기 실질 국내총생산(GDP) 속보치 성장률이 전기 대비 0.5%를 상회할지 예측하세요.\n📅 마감: 발표 1시간 전(07:00) | 🏛️ 정산: 한국은행 ECOS(200Y101)",
       predictionType: PredictionType.BINARY,
       options: [
-        { id: "above", label: "3% 초과", description: "물가 상승 심화" },
-        { id: "below", label: "3% 이하", description: "물가 안정" },
+        { id: "above", label: "0.5% 초과 (성장 호조)", description: "전기비 성장률 > 0.5%" },
+        { id: "below", label: "0.5% 이하 (성장 둔화)", description: "전기비 성장률 ≤ 0.5%" },
       ],
-      scheduledTime: this.getNextMonthlySchedule(1, 9), // 매월 1일 09:00 시작
-      duration: 240, // 10일간 참여 가능
-      settlementDelay: 1, // 발표 후 1시간 내 정산
+      scheduledTime: this.getNextQuarterlySchedule(15, 8),
+      duration: 239, // 발표 1시간 전 마감
+      settlementDelay: 2,
       minimumStake: 2000 as PmpAmount,
+      maximumStake: 150000 as PmpAmount,
+      maxParticipants: 3000,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "high",
+      recurrence: "monthly",
+      isActive: true,
+      sourceType: "ecos",
+      sourceConfig: {
+        statCode: "200Y101",
+        cycle: "Q",
+        itemCode1: "10101",
+        comparisonType: "greater",
+        threshold: 0.5,
+        optionMapping: { above: "above", below: "below" },
+      },
+    });
+
+    // 1-3. 한국 월간 경상수지 흑자 규모 예측
+    this.templates.push({
+      id: "ecos-bok-current-account",
+      title: "[국제수지] 한국 이번 달 경상수지 흑자 50억 달러 상회할까?",
+      description:
+        "반도체·자동차 수출 실적에 따른 한국은행 월간 국제수지(경상수지) 잠정치 흑자 규모를 예측하세요.\n📅 마감: 발표 1시간 전(07:00) | 🏛️ 정산: 한국은행 ECOS(301Y013)",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "above", label: "50억 달러 초과", description: "수출 흑자 확대" },
+        { id: "below", label: "50억 달러 이하", description: "흑자 축소 또는 적자" },
+      ],
+      scheduledTime: this.getNextMonthlySchedule(1, 8),
+      duration: 167,
+      settlementDelay: 2,
+      minimumStake: 1000 as PmpAmount,
       maximumStake: 100000 as PmpAmount,
-      maxParticipants: 1000,
+      maxParticipants: 2000,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "high",
+      recurrence: "monthly",
+      isActive: true,
+      sourceType: "ecos",
+      sourceConfig: {
+        statCode: "301Y013",
+        cycle: "M",
+        itemCode1: "000000",
+        comparisonType: "greater",
+        threshold: 5000,
+        optionMapping: { above: "above", below: "below" },
+      },
+    });
+  }
+
+  /**
+   * 2. 통계청(KOSIS) 월간 민생·거시 통계 정기 템플릿
+   */
+  private registerKosisTemplates(systemUserId: UserId): void {
+    // 2-1. 소비자물가지수(CPI) 상승률 (매월 초 08:00 발표 -> 07:00 마감)
+    this.templates.push({
+      id: "kosis-cpi-monthly",
+      title: "[통계청] 이번 달 소비자물가 상승률(전년동월비) 2.5% 상회할까?",
+      description:
+        "통계청 소비자물가동향 발표 기준 전년동월대비 물가상승률이 2.5%를 넘을지 예측하세요.\n📅 마감: 발표일 07:00 (발표 1시간 전) | 📊 정산: 통계청 KOSIS(DT_1J22003)",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "above", label: "2.5% 초과 (물가 상방압력)", description: "CPI 상승률 > 2.5%" },
+        { id: "below", label: "2.5% 이하 (물가 안정세)", description: "CPI 상승률 ≤ 2.5%" },
+      ],
+      scheduledTime: this.getNextMonthlySchedule(1, 8),
+      duration: 47, // 2일 뒤 07:00 마감
+      settlementDelay: 2, // 09:00 정산
+      minimumStake: 1000 as PmpAmount,
+      maximumStake: 100000 as PmpAmount,
+      maxParticipants: 2000,
       creatorId: systemUserId,
       category: "economy",
       importance: "high",
@@ -193,30 +224,34 @@ export class GameSchedulingService {
       isActive: true,
       sourceType: "kosis",
       sourceConfig: {
-        indicatorCode: "CPI_RATE", // KOSIS 소비자물가지수 코드
+        indicatorCode: "CPI_RATE",
+        orgId: "101",
+        tblId: "DT_1J22003",
+        itmId: "T03",
+        prdSe: "M",
         comparisonType: "greater",
-        threshold: 3.0,
+        threshold: 2.5,
         optionMapping: { above: "above", below: "below" },
       },
     });
 
-    // 월간 실업률 예측 (매월 15일 발표)
+    // 2-2. 월간 실업률 (매월 중순 08:00 발표 -> 07:00 마감)
     this.templates.push({
       id: "kosis-unemployment-monthly",
-      title: "이번 달 실업률 예측",
+      title: "[고용동향] 통계청 이번 달 전국 실업률 3.0% 이하 기록할까?",
       description:
-        "통계청 발표 실업률을 예측하세요. 고용 시장 동향을 읽어보세요!",
+        "통계청 경제활동인구조사 월간 고용동향 실업률 지표를 예측하세요.\n📅 마감: 발표일 07:00 | 📊 정산: 통계청 KOSIS(DT_1DA7004S)",
       predictionType: PredictionType.BINARY,
       options: [
-        { id: "above", label: "3.5% 초과", description: "고용 시장 악화" },
-        { id: "below", label: "3.5% 이하", description: "고용 시장 안정" },
+        { id: "below", label: "3.0% 이하 (고용 호조)", description: "실업률 ≤ 3.0%" },
+        { id: "above", label: "3.0% 초과 (고용 둔화)", description: "실업률 > 3.0%" },
       ],
-      scheduledTime: this.getNextMonthlySchedule(5, 9), // 매월 5일 09:00 시작
-      duration: 240, // 10일간 참여 가능
-      settlementDelay: 1,
-      minimumStake: 2000 as PmpAmount,
+      scheduledTime: this.getNextMonthlySchedule(5, 8),
+      duration: 167,
+      settlementDelay: 2,
+      minimumStake: 1000 as PmpAmount,
       maximumStake: 100000 as PmpAmount,
-      maxParticipants: 1000,
+      maxParticipants: 1500,
       creatorId: systemUserId,
       category: "economy",
       importance: "high",
@@ -225,136 +260,263 @@ export class GameSchedulingService {
       sourceType: "kosis",
       sourceConfig: {
         indicatorCode: "UNEMPLOYMENT_RATE",
+        orgId: "101",
+        tblId: "DT_1DA7004S",
+        itmId: "T80",
+        prdSe: "M",
         comparisonType: "greater",
-        threshold: 3.5,
+        threshold: 3.0,
         optionMapping: { above: "above", below: "below" },
       },
     });
+  }
 
-    // ============================================================
-    // DART 기업 공시 기반 예측 게임 템플릿
-    // ============================================================
-
-    // 삼성전자 분기 영업이익 예측 (분기별 실적 발표)
-    this.templates.push({
-      id: "dart-samsung-quarterly",
-      title: "삼성전자 분기 영업이익 예측",
-      description:
-        "삼성전자 분기 실적 발표 영업이익을 예측하세요. DART 공시 기반 정확한 정산!",
-      predictionType: PredictionType.BINARY,
-      options: [
-        { id: "above", label: "10조원 초과", description: "실적 호조" },
-        { id: "below", label: "10조원 이하", description: "실적 부진" },
-      ],
-      scheduledTime: this.getNextQuarterlySchedule(1, 9), // 분기 시작 1일 09:00
-      duration: 720, // 30일간 참여 가능
-      settlementDelay: 24, // 발표 후 24시간 내 정산
-      minimumStake: 5000 as PmpAmount,
-      maximumStake: 200000 as PmpAmount,
-      maxParticipants: 2000,
-      creatorId: systemUserId,
-      category: "economy",
-      importance: "critical",
-      recurrence: "monthly", // 분기별이지만 monthly로 관리
-      isActive: true,
-      sourceType: "dart",
-      sourceConfig: {
-        corpCode: "00126380", // 삼성전자 고유번호
-        bsnsYear: new Date().getFullYear().toString(),
-        reprtCode: "11013", // 1분기 보고서
+  /**
+   * 3. 금융감독원(DART) 국내 대표 상장사 분기 실적 정기 템플릿
+   */
+  private registerDartTemplates(systemUserId: UserId): void {
+    const dartCorporations: Array<{
+      id: string;
+      name: string;
+      corpCode: string;
+      accountName: string;
+      threshold: number;
+      thresholdLabel: string;
+      importance: "high" | "critical";
+    }> = [
+      {
+        id: "dart-samsung-quarterly",
+        name: "삼성전자",
+        corpCode: "00126380",
         accountName: "영업이익",
-        comparisonType: "greater",
-        threshold: 10000000000000, // 10조원
-        optionMapping: { above: "above", below: "below" },
+        threshold: 10_000_000_000_000,
+        thresholdLabel: "10조 원",
+        importance: "critical",
       },
-    });
-
-    // 현대자동차 분기 영업이익 예측
-    this.templates.push({
-      id: "dart-hyundai-quarterly",
-      title: "현대자동차 분기 영업이익 예측",
-      description:
-        "현대자동차 분기 실적 발표 영업이익을 예측하세요. 자동차 산업 동향 파악!",
-      predictionType: PredictionType.BINARY,
-      options: [
-        { id: "above", label: "3조원 초과", description: "실적 호조" },
-        { id: "below", label: "3조원 이하", description: "실적 부진" },
-      ],
-      scheduledTime: this.getNextQuarterlySchedule(5, 9),
-      duration: 720,
-      settlementDelay: 24,
-      minimumStake: 5000 as PmpAmount,
-      maximumStake: 200000 as PmpAmount,
-      maxParticipants: 2000,
-      creatorId: systemUserId,
-      category: "economy",
-      importance: "high",
-      recurrence: "monthly",
-      isActive: true,
-      sourceType: "dart",
-      sourceConfig: {
-        corpCode: "00164742", // 현대자동차 고유번호
-        bsnsYear: new Date().getFullYear().toString(),
-        reprtCode: "11013",
+      {
+        id: "dart-skhynix-quarterly",
+        name: "SK하이닉스",
+        corpCode: "00164779",
         accountName: "영업이익",
-        comparisonType: "greater",
-        threshold: 3000000000000, // 3조원
+        threshold: 5_000_000_000_000,
+        thresholdLabel: "5조 원",
+        importance: "critical",
+      },
+      {
+        id: "dart-hyundai-quarterly",
+        name: "현대자동차",
+        corpCode: "00164742",
+        accountName: "영업이익",
+        threshold: 3_500_000_000_000,
+        thresholdLabel: "3조 5,000억 원",
+        importance: "high",
+      },
+      {
+        id: "dart-naver-quarterly",
+        name: "NAVER",
+        corpCode: "00266961",
+        accountName: "영업이익",
+        threshold: 500_000_000_000,
+        thresholdLabel: "5,000억 원",
+        importance: "high",
+      },
+      {
+        id: "dart-kakao-quarterly",
+        name: "카카오",
+        corpCode: "00258801",
+        accountName: "영업이익",
+        threshold: 150_000_000_000,
+        thresholdLabel: "1,500억 원",
+        importance: "high",
+      },
+    ];
+
+    dartCorporations.forEach((corp, idx) => {
+      this.templates.push({
+        id: corp.id,
+        title: `[실적공시] ${corp.name} 이번 분기 연결 ${corp.accountName} ${corp.thresholdLabel} 돌파할까?`,
+        description: `${corp.name}의 분기 보고서(연결재무제표 기준) ${corp.accountName}이 ${corp.thresholdLabel}을 상회할지 예측하세요.\n📅 마감: 공시 마감 1시간 전 | 📑 정산: 금융감독원 OpenDART 공식 재무제표 API`,
+        predictionType: PredictionType.BINARY,
+        options: [
+          {
+            id: "above",
+            label: `${corp.thresholdLabel} 초과 (어닝 서프라이즈)`,
+            description: `${corp.accountName} > ${corp.thresholdLabel}`,
+          },
+          {
+            id: "below",
+            label: `${corp.thresholdLabel} 이하 (예상 부합·하회)`,
+            description: `${corp.accountName} ≤ ${corp.thresholdLabel}`,
+          },
+        ],
+        scheduledTime: this.getNextQuarterlySchedule(1 + idx * 2, 9),
+        duration: 720,
+        settlementDelay: 24,
+        minimumStake: 2000 as PmpAmount,
+        maximumStake: 200000 as PmpAmount,
+        maxParticipants: 3000,
+        creatorId: systemUserId,
+        category: "economy",
+        importance: corp.importance,
+        recurrence: "monthly",
+        isActive: true,
+        sourceType: "dart",
+        sourceConfig: {
+          corpCode: corp.corpCode,
+          bsnsYear: "auto",
+          reprtCode: "auto",
+          accountName: corp.accountName,
+          comparisonType: "greater",
+          threshold: corp.threshold,
+          optionMapping: { above: "above", below: "below" },
+        },
+      });
+    });
+  }
+
+  /**
+   * 4. K-콘텐츠 (영화 박스오피스 · 주말 드라마 시청률 · 예능 · K-POP 음원 차트) 정기 템플릿
+   */
+  private registerKContentTemplates(systemUserId: UserId): void {
+    // 4-1. 주말 박스오피스 1위 누적 관객 돌파 예측 (영진위 KOBIS API 연동)
+    this.templates.push({
+      id: "kobis-weekend-boxoffice",
+      title: "[주말극장] 이번 주말 박스오피스 1위 영화, 누적 관객 100만 돌파할까?",
+      description:
+        "영화진흥위원회 통합전산망(KOBIS) 주말 박스오피스 1위 작품의 누적 관객수가 일요일 자정 기준 100만 명을 돌파할지 예측하세요.\n📅 마감: 금요일 18:00 (주말 집계 시작 전) | 🎬 정산: 월요일 09:00 KOBIS API",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "above", label: "100만 관객 돌파 (Yes)", description: "누적 관객수 ≥ 1,000,000명" },
+        { id: "below", label: "100만 관객 미달 (No)", description: "누적 관객수 < 1,000,000명" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(3, 9), // 매주 수요일 09:00 오픈
+      duration: 57, // 금요일 18:00 마감
+      settlementDelay: 63, // 월요일 09:00 정산
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 3000,
+      creatorId: systemUserId,
+      category: "entertainment",
+      importance: "high",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "kobis",
+      sourceConfig: {
+        mode: "audience_threshold",
+        periodType: "weekend",
+        threshold: 1_000_000,
         optionMapping: { above: "above", below: "below" },
       },
     });
 
-    // SK하이닉스 분기 순이익 예측
+    // 4-2. 주말 미니시리즈 시청률 돌파 예측 (매주 목요일 오픈 -> 토요일 21:00 마감 -> 일요일 09:00 정산)
     this.templates.push({
-      id: "dart-skhynix-quarterly",
-      title: "SK하이닉스 분기 순이익 예측",
+      id: "kcontent-weekend-drama-rating",
+      title: "[주말드라마] 이번 주 금토·주말 미니시리즈 최고 시청률 12% 돌파할까?",
       description:
-        "SK하이닉스 분기 순이익을 예측하세요. 반도체 업황 흑자/적자 전환 게임!",
+        "이번 주말 방영되는 지상파·종편·케이블 미니시리즈 중 닐슨코리아 전국 가구 기준 시청률 12.0% 돌파 작품이 나올지 예측하세요.\n📅 마감: 토요일 21:00 (본방송 1시간 전) | 📺 정산: 일요일 09:00 시청률 발표",
       predictionType: PredictionType.BINARY,
       options: [
-        { id: "profit", label: "흑자", description: "순이익 0 초과" },
-        { id: "loss", label: "적자", description: "순이익 0 이하" },
+        { id: "yes", label: "12.0% 이상 돌파 (Yes)", description: "전국 가구 시청률 ≥ 12.0%" },
+        { id: "no", label: "12.0% 미만 (No)", description: "전국 가구 시청률 < 12.0%" },
       ],
-      scheduledTime: this.getNextQuarterlySchedule(10, 9),
-      duration: 720,
-      settlementDelay: 24,
-      minimumStake: 5000 as PmpAmount,
-      maximumStake: 200000 as PmpAmount,
-      maxParticipants: 2000,
+      scheduledTime: this.getNextWeeklySchedule(4, 9), // 매주 목요일 09:00 오픈
+      duration: 60, // 토요일 21:00 마감
+      settlementDelay: 12, // 일요일 09:00 정산
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 2500,
       creatorId: systemUserId,
-      category: "economy",
-      importance: "high",
-      recurrence: "monthly",
+      category: "entertainment",
+      importance: "medium",
+      recurrence: "weekly",
       isActive: true,
-      sourceType: "dart",
+      sourceType: "kcontent",
       sourceConfig: {
-        corpCode: "00164779", // SK하이닉스 고유번호
-        bsnsYear: new Date().getFullYear().toString(),
-        reprtCode: "11013",
-        accountName: "당기순이익",
-        comparisonType: "greater",
-        threshold: 0, // 흑자/적자 판단
-        optionMapping: { above: "profit", below: "loss" },
+        subCategory: "drama_rating",
+        metric: "nielsen_national_household",
+        threshold: 12.0,
+        optionMapping: { above: "yes", below: "no" },
       },
     });
 
-    // ============================================================
-    // 미국 주식 시장 예측 (Alpha Vantage)
-    // ============================================================
+    // 4-3. 일요일 황금시간대 예능 시청률 대전
+    this.templates.push({
+      id: "kcontent-sunday-variety-king",
+      title: "[예능대전] 이번 주 일요일 프라임타임 예능 시청률 1위 방송사는?",
+      description:
+        "일요일 저녁 황금시간대(18:00~23:00) 방영 예능 프로그램 중 최고 시청률 1위를 기록할 채널군을 예측하세요.\n📅 마감: 일요일 17:00 (방영 1시간 전) | 🏆 정산: 월요일 09:00 시청률 집계",
+      predictionType: PredictionType.WIN_DRAW_LOSE,
+      options: [
+        { id: "sbs_kbs", label: "SBS · KBS 지상파", description: "미운우리새끼 · 1박2일 등" },
+        { id: "mbc", label: "MBC 예능", description: "복면가왕 · 태어난김에 등" },
+        { id: "cable_jtbc", label: "tvN · JTBC 등 종편/케이블", description: "케이블/종편 일요 예능" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(5, 9), // 매주 금요일 09:00 오픈
+      duration: 56, // 일요일 17:00 마감
+      settlementDelay: 16, // 월요일 09:00 정산
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 40000 as PmpAmount,
+      maxParticipants: 2000,
+      creatorId: systemUserId,
+      category: "entertainment",
+      importance: "medium",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "kcontent",
+      sourceConfig: {
+        subCategory: "variety_rating_rank1",
+        metric: "nielsen_sunday_variety",
+      },
+    });
 
-    // 나스닥 100 지수 (QQQ) 등락 예측 (매일)
+    // 4-4. K-POP 주간 음원 차트 (써클/멜론 TOP 10 신곡 진입)
+    this.templates.push({
+      id: "kcontent-kpop-chart-top10",
+      title: "[K-POP 차트] 이번 주 신규 발매 음원, 주간 차트 TOP 10 진입 성공할까?",
+      description:
+        "이번 주 발매된 K-POP 컴백 신곡이 멜론/써클 주간 디지털 차트 10위권 내에 새롭게 진입(New Entry)할지 예측하세요.\n📅 마감: 일요일 18:00 | 🎵 정산: 월요일 12:00 주간 차트 발표",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "yes", label: "TOP 10 신곡 진입 성공 (Yes)", description: "주간 차트 1~10위 내 신곡 진입" },
+        { id: "no", label: "기존 곡 TOP 10 수성 (No)", description: "신곡 10위권 진입 실패" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(1, 12), // 매주 월요일 12:00 오픈
+      duration: 150, // 일요일 18:00 마감
+      settlementDelay: 18, // 월요일 12:00 정산
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 3000,
+      creatorId: systemUserId,
+      category: "entertainment",
+      importance: "high",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "kcontent",
+      sourceConfig: {
+        subCategory: "music_chart_top10",
+        chartSource: "circle_melon_weekly",
+      },
+    });
+  }
+
+  /**
+   * 5. 글로벌 증시 & 암호화폐 정기 템플릿
+   */
+  private registerGlobalMarketTemplates(systemUserId: UserId): void {
     this.templates.push({
       id: "us-nasdaq-daily",
-      title: "오늘의 나스닥(QQQ) 등락 예측",
+      title: "[미국증시] 오늘 밤 나스닥 100(QQQ) 전일 대비 상승 마감할까?",
       description:
-        "나스닥 100 지수(QQQ)가 어제보다 오를까요? 내릴까요? 미국 기술주 시장 예측!",
+        "미국 기술주 중심 나스닥 100 추종 ETF(QQQ)가 오늘 정규장 종가 기준 상승 마감할지 예측하세요.\n📅 마감: 미국 정규장 개장 1시간 전(21:30 KST) | 📈 정산: 장 마감 후 AlphaVantage API",
       predictionType: PredictionType.BINARY,
       options: [
-        { id: "up", label: "상승", description: "어제 종가보다 상승" },
-        { id: "down", label: "하락", description: "어제 종가보다 하락" },
+        { id: "up", label: "상승 마감 (Up)", description: "전일 종가 대비 상승" },
+        { id: "down", label: "하락·보합 마감 (Down)", description: "전일 종가 대비 하락" },
       ],
-      scheduledTime: this.getNextDailyUSMarketOpen(), // 미국 장 시작 전 생성
-      duration: 24, // 24시간
-      settlementDelay: 1, // 장 마감 1시간 후 정산
+      scheduledTime: this.getNextDailyUSMarketOpen(),
+      duration: 1.5, // 20:00 오픈 -> 21:30 마감 (개장 1시간 전)
+      settlementDelay: 8, // 익일 05:30 정산
       minimumStake: 1000 as PmpAmount,
       maximumStake: 50000 as PmpAmount,
       maxParticipants: 5000,
@@ -365,117 +527,23 @@ export class GameSchedulingService {
       isActive: true,
       sourceType: "alpha-vantage",
       sourceConfig: {
-        symbol: "QQQ", // Invesco QQQ Trust (나스닥 100 추종 ETF)
+        symbol: "QQQ",
         comparisonType: "price_change_direction",
         optionMapping: { up: "up", down: "down" },
-      },
-    });
-
-    // 엔비디아 (NVDA) 주가 등락 예측 (매일)
-    this.templates.push({
-      id: "us-nvda-daily",
-      title: "엔비디아(NVDA) 주가 등락 예측",
-      description:
-        "AI 대장주 엔비디아, 오늘 주가는? 상승/하락을 예측해보세요.",
-      predictionType: PredictionType.BINARY,
-      options: [
-        { id: "up", label: "상승", description: "전일 대비 상승" },
-        { id: "down", label: "하락", description: "전일 대비 하락" },
-      ],
-      scheduledTime: this.getNextDailyUSMarketOpen(),
-      duration: 24,
-      settlementDelay: 1,
-      minimumStake: 1000 as PmpAmount,
-      maximumStake: 50000 as PmpAmount,
-      maxParticipants: 5000,
-      creatorId: systemUserId,
-      category: "technology",
-      importance: "high",
-      recurrence: "daily",
-      isActive: true,
-      sourceType: "alpha-vantage",
-      sourceConfig: {
-        symbol: "NVDA", // NVIDIA Corporation
-        comparisonType: "price_change_direction",
-        optionMapping: { up: "up", down: "down" },
-      },
-    });
-
-    // ============================================================
-    // 미국 기업 실적 예측 (FMP)
-    // ============================================================
-
-    // 애플 (AAPL) 분기 매출 예측
-    this.templates.push({
-      id: "us-aapl-revenue-quarterly",
-      title: "애플(AAPL) 분기 매출 예측",
-      description: "애플의 이번 분기 매출이 1,000억 달러를 넘을까요? 실적 시즌 빅이벤트!",
-      predictionType: PredictionType.BINARY,
-      options: [
-        { id: "above", label: "1,000억 달러 초과", description: "매출 호조" },
-        { id: "below", label: "1,000억 달러 이하", description: "예상 하회" },
-      ],
-      scheduledTime: this.getNextQuarterlySchedule(1, 22), // 분기초 1일 22:00
-      duration: 720,
-      settlementDelay: 24,
-      minimumStake: 5000 as PmpAmount,
-      maximumStake: 200000 as PmpAmount,
-      maxParticipants: 5000,
-      creatorId: systemUserId,
-      category: "technology",
-      importance: "critical",
-      recurrence: "monthly",
-      isActive: true,
-      sourceType: "fmp",
-      sourceConfig: {
-        symbol: "AAPL",
-        period: "quarter",
-        accountName: "revenue",
-        comparisonType: "greater",
-        threshold: 100000000000, // 1000억 달러
-        optionMapping: { above: "above", below: "below" },
-      },
-    });
-
-    // 테슬라 (TSLA) 분기 순이익 예측
-    this.templates.push({
-      id: "us-tsla-income-quarterly",
-      title: "테슬라(TSLA) 분기 순이익 예측",
-      description: "테슬라가 이번 분기에 흑자를 낼 수 있을까요? 순이익 20억 달러 기준!",
-      predictionType: PredictionType.BINARY,
-      options: [
-        { id: "above", label: "20억 달러 초과", description: "이익 급증" },
-        { id: "below", label: "20억 달러 이하", description: "이익 감소" },
-      ],
-      scheduledTime: this.getNextQuarterlySchedule(1, 22),
-      duration: 720,
-      settlementDelay: 24,
-      minimumStake: 5000 as PmpAmount,
-      maximumStake: 200000 as PmpAmount,
-      maxParticipants: 5000,
-      creatorId: systemUserId,
-      category: "technology",
-      importance: "high",
-      recurrence: "monthly",
-      isActive: true,
-      sourceType: "fmp",
-      sourceConfig: {
-        symbol: "TSLA",
-        period: "quarter",
-        accountName: "netIncome",
-        comparisonType: "greater",
-        threshold: 2000000000, // 20억 달러
-        optionMapping: { above: "above", below: "below" },
       },
     });
   }
 
-  /**
-   * 다음 미국 주식 시장 개장 시간 전 (한국 시간 기준 매일 20:00)
-   */
   private getNextDailyUSMarketOpen(): Date {
     const now = new Date();
-    const result = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 20, 0, 0);
+    const result = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      20,
+      0,
+      0
+    );
     if (result <= now) {
       result.setDate(result.getDate() + 1);
     }
@@ -483,41 +551,60 @@ export class GameSchedulingService {
   }
 
   /**
-   * 다음 월간 스케줄 날짜 계산
+   * 다음 주간 특정 요일(0:일 ~ 6:토) 및 시각 계산
    */
+  private getNextWeeklySchedule(dayOfWeek: number, hour: number): Date {
+    const now = new Date();
+    const result = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      hour,
+      0,
+      0
+    );
+    const diff = (dayOfWeek + 7 - result.getDay()) % 7;
+    result.setDate(result.getDate() + diff);
+    if (result <= now) {
+      result.setDate(result.getDate() + 7);
+    }
+    return result;
+  }
+
   private getNextMonthlySchedule(dayOfMonth: number, hour: number): Date {
     const now = new Date();
-    const result = new Date(now.getFullYear(), now.getMonth(), dayOfMonth, hour, 0, 0);
+    const result = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      dayOfMonth,
+      hour,
+      0,
+      0
+    );
     if (result <= now) {
       result.setMonth(result.getMonth() + 1);
     }
     return result;
   }
 
-  /**
-   * 다음 분기 스케줄 날짜 계산 (1, 4, 7, 10월)
-   */
   private getNextQuarterlySchedule(dayOfMonth: number, hour: number): Date {
     const now = new Date();
     const currentMonth = now.getMonth();
-    const quarterStartMonths = [0, 3, 6, 9]; // 1월, 4월, 7월, 10월
+    const quarterStartMonths = [0, 3, 6, 9];
 
-    // 현재 월 이후의 다음 분기 시작월 찾기
-    let nextQuarterMonth = quarterStartMonths.find(m => m > currentMonth);
+    let nextQuarterMonth = quarterStartMonths.find((m) => m > currentMonth);
     if (nextQuarterMonth === undefined) {
-      nextQuarterMonth = 0; // 다음 해 1월
+      nextQuarterMonth = 0;
     }
 
-    const year = nextQuarterMonth === 0 && currentMonth >= 9
-      ? now.getFullYear() + 1
-      : now.getFullYear();
+    const year =
+      nextQuarterMonth === 0 && currentMonth >= 9
+        ? now.getFullYear() + 1
+        : now.getFullYear();
 
     return new Date(year, nextQuarterMonth, dayOfMonth, hour, 0, 0);
   }
 
-  /**
-   * 스케줄링 시스템 시작
-   */
   async startScheduling(): Promise<void> {
     if (this.isRunning) {
       return;
@@ -525,61 +612,48 @@ export class GameSchedulingService {
 
     this.isRunning = true;
 
-    // 매분마다 스케줄 확인
     setInterval(async () => {
       await this.checkAndCreateScheduledGames();
-    }, 60 * 1000); // 1분 간격
+    }, 60 * 1000);
 
-    // 매시간마다 동적 게임 생성
-    setInterval(
-      async () => {
-        await this.createDynamicGames();
-      },
-      60 * 60 * 1000
-    ); // 1시간 간격
+    setInterval(async () => {
+      await this.createDynamicGames();
+    }, 60 * 60 * 1000);
   }
 
-  /**
-   * 스케줄링 시스템 중지
-   */
   stopScheduling(): void {
     this.isRunning = false;
   }
 
-  /**
-   * 예정된 게임들 확인 및 생성
-   */
   private async checkAndCreateScheduledGames(): Promise<void> {
     const now = new Date();
 
     for (const template of this.templates) {
       if (!template.isActive) continue;
 
-      // 생성 시간이 되었는지 확인 (±2분 오차 허용)
       const timeDiff = Math.abs(
         now.getTime() - template.scheduledTime.getTime()
       );
-      const shouldCreate = timeDiff <= 2 * 60 * 1000; // 2분 오차
+      const shouldCreate = timeDiff <= 2 * 60 * 1000;
 
       if (shouldCreate) {
         await this.createGameFromTemplate(template);
 
-        // 반복 생성인 경우 다음 스케줄 설정
         if (template.recurrence && template.recurrence !== "once") {
           this.updateTemplateSchedule(template);
         } else {
-          template.isActive = false; // 일회성 게임은 비활성화
+          template.isActive = false;
         }
       }
     }
   }
 
   /**
-   * 템플릿으로부터 게임 생성
+   * 템플릿으로부터 예측 게임을 생성하고, 동시에 settlement_sources에 오라클 스펙을 자동 등록
    */
-  private async createGameFromTemplate(
+  public async createGameFromTemplate(
     template: ScheduledGameTemplate
-  ): Promise<void> {
+  ): Promise<string | null> {
     try {
       const now = new Date();
       const endTime = new Date(
@@ -589,10 +663,16 @@ export class GameSchedulingService {
         endTime.getTime() + template.settlementDelay * 60 * 60 * 1000
       );
 
+      const typeMap: Record<PredictionType, "binary" | "wdl" | "ranking"> = {
+        [PredictionType.BINARY]: "binary",
+        [PredictionType.WIN_DRAW_LOSE]: "wdl",
+        [PredictionType.RANKING]: "ranking",
+      };
+
       const result = await this.createGameUseCase.execute({
         title: template.title,
         description: template.description,
-        predictionType: template.predictionType as any,
+        predictionType: typeMap[template.predictionType] ?? "binary",
         options: template.options,
         startTime: now,
         endTime,
@@ -603,18 +683,29 @@ export class GameSchedulingService {
         maxParticipants: template.maxParticipants,
       });
 
-      if (result.success) {
-      } else {
-        // 실패 로깅은 생략
+      if (!result.success) {
+        return null;
       }
-    } catch (error) {
-      void error;
+
+      const createdGameId = String(result.data.gameId);
+
+      // 오라클 설정이 있는 템플릿이면 settlement_sources 테이블에 100% 세트로 등록
+      if (template.sourceType && template.sourceConfig) {
+        await settlementOrchestrator.registerSettlementSource({
+          gameId: createdGameId,
+          sourceType: template.sourceType,
+          sourceConfig: template.sourceConfig,
+          scheduledAt: settlementTime,
+          externalId: template.id,
+        });
+      }
+
+      return createdGameId;
+    } catch {
+      return null;
     }
   }
 
-  /**
-   * 템플릿의 다음 스케줄 업데이트
-   */
   private updateTemplateSchedule(template: ScheduledGameTemplate): void {
     const current = template.scheduledTime;
 
@@ -637,33 +728,22 @@ export class GameSchedulingService {
     }
   }
 
-  /**
-   * MoneyWave 상태에 따른 동적 게임 생성
-   */
   private async createDynamicGames(): Promise<void> {
     const currentHour = new Date().getHours();
     let gamesToCreate = this.config.gamesPerHour;
 
-    // 피크 시간대 조정
     if (this.config.peakHours.includes(currentHour)) {
-      gamesToCreate = Math.ceil(gamesToCreate * 1.5); // 50% 증가
+      gamesToCreate = Math.ceil(gamesToCreate * 1.5);
     } else if (this.config.quietHours.includes(currentHour)) {
-      gamesToCreate = Math.max(1, Math.ceil(gamesToCreate * 0.5)); // 50% 감소
+      gamesToCreate = Math.max(1, Math.ceil(gamesToCreate * 0.5));
     }
-
-    void currentHour;
 
     for (let i = 0; i < gamesToCreate; i++) {
       await this.createDynamicGame(i, gamesToCreate);
-
-      // 게임 간 간격 (동시 생성 방지)
-      await new Promise((resolve) => setTimeout(resolve, 5000)); // 5초 간격
+      await new Promise((resolve) => setTimeout(resolve, 5000));
     }
   }
 
-  /**
-   * 단일 동적 게임 생성
-   */
   private async createDynamicGame(
     index: number,
     totalGames: number
@@ -672,8 +752,6 @@ export class GameSchedulingService {
     const category =
       this.config.categoryRotation[index % this.config.categoryRotation.length];
     const difficulty = this.selectRandomDifficulty();
-
-    // 카테고리별 게임 템플릿 선택
     const gameTemplate = this.generateDynamicGameTemplate(category, difficulty);
 
     if (gameTemplate) {
@@ -681,9 +759,6 @@ export class GameSchedulingService {
     }
   }
 
-  /**
-   * 확률 기반 난이도 선택
-   */
   private selectRandomDifficulty(): string {
     const random = Math.random();
     let cumulative = 0;
@@ -697,12 +772,9 @@ export class GameSchedulingService {
       }
     }
 
-    return "medium"; // 기본값
+    return "medium";
   }
 
-  /**
-   * 동적 게임 템플릿 생성
-   */
   private generateDynamicGameTemplate(
     category: string,
     difficulty: string
@@ -712,37 +784,26 @@ export class GameSchedulingService {
 
     if (templates.length === 0) return null;
 
-    // 랜덤 템플릿 선택 후 수정
     const baseTemplate =
       templates[Math.floor(Math.random() * templates.length)];
 
     return {
       ...baseTemplate,
       id: `dynamic-${category}-${now.getTime()}`,
-      title: `[동적생성] ${baseTemplate.title} #${now.getHours()}`,
       scheduledTime: now,
       importance: difficulty as any,
       recurrence: "once",
     };
   }
 
-  /**
-   * 활성 템플릿 목록 조회
-   */
   getActiveTemplates(): ScheduledGameTemplate[] {
     return this.templates.filter((t) => t.isActive);
   }
 
-  /**
-   * 새 템플릿 추가
-   */
   addTemplate(template: ScheduledGameTemplate): void {
     this.templates.push(template);
   }
 
-  /**
-   * 스케줄링 통계
-   */
   getSchedulingStats() {
     const activeTemplates = this.templates.filter((t) => t.isActive).length;
     const totalTemplates = this.templates.length;
@@ -756,9 +817,6 @@ export class GameSchedulingService {
     };
   }
 
-  /**
-   * 다음 예정 게임 시간
-   */
   private getNextScheduledTime(): Date | null {
     const activeTemplates = this.templates.filter((t) => t.isActive);
     if (activeTemplates.length === 0) return null;

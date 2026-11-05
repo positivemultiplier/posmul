@@ -1,22 +1,36 @@
 /**
  * Prediction Settlement Service
  *
- * 예측 게임 결과 정산 로직을 처리하는 서비스
- * PMP/PMC 분배 및 MoneyWave 통합 처리
+ * PosMul 표준 하이브리드 패리뮤추얼(Time-Weighted Seeded Parimutuel) 정산 및
+ * PMP ➔ PMC 전환 수식을 담당하는 핵심 도메인/애플리케이션 서비스
+ *
+ * 핵심 수학 모델:
+ * 1. 스무딩 확률 (LMSR 스타일 유동성 시드 b 반영):
+ *    P_i = (S_i + b) / Σ_j (S_j + b)
+ * 2. 얼리버드(Early-Bird) 시간 가중치:
+ *    w(t) = 1.0 + 0.5 * clamp((T_close - t) / (T_close - T_open), 0, 1)  ∈ [1.0, 1.5]
+ * 3. 승자 배당 (패자 PMP 풀 + MoneyWave 시드 풀 비례 배분):
+ *    EffectiveStake_i = s_i * w(t_i)
+ *    GrossReward_i = s_i + (Pool_losers + Pool_moneyWave) * (EffectiveStake_i / Σ_winners EffectiveStake)
  */
 
-// 타입 정의
 type PmpAmount = number;
 type PmcAmount = number;
 
-interface PredictionResultData {
+export interface PredictionResultData {
   gameId: string;
   winningOptionId: string;
   settledAt: Date;
   settlementType: "automatic" | "manual" | "disputed";
+  /** 게임 오픈 시각 (얼리버드 시간 가중치 산출용) */
+  gameOpenTime?: Date;
+  /** 베팅 마감 시각 (얼리버드 시간 가중치 산출용) */
+  gameCloseTime?: Date;
+  /** 게임에 배정된 MoneyWave 시드 상금 풀 (기본값: DEFAULT_MONEY_WAVE_SEED) */
+  allocatedMoneyWavePool?: PmcAmount;
 }
 
-interface ParticipantPredictionData {
+export interface ParticipantPredictionData {
   userId: string;
   optionId: string;
   stakedAmount: PmpAmount;
@@ -24,32 +38,104 @@ interface ParticipantPredictionData {
   confidenceLevel?: number;
 }
 
-interface SettlementCalculationData {
+export interface SettlementCalculationData {
   userId: string;
   isWinner: boolean;
   stakedAmount: PmpAmount;
-  winningAmount: PmpAmount;
-  platformFee: PmpAmount;
-  netProfit: PmpAmount;
+  /** 얼리버드 시간 가중치 (1.0 ~ 1.5) */
+  earlyBirdWeight: number;
+  /** 시간 가중치가 반영된 유효 지분 */
+  effectiveStake: number;
+  winningAmount: PmcAmount;
+  platformFee: PmcAmount;
+  netProfit: PmcAmount;
   agencyBonus?: PmcAmount;
   settlementReason: string;
 }
 
-interface MoneyWaveDistributionData {
+export interface MoneyWaveDistributionData {
   currentWave: number;
-  totalPool: PmpAmount;
+  totalPool: PmcAmount;
+  seedLiquidityPerOption: PmpAmount;
   distributionRatio: number;
   participantCount: number;
-  averageWinning: PmpAmount;
+  averageWinning: PmcAmount;
 }
 
 export class PredictionSettlementService {
   private readonly PLATFORM_FEE_RATE = 0.02; // 2% 플랫폼 수수료
-  private readonly MIN_WINNING_THRESHOLD = 1000; // 최소 당첨 금액 (PMP)
-  private readonly AGENCY_BONUS_RATE = 0.05; // 에이전시 보너스 5%
+  private readonly MIN_WINNING_THRESHOLD = 100; // 최소 보장 당첨 PMC
+  private readonly AGENCY_BONUS_RATE = 0.05; // 고신뢰도(80%+) 예측 적중 보너스 5%
+  private readonly MAX_EARLY_BIRD_BONUS = 0.5; // 조기 참여 가중치 최대 +50% (w_t ∈ [1.0, 1.5])
+  public static readonly DEFAULT_LIQUIDITY_SEED = 5000; // 옵션당 기본 가상 유동성 시드 b (5,000 PMP)
 
   /**
-   * 예측 게임 결과를 정산합니다
+   * LMSR 스타일 유동성 시드(b)가 반영된 옵션별 스무딩 확률 계산
+   * - 참여자가 0명이거나 1명일 때도 100% : 0%로 튀지 않고 부드러운 확률 분포 제공
+   */
+  public static calculateSmoothedProbabilities(
+    optionStakes: Record<string, number>,
+    optionIds: string[],
+    liquiditySeed: number = PredictionSettlementService.DEFAULT_LIQUIDITY_SEED
+  ): Record<string, number> {
+    const count = optionIds.length;
+    if (count === 0) return {};
+
+    const b = Math.max(100, liquiditySeed);
+    let denominator = 0;
+    for (const id of optionIds) {
+      denominator += (optionStakes[id] || 0) + b;
+    }
+
+    const probabilities: Record<string, number> = {};
+    for (const id of optionIds) {
+      const numerator = (optionStakes[id] || 0) + b;
+      probabilities[id] =
+        denominator > 0 ? Number((numerator / denominator).toFixed(4)) : 1 / count;
+    }
+    return probabilities;
+  }
+
+  /**
+   * 특정 옵션에 베팅했을 때 예상 배당 배율(Multiplier) 계산
+   * - 반대편 베팅이 0원이어도 MoneyWave 시드 풀 덕분에 최소 > 1.0x 배당 성립
+   */
+  public static calculateExpectedMultiplier(
+    targetOptionStake: number,
+    totalAllOptionsStake: number,
+    moneyWaveSeedPool: number = PredictionSettlementService.DEFAULT_LIQUIDITY_SEED,
+    feeRate: number = 0.02
+  ): number {
+    const effectiveTarget = Math.max(targetOptionStake, 1000);
+    const otherStake = Math.max(0, totalAllOptionsStake - targetOptionStake);
+    const distributablePool = otherStake + moneyWaveSeedPool;
+    const grossMultiplier = 1 + distributablePool / effectiveTarget;
+    return Number((grossMultiplier * (1 - feeRate)).toFixed(2));
+  }
+
+  /**
+   * 얼리버드(Early-Bird) 시간 가중치 계산: w(t) ∈ [1.0, 1.5]
+   * - 오픈 직후 참여 시 1.5배, 마감 직전 참여 시 1.0배
+   */
+  public calculateEarlyBirdWeight(
+    stakeTime: Date,
+    gameOpenTime?: Date,
+    gameCloseTime?: Date
+  ): number {
+    if (!gameOpenTime || !gameCloseTime) {
+      return 1.15; // 타임라인 정보 미제공 시 기본 중간 가중치
+    }
+
+    const totalWindowMs = gameCloseTime.getTime() - gameOpenTime.getTime();
+    if (totalWindowMs <= 0) return 1.0;
+
+    const remainingMs = gameCloseTime.getTime() - stakeTime.getTime();
+    const ratio = Math.min(1, Math.max(0, remainingMs / totalWindowMs));
+    return Number((1.0 + this.MAX_EARLY_BIRD_BONUS * ratio).toFixed(3));
+  }
+
+  /**
+   * 예측 게임 결과를 정산합니다 (Seeded Parimutuel + Early-Bird 가중치)
    */
   async settlePrediction(
     gameId: string,
@@ -60,15 +146,14 @@ export class PredictionSettlementService {
     moneyWaveDistribution: MoneyWaveDistributionData;
     summary: {
       totalStaked: PmpAmount;
-      totalPayout: PmpAmount;
-      platformRevenue: PmpAmount;
+      totalPayout: PmcAmount;
+      platformRevenue: PmcAmount;
       participantCount: number;
       winnerCount: number;
     };
   }> {
     void gameId;
 
-    // 1. 승자와 패자 분류
     const winners = participants.filter(
       (p) => p.optionId === result.winningOptionId
     );
@@ -76,60 +161,58 @@ export class PredictionSettlementService {
       (p) => p.optionId !== result.winningOptionId
     );
 
-    // 2. 총 스테이킹 금액 계산
     const totalStaked = participants.reduce(
       (sum, p) => sum + p.stakedAmount,
       0
     );
-    const winnersStaked = winners.reduce((sum, p) => sum + p.stakedAmount, 0);
     const losersStaked = losers.reduce((sum, p) => sum + p.stakedAmount, 0);
 
-    void winnersStaked;
-    void losersStaked;
+    // MoneyWave 분배 풀 계산 (최소 시드 풀 보장)
+    const moneyWaveDistribution = this.calculateMoneyWaveDistribution(
+      totalStaked,
+      participants.length,
+      result.allocatedMoneyWavePool
+    );
 
-    // 3. 승자별 정산 계산
+    // 승자별 정산 계산 (패자 풀 + MoneyWave 시드 풀 결합, 얼리버드 시간 가중치 적용)
     const winnerSettlements = this.calculateWinnerPayouts(
       winners,
       losersStaked,
-      winnersStaked
+      moneyWaveDistribution.totalPool,
+      result.gameOpenTime,
+      result.gameCloseTime
     );
 
-    // 4. 패자 정산 (손실만 기록)
+    // 패자 정산 (PMP 소각 기록)
     const loserSettlements: SettlementCalculationData[] = losers.map(
       (loser) => ({
         userId: loser.userId,
         isWinner: false,
         stakedAmount: loser.stakedAmount,
+        earlyBirdWeight: this.calculateEarlyBirdWeight(
+          loser.stakeTime,
+          result.gameOpenTime,
+          result.gameCloseTime
+        ),
+        effectiveStake: loser.stakedAmount,
         winningAmount: 0,
         platformFee: 0,
         netProfit: -loser.stakedAmount,
-        settlementReason: "예측 실패",
+        settlementReason: "예측 미적중 (PMP 소각 · 사회적 예측 비용 전환)",
       })
     );
 
-    // 5. MoneyWave 분배 계산
-    const moneyWaveDistribution = this.calculateMoneyWaveDistribution(
-      totalStaked,
-      participants.length
-    );
-
-    // 6. 플랫폼 수수료 계산
     const totalPlatformFee = winnerSettlements.reduce(
       (sum, s) => sum + s.platformFee,
       0
     );
-
     const totalPayout = winnerSettlements.reduce(
       (sum, s) => sum + s.winningAmount,
       0
     );
 
-    const settlements = [...winnerSettlements, ...loserSettlements];
-
-    void settlements;
-
     return {
-      settlements,
+      settlements: [...winnerSettlements, ...loserSettlements],
       moneyWaveDistribution,
       summary: {
         totalStaked,
@@ -142,35 +225,52 @@ export class PredictionSettlementService {
   }
 
   /**
-   * 승자들의 배당금 계산
+   * 승자들의 배당금 계산 (Time-Weighted Seeded Parimutuel)
    */
   private calculateWinnerPayouts(
     winners: ParticipantPredictionData[],
     losersStaked: PmpAmount,
-    winnersStaked: PmpAmount
+    moneyWavePool: PmcAmount,
+    gameOpenTime?: Date,
+    gameCloseTime?: Date
   ): SettlementCalculationData[] {
     if (winners.length === 0) {
       return [];
     }
 
-    // 사용 가능한 상금 풀 (패자들의 스테이킹 금액)
-    const prizePool = losersStaked;
+    // 1. 각 승자의 얼리버드 가중치 및 유효 지분(effectiveStake) 산출
+    const weightedWinners = winners.map((winner) => {
+      const earlyBirdWeight = this.calculateEarlyBirdWeight(
+        winner.stakeTime,
+        gameOpenTime,
+        gameCloseTime
+      );
+      const effectiveStake = winner.stakedAmount * earlyBirdWeight;
+      return { winner, earlyBirdWeight, effectiveStake };
+    });
 
-    return winners.map((winner) => {
-      // 개별 승자의 스테이킹 비율에 따른 상금 계산
-      const stakingRatio = winner.stakedAmount / winnersStaked;
-      const grossWinning = winner.stakedAmount + prizePool * stakingRatio;
+    const totalEffectiveStake = weightedWinners.reduce(
+      (sum, item) => sum + item.effectiveStake,
+      0
+    );
 
-      // 플랫폼 수수료 차감
-      const platformFee = grossWinning * this.PLATFORM_FEE_RATE;
-      const netWinning = grossWinning - platformFee;
+    // 2. 분배 가능한 총 보너스 상금 풀 = 패자 PMP 총합 + MoneyWave 배정 풀
+    // (반대편 베팅이 0원이어도 moneyWavePool이 존재하므로 항상 > 1.0x 배당 성립!)
+    const totalPrizePool = losersStaked + moneyWavePool;
 
-      // 최소 당첨 금액 보장
+    return weightedWinners.map(({ winner, earlyBirdWeight, effectiveStake }) => {
+      const shareRatio =
+        totalEffectiveStake > 0
+          ? effectiveStake / totalEffectiveStake
+          : 1 / winners.length;
+
+      const grossWinning = winner.stakedAmount + totalPrizePool * shareRatio;
+      const platformFee = Math.floor(grossWinning * this.PLATFORM_FEE_RATE);
+      const netWinning = Math.floor(grossWinning - platformFee);
       const finalWinning = Math.max(netWinning, this.MIN_WINNING_THRESHOLD);
 
-      // 에이전시 보너스 (고신뢰도 예측자에게 PMC 지급)
       const agencyBonus =
-        winner.confidenceLevel && winner.confidenceLevel > 0.8
+        winner.confidenceLevel && winner.confidenceLevel >= 0.8
           ? Math.floor(finalWinning * this.AGENCY_BONUS_RATE)
           : 0;
 
@@ -178,43 +278,49 @@ export class PredictionSettlementService {
         userId: winner.userId,
         isWinner: true,
         stakedAmount: winner.stakedAmount,
+        earlyBirdWeight,
+        effectiveStake: Math.round(effectiveStake),
         winningAmount: finalWinning,
-        platformFee: platformFee,
+        platformFee,
         netProfit: finalWinning - winner.stakedAmount,
-        agencyBonus: agencyBonus,
-        settlementReason: `예측 성공 (${(stakingRatio * 100).toFixed(1)}% 비율)`,
+        agencyBonus,
+        settlementReason: `예측 성공 (지분 ${(shareRatio * 100).toFixed(1)}%, 얼리버드 ${earlyBirdWeight}x)`,
       };
     });
   }
 
   /**
-   * MoneyWave 분배 계산
+   * MoneyWave 분배 계산 (최소 유동성 시드 보장)
    */
   private calculateMoneyWaveDistribution(
     totalStaked: PmpAmount,
-    participantCount: number
+    participantCount: number,
+    allocatedPool?: PmcAmount
   ): MoneyWaveDistributionData {
-    // MoneyWave 현재 상태 가져오기 (실제로는 서비스에서 가져와야 함)
-    const currentWave = 3; // 예시
+    const currentWave = 3;
     const waveMultiplier = this.getWaveMultiplier(currentWave);
+    const distributionRatio = 0.1 * waveMultiplier;
 
-    const distributionRatio = 0.1 * waveMultiplier; // 10% 기본 + 웨이브 보너스
-    const totalPool = totalStaked * distributionRatio;
+    const calculatedPool = Math.floor(totalStaked * distributionRatio);
+    const totalPool = Math.max(
+      allocatedPool ?? 0,
+      calculatedPool,
+      PredictionSettlementService.DEFAULT_LIQUIDITY_SEED
+    );
+
     const averageWinning =
-      participantCount > 0 ? totalPool / participantCount : 0;
+      participantCount > 0 ? Math.floor(totalPool / participantCount) : 0;
 
     return {
       currentWave,
       totalPool,
+      seedLiquidityPerOption: PredictionSettlementService.DEFAULT_LIQUIDITY_SEED,
       distributionRatio,
       participantCount,
       averageWinning,
     };
   }
 
-  /**
-   * MoneyWave별 배율 계산
-   */
   private getWaveMultiplier(wave: number): number {
     switch (wave) {
       case 1:
@@ -226,99 +332,5 @@ export class PredictionSettlementService {
       default:
         return 1.0;
     }
-  }
-
-  /**
-   * 정산 결과를 실제 계정에 반영
-   */
-  async executeSettlement(
-    gameId: string,
-    settlements: SettlementCalculationData[]
-  ): Promise<{
-    success: boolean;
-    processedCount: number;
-    errors: Array<{ userId: string; error: string }>;
-  }> {
-    void gameId;
-
-    let processedCount = 0;
-    const errors: Array<{ userId: string; error: string }> = [];
-
-    for (const settlement of settlements) {
-      try {
-        if (settlement.isWinner) {
-          // 승자에게 PMP 지급
-          await this.transferPmp(settlement.userId, settlement.winningAmount);
-
-          // 에이전시 보너스 PMC 지급
-          if (settlement.agencyBonus && settlement.agencyBonus > 0) {
-            await this.transferPmc(settlement.userId, settlement.agencyBonus);
-          }
-        }
-
-        // 정산 기록 저장
-        await this.recordSettlement(gameId, settlement);
-        processedCount++;
-      } catch (error) {
-        void error;
-        errors.push({
-          userId: settlement.userId,
-          error: error instanceof Error ? error.message : "알 수 없는 오류",
-        });
-      }
-    }
-
-    void processedCount;
-
-    return {
-      success: errors.length === 0,
-      processedCount,
-      errors,
-    };
-  }
-
-  /**
-   * PMP 전송 (실제로는 경제 시스템 연동)
-   */
-  private async transferPmp(userId: string, amount: PmpAmount): Promise<void> {
-    // TODO: 실제 경제 시스템과 연동
-    void userId;
-    void amount;
-  }
-
-  /**
-   * PMC 전송 (에이전시 보너스)
-   */
-  private async transferPmc(userId: string, amount: PmcAmount): Promise<void> {
-    // TODO: 실제 경제 시스템과 연동
-    void userId;
-    void amount;
-  }
-
-  /**
-   * 정산 기록 저장
-   */
-  private async recordSettlement(
-    gameId: string,
-    settlement: SettlementCalculationData
-  ): Promise<void> {
-    // TODO: 데이터베이스에 정산 기록 저장
-    void gameId;
-    void settlement;
-  }
-
-  /**
-   * 정산 상태 조회
-   */
-  async getSettlementStatus(gameId: string): Promise<{
-    isSettled: boolean;
-    settledAt?: Date;
-    settlementSummary?: any;
-  }> {
-    // TODO: 실제 정산 상태 조회 로직
-    void gameId;
-    return {
-      isSettled: false,
-    };
   }
 }

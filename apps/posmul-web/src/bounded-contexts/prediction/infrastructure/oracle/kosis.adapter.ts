@@ -1,83 +1,123 @@
 import { IOracleProvider } from "../../domain/services/oracle/oracle.interface";
-import { OracleResult, SettlementSource } from "../../domain/value-objects/settlement-types";
+import {
+  OracleResult,
+  SettlementSource,
+} from "../../domain/value-objects/settlement-types";
 
-interface KosisConfig {
-    indicatorCode: string;
-    comparisonType: "greater" | "less" | "equal" | "range";
-    threshold?: number;
-    optionMapping: Record<string, string>;
+export interface KosisConfig {
+  /** 지표 식별 코드 (예: 'CPI_RATE', 'UNEMPLOYMENT_RATE') */
+  indicatorCode: string;
+  /** 기관코드 (기본값: '101' 통계청) */
+  orgId?: string;
+  /** 통계표 ID (예: 소비자물가 'DT_1J22003', 고용동향 'DT_1DA7004S') */
+  tblId?: string;
+  /** 항목 ID (기본값: indicatorCode) */
+  itmId?: string;
+  /** 수록주기 ('M': 월, 'Q': 분기, 'Y': 년) */
+  prdSe?: "M" | "Q" | "Y";
+  comparisonType: "greater" | "less" | "equal" | "range";
+  threshold?: number;
+  optionMapping: Record<string, string>;
+}
+
+const DEFAULT_KOSIS_TABLES: Record<
+  string,
+  { orgId: string; tblId: string; itmId: string; prdSe: "M" | "Q" | "Y" }
+> = {
+  CPI_RATE: {
+    orgId: "101",
+    tblId: "DT_1J22003",
+    itmId: "T03",
+    prdSe: "M",
+  },
+  UNEMPLOYMENT_RATE: {
+    orgId: "101",
+    tblId: "DT_1DA7004S",
+    itmId: "T80",
+    prdSe: "M",
+  },
+  INDUSTRIAL_PRODUCTION: {
+    orgId: "101",
+    tblId: "DT_1JH2020",
+    itmId: "T1",
+    prdSe: "M",
+  },
+};
+
+function buildKosisUrl(apiKey: string, config: KosisConfig): string {
+  const preset = DEFAULT_KOSIS_TABLES[config.indicatorCode];
+  const orgId = config.orgId ?? preset?.orgId ?? "101";
+  const tblId = config.tblId ?? preset?.tblId ?? "DT_1J22003";
+  const itmId = config.itmId ?? preset?.itmId ?? config.indicatorCode;
+  const prdSe = config.prdSe ?? preset?.prdSe ?? "M";
+
+  const params = new URLSearchParams({
+    method: "getList",
+    apiKey,
+    orgId,
+    tblId,
+    itmId,
+    prdSe,
+    newEstPrdCnt: "2",
+    format: "json",
+    jsonVD: "Y",
+  });
+
+  return `https://kosis.kr/openapi/Param/statisticsParameterData.do?${params.toString()}`;
 }
 
 export class KosisOracleAdapter implements IOracleProvider {
-    supports(sourceType: string): boolean {
-        return sourceType === "kosis";
+  supports(sourceType: string): boolean {
+    return sourceType === "kosis";
+  }
+
+  async fetchResult(source: SettlementSource): Promise<OracleResult | null> {
+    const apiKey = process.env.KOSIS_API_KEY;
+    if (!apiKey) return null;
+
+    const config = source.sourceConfig as unknown as KosisConfig;
+    if (!config?.indicatorCode || !config?.optionMapping) return null;
+
+    try {
+      const res = await fetch(buildKosisUrl(apiKey, config));
+      if (!res.ok) return null;
+
+      const data = await res.json();
+      const rows = Array.isArray(data) ? data : data?.item;
+      const latestItem = Array.isArray(rows) ? rows[rows.length - 1] : null;
+      const rawValue = latestItem?.DT ?? null;
+      if (rawValue === null) return null;
+
+      const numValue = parseFloat(String(rawValue));
+      if (Number.isNaN(numValue)) return null;
+
+      const threshold = config.threshold ?? 0;
+      const resultKey =
+        config.comparisonType === "less"
+          ? numValue < threshold
+            ? "below"
+            : "above"
+          : numValue > threshold
+            ? "above"
+            : "below";
+
+      const winningOptionId = config.optionMapping[resultKey];
+      if (!winningOptionId) return null;
+
+      return {
+        winningOptionId,
+        sourceData: {
+          indicatorCode: config.indicatorCode,
+          period: latestItem?.PRD_DE,
+          value: numValue,
+          comparisonType: config.comparisonType,
+          threshold,
+        },
+        confidence: 1.0,
+        fetchedAt: new Date(),
+      };
+    } catch {
+      return null;
     }
-
-    async fetchResult(source: SettlementSource): Promise<OracleResult | null> {
-        const apiKey = process.env.KOSIS_API_KEY;
-        if (!apiKey) {
-            console.error("[KOSIS] KOSIS_API_KEY not set");
-            return null;
-        }
-
-        const config = source.sourceConfig as unknown as KosisConfig;
-        const { indicatorCode, comparisonType, threshold, optionMapping } = config;
-
-        if (!indicatorCode || !optionMapping) {
-            console.error("[KOSIS] Missing indicatorCode or optionMapping");
-            return null;
-        }
-
-        try {
-            // KOSIS API 호출
-            const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${apiKey}&itmId=${indicatorCode}&format=json`;
-            const res = await fetch(url);
-
-            if (!res.ok) {
-                console.error("[KOSIS] API error:", res.status);
-                return null;
-            }
-
-            const data = await res.json();
-            const item = Array.isArray(data) ? data[0] : (data?.item?.[0]); // 응답 구조 유연하게 처리
-            const latestValue = item?.DT ?? null;
-
-            if (latestValue === null) {
-                console.log("[KOSIS] No data available yet");
-                return null;
-            }
-
-            // 조건에 따라 승리 옵션 결정
-            let resultKey = "unknown";
-            const numValue = parseFloat(latestValue);
-
-            if (comparisonType === "greater" && threshold !== undefined) {
-                resultKey = numValue > threshold ? "above" : "below";
-            } else if (comparisonType === "less" && threshold !== undefined) {
-                resultKey = numValue < threshold ? "below" : "above";
-            }
-
-            const winningOptionId = optionMapping[resultKey];
-            if (!winningOptionId) {
-                console.error("[KOSIS] No option mapped for:", resultKey);
-                return null;
-            }
-
-            return {
-                winningOptionId,
-                sourceData: {
-                    indicatorCode,
-                    value: numValue,
-                    comparisonType,
-                    threshold,
-                    raw: item
-                },
-                confidence: 1.0,
-                fetchedAt: new Date(),
-            };
-        } catch (err) {
-            console.error("[KOSIS] Fetch error:", err);
-            return null;
-        }
-    }
+  }
 }
