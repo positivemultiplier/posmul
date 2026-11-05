@@ -199,9 +199,10 @@ export default async function PredictionPage() {
     },
   ];
 
-  const existingSlugs = new Set(mappedGames.map((g) => g.slug));
-  const additionalGames = fallbackGames.filter((g) => !existingSlugs.has(g.slug));
-  mappedGames = [...mappedGames, ...additionalGames];
+  // DB에 활성 게임이 없을 때만 샘플 더미 게임을 노출하여 정합성 유지
+  if (mappedGames.length === 0) {
+    mappedGames = fallbackGames;
+  }
 
 // userPredictions는 상단 2단계 병렬 쿼리에서 이미 로드됨
 
@@ -210,15 +211,15 @@ export default async function PredictionPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <DomainContextHeader
           domain="prediction"
-          title="🎯 Prediction Market · 시민 집단지성 예측"
+          title="🎯 Prediction Market"
           subtitle="무위험 참여 자산(PMP)으로 미래 이슈를 예측하고, 적중 시 MoneyWave 상금풀에서 PMC를 획득하세요"
           metrics={[
             {
               label: "MoneyWave 상금풀",
-              value: platformTotalPool || 66461,
+              value: Math.round(platformTotalPool || 66461),
               unit: "PMC",
             },
-            { label: "진행 중 마켓", value: totalActiveGames, unit: "개" },
+            { label: "진행 중 마켓", value: mappedGames.length, unit: "개" },
           ]}
         />
 

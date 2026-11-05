@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+﻿import type { SupabaseClient } from "@supabase/supabase-js";
 import { GameStatus, PredictionType } from "../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 import { getKstHourStartIso } from "../../../shared/utils/time/getKstHourStartIso";
 
@@ -168,60 +168,74 @@ export const mapDbGameStatus = (value: unknown): GameStatus => {
   }
 };
 
+const extractOptionText = (opt: unknown, fallback: string): string => {
+  if (typeof opt === "string" && opt.trim()) return opt.trim();
+  if (isRecord(opt)) {
+    if (typeof opt.label === "string" && opt.label.trim()) return opt.label.trim();
+    if (typeof opt.text === "string" && opt.text.trim()) return opt.text.trim();
+    if (typeof opt.title === "string" && opt.title.trim()) return opt.title.trim();
+    if (typeof opt.name === "string" && opt.name.trim()) return opt.name.trim();
+  }
+  return fallback;
+};
+
+const extractOptionId = (opt: unknown, fallback: string): string => {
+  if (typeof opt === "string" && opt.trim()) return opt.trim();
+  if (isRecord(opt)) {
+    if (typeof opt.id === "string" && opt.id.trim()) return opt.id.trim();
+    if (typeof opt.key === "string" && opt.key.trim()) return opt.key.trim();
+  }
+  return fallback;
+};
+
 const mapGameOptions = (value: unknown): PredictionGameCardModel["options"] => {
-  if (isRecord(value) && Array.isArray(value.options)) {
-    return value.options.map((opt: any, idx: number) => ({
-      id: typeof opt === "string" ? opt : `opt-${idx + 1}`,
-      text: typeof opt === "string" ? opt : String(opt),
-      currentOdds: 0.5,
-    }));
+  let parsedValue = value;
+  if (typeof value === "string") {
+    try {
+      parsedValue = JSON.parse(value);
+    } catch {
+      parsedValue = value;
+    }
   }
 
-  if (!Array.isArray(value)) {
-    return [
-      { id: "Yes", text: "예 (Yes)", currentOdds: 0.5 },
-      { id: "No", text: "아니오 (No)", currentOdds: 0.5 },
-    ];
+  let rawList: unknown[] = [];
+  if (isRecord(parsedValue) && Array.isArray(parsedValue.options)) {
+    rawList = parsedValue.options;
+  } else if (Array.isArray(parsedValue)) {
+    rawList = parsedValue;
   }
 
-  const mapped = value
-    .map((raw, idx) => {
-      if (!isRecord(raw)) return null;
+  if (rawList.length > 0) {
+    const mapped = rawList
+      .map((raw, idx) => {
+        const id = extractOptionId(raw, `opt-${idx + 1}`);
+        const text = extractOptionText(raw, `옵션 ${idx + 1}`);
 
-      const id = typeof raw.id === "string" ? raw.id : `opt-${idx + 1}`;
-      const text =
-        typeof raw.text === "string"
-          ? raw.text
-          : typeof raw.label === "string"
-            ? raw.label
-            : `옵션 ${idx + 1}`;
+        const currentOddsRaw = isRecord(raw) ? raw.currentOdds : undefined;
+        const ratioRaw = isRecord(raw) ? raw.ratio : undefined;
 
-      const currentOddsRaw = isRecord(raw) ? raw.currentOdds : undefined;
-      const ratioRaw = isRecord(raw) ? raw.ratio : undefined;
+        const currentOdds = (() => {
+          if (typeof currentOddsRaw === "number" && Number.isFinite(currentOddsRaw)) {
+            return clamp(currentOddsRaw, 0.01, 0.99);
+          }
+          const ratio = toNumber(ratioRaw, NaN);
+          if (Number.isFinite(ratio) && ratio > 0) {
+            return clamp(1 / ratio, 0.01, 0.99);
+          }
+          return 0.5;
+        })();
 
-      const currentOdds = (() => {
-        if (typeof currentOddsRaw === "number" && Number.isFinite(currentOddsRaw)) {
-          return clamp(currentOddsRaw, 0.01, 0.99);
-        }
+        return { id, text, currentOdds };
+      })
+      .filter((v): v is NonNullable<typeof v> => Boolean(v && v.text));
 
-        const ratio = toNumber(ratioRaw, NaN);
-        if (Number.isFinite(ratio) && ratio > 0) {
-          return clamp(1 / ratio, 0.01, 0.99);
-        }
+    if (mapped.length > 0) return mapped;
+  }
 
-        return 0.5;
-      })();
-
-      return { id, text, currentOdds };
-    })
-    .filter((v): v is NonNullable<typeof v> => v !== null);
-
-  return mapped.length
-    ? mapped
-    : [
-        { id: "Yes", text: "예 (Yes)", currentOdds: 0.5 },
-        { id: "No", text: "아니오 (No)", currentOdds: 0.5 },
-      ];
+  return [
+    { id: "Yes", text: "예 (Yes)", currentOdds: 0.5 },
+    { id: "No", text: "아니오 (No)", currentOdds: 0.5 },
+  ];
 };
 
 export const mapPredictionGameRowToCardModel = (

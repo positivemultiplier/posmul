@@ -49,13 +49,28 @@ interface ClientPredictionGamesGridProps {
     basePath?: string;
 }
 
-const CATEGORY_CHIPS = [
-    { id: "ALL", label: "전체", emoji: "✨", icon: Sparkles },
-    { id: "SPORTS", label: "스포츠", emoji: "⚽", icon: Activity },
-    { id: "POLITICS", label: "정치/선거", emoji: "🗳️", icon: Vote },
-    { id: "INVEST", label: "투자/경제", emoji: "📈", icon: TrendingUp },
-    { id: "ENTERTAINMENT", label: "엔터테인먼트", emoji: "🎬", icon: Film },
+interface CategoryChipItem {
+    id: string;
+    label: string;
+    emoji: string;
+    aliases: string[];
+}
+
+const CATEGORY_CHIPS: CategoryChipItem[] = [
+    { id: "ALL", label: "전체", emoji: "✨", aliases: ["ALL"] },
+    { id: "ECONOMY", label: "경제/투자", emoji: "📈", aliases: ["ECONOMY", "INVEST"] },
+    { id: "ENTERTAINMENT", label: "엔터테인먼트", emoji: "🎬", aliases: ["ENTERTAINMENT", "CULTURE"] },
+    { id: "POLITICS", label: "정치/선거", emoji: "🗳️", aliases: ["POLITICS"] },
+    { id: "SPORTS", label: "스포츠", emoji: "⚽", aliases: ["SPORTS"] },
 ];
+
+const matchesCategory = (gameCategory: string | undefined, chipId: string): boolean => {
+    if (chipId === "ALL") return true;
+    const cat = gameCategory?.toUpperCase() || "";
+    const chip = CATEGORY_CHIPS.find(c => c.id === chipId);
+    if (!chip) return false;
+    return chip.aliases.includes(cat);
+};
 
 export function ClientPredictionGamesGrid({
     games,
@@ -71,10 +86,7 @@ export function ClientPredictionGamesGrid({
     };
 
     // 카테고리 필터링
-    const filteredGames = games.filter(game => {
-        if (selectedCategory === "ALL") return true;
-        return game.category?.toUpperCase() === selectedCategory;
-    });
+    const filteredGames = games.filter(game => matchesCategory(game.category, selectedCategory));
 
     return (
         <div className="space-y-6">
@@ -86,9 +98,7 @@ export function ClientPredictionGamesGrid({
                         <span>카테고리</span>
                     </div>
                     {CATEGORY_CHIPS.map((chip) => {
-                        const count = chip.id === "ALL" 
-                            ? games.length 
-                            : games.filter(g => g.category?.toUpperCase() === chip.id).length;
+                        const count = chip.id === "ALL" ? games.length : games.filter(g => matchesCategory(g.category, chip.id)).length;
 
                         const isSelected = selectedCategory === chip.id;
 
