@@ -144,3 +144,4 @@ export class EcosOracleAdapter implements IOracleProvider {
     }
   }
 }
+
