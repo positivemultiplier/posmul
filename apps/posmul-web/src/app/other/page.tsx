@@ -2,13 +2,14 @@
 
 /**
  * Other Services Page
- * 기타 서비스 메인 페이지 - Forum 스타일 다크 테마
+ * 기타 서비스 메인 페이지 - Cool Slate Tone-on-Tone
  */
 
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Gift, BarChart3, MessageCircle, Settings, ArrowRight, CheckCircle } from 'lucide-react';
 import { Card, CardContent } from '@/shared/ui/components/base/Card';
+import { DomainContextHeader } from '@/shared/ui/components/layout/DomainContextHeader';
 
 interface ServiceCardProps {
   href: string;
@@ -17,40 +18,44 @@ interface ServiceCardProps {
   description: string;
   status: 'active' | 'coming-soon';
   features: string[];
-  color: string;
 }
 
-function ServiceCard({ href, icon, title, description, status, features, color }: ServiceCardProps) {
+function ServiceCard({ href, icon, title, description, status, features }: ServiceCardProps) {
   const isActive = status === 'active';
 
   const content = (
-    <Card className={`bg-slate-900/70 border-slate-800 transition-all h-full ${isActive
-      ? 'hover:border-slate-600 cursor-pointer group'
-      : 'opacity-50 cursor-not-allowed'
-      }`}>
+    <Card
+      className={`bg-slate-900/70 border-slate-800/90 transition-all h-full ${
+        isActive
+          ? 'hover:border-slate-500/50 cursor-pointer group'
+          : 'opacity-50 cursor-not-allowed'
+      }`}
+    >
       <CardContent className="p-6">
         <div className="flex items-start justify-between mb-4">
-          <div className={`w-12 h-12 rounded-xl bg-gradient-to-r ${color} flex items-center justify-center text-white`}>
+          <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-200">
             {icon}
           </div>
           {status === 'coming-soon' && (
-            <span className="text-xs bg-slate-700 text-slate-400 px-2 py-1 rounded-full">
-              Coming Soon
+            <span className="text-xs bg-slate-800 text-slate-400 px-2.5 py-1 rounded-full border border-slate-700">
+              준비 중
             </span>
           )}
         </div>
-        <h3 className="text-xl font-bold text-white mb-2">{title}</h3>
+        <h3 className="text-xl font-bold text-white mb-2 group-hover:text-slate-200">
+          {title}
+        </h3>
         <p className="text-slate-400 mb-4 text-sm">{description}</p>
         <ul className="space-y-2 mb-4">
           {features.map((feature, idx) => (
-            <li key={idx} className="flex items-center text-sm text-slate-500">
-              <CheckCircle className="w-4 h-4 mr-2 text-emerald-500" />
+            <li key={idx} className="flex items-center text-sm text-slate-400">
+              <CheckCircle className="w-4 h-4 mr-2 text-slate-300" />
               {feature}
             </li>
           ))}
         </ul>
         {isActive && (
-          <div className="flex items-center text-sm text-slate-500 group-hover:text-white transition-colors">
+          <div className="flex items-center text-xs font-bold text-slate-400 group-hover:text-white transition-colors">
             바로가기 <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
           </div>
         )}
@@ -61,9 +66,9 @@ function ServiceCard({ href, icon, title, description, status, features, color }
   if (isActive) {
     return (
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
+        transition={{ delay: 0.08 }}
       >
         <Link href={href}>{content}</Link>
       </motion.div>
@@ -72,9 +77,9 @@ function ServiceCard({ href, icon, title, description, status, features, color }
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.2 }}
+      transition={{ delay: 0.15 }}
     >
       {content}
     </motion.div>
@@ -86,103 +91,73 @@ export default function OtherServicesPage() {
     {
       href: '/other/gift-aid',
       icon: <Gift className="w-6 h-6" />,
-      title: 'Gift Aid',
-      description: '기부금 세액공제 관련 서비스입니다.',
+      title: '🎁 Gift Aid (기부금 세액공제)',
+      description: '시민 직접 예산 집행(PMC 기부) 내역의 영수증 발급 및 연말정산 세액공제 계산 서비스입니다.',
       status: 'active',
-      color: 'from-purple-500 to-pink-500',
       features: [
-        '기부금 영수증 발급',
-        '연말정산용 자료 제공',
-        '세액공제 예상 금액 계산',
-        '기부 내역 조회',
+        '기부금 영수증 즉시 발급',
+        '연말정산 국세청 제출 자료 제공',
+        '연 소득 대비 세액공제 예상액 시뮬레이터',
+        '연도별 투명 기부 내역 조회',
       ],
     },
     {
       href: '/other/tax',
       icon: <BarChart3 className="w-6 h-6" />,
-      title: 'Accounting & Tax',
-      description: '회계 및 세무 관련 서비스입니다.',
+      title: '📊 Accounting & Tax (세무·회계)',
+      description: 'PMP·PMC 자산 획득 및 사용 내역을 투명하게 검증하고 명세서를 출력하는 회계 서비스입니다.',
       status: 'active',
-      color: 'from-blue-500 to-cyan-500',
       features: [
-        '포인트 거래 내역 조회',
-        'PMC 수익 명세서',
-        '세무 신고용 자료',
-        '거래 요약 리포트',
+        'PMP / PMC 전체 거래 원장 조회',
+        '예측·소비·기부 도메인별 명세서',
+        '세무 신고용 PDF / Excel 자료 다운로드',
+        '기간별 자산 흐름 요약 리포트',
       ],
     },
     {
       href: '/other/support',
       icon: <MessageCircle className="w-6 h-6" />,
-      title: 'Support Center',
-      description: '고객 지원 및 문의 서비스입니다.',
+      title: '💬 Support Center (시민 지원)',
+      description: '플랫폼 이용 가이드 및 1:1 문의, 시민 건의사항 접수 센터입니다.',
       status: 'coming-soon',
-      color: 'from-emerald-500 to-teal-500',
       features: [
-        '1:1 문의',
-        'FAQ',
-        '가이드 문서',
-        '피드백 제출',
+        '1:1 시민 문의',
+        'PMP · PMC · PMG 경제 시스템 FAQ',
+        '직접민주주의 참여 가이드 문서',
+        '플랫폼 개선 피드백 제출',
       ],
     },
     {
       href: '/other/settings',
       icon: <Settings className="w-6 h-6" />,
-      title: 'Account Settings',
-      description: '계정 및 환경 설정입니다.',
+      title: '⚙️ Account Settings (계정·환경)',
+      description: '동네(읍·면·동) 인증, 직업군 설정 및 알림·보안 환경을 관리합니다.',
       status: 'coming-soon',
-      color: 'from-amber-500 to-orange-500',
       features: [
-        '프로필 수정',
-        '알림 설정',
-        '보안 설정',
-        '연동 계정 관리',
+        '동네(읍·면·동) 및 직업군 프로필 관리',
+        '예측 정산 · 공론장 투표 알림 설정',
+        '2단계 보안 및 지갑 연동 관리',
+        '개인정보 투명성 관리',
       ],
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 to-slate-950 text-slate-200">
-      {/* Header - Forum 스타일 */}
-      <header className="sticky top-0 z-10 backdrop-blur-xl bg-slate-900/80 border-b border-slate-800/50">
-        <div className="max-w-4xl mx-auto p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-slate-300 to-slate-100">
-                ⚡ 기타 서비스
-              </h1>
-              <p className="text-sm text-slate-400">Gift Aid · 세무 · 설정</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-500">이용 가능</p>
-              <p className="text-xl font-bold text-white">
-                <span className="text-2xl">2</span>
-                <span className="text-sm ml-1">서비스</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#090b12] text-slate-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <DomainContextHeader
+          domain="other"
+          title="⚡ Services · 투명 회계 & 시민 지원"
+          subtitle="기부금 세액공제(Gift Aid) 영수증 발급과 PMP/PMC 거래 명세서를 투명하게 확인하세요"
+          metrics={[{ label: '활성 인프라', value: 2, unit: '서비스' }]}
+        />
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* 서비스 그리드 */}
-        <div className="grid md:grid-cols-2 gap-4">
+        <div className="grid md:grid-cols-2 gap-5">
           {services.map((service) => (
             <ServiceCard key={service.href} {...service} />
           ))}
         </div>
-
-        {/* 안내 문구 */}
-        <div className="bg-blue-900/30 border border-blue-800/50 rounded-xl p-4">
-          <h3 className="font-semibold text-blue-400 mb-2 flex items-center gap-2">
-            💡 안내
-          </h3>
-          <p className="text-blue-300/70 text-sm">
-            Gift Aid와 Accounting & Tax 서비스는 현재 기본 기능만 제공됩니다.
-            향후 업데이트를 통해 더 많은 기능이 추가될 예정입니다.
-          </p>
-        </div>
-      </main>
+      </div>
     </div>
   );
 }

@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { Suspense, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Star, Users, Heart, Search, TrendingUp } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Star, Users, Heart, Search } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/shared/ui/components/base/Card";
+import { DomainContextHeader } from "@/shared/ui/components/layout/DomainContextHeader";
 
 export interface OpinionLeader {
   id: string;
@@ -26,31 +28,59 @@ interface OpinionLeaderClientProps {
   userId: string | null;
 }
 
-// 카테고리 목록
 const CATEGORIES = [
-  { key: "all", label: "전체", icon: "🌟" },
+  { key: "all", label: "전체 리더", icon: "🌟" },
   { key: "environment", label: "환경", icon: "🌿" },
-  { key: "education", label: "교육", icon: "📚" },
-  { key: "animal", label: "동물", icon: "🐾" },
   { key: "welfare", label: "복지", icon: "🤝" },
-  { key: "culture", label: "문화", icon: "🎭" },
+  { key: "science", label: "과학·교육", icon: "🔬" },
+  { key: "human-rights", label: "인권·동물", icon: "🕊️" },
 ];
 
-export function OpinionLeaderClient({ leaders }: OpinionLeaderClientProps) {
-  const [selectedCategory, setSelectedCategory] = useState("all");
+function OpinionLeaderContent({ leaders }: OpinionLeaderClientProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const queryField = searchParams?.get("field") || "all";
+
+  const [selectedCategory, setSelectedCategory] = useState(queryField);
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    setSelectedCategory(queryField);
+  }, [queryField]);
+
+  const handleCategoryChange = (key: string) => {
+    setSelectedCategory(key);
+    if (key === "all") {
+      router.push("/donation/opinion-leader");
+    } else {
+      router.push(`/donation/opinion-leader?field=${key}`);
+    }
+  };
 
   const filteredLeaders = useMemo(() => {
     return leaders.filter((leader) => {
-      const matchCategory = selectedCategory === "all" || leader.category === selectedCategory;
-      const matchSearch = leader.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      const normalizedCat =
+        leader.category === "education"
+          ? "science"
+          : leader.category === "animal" || leader.category === "culture"
+          ? "human-rights"
+          : leader.category;
+      const matchCategory =
+        selectedCategory === "all" ||
+        leader.category === selectedCategory ||
+        normalizedCat === selectedCategory;
+      const matchSearch =
+        leader.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         leader.bio.toLowerCase().includes(searchQuery.toLowerCase());
       return matchCategory && matchSearch;
     });
   }, [leaders, selectedCategory, searchQuery]);
 
   const totalFollowers = leaders.reduce((sum, l) => sum + l.followerCount, 0);
-  const totalImpact = leaders.reduce((sum, l) => sum + l.totalDonationsInfluenced, 0);
+  const totalImpact = leaders.reduce(
+    (sum, l) => sum + l.totalDonationsInfluenced,
+    0
+  );
 
   const formatCount = (num: number) => {
     if (num >= 10000) return `${(num / 10000).toFixed(1)}만`;
@@ -65,137 +95,110 @@ export function OpinionLeaderClient({ leaders }: OpinionLeaderClientProps) {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-950 to-slate-950 text-slate-200">
-      {/* Header - Forum 스타일 */}
-      <header className="sticky top-0 z-10 backdrop-blur-xl bg-purple-950/80 border-b border-purple-800/50">
-        <div className="max-w-4xl mx-auto p-4">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-                🌟 Leader
-              </h1>
-              <p className="text-sm text-purple-400/70">오피니언 리더 · 선한 영향력</p>
+    <div className="min-h-screen bg-[#090b12] text-slate-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <DomainContextHeader
+          domain="donation"
+          title="🌟 Opinion Leader · 오피니언 리더 연대 후원"
+          subtitle="신뢰하는 전문가·인플루언서가 보증하는 공익 캠페인에 동참하여 선한 영향력을 확산하세요"
+          metrics={[
+            { label: "연대 팔로워", value: formatCount(totalFollowers), unit: "명" },
+            { label: "영향력 기부금", value: formatAmount(totalImpact), unit: "PMC" },
+          ]}
+        >
+          <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center justify-between">
+            <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.key}
+                  onClick={() => handleCategoryChange(cat.key)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
+                    selectedCategory === cat.key
+                      ? "bg-purple-500/20 text-purple-200 border-purple-400/40"
+                      : "bg-slate-900/70 text-slate-400 border-slate-800 hover:text-slate-200"
+                  }`}
+                >
+                  {cat.icon} {cat.label}
+                </button>
+              ))}
             </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-400">활동 리더</p>
-              <p className="text-xl font-bold text-purple-400">
-                <span className="text-2xl">{leaders.length}</span>
-                <span className="text-sm ml-1">명</span>
-              </p>
+
+            <div className="relative w-full sm:w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input
+                type="text"
+                placeholder="리더 이름 또는 소개 검색..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-purple-500/60"
+              />
             </div>
           </div>
+        </DomainContextHeader>
 
-          {/* 검색 */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-            <input
-              type="text"
-              placeholder="리더 이름 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 rounded-xl bg-slate-900/80 border border-slate-700 
-                         text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-purple-500
-                         focus:ring-1 focus:ring-purple-500/50 transition-all"
-            />
-          </div>
-        </div>
-      </header>
-
-      {/* Stats */}
-      <div className="max-w-4xl mx-auto px-4 py-4">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 text-center">
-            <p className="text-xs text-slate-500">총 팔로워</p>
-            <p className="text-lg font-bold text-white">{formatCount(totalFollowers)}</p>
-          </div>
-          <div className="p-3 rounded-xl bg-slate-900/70 border border-slate-800 text-center">
-            <p className="text-xs text-slate-500">영향력 기부금</p>
-            <p className="text-lg font-bold text-purple-400">{formatAmount(totalImpact)} PMC</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Category Tabs */}
-      <div className="max-w-4xl mx-auto px-4 py-2 overflow-x-auto">
-        <div className="flex gap-2">
-          {CATEGORIES.map((cat) => (
-            <button
-              key={cat.key}
-              onClick={() => setSelectedCategory(cat.key)}
-              className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-all
-                ${selectedCategory === cat.key
-                  ? "bg-purple-500 text-white shadow-lg shadow-purple-500/25"
-                  : "bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-300"
-                }`}
-            >
-              {cat.icon} {cat.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Leader Grid */}
-      <main className="max-w-4xl mx-auto px-4 py-4 pb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           <AnimatePresence mode="popLayout">
             {filteredLeaders.map((leader) => (
               <motion.div
                 key={leader.id}
                 layout
-                initial={{ opacity: 0, scale: 0.95 }}
+                initial={{ opacity: 0, scale: 0.97 }}
                 animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.95 }}
+                exit={{ opacity: 0, scale: 0.97 }}
                 transition={{ duration: 0.2 }}
               >
-                <Link href={`/donation/opinion-leader/${leader.category}/${leader.id}`}>
-                  <Card className="bg-slate-900/70 border-slate-800 hover:border-purple-700/50 transition-all cursor-pointer group overflow-hidden h-full">
-                    {/* 아바타 영역 */}
-                    <div className="relative aspect-video bg-gradient-to-br from-purple-900/50 to-slate-900 flex items-center justify-center">
+                <Link
+                  href={`/donation/opinion-leader/${leader.category}/${leader.id}`}
+                >
+                  <Card className="bg-slate-900/70 border-slate-800/90 hover:border-purple-500/40 transition-all cursor-pointer group overflow-hidden h-full">
+                    <div className="relative aspect-video bg-gradient-to-br from-purple-950/60 via-slate-900 to-slate-950 flex items-center justify-center border-b border-white/[0.04]">
                       <div className="text-center">
-                        <div className="w-20 h-20 mx-auto rounded-full bg-slate-800 flex items-center justify-center text-4xl border-4 border-purple-500/30">
+                        <div className="w-20 h-20 mx-auto rounded-full bg-slate-900 flex items-center justify-center text-4xl border-2 border-purple-500/40">
                           {leader.avatarUrl ? (
-                            <img src={leader.avatarUrl} alt={leader.displayName} className="w-full h-full rounded-full object-cover" />
+                            <img
+                              src={leader.avatarUrl}
+                              alt={leader.displayName}
+                              className="w-full h-full rounded-full object-cover"
+                            />
                           ) : (
                             leader.categoryIcon
                           )}
                         </div>
                         {leader.isVerified && (
-                          <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded bg-purple-500/80 text-white text-xs">
-                            ✓ 인증됨
+                          <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded bg-purple-500/20 border border-purple-400/40 text-purple-200 text-[10px] font-bold">
+                            ✓ 공식 인증 리더
                           </span>
                         )}
                       </div>
-                      {/* 팔로워 수 */}
-                      <div className="absolute top-2 right-2 px-2 py-1 rounded bg-black/60 text-white text-xs flex items-center gap-1">
+                      <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded bg-black/60 text-slate-200 text-xs flex items-center gap-1">
                         <Users className="w-3 h-3" />
                         {formatCount(leader.followerCount)}
                       </div>
                     </div>
 
-                    <CardContent className="p-4 space-y-2">
-                      {/* 카테고리 */}
+                    <CardContent className="p-4 space-y-2.5">
                       <div className="flex items-center gap-2 text-xs text-slate-500">
-                        <span className="px-2 py-0.5 rounded-full bg-purple-900/30 text-purple-400">
+                        <span className="px-2 py-0.5 rounded-md bg-purple-500/15 text-purple-300 border border-purple-500/25 font-medium">
                           {leader.categoryIcon} {leader.categoryLabel}
                         </span>
                       </div>
 
-                      {/* 이름 */}
-                      <h3 className="font-bold text-white group-hover:text-purple-400 transition-colors">
+                      <h3 className="font-bold text-white group-hover:text-purple-300 transition-colors">
                         {leader.displayName}
                       </h3>
 
-                      {/* 소개 */}
-                      <p className="text-sm text-slate-400 line-clamp-2">{leader.bio}</p>
+                      <p className="text-sm text-slate-400 line-clamp-2">
+                        {leader.bio}
+                      </p>
 
-                      {/* Footer */}
-                      <div className="flex items-center justify-between pt-2 text-xs text-slate-500">
-                        <span className="flex items-center gap-1">
-                          <Heart className="w-3 h-3 text-pink-400" />
-                          영향력 {formatAmount(leader.totalDonationsInfluenced)} PMC
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs text-slate-500">
+                        <span className="flex items-center gap-1 text-purple-300 font-semibold">
+                          <Heart className="w-3.5 h-3.5 text-fuchsia-400" />
+                          영향력 {formatAmount(leader.totalDonationsInfluenced)}{" "}
+                          PMC
                         </span>
-                        <span className="flex items-center gap-1 text-purple-400 font-medium">
-                          함께하기 →
+                        <span className="flex items-center gap-1 text-purple-300 font-bold">
+                          연대 후원 →
                         </span>
                       </div>
                     </CardContent>
@@ -208,11 +211,19 @@ export function OpinionLeaderClient({ leaders }: OpinionLeaderClientProps) {
 
         {filteredLeaders.length === 0 && (
           <div className="text-center py-16 text-slate-500">
-            <Star className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>조건에 맞는 리더가 없습니다.</p>
+            <Star className="w-12 h-12 mx-auto mb-4 opacity-40 text-purple-400" />
+            <p>조건에 맞는 오피니언 리더가 없습니다.</p>
           </div>
         )}
-      </main>
+      </div>
     </div>
+  );
+}
+
+export function OpinionLeaderClient(props: OpinionLeaderClientProps) {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#090b12]" />}>
+      <OpinionLeaderContent {...props} />
+    </Suspense>
   );
 }

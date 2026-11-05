@@ -1,56 +1,83 @@
 "use client";
 
 import React, { useState } from "react";
-import { Building2, Star, Gift, ArrowRight, Heart, TrendingUp, DollarSign, CheckCircle2 } from "lucide-react";
+import {
+  Building2,
+  Star,
+  Gift,
+  ArrowRight,
+  Heart,
+  TrendingUp,
+  DollarSign,
+  CheckCircle2,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Card, CardContent } from "@/shared/ui/components/base/Card";
+import { DomainContextHeader } from "@/shared/ui/components/layout/DomainContextHeader";
 
-// 3-Pillar 데이터
+// 3-Pillar 데이터 (Rose Amethyst Tone-on-Tone 계층화)
 const PILLARS = [
+  {
+    key: "direct",
+    title: "🎁 Direct",
+    subtitle: "물품 직접 기부 · 생활 밀착 지원",
+    description:
+      "의류, 식품, 교육용품, 의료기기를 필요한 이웃에게 직접 전달하세요. 중간 유통 비용 없이 투명하게 집행됩니다.",
+    href: "/donation/direct",
+    color: "from-purple-300 to-fuchsia-300",
+    bgColor: "from-purple-950/80 via-slate-900/70 to-slate-950",
+    stats: { count: 56, label: "개 프로젝트" },
+    rewardBadge: "PMC 100% 물품전달",
+    icon: <Gift className="w-8 h-8" />,
+    image: "/images/cards/donation_direct.png",
+  },
   {
     key: "institute",
     title: "🏛️ Institute",
-    subtitle: "검증된 기관 기부",
-    description: "NGO, 비영리 단체의 캠페인에 직접 후원하세요. 투명성 보고서로 기부금 사용 내역을 확인할 수 있습니다.",
+    subtitle: "검증된 공익 기관 기부",
+    description:
+      "투명성 등급(AAA~A)이 검증된 NGO·비영리 단체의 캠페인에 직접 후원하고 세액공제(Gift Aid) 영수증을 발급받으세요.",
     href: "/donation/institute",
-    color: "from-blue-500 to-indigo-500",
-    bgColor: "from-blue-900/50 to-slate-900",
-    stats: { count: 42, label: "개 기관" },
+    color: "from-fuchsia-300 to-pink-300",
+    bgColor: "from-fuchsia-950/80 via-slate-900/70 to-slate-950",
+    stats: { count: 42, label: "개 검증기관" },
+    rewardBadge: "투명성 검증 · 세액공제",
     icon: <Building2 className="w-8 h-8" />,
     image: "/images/cards/donation_institute.png",
   },
   {
     key: "leader",
     title: "🌟 Leader",
-    subtitle: "오피니언 리더 후원",
-    description: "신뢰하는 인플루언서가 추천하는 캠페인에 동참하세요. 리더와 함께 선한 영향력을 확산하세요.",
+    subtitle: "오피니언 리더 연대 후원",
+    description:
+      "신뢰하는 전문가·인플루언서가 보증하는 공익 캠페인에 동참하여 선한 영향력의 승수 효과를 확산하세요.",
     href: "/donation/opinion-leader",
-    color: "from-purple-500 to-pink-500",
-    bgColor: "from-purple-900/50 to-slate-900",
+    color: "from-purple-200 to-purple-400",
+    bgColor: "from-purple-900/70 via-slate-900/70 to-slate-950",
     stats: { count: 128, label: "명 리더" },
+    rewardBadge: "연대 승수 효과",
     icon: <Star className="w-8 h-8" />,
     image: "/images/cards/donation_leader.png",
   },
-  {
-    key: "direct",
-    title: "🎁 Direct",
-    subtitle: "물품 직접 기부",
-    description: "필요한 곳에 필요한 물품을 직접 전달하세요. 의류, 식품, 교육용품 등 다양한 펀딩에 참여할 수 있습니다.",
-    href: "/donation/direct",
-    color: "from-emerald-500 to-teal-500",
-    bgColor: "from-emerald-900/50 to-slate-900",
-    stats: { count: 56, label: "개 프로젝트" },
-    icon: <Gift className="w-8 h-8" />,
-    image: "/images/cards/donation_direct.png",
-  },
 ];
 
-// 초기 기부 목록
 const INITIAL_DONATIONS = [
   { id: 1, user: "User***21", amount: 10000, target: "환경재단", time: "1분 전" },
-  { id: 2, user: "User***87", amount: 5000, target: "아동복지센터", time: "3분 전" },
-  { id: 3, user: "User***45", amount: 25000, target: "김OO 리더 캠페인", time: "5분 전" },
+  {
+    id: 2,
+    user: "User***87",
+    amount: 5000,
+    target: "아동복지센터",
+    time: "3분 전",
+  },
+  {
+    id: 3,
+    user: "User***45",
+    amount: 25000,
+    target: "김OO 리더 캠페인",
+    time: "5분 전",
+  },
 ];
 
 export default function DonationPage() {
@@ -59,7 +86,6 @@ export default function DonationPage() {
   const [todayCount, setTodayCount] = useState(142);
   const [liveDonations, setLiveDonations] = useState(INITIAL_DONATIONS);
 
-  // Quick Donation Form Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [targetName, setTargetName] = useState("환경재단");
   const [amount, setAmount] = useState<number>(1000);
@@ -77,7 +103,7 @@ export default function DonationPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userId: "00000000-0000-0000-0000-000000000001", // Demo System User
+          userId: "00000000-0000-0000-0000-000000000001",
           targetName,
           amount,
         }),
@@ -98,7 +124,9 @@ export default function DonationPage() {
         };
         setLiveDonations((prev) => [newDonation, ...prev]);
 
-        setSuccessMessage(`성공적으로 ${amount.toLocaleString()} PMC를 기부하셨습니다!`);
+        setSuccessMessage(
+          `성공적으로 ${amount.toLocaleString()} PMC를 기부하셨습니다!`
+        );
         setTimeout(() => {
           setIsModalOpen(false);
           setSuccessMessage(null);
@@ -106,7 +134,7 @@ export default function DonationPage() {
       } else {
         alert(data.error || "기부에 실패했습니다.");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       alert("기부 처리 도중 오류가 발생했습니다.");
     } finally {
@@ -115,122 +143,84 @@ export default function DonationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-950 to-slate-950 text-slate-200">
-      {/* Header */}
-      <header className="sticky top-0 z-10 backdrop-blur-xl bg-purple-950/80 border-b border-purple-800/50">
-        <div className="max-w-4xl mx-auto p-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400">
-              💜 Donation
-            </h1>
-            <p className="text-sm text-purple-400/70">세상을 바꾸는 따뜻한 마음</p>
-          </div>
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-[#090b12] text-slate-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+        <DomainContextHeader
+          domain="donation"
+          title="💜 Donation · 시민 직접 예산 집행"
+          subtitle="관료·정치인을 거치지 않고, 예측 적중과 상생 소비로 획득한 PMC로 필요한 곳에 직접 예산을 집행합니다"
+          metrics={[
+            {
+              label: "누적 시민 집행액",
+              value: `${(totalDonation / 100000000).toFixed(2)}억`,
+              unit: "PMC",
+            },
+            { label: "오늘 참여 시민", value: todayCount, unit: "명" },
+          ]}
+          actionSlot={
             <button
               onClick={() => setIsModalOpen(true)}
-              className="px-4 py-2 rounded-xl font-semibold text-sm bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white shadow-lg transition-all flex items-center gap-1.5"
+              className="px-4 py-2 rounded-xl font-bold text-xs bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-white shadow-md shadow-purple-950/50 transition-all flex items-center gap-1.5"
             >
-              <Heart className="w-4 h-4 fill-white" /> 즉시 기부하기
+              <Heart className="w-3.5 h-3.5 fill-white" /> 즉시 기부하기
             </button>
-            <div className="text-right hidden sm:block">
-              <p className="text-xs text-slate-400">오늘 참여</p>
-              <p className="text-xl font-bold text-purple-400">
-                <span className="text-2xl">{todayCount}</span>
-                <span className="text-sm ml-1">명</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
+          }
+        />
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
-        {/* Stats Summary */}
-        <section className="grid grid-cols-2 gap-4">
-          <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 text-center">
-            <p className="text-xs text-slate-500 mb-1">총 누적 기부금</p>
-            <p className="text-2xl font-bold text-white">
-              {(totalDonation / 100000000).toFixed(2)}억
-              <span className="text-sm text-purple-400 ml-1">PMC</span>
-            </p>
-          </div>
-          <div className="p-4 rounded-xl bg-slate-900/70 border border-slate-800 text-center">
-            <p className="text-xs text-slate-500 mb-1">함께한 기부자</p>
-            <p className="text-2xl font-bold text-white">
-              {totalDonors.toLocaleString()}
-              <span className="text-sm text-slate-400 ml-1">명</span>
-            </p>
-          </div>
-        </section>
-
-        {/* Live Ticker */}
-        <section className="p-4 rounded-xl bg-slate-900/50 border border-slate-800">
-          <div className="flex items-center gap-2 mb-3">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-            </span>
-            <span className="text-sm font-medium text-slate-400">실시간 기부 현황</span>
-          </div>
-          <div className="space-y-2">
-            {liveDonations.map((donation) => (
-              <div key={donation.id} className="flex items-center justify-between text-sm">
-                <div className="flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-pink-400" />
-                  <span className="text-slate-300 font-medium">{donation.user}</span>
-                  <span className="text-purple-400 font-semibold">{donation.amount.toLocaleString()} PMC</span>
-                  <span className="text-slate-500">→</span>
-                  <span className="text-slate-300">{donation.target}</span>
-                </div>
-                <span className="text-xs text-slate-500">{donation.time}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* 3-Pillar Cards */}
+        {/* 3-Pillar Cards (Rose Amethyst Tone-on-Tone) */}
         <section>
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-purple-400" />
-            기부 방법 선택
+          <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-purple-400" />
+            <span>시민 예산 집행 3대 방식</span>
           </h2>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-3">
             {PILLARS.map((pillar, index) => (
               <motion.div
                 key={pillar.key}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.08 }}
               >
                 <Link href={pillar.href}>
-                  <Card className="bg-slate-900/70 border-slate-800 hover:border-purple-700/50 transition-all cursor-pointer group overflow-hidden h-full">
-                    {/* 히어로 영역 */}
-                    <div className="relative aspect-[4/3] overflow-hidden">
+                  <Card className="bg-slate-900/70 border-slate-800/90 hover:border-purple-500/40 transition-all cursor-pointer group overflow-hidden h-full">
+                    <div className="relative aspect-[16/10] overflow-hidden">
                       <img
                         src={pillar.image}
                         alt={pillar.title}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
-                      <div className={`absolute inset-0 bg-gradient-to-t ${pillar.bgColor} opacity-90`} />
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-t ${pillar.bgColor} opacity-90`}
+                      />
 
-                      {/* Content Overlay */}
+                      <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded-md bg-purple-500/20 border border-purple-400/30 text-purple-200 text-[11px] font-bold z-10">
+                        {pillar.rewardBadge}
+                      </div>
+
                       <div className="absolute inset-0 flex flex-col items-center justify-center p-4 z-10">
-                        <div className={`text-transparent bg-clip-text bg-gradient-to-r ${pillar.color}`}>
-                          {pillar.icon}
-                        </div>
-                        <h3 className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${pillar.color} mt-2`}>
+                        <div className="text-purple-300">{pillar.icon}</div>
+                        <h3
+                          className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${pillar.color} mt-2`}
+                        >
                           {pillar.title}
                         </h3>
-                        <p className="text-xs text-slate-300 text-center mt-1">{pillar.subtitle}</p>
+                        <p className="text-xs text-slate-300 text-center mt-1">
+                          {pillar.subtitle}
+                        </p>
                       </div>
 
-                      <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/60 text-white text-xs z-10 backdrop-blur-sm border border-white/10">
-                        {pillar.stats.count}{pillar.stats.label}
+                      <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded bg-black/60 text-slate-200 text-xs z-10 backdrop-blur-sm border border-white/10">
+                        {pillar.stats.count}
+                        {pillar.stats.label}
                       </div>
                     </div>
-                    <CardContent className="p-4 space-y-2">
-                      <p className="text-sm text-slate-400 line-clamp-2">{pillar.description}</p>
-                      <div className="flex items-center justify-end text-xs text-slate-500 group-hover:text-purple-400 transition-colors">
-                        바로가기 <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                    <CardContent className="p-4 space-y-2.5">
+                      <p className="text-sm text-slate-400 line-clamp-2">
+                        {pillar.description}
+                      </p>
+                      <div className="flex items-center justify-end text-xs text-slate-400 group-hover:text-purple-300 transition-colors font-semibold">
+                        집행하러 가기{" "}
+                        <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </CardContent>
                   </Card>
@@ -240,28 +230,88 @@ export default function DonationPage() {
           </div>
         </section>
 
-        {/* 기부 가이드 */}
-        <section>
-          <h2 className="text-lg font-bold text-white mb-4">💡 기부 가이드</h2>
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="p-4 rounded-xl bg-blue-900/20 border border-blue-800/30 text-center">
-              <Building2 className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-              <p className="font-medium text-white text-sm">기관 기부</p>
-              <p className="text-xs text-slate-400">검증된 단체 후원</p>
+        {/* 실시간 기부 현황 & 직접민주주의 철학 안내 */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <section className="lg:col-span-2 p-5 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                </span>
+                <span className="text-sm font-bold text-white">
+                  실시간 시민 예산 집행 현황
+                </span>
+              </div>
+              <span className="text-xs text-slate-400">
+                총 {totalDonors.toLocaleString()}명 동참
+              </span>
             </div>
-            <div className="p-4 rounded-xl bg-purple-900/20 border border-purple-800/30 text-center">
-              <Star className="w-6 h-6 text-purple-400 mx-auto mb-2" />
-              <p className="font-medium text-white text-sm">리더 후원</p>
-              <p className="text-xs text-slate-400">인플루언서 캠페인</p>
+            <div className="space-y-2.5 pt-1">
+              {liveDonations.map((donation) => (
+                <div
+                  key={donation.id}
+                  className="flex items-center justify-between p-3 rounded-xl bg-slate-950/60 border border-white/[0.04] text-sm"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Heart className="w-4 h-4 text-purple-400" />
+                    <span className="text-slate-200 font-semibold">
+                      {donation.user}
+                    </span>
+                    <span className="text-purple-300 font-bold">
+                      {donation.amount.toLocaleString()} PMC
+                    </span>
+                    <span className="text-slate-600">➔</span>
+                    <span className="text-slate-300">{donation.target}</span>
+                  </div>
+                  <span className="text-xs text-slate-500">{donation.time}</span>
+                </div>
+              ))}
             </div>
-            <div className="p-4 rounded-xl bg-emerald-900/20 border border-emerald-800/30 text-center">
-              <Gift className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
-              <p className="font-medium text-white text-sm">직접 기부</p>
-              <p className="text-xs text-slate-400">물품 펀딩 참여</p>
+          </section>
+
+          <section className="space-y-3">
+            <h2 className="text-base font-bold text-white">
+              💡 왜 시민이 직접 기부를 집행하는가?
+            </h2>
+            <div className="space-y-2.5">
+              <div className="p-3.5 rounded-xl bg-purple-950/20 border border-purple-500/20 flex items-center gap-3">
+                <Gift className="w-5 h-5 text-purple-400 shrink-0" />
+                <div>
+                  <p className="font-semibold text-white text-xs">
+                    1. 철의 삼각(관료 카르텔) 극복
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    복잡한 행정 전달체계 없이 수혜자에게 즉시 가치 전달
+                  </p>
+                </div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-fuchsia-950/20 border border-fuchsia-500/20 flex items-center gap-3">
+                <Building2 className="w-5 h-5 text-fuchsia-400 shrink-0" />
+                <div>
+                  <p className="font-semibold text-white text-xs">
+                    2. 100% 온체인/DB 투명성 검증
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    신뢰도 등급(AAA~A)과 영수증(Gift Aid) 자동 연동
+                  </p>
+                </div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-purple-900/15 border border-purple-400/20 flex items-center gap-3">
+                <Star className="w-5 h-5 text-purple-300 shrink-0" />
+                <div>
+                  <p className="font-semibold text-white text-xs">
+                    3. 동네 긍정승수 & 명예의 전당 반영
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    집행한 PMC는 우리 동네(읍·면·동) 시민 위상 점수로 축적
+                  </p>
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
-      </main>
+          </section>
+        </div>
+      </div>
 
       {/* Quick Donation Modal */}
       <AnimatePresence>
@@ -275,7 +325,8 @@ export default function DonationPage() {
             >
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <Heart className="w-5 h-5 text-pink-400 fill-pink-400" /> 즉시 기부 동참
+                  <Heart className="w-5 h-5 text-purple-400 fill-purple-400" />{" "}
+                  즉시 기부 동참
                 </h3>
                 <button
                   onClick={() => setIsModalOpen(false)}
@@ -288,26 +339,40 @@ export default function DonationPage() {
               {successMessage ? (
                 <div className="py-8 text-center space-y-3">
                   <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto animate-bounce" />
-                  <p className="text-emerald-300 font-semibold">{successMessage}</p>
+                  <p className="text-emerald-300 font-semibold">
+                    {successMessage}
+                  </p>
                 </div>
               ) : (
                 <form onSubmit={handleDonateSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1">기부 대상 선택</label>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">
+                      기부 대상 선택
+                    </label>
                     <select
                       value={targetName}
                       onChange={(e) => setTargetName(e.target.value)}
                       className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-purple-500"
                     >
-                      <option value="환경재단">🌱 환경재단 (지구 온난화 방지)</option>
-                      <option value="아동복지센터">👶 아동복지센터 (미래 세대 지원)</option>
-                      <option value="김OO 리더 캠페인">🌟 김OO 리더 기후변화 프로젝트</option>
-                      <option value="독거노인 도시락 펀딩">🍱 독거노인 따뜻한 도시락</option>
+                      <option value="환경재단">
+                        🌱 환경재단 (지구 온난화 방지)
+                      </option>
+                      <option value="아동복지센터">
+                        👶 아동복지센터 (미래 세대 지원)
+                      </option>
+                      <option value="김OO 리더 캠페인">
+                        🌟 김OO 리더 기후변화 프로젝트
+                      </option>
+                      <option value="독거노인 도시락 펀딩">
+                        🍱 독거노인 따뜻한 도시락
+                      </option>
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-400 mb-1">기부 금액 (PMC)</label>
+                    <label className="block text-xs font-semibold text-slate-400 mb-1">
+                      기부 금액 (PMC)
+                    </label>
                     <div className="relative">
                       <DollarSign className="w-4 h-4 text-purple-400 absolute left-3 top-3" />
                       <input
@@ -346,7 +411,7 @@ export default function DonationPage() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-xs font-semibold text-white shadow disabled:opacity-50"
+                      className="px-5 py-2 rounded-lg bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-500 hover:to-fuchsia-500 text-xs font-semibold text-white shadow disabled:opacity-50"
                     >
                       {isSubmitting ? "처리 중..." : "기부 완료하기"}
                     </button>
@@ -360,4 +425,3 @@ export default function DonationPage() {
     </div>
   );
 }
-

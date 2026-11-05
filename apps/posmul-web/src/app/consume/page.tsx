@@ -1,130 +1,157 @@
 "use client";
 
 import React from "react";
-import { Tv, Store, CloudFog, Award, ArrowRight, Coins, TrendingUp } from "lucide-react";
+import {
+  Tv,
+  Store,
+  CloudFog,
+  Award,
+  ArrowRight,
+  Coins,
+  TrendingUp,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Card, CardContent } from "@/shared/ui/components/base/Card";
+import { DomainContextHeader } from "@/shared/ui/components/layout/DomainContextHeader";
 
-// 3-Pillar 데이터
+// 3-Pillar 데이터 (Indigo Violet Tone-on-Tone 계층화)
 const PILLARS = [
   {
     key: "major",
     title: "🎬 Major League",
-    subtitle: "광고 시청 · PMP 획득",
-    description: "대기업 광고, 설문을 시청/참여하고 PMP를 획득하세요. 1분으로 포인트를 쌓을 수 있습니다.",
+    subtitle: "시간 가치화 · 광고 시청 · PMP 획득",
+    description:
+      "공익·혁신 브랜드 광고와 설문에 참여하고 무위험 시민 자산(PMP)을 획득하세요. 1분으로 예측 자본을 쌓을 수 있습니다.",
     href: "/consume/major-league",
-    color: "from-indigo-500 to-purple-500",
-    bgColor: "from-indigo-900/50 to-slate-900",
-    stats: { count: 24, label: "개 광고" },
+    color: "from-indigo-300 to-violet-300",
+    bgColor: "from-indigo-950/80 via-slate-900/70 to-slate-950",
+    stats: { count: 24, label: "개 캠페인" },
+    rewardBadge: "+35~100 PMP",
     icon: <Tv className="w-8 h-8" />,
     image: "/images/cards/major-league.png",
   },
   {
     key: "minor",
     title: "🏪 Minor League",
-    subtitle: "지역 소비 · PMC 획득",
-    description: "동네 카페, 음식점, 서점에서 결제하고 PMC를 획득하세요. 지역 경제에도 기여합니다.",
+    subtitle: "지역 상생 소비 · PMC 직접 적립",
+    description:
+      "동네 카페, 음식점, 독립서점에서 QR 결제하고 사회적 가치 자산(PMC)을 획득하세요. 골목 상권 선순환에 기여합니다.",
     href: "/consume/minor-league",
-    color: "from-emerald-500 to-teal-500",
-    bgColor: "from-emerald-900/50 to-slate-900",
-    stats: { count: 156, label: "개 매장" },
+    color: "from-violet-300 to-purple-300",
+    bgColor: "from-violet-950/80 via-slate-900/70 to-slate-950",
+    stats: { count: 156, label: "개 상생매장" },
+    rewardBadge: "결제액 3~10% PMC",
     icon: <Store className="w-8 h-8" />,
     image: "/images/cards/minor-league.png",
   },
   {
     key: "cloud",
     title: "💡 Cloud Funding",
-    subtitle: "프로젝트 후원 · 수익 공유",
-    description: "스타트업, 출판, 농업 등 다양한 프로젝트에 투자하고 수익을 공유받으세요.",
+    subtitle: "소셜 임팩트 펀딩 · PMC 리워드",
+    description:
+      "청년 창업, 독립 출판, 친환경 농업 프로젝트에 후원하고 PMC 보너스와 리워드를 공유받으세요.",
     href: "/consume/cloud-funding",
-    color: "from-amber-500 to-orange-500",
-    bgColor: "from-amber-900/50 to-slate-900",
-    stats: { count: 42, label: "개 펀딩" },
+    color: "from-indigo-200 to-indigo-400",
+    bgColor: "from-indigo-900/70 via-slate-900/70 to-slate-950",
+    stats: { count: 42, label: "개 프로젝트" },
+    rewardBadge: "펀딩액 5% PMC",
     icon: <CloudFog className="w-8 h-8" />,
     image: "/images/cards/cloud-funding.png",
   },
 ];
 
-// 인기 활동 (Mock)
 const HOT_ACTIVITIES = [
-  { id: 1, title: "삼성전자 신제품 광고", type: "Major", href: "/consume/major-league/ad-001", pmp: 50 },
-  { id: 2, title: "동네 북카페 '책 읽는 하루'", type: "Minor", href: "/consume/minor-league/shop-042", pmc: 200 },
-  { id: 3, title: "친환경 농업 스타트업 펀딩", type: "Cloud", href: "/consume/cloud-funding/project-015", rate: "12%" },
+  {
+    id: 1,
+    title: "친환경 라이프스타일 브랜드 'GreenLife' 캠페인",
+    type: "Major League · 광고",
+    href: "/consume/major-league/ad-001",
+    pmp: 50,
+  },
+  {
+    id: 2,
+    title: "동네 카페 '따뜻함' QR 상생 결제",
+    type: "Minor League · 지역상점",
+    href: "/consume/minor-league/m-001",
+    pmc: 200,
+  },
+  {
+    id: 3,
+    title: "청년 농부의 로컬 채소 구독 프로젝트",
+    type: "Cloud Funding · 임팩트",
+    href: "/consume/cloud-funding/cf-003",
+    rate: "+5% PMC 적립",
+  },
 ];
 
 export default function ConsumePage() {
-  const totalEarned = 8420; // Mock - 총 획득량
+  const totalEarned = 8420;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-950 to-slate-950 text-slate-200">
-      {/* Header - Forum 스타일 */}
-      <header className="sticky top-0 z-10 backdrop-blur-xl bg-indigo-950/80 border-b border-indigo-800/50">
-        <div className="max-w-4xl mx-auto p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
-                💳 Consume
-              </h1>
-              <p className="text-sm text-indigo-400/70">광고 시청 · 지역 소비 · 펀딩</p>
-            </div>
-            <div className="text-right">
-              <p className="text-xs text-slate-400">이번 달 획득</p>
-              <p className="text-xl font-bold text-indigo-400">
-                <span className="text-2xl">{totalEarned.toLocaleString()}</span>
-                <span className="text-sm ml-1">P</span>
-              </p>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-[#090b12] text-slate-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+        <DomainContextHeader
+          domain="consume"
+          title="💳 Consume · 가치 소비 생태계"
+          subtitle="시민의 시간(광고 시청)을 PMP로 전환하고, 동네 상점 소비와 펀딩으로 지역경제 PMC를 창출합니다"
+          metrics={[
+            { label: "이번 달 누적 획득", value: totalEarned, unit: "P" },
+            { label: "참여 상생 파트너", value: 222, unit: "곳" },
+          ]}
+        />
 
-      <main className="max-w-4xl mx-auto px-4 py-6 space-y-8">
-        {/* 3-Pillar Cards */}
+        {/* 3-Pillar Cards (Indigo Violet Tone-on-Tone) */}
         <section>
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-indigo-400" />
-            소비 방법 선택
+          <h2 className="text-base font-bold text-white mb-4 flex items-center gap-2">
+            <TrendingUp className="w-4 h-4 text-indigo-400" />
+            <span>소비 3대 리그 선택</span>
           </h2>
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-5 md:grid-cols-3">
             {PILLARS.map((pillar, index) => (
               <motion.div
                 key={pillar.key}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: index * 0.1 }}
+                transition={{ delay: index * 0.08 }}
               >
                 <Link href={pillar.href}>
-                  <Card className="bg-slate-900/70 border-slate-800 hover:border-indigo-700/50 transition-all cursor-pointer group overflow-hidden h-full">
-                    {/* 히어로 영역 - 이미지 배경 */}
-                    <div className="relative aspect-[4/3] overflow-hidden">
-                      {/* 배경 이미지 */}
+                  <Card className="bg-slate-900/70 border-slate-800/90 hover:border-indigo-500/40 transition-all cursor-pointer group overflow-hidden h-full">
+                    <div className="relative aspect-[16/10] overflow-hidden">
                       <img
                         src={pillar.image}
                         alt={pillar.title}
-                        className="absolute inset-0 w-full h-full object-cover"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                       />
-                      {/* 오버레이 */}
-                      <div className={`absolute inset-0 bg-gradient-to-t ${pillar.bgColor} opacity-80`} />
-                      {/* 콘텐츠 */}
+                      <div
+                        className={`absolute inset-0 bg-gradient-to-t ${pillar.bgColor} opacity-90`}
+                      />
+                      <div className="absolute top-3 left-3 px-2.5 py-0.5 rounded-md bg-indigo-500/20 border border-indigo-400/30 text-indigo-200 text-[11px] font-bold z-10">
+                        {pillar.rewardBadge}
+                      </div>
                       <div className="relative z-10 flex flex-col items-center justify-center h-full p-4">
-                        <div className="text-white">
-                          {pillar.icon}
-                        </div>
-                        <h3 className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${pillar.color} mt-2`}>
+                        <div className="text-indigo-300">{pillar.icon}</div>
+                        <h3
+                          className={`text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r ${pillar.color} mt-2`}
+                        >
                           {pillar.title}
                         </h3>
-                        <p className="text-xs text-slate-300 text-center">{pillar.subtitle}</p>
+                        <p className="text-xs text-slate-300 text-center mt-1">
+                          {pillar.subtitle}
+                        </p>
                       </div>
-                      {/* 통계 배지 */}
-                      <div className="absolute bottom-2 right-2 px-2 py-1 rounded bg-black/60 text-white text-xs z-10">
-                        {pillar.stats.count}{pillar.stats.label}
+                      <div className="absolute bottom-2.5 right-2.5 px-2 py-0.5 rounded bg-black/60 text-slate-200 text-xs z-10 backdrop-blur-sm border border-white/10">
+                        {pillar.stats.count}
+                        {pillar.stats.label}
                       </div>
                     </div>
-                    <CardContent className="p-4 space-y-2">
-                      <p className="text-sm text-slate-400 line-clamp-2">{pillar.description}</p>
-                      <div className="flex items-center justify-end text-xs text-slate-500 group-hover:text-indigo-400 transition-colors">
-                        바로가기 <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
+                    <CardContent className="p-4 space-y-2.5">
+                      <p className="text-sm text-slate-400 line-clamp-2">
+                        {pillar.description}
+                      </p>
+                      <div className="flex items-center justify-end text-xs text-slate-400 group-hover:text-indigo-300 transition-colors font-semibold">
+                        참여하러 가기{" "}
+                        <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
                       </div>
                     </CardContent>
                   </Card>
@@ -134,57 +161,92 @@ export default function ConsumePage() {
           </div>
         </section>
 
-        {/* 인기 활동 */}
-        <section>
-          <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            🔥 오늘의 인기
-          </h2>
-          <div className="space-y-3">
-            {HOT_ACTIVITIES.map((activity, index) => (
-              <Link key={activity.id} href={activity.href}>
-                <div className="flex items-center justify-between p-4 rounded-xl bg-slate-800/50 border border-slate-700 hover:border-indigo-700/50 transition-all cursor-pointer group">
-                  <div className="flex items-center gap-4">
-                    <span className="w-8 h-8 rounded-full bg-indigo-900/50 text-indigo-400 font-bold flex items-center justify-center">
-                      {index + 1}
-                    </span>
-                    <div>
-                      <p className="font-medium text-white group-hover:text-indigo-400 transition-colors">{activity.title}</p>
-                      <p className="text-xs text-slate-500">{activity.type}</p>
+        {/* 인기 활동 & 소비 철학 가이드 */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <section className="lg:col-span-2 space-y-3">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <span>🔥 오늘의 인기 가치 소비</span>
+            </h2>
+            <div className="space-y-2.5">
+              {HOT_ACTIVITIES.map((activity, index) => (
+                <Link key={activity.id} href={activity.href} className="block">
+                  <div className="flex items-center justify-between p-4 rounded-xl bg-slate-900/60 border border-slate-800/80 hover:border-indigo-500/40 transition-all cursor-pointer group">
+                    <div className="flex items-center gap-3.5">
+                      <span className="w-7 h-7 rounded-lg bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-extrabold flex items-center justify-center">
+                        {index + 1}
+                      </span>
+                      <div>
+                        <p className="font-semibold text-sm text-white group-hover:text-indigo-300 transition-colors">
+                          {activity.title}
+                        </p>
+                        <p className="text-xs text-slate-500">{activity.type}</p>
+                      </div>
                     </div>
+                    <span className="flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-300 border border-indigo-500/20">
+                      {activity.pmp && (
+                        <>
+                          <Coins className="w-3.5 h-3.5" /> +{activity.pmp} PMP
+                        </>
+                      )}
+                      {activity.pmc && (
+                        <>
+                          <Coins className="w-3.5 h-3.5" /> +{activity.pmc} PMC
+                        </>
+                      )}
+                      {activity.rate && (
+                        <>
+                          <Award className="w-3.5 h-3.5" /> {activity.rate}
+                        </>
+                      )}
+                    </span>
                   </div>
-                  <span className="flex items-center gap-1 text-sm text-indigo-400">
-                    {activity.pmp && <><Coins className="w-4 h-4" /> +{activity.pmp} PMP</>}
-                    {activity.pmc && <><Coins className="w-4 h-4" /> +{activity.pmc} PMC</>}
-                    {activity.rate && <><Award className="w-4 h-4" /> {activity.rate} 수익률</>}
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </section>
+                </Link>
+              ))}
+            </div>
+          </section>
 
-        {/* 가이드 */}
-        <section>
-          <h2 className="text-lg font-bold text-white mb-4">💡 소비 가이드</h2>
-          <div className="grid gap-3 md:grid-cols-3">
-            <div className="p-4 rounded-xl bg-indigo-900/20 border border-indigo-800/30 text-center">
-              <Tv className="w-6 h-6 text-indigo-400 mx-auto mb-2" />
-              <p className="font-medium text-white text-sm">광고 시청</p>
-              <p className="text-xs text-slate-400">+10~100 PMP</p>
+          <section className="space-y-3">
+            <h2 className="text-base font-bold text-white">
+              💡 시간·화폐·클라우드 3대 소비 철학
+            </h2>
+            <div className="space-y-2.5">
+              <div className="p-3.5 rounded-xl bg-indigo-950/20 border border-indigo-500/20 flex items-center gap-3">
+                <Tv className="w-5 h-5 text-indigo-400 shrink-0" />
+                <div>
+                  <p className="font-semibold text-white text-xs">
+                    1. TimeConsume (Major League)
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    시민의 주의력(Attention)에 정당한 무위험 PMP 보상 지급
+                  </p>
+                </div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-violet-950/20 border border-violet-500/20 flex items-center gap-3">
+                <Store className="w-5 h-5 text-violet-400 shrink-0" />
+                <div>
+                  <p className="font-semibold text-white text-xs">
+                    2. MoneyConsume (Minor League)
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    소상공인 매장 결제액의 일부를 지역 상생 PMC로 즉시 환원
+                  </p>
+                </div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-indigo-900/15 border border-indigo-400/20 flex items-center gap-3">
+                <CloudFog className="w-5 h-5 text-indigo-300 shrink-0" />
+                <div>
+                  <p className="font-semibold text-white text-xs">
+                    3. CloudConsume (Cloud Funding)
+                  </p>
+                  <p className="text-[11px] text-slate-400">
+                    혁신 프로젝트 후원을 통해 사회적 가치(PMC)와 리워드 공유
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="p-4 rounded-xl bg-emerald-900/20 border border-emerald-800/30 text-center">
-              <Store className="w-6 h-6 text-emerald-400 mx-auto mb-2" />
-              <p className="font-medium text-white text-sm">지역 소비</p>
-              <p className="text-xs text-slate-400">결제액 10% PMC</p>
-            </div>
-            <div className="p-4 rounded-xl bg-amber-900/20 border border-amber-800/30 text-center">
-              <CloudFog className="w-6 h-6 text-amber-400 mx-auto mb-2" />
-              <p className="font-medium text-white text-sm">펀딩 참여</p>
-              <p className="text-xs text-slate-400">수익률 공유</p>
-            </div>
-          </div>
-        </section>
-      </main>
+          </section>
+        </div>
+      </div>
     </div>
   );
 }

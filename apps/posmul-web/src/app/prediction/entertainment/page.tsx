@@ -1,106 +1,121 @@
 import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { getAggregatedPrizePool } from "../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { createClient } from "../../../lib/supabase/server";
-import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
+import { FadeIn } from "../../../shared/ui/components/animations";
 import Link from "next/link";
 import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
 import {
-    attachHourlyGamePoolsToRows,
-    mapPredictionGameRowToCardModel,
-    type PredictionGameRow,
+  attachHourlyGamePoolsToRows,
+  mapPredictionGameRowToCardModel,
+  type PredictionGameRow,
 } from "../components/prediction-game-mapper";
+import { DomainContextHeader } from "../../../shared/ui/components/layout/DomainContextHeader";
 
 export default async function PredictionEntertainmentPage() {
-    const supabase = await createClient();
+  const supabase = await createClient();
 
-    const entertainmentPool = await getAggregatedPrizePool(supabase, "ENTERTAINMENT");
+  const entertainmentPool = await getAggregatedPrizePool(
+    supabase,
+    "ENTERTAINMENT"
+  );
 
-    const query = supabase
-        .schema('prediction')
-        .from("prediction_games")
-        .select("*")
-        .eq("category", "ENTERTAINMENT")
-        .eq("status", "ACTIVE")
-        .order("created_at", { ascending: false });
+  const query = supabase
+    .schema("prediction")
+    .from("prediction_games")
+    .select("*")
+    .eq("category", "ENTERTAINMENT")
+    .eq("status", "ACTIVE")
+    .order("created_at", { ascending: false });
 
-    // 유저 정보 가져오기 (내 베팅 정보 표시용)
-    const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-    interface UserPrediction {
-        prediction_id: string;
-        game_id: string;
-        bet_amount: number | null;
-        is_active: boolean;
-        prediction_data: Record<string, unknown> | null;
-    }
+  interface UserPrediction {
+    prediction_id: string;
+    game_id: string;
+    bet_amount: number | null;
+    is_active: boolean;
+    prediction_data: Record<string, unknown> | null;
+  }
 
-    let userPredictions: UserPrediction[] = [];
-    if (user) {
-        const { data: predictions } = await supabase
-            .schema('prediction')
-            .from('predictions')
-            .select('prediction_id, game_id, bet_amount, is_active, prediction_data')
-            .eq('user_id', user.id)
-            .eq('is_active', true);
-        userPredictions = (predictions || []) as UserPrediction[];
-    }
+  let userPredictions: UserPrediction[] = [];
+  if (user) {
+    const { data: predictions } = await supabase
+      .schema("prediction")
+      .from("predictions")
+      .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
+      .eq("user_id", user.id)
+      .eq("is_active", true);
+    userPredictions = (predictions || []) as UserPrediction[];
+  }
 
-    const { data: games } = await query;
+  const { data: games } = await query;
 
-    const gameRows = (games || []) as PredictionGameRow[];
-    const gameRowsWithPools = await attachHourlyGamePoolsToRows(supabase, gameRows);
-    const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
+  const gameRows = (games || []) as PredictionGameRow[];
+  const gameRowsWithPools = await attachHourlyGamePoolsToRows(
+    supabase,
+    gameRows
+  );
+  const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
 
-    const subcategories = [
-        { label: "영화", href: "/prediction/entertainment/movies" },
-        { label: "드라마", href: "/prediction/entertainment/dramas" },
-        { label: "음악", href: "/prediction/entertainment/music" },
-        { label: "시상식", href: "/prediction/entertainment/awards" },
-    ];
+  const subcategories = [
+    { label: "전체", href: "/prediction/entertainment" },
+    { label: "영화", href: "/prediction/entertainment/movies" },
+    { label: "드라마", href: "/prediction/entertainment/dramas" },
+    { label: "음악", href: "/prediction/entertainment/music" },
+    { label: "시상식", href: "/prediction/entertainment/awards" },
+  ];
 
-    return (
-        <div className="min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#1a1a2e] to-[#0a0a0f] text-white">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-                <FadeIn>
-                    <div className="mb-8">
-                        <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                            🎬 엔터테인먼트 예측
-                        </h1>
-                        <p className="text-xl text-gray-400">
-                            영화, 드라마, 음악, 시상식 결과를 예측하고 PMC를 획득하세요
-                        </p>
-                    </div>
-
-                    {/* MoneyWave Card (Level 1) */}
-                    <div className="mb-12">
-                                                <CompactMoneyWaveCard
-                                                    depthLevel={2}
-                                                    category="entertainment"
-                                                    initialPool={entertainmentPool}
-                                                />
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-10">
-                        {subcategories.map((item) => (
-                            <HoverLift key={item.label}>
-                                <Link
-                                    href={item.href}
-                                    className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
-                                >
-                                    <div className="text-lg font-semibold mb-1">{item.label}</div>
-                                    <div className="text-sm text-gray-300">카테고리로 이동</div>
-                                </Link>
-                            </HoverLift>
-                        ))}
-                    </div>
-
-                    <ClientPredictionGamesGrid
-                        games={mappedGames}
-                        userId={user?.id}
-                        userPredictions={userPredictions}
-                    />
-                </FadeIn>
+  return (
+    <div className="min-h-screen bg-[#090b12] text-slate-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+        <FadeIn>
+          <DomainContextHeader
+            domain="prediction"
+            title="🎬 엔터테인먼트 예측 마켓"
+            subtitle="영화 흥행, 드라마 시청률, 음악 차트, 글로벌 시상식 결과를 예측하세요"
+            metrics={[
+              {
+                label: "엔터 상금풀",
+                value: entertainmentPool || 11500,
+                unit: "PMC",
+              },
+              { label: "진행 중 마켓", value: mappedGames.length, unit: "개" },
+            ]}
+          >
+            <div className="flex flex-wrap gap-1.5">
+              {subcategories.map((item, idx) => (
+                <Link
+                  key={item.label}
+                  href={item.href}
+                  className={`px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
+                    idx === 0
+                      ? "bg-sky-500/20 border-sky-400/40 text-sky-200"
+                      : "bg-slate-900/70 border-slate-800 hover:text-slate-200 text-slate-400"
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              ))}
             </div>
-        </div>
-    );
+          </DomainContextHeader>
+
+          <div className="mb-6">
+            <CompactMoneyWaveCard
+              depthLevel={2}
+              category="entertainment"
+              initialPool={entertainmentPool}
+            />
+          </div>
+
+          <ClientPredictionGamesGrid
+            games={mappedGames}
+            userId={user?.id}
+            userPredictions={userPredictions}
+          />
+        </FadeIn>
+      </div>
+    </div>
+  );
 }

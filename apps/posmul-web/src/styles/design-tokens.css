@@ -1,21 +1,34 @@
 /**
  * Design Tokens for Posmul
- * Based on Kalshi, Polymarket, and ReactBits benchmarking
+ * Tone-on-Tone Citizen Agora & Economic Flywheel System
  */
 
 :root {
-  /* === Background Colors === */
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #1a1a2e;
-  --bg-tertiary: #16213e;
-  --bg-elevated: #1f1f2e;
-  
+  /* === Base Canvas & Tone-on-Tone Surfaces === */
+  --bg-canvas: #090b12;
+  --bg-primary: #090b12;
+  --bg-secondary: #0f1420;
+  --bg-tertiary: #151c2c;
+  --bg-elevated: #1b2438;
+
+  --surface-1: rgba(15, 20, 32, 0.78);
+  --surface-2: rgba(27, 36, 56, 0.65);
+  --surface-3: rgba(45, 58, 86, 0.45);
+
+  /* === Domain Semantic Tones (PosMul Citizen Flywheel) === */
+  --tone-forum: #10b981;      /* STEP 1: 공론 (Emerald Teal) */
+  --tone-consume: #6366f1;    /* STEP 2: 참여 (Indigo Violet) */
+  --tone-prediction: #0ea5e9; /* STEP 3: 학습 (Royal Sky Blue) */
+  --tone-donation: #a855f7;   /* STEP 4: 집행 (Rose Amethyst) */
+  --tone-ranking: #f59e0b;    /* CROWN: 명예 (Champagne Amber) */
+  --tone-other: #94a3b8;      /* SUPPORT: 인프라 (Cool Slate) */
+
   /* === Accent Colors === */
   --accent-blue: #00aaff;
   --accent-green: #00d4aa;
   --accent-purple: #a855f7;
   --accent-pink: #ec4899;
-  
+
   /* === PMP/PMC 전용 색상 === */
   --pmp-primary: #3b82f6;
   --pmp-light: #60a5fa;
@@ -23,7 +36,7 @@
   --pmc-primary: #8b5cf6;
   --pmc-light: #a78bfa;
   --pmc-dark: #7c3aed;
-  
+
   /* === 차트 색상 팔레트 === */
   --chart-option-1: #6366f1;
   --chart-option-2: #ec4899;
@@ -33,7 +46,7 @@
   --chart-win: #10b981;
   --chart-lose: #ef4444;
   --chart-draw: #94a3b8;
-  
+
   /* === Semantic Colors === */
   --success: #10b981;
   --success-light: #34d399;
@@ -42,18 +55,18 @@
   --warning: #f59e0b;
   --warning-light: #fbbf24;
   --info: #3b82f6;
-  
+
   /* === Text Colors === */
-  --text-primary: #ffffff;
+  --text-primary: #f8fafc;
   --text-secondary: #94a3b8;
   --text-muted: #64748b;
   --text-disabled: #475569;
-  
+
   /* === Border Colors === */
-  --border-default: #2d3748;
-  --border-light: #374151;
-  --border-heavy: #4b5563;
-  
+  --border-default: rgba(148, 163, 184, 0.14);
+  --border-light: rgba(148, 163, 184, 0.22);
+  --border-heavy: rgba(148, 163, 184, 0.35);
+
   /* === Spacing === */
   --space-xs: 0.25rem;   /* 4px */
   --space-sm: 0.5rem;    /* 8px */
@@ -61,14 +74,14 @@
   --space-lg: 1.5rem;    /* 24px */
   --space-xl: 2rem;      /* 32px */
   --space-2xl: 3rem;     /* 48px */
-  
+
   /* === Border Radius === */
   --radius-sm: 0.25rem;  /* 4px */
   --radius-md: 0.5rem;   /* 8px */
   --radius-lg: 1rem;     /* 16px */
   --radius-xl: 1.5rem;   /* 24px */
   --radius-full: 9999px;
-  
+
   /* === Shadows === */
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
@@ -77,12 +90,12 @@
   --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
   --shadow-glow-pmp: 0 0 20px rgba(59, 130, 246, 0.3);
   --shadow-glow-pmc: 0 0 20px rgba(139, 92, 246, 0.3);
-  
+
   /* === Typography === */
   --font-heading: 'Bricolage Grotesque', system-ui, sans-serif;
   --font-body: 'Figtree', system-ui, sans-serif;
   --font-mono: 'Google Sans Code', 'Courier New', monospace;
-  
+
   /* === Font Sizes === */
   --text-xs: 0.75rem;    /* 12px */
   --text-sm: 0.875rem;   /* 14px */
@@ -93,19 +106,19 @@
   --text-3xl: 1.875rem;  /* 30px */
   --text-4xl: 2.25rem;   /* 36px */
   --text-5xl: 3rem;      /* 48px */
-  
+
   /* === Transitions === */
   --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-base: 300ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 500ms cubic-bezier(0.4, 0, 0.2, 1);
   --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
-  
+
   /* === 애니메이션 토큰 === */
   --animation-count-up: 1.5s ease-out;
   --animation-chart-reveal: 1s ease-in-out;
   --animation-pulse: 2s ease-in-out infinite;
   --animation-shimmer: 2s linear infinite;
-  
+
   /* === Z-Index === */
   --z-dropdown: 1000;
   --z-sticky: 1100;
@@ -116,15 +129,16 @@
 
 /* === Light Mode Overrides === */
 [data-theme="light"] {
+  --bg-canvas: #ffffff;
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
   --bg-elevated: #ffffff;
-  
+
   --text-primary: #0f172a;
   --text-secondary: #475569;
   --text-muted: #64748b;
-  
+
   --border-default: #e2e8f0;
   --border-light: #cbd5e1;
   --border-heavy: #94a3b8;
@@ -132,9 +146,14 @@
 
 /* === Utility Classes === */
 .glassmorphic {
-  background: rgba(26, 26, 46, 0.7);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--surface-1);
+  backdrop-filter: blur(16px);
+  border: 1px solid var(--border-default);
+}
+
+.posmul-canvas {
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
 }
 
 .text-gradient {

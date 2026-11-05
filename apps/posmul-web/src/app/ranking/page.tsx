@@ -5,12 +5,10 @@
  * 동(읍·면·동) 단위 세분화 풀뿌리 랭킹 & 직업군별 시민 명예의 전당
  */
 
-import { useState, useMemo } from 'react';
+import { Suspense, useState, useMemo, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Trophy,
-  Medal,
-  Award,
-  TrendingUp,
   Users,
   Clock,
   Eye,
@@ -21,10 +19,8 @@ import {
   ArrowUpRight,
   MapPin,
   Briefcase,
-  ChevronDown,
-  Filter,
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import {
   useRanking,
@@ -33,8 +29,8 @@ import {
   type RankingEntry,
 } from '@/bounded-contexts/ranking/presentation/hooks/use-ranking';
 import { KOREA_REGIONS, SIDO_LIST, JOB_GROUPS } from '@/shared/constants/regions-and-jobs';
+import { DomainContextHeader } from '@/shared/ui/components/layout/DomainContextHeader';
 
-// 티어 계산 헬퍼
 function getTierInfo(score: number) {
   if (score >= 10000) return { name: '레전드', color: 'from-amber-400 to-yellow-300', nextScore: 10000, progress: 100, icon: '👑' };
   if (score >= 5000) return { name: '마스터', color: 'from-purple-400 to-pink-400', nextScore: 10000, progress: Math.min(100, Math.round(((score - 5000) / 5000) * 100)), icon: '⭐' };
@@ -43,7 +39,6 @@ function getTierInfo(score: number) {
   return { name: '새싹 시민', color: 'from-slate-400 to-zinc-400', nextScore: 500, progress: Math.min(100, Math.round((score / 500) * 100)), icon: '🐣' };
 }
 
-// 상단 TOP 3 포디움 (명예의 전당) 컴포넌트
 function HallOfFamePodium({
   top3,
   category,
@@ -76,9 +71,9 @@ function HallOfFamePodium({
   const unit = getScoreUnit(category);
 
   return (
-    <div className="relative pt-6 pb-2 px-2 overflow-hidden">
+    <div className="relative pt-4 pb-2 px-2 overflow-hidden">
       <div className="text-center mb-8">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-semibold mb-2">
+        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-300 text-xs font-semibold mb-2">
           <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
           <span>
             {category === 'expect'
@@ -100,7 +95,6 @@ function HallOfFamePodium({
       </div>
 
       <div className="grid grid-cols-3 gap-2 md:gap-6 items-end max-w-2xl mx-auto">
-        {/* 2위 포디움 */}
         {second ? (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -131,7 +125,6 @@ function HallOfFamePodium({
           <div className="h-28" />
         )}
 
-        {/* 1위 포디움 */}
         {first && (
           <motion.div
             initial={{ opacity: 0, y: 40 }}
@@ -163,7 +156,6 @@ function HallOfFamePodium({
           </motion.div>
         )}
 
-        {/* 3위 포디움 */}
         {third ? (
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -198,7 +190,6 @@ function HallOfFamePodium({
   );
 }
 
-// 랭킹 카드 컴포넌트
 function RankingCard({
   entry,
   showDetails,
@@ -233,12 +224,11 @@ function RankingCard({
       className={`p-4 md:p-5 rounded-2xl border transition-all duration-300 ${
         entry.isCurrentUser
           ? 'border-amber-400/60 bg-gradient-to-r from-amber-950/40 via-slate-900/90 to-slate-950/90 shadow-xl shadow-amber-500/10 ring-1 ring-amber-400/40'
-          : 'border-slate-800/80 bg-slate-900/50 hover:bg-slate-900/80 hover:border-slate-700'
+          : 'border-slate-800/80 bg-slate-900/50 hover:bg-slate-900/80 hover:border-amber-500/30'
       }`}
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3 md:gap-4 min-w-0">
-          {/* 순위 배지 */}
           <div
             className={`w-10 h-10 md:w-11 md:h-11 rounded-xl flex items-center justify-center text-sm md:text-base shrink-0 ${getRankBadge(
               entry.rank
@@ -247,7 +237,6 @@ function RankingCard({
             {entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : entry.rank}
           </div>
 
-          {/* 유저 정보 */}
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`font-bold text-sm md:text-base truncate ${entry.isCurrentUser ? 'text-amber-200' : 'text-white'}`}>
@@ -264,35 +253,32 @@ function RankingCard({
                 </span>
               )}
 
-              {/* 지역 뱃지 (동 단위 포함) */}
               {entry.dong && (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-950/50 text-blue-300 border border-blue-800/40 flex items-center gap-1">
-                  <MapPin className="w-2.5 h-2.5 text-blue-400" />
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-amber-950/50 text-amber-300 border border-amber-800/40 flex items-center gap-1">
+                  <MapPin className="w-2.5 h-2.5 text-amber-400" />
                   <span>{entry.sigungu || ''} {entry.dong}</span>
                 </span>
               )}
 
-              {/* 직업 뱃지 */}
               {job && (
-                <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-950/50 text-purple-300 border border-purple-800/40 flex items-center gap-1">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-800 text-slate-300 border border-slate-700 flex items-center gap-1">
                   <span>{job.icon}</span>
                   <span>{job.name.split('·')[0].trim()}</span>
                 </span>
               )}
             </div>
 
-            {/* 상세 지표 칩 */}
             {showDetails && (
               <div className="text-[11px] md:text-xs text-slate-400 mt-1.5 flex flex-wrap items-center gap-1.5 md:gap-2">
                 {entry.details.donationPmc !== undefined && entry.details.donationPmc > 0 && (
-                  <span className="px-2 py-0.5 rounded-md bg-rose-950/40 text-rose-300 border border-rose-800/30 flex items-center gap-1">
-                    <Heart className="w-2.5 h-2.5 text-rose-400" />
+                  <span className="px-2 py-0.5 rounded-md bg-purple-950/40 text-purple-300 border border-purple-800/30 flex items-center gap-1">
+                    <Heart className="w-2.5 h-2.5 text-purple-400" />
                     기부 {entry.details.donationPmc.toLocaleString()} PMC
                   </span>
                 )}
                 {entry.details.expectPmc !== undefined && entry.details.expectPmc > 0 && (
-                  <span className="px-2 py-0.5 rounded-md bg-blue-950/40 text-blue-300 border border-blue-800/30 flex items-center gap-1">
-                    <Compass className="w-2.5 h-2.5 text-blue-400" />
+                  <span className="px-2 py-0.5 rounded-md bg-sky-950/40 text-sky-300 border border-sky-800/30 flex items-center gap-1">
+                    <Compass className="w-2.5 h-2.5 text-sky-400" />
                     예측 {entry.details.expectPmc.toLocaleString()} PMC
                   </span>
                 )}
@@ -307,7 +293,6 @@ function RankingCard({
           </div>
         </div>
 
-        {/* 점수 */}
         <div className="text-right shrink-0">
           <div className="text-lg md:text-xl font-extrabold text-amber-400">
             {entry.score.toLocaleString()}
@@ -321,7 +306,6 @@ function RankingCard({
   );
 }
 
-// 현재 사용자 카드 컴포넌트
 function CurrentUserDashboardCard({
   user,
   regionText,
@@ -332,9 +316,7 @@ function CurrentUserDashboardCard({
   const tier = getTierInfo(user.score);
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-950/80 via-slate-900/90 to-slate-950 border border-amber-500/40 p-5 md:p-6 shadow-2xl shadow-amber-950/50">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
+    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-950/60 via-slate-900/90 to-slate-950 border border-amber-500/40 p-5 md:p-6 shadow-xl">
       <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-semibold text-amber-400 uppercase tracking-wider mb-1">
@@ -363,7 +345,6 @@ function CurrentUserDashboardCard({
         </div>
       </div>
 
-      {/* 티어 진행률 바 */}
       <div className="mt-5 pt-4 border-t border-slate-800/80">
         <div className="flex justify-between text-xs font-medium mb-1.5">
           <span className="text-slate-400 flex items-center gap-1">
@@ -382,7 +363,12 @@ function CurrentUserDashboardCard({
   );
 }
 
-export default function RankingPage() {
+function RankingContent() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const queryCategory = (searchParams?.get('category') as RankingCategory) || 'expect';
+  const querySido = searchParams?.get('sido') || '전국';
+
   const {
     rankings,
     currentUser,
@@ -397,17 +383,36 @@ export default function RankingPage() {
     changeCategory,
     changeRegion,
     changeJobGroup,
-  } = useRanking('expect');
+  } = useRanking(queryCategory);
 
   const [showDetails, setShowDetails] = useState(true);
 
-  // 시군구 목록 계산
+  // Row 2 / Row 3 네비게이션 쿼리와 실시간 동기화
+  useEffect(() => {
+    const validCategories: RankingCategory[] = ['expect', 'overall', 'forum', 'consume', 'donation'];
+    if (validCategories.includes(queryCategory) && queryCategory !== category) {
+      changeCategory(queryCategory);
+    }
+  }, [queryCategory, category, changeCategory]);
+
+  useEffect(() => {
+    if (querySido !== sido) {
+      changeRegion(querySido, '전체', '전체');
+    }
+  }, [querySido, sido, changeRegion]);
+
+  const handleCategoryTabClick = (catId: RankingCategory) => {
+    changeCategory(catId);
+    const params = new URLSearchParams(searchParams?.toString() || '');
+    params.set('category', catId);
+    router.push(`/ranking?${params.toString()}`);
+  };
+
   const sigunguList = useMemo(() => {
     if (sido === '전국' || !KOREA_REGIONS[sido]) return ['전체'];
     return ['전체', ...Object.keys(KOREA_REGIONS[sido])];
   }, [sido]);
 
-  // 읍면동 목록 계산
   const dongList = useMemo(() => {
     if (sido === '전국' || sigungu === '전체' || !KOREA_REGIONS[sido]?.[sigungu]) {
       return ['전체'];
@@ -415,7 +420,6 @@ export default function RankingPage() {
     return ['전체', ...KOREA_REGIONS[sido][sigungu]];
   }, [sido, sigungu]);
 
-  // 현재 필터링된 지역 텍스트 표현
   const currentRegionText = useMemo(() => {
     if (sido === '전국') return '전국';
     if (sigungu === '전체') return sido;
@@ -426,47 +430,49 @@ export default function RankingPage() {
   const top3 = rankings.slice(0, 3);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 selection:bg-amber-500 selection:text-black">
-      {/* 배경 글로우 */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden -z-10">
-        <div className="absolute -top-40 left-1/2 -translate-x-1/2 w-[700px] h-[500px] bg-gradient-to-b from-amber-500/10 via-amber-900/5 to-transparent rounded-full blur-3xl opacity-70" />
-      </div>
-
-      {/* 헤더 섹션 */}
-      <div className="border-b border-slate-800/60 bg-slate-900/40 backdrop-blur-md sticky top-0 z-20">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-          <div>
-            <h1 className="text-xl md:text-2xl font-black text-white flex items-center gap-2">
-              <Trophy className="w-6 h-6 text-amber-400" />
-              <span>PosMul 동네 풀뿌리 명예의 전당</span>
-            </h1>
-            <p className="text-xs text-slate-400">읍·면·동 행정동 단위 세분화 & 직업군별 시민 랭킹</p>
-          </div>
-
-          <div className="flex items-center gap-3 self-end sm:self-auto">
-            <div className="text-right">
-              <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">집계 시민</div>
-              <div className="text-base md:text-lg font-black text-amber-400">
-                {rankings.length} <span className="text-xs text-slate-300">명</span>
-              </div>
-            </div>
+    <div className="min-h-screen bg-[#090b12] text-slate-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-7">
+        <DomainContextHeader
+          domain="ranking"
+          title="🏆 Ranking · 동네 풀뿌리 명예의 전당"
+          subtitle="읍·면·동 행정동 단위 세분화 & 직업군별 '내가 그랬제!' 예측 명사수 및 시민 주권 랭킹"
+          metrics={[
+            { label: '집계 주권 시민', value: rankings.length, unit: '명' },
+            { label: '현재 탐색 지역', value: currentRegionText },
+          ]}
+          actionSlot={
             <Link
               href="/prediction"
-              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-amber-500/20 flex items-center gap-1"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-amber-950/50 flex items-center gap-1"
             >
               <span>예측 참여하기</span>
               <ArrowUpRight className="w-3.5 h-3.5" />
             </Link>
+          }
+        >
+          <div className="flex flex-wrap gap-2">
+            {RANKING_CATEGORIES.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleCategoryTabClick(cat.id)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 flex items-center gap-1.5 border ${
+                  category === cat.id
+                    ? 'bg-amber-500/20 text-amber-200 border-amber-400/40'
+                    : 'bg-slate-900/70 text-slate-400 hover:text-slate-200 border-slate-800'
+                }`}
+              >
+                <span>{cat.icon}</span>
+                <span>{cat.label}</span>
+              </button>
+            ))}
           </div>
-        </div>
-      </div>
+        </DomainContextHeader>
 
-      <main className="max-w-5xl mx-auto px-4 py-8 space-y-7">
         {/* 🗺️ 동네 랭킹 3단계 계층형 셀렉터 (시/도 > 시/군/구 > 읍/면/동) */}
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/40 via-slate-900/80 to-slate-900/80 border border-blue-500/30 shadow-xl space-y-3">
+        <div className="p-4 rounded-2xl bg-slate-900/60 border border-amber-500/20 shadow-lg space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-blue-300 flex items-center gap-1.5">
-              <MapPin className="w-4 h-4 text-blue-400" />
+            <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+              <MapPin className="w-4 h-4 text-amber-400" />
               <span>동네 행정구역 선택 (3단계 풀뿌리 자치 랭킹)</span>
             </span>
             <span className="text-[11px] text-slate-400">
@@ -475,13 +481,12 @@ export default function RankingPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {/* 1단계: 시/도 */}
             <div>
               <label className="block text-[10px] text-slate-400 font-semibold mb-1">1단계: 광역 (시/도)</label>
               <select
                 value={sido}
                 onChange={(e) => changeRegion(e.target.value, '전체', '전체')}
-                className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 font-medium"
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500/60 font-medium"
               >
                 {SIDO_LIST.map((s) => (
                   <option key={s} value={s}>{s}</option>
@@ -489,14 +494,13 @@ export default function RankingPage() {
               </select>
             </div>
 
-            {/* 2단계: 시/군/구 */}
             <div>
               <label className="block text-[10px] text-slate-400 font-semibold mb-1">2단계: 기초 (시/군/구)</label>
               <select
                 value={sigungu}
                 disabled={sido === '전국'}
                 onChange={(e) => changeRegion(sido, e.target.value, '전체')}
-                className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 font-medium disabled:opacity-50"
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500/60 font-medium disabled:opacity-50"
               >
                 {sigunguList.map((sgg) => (
                   <option key={sgg} value={sgg}>{sgg}</option>
@@ -504,14 +508,13 @@ export default function RankingPage() {
               </select>
             </div>
 
-            {/* 3단계: 읍/면/동 */}
             <div>
               <label className="block text-[10px] text-slate-400 font-semibold mb-1">3단계: 동네 (읍/면/동)</label>
               <select
                 value={dong}
                 disabled={sido === '전국' || sigungu === '전체'}
                 onChange={(e) => changeRegion(sido, sigungu, e.target.value)}
-                className="w-full bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-blue-500 font-medium disabled:opacity-50"
+                className="w-full bg-slate-950 border border-slate-800 text-slate-200 text-xs rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500/60 font-medium disabled:opacity-50"
               >
                 {dongList.map((d) => (
                   <option key={d} value={d}>{d}</option>
@@ -521,28 +524,26 @@ export default function RankingPage() {
           </div>
         </div>
 
-        {/* 상단 TOP 3 명예의 전당 포디움 */}
         {!loading && rankings.length > 0 && (
           <HallOfFamePodium top3={top3} category={category} regionText={currentRegionText} />
         )}
 
-        {/* 현재 사용자 랭킹 카드 */}
         {currentUser && <CurrentUserDashboardCard user={currentUser} regionText={currentRegionText} />}
 
         {/* 직업군 필터 칩 바 */}
-        <div className="p-3 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2">
+        <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-slate-800/80 space-y-2.5">
           <div className="flex items-center gap-1.5 text-xs text-slate-300 font-bold">
-            <Briefcase className="w-3.5 h-3.5 text-purple-400" />
+            <Briefcase className="w-3.5 h-3.5 text-amber-400" />
             <span>직업군별 필터링</span>
           </div>
 
           <div className="flex gap-1.5 overflow-x-auto pb-1 no-scrollbar">
             <button
               onClick={() => changeJobGroup('전체')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all border ${
                 jobGroup === '전체'
-                  ? 'bg-purple-600 text-white shadow-md'
-                  : 'bg-slate-950 text-slate-400 hover:bg-slate-800'
+                  ? 'bg-amber-500/20 text-amber-200 border-amber-400/40'
+                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800'
               }`}
             >
               전체 직업
@@ -551,10 +552,10 @@ export default function RankingPage() {
               <button
                 key={job.id}
                 onClick={() => changeJobGroup(job.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1 transition-all ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1 transition-all border ${
                   jobGroup === job.id
-                    ? 'bg-purple-600 text-white shadow-md ring-1 ring-purple-400'
-                    : 'bg-slate-950 text-slate-400 hover:bg-slate-800'
+                    ? 'bg-amber-500/20 text-amber-200 border-amber-400/40'
+                    : 'bg-slate-950 text-slate-400 border-slate-800 hover:bg-slate-800'
                 }`}
               >
                 <span>{job.icon}</span>
@@ -564,27 +565,6 @@ export default function RankingPage() {
           </div>
         </div>
 
-        {/* 활동 카테고리 탭 (종합, Forum, Consume, Expect, Donation) */}
-        <div className="space-y-3">
-          <div className="flex flex-wrap gap-2">
-            {RANKING_CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => changeCategory(cat.id)}
-                className={`px-4 py-2 rounded-xl text-xs md:text-sm font-bold transition-all duration-200 flex items-center gap-1.5 ${
-                  category === cat.id
-                    ? 'bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/20 ring-2 ring-amber-300/40'
-                    : 'bg-slate-900/80 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-slate-800'
-                }`}
-              >
-                <span>{cat.icon}</span>
-                <span>{cat.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* 로딩 인디케이터 */}
         {loading && (
           <div className="flex flex-col justify-center items-center py-20 space-y-3">
             <div className="animate-spin rounded-full h-10 w-10 border-2 border-amber-400 border-t-transparent" />
@@ -592,14 +572,12 @@ export default function RankingPage() {
           </div>
         )}
 
-        {/* 에러 피드백 */}
         {error && (
           <div className="bg-rose-950/30 border border-rose-800 text-rose-300 px-4 py-3 rounded-xl text-sm">
             {error}
           </div>
         )}
 
-        {/* 랭킹 리스트 (전체 목록) */}
         {!loading && !error && (
           <div className="space-y-3">
             <div className="flex justify-between items-center px-1">
@@ -641,14 +619,21 @@ export default function RankingPage() {
           </div>
         )}
 
-        {/* 푸터 메타 정보 */}
         {meta && (
           <div className="pt-4 text-center text-xs text-slate-500 flex items-center justify-center gap-1.5">
             <Clock className="w-3.5 h-3.5" />
             <span>최근 업데이트: {new Date(meta.lastUpdated).toLocaleString('ko-KR')}</span>
           </div>
         )}
-      </main>
+      </div>
     </div>
+  );
+}
+
+export default function RankingPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[#090b12]" />}>
+      <RankingContent />
+    </Suspense>
   );
 }

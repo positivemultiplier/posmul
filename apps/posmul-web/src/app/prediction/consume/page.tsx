@@ -11,6 +11,7 @@ import {
   mapPredictionGameRowToCardModel,
   type PredictionGameRow,
 } from "../components/prediction-game-mapper";
+import { DomainContextHeader } from "../../../shared/ui/components/layout/DomainContextHeader";
 
 type ConsumeSubcategory = {
   slug: "time" | "money" | "cloud";
@@ -19,9 +20,9 @@ type ConsumeSubcategory = {
 };
 
 const SUBCATEGORIES: ConsumeSubcategory[] = [
-  { slug: "time", title: "⏰ TimeConsume", description: "시간 소비 영역" },
-  { slug: "money", title: "💳 MoneyConsume", description: "지역 소비 영역" },
-  { slug: "cloud", title: "☁️ CloudConsume", description: "펀딩/후원 영역" },
+  { slug: "time", title: "⏰ TimeConsume", description: "시간 소비 캠페인 성과 예측" },
+  { slug: "money", title: "💳 MoneyConsume", description: "지역 상생 소비 트렌드 예측" },
+  { slug: "cloud", title: "☁️ CloudConsume", description: "크라우드 펀딩 달성률 예측" },
 ];
 
 interface UserPrediction {
@@ -51,7 +52,6 @@ export default async function PredictionConsumePage() {
     .limit(12);
 
   if (error) {
-    // eslint-disable-next-line no-console
     console.error("PredictionConsumePage Supabase error", error.message);
   }
 
@@ -68,41 +68,49 @@ export default async function PredictionConsumePage() {
   }
 
   const gameRows = (games ?? []) as PredictionGameRow[];
-  const gameRowsWithPools = await attachHourlyGamePoolsToRows(supabase, gameRows);
+  const gameRowsWithPools = await attachHourlyGamePoolsToRows(
+    supabase,
+    gameRows
+  );
   const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen bg-[#090b12] text-slate-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <FadeIn>
-          <div className="mb-8">
-            <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-emerald-300 to-teal-300 bg-clip-text text-transparent">
-              💳 소비 예측
-            </h1>
-            <p className="text-xl text-gray-400">
-              투자→소비 영역(Time/Money/Cloud)의 성과를 예측합니다
-            </p>
+          <DomainContextHeader
+            domain="prediction"
+            title="💳 소비·임팩트 예측 마켓"
+            subtitle="시간(Time)·지역소비(Money)·크라우드펀딩(Cloud) 영역의 시민 참여 성과를 예측합니다"
+            metrics={[
+              {
+                label: "소비예측 상금풀",
+                value: consumePool || 12800,
+                unit: "PMC",
+              },
+              { label: "진행 중 마켓", value: mappedGames.length, unit: "개" },
+            ]}
+          />
+
+          <div className="mb-6">
+            <CompactMoneyWaveCard
+              depthLevel={2}
+              category="economy"
+              initialPool={consumePool}
+            />
           </div>
 
-          <div className="mb-12">
-            <HoverLift>
-              <CompactMoneyWaveCard
-                depthLevel={2}
-                category="economy"
-                initialPool={consumePool}
-              />
-            </HoverLift>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-10">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             {SUBCATEGORIES.map((sub) => (
               <HoverLift key={sub.slug}>
                 <Link
                   href={`/prediction/consume/${sub.slug}`}
-                  className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
+                  className="block rounded-2xl border border-slate-800/90 bg-slate-900/70 p-5 hover:border-sky-500/40 transition-colors"
                 >
-                  <div className="text-lg font-semibold mb-2">{sub.title}</div>
-                  <div className="text-sm text-gray-300">{sub.description}</div>
+                  <div className="text-base font-bold text-white mb-1">
+                    {sub.title}
+                  </div>
+                  <div className="text-xs text-slate-400">{sub.description}</div>
                 </Link>
               </HoverLift>
             ))}

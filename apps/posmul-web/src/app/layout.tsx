@@ -46,27 +46,36 @@ export default function RootLayout({
   return (
     <html lang="ko" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#090b12] text-slate-100`}
       >
         <ThemeProvider>
           <ToastProvider>
-            <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#0a0a0f] via-[#1a1a2e] to-[#0a0a0f]">
+            <div className="flex flex-col min-h-screen bg-[#090b12]">
               {/* Navigation */}
               <ThreeRowNavbar />
 
               {/*
-                ThreeRowNavbar가 fixed top-0 이므로 상단 패딩 확보,
-                모바일 환경 하단 탭 바 확보를 위해 pb-16 추가.
+                ThreeRowNavbar가 fixed top-0 (Desktop: 142px, Mobile: 60px) 이므로 상단 패딩 확보,
+                모바일 환경 하단 탭 바 확보를 위해 pb-20 추가.
               */}
-              <main className="flex-1 pt-16 md:pt-[152px] pb-16 md:pb-0">{children}</main>
+              <main className="flex-1 pt-[60px] md:pt-[142px] pb-20 md:pb-0">{children}</main>
 
               {/* Mobile Bottom Navigation Bar */}
               <BottomNavigation />
 
-              <footer className="bg-[#0a0a0f] border-t border-white/10 hidden md:block">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                  <div className="text-center text-sm text-gray-400">
+              <footer className="bg-[#090b12] border-t border-white/5 hidden md:block">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+                  <div>
                     © 2026 PosMul. AI 시대 직접민주주의 & 소셜 임팩트 플랫폼
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                    <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">PMP 공론·참여</span>
+                    <span>➔</span>
+                    <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-400 border border-sky-500/20">Expect 집단지성</span>
+                    <span>➔</span>
+                    <span className="px-2 py-0.5 rounded bg-purple-500/10 text-purple-400 border border-purple-500/20">PMC 직접집행</span>
+                    <span>➔</span>
+                    <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Honor 명예</span>
                   </div>
                 </div>
               </footer>
@@ -82,6 +91,5 @@ export default function RootLayout({
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#0a0a0f",
+  themeColor: "#090b12",
 };
-
