@@ -106,9 +106,13 @@ export class SettlePredictionGameUseCase {
         };
       }
 
-      // 2. 게임 상태 검증 - ACTIVE 게임만 정산 가능
+      // 2. 게임 상태 검증 - ACTIVE, ENDED(DB CLOSED), SETTLING 게임 모두 정산 가능
       const status = predictionGame.getStatus();
-      if (status !== "ACTIVE") {
+      if (
+        status !== "ACTIVE" &&
+        status !== "ENDED" &&
+        status !== "SETTLING"
+      ) {
         return {
           success: false,
           error: new UseCaseError(`Game cannot be settled. Current status: ${status}`),

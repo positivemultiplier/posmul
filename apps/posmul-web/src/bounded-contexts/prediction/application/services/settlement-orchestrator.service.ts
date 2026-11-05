@@ -178,18 +178,28 @@ export class SettlementOrchestratorService {
     if (settleRes.success) {
       rewardDistributed = settleRes.data.totalRewardDistributed;
     } else {
-      // 만약 이미 SETTLED 상태이거나 RPC가 없는 환경일 경우 상태만이라도 안전하게 동기화
-      await supabaseAdmin
-        .schema("prediction")
-        .from("prediction_games")
-        .update({
-          status: "SETTLED",
-          winning_option_id: result.winningOptionId,
-          settled_at: new Date().toISOString(),
-        })
-        .eq("game_id", source.gameId)
-        // 베팅 진행 중(ACTIVE) 또는 베팅 마감 후 정산 대기(CLOSED) 게임만 동기화
-        .in("status", ["ACTIVE", "CLOSED"]);
+      // UseCase 검증 실패 시에도 DB RPC(settle_prediction_game)를 직접 호출하여 승자 PMC 보상 지급 및 PMP 소각 보장
+      const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc(
+        "settle_prediction_game",
+        {
+          p_game_id: source.gameId,
+          p_correct_option_id: result.winningOptionId,
+        }
+      );
+
+      if (!rpcErr && rpcData) {
+        rewardDistributed = Number(
+          (rpcData as any).total_reward_distributed ?? 0
+        );
+      } else {
+        return {
+          success: false,
+          error:
+            rpcErr?.message ||
+            (settleRes as any).error?.message ||
+            "정산 RPC 실행 실패",
+        };
+      }
     }
 
     // 3. 정산 이력 기록
@@ -227,7 +237,12 @@ export class SettlementOrchestratorService {
         .eq("game_id", source.gameId)
         .maybeSingle();
 
-      if (!game || game.status !== "ACTIVE") {
+      if (
+        !game ||
+        (game.status !== "ACTIVE" &&
+          game.status !== "CLOSED" &&
+          game.status !== "SETTLING")
+      ) {
         skippedCount++;
         continue;
       }

@@ -15,7 +15,7 @@ export class MoneyWaveCalculatorService {
   private static readonly INTEREST_RATE = 0.03; // 이자율 3%
 
   constructor(
-    private readonly expectedAnnualEbit: number = 1000000 // 기본값: 100만원
+    private readonly expectedAnnualEbit: number = 36500000 // 기본값: 일일 100,000 PMC 기준 (연간 3,650만원)
   ) {}
 
   /**

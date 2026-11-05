@@ -33,28 +33,28 @@ interface MoneyWaveData {
   };
 }
 
-// Wave 타입 정보
+// Wave 타입 정보 (이론 및 DB 모델과 일관되게 통일)
 const waveInfo = {
   wave1: {
     name: "Wave 1",
-    title: "균등 분배",
-    description: "전체 활성 사용자에게 균등 분배",
+    title: "EBIT·사회적학습 발행",
+    description: "일일 플랫폼 순이익 & 공론장 사회적 학습 비례 배분",
     icon: "🌊",
     color: "from-blue-500 to-cyan-500",
     bgColor: "bg-blue-50 dark:bg-blue-900/20",
   },
   wave2: {
     name: "Wave 2",
-    title: "활동 보상",
-    description: "활동 점수 비례 분배",
+    title: "휴면 PMC 재분배",
+    description: "30일 미사용 PMC 회수 및 활성 시민 재분배",
     icon: "🌀",
     color: "from-purple-500 to-pink-500",
     bgColor: "bg-purple-50 dark:bg-purple-900/20",
   },
   wave3: {
     name: "Wave 3",
-    title: "기여 보상",
-    description: "핵심 기여자 보상",
+    title: "기업가·로컬 생태계",
+    description: "ESG 파트너 기업 및 지역 벤처 투자 풀",
     icon: "🔥",
     color: "from-orange-500 to-red-500",
     bgColor: "bg-orange-50 dark:bg-orange-900/20",
@@ -111,7 +111,7 @@ export function MoneyWaveDashboard({ initialData }: MoneyWaveDashboardProps) {
       } else {
         setError(result.error?.message || "데이터를 불러올 수 없습니다.");
       }
-    } catch (err) {
+    } catch {
       setError("네트워크 오류가 발생했습니다.");
     } finally {
       setIsLoading(false);
@@ -156,7 +156,7 @@ export function MoneyWaveDashboard({ initialData }: MoneyWaveDashboardProps) {
             <span className="text-3xl">🌊</span>
             <div>
               <h3 className="font-bold text-white text-lg">MoneyWave</h3>
-              <p className="text-sm text-white/80">PMC 분배 시스템</p>
+              <p className="text-sm text-white/80">일일 100,000 PMC · 사회적 학습 기반 분배 엔진</p>
             </div>
           </div>
           {data.myRewards.total > 0 && (
@@ -188,19 +188,19 @@ export function MoneyWaveDashboard({ initialData }: MoneyWaveDashboardProps) {
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">총 발행</span>
+                <span className="text-gray-600 dark:text-gray-400">일일/누적 풀</span>
                 <span className="font-medium text-gray-900 dark:text-white">
                   {data.wave1.totalPmcIssued.toLocaleString()} PMC
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">수혜자</span>
+                <span className="text-gray-600 dark:text-gray-400">정산 수혜자</span>
                 <span className="font-medium text-gray-900 dark:text-white">
                   {data.wave1.affectedUsers.toLocaleString()}명
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">최근 실행</span>
+                <span className="text-gray-600 dark:text-gray-400">최근 갱신</span>
                 <span className="font-medium text-gray-900 dark:text-white">
                   {formatDate(data.wave1.lastExecution)}
                 </span>
@@ -231,19 +231,19 @@ export function MoneyWaveDashboard({ initialData }: MoneyWaveDashboardProps) {
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">휴면 PMC</span>
+                <span className="text-gray-600 dark:text-gray-400">재분배 배정</span>
                 <span className="font-medium text-gray-900 dark:text-white">
                   {data.wave2.dormantPmcAmount.toLocaleString()} PMC
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">재분배</span>
+                <span className="text-gray-600 dark:text-gray-400">재분배 누적</span>
                 <span className="font-medium text-gray-900 dark:text-white">
                   {data.wave2.redistributedAmount.toLocaleString()} PMC
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">최근 실행</span>
+                <span className="text-gray-600 dark:text-gray-400">최근 갱신</span>
                 <span className="font-medium text-gray-900 dark:text-white">
                   {formatDate(data.wave2.lastExecution)}
                 </span>
@@ -274,7 +274,7 @@ export function MoneyWaveDashboard({ initialData }: MoneyWaveDashboardProps) {
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">기업가</span>
+                <span className="text-gray-600 dark:text-gray-400">파트너 기업가</span>
                 <span className="font-medium text-gray-900 dark:text-white">
                   {data.wave3.entrepreneurCount}명
                 </span>
@@ -286,7 +286,7 @@ export function MoneyWaveDashboard({ initialData }: MoneyWaveDashboardProps) {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-gray-600 dark:text-gray-400">최근 실행</span>
+                <span className="text-gray-600 dark:text-gray-400">최근 갱신</span>
                 <span className="font-medium text-gray-900 dark:text-white">
                   {formatDate(data.wave3.lastExecution)}
                 </span>
@@ -314,7 +314,7 @@ export function MoneyWaveDashboard({ initialData }: MoneyWaveDashboardProps) {
               {data.recentWaves.slice(0, 5).map((wave, index) => {
                 const waveType = wave.waveType as keyof typeof waveInfo;
                 const info = waveInfo[waveType] || waveInfo.wave1;
-                
+
                 return (
                   <div
                     key={index}

@@ -10,6 +10,7 @@
 import { PredictionGameId, Result, UserId, createPredictionGameId } from "@posmul/auth-economy-sdk";
 import { createPmpAmount } from "@posmul/auth-economy-sdk";
 import { createClient } from "../../../../lib/supabase/server";
+import { supabaseAdmin } from "../../../../lib/supabase/admin";
 import { PredictionGame } from "../../domain/entities/prediction-game.aggregate";
 import { Prediction } from "../../domain/entities/prediction.entity";
 import {
@@ -1058,7 +1059,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
         });
 
         if (predictionResult.success) {
-          game.addPrediction(predictionResult.data);
+          game.addPrediction(predictionResult.data, { skipStatusCheck: true });
         }
       }
 
@@ -1093,7 +1094,7 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
       const supabase = await createClient();
 
       // DB 함수 호출로 정산 실행
-      const { data, error } = await supabase.rpc("settle_prediction_game", {
+      const { data, error } = await supabaseAdmin.rpc("settle_prediction_game", {
         p_game_id: gameId,
         p_correct_option_id: correctOptionId,
       });

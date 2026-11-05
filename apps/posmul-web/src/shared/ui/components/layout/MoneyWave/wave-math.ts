@@ -15,10 +15,12 @@ export function parseNumeric(value: unknown): number | null {
 
 export const CATEGORY_MAP: Readonly<Record<string, string>> = {
   invest: "INVEST",
+  economy: "ECONOMY",
   sports: "SPORTS",
   politics: "POLITICS",
   entertainment: "ENTERTAINMENT",
   user: "USER_PROPOSED",
+  user_proposed: "USER_PROPOSED",
 };
 
 export function resolveSelectedDbCategory(
@@ -26,7 +28,8 @@ export function resolveSelectedDbCategory(
   category: string
 ): string | null {
   if (domain !== "prediction" || category === "all") return null;
-  return CATEGORY_MAP[category] ?? null;
+  const normalized = category.toLowerCase();
+  return CATEGORY_MAP[normalized] ?? category.toUpperCase();
 }
 
 export function buildMultiplierByCategory(

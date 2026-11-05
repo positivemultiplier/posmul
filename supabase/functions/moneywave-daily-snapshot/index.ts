@@ -83,7 +83,6 @@ Deno.serve(async (req: Request) => {
   const now = new Date();
   const snapshotDate = toSeoulDateString(now);
 
-  // v2 algorithm: read config from DB + allocate by real signals.
   const configRes = await supabase
     .schema("economy")
     .from("money_wave_config")
@@ -101,10 +100,8 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const desiredAlgorithmVersion = (config.algorithm_version ?? "v2_signals_based") as string;
+  const desiredAlgorithmVersion = (config.algorithm_version ?? "v3_social_learning_time_weighted") as string;
 
-  // Idempotent-by-version: if already computed today with same algorithm_version, return it.
-  // If version changed (or force=true), recompute and update today's row.
   const existing = await supabase
     .schema("economy")
     .from("money_wave_daily_snapshots")
@@ -177,10 +174,11 @@ Deno.serve(async (req: Request) => {
   const w3 = s3.count;
   const sum = w1 + w2 + w3;
 
-  const dailyWave1 = sum > 0 ? (dailyTotal * w1) / sum : dailyTotal;
-  const dailyWave2 = sum > 0 ? (dailyTotal * w2) / sum : 0;
-  const dailyWave3 = sum > 0 ? (dailyTotal * w3) / sum : 0;
-  const dailyPoolTotal = dailyWave1 + dailyWave2 + dailyWave3;
+  // Wave 2(휴면 재분배)는 일일 총 풀의 최대 20%, Wave 3(벤처)는 최대 10%, 나머지는 Wave 1(순수 EBIT & 사회적 학습)
+  const dailyWave2 = w2 > 0 ? Math.min(dailyTotal * 0.2, dailyTotal * (w2 / Math.max(100, sum))) : 0;
+  const dailyWave3 = w3 > 0 ? Math.min(dailyTotal * 0.1, dailyTotal * (w3 / Math.max(100, sum))) : 0;
+  const dailyWave1 = dailyTotal - dailyWave2 - dailyWave3;
+  const dailyPoolTotal = dailyTotal;
   const hourlyPoolTotal = dailyPoolTotal / 24;
 
   const warnings = [s1.warning, s2.warning, s3.warning].filter(

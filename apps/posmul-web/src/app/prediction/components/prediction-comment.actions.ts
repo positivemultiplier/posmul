@@ -169,12 +169,15 @@ export async function getPredictionCommentsAction(
 
     if (authorIds.length > 0) {
       const { data: profiles } = await supabaseAdmin
-        .from("user_profiles")
-        .select("id, username")
+        .schema("user")
+        .from("profiles")
+        .select("id, username, display_name")
         .in("id", authorIds);
 
-      (profiles || []).forEach((p) => {
-        userProfileMap.set(p.id, { username: p.username || "시민" });
+      (profiles || []).forEach((p: any) => {
+        userProfileMap.set(p.id, {
+          username: p.display_name || p.username || "시민",
+        });
       });
     }
 
@@ -286,9 +289,18 @@ export async function addPredictionCommentAction(input: {
       // 무시
     }
 
-    // 3. 사용자 PMP 잔액에 +10 PMP 활동 리워드 즉시 지급
+    // 3. 사용자 PMP 잔액에 +10 PMP 활동 리워드 즉시 지급 (economy.grant_pmp 및 pmp_pmc_transactions 기록)
     let newBalance = 0;
     try {
+      await supabaseAdmin
+        .schema("economy")
+        .rpc("grant_pmp", {
+          p_user_id: user.id,
+          p_amount: pmpReward,
+          p_description: `예측 공론장 의견 작성 리워드 (+${pmpReward} PMP)`,
+          p_source: "prediction_comment",
+        });
+
       const { data: account } = await supabaseAdmin
         .schema("economy")
         .from("pmp_pmc_accounts")
@@ -296,48 +308,25 @@ export async function addPredictionCommentAction(input: {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const currentPmp = Number(account?.pmp_balance) || 0;
-      newBalance = currentPmp + pmpReward;
-
-      await supabaseAdmin
-        .schema("economy")
-        .from("pmp_pmc_accounts")
-        .upsert({
-          user_id: user.id,
-          pmp_balance: newBalance,
-          updated_at: now,
-        });
-
-      // 포인트 트랜잭션 기록
-      try {
-        await supabaseAdmin
-          .schema("economy")
-          .from("point_transactions")
-          .insert({
-            user_id: user.id,
-            amount: pmpReward,
-            point_type: "PMP",
-            transaction_type: "FORUM_COMMENT_REWARD",
-            description: `예측 토론 의견 작성 리워드 (+${pmpReward} PMP)`,
-            balance_after: newBalance,
-            created_at: now,
-          });
-      } catch {
-        // 트랜잭션 로깅 오류 무시
-      }
+      newBalance = Number(account?.pmp_balance) || pmpReward;
     } catch (econErr) {
       console.warn("PMP reward account update warning:", econErr);
     }
 
-    // 사용자 이름 조회
+    // 사용자 이름 조회 ("user".profiles 스키마 사용)
     const { data: profile } = await supabaseAdmin
-      .from("user_profiles")
-      .select("username")
+      .schema("user")
+      .from("profiles")
+      .select("username, display_name")
       .eq("id", user.id)
       .maybeSingle();
 
     const authorName =
-      profile?.username || user.user_metadata?.display_name || user.email?.split("@")[0] || "시민";
+      (profile as any)?.display_name ||
+      profile?.username ||
+      user.user_metadata?.display_name ||
+      user.email?.split("@")[0] ||
+      "시민";
 
     const newComment: PredictionCommentDTO = {
       id: commentId,

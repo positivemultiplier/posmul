@@ -173,8 +173,11 @@ export class PredictionGame extends AggregateRoot {
     return success(game);
   }
 
-  public addPrediction(prediction: Prediction): Result<void, DomainError> {
-    if (this._status !== GameStatus.ACTIVE) {
+  public addPrediction(
+    prediction: Prediction,
+    options?: { skipStatusCheck?: boolean }
+  ): Result<void, DomainError> {
+    if (!options?.skipStatusCheck && this._status !== GameStatus.ACTIVE) {
       return failure(new DomainError("GAME_NOT_ACTIVE"));
     }
 
