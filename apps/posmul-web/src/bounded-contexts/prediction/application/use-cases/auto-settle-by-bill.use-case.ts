@@ -82,7 +82,8 @@ export class AutoSettleByBillUseCase {
                 .schema("prediction")
                 .from("prediction_games")
                 .select("game_id, title, game_options, status, metadata, external_id")
-                .eq("status", "ACTIVE");
+                // 베팅 진행 중(ACTIVE) + 베팅 마감 후 정산 대기(CLOSED)
+                .in("status", ["ACTIVE", "CLOSED"]);
 
             if (gameError || !activeGames) {
                 return failure(new UseCaseError(`Failed to fetch active prediction games: ${gameError?.message}`));

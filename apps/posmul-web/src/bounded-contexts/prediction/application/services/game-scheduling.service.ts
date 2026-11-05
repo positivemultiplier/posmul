@@ -6,6 +6,60 @@ import { PredictionType } from "../../domain/value-objects/prediction-types";
 import { SettlementSourceType } from "../../domain/value-objects/settlement-types";
 import { CreatePredictionGameUseCase } from "../use-cases/create-prediction-game.use-case";
 import { settlementOrchestrator } from "./settlement-orchestrator.service";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
+/** 한국 표준시(KST) UTC 오프셋 (분) */
+const KST_OFFSET_MINUTES = 9 * 60;
+
+/** 템플릿 카테고리 → DB prediction_category enum */
+const TEMPLATE_CATEGORY_TO_DB: Record<ScheduledGameTemplate["category"], string> = {
+  sports: "SPORTS",
+  politics: "POLITICS",
+  economy: "ECONOMY",
+  entertainment: "ENTERTAINMENT",
+  weather: "USER_PROPOSED",
+  technology: "INVEST",
+};
+
+/** 도메인 PredictionType → DB prediction_type enum */
+const PREDICTION_TYPE_TO_DB: Record<PredictionType, string> = {
+  [PredictionType.BINARY]: "BINARY",
+  [PredictionType.WIN_DRAW_LOSE]: "WIN_DRAW_LOSE",
+  [PredictionType.RANKING]: "RANKING",
+};
+
+/** 중요도 → 난이도(1.0~5.0) */
+const IMPORTANCE_TO_DIFFICULTY: Record<ScheduledGameTemplate["importance"], number> = {
+  low: 1.5,
+  medium: 2.5,
+  high: 3.5,
+  critical: 4.5,
+};
+
+/** 카테고리 페이지 필터(서브카테고리)에 맞춰 템플릿 서브카테고리 결정 */
+function resolveTemplateSubcategory(template: ScheduledGameTemplate): string | null {
+  switch (template.sourceType) {
+    case "ecos":
+    case "kosis":
+      return "indicators";
+    case "dart":
+    case "fmp":
+      return "earnings";
+    case "alpha-vantage":
+      return "stocks";
+    case "kobis":
+      return "movie";
+    case "kcontent": {
+      const sub = String(template.sourceConfig?.subCategory ?? "");
+      if (sub.startsWith("drama")) return "drama";
+      if (sub.startsWith("variety")) return "variety";
+      if (sub.startsWith("music")) return "music";
+      return null;
+    }
+    default:
+      return null;
+  }
+}
 
 export interface ScheduledGameTemplate {
   id: string;
@@ -656,41 +710,90 @@ export class GameSchedulingService {
   ): Promise<string | null> {
     try {
       const now = new Date();
-      const endTime = new Date(
-        now.getTime() + template.duration * 60 * 60 * 1000
-      );
+      const HOUR_MS = 60 * 60 * 1000;
+
+      // 템플릿 시각은 '한국시간(KST) 벽시계' 기준으로 계산되므로,
+      // 서버 타임존(Vercel=UTC)과의 차이만큼 보정하여 실제 시각으로 변환
+      const kstCorrectionMs =
+        (KST_OFFSET_MINUTES + now.getTimezoneOffset()) * 60 * 1000;
+      const openAt = new Date(template.scheduledTime.getTime() - kstCorrectionMs);
+      const endTime = new Date(openAt.getTime() + template.duration * HOUR_MS);
       const settlementTime = new Date(
-        endTime.getTime() + template.settlementDelay * 60 * 60 * 1000
+        endTime.getTime() + template.settlementDelay * HOUR_MS
       );
 
-      const typeMap: Record<PredictionType, "binary" | "wdl" | "ranking"> = {
-        [PredictionType.BINARY]: "binary",
-        [PredictionType.WIN_DRAW_LOSE]: "wdl",
-        [PredictionType.RANKING]: "ranking",
-      };
-
-      const result = await this.createGameUseCase.execute({
-        title: template.title,
-        description: template.description,
-        predictionType: typeMap[template.predictionType] ?? "binary",
-        options: template.options,
-        startTime: now,
-        endTime,
-        settlementTime,
-        creatorId: template.creatorId,
-        minimumStake: template.minimumStake,
-        maximumStake: template.maximumStake,
-        maxParticipants: template.maxParticipants,
-      });
-
-      if (!result.success) {
+      // 마감까지 1시간도 남지 않은 회차는 생성하지 않음 (다음 회차에서 생성)
+      if (endTime.getTime() <= now.getTime() + HOUR_MS) {
         return null;
       }
 
-      const createdGameId = String(result.data.gameId);
+      // 회차별 고유 slug (템플릿 ID + 마감일 KST) → 같은 회차 중복 생성 방지 (멱등성)
+      const closeDateKst = new Date(endTime.getTime() + KST_OFFSET_MINUTES * 60 * 1000)
+        .toISOString()
+        .slice(0, 10)
+        .replace(/-/g, "");
+      const slug = `${template.id}-${closeDateKst}`;
 
-      // 오라클 설정이 있는 템플릿이면 settlement_sources 테이블에 100% 세트로 등록
-      if (template.sourceType && template.sourceConfig) {
+      const { data: existing } = await supabaseAdmin
+        .schema("prediction")
+        .from("prediction_games")
+        .select("game_id")
+        .eq("slug", slug)
+        .maybeSingle();
+      if (existing) {
+        return null;
+      }
+
+      const hasOracleAdapter =
+        !!template.sourceType && template.sourceType !== "kcontent";
+
+      // 크론에는 로그인 사용자가 없으므로(RLS 차단) 서비스 롤로 직접 저장
+      const { data: inserted, error } = await supabaseAdmin
+        .schema("prediction")
+        .from("prediction_games")
+        .insert({
+          creator_id: String(template.creatorId),
+          title: template.title,
+          description: template.description,
+          category: TEMPLATE_CATEGORY_TO_DB[template.category] ?? "ECONOMY",
+          subcategory: resolveTemplateSubcategory(template),
+          prediction_type: PREDICTION_TYPE_TO_DB[template.predictionType] ?? "BINARY",
+          game_options: { options: template.options },
+          difficulty: IMPORTANCE_TO_DIFFICULTY[template.importance] ?? 2.5,
+          min_bet_amount: Number(template.minimumStake),
+          max_bet_amount: Number(template.maximumStake),
+          registration_start: now.toISOString(),
+          registration_end: endTime.toISOString(),
+          settlement_date: settlementTime.toISOString(),
+          status: "ACTIVE",
+          slug,
+          is_official: true,
+          settlement_type: hasOracleAdapter ? "auto" : "manual",
+          data_source: template.sourceType ?? null,
+          external_id: template.id,
+          tags: [template.category, template.sourceType ?? "manual"],
+          metadata: {
+            templateId: template.id,
+            maxParticipants: template.maxParticipants,
+            recurrence: template.recurrence ?? "once",
+            importance: template.importance,
+          },
+        })
+        .select("game_id")
+        .single();
+
+      if (error || !inserted) {
+        console.error(
+          `[GameScheduling] 템플릿 게임 생성 실패 (${template.id}):`,
+          error?.message
+        );
+        return null;
+      }
+
+      const createdGameId = String(inserted.game_id);
+
+      // 오라클 어댑터가 있는 템플릿이면 settlement_sources 테이블에 등록 (자동 정산 대상)
+      if (hasOracleAdapter && template.sourceType && template.sourceConfig) {
         await settlementOrchestrator.registerSettlementSource({
           gameId: createdGameId,
           sourceType: template.sourceType,
@@ -701,7 +804,8 @@ export class GameSchedulingService {
       }
 
       return createdGameId;
-    } catch {
+    } catch (err) {
+      console.error(`[GameScheduling] 템플릿 게임 생성 예외 (${template.id}):`, err);
       return null;
     }
   }

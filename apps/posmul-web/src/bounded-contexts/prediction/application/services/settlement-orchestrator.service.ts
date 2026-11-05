@@ -188,7 +188,8 @@ export class SettlementOrchestratorService {
           settled_at: new Date().toISOString(),
         })
         .eq("game_id", source.gameId)
-        .eq("status", "ACTIVE");
+        // 베팅 진행 중(ACTIVE) 또는 베팅 마감 후 정산 대기(CLOSED) 게임만 동기화
+        .in("status", ["ACTIVE", "CLOSED"]);
     }
 
     // 3. 정산 이력 기록

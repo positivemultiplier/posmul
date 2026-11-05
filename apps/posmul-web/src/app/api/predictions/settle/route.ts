@@ -163,7 +163,7 @@ export async function GET(_request: NextRequest) {
         created_at
       `
       )
-      .eq("status", "ACTIVE")
+      .in("status", ["ACTIVE", "CLOSED"])
       .lte("settlement_date", new Date().toISOString())
       .order("settlement_date", { ascending: true })
       .limit(20);

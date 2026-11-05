@@ -70,14 +70,15 @@ export async function GET(request: NextRequest) {
     details.push(...oracleBatch.results);
     logs.push(...oracleBatch.logs);
 
-    // 3. 마감일이 지났으나 아직 ACTIVE인 수동 판정 대기 게임 카운트
+    // 3. 베팅 마감 후 아직 정산되지 않은(ACTIVE/CLOSED) 판정 대기 게임 카운트
+    // (정산 기한 + 7일 초과 시 DB cron의 prediction.void_stale_games()가 전액 환불 처리)
     const nowIso = new Date().toISOString();
     const { data: expiredGames } = await supabaseAdmin
       .schema("prediction")
       .from("prediction_games")
-      .select("game_id, title, category, closing_date, status")
-      .eq("status", "ACTIVE")
-      .lte("closing_date", nowIso);
+      .select("game_id, title, category, registration_end, status")
+      .in("status", ["ACTIVE", "CLOSED"])
+      .lte("registration_end", nowIso);
 
     const pendingExpiredCount = expiredGames?.length || 0;
     if (pendingExpiredCount > 0) {

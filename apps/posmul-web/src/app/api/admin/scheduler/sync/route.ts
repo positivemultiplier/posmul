@@ -13,7 +13,8 @@ export async function POST(request: NextRequest) {
     const authHeader = request.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
 
-    if (cronSecret && authHeader && authHeader !== `Bearer ${cronSecret}`) {
+    // CRON_SECRET이 설정된 환경에서는 Authorization 헤더가 없거나 불일치하면 거부
+    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 401 }
