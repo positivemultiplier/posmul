@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Universal Prediction Game Detail Page
  * 모든 예측 카드를 클릭했을 때 이동하는 범용 상세페이지 라우트 (/prediction/[slug])
  */
@@ -6,6 +6,8 @@
 import { getPredictionGameBySlug, getPredictionGameStats, parseGameOptions } from "@/bounded-contexts/prediction/infrastructure/repositories/prediction-query.repository";
 import { UniversalPredictionDetailClient } from "./client";
 import { getUserBalance, getUserBets } from "../sports/soccer/[slug]/actions";
+
+export const revalidate = 10;
 
 function decodeSlug(slug: string) {
   return decodeURIComponent(slug);
@@ -105,12 +107,23 @@ export default async function PredictionDetailPage({ params }: PredictionDetailP
   const { slug } = await params;
   const decodedSlug = decodeSlug(slug);
 
-  // 1. DB에서 게임 조회
-  const dbGame = await getPredictionGameBySlug(decodedSlug);
+  // 1. DB에서 게임 및 사용자 잔액을 병렬 조회
+  const [dbGame, balanceResult] = await Promise.all([
+    getPredictionGameBySlug(decodedSlug),
+    getUserBalance(),
+  ]);
+
   let gameForView = null;
+  let userBets: any[] = [];
 
   if (dbGame) {
-    const stats = await getPredictionGameStats(dbGame.game_id);
+    // 게임 통계와 유저 베팅 내역을 병렬 조회
+    const [stats, fetchedBets] = await Promise.all([
+      getPredictionGameStats(dbGame.game_id),
+      getUserBets(dbGame.game_id),
+    ]);
+    userBets = fetchedBets;
+
     const parsedOptions = parseGameOptions(dbGame.game_options);
     const totalBetAmount = stats?.total_bet_amount ?? 0;
 
@@ -141,6 +154,7 @@ export default async function PredictionDetailPage({ params }: PredictionDetailP
     };
   } else if (SAMPLE_GAMES_MAP[decodedSlug]) {
     gameForView = SAMPLE_GAMES_MAP[decodedSlug];
+    userBets = await getUserBets(gameForView.id);
   } else {
     // 일반 fallback 게임 동적 생성
     gameForView = {
@@ -166,10 +180,7 @@ export default async function PredictionDetailPage({ params }: PredictionDetailP
     };
   }
 
-  // 사용자 잔액 및 기존 베팅 조회
-  const balanceResult = await getUserBalance();
   const userBalance = balanceResult || { pmp: 1000, pmc: 500 };
-  const userBets = gameForView ? await getUserBets(gameForView.id) : [];
 
   return (
     <UniversalPredictionDetailClient

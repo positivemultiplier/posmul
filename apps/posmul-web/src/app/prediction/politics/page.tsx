@@ -1,4 +1,4 @@
-import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
+﻿import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { getAggregatedPrizePool } from "../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { createClient } from "../../../lib/supabase/server";
 import { FadeIn } from "../../../shared/ui/components/animations";
@@ -11,49 +11,51 @@ import {
 } from "../components/prediction-game-mapper";
 import { DomainContextHeader } from "../../../shared/ui/components/layout/DomainContextHeader";
 
+export const revalidate = 10;
+
+interface UserPrediction {
+  prediction_id: string;
+  game_id: string;
+  bet_amount: number | null;
+  is_active: boolean;
+  prediction_data: Record<string, unknown> | null;
+}
+
 export default async function PredictionPoliticsPage() {
   const supabase = await createClient();
 
-  const politicsPool = await getAggregatedPrizePool(supabase, "POLITICS");
-
-  const query = supabase
-    .schema("prediction")
-    .from("prediction_games")
-    .select("*")
-    .eq("category", "POLITICS")
-    .eq("status", "ACTIVE")
-    .order("created_at", { ascending: false });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  interface UserPrediction {
-    prediction_id: string;
-    game_id: string;
-    bet_amount: number | null;
-    is_active: boolean;
-    prediction_data: Record<string, unknown> | null;
-  }
-
-  let userPredictions: UserPrediction[] = [];
-  if (user) {
-    const { data: predictions } = await supabase
+  // 1단계 병렬 요청
+  const [userResult, politicsPool, gamesResult] = await Promise.all([
+    supabase.auth.getUser(),
+    getAggregatedPrizePool(supabase, "POLITICS"),
+    supabase
       .schema("prediction")
-      .from("predictions")
-      .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
-      .eq("user_id", user.id)
-      .eq("is_active", true);
-    userPredictions = (predictions || []) as UserPrediction[];
-  }
+      .from("prediction_games")
+      .select("*")
+      .eq("category", "POLITICS")
+      .eq("status", "ACTIVE")
+      .order("created_at", { ascending: false }),
+  ]);
 
-  const { data: games } = await query;
+  const user = userResult.data?.user ?? null;
+  const gameRows = (gamesResult.data || []) as PredictionGameRow[];
+  const gameIds = gameRows.map((g) => g.game_id);
 
-  const gameRows = (games || []) as PredictionGameRow[];
-  const gameRowsWithPools = await attachHourlyGamePoolsToRows(
-    supabase,
-    gameRows
-  );
+  // 2단계 병렬 요청
+  const [gameRowsWithPools, predictionsResult] = await Promise.all([
+    attachHourlyGamePoolsToRows(supabase, gameRows),
+    user && gameIds.length > 0
+      ? supabase
+          .schema("prediction")
+          .from("predictions")
+          .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .in("game_id", gameIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const userPredictions: UserPrediction[] = (predictionsResult.data || []) as UserPrediction[];
   const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
 
   const subcategories = [

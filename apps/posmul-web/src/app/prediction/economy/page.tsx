@@ -1,4 +1,4 @@
-import { createClient } from "../../../lib/supabase/server";
+﻿import { createClient } from "../../../lib/supabase/server";
 import { FadeIn } from "../../../shared/ui/components/animations";
 import Link from "next/link";
 import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
@@ -10,6 +10,8 @@ import {
   type PredictionGameRow,
 } from "../components/prediction-game-mapper";
 import { DomainContextHeader } from "../../../shared/ui/components/layout/DomainContextHeader";
+
+export const revalidate = 10;
 
 interface PageProps {
   searchParams: Promise<{
@@ -48,16 +50,6 @@ export default async function PredictionEconomyPage({
   const resolvedSearchParams = await searchParams;
   const safeSubcategory = normalizeSubcategory(resolvedSearchParams?.subcategory);
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const economyPool = await getAggregatedPrizePool(
-    supabase,
-    "ECONOMY",
-    safeSubcategory || undefined
-  );
-
   let query = supabase
     .schema("prediction")
     .from("prediction_games")
@@ -71,27 +63,32 @@ export default async function PredictionEconomyPage({
     query = query.eq("subcategory", safeSubcategory);
   }
 
-  const { data, error } = await query;
-  if (error) {
-    console.error("PredictionEconomyPage Supabase error", error.message);
-  }
-  const games = (data ?? []) as PredictionGameRow[];
+  // 1단계 병렬 요청: 유저 인증, 경제 상금풀, 경제 게임 쿼리를 동시 실행
+  const [userResult, economyPool, gamesResult] = await Promise.all([
+    supabase.auth.getUser(),
+    getAggregatedPrizePool(supabase, "ECONOMY", safeSubcategory || undefined),
+    query,
+  ]);
 
-  const gamesWithPools = await attachHourlyGamePoolsToRows(supabase, games);
+  const user = userResult.data?.user ?? null;
+  const games = (gamesResult.data ?? []) as PredictionGameRow[];
+  const gameIds = games.map((g) => g.game_id);
 
-  let userPredictions: UserPrediction[] = [];
-  if (user && games.length > 0) {
-    const gameIds = games.map((g) => g.game_id);
-    const { data: predictions } = await supabase
-      .schema("prediction")
-      .from("predictions")
-      .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
-      .eq("user_id", user.id)
-      .eq("is_active", true)
-      .in("game_id", gameIds);
+  // 2단계 병렬 요청: 게임별 실시간 상금풀 및 유저 베팅 내역을 동시 실행
+  const [gamesWithPools, predictionsResult] = await Promise.all([
+    attachHourlyGamePoolsToRows(supabase, games),
+    user && gameIds.length > 0
+      ? supabase
+          .schema("prediction")
+          .from("predictions")
+          .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .in("game_id", gameIds)
+      : Promise.resolve({ data: [] }),
+  ]);
 
-    userPredictions = predictions || [];
-  }
+  const userPredictions: UserPrediction[] = (predictionsResult.data || []) as UserPrediction[];
 
   const visibleGames = gamesWithPools;
 

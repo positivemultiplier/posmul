@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { Suspense, useState, useEffect } from "react";
@@ -617,6 +617,7 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                     )}
                     <Link
                       href={data.href}
+                      prefetch={true}
                       className={`px-3 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-1.5 ${
                         isSelected
                           ? meta.tones.row1Active
@@ -710,6 +711,7 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                 <Link
                   key={categoryKey}
                   href={category.href}
+                  prefetch={true}
                   className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all duration-200 whitespace-nowrap border ${
                     isSelected
                       ? currentDomainMeta.tones.row2Active
@@ -742,6 +744,7 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                 <Link
                   key={`${subcategory.path}-${index}`}
                   href={subcategory.path}
+                  prefetch={true}
                   className={`px-2.5 py-0.5 text-[11px] rounded-md transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap border ${
                     active
                       ? currentDomainMeta.tones.row3Active
@@ -796,6 +799,7 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                   <div key={domainKey} className="space-y-1">
                     <Link
                       href={data.href}
+                      prefetch={true}
                       onClick={() => setMobileOpen(false)}
                       className={`flex items-center justify-between px-3 py-2 rounded-xl font-bold text-sm ${
                         isSelected

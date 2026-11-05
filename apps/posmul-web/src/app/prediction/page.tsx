@@ -1,4 +1,4 @@
-import { createClient } from "../../lib/supabase/server";
+﻿import { createClient } from "../../lib/supabase/server";
 import { ClientPredictionGamesGrid } from "./components/ClientPredictionGamesGrid";
 import { getAggregatedPrizePool } from "../../bounded-contexts/prediction/application/prediction-pool.service";
 import {
@@ -8,37 +8,50 @@ import {
 } from "./components/prediction-game-mapper";
 import { DomainContextHeader } from "../../shared/ui/components/layout/DomainContextHeader";
 
+// 10초 캐싱 (ISR) 적용으로 초기 로딩 및 클릭 전환 체감 속도 극대화
+export const revalidate = 10;
+
 export default async function PredictionPage() {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // 1단계 병렬 요청: 유저 인증, MoneyWave 상금풀, 활성 게임 목록을 동시에 fetch
+  const [userResult, platformTotalPool, recentGamesResult] = await Promise.all([
+    supabase.auth.getUser(),
+    getAggregatedPrizePool(supabase),
+    supabase
+      .schema("prediction")
+      .from("prediction_games")
+      .select("*")
+      .eq("status", "ACTIVE")
+      .order("created_at", { ascending: false })
+      .limit(50),
+  ]);
 
-  const platformTotalPool = await getAggregatedPrizePool(supabase);
+  const user = userResult.data?.user ?? null;
+  const recentGameRows = (recentGamesResult.data ?? []) as PredictionGameRow[];
+  const totalActiveGames = recentGameRows.length;
 
-  const { data: games } = await supabase
-    .schema("prediction")
-    .from("prediction_games")
-    .select("category, status")
-    .eq("status", "ACTIVE");
+  // 2단계 병렬 요청: 게임별 실시간 상금풀 매핑 및 유저의 활성 베팅 목록을 동시에 fetch
+  const [recentGameRowsWithPools, userPredictionsResult] = await Promise.all([
+    attachHourlyGamePoolsToRows(supabase, recentGameRows),
+    user
+      ? supabase
+          .schema("prediction")
+          .from("predictions")
+          .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+      : Promise.resolve({ data: [] }),
+  ]);
 
-  const totalActiveGames = games?.length || 0;
-
-  const { data: recentGames } = await supabase
-    .schema("prediction")
-    .from("prediction_games")
-    .select("*")
-    .eq("status", "ACTIVE")
-    .order("created_at", { ascending: false })
-    .limit(50);
-
-  const recentGameRows = (recentGames ?? []) as PredictionGameRow[];
-  const recentGameRowsWithPools = await attachHourlyGamePoolsToRows(
-    supabase,
-    recentGameRows
-  );
   let mappedGames = recentGameRowsWithPools.map(mapPredictionGameRowToCardModel);
+  const userPredictions = (userPredictionsResult.data || []) as Array<{
+    prediction_id: string;
+    game_id: string;
+    bet_amount: number;
+    is_active: boolean;
+    prediction_data: Record<string, unknown> | null;
+  }>;
 
   const fallbackGames = [
     {
@@ -190,24 +203,7 @@ export default async function PredictionPage() {
   const additionalGames = fallbackGames.filter((g) => !existingSlugs.has(g.slug));
   mappedGames = [...mappedGames, ...additionalGames];
 
-  let userPredictions: Array<{
-    prediction_id: string;
-    game_id: string;
-    bet_amount: number;
-    is_active: boolean;
-    prediction_data: Record<string, unknown> | null;
-  }> = [];
-
-  if (user) {
-    const { data: predictions } = await supabase
-      .schema("prediction")
-      .from("predictions")
-      .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
-      .eq("user_id", user.id)
-      .eq("is_active", true);
-
-    userPredictions = predictions || [];
-  }
+// userPredictions는 상단 2단계 병렬 쿼리에서 이미 로드됨
 
   return (
     <div className="min-h-screen bg-[#090b12] text-slate-100">

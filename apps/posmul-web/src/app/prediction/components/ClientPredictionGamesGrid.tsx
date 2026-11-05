@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Link from "next/link";
@@ -165,7 +165,7 @@ export function ClientPredictionGamesGrid({
 
                         return (
                             <FadeIn key={game.slug || game.id} delay={Math.min(index * 0.05, 0.3)}>
-                                <Link href={game.href ?? `${basePath}/${game.slug}`} className="block">
+                                <Link href={game.href ?? `${basePath}/${game.slug}`} prefetch={true} className="block">
                                     <PredictionGameCard
                                         game={safeGame}
                                         userId={userId}
