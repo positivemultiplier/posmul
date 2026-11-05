@@ -1,4 +1,3 @@
-import { redirect } from "next/navigation";
 import { createClient } from "../../lib/supabase/server";
 import EconomicBalance from "../../bounded-contexts/economy/presentation/components/EconomicBalance";
 import TransactionHistory from "../../bounded-contexts/economy/presentation/components/TransactionHistory";
@@ -13,7 +12,7 @@ export default async function DashboardPage() {
         data: { user },
     } = await supabase.auth.getUser();
 
-    let targetUserId = user?.id || "00000000-0000-0000-0000-000000000001";
+    const targetUserId = user?.id || "00000000-0000-0000-0000-000000000001";
     const displayName = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'PosMul 시민 (데모)';
 
     return (
@@ -66,14 +65,14 @@ export default async function DashboardPage() {
                             <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                                 🎯 나의 예측 내역
                             </h2>
-                            <MyPredictions userId={user.id} />
+                            <MyPredictions userId={targetUserId} />
                         </section>
                     </div>
 
                     {/* Right Column (4/12): Donation & Side Widgets */}
                     <div className="lg:col-span-4 space-y-8">
                         <section>
-                            <DonationActivityPanel userId={user.id} />
+                            <DonationActivityPanel userId={targetUserId} />
                         </section>
                     </div>
                 </div>
@@ -83,7 +82,7 @@ export default async function DashboardPage() {
                     <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                         📜 거래 내역
                     </h2>
-                    <TransactionHistory userId={user.id} />
+                    <TransactionHistory userId={targetUserId} />
                 </section>
             </main>
         </div>

@@ -28,14 +28,8 @@
       "@/*": [
         "./src/*"
       ],
-      "@posmul/shared-types": [
-        "../../packages/shared-types/src/index.ts"
-      ],
       "@posmul/auth-economy-sdk": [
         "../../packages/auth-economy-sdk/src/index.ts"
-      ],
-      "@posmul/study-cycle-core": [
-        "../../packages/study-cycle-core/src/index.ts"
       ]
     },
     "baseUrl": "."

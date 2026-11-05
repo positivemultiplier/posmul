@@ -165,7 +165,7 @@ export async function getPredictionCommentsAction(
 
     // 작성자 ID 목록 수집
     const authorIds = Array.from(new Set((comments || []).map((c) => c.author_id)));
-    let userProfileMap = new Map<string, { username: string }>();
+    const userProfileMap = new Map<string, { username: string }>();
 
     if (authorIds.length > 0) {
       const { data: profiles } = await supabaseAdmin

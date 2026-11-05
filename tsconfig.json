@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "es2017",
+    "target": "es2020",
     "lib": [
       "dom",
       "dom.iterable",
@@ -21,50 +21,19 @@
     "downlevelIteration": true,
     "baseUrl": ".",
     "paths": {
-      "@posmul/*": [
-        "packages/*/src"
-      ],
-      "@/shared/components/*": [
-        "packages/shared-ui/src/components/*"
-      ],
-      "@/shared/components": [
-        "packages/shared-ui/src/components/index.ts"
-      ],
-      "@/shared/types/*": [
-        "packages/shared-types/src/*"
-      ],
-      "@/shared/types": [
-        "packages/shared-types/src/index.ts"
-      ],
-      "@/shared/utils/*": [
-        "packages/shared-ui/src/utils/*"
-      ],
-      "@/shared/utils": [
-        "packages/shared-ui/src/utils/index.ts"
-      ],
-      "@/shared/mcp/*": [
-        "packages/shared-auth/src/*"
-      ],
-      "../../shared/types/*": [
-        "packages/shared-types/src/*"
-      ],
-      "../../shared/components/*": [
-        "packages/shared-ui/src/components/*"
+      "@posmul/auth-economy-sdk": [
+        "packages/auth-economy-sdk/src/index.ts"
       ]
     }
   },
+  "include": [
+    "packages/auth-economy-sdk/src/**/*"
+  ],
   "exclude": [
     "node_modules",
-    "scripts/**/*.js",
+    "apps/**",
+    "scripts/**",
     "out/**",
-    "supabase/**",
-    "**/*legacy*",
-    "**/*.tmp.*",
-    "**/samples/**",
-    "**/sports/**",
-    "**/loading.*",
-    "**/error.*",
-    "**/api/**",
-    "**/src_migrated/**"
+    "supabase/**"
   ]
 }

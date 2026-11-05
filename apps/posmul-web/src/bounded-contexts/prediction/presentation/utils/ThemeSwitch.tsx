@@ -74,7 +74,7 @@ const ButtonsVariant = () => {
 
   return (
     <div className="flex items-center space-x-1 p-1 bg-gray-100 rounded-lg dark:bg-gray-800">
-      {availableThemes.filter(theme => theme !== 'system').map((theme) => {
+      {availableThemes.map((theme) => {
         const Icon = themeIcons[theme];
         return (
           <motion.button
@@ -100,11 +100,10 @@ const ButtonsVariant = () => {
 
 // Dropdown component
 const DropdownVariant = ({ showLabel }: { showLabel: boolean }) => {
-  const { currentTheme, setTheme, systemPreference } = useTheme();
+  const { currentTheme, setTheme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
 
-  const currentIcon = themeIcons[currentTheme === 'system' ? systemPreference : currentTheme];
-  const CurrentIcon = currentIcon;
+  const CurrentIcon = themeIcons[currentTheme];
 
   return (
     <div className="relative">

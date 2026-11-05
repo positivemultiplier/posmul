@@ -388,6 +388,20 @@ function isDomainKey(value: string): value is PosMulDomainKey {
   return value in navigationData;
 }
 
+function findMatchingCategoryKey(
+  categories: Record<string, NavCategoryItem>,
+  segment: string | undefined
+): string {
+  const fallback = "all" in categories ? "all" : Object.keys(categories)[0] ?? "all";
+  if (!segment) return fallback;
+  for (const [catKey, cat] of Object.entries(categories)) {
+    if (catKey === segment || cat.segmentAliases?.includes(segment)) {
+      return catKey;
+    }
+  }
+  return fallback;
+}
+
 /**
  * URL pathname과 searchParams로부터 현재 활성 도메인과 카테고리(Row 2) 키를 결정론적으로 도출
  */
@@ -398,21 +412,14 @@ function resolveDomainAndCategory(
   const parts = pathname.split("/").filter(Boolean);
   const first = parts[0];
   const second = parts[1];
-  const params = new URLSearchParams(searchParamsString);
 
-  // 홈('/') 또는 '/prediction/*' -> prediction
   if (!first || first === "prediction") {
-    const domain: PosMulDomainKey = "prediction";
-    if (!second) return { domain, categoryKey: "all" };
-    for (const [catKey, cat] of Object.entries(navigationData.prediction.categories)) {
-      if (catKey === second || cat.segmentAliases?.includes(second)) {
-        return { domain, categoryKey: catKey };
-      }
-    }
-    return { domain, categoryKey: "all" };
+    return {
+      domain: "prediction",
+      categoryKey: findMatchingCategoryKey(navigationData.prediction.categories, second),
+    };
   }
 
-  // Legacy '/invest' -> consume
   if (first === "invest") {
     return { domain: "consume", categoryKey: "all" };
   }
@@ -424,34 +431,57 @@ function resolveDomainAndCategory(
   const domain = first;
   const categories = navigationData[domain].categories;
 
-  // Ranking 도메인은 ?category= 쿼리 파라미터로 Row 2가 구분됨
   if (domain === "ranking") {
-    const queryCat = params.get("category");
-    if (queryCat && queryCat in categories) {
-      return { domain, categoryKey: queryCat };
-    }
-    return { domain, categoryKey: "expect" };
-  }
-
-  // 2번째 URL 세그먼트가 없는 도메인 루트 (/forum, /consume, /donation, /other)
-  if (!second) {
-    return {
-      domain,
-      categoryKey: "all" in categories ? "all" : Object.keys(categories)[0] ?? "all",
-    };
-  }
-
-  // 2번째 URL 세그먼트와 일치하는 categoryKey 또는 segmentAliases 탐색
-  for (const [catKey, cat] of Object.entries(categories)) {
-    if (catKey === second || cat.segmentAliases?.includes(second)) {
-      return { domain, categoryKey: catKey };
-    }
+    const queryCat = new URLSearchParams(searchParamsString).get("category");
+    const categoryKey = queryCat && queryCat in categories ? queryCat : "expect";
+    return { domain, categoryKey };
   }
 
   return {
     domain,
-    categoryKey: "all" in categories ? "all" : Object.keys(categories)[0] ?? "all",
+    categoryKey: findMatchingCategoryKey(categories, second),
   };
+}
+
+function checkQuerySubcategoryMatch(
+  subBase: string,
+  subQueryStr: string,
+  allSubcategories: NavSubcategoryItem[],
+  pathname: string,
+  currentParams: URLSearchParams
+): boolean {
+  if (pathname !== subBase) return false;
+  const subParams = new URLSearchParams(subQueryStr);
+  for (const [k, v] of subParams.entries()) {
+    if (currentParams.get(k) !== v) return false;
+  }
+
+  for (const sib of allSubcategories) {
+    const q = sib.path.split("?")[1];
+    if (!q) continue;
+    for (const k of new URLSearchParams(q).keys()) {
+      if (!subParams.has(k) && currentParams.has(k)) return false;
+    }
+  }
+  return true;
+}
+
+function collectSiblingQueryKeys(
+  subPath: string,
+  subBase: string,
+  allSubcategories: NavSubcategoryItem[]
+): Set<string> {
+  const keys = new Set<string>();
+  for (const sib of allSubcategories) {
+    if (sib.path === subPath) continue;
+    const [sibBase, sibQ] = sib.path.split("?");
+    if (sibBase === subBase && sibQ) {
+      for (const k of new URLSearchParams(sibQ).keys()) {
+        keys.add(k);
+      }
+    }
+  }
+  return keys;
 }
 
 /**
@@ -466,51 +496,22 @@ function checkSubcategoryActive(
   const [subBase, subQueryStr] = subPath.split("?");
   const currentParams = new URLSearchParams(searchParamsString);
 
-  // 1) subPath에 쿼리 파라미터가 있는 경우
   if (subQueryStr) {
-    if (pathname !== subBase) return false;
-    const subParams = new URLSearchParams(subQueryStr);
-    for (const [k, v] of subParams.entries()) {
-      if (currentParams.get(k) !== v) return false;
-    }
-    // subParams에 없는 추가 필터 키가 sibling에 정의되어 있는데 currentParams에 다른 값으로 들어있다면 비활성
-    const siblingFilterKeys = new Set<string>();
-    for (const sib of allSubcategories) {
-      const q = sib.path.split("?")[1];
-      if (q) {
-        for (const k of new URLSearchParams(q).keys()) {
-          if (!subParams.has(k)) siblingFilterKeys.add(k);
-        }
-      }
-    }
-    for (const extraKey of siblingFilterKeys) {
-      if (currentParams.has(extraKey)) return false;
-    }
-    return true;
+    return checkQuerySubcategoryMatch(
+      subBase,
+      subQueryStr,
+      allSubcategories,
+      pathname,
+      currentParams
+    );
   }
 
-  // 2) subPath에 쿼리 파라미터가 없는 경우 (예: '전체 광고' /consume/major-league)
-  // 만약 다른 형제 항목들이 쿼리 파라미터로 분기한다면, 현재 URL에 해당 쿼리가 없을 때만 활성화
-  const siblingQueryKeys = new Set<string>();
-  for (const sib of allSubcategories) {
-    if (sib.path === subPath) continue;
-    const [sibBase, sibQ] = sib.path.split("?");
-    if (sibBase === subBase && sibQ) {
-      for (const k of new URLSearchParams(sibQ).keys()) {
-        siblingQueryKeys.add(k);
-      }
-    }
-  }
-
+  const siblingQueryKeys = collectSiblingQueryKeys(subPath, subBase, allSubcategories);
   if (siblingQueryKeys.size > 0) {
     if (pathname !== subBase) return false;
-    for (const k of siblingQueryKeys) {
-      if (currentParams.has(k)) return false;
-    }
-    return true;
+    return Array.from(siblingQueryKeys).every((k) => !currentParams.has(k));
   }
 
-  // 3) 경로 기반 서브카테고리 (예: /prediction/economy/stocks vs /prediction/economy)
   const hasDeeperSiblingMatch = allSubcategories.some((sib) => {
     if (sib.path === subPath) return false;
     const sibBase = sib.path.split("?")[0] ?? sib.path;

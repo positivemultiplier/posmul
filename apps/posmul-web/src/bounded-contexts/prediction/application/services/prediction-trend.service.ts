@@ -1,4 +1,3 @@
-
 import { supabaseAdmin as supabase } from "../../../../lib/supabase/admin";
 
 interface PredictionRow {
@@ -57,7 +56,7 @@ export class PredictionTrendService {
 
             // 4. 스냅샷 데이터 생성 및 저장
             let processed = 0;
-            let errors = 0;
+            const errors = 0;
 
             const snapshots = [];
             const timestamp = new Date().toISOString();
