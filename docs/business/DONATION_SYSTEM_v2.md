@@ -152,3 +152,4 @@ CREATE TABLE IF NOT EXISTS donation.dream_repayments (
    - 청년 꿈 프로젝트 신청 및 자발적 상환 명예의 전당 연동.
 4. **Phase 4 (기업 ESG 파트너십 및 ODA 연계)**:
    - 한국 대기업(가전/식품) 물품 조달 계약 및 MoneyWave 3단계 펀드 풀 확보.
+
