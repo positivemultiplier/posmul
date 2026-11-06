@@ -68,12 +68,26 @@ const PILLARS = [
   },
 ];
 
-// 현재 펀딩 진행 중인 대표 추천 물품 프로젝트 (실제 DB 프로젝트 연동 및 상세보기 지원)
+// 현재 펀딩 진행 중인 대표 추천 물품 프로젝트 (실제 DB 프로젝트 연동 및 기부처 선택 지원)
 const FEATURED_GOODS_PROJECTS = [
+  {
+    id: "6daddc20-92cc-4f09-94d2-3b6d3d4f1991",
+    title: "지역아동센터 아이들을 위한 따뜻한 신학기 운동화·방한화 나눔",
+    subtitle: "한국 대표 제화사 부산 A제화 직구매 ➔ 보육원·도서분교 아이들 첫 등굣길 선물",
+    manufacturer: "부산 A제화 (Made in Korea 👟)",
+    itemSpec: "키즈 웜 패딩부츠 & 튼튼 운동화",
+    unitPrice: 35000,
+    targetQuantity: 50,
+    currentQuantity: 38,
+    achievementRate: 76,
+    href: "/donation/direct/item/6daddc20-92cc-4f09-94d2-3b6d3d4f1991",
+    badge: "K-제화 수출승수",
+    badgeColor: "bg-fuchsia-950 text-fuchsia-300 border-fuchsia-800",
+  },
   {
     id: "4a56aa1a-b59e-47a2-a260-c6179519d7f5",
     title: "건강한 여름나기를 위한 LG 휘센 에어컨 나눔",
-    subtitle: "한국 대표 가전 LG전자 직구매 ➔ 폭염 취약가구 시원한 여름 선물",
+    subtitle: "한국 대표 가전 LG전자 직구매 ➔ 아동센터·어르신쉼터 시원한 여름 선물",
     manufacturer: "LG Electronics (Made in Korea 🇰🇷)",
     itemSpec: "LG Whisen 벽걸이 고효율 에어컨",
     unitPrice: 850000,
@@ -85,23 +99,9 @@ const FEATURED_GOODS_PROJECTS = [
     badgeColor: "bg-indigo-950 text-indigo-300 border-indigo-800",
   },
   {
-    id: "d69fd152-5416-478a-9112-4c9a99fa15a3",
-    title: "깨끗한 의류 관리를 위한 삼성 세탁기 나눔",
-    subtitle: "삼성전자 고효율 AI 세탁기 ➔ 조손가정·다문화가정 직배송",
-    manufacturer: "Samsung Electronics (K-가전)",
-    itemSpec: "Samsung Bubble Wash AI 세탁기",
-    unitPrice: 750000,
-    targetQuantity: 20,
-    currentQuantity: 12,
-    achievementRate: 60,
-    href: "/donation/direct/item/d69fd152-5416-478a-9112-4c9a99fa15a3",
-    badge: "K-가전 고효율",
-    badgeColor: "bg-purple-950 text-purple-300 border-purple-800",
-  },
-  {
     id: "edeb5889-f979-4f63-a9d9-56fa0529f1e0",
     title: "독거 어르신 100가구에 전하는 철원 오대쌀 햅쌀 나눔",
-    subtitle: "국내 농가 직접구매 ➔ 결식 우려 독거 어르신 따뜻한 밥상 지원",
+    subtitle: "국내 농가 직접구매 ➔ 결식 우려 무료급식소·마을식당 따뜻한 밥상 지원",
     manufacturer: "철원영농조합 (Made in Korea 🌾)",
     itemSpec: "철원 오대쌀 10kg",
     unitPrice: 42000,
@@ -111,6 +111,20 @@ const FEATURED_GOODS_PROJECTS = [
     href: "/donation/direct/item/edeb5889-f979-4f63-a9d9-56fa0529f1e0",
     badge: "K-푸드 농가상생",
     badgeColor: "bg-emerald-950 text-emerald-300 border-emerald-800",
+  },
+  {
+    id: "d69fd152-5416-478a-9112-4c9a99fa15a3",
+    title: "깨끗한 의류 관리를 위한 삼성 세탁기 나눔",
+    subtitle: "삼성전자 고효율 AI 세탁기 ➔ 청소년 쉼터·모자원 직배송 설치",
+    manufacturer: "Samsung Electronics (K-가전)",
+    itemSpec: "Samsung Bubble Wash AI 세탁기",
+    unitPrice: 750000,
+    targetQuantity: 20,
+    currentQuantity: 12,
+    achievementRate: 60,
+    href: "/donation/direct/item/d69fd152-5416-478a-9112-4c9a99fa15a3",
+    badge: "K-가전 고효율",
+    badgeColor: "bg-purple-950 text-purple-300 border-purple-800",
   },
 ];
 
