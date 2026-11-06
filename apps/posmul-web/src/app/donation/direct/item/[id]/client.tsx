@@ -2,164 +2,293 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MotionDiv, fadeInVariants } from "@/shared/ui/components/motion/MotionComponents";
-import { SpotlightCard } from "@/shared/ui/components/motion/SpotlightCard";
+import {
+  ArrowLeft,
+  Package,
+  Heart,
+  Sparkles,
+  ShieldCheck,
+  CheckCircle2,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface FundingProject {
-    id: string;
-    title: string;
-    description: string;
-    category: string;
-    target_beneficiary: string;
-    product_name: string;
-    manufacturer: string;
-    unit_price: number;
-    target_quantity: number;
-    current_quantity: number;
-    achievementRate: number;
-    images: string[];
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  target_beneficiary: string;
+  product_name: string;
+  manufacturer: string;
+  unit_price: number;
+  target_quantity: number;
+  current_quantity: number;
+  achievementRate: number;
+  images: string[];
 }
 
 interface DirectDonationDetailClientProps {
-    project: FundingProject;
-    isLoggedIn: boolean;
-    currentUserId: string | null;
+  project: FundingProject;
+  isLoggedIn: boolean;
+  currentUserId: string | null;
 }
 
+const CATEGORY_ICON_MAP: Record<string, string> = {
+  electronics: "🔌",
+  food: "🍚",
+  clothing: "👕",
+  education: "📚",
+  medical: "💊",
+};
+
 export function DirectDonationDetailClient({
-    project,
-    isLoggedIn,
-    currentUserId,
+  project,
+  isLoggedIn,
+  currentUserId,
 }: DirectDonationDetailClientProps) {
-    const [donateQuantity, setDonateQuantity] = useState(1);
+  const [donateQuantity, setDonateQuantity] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
-    const handleQuantityChange = (delta: number) => {
-        setDonateQuantity(prev => Math.max(1, prev + delta));
-    };
+  const handleQuantityChange = (delta: number) => {
+    setDonateQuantity((prev) => Math.max(1, prev + delta));
+  };
 
-    return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 pb-20">
-            {/* Short Hero / Header */}
-            <div className="bg-purple-900 text-white py-8 px-4">
-                <div className="max-w-6xl mx-auto">
-                    <Link href="/donation/direct" className="text-purple-200 hover:text-white text-sm flex items-center gap-1 mb-4">
-                        ← 목록으로 돌아가기
-                    </Link>
-                    <div className="flex items-center gap-3">
-                        <span className="bg-white/20 px-3 py-1 rounded-full text-xs font-bold backdrop-blur-sm">
-                            {project.manufacturer}
-                        </span>
-                        <span className="text-purple-200 text-sm">Global Top Tier 🏆</span>
-                    </div>
-                </div>
-            </div>
+  const handleDonate = () => {
+    setIsSubmitting(true);
+    setTimeout(() => {
+      setIsSubmitting(false);
+      setIsSuccess(true);
+    }, 600);
+  };
 
-            <div className="max-w-6xl mx-auto px-4 -mt-8">
-                <SpotlightCard className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-0 lg:gap-8">
-                        {/* Left: Image & Story */}
-                        <div className="p-8 lg:p-12 bg-gray-50 dark:bg-gray-800/50">
-                            {/* Image Placeholder */}
-                            <div className="aspect-video bg-gray-200 dark:bg-gray-700 rounded-2xl mb-8 flex items-center justify-center text-4xl text-gray-400">
-                                Image
-                            </div>
+  const totalAmount = donateQuantity * project.unit_price;
+  const categoryIcon = CATEGORY_ICON_MAP[project.category] || "📦";
 
-                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">프로젝트 이야기</h2>
-                            <p className="text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
-                                {project.description}
-                            </p>
-
-                            <div className="mt-8 p-6 bg-purple-50 dark:bg-purple-900/10 rounded-2xl border border-purple-100 dark:border-purple-800/50">
-                                <h3 className="font-bold text-purple-900 dark:text-purple-100 mb-2">물품 정보</h3>
-                                <ul className="space-y-2 text-sm text-gray-700 dark:text-gray-300">
-                                    <li className="flex justify-between">
-                                        <span className="text-gray-500">품명</span>
-                                        <span className="font-medium">{project.product_name}</span>
-                                    </li>
-                                    <li className="flex justify-between">
-                                        <span className="text-gray-500">제조사</span>
-                                        <span className="font-medium">{project.manufacturer}</span>
-                                    </li>
-                                    <li className="flex justify-between">
-                                        <span className="text-gray-500">단가</span>
-                                        <span className="font-medium w-fit bg-purple-100 dark:bg-purple-800 px-2 rounded">
-                                            {project.unit_price.toLocaleString()}원
-                                        </span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-
-                        {/* Right: Funding Status & Action */}
-                        <div className="p-8 lg:p-12 flex flex-col justify-center">
-                            <h1 className="text-3xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4 leading-tight">
-                                {project.title}
-                            </h1>
-                            <p className="text-xl text-gray-500 mb-8">
-                                {project.target_beneficiary}에게 전달됩니다.
-                            </p>
-
-                            {/* Progress */}
-                            <div className="mb-10">
-                                <div className="flex justify-between items-end mb-2">
-                                    <div className="text-4xl font-bold text-purple-600 dark:text-purple-400">
-                                        {project.achievementRate}%
-                                    </div>
-                                    <div className="text-gray-500 font-medium">
-                                        <strong className="text-gray-900 dark:text-white">{project.current_quantity}</strong>
-                                        <span className="mx-1">/</span>
-                                        {project.target_quantity}개 달성
-                                    </div>
-                                </div>
-                                <div className="h-4 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full"
-                                        style={{ width: `${project.achievementRate}%` }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Action Area */}
-                            <div className="bg-gray-50 dark:bg-gray-900 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-                                <div className="mb-4 text-center text-sm text-gray-500">
-                                    얼마나 선물하시겠습니까?
-                                </div>
-
-                                <div className="flex items-center justify-center gap-6 mb-8">
-                                    <button
-                                        onClick={() => handleQuantityChange(-1)}
-                                        className="w-12 h-12 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center text-xl font-bold hover:bg-gray-50 active:scale-95 transition-all"
-                                    >
-                                        -
-                                    </button>
-                                    <div className="text-3xl font-bold tabular-nums w-16 text-center">
-                                        {donateQuantity}
-                                    </div>
-                                    <button
-                                        onClick={() => handleQuantityChange(1)}
-                                        className="w-12 h-12 rounded-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 flex items-center justify-center text-xl font-bold hover:bg-gray-50 active:scale-95 transition-all"
-                                    >
-                                        +
-                                    </button>
-                                </div>
-
-                                <div className="flex justify-between items-center mb-6 px-4 py-3 bg-white dark:bg-gray-800 rounded-xl">
-                                    <span className="text-gray-500">총 후원 금액</span>
-                                    <span className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                                        {(donateQuantity * project.unit_price).toLocaleString()}원
-                                    </span>
-                                </div>
-
-                                <button
-                                    className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xl font-bold py-4 rounded-xl hover:shadow-lg hover:shadow-purple-500/30 transform hover:-translate-y-0.5 transition-all active:scale-95"
-                                >
-                                    선물하기
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </SpotlightCard>
-            </div>
+  return (
+    <div className="min-h-screen bg-[#090b12] text-slate-100 pb-24">
+      {/* Top Navigation Bar */}
+      <div className="border-b border-slate-800/80 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
+          <Link
+            href="/donation/direct"
+            className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>K-물품 직접기부 목록</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/30">
+              영국식 Tied Aid · 수출 승수
+            </span>
+          </div>
         </div>
-    );
+      </div>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-8">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Left Column (7 cols): Visual & Story */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* Visual Hero Card */}
+            <div className="relative rounded-3xl overflow-hidden border border-slate-800 bg-gradient-to-br from-purple-950/40 via-slate-900 to-slate-950 p-8 sm:p-10 shadow-2xl">
+              <div className="absolute top-4 right-4 flex items-center gap-2">
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-900/90 text-purple-300 border border-purple-500/30">
+                  {project.manufacturer}
+                </span>
+              </div>
+
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-purple-500/20 to-indigo-500/20 border border-purple-500/30 flex items-center justify-center text-5xl mb-6 shadow-inner">
+                  {categoryIcon}
+                </div>
+                <span className="text-xs font-semibold tracking-wider text-purple-400 uppercase mb-2">
+                  K-Impact Goods Direct Funding
+                </span>
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white max-w-lg leading-snug">
+                  {project.title}
+                </h1>
+                <p className="mt-3 text-sm text-slate-400 max-w-md">
+                  수혜 대상: <strong className="text-slate-200">{project.target_beneficiary}</strong>
+                </p>
+              </div>
+
+              {/* Tied Aid Badge Banner */}
+              <div className="mt-6 p-4 rounded-2xl bg-slate-950/70 border border-slate-800/90 flex items-start gap-3.5">
+                <Sparkles className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+                <div className="text-xs text-slate-300 space-y-1">
+                  <p className="font-semibold text-amber-300">
+                    K-물품 직접기부의 경제적 승수 효과 (Tied Aid Model)
+                  </p>
+                  <p className="text-slate-400 leading-relaxed">
+                    단순 현금 지원이 아닌 대한민국 제조사의 실물 물품을 직구매하여 전달합니다. 취약계층 구호와 함께 국내 제조기업 매출 및 수출 경쟁력 강화로 이어집니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Story & Description */}
+            <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8 space-y-4">
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <Heart className="w-5 h-5 text-rose-400" />
+                <span>프로젝트 이야기</span>
+              </h2>
+              <p className="text-sm text-slate-300 leading-relaxed whitespace-pre-wrap">
+                {project.description}
+              </p>
+            </div>
+
+            {/* Product Spec Table */}
+            <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 sm:p-8 space-y-4">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <Package className="w-5 h-5 text-purple-400" />
+                <span>물품 상세 스펙 & 직구매 공급 정보</span>
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-slate-500 block mb-1">지원 품목명</span>
+                  <span className="font-semibold text-slate-200 text-sm">{project.product_name}</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-slate-500 block mb-1">제조사 / 공급처</span>
+                  <span className="font-semibold text-slate-200 text-sm">{project.manufacturer}</span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-slate-500 block mb-1">물품 개당 단가</span>
+                  <span className="font-bold text-purple-300 text-sm">
+                    {project.unit_price.toLocaleString()}원 (또는 PMC)
+                  </span>
+                </div>
+                <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/80">
+                  <span className="text-slate-500 block mb-1">목표 수량 / 지원 현황</span>
+                  <span className="font-bold text-white text-sm">
+                    {project.current_quantity} / {project.target_quantity} 개 달성
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column (5 cols): Funding Progress & Donation Action */}
+          <div className="lg:col-span-5 space-y-6">
+            <div className="sticky top-24 rounded-3xl border border-purple-500/30 bg-gradient-to-b from-slate-900/90 via-slate-900/70 to-slate-950 p-6 sm:p-8 shadow-2xl space-y-6">
+              {/* Progress Block */}
+              <div>
+                <div className="flex justify-between items-baseline mb-2">
+                  <span className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-indigo-300">
+                    {project.achievementRate}% 달성
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    목표 <strong className="text-slate-200">{project.target_quantity}</strong>개 중{" "}
+                    <strong className="text-purple-300">{project.current_quantity}</strong>개 완료
+                  </span>
+                </div>
+                <div className="h-3 bg-slate-800/90 rounded-full overflow-hidden p-0.5">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-purple-500 via-indigo-500 to-fuchsia-500 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, project.achievementRate)}%` }}
+                    transition={{ duration: 0.8, ease: "easeOut" }}
+                  />
+                </div>
+              </div>
+
+              {/* Quantity Selector */}
+              <div className="p-5 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-4">
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>선물할 물품 수량</span>
+                  <span className="text-purple-300 font-medium">개당 {project.unit_price.toLocaleString()}원</span>
+                </div>
+
+                <div className="flex items-center justify-between gap-4">
+                  <button
+                    onClick={() => handleQuantityChange(-1)}
+                    disabled={donateQuantity <= 1}
+                    className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-700/80 text-xl font-bold text-slate-200 hover:bg-slate-800 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-all"
+                  >
+                    -
+                  </button>
+                  <div className="text-center">
+                    <span className="text-3xl font-extrabold text-white tabular-nums">
+                      {donateQuantity}
+                    </span>
+                    <span className="text-xs text-slate-400 ml-1.5">개</span>
+                  </div>
+                  <button
+                    onClick={() => handleQuantityChange(1)}
+                    className="w-11 h-11 rounded-xl bg-slate-900 border border-slate-700/80 text-xl font-bold text-slate-200 hover:bg-slate-800 flex items-center justify-center transition-all"
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between">
+                  <span className="text-xs text-slate-400">총 후원 금액</span>
+                  <div className="text-right">
+                    <div className="text-xl font-extrabold text-purple-300">
+                      {totalAmount.toLocaleString()}원
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      또는 {totalAmount.toLocaleString()} PMC 결제
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit Button */}
+              <AnimatePresence mode="wait">
+                {isSuccess ? (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="p-5 rounded-2xl bg-emerald-950/70 border border-emerald-500/40 text-center space-y-2"
+                  >
+                    <CheckCircle2 className="w-8 h-8 text-emerald-400 mx-auto" />
+                    <p className="font-bold text-emerald-200 text-sm">
+                      {donateQuantity}개의 {project.product_name} 기부가 접수되었습니다!
+                    </p>
+                    <p className="text-xs text-emerald-300/80">
+                      시민주권자님의 따뜻한 동행이 대한민국 제조사와 수혜 이웃 모두에게 큰 힘이 됩니다.
+                    </p>
+                    <button
+                      onClick={() => setIsSuccess(false)}
+                      className="mt-3 text-xs text-slate-300 underline hover:text-white"
+                    >
+                      추가로 선물하기
+                    </button>
+                  </motion.div>
+                ) : (
+                  <button
+                    onClick={handleDonate}
+                    disabled={isSubmitting}
+                    className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-base shadow-lg shadow-purple-600/30 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
+                  >
+                    {isSubmitting ? (
+                      <span>처리 중...</span>
+                    ) : (
+                      <>
+                        <Heart className="w-5 h-5 fill-current" />
+                        <span>{project.product_name} 선물하기</span>
+                      </>
+                    )}
+                  </button>
+                )}
+              </AnimatePresence>
+
+              {/* Transparency Notice */}
+              <div className="space-y-2.5 pt-2 border-t border-slate-800/80 text-xs text-slate-400">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>제조사 직접 발주 및 직배송 설치 보증</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span>수혜자 수령 인수증 및 실물 사진 100% 투명 공개</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
