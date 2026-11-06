@@ -30,25 +30,40 @@ export function HeroLandingSection({ totalPool, totalUsers }: HeroLandingSection
           <span>AI 시대 직접민주주의 · 의사결정 트레이닝 플랫폼</span>
         </div>
 
-        {/* 🌟 핵심 브랜드 카피 (헤드라인) */}
-        <div className="space-y-4">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-[1.25]">
-            오늘의 당신은 과거 수많은 <span className="text-blue-400 underline decoration-blue-500/40 underline-offset-8">선택의 합</span>입니다.
+        {/* 🌟 핵심 브랜드 카피 (헤드라인: '선택'과 '훈련'에 확실한 시각적 포인트) */}
+        <div className="space-y-5">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-[1.3]">
+            오늘의 당신은 과거 수많은{" "}
+            <span className="relative inline-block px-2 py-0.5 rounded-xl bg-blue-500/10 border border-blue-400/40 text-blue-400 font-black shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+              선택
+            </span>
+            의 합입니다.
           </h1>
 
           <p className="text-lg sm:text-xl md:text-2xl font-bold text-slate-400">
-            지난 선택들에 <span className="text-rose-400 font-extrabold">후회</span>는 없으신가요?
+            지난 선택들에 <span className="text-slate-200 border-b-2 border-rose-500/60 pb-0.5">후회는 없으신가요?</span>
           </p>
 
-          <p className="text-xl sm:text-2xl md:text-3xl font-black bg-gradient-to-r from-blue-400 via-indigo-200 to-purple-400 bg-clip-text text-transparent leading-relaxed">
-            합리적 선택은 타고나는 것이 아니라, 훈련되는 것입니다.
-          </p>
+          <div className="pt-2">
+            <p className="text-xl sm:text-2xl md:text-4xl font-black text-slate-100 leading-snug">
+              합리적 <span className="text-blue-400 font-black">선택</span>은 타고나는 것이 아니라,{" "}
+              <br className="hidden sm:inline" />
+              <span className="relative inline-block mt-1 sm:mt-0 px-3 py-1 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-blue-500/20 border-2 border-emerald-400/60 text-emerald-300 font-black shadow-[0_0_30px_rgba(16,185,129,0.35)] animate-pulse">
+                훈련
+              </span>
+              되는 것입니다.
+            </p>
+          </div>
         </div>
 
         {/* 바디 설명 */}
-        <div className="max-w-2xl mx-auto pt-2 space-y-2">
+        <div className="max-w-2xl mx-auto pt-3 space-y-2">
           <p className="text-base sm:text-lg font-bold text-slate-200">
-            세상의 흐름을 예측하고 올바른 곳에 가치를 흘려보내는 훈련,
+            세상의 흐름을 예측하고 올바른 곳에 가치를 흘려보내는{" "}
+            <span className="text-emerald-400 font-extrabold underline decoration-emerald-500/50 underline-offset-4">
+              훈련
+            </span>
+            ,
           </p>
           <p className="text-lg sm:text-xl font-black text-amber-400 tracking-wide">
             PosMul(긍정승수)에서 지금 시작하세요.
