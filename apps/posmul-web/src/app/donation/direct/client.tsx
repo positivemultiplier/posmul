@@ -137,11 +137,17 @@ function DirectDonationContent({ projects }: DirectDonationClientProps) {
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
-            <button
-              onClick={() => setIsWishlistModalOpen(true)}
+            <Link
+              href="/donation/direct/wishlist"
               className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 text-white font-bold text-xs shadow-md shadow-purple-600/30 transition-all active:scale-95 flex items-center justify-center gap-1.5"
             >
-              <span>우리 시설 물품 신청하기 🎁</span>
+              <span>🎁 K-위시리스트 포털 가기</span>
+            </Link>
+            <button
+              onClick={() => setIsWishlistModalOpen(true)}
+              className="px-3.5 py-2.5 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/40 text-purple-200 font-bold text-xs transition-colors"
+            >
+              간편 신청
             </button>
             <button
               onClick={() => setIsAdminModalOpen(true)}

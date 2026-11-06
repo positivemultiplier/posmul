@@ -342,3 +342,4 @@ export function WishlistRequestModal({
     </div>
   );
 }
+

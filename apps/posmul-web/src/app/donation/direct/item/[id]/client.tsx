@@ -17,6 +17,13 @@ import {
   Zap,
   PlusCircle,
   FileCheck,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  Calendar,
+  Users,
+  FileText,
+  Mail,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { RecipientCenter } from "./page";
@@ -65,6 +72,11 @@ export function DirectDonationDetailClient({
     recipientList[0]?.id || ""
   );
 
+  // 인라인 상세 스토리 펼침 상태 (기본적으로 첫 번째 기부처는 펼쳐둠)
+  const [expandedRecipientId, setExpandedRecipientId] = useState<string | null>(
+    recipientList[0]?.id || null
+  );
+
   const [myBalance, setMyBalance] = useState<number>(510000);
   const [donateAmount, setDonateAmount] = useState<number>(10000);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -93,6 +105,11 @@ export function DirectDonationDetailClient({
     setDonateAmount(Math.min(myBalance, remainingAmount));
   };
 
+  const handleToggleExpand = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedRecipientId((prev) => (prev === id ? null : id));
+  };
+
   const handleExecuteDonation = async () => {
     if (!selectedRecipient || donateAmount <= 0) return;
     if (donateAmount > myBalance) {
@@ -102,16 +119,14 @@ export function DirectDonationDetailClient({
 
     setIsSubmitting(true);
 
-    // 1. 서버 DB에 기부액 업데이트 시도
+    // 서버 DB에 기부액 누적 시도
     donateToWishlist(selectedRecipient.id, donateAmount).catch((err) =>
       console.warn("Server update warning:", err)
     );
 
     setTimeout(() => {
-      // 2. 내 잔고 차감
       setMyBalance((prev) => Math.max(0, prev - donateAmount));
 
-      // 3. 클라이언트 실시간 반영
       let isFullyFunded = false;
       setRecipientList((prevList) =>
         prevList.map((rec) => {
@@ -155,16 +170,24 @@ export function DirectDonationDetailClient({
             className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-white transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>K-물품 직접기부 목록</span>
+            <span>K-물품 직접기부 허브</span>
           </Link>
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Wishlist Application CTA */}
+            {/* Link to Dedicated Wishlist Portal */}
+            <Link
+              href="/donation/direct/wishlist"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-purple-500/30 hover:border-purple-500/60 text-xs font-bold text-purple-200 transition-all shadow-sm"
+            >
+              <span>🎁 K-위시리스트 포털</span>
+            </Link>
+
+            {/* Quick Application Modal CTA */}
             <button
               onClick={() => setIsWishlistModalOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-600/30 border border-purple-500/50 hover:bg-purple-600/50 text-xs font-bold text-purple-200 transition-all shadow-sm active:scale-95"
             >
               <PlusCircle className="w-3.5 h-3.5 text-purple-300" />
-              <span>우리 시설 물품 신청 (Wishlist)</span>
+              <span>물품 신청</span>
             </button>
 
             {/* Admin Verification Modal CTA */}
@@ -173,7 +196,7 @@ export function DirectDonationDetailClient({
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700/80 hover:border-slate-500 text-xs font-semibold text-slate-300 transition-all"
             >
               <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="hidden sm:inline">관리자 검증 게이트</span>
+              <span className="hidden sm:inline">관리자 검증</span>
             </button>
 
             {/* User Balance Badge */}
@@ -208,7 +231,7 @@ export function DirectDonationDetailClient({
                 {project.title}
               </h1>
               <p className="text-xs sm:text-sm text-slate-400">
-                복지시설이 직접 신청(Wishlist)하고 관리자가 검증한 현장에 시민이 PMC를 후원하여 실물을 직배송합니다.
+                복지시설의 상세 스토리와 현장 사진을 확인하고, 마음이 가는 곳에 소액 PMC를 모아 새 제품을 선물하세요.
               </p>
             </div>
           </div>
@@ -219,20 +242,29 @@ export function DirectDonationDetailClient({
               <span>영국식 Tied Aid 수출 승수</span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
-              모금 완료 즉시 한국 제조사({project.manufacturer.split(" ")[0]})에 직발주되어 국내 일자리 및 수출 경쟁력 강화로 이어집니다.
+              100% 모금 완료 시 한국 제조사({project.manufacturer.split(" ")[0]})에 직발주되어 국내 일자리 및 수출 경쟁력 강화로 이어집니다.
             </p>
-            <button
-              onClick={() => setIsWishlistModalOpen(true)}
-              className="w-full py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/40 text-[11px] font-bold text-purple-200 hover:bg-purple-500/30 transition-all flex items-center justify-center gap-1"
-            >
-              <span>+ 이 물품 우리 시설에도 신청하기</span>
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsWishlistModalOpen(true)}
+                className="flex-1 py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/40 text-[11px] font-bold text-purple-200 hover:bg-purple-500/30 transition-all flex items-center justify-center gap-1"
+              >
+                <span>+ 이 물품 신청하기</span>
+              </button>
+              <Link
+                href="/donation/direct/wishlist"
+                className="px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-700 text-[11px] text-slate-400 hover:text-white"
+                title="전국 포털로 이동"
+              >
+                포털
+              </Link>
+            </div>
           </div>
         </div>
 
         {/* Main 2-Column Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column (7 cols): Recipient Center Selection List */}
+          {/* Left Column (7 cols): Recipient Center Selection List with Expandable Deep Stories */}
           <div className="lg:col-span-7 space-y-4">
             <div className="flex items-center justify-between px-1">
               <div>
@@ -241,7 +273,7 @@ export function DirectDonationDetailClient({
                   <span>이 물품을 신청한 검증 복지시설 선택</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  마음이 가는 복지시설을 클릭하여 선택하신 후, 원하는 만큼 PMC를 후원해주세요.
+                  각 시설 카드를 클릭하면 선택되며, [상세 스토리 펼쳐보기]를 누르면 현장 사진과 사연을 확인하실 수 있습니다.
                 </p>
               </div>
               <span className="text-xs text-purple-300 font-medium">
@@ -252,6 +284,7 @@ export function DirectDonationDetailClient({
             <div className="space-y-3.5">
               {recipientList.map((center) => {
                 const isSelected = center.id === selectedRecipientId;
+                const isExpanded = expandedRecipientId === center.id;
                 const percent = Math.min(
                   100,
                   Math.round((center.currentAmount / center.targetAmount) * 100)
@@ -264,14 +297,14 @@ export function DirectDonationDetailClient({
                   <motion.div
                     key={center.id}
                     onClick={() => setSelectedRecipientId(center.id)}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    className={`cursor-pointer rounded-2xl p-5 border transition-all relative overflow-hidden ${
+                    layout
+                    className={`cursor-pointer rounded-3xl p-5 sm:p-6 border transition-all relative overflow-hidden ${
                       isSelected
                         ? "bg-slate-900 border-purple-500 shadow-xl shadow-purple-500/10 ring-1 ring-purple-500"
                         : "bg-slate-900/60 border-slate-800/90 hover:border-slate-700 hover:bg-slate-900/80"
                     }`}
                   >
+                    {/* Active Selection Badge */}
                     {isSelected && (
                       <div className="absolute top-0 right-0 bg-gradient-to-l from-purple-600 to-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1 shadow">
                         <CheckCircle2 className="w-3 h-3" />
@@ -280,11 +313,11 @@ export function DirectDonationDetailClient({
                     )}
 
                     <div className="flex items-start gap-4">
-                      <div className="w-12 h-12 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center text-2xl shrink-0">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-950 border border-slate-800 flex items-center justify-center text-2xl shrink-0 shadow-inner">
                         {center.avatarIcon}
                       </div>
 
-                      <div className="flex-1 min-w-0 space-y-2">
+                      <div className="flex-1 min-w-0 space-y-2.5">
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-extrabold text-base text-white">
@@ -310,12 +343,12 @@ export function DirectDonationDetailClient({
                               </span>
                             )}
                           </div>
-                          <span className="text-[10px] text-emerald-400 font-medium block mt-1">
+                          <span className="text-[11px] text-emerald-400 font-medium block mt-1">
                             ✓ {center.verifiedBadge}
                           </span>
                         </div>
 
-                        {/* Story */}
+                        {/* Brief Story */}
                         <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/40 p-2.5 rounded-xl border border-white/[0.03]">
                           "{center.story}"
                         </p>
@@ -348,8 +381,114 @@ export function DirectDonationDetailClient({
                             />
                           </div>
                         </div>
+
+                        {/* Expandable Deep Story Toggle Button */}
+                        <div className="pt-2 flex items-center justify-between">
+                          <button
+                            type="button"
+                            onClick={(e) => handleToggleExpand(center.id, e)}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-400 hover:text-purple-300 bg-purple-500/10 hover:bg-purple-500/20 px-3 py-1.5 rounded-xl border border-purple-500/30 transition-all"
+                          >
+                            <FileText className="w-3.5 h-3.5" />
+                            <span>
+                              {isExpanded
+                                ? "시설 상세 스토리 접기"
+                                : "🏛️ 시설 상세 스토리 & 현장 정보 더보기"}
+                            </span>
+                            {isExpanded ? (
+                              <ChevronUp className="w-3.5 h-3.5" />
+                            ) : (
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            )}
+                          </button>
+
+                          <span className="text-[11px] text-slate-500">
+                            {center.targetQuantity}개 신청됨
+                          </span>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Expandable Story Drawer (Inline Accordion) */}
+                    <AnimatePresence>
+                      {isExpanded && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="mt-5 pt-5 border-t border-slate-800 space-y-4"
+                        >
+                          {/* 1. Facility Specs & License Grid */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                            <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-start gap-2.5">
+                              <Calendar className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="text-slate-500 block text-[10px]">설립 및 연혁</span>
+                                <span className="font-semibold text-slate-200">
+                                  {center.establishedYear || "공식 인가 복지시설"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-start gap-2.5">
+                              <Users className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="text-slate-500 block text-[10px]">수혜 인원 규모</span>
+                                <span className="font-semibold text-slate-200">
+                                  {center.beneficiaryCount || "상시 수혜 취약계층"}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="sm:col-span-2 p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-start gap-2.5">
+                              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                              <div>
+                                <span className="text-slate-500 block text-[10px]">지자체 인가 및 고유번호</span>
+                                <span className="font-semibold text-emerald-300">
+                                  {center.licenseNumber || "보건복지부 / 지자체 인가 공인 복지시설"}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* 2. Current Facility Condition */}
+                          {center.currentFacilityStatus && (
+                            <div className="p-3.5 rounded-2xl bg-amber-950/20 border border-amber-500/30 space-y-1 text-xs">
+                              <span className="font-bold text-amber-300 flex items-center gap-1.5">
+                                <Info className="w-3.5 h-3.5" />
+                                현재 현장의 노후 실태
+                              </span>
+                              <p className="text-slate-300 leading-relaxed text-[11px]">
+                                {center.currentFacilityStatus}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* 3. Director's Heartfelt Letter */}
+                          {center.directorLetter && (
+                            <div className="p-4 rounded-2xl bg-purple-950/20 border border-purple-500/30 space-y-2 text-xs">
+                              <span className="font-bold text-purple-300 flex items-center gap-1.5">
+                                <Mail className="w-3.5 h-3.5" />
+                                시설장 / 담당 복지사의 진솔한 편지
+                              </span>
+                              <p className="text-slate-300 leading-relaxed whitespace-pre-wrap text-[11px]">
+                                {center.directorLetter}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* 4. Transparency Commitment */}
+                          <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 flex items-start gap-2">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
+                            <span>
+                              {center.transparencyPledge ||
+                                "100% 모금 달성 시 제조사 본사 직발주 배송 및 수령 인수증이 즉시 투명하게 공개됩니다."}
+                            </span>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 );
               })}
@@ -552,9 +691,7 @@ export function DirectDonationDetailClient({
         defaultProjectId={project.id}
         defaultProductName={project.product_name}
         defaultManufacturer={project.manufacturer}
-        onSubmitted={() => {
-          // 필요 시 리프레시
-        }}
+        onSubmitted={() => {}}
       />
 
       {/* Admin Verification Modal */}
@@ -562,7 +699,6 @@ export function DirectDonationDetailClient({
         isOpen={isAdminModalOpen}
         onClose={() => setIsAdminModalOpen(false)}
         onApproved={() => {
-          // 승인 시 새로고침
           window.location.reload();
         }}
       />

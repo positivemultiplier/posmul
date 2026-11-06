@@ -15,9 +15,15 @@ export interface RecipientCenter {
   currentAmount: number;
   verifiedBadge: string;
   avatarIcon: string;
+  establishedYear?: string;
+  beneficiaryCount?: string;
+  licenseNumber?: string;
+  directorLetter?: string;
+  currentFacilityStatus?: string;
+  transparencyPledge?: string;
 }
 
-// 물품별/카테고리별 맞춤 희망 기부처 프리셋 사전 (Fallback 겸 기본 데이터)
+// 물품별/카테고리별 맞춤 희망 기부처 프리셋 사전 (풍부한 상세 스토리 포함)
 const RECIPIENTS_CATALOG: Record<string, RecipientCenter[]> = {
   // 1. LG 휘센 에어컨 (4a56aa1a-...)
   "4a56aa1a-b59e-47a2-a260-c6179519d7f5": [
@@ -33,6 +39,12 @@ const RECIPIENTS_CATALOG: Record<string, RecipientCenter[]> = {
       currentAmount: 620000,
       verifiedBadge: "보건복지부 인가 아동복지시설",
       avatarIcon: "👧",
+      establishedYear: "2012년 설립 (14년차 공익시설)",
+      beneficiaryCount: "맞벌이·한부모 가정 아동 35명 상시 이용",
+      licenseNumber: "서울시 은평구청 아동복지시설 신고 제2012-08호",
+      directorLetter: "안녕하세요, 햇살지역아동센터 김영희 센터장입니다. 저희 센터는 학교 수업이 끝난 후 부모님이 일터에서 돌아오실 때까지 아이들이 매일 6시간 이상 숙제하고 밥을 먹는 제2의 가정입니다. 15년 전 기증받은 구형 에어컨이 올해 완전히 멈춰버려 선풍기 2대로 35명의 아이들이 땀을 뻘뻘 흘리고 있습니다. 시민 여러분의 따뜻한 손길로 아이들에게 시원한 여름을 선물해주세요.",
+      currentFacilityStatus: "현재 15년 된 구형 냉방기 고장으로 실내 온도 32도 육박, 선풍기 2대로 임시 대응 중",
+      transparencyPledge: "100% 모금 달성 즉시 LG전자 본사 설치 기사님의 시공 사진과 아이들이 직접 쓴 감사 편지를 7일 이내에 증빙으로 공개합니다.",
     },
     {
       id: "rec-air-002",
@@ -46,6 +58,12 @@ const RECIPIENTS_CATALOG: Record<string, RecipientCenter[]> = {
       currentAmount: 780000,
       verifiedBadge: "지자체 지정 무더위 쉼터",
       avatarIcon: "👵",
+      establishedYear: "2015년 개소 (지자체 지정 쉼터)",
+      beneficiaryCount: "산골마을 홀몸 어르신 45명 일일 이용",
+      licenseNumber: "강원도 춘천시 노인여가복지시설 제2015-19호",
+      directorLetter: "마을에 홀로 계신 80~90대 어르신들께서 낮 동안 더위를 식히러 오시는 유일한 공간입니다. 기존 에어컨이 4등급이라 전기요금이 두려워 어르신들이 켜지도 못하셨습니다. 인버터 1등급 에어컨이 생기면 전기료 걱정 없이 건강하게 폭염을 나실 수 있습니다.",
+      currentFacilityStatus: "노후 4등급 구형 에어컨으로 누진세 부담 극심, 절전으로 인해 실내 환기 부족",
+      transparencyPledge: "설치 완료 즉시 어르신들의 시원한 쉼터 현장 사진과 지자체 설치 검수표를 등록합니다.",
     },
     {
       id: "rec-air-003",
@@ -59,6 +77,12 @@ const RECIPIENTS_CATALOG: Record<string, RecipientCenter[]> = {
       currentAmount: 340000,
       verifiedBadge: "사회복지법인 공인 기관",
       avatarIcon: "🌱",
+      establishedYear: "2020년 설립 (자립청년 둥지)",
+      beneficiaryCount: "만 18세 보호종료 청년 8명 거주",
+      licenseNumber: "사회복지법인 디딤돌 재단 공인 제2020-03호",
+      directorLetter: "보육원을 퇴소해 세상에 첫발을 디딘 청년들이 취업을 준비하며 함께 사는 공간입니다. 거실 냉방이 제대로 되지 않아 공부와 휴식에 큰 어려움이 있었습니다. 청년들의 꿈을 응원해주세요.",
+      currentFacilityStatus: "거실 냉방기 부재로 각 방 이동식 소형 냉풍기로 버티는 실정",
+      transparencyPledge: "청년들의 자립 공부방 에어컨 설치 후 영수증 및 직발주 검수서를 투명 공개합니다.",
     },
   ],
 
@@ -76,6 +100,12 @@ const RECIPIENTS_CATALOG: Record<string, RecipientCenter[]> = {
       currentAmount: 455000,
       verifiedBadge: "보건복지부 인가 양육시설",
       avatarIcon: "👟",
+      establishedYear: "1998년 설립 (28년 전통 양육시설)",
+      beneficiaryCount: "원아 28명 (초등학생 15명 등하교)",
+      licenseNumber: "부산광역시 사하구 아동복지시설 인가 제1998-02호",
+      directorLetter: "아이들은 정말 빠르게 자랍니다. 한 해 사이에 발이 20mm씩 훌쩍 커서 작아진 신발에 발가락을 웅크리고 다니는 아이들을 볼 때마다 마음이 아팠습니다. 한국 제화 기술로 만든 튼튼하고 예쁜 새 신발을 신고 씩씩하게 등교할 수 있도록 선물해주세요.",
+      currentFacilityStatus: "원아 15명 중 11명이 발에 맞지 않는 작아진 신발 착용 중",
+      transparencyPledge: "새 신발을 신은 아이들의 환한 발걸음 사진과 치수별 개별 지급 수령증을 공개합니다.",
     },
     {
       id: "rec-shoes-002",
@@ -89,6 +119,12 @@ const RECIPIENTS_CATALOG: Record<string, RecipientCenter[]> = {
       currentAmount: 175000,
       verifiedBadge: "교육청 지정 도서벽지 학교",
       avatarIcon: "🏝️",
+      establishedYear: "1983년 개교 (도서벽지 분교)",
+      beneficiaryCount: "전교생 8명 매일 왕복 4km 도보 통학",
+      licenseNumber: "전라남도 신안교육지원청 지정 분교장",
+      directorLetter: "저희 분교 아이들은 통학버스가 닿지 않아 흙길과 갯바위 고갯길을 매일 걸어서 다닙니다. 비가 오거나 눈이 오면 신발이 젖고 미끄러져 다치기 십상입니다. 접지력이 좋고 따뜻한 국산 방한 운동화는 아이들의 안전한 통학길을 지켜주는 가장 큰 방패입니다.",
+      currentFacilityStatus: "도보 통학로 비포장 구간 2.5km, 마모된 운동화 착용으로 미끄럼 사고 우려",
+      transparencyPledge: "섬마을 분교장 선생님의 신발 전달식 및 아이들의 착용 사진을 등록합니다.",
     },
   ],
 };
@@ -176,6 +212,12 @@ export default async function DirectDonationDetailPage(props: { params: Promise<
         currentAmount: w.current_funded_amount || 0,
         verifiedBadge: "보건복지부 / 고유번호증 공인 검증 완료 ✓",
         avatarIcon: targetProject.category === "clothing" ? "👟" : targetProject.category === "food" ? "🍚" : "🏢",
+        establishedYear: "공식 인가 복지시설",
+        beneficiaryCount: `신청 수량: ${w.needed_quantity}개 수혜 예정`,
+        licenseNumber: w.business_license_number || "고유번호증 검증 완료",
+        directorLetter: w.story,
+        currentFacilityStatus: "현장 노후 시설 개선 및 실물 물품 긴급 필요",
+        transparencyPledge: "100% 모금 달성 시 제조사 본사 직발주 및 현장 수령 인수증 100% 투명 공개",
       };
     });
   }
