@@ -140,3 +140,4 @@ export function HeroLandingSection({ totalPool, totalUsers }: HeroLandingSection
     </section>
   );
 }
+

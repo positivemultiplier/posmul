@@ -11,6 +11,7 @@ import { ParticipantTimelineChart } from "@/bounded-contexts/prediction/presenta
 import { CompactMoneyWaveCard } from "@/bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { PredictionComments } from "@/bounded-contexts/prediction/presentation/components/PredictionComments";
 import { GalleryPostList } from "@/app/forum/components/GalleryPostList";
+import { BalancedDecisionBriefing } from "@/bounded-contexts/prediction/presentation/components/BalancedDecisionBriefing";
 import { placeBet } from "../sports/soccer/[slug]/actions";
 import { FadeIn } from "@/shared/ui/components/animations";
 import { Users, BarChart2, Info, ArrowLeft, Trophy, Calendar, Clock, Activity, TrendingUp, PieChart } from "lucide-react";
@@ -192,6 +193,15 @@ export function UniversalPredictionDetailClient({
                 />
               </div>
             </Card>
+
+            {/* ⚖️ AI 균형 의사결정 브리핑 (중립 팩트체크 + YES 찬성 논거 + NO 반대 논거) */}
+            <BalancedDecisionBriefing
+              gameId={game.id}
+              gameTitle={game.title}
+              onRewardClaimed={(earned) => {
+                setBalance((prev) => ({ ...prev, pmp: prev.pmp + earned }));
+              }}
+            />
 
             {/* Tab navigation */}
             <div className="border-b border-slate-800 flex gap-4 text-sm font-bold">
