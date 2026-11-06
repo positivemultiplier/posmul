@@ -111,7 +111,7 @@ stateDiagram-v2
 | **위험도** | 위험 (Risky Asset) | CAPM 모델의 β 반영 |
 | **변동성** | 있음 | EBIT 및 집단지성 예측 결과 연동 |
 | **발행량** | EBIT 기반 (일일 100,000 PMC) | 연간 예산 상한 있음 |
-| **사용** | 기부(Donation) 및 로컬 투자 전용 | 원화 직접 환금 불가 (사회적 환원) |
+| **사용** | 기부(Donation, [상세: DONATION_SYSTEM_v2.md](./DONATION_SYSTEM_v2.md)) 및 로컬 투자 전용 | 원화 직접 환금 불가 (사회적 환원) |
 
 ### 획득 경로
 
