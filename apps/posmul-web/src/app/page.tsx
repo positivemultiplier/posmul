@@ -6,7 +6,7 @@ import {
 } from "./prediction/components/prediction-game-mapper";
 import { getAggregatedPrizePool } from "../bounded-contexts/prediction/application/prediction-pool.service";
 import { ClientPredictionGamesGrid } from "./prediction/components/ClientPredictionGamesGrid";
-import { DomainContextHeader } from "../shared/ui/components/layout/DomainContextHeader";
+import { HeroLandingSection } from "./components/HeroLandingSection";
 
 export const dynamic = "force-dynamic";
 
@@ -39,23 +39,30 @@ export default async function Home() {
   const totalUsersCount = accountsCountResult.count ?? 85;
 
   return (
-    <div className="min-h-screen bg-[#090b12] text-slate-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
-        <DomainContextHeader
-          domain="prediction"
-          title="🔮 PosMul · 시민 집단지성 예측 피드"
-          subtitle="포럼·소비에서 모은 무위험 PMP로 미래 의제를 예측하고, 적중 시 MoneyWave PMC를 획득하여 기부에 직접 집행하세요"
-          metrics={[
-            {
-              label: "MoneyWave 상금풀",
-              value: platformTotalPool || 66461,
-              unit: "PMC",
-            },
-            { label: "참여 주권자", value: totalUsersCount, unit: "명" },
-          ]}
+    <div className="min-h-screen bg-[#07090e] text-slate-100 selection:bg-blue-500 selection:text-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-10">
+        {/* 🌟 1. 메인 브랜드 Hero 랜딩 섹션 */}
+        <HeroLandingSection
+          totalPool={platformTotalPool || 66461}
+          totalUsers={totalUsersCount}
         />
 
-        <section>
+        {/* 🎯 2. 실시간 예측 의사결정 훈련장 (Trending Prediction Markets) */}
+        <section id="featured-prediction-markets" className="space-y-4 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
+                <span>🔥 실시간 의사결정 훈련 마켓</span>
+              </h2>
+              <p className="text-xs text-slate-400">
+                수많은 선택 앞에서 후회를 줄이는 연습, 지금 가장 뜨거운 이슈를 예측해보세요.
+              </p>
+            </div>
+            <div className="text-xs text-blue-400 font-bold">
+              진행 중 마켓 {featuredGames.length}개
+            </div>
+          </div>
+
           <ClientPredictionGamesGrid
             games={featuredGames}
             basePath="/prediction"
