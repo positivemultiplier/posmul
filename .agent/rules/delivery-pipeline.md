@@ -30,9 +30,14 @@ git add -A
 git commit -m "feat(도메인): 작업 내용 요약"
 ```
 
-### Gate 3: 원격 푸시 및 배포 파이프라인 트리거
-로컬 빌드와 커밋이 완료되면 `origin/develop`에 푸시하여 GitHub Actions CI 및 Vercel 배포(`posmul.com`) 파이프라인을 가동시킵니다.
+### Gate 3: 원격 푸시 및 Vercel 프로덕션 배포 파이프라인 가동
+로컬 빌드와 커밋이 완료되면 `origin/develop`에 푸시하고, 프로덕션 배포 파이프라인을 실행하여 `posmul.com` 라이브에 즉시 반영합니다.
 ```powershell
+# 1) 원격 저장소 푸시
 git push origin develop
+
+# 2) Vercel 프로덕션 즉시 배포 (posmul.com 라이브 적용)
+npx vercel --prod --yes
 ```
-- 푸시 후 변경 사항이 원격에 정상 반영되었음을 확인하고 최종 보고를 전달한다.
+- 배포 완료 후 `posmul.com`의 응답 코드(200 OK) 및 라이브 반영 여부를 반드시 확인한 후 사용자에게 완료 보고를 전달한다.
+
