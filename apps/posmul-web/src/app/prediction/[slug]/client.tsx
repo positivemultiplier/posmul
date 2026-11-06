@@ -10,6 +10,7 @@ import { BettingDistributionChart } from "@/bounded-contexts/prediction/presenta
 import { ParticipantTimelineChart } from "@/bounded-contexts/prediction/presentation/components/charts/ParticipantTimelineChart";
 import { CompactMoneyWaveCard } from "@/bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { PredictionComments } from "@/bounded-contexts/prediction/presentation/components/PredictionComments";
+import { GalleryPostList } from "@/app/forum/components/GalleryPostList";
 import { placeBet } from "../sports/soccer/[slug]/actions";
 import { FadeIn } from "@/shared/ui/components/animations";
 import { Users, BarChart2, Info, ArrowLeft, Trophy, Calendar, Clock, Activity, TrendingUp, PieChart } from "lucide-react";
@@ -273,20 +274,30 @@ export function UniversalPredictionDetailClient({
               </Card>
             )}
 
-            {/* Comments & Forum Section */}
-            <Card className="p-5 bg-slate-900/70 border-slate-800 space-y-4">
-              <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-                <span>💬 예측 이슈 시민 토론장</span>
-                <span className="text-xs text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">
-                  댓글 작성 시 +10 PMP
-                </span>
-              </h3>
-              <PredictionComments
-                gameId={game.id}
-                predictionType={game.predictionType}
-                options={game.options.map((opt) => ({ id: opt.id, label: opt.label }))}
+            {/* Comments & Forum Section (DC Gallery Style) */}
+            <div className="space-y-4 pt-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
+                  <span>💬 이 게임 전용 갤러리</span>
+                  <span className="text-xs text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">
+                    글·댓글 작성 시 +10 PMP
+                  </span>
+                </h3>
+                <Link
+                  href="/forum"
+                  className="text-xs text-blue-400 hover:text-blue-300 font-bold transition-colors"
+                >
+                  포럼 전체 갤러리 가기 →
+                </Link>
+              </div>
+
+              {/* DC갤 스타일 미니 갤러리 리스트 */}
+              <GalleryPostList
+                gameFilterId={game.id}
+                gameFilterTitle={game.title}
+                isCompactMode={true}
               />
-            </Card>
+            </div>
           </div>
 
           {/* Right Column: Betting & Trade Panel (1 col) */}
