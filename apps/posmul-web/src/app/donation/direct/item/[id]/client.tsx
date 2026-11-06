@@ -15,9 +15,14 @@ import {
   MapPin,
   Award,
   Zap,
+  PlusCircle,
+  FileCheck,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import type { RecipientCenter } from "./page";
+import { WishlistRequestModal } from "../../components/WishlistRequestModal";
+import { WishlistAdminModal } from "../../components/WishlistAdminModal";
+import { donateToWishlist } from "../../wishlist.actions";
 
 interface FundingProject {
   id: string;
@@ -55,36 +60,12 @@ export function DirectDonationDetailClient({
   isLoggedIn,
   currentUserId,
 }: DirectDonationDetailClientProps) {
-  // 기부처 리스트 및 실시간 기부 상태 관리
-  const [recipientList, setRecipientList] = useState<RecipientCenter[]>(
-    initialRecipients && initialRecipients.length > 0
-      ? initialRecipients
-      : [
-          {
-            id: "rec-default-1",
-            name: "햇살지역아동센터",
-            type: "지역아동센터",
-            region: "서울 은평구",
-            story: "방과 후 아이들이 이용하는 공부방에 물품 지원이 절실합니다.",
-            targetQuantity: 1,
-            currentQuantity: 0,
-            targetAmount: project.unit_price,
-            currentAmount: Math.round(project.unit_price * 0.72),
-            verifiedBadge: "보건복지부 인가 시설",
-            avatarIcon: "👧",
-          },
-        ]
-  );
-
-  // 기본 선택 기부처: 첫 번째 기부처
+  const [recipientList, setRecipientList] = useState<RecipientCenter[]>(initialRecipients);
   const [selectedRecipientId, setSelectedRecipientId] = useState<string>(
-    recipientList[0]?.id || "rec-default-1"
+    recipientList[0]?.id || ""
   );
 
-  // 내 보유 PMC (상단 네비게이션과 동기화된 기본 모의 잔고 510,000 PMC)
   const [myBalance, setMyBalance] = useState<number>(510000);
-
-  // 기부할 PMC 금액 입력 상태
   const [donateAmount, setDonateAmount] = useState<number>(10000);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [successInfo, setSuccessInfo] = useState<{
@@ -93,29 +74,27 @@ export function DirectDonationDetailClient({
     isFullyFunded: boolean;
   } | null>(null);
 
-  // 현재 선택된 기부처 객체
+  // 모달 제어 상태
+  const [isWishlistModalOpen, setIsWishlistModalOpen] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
+
   const selectedRecipient =
     recipientList.find((r) => r.id === selectedRecipientId) || recipientList[0];
 
-  // 선택된 기부처의 잔여 필요 금액
-  const remainingAmount = Math.max(
-    0,
-    selectedRecipient.targetAmount - selectedRecipient.currentAmount
-  );
+  const remainingAmount = selectedRecipient
+    ? Math.max(0, selectedRecipient.targetAmount - selectedRecipient.currentAmount)
+    : 0;
 
-  // 빠른 기부 금액 추가
   const handleAddAmount = (add: number) => {
     setDonateAmount((prev) => Math.min(myBalance, prev + add));
   };
 
-  // 남은 금액 전액 완판 설정
   const handleFillRemaining = () => {
     setDonateAmount(Math.min(myBalance, remainingAmount));
   };
 
-  // 기부 집행 처리
-  const handleExecuteDonation = () => {
-    if (donateAmount <= 0) return;
+  const handleExecuteDonation = async () => {
+    if (!selectedRecipient || donateAmount <= 0) return;
     if (donateAmount > myBalance) {
       alert("보유한 PMC 잔고가 부족합니다!");
       return;
@@ -123,15 +102,20 @@ export function DirectDonationDetailClient({
 
     setIsSubmitting(true);
 
+    // 1. 서버 DB에 기부액 업데이트 시도
+    donateToWishlist(selectedRecipient.id, donateAmount).catch((err) =>
+      console.warn("Server update warning:", err)
+    );
+
     setTimeout(() => {
-      // 1. 내 잔고 차감
+      // 2. 내 잔고 차감
       setMyBalance((prev) => Math.max(0, prev - donateAmount));
 
-      // 2. 해당 기부처 모금액 누적
+      // 3. 클라이언트 실시간 반영
       let isFullyFunded = false;
       setRecipientList((prevList) =>
         prevList.map((rec) => {
-          if (rec.id === selectedRecipientId) {
+          if (rec.id === selectedRecipient.id) {
             const nextAmount = rec.currentAmount + donateAmount;
             if (nextAmount >= rec.targetAmount) {
               isFullyFunded = true;
@@ -149,7 +133,6 @@ export function DirectDonationDetailClient({
         })
       );
 
-      // 3. 완료 안내 모달 표시
       setSuccessInfo({
         recipientName: selectedRecipient.name,
         donatedAmount: donateAmount,
@@ -157,7 +140,7 @@ export function DirectDonationDetailClient({
       });
 
       setIsSubmitting(false);
-    }, 500);
+    }, 400);
   };
 
   const categoryIcon = CATEGORY_ICON_MAP[project.category] || "📦";
@@ -174,17 +157,33 @@ export function DirectDonationDetailClient({
             <ArrowLeft className="w-4 h-4" />
             <span>K-물품 직접기부 목록</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-slate-700/80 text-xs text-slate-300">
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Wishlist Application CTA */}
+            <button
+              onClick={() => setIsWishlistModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-600/30 border border-purple-500/50 hover:bg-purple-600/50 text-xs font-bold text-purple-200 transition-all shadow-sm active:scale-95"
+            >
+              <PlusCircle className="w-3.5 h-3.5 text-purple-300" />
+              <span>우리 시설 물품 신청 (Wishlist)</span>
+            </button>
+
+            {/* Admin Verification Modal CTA */}
+            <button
+              onClick={() => setIsAdminModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700/80 hover:border-slate-500 text-xs font-semibold text-slate-300 transition-all"
+            >
+              <FileCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="hidden sm:inline">관리자 검증 게이트</span>
+            </button>
+
+            {/* User Balance Badge */}
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-slate-700/80 text-xs text-slate-300">
               <Coins className="w-3.5 h-3.5 text-amber-400" />
-              <span>내 보유:</span>
+              <span className="hidden md:inline">내 보유:</span>
               <strong className="text-amber-300 font-bold tabular-nums">
                 {myBalance.toLocaleString()} PMC
               </strong>
             </div>
-            <span className="hidden sm:inline-block px-3 py-1 rounded-full text-xs font-semibold bg-purple-500/10 text-purple-300 border border-purple-500/30">
-              영국식 Tied Aid · 수출 승수
-            </span>
           </div>
         </div>
       </div>
@@ -209,23 +208,29 @@ export function DirectDonationDetailClient({
                 {project.title}
               </h1>
               <p className="text-xs sm:text-sm text-slate-400">
-                시민이 직접 지원할 복지시설을 선택하고 소액 PMC를 모아 해당 물품을 직배송 설치합니다.
+                복지시설이 직접 신청(Wishlist)하고 관리자가 검증한 현장에 시민이 PMC를 후원하여 실물을 직배송합니다.
               </p>
             </div>
           </div>
 
-          <div className="shrink-0 p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 max-w-xs">
-            <div className="flex items-center gap-1.5 text-amber-300 font-bold mb-1">
+          <div className="shrink-0 p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-xs text-slate-300 max-w-xs space-y-2">
+            <div className="flex items-center gap-1.5 text-amber-300 font-bold">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>K-Impact Tied Aid 원조 모델</span>
+              <span>영국식 Tied Aid 수출 승수</span>
             </div>
             <p className="text-[11px] text-slate-400 leading-relaxed">
               모금 완료 즉시 한국 제조사({project.manufacturer.split(" ")[0]})에 직발주되어 국내 일자리 및 수출 경쟁력 강화로 이어집니다.
             </p>
+            <button
+              onClick={() => setIsWishlistModalOpen(true)}
+              className="w-full py-1.5 rounded-lg bg-purple-500/20 border border-purple-500/40 text-[11px] font-bold text-purple-200 hover:bg-purple-500/30 transition-all flex items-center justify-center gap-1"
+            >
+              <span>+ 이 물품 우리 시설에도 신청하기</span>
+            </button>
           </div>
         </div>
 
-        {/* Main 2-Column Grid: Left (Recipient Centers) vs Right (Donation Action) */}
+        {/* Main 2-Column Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Left Column (7 cols): Recipient Center Selection List */}
           <div className="lg:col-span-7 space-y-4">
@@ -233,14 +238,14 @@ export function DirectDonationDetailClient({
               <div>
                 <h2 className="text-lg font-extrabold text-white flex items-center gap-2">
                   <Building2 className="w-5 h-5 text-purple-400" />
-                  <span>이 물품을 기다리는 희망 기부처 선택</span>
+                  <span>이 물품을 신청한 검증 복지시설 선택</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
                   마음이 가는 복지시설을 클릭하여 선택하신 후, 원하는 만큼 PMC를 후원해주세요.
                 </p>
               </div>
               <span className="text-xs text-purple-300 font-medium">
-                총 {recipientList.length}곳 신청
+                총 {recipientList.length}곳 승인
               </span>
             </div>
 
@@ -267,7 +272,6 @@ export function DirectDonationDetailClient({
                         : "bg-slate-900/60 border-slate-800/90 hover:border-slate-700 hover:bg-slate-900/80"
                     }`}
                   >
-                    {/* Active Selection Badge */}
                     {isSelected && (
                       <div className="absolute top-0 right-0 bg-gradient-to-l from-purple-600 to-indigo-600 text-white text-[10px] font-bold px-3 py-1 rounded-bl-xl flex items-center gap-1 shadow">
                         <CheckCircle2 className="w-3 h-3" />
@@ -356,26 +360,28 @@ export function DirectDonationDetailClient({
           <div className="lg:col-span-5 space-y-4">
             <div className="sticky top-20 rounded-3xl border border-purple-500/40 bg-gradient-to-b from-slate-900 via-slate-900/90 to-slate-950 p-6 sm:p-7 shadow-2xl space-y-5">
               {/* Target Beneficiary Card Header */}
-              <div className="p-4 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1">
-                  <Heart className="w-3.5 h-3.5 text-rose-400 fill-current" />
-                  현재 선택된 후원 기부처
-                </span>
-                <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-extrabold text-white">
-                    {selectedRecipient.name}
-                  </h3>
-                  <span className="text-xs px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
-                    {selectedRecipient.region}
+              {selectedRecipient && (
+                <div className="p-4 rounded-2xl bg-slate-950/90 border border-slate-800 space-y-2">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1">
+                    <Heart className="w-3.5 h-3.5 text-rose-400 fill-current" />
+                    현재 선택된 후원 기부처
                   </span>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-extrabold text-white">
+                      {selectedRecipient.name}
+                    </h3>
+                    <span className="text-xs px-2.5 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/30">
+                      {selectedRecipient.region}
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/80">
+                    <span>완판까지 남은 금액:</span>
+                    <strong className="text-amber-300 text-sm font-bold tabular-nums">
+                      {remainingAmount.toLocaleString()} PMC
+                    </strong>
+                  </div>
                 </div>
-                <div className="text-xs text-slate-400 flex items-center justify-between pt-1 border-t border-slate-800/80">
-                  <span>완판까지 남은 금액:</span>
-                  <strong className="text-amber-300 text-sm font-bold tabular-nums">
-                    {remainingAmount.toLocaleString()} PMC
-                  </strong>
-                </div>
-              </div>
+              )}
 
               {/* Donation Amount Input Form */}
               <div className="space-y-3">
@@ -416,8 +422,8 @@ export function DirectDonationDetailClient({
                   ))}
                 </div>
 
-                {/* Special One-Click Button: Fill Remaining & Finish Funding */}
-                {remainingAmount > 0 && (
+                {/* One-Click Finish Button */}
+                {remainingAmount > 0 && selectedRecipient && (
                   <button
                     type="button"
                     onClick={handleFillRemaining}
@@ -432,23 +438,25 @@ export function DirectDonationDetailClient({
               </div>
 
               {/* Execution CTA Button */}
-              <button
-                type="button"
-                onClick={handleExecuteDonation}
-                disabled={isSubmitting || donateAmount <= 0}
-                className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 text-white font-extrabold text-base shadow-xl shadow-purple-600/30 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
-              >
-                {isSubmitting ? (
-                  <span>기부 집행 중...</span>
-                ) : (
-                  <>
-                    <Zap className="w-5 h-5 text-amber-300 fill-current" />
-                    <span>
-                      [{selectedRecipient.name}]에 {donateAmount.toLocaleString()} PMC 후원하기
-                    </span>
-                  </>
-                )}
-              </button>
+              {selectedRecipient && (
+                <button
+                  type="button"
+                  onClick={handleExecuteDonation}
+                  disabled={isSubmitting || donateAmount <= 0}
+                  className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-50 text-white font-extrabold text-base shadow-xl shadow-purple-600/30 transition-all hover:scale-[1.01] active:scale-[0.99] flex items-center justify-center gap-2"
+                >
+                  {isSubmitting ? (
+                    <span>기부 집행 중...</span>
+                  ) : (
+                    <>
+                      <Zap className="w-5 h-5 text-amber-300 fill-current" />
+                      <span>
+                        [{selectedRecipient.name}]에 {donateAmount.toLocaleString()} PMC 후원하기
+                      </span>
+                    </>
+                  )}
+                </button>
+              )}
 
               {/* Transparency Assurances */}
               <div className="space-y-2 pt-2 border-t border-slate-800 text-xs text-slate-400">
@@ -458,7 +466,7 @@ export function DirectDonationDetailClient({
                 </div>
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 text-purple-400 shrink-0" />
-                  <span>수혜 시설 직배송 인수증 및 아이들의 감사 사진 공개</span>
+                  <span>수혜 시설 직배송 인수증 및 아이들의 감사 사진 100% 공개</span>
                 </div>
               </div>
             </div>
@@ -466,7 +474,7 @@ export function DirectDonationDetailClient({
         </div>
       </div>
 
-      {/* Success Modal / Banner */}
+      {/* Success Modal */}
       <AnimatePresence>
         {successInfo && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
@@ -536,6 +544,28 @@ export function DirectDonationDetailClient({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Wishlist Request Modal */}
+      <WishlistRequestModal
+        isOpen={isWishlistModalOpen}
+        onClose={() => setIsWishlistModalOpen(false)}
+        defaultProjectId={project.id}
+        defaultProductName={project.product_name}
+        defaultManufacturer={project.manufacturer}
+        onSubmitted={() => {
+          // 필요 시 리프레시
+        }}
+      />
+
+      {/* Admin Verification Modal */}
+      <WishlistAdminModal
+        isOpen={isAdminModalOpen}
+        onClose={() => setIsAdminModalOpen(false)}
+        onApproved={() => {
+          // 승인 시 새로고침
+          window.location.reload();
+        }}
+      />
     </div>
   );
 }

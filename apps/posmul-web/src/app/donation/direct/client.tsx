@@ -3,10 +3,12 @@
 import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Gift, Users, Search, Package } from "lucide-react";
+import { Gift, Users, Search, Package, Sparkles, Building2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent } from "@/shared/ui/components/base/Card";
 import { DomainContextHeader } from "@/shared/ui/components/layout/DomainContextHeader";
+import { WishlistRequestModal } from "./components/WishlistRequestModal";
+import { WishlistAdminModal } from "./components/WishlistAdminModal";
 
 interface FundingProject {
   id: string;
@@ -46,6 +48,8 @@ function DirectDonationContent({ projects }: DirectDonationClientProps) {
 
   const [selectedCategory, setSelectedCategory] = useState(queryCategory);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isWishlistModalOpen, setIsWishlistModalOpen] = useState(false);
+  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
   useEffect(() => {
     setSelectedCategory(queryCategory);
@@ -113,6 +117,41 @@ function DirectDonationContent({ projects }: DirectDonationClientProps) {
             </div>
           </div>
         </DomainContextHeader>
+
+        {/* K-Wishlist Facility Application Banner */}
+        <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-950/70 via-slate-900 to-indigo-950/70 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
+          <div className="flex items-center gap-3.5">
+            <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-xl shrink-0">
+              🏢
+            </div>
+            <div>
+              <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
+                <span>복지시설·공익기관 담당자이신가요?</span>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                  K-Wishlist
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                우리 시설에 필요한 LG 에어컨, 국산 운동화, 햅쌀 등을 신청하시면 공익검증 후 시민 크라우드펀딩이 개설됩니다.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+            <button
+              onClick={() => setIsWishlistModalOpen(true)}
+              className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 text-white font-bold text-xs shadow-md shadow-purple-600/30 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+            >
+              <span>우리 시설 물품 신청하기 🎁</span>
+            </button>
+            <button
+              onClick={() => setIsAdminModalOpen(true)}
+              className="px-3 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-500 text-slate-300 font-medium text-xs transition-colors"
+              title="관리자 검증 게이트 열기"
+            >
+              관리자 심사
+            </button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           <AnimatePresence mode="popLayout">
@@ -213,6 +252,21 @@ function DirectDonationContent({ projects }: DirectDonationClientProps) {
             <p>진행 중인 물품 후원 프로젝트가 없습니다.</p>
           </div>
         )}
+
+        {/* Wishlist Request Modal */}
+        <WishlistRequestModal
+          isOpen={isWishlistModalOpen}
+          onClose={() => setIsWishlistModalOpen(false)}
+        />
+
+        {/* Admin Verification Modal */}
+        <WishlistAdminModal
+          isOpen={isAdminModalOpen}
+          onClose={() => setIsAdminModalOpen(false)}
+          onApproved={() => {
+            window.location.reload();
+          }}
+        />
       </div>
     </div>
   );
