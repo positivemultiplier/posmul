@@ -77,8 +77,8 @@ function DirectDonationContent({ projects }: DirectDonationClientProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DomainContextHeader
           domain="donation"
-          title="🎁 Direct · 물품 직접 기부"
-          subtitle="중간 행정 비용 없이 필요한 이웃에게 필요한 물품을 PMC로 직접 후원합니다"
+          title="📦 K-물품 직접기부 (Tied Goods)"
+          subtitle="LG·삼성 가전, CJ 영양식품 등 한국 기업 실물 물품을 직구매하여 취약계층에 전달하고 수출 승수 효과를 창출합니다"
           metrics={[
             { label: "전달된 물품", value: totalDelivered, unit: "개" },
             { label: "수혜 이웃", value: totalBeneficiaries, unit: "명" },

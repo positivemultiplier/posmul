@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { Suspense, useState, useEffect } from "react";
@@ -237,7 +237,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       direct: {
-        title: "🎁 직접 기부",
+        title: "📦 K-물품 기부",
         href: "/donation/direct",
         segmentAliases: ["direct"],
         subcategories: [
