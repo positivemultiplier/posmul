@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { FadeIn } from "../../HomeClientComponents";
 import { PredictionGameCard } from "../../../bounded-contexts/prediction/presentation/components/PredictionGameCard";
 import { PredictionType, GameStatus } from "../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
-import { Sparkles, Filter, ArrowUpDown } from "lucide-react";
+import { Sparkles, Filter, Flame } from "lucide-react";
 
 export interface PredictionGame {
     id: string;
@@ -42,16 +42,20 @@ export interface UserPrediction {
     prediction_data: Record<string, unknown> | null;
 }
 
+export type SortOption = "latest" | "prize_pool" | "closing_soon" | "hot";
+
 export interface ClientPredictionGamesGridProps {
     games: PredictionGame[];
     userId?: string;
     userPredictions?: UserPrediction[];
     basePath?: string;
-    /** 대분류 카테고리 칩(전체, 경제, 스포츠 등) 표시 여부 (하위 도메인에서는 false 권장) */
+    /** 대분류 카테고리 칩 표시 여부 (3RowNavbar와 중복 방지를 위해 기본값 false) */
     showCategoryFilter?: boolean;
-    /** 정렬 툴바(최신순, 상금 높은순, 마감 임박) 표시 여부 */
+    /** 정렬 툴바(최신순, 상금순, 마감임박) 표시 여부 */
     showSortToolbar?: boolean;
-    /** 서브마켓 필터(나스닥, 코스피 등) 주입 슬롯 */
+    /** 초기 정렬 옵션 (URL 쿼리 연동용) */
+    initialSort?: SortOption;
+    /** 서브마켓 필터 슬롯 */
     extraFilters?: React.ReactNode;
 }
 
@@ -78,19 +82,22 @@ const matchesCategory = (gameCategory: string | undefined, chipId: string): bool
     return chip.aliases.includes(cat);
 };
 
-export type SortOption = "latest" | "prize_pool" | "closing_soon";
-
 export function ClientPredictionGamesGrid({
     games,
     userId,
     userPredictions = [],
     basePath = "/prediction",
-    showCategoryFilter = true,
+    showCategoryFilter = false,
     showSortToolbar = true,
+    initialSort = "latest",
     extraFilters,
 }: ClientPredictionGamesGridProps) {
     const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
-    const [sortBy, setSortBy] = useState<SortOption>("latest");
+    const [sortBy, setSortBy] = useState<SortOption>(initialSort);
+
+    useEffect(() => {
+        setSortBy(initialSort);
+    }, [initialSort]);
 
     // 게임 ID로 사용자 예측 찾기
     const getPredictionForGame = (gameId: string): UserPrediction | undefined => {
@@ -109,12 +116,18 @@ export function ClientPredictionGamesGrid({
         if (sortBy === "prize_pool") {
             return list.sort((a, b) => (b.allocatedPrizePool || 0) - (a.allocatedPrizePool || 0));
         }
+        if (sortBy === "hot") {
+            return list.sort(
+                (a, b) =>
+                    (b.currentParticipants || 0) * 10 + (b.allocatedPrizePool || 0) -
+                    ((a.currentParticipants || 0) * 10 + (a.allocatedPrizePool || 0))
+            );
+        }
         if (sortBy === "closing_soon") {
             const now = Date.now();
             return list.sort((a, b) => {
                 const timeA = new Date(a.endTime).getTime();
                 const timeB = new Date(b.endTime).getTime();
-                // 이미 종료된 게임은 뒤로
                 if (timeA < now && timeB >= now) return 1;
                 if (timeB < now && timeA >= now) return -1;
                 return timeA - timeB;
@@ -126,11 +139,11 @@ export function ClientPredictionGamesGrid({
 
     return (
         <div className="space-y-5">
-            {/* 상단 컨트롤 툴바: 카테고리 칩 + 추가 서브필터 + 정렬 탭 + AI 수집/생성 */}
+            {/* 상단 컨트롤 툴바: 좌측 상태 요약/서브필터 + 우측 정렬 탭 + AI 수집/생성 */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
-                {/* 좌측 영역: 카테고리 칩 또는 커스텀 서브마켓 필터 */}
+                {/* 좌측 영역 */}
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-                    {showCategoryFilter && (
+                    {showCategoryFilter ? (
                         <>
                             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-400 text-xs font-semibold shrink-0">
                                 <Filter className="w-3.5 h-3.5 text-blue-400" />
@@ -162,9 +175,18 @@ export function ClientPredictionGamesGrid({
                                 );
                             })}
                         </>
+                    ) : (
+                        <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-300 text-xs font-semibold">
+                                <Flame className="w-3.5 h-3.5 text-sky-400" />
+                                <span>진행 중 마켓</span>
+                                <span className="px-1.5 py-0.2 rounded-full bg-sky-500/20 text-sky-300 text-[11px] font-extrabold">
+                                    {sortedGames.length}
+                                </span>
+                            </span>
+                            {extraFilters}
+                        </div>
                     )}
-
-                    {extraFilters}
                 </div>
 
                 {/* 우측 영역: 정렬 옵션 및 AI 생성 버튼 */}
@@ -181,6 +203,18 @@ export function ClientPredictionGamesGrid({
                                 }`}
                             >
                                 최신순
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setSortBy("hot")}
+                                className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1 ${
+                                    sortBy === "hot"
+                                        ? "bg-slate-800 text-white font-bold shadow-sm"
+                                        : "text-slate-400 hover:text-slate-200"
+                                }`}
+                            >
+                                <span>인기순</span>
+                                <span className="text-[10px]">🔥</span>
                             </button>
                             <button
                                 type="button"
@@ -223,8 +257,9 @@ export function ClientPredictionGamesGrid({
                                 } else {
                                     alert("생성 중 오류 발생: " + (data.error || "알 수 없음"));
                                 }
-                            } catch (err: any) {
-                                alert("요청 실패: " + err.message);
+                            } catch (err: unknown) {
+                                const message = err instanceof Error ? err.message : "알 수 없는 오류";
+                                alert("요청 실패: " + message);
                             } finally {
                                 const btn = document.getElementById("ai-ingest-btn");
                                 if (btn) btn.innerText = "✨ AI 수집 & 생성";

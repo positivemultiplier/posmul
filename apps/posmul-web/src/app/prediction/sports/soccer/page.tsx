@@ -1,19 +1,20 @@
+import Link from "next/link";
 import { createClient } from "../../../../lib/supabase/server";
-import { FadeIn, HoverLift } from "../../../../shared/ui/components/animations";
+import { FadeIn } from "../../../../shared/ui/components/animations";
 import { CompactMoneyWaveCard } from "../../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { ClientPredictionGamesGrid } from "../../components/ClientPredictionGamesGrid";
-import Link from "next/link"; // Link import 추가
 import { getAggregatedPrizePool } from "../../../../bounded-contexts/prediction/application/prediction-pool.service";
-import { SoccerLeagueStickyHeaderClient } from "../../components/soccer/SoccerLeagueStickyHeaderClient";
 import {
   attachHourlyGamePoolsToRows,
   mapPredictionGameRowToCardModel,
   type PredictionGameRow,
 } from "../../components/prediction-game-mapper";
+import { DomainContextHeader } from "../../../../shared/ui/components/layout/DomainContextHeader";
+
+export const revalidate = 10;
 
 interface PageProps {
   searchParams: Promise<{
-    sort?: string;
     league?: string;
   }>;
 }
@@ -26,66 +27,10 @@ interface UserPrediction {
   prediction_data: Record<string, unknown> | null;
 }
 
-type CardModel = ReturnType<typeof mapPredictionGameRowToCardModel>;
-
-const applyLeagueFilter = <Q extends { eq: (column: string, value: string) => Q }>(
-  query: Q,
-  league?: string
-): Q => {
-  return league ? query.eq("league", league) : query;
-};
-
-const applySort = <Q extends { order: (column: string, options: { ascending: boolean }) => Q }>(
-  query: Q,
-  sort: string
-): Q => {
-  if (sort === "closing_soon") {
-    return query.order("registration_end", { ascending: true });
-  }
-  // "latest" / "prize_pool" / default
-  return query.order("created_at", { ascending: false });
-};
-
-const fetchUserPredictions = async (
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  userId: string | undefined,
-  games: PredictionGameRow[]
-): Promise<UserPrediction[]> => {
-  if (!userId || games.length === 0) return [];
-
-  const gameIds = games.map((g) => g.game_id);
-  const { data: predictions } = await supabase
-    .schema("prediction")
-    .from("predictions")
-    .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
-    .eq("user_id", userId)
-    .eq("is_active", true)
-    .in("game_id", gameIds);
-
-  return (predictions ?? []) as UserPrediction[];
-};
-
-const sortMappedGamesIfNeeded = (
-  sort: string,
-  mappedGames: CardModel[]
-) => {
-  if (sort !== "prize_pool") return mappedGames;
-  return [...mappedGames].sort(
-    (a, b) => b.allocatedPrizePool - a.allocatedPrizePool
-  );
-};
-
 export default async function SoccerPage({ searchParams }: PageProps) {
   const supabase = await createClient();
   const resolvedSearchParams = await searchParams;
-  const sort = resolvedSearchParams?.sort || "latest"; // default sort
-  const league = resolvedSearchParams?.league; // league filter
-
-  // 현재 사용자 확인
-  const { data: { user } } = await supabase.auth.getUser();
-
-  // Get aggregated prize pool for SOCCER
-  const soccerPool = await getAggregatedPrizePool(supabase, "SPORTS", "soccer");
+  const league = resolvedSearchParams?.league;
 
   let query = supabase
     .schema("prediction")
@@ -93,59 +38,78 @@ export default async function SoccerPage({ searchParams }: PageProps) {
     .select("*")
     .eq("category", "SPORTS")
     .eq("subcategory", "soccer")
-    .in("status", ["ACTIVE", "DRAFT"]);
+    .in("status", ["ACTIVE", "DRAFT"])
+    .order("created_at", { ascending: false })
+    .limit(30);
 
-  // League Filtering
-  query = applyLeagueFilter(query, league);
-
-  // Sorting logic (DB 컬럼 의존 제거: prize_pool은 MoneyWave Truth를 붙인 뒤 로컬 정렬)
-  query = applySort(query, sort);
-
-  query = query.limit(20);
-
-  const { data, error } = await query;
-  if (error) {
-    // eslint-disable-next-line no-console
-    console.error("SoccerPage Supabase error", error.message);
+  if (league) {
+    query = query.eq("league", league);
   }
-  const games = (data ?? []) as PredictionGameRow[];
 
-  // 사용자의 예측 목록 조회
-  const userPredictions = await fetchUserPredictions(
-    supabase,
-    user?.id,
-    games
-  );
+  const [userResult, soccerPool, gamesResult] = await Promise.all([
+    supabase.auth.getUser(),
+    getAggregatedPrizePool(supabase, "SPORTS", "soccer"),
+    query,
+  ]);
 
-  const gamesWithPools = await attachHourlyGamePoolsToRows(supabase, games);
+  const user = userResult.data?.user ?? null;
+  const games = (gamesResult.data ?? []) as PredictionGameRow[];
+  const gameIds = games.map((g) => g.game_id);
 
-  const mappedGames = sortMappedGamesIfNeeded(
-    sort,
-    gamesWithPools.map(mapPredictionGameRowToCardModel)
-  );
+  const [gamesWithPools, predictionsResult] = await Promise.all([
+    attachHourlyGamePoolsToRows(supabase, games),
+    user && gameIds.length > 0
+      ? supabase
+          .schema("prediction")
+          .from("predictions")
+          .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .in("game_id", gameIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const userPredictions: UserPrediction[] = (predictionsResult.data ?? []) as UserPrediction[];
+  const mappedGames = gamesWithPools.map(mapPredictionGameRowToCardModel);
+
+  const dataSources = ["API-Football (실시간)", "K리그·EPL 공식 매치 기록"];
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white pb-20">
-      <SoccerLeagueStickyHeaderClient />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+    <div className="min-h-screen bg-[#090b12] text-slate-100">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+        <FadeIn>
+          <DomainContextHeader
+            domain="prediction"
+            title="⚽ 축구 예측 마켓"
+            subtitle="프리미어리그(EPL), K리그, 라리가, 챔피언스리그 등 주요 축구 경기 승패를 예측하세요"
+            metrics={[
+              {
+                label: "축구 상금풀",
+                value: soccerPool || 15200,
+                unit: "PMC",
+              },
+              {
+                label: "진행 중 게임",
+                value: mappedGames.length,
+                unit: "개",
+              },
+            ]}
+          >
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+              <span className="font-semibold text-slate-300">📡 검증 데이터 소스:</span>
+              {dataSources.map((ds) => (
+                <span
+                  key={ds}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-950/40 border border-sky-800/40 text-sky-300 font-medium"
+                >
+                  <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-pulse" />
+                  {ds}
+                </span>
+              ))}
+            </div>
+          </DomainContextHeader>
 
-        {/* Header */}
-        <div className="text-center mb-12">
-          <FadeIn>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-6">
-              ⚽ 축구 예측
-            </h1>
-            <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
-              전 세계 주요 축구 리그의 승패를 예측하고 PMC 상금을 획득하세요.
-              <br />
-              프리미어리그, 라리가, 분데스리가 등 다양한 리그가 준비되어 있습니다.
-            </p>
-          </FadeIn>
-        </div>
-
-        {/* MoneyWave Card (Depth 3: Soccer, Depth 4: League) */}
-        <div className="mb-12">
-          <HoverLift>
+          <div className="mb-6">
             <CompactMoneyWaveCard
               depthLevel={league ? 4 : 3}
               category="sports"
@@ -153,58 +117,37 @@ export default async function SoccerPage({ searchParams }: PageProps) {
               league={league}
               initialPool={soccerPool}
             />
-          </HoverLift>
-        </div>
-
-        {/* Filter & Sort Tabs */}
-        <div className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-          <div className="flex gap-2">
-            <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-sm border border-blue-500/30">
-              전체 {mappedGames.length}
-            </span>
-            <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-300 text-sm border border-green-500/30">
-              진행중
-            </span>
           </div>
 
-          <div className="flex bg-slate-900/50 p-1 rounded-lg border border-slate-800">
-            <Link
-              href="?sort=latest"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${sort === 'latest'
-                ? 'bg-slate-800 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              최신순
-            </Link>
-            <Link
-              href="?sort=prize_pool"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${sort === 'prize_pool'
-                ? 'bg-slate-800 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              상금 높은순 💰
-            </Link>
-            <Link
-              href="?sort=closing_soon"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-all ${sort === 'closing_soon'
-                ? 'bg-slate-800 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200'
-                }`}
-            >
-              마감 임박 ⏰
-            </Link>
-          </div>
-        </div>
-
-        {/* Prediction Games Grid */}
-        <ClientPredictionGamesGrid
-          games={mappedGames}
-          userId={user?.id}
-          userPredictions={userPredictions}
-          basePath="/prediction/sports/soccer"
-        />
+          {mappedGames.length > 0 ? (
+            <ClientPredictionGamesGrid
+              games={mappedGames}
+              userId={user?.id}
+              userPredictions={userPredictions}
+              basePath="/prediction/sports/soccer"
+              showCategoryFilter={false}
+              showSortToolbar={true}
+            />
+          ) : (
+            <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4">
+              <div className="text-5xl">⚽</div>
+              <h3 className="text-lg font-bold text-white">
+                ⚽ 축구 예측 준비 중
+              </h3>
+              <p className="text-sm text-slate-400 max-w-md mx-auto">
+                다음 라운드 경기 일정에 맞춰 새로운 축구 예측 마켓이 곧 오픈됩니다.
+              </p>
+              <div className="flex items-center justify-center gap-3 pt-2">
+                <Link
+                  href="/prediction/sports"
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl border border-slate-700 transition"
+                >
+                  ← 스포츠 전체 마켓 보기
+                </Link>
+              </div>
+            </div>
+          )}
+        </FadeIn>
       </div>
     </div>
   );

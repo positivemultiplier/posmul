@@ -144,11 +144,10 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         title: "전체 마켓",
         href: "/prediction",
         subcategories: [
-          { title: "인기 예측 피드", path: "/prediction" },
-          { title: "경제·투자", path: "/prediction/economy" },
-          { title: "스포츠", path: "/prediction/sports" },
-          { title: "정치·선거", path: "/prediction/politics" },
-          { title: "엔터테인먼트", path: "/prediction/entertainment" },
+          { title: "전체 마켓 피드", path: "/prediction" },
+          { title: "🔥 인기·핫이슈", path: "/prediction?filter=hot" },
+          { title: "💰 고액 상금풀", path: "/prediction?filter=high-pool" },
+          { title: "⏰ 마감 임박", path: "/prediction?filter=closing" },
         ],
       },
       economy: {
@@ -194,6 +193,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
           { title: "엔터 전체", path: "/prediction/entertainment" },
           { title: "영화", path: "/prediction/entertainment/movies" },
           { title: "드라마", path: "/prediction/entertainment/dramas" },
+          { title: "예능·방송", path: "/prediction/entertainment/variety" },
           { title: "음악", path: "/prediction/entertainment/music" },
           { title: "시상식", path: "/prediction/entertainment/awards" },
         ],

@@ -1,10 +1,7 @@
-import Link from "next/link";
-
 import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { getAggregatedPrizePool } from "../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { createClient } from "../../../lib/supabase/server";
-import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
-
+import { FadeIn } from "../../../shared/ui/components/animations";
 import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
 import {
   attachHourlyGamePoolsToRows,
@@ -13,17 +10,7 @@ import {
 } from "../components/prediction-game-mapper";
 import { DomainContextHeader } from "../../../shared/ui/components/layout/DomainContextHeader";
 
-type ConsumeSubcategory = {
-  slug: "time" | "money" | "cloud";
-  title: string;
-  description: string;
-};
-
-const SUBCATEGORIES: ConsumeSubcategory[] = [
-  { slug: "time", title: "⏰ TimeConsume", description: "시간 소비 캠페인 성과 예측" },
-  { slug: "money", title: "💳 MoneyConsume", description: "지역 상생 소비 트렌드 예측" },
-  { slug: "cloud", title: "☁️ CloudConsume", description: "크라우드 펀딩 달성률 예측" },
-];
+export const revalidate = 10;
 
 interface UserPrediction {
   prediction_id: string;
@@ -36,43 +23,44 @@ interface UserPrediction {
 export default async function PredictionConsumePage() {
   const supabase = await createClient();
 
-  const consumePool = await getAggregatedPrizePool(supabase, "INVEST");
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: games, error } = await supabase
-    .schema("prediction")
-    .from("prediction_games")
-    .select("*")
-    .eq("category", "INVEST")
-    .in("status", ["ACTIVE", "DRAFT"])
-    .order("created_at", { ascending: false })
-    .limit(12);
-
-  if (error) {
-    console.error("PredictionConsumePage Supabase error", error.message);
-  }
-
-  let userPredictions: UserPrediction[] = [];
-  if (user) {
-    const { data: predictions } = await supabase
+  const [userResult, consumePool, gamesResult] = await Promise.all([
+    supabase.auth.getUser(),
+    getAggregatedPrizePool(supabase, "INVEST"),
+    supabase
       .schema("prediction")
-      .from("predictions")
-      .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
-      .eq("user_id", user.id)
-      .eq("is_active", true);
+      .from("prediction_games")
+      .select("*")
+      .eq("category", "INVEST")
+      .in("status", ["ACTIVE", "DRAFT"])
+      .order("created_at", { ascending: false })
+      .limit(20),
+  ]);
 
-    userPredictions = (predictions ?? []) as UserPrediction[];
-  }
+  const user = userResult.data?.user ?? null;
+  const gameRows = (gamesResult.data ?? []) as PredictionGameRow[];
+  const gameIds = gameRows.map((g) => g.game_id);
 
-  const gameRows = (games ?? []) as PredictionGameRow[];
-  const gameRowsWithPools = await attachHourlyGamePoolsToRows(
-    supabase,
-    gameRows
-  );
+  const [gameRowsWithPools, predictionsResult] = await Promise.all([
+    attachHourlyGamePoolsToRows(supabase, gameRows),
+    user && gameIds.length > 0
+      ? supabase
+          .schema("prediction")
+          .from("predictions")
+          .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .in("game_id", gameIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  const userPredictions: UserPrediction[] = (predictionsResult.data ?? []) as UserPrediction[];
   const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
+
+  const dataSources = [
+    { name: "TimeConsume", desc: "광고·캠페인 조회 지표" },
+    { name: "MoneyConsume", desc: "지역 상생 가맹점 매출" },
+    { name: "CloudConsume", desc: "크라우드 펀딩 달성률" },
+  ];
 
   return (
     <div className="min-h-screen bg-[#090b12] text-slate-100">
@@ -90,7 +78,21 @@ export default async function PredictionConsumePage() {
               },
               { label: "진행 중 마켓", value: mappedGames.length, unit: "개" },
             ]}
-          />
+          >
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+              <span className="font-semibold text-slate-300">📡 공인 검증 데이터:</span>
+              {dataSources.map((ds) => (
+                <span
+                  key={ds.name}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-950/40 border border-sky-800/40 text-sky-300 font-medium"
+                >
+                  <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-pulse" />
+                  <span className="font-bold">{ds.name}</span>
+                  <span className="text-slate-400 text-[10px]">({ds.desc})</span>
+                </span>
+              ))}
+            </div>
+          </DomainContextHeader>
 
           <div className="mb-6">
             <CompactMoneyWaveCard
@@ -100,27 +102,13 @@ export default async function PredictionConsumePage() {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            {SUBCATEGORIES.map((sub) => (
-              <HoverLift key={sub.slug}>
-                <Link
-                  href={`/prediction/consume/${sub.slug}`}
-                  className="block rounded-2xl border border-slate-800/90 bg-slate-900/70 p-5 hover:border-sky-500/40 transition-colors"
-                >
-                  <div className="text-base font-bold text-white mb-1">
-                    {sub.title}
-                  </div>
-                  <div className="text-xs text-slate-400">{sub.description}</div>
-                </Link>
-              </HoverLift>
-            ))}
-          </div>
-
           <ClientPredictionGamesGrid
             games={mappedGames}
             userId={user?.id}
             userPredictions={userPredictions}
             basePath="/prediction/consume"
+            showCategoryFilter={false}
+            showSortToolbar={true}
           />
         </FadeIn>
       </div>
