@@ -1,4 +1,4 @@
-﻿import { createClient } from "../../../lib/supabase/server";
+import { createClient } from "../../../lib/supabase/server";
 import { FadeIn } from "../../../shared/ui/components/animations";
 import Link from "next/link";
 import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
@@ -57,7 +57,7 @@ export default async function PredictionEconomyPage({
     .eq("category", "ECONOMY")
     .in("status", ["ACTIVE", "DRAFT"])
     .order("created_at", { ascending: false })
-    .limit(12);
+    .limit(30);
 
   if (safeSubcategory) {
     query = query.eq("subcategory", safeSubcategory);
@@ -89,21 +89,20 @@ export default async function PredictionEconomyPage({
   ]);
 
   const userPredictions: UserPrediction[] = (predictionsResult.data || []) as UserPrediction[];
-
   const visibleGames = gamesWithPools;
 
-  const filters = [
-    { label: "전체", value: undefined, icon: "📋" },
-    { label: "주식", value: "stocks", icon: "📈" },
-    { label: "기업 실적", value: "earnings", icon: "💰" },
-    { label: "경제 지표", value: "indicators", icon: "📊" },
-    { label: "암호화폐", value: "crypto", icon: "₿" },
+  const dataSources = [
+    { name: "Alpha Vantage", desc: "실시간 글로벌 주가" },
+    { name: "DART", desc: "기업 분기 실적" },
+    { name: "KOSIS", desc: "국가 경제 지표" },
+    { name: "CoinGecko", desc: "암호화폐 온체인" },
   ];
 
   return (
     <div className="min-h-screen bg-[#090b12] text-slate-100">
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
         <FadeIn>
+          {/* PosMul 통일 디자인 시스템 헤더 (DomainContextHeader) */}
           <DomainContextHeader
             domain="prediction"
             title="📈 경제 예측 마켓"
@@ -117,43 +116,23 @@ export default async function PredictionEconomyPage({
               { label: "진행 중 게임", value: visibleGames.length, unit: "개" },
             ]}
           >
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div className="flex flex-wrap gap-1.5">
-                {filters.map((filter) => (
-                  <Link
-                    key={filter.label}
-                    href={
-                      filter.value
-                        ? `/prediction/economy/${filter.value}`
-                        : "/prediction/economy"
-                    }
-                    className={`px-3 py-1.5 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 ${
-                      safeSubcategory === filter.value
-                        ? "bg-sky-500/20 border-sky-400/40 text-sky-200"
-                        : "bg-slate-900/70 border-slate-800 hover:text-slate-200 text-slate-400"
-                    }`}
-                  >
-                    <span>{filter.icon}</span>
-                    <span>{filter.label}</span>
-                  </Link>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-3 text-xs text-slate-400">
-                <span className="font-semibold text-slate-300">📡 검증 데이터:</span>
-                <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-sky-400 rounded-full" /> KOSIS
+            {/* 검증 데이터 소스 안내 배지 (3row 중복 탭 제거 후 데이터 신뢰성 강조) */}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+              <span className="font-semibold text-slate-300">📡 공인 검증 데이터:</span>
+              {dataSources.map((ds) => (
+                <span
+                  key={ds.name}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-950/40 border border-sky-800/40 text-sky-300 font-medium"
+                >
+                  <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-pulse" />
+                  <span className="font-bold">{ds.name}</span>
+                  <span className="text-slate-400 text-[10px]">({ds.desc})</span>
                 </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-sky-400 rounded-full" /> DART
-                </span>
-                <span className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 bg-sky-400 rounded-full" /> Alpha Vantage
-                </span>
-              </div>
+              ))}
             </div>
           </DomainContextHeader>
 
+          {/* 머니웨이브 상금풀 현황 위젯 */}
           <div className="mb-6">
             <CompactMoneyWaveCard
               depthLevel={2}
@@ -162,16 +141,15 @@ export default async function PredictionEconomyPage({
             />
           </div>
 
+          {/* 게임 피드 (정렬 툴바 + 카드 목록) */}
           {visibleGames.length > 0 ? (
             <ClientPredictionGamesGrid
               games={visibleGames.map(mapPredictionGameRowToCardModel)}
               userId={user?.id}
               userPredictions={userPredictions}
-              basePath={
-                safeSubcategory
-                  ? `/prediction/economy/${safeSubcategory}`
-                  : "/prediction/economy/stocks"
-              }
+              basePath="/prediction/economy"
+              showCategoryFilter={false}
+              showSortToolbar={true}
             />
           ) : (
             <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80">

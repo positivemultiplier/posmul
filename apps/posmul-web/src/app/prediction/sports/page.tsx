@@ -1,4 +1,4 @@
-﻿import { createClient } from "../../../lib/supabase/server";
+import { createClient } from "../../../lib/supabase/server";
 import { FadeIn } from "../../../shared/ui/components/animations";
 import Link from "next/link";
 import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
@@ -56,13 +56,12 @@ export default async function PredictionSportsPage({
     .eq("category", "SPORTS")
     .in("status", ["ACTIVE", "DRAFT"])
     .order("created_at", { ascending: false })
-    .limit(12);
+    .limit(20);
 
   if (safeSport) {
     query = query.eq("subcategory", safeSport);
   }
 
-  // 1단계 병렬 요청: 유저 인증, 스포츠 상금풀, 스포츠 게임 쿼리를 동시 실행
   const [userResult, sportsPool, gamesResult] = await Promise.all([
     supabase.auth.getUser(),
     getAggregatedPrizePool(supabase, "SPORTS", safeSport || undefined),
@@ -73,7 +72,6 @@ export default async function PredictionSportsPage({
   const games = (gamesResult.data ?? []) as PredictionGameRow[];
   const gameIds = games.map((g) => g.game_id);
 
-  // 2단계 병렬 요청: 게임별 실시간 상금풀 및 유저 베팅 내역을 동시 실행
   const [gamesWithPools, predictionsResult] = await Promise.all([
     attachHourlyGamePoolsToRows(supabase, games),
     user && gameIds.length > 0
@@ -88,15 +86,11 @@ export default async function PredictionSportsPage({
   ]);
 
   const userPredictions: UserPrediction[] = (predictionsResult.data || []) as UserPrediction[];
-
   const visibleGames = gamesWithPools;
 
-  const filters = [
-    { label: "전체", value: undefined },
-    { label: "축구", value: "soccer" },
-    { label: "야구", value: "baseball" },
-    { label: "농구", value: "basketball" },
-    { label: "e스포츠", value: "esports" },
+  const dataSources = [
+    { name: "공식 리그 데이터", desc: "K리그, EPL, MLB, KBO" },
+    { name: "LiveScore API", desc: "실시간 경기 결과" },
   ];
 
   return (
@@ -112,23 +106,17 @@ export default async function PredictionSportsPage({
               { label: "진행 중 게임", value: visibleGames.length, unit: "개" },
             ]}
           >
-            <div className="flex flex-wrap gap-1.5">
-              {filters.map((filter) => (
-                <Link
-                  key={filter.label}
-                  href={
-                    filter.value
-                      ? `/prediction/sports/${filter.value}`
-                      : "/prediction/sports"
-                  }
-                  className={`px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
-                    safeSport === filter.value
-                      ? "bg-sky-500/20 border-sky-400/40 text-sky-200"
-                      : "bg-slate-900/70 border-slate-800 hover:text-slate-200 text-slate-400"
-                  }`}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+              <span className="font-semibold text-slate-300">📡 공인 검증 데이터:</span>
+              {dataSources.map((ds) => (
+                <span
+                  key={ds.name}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-950/40 border border-sky-800/40 text-sky-300 font-medium"
                 >
-                  {filter.label}
-                </Link>
+                  <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-pulse" />
+                  <span className="font-bold">{ds.name}</span>
+                  <span className="text-slate-400 text-[10px]">({ds.desc})</span>
+                </span>
               ))}
             </div>
           </DomainContextHeader>
@@ -150,6 +138,8 @@ export default async function PredictionSportsPage({
                 ? `/prediction/sports/${safeSport}`
                 : "/prediction/sports/soccer"
             }
+            showCategoryFilter={false}
+            showSortToolbar={true}
           />
         </FadeIn>
       </div>

@@ -1,8 +1,7 @@
-﻿import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
+import { CompactMoneyWaveCard } from "../../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { getAggregatedPrizePool } from "../../../bounded-contexts/prediction/application/prediction-pool.service";
 import { createClient } from "../../../lib/supabase/server";
 import { FadeIn } from "../../../shared/ui/components/animations";
-import Link from "next/link";
 import { ClientPredictionGamesGrid } from "../components/ClientPredictionGamesGrid";
 import {
   attachHourlyGamePoolsToRows,
@@ -58,11 +57,9 @@ export default async function PredictionPoliticsPage() {
   const userPredictions: UserPrediction[] = (predictionsResult.data || []) as UserPrediction[];
   const mappedGames = gameRowsWithPools.map(mapPredictionGameRowToCardModel);
 
-  const subcategories = [
-    { label: "전체", href: "/prediction/politics" },
-    { label: "국가 선거", href: "/prediction/politics/national-elections" },
-    { label: "지역 선거", href: "/prediction/politics/local-elections" },
-    { label: "정책 변화", href: "/prediction/politics/policy-changes" },
+  const dataSources = [
+    { name: "중앙선거관리위원회", desc: "공식 투·개표 결과" },
+    { name: "대한민국 국회 의안정보시스템", desc: "법안 통과/계류" },
   ];
 
   return (
@@ -82,19 +79,17 @@ export default async function PredictionPoliticsPage() {
               { label: "진행 중 마켓", value: mappedGames.length, unit: "개" },
             ]}
           >
-            <div className="flex flex-wrap gap-1.5">
-              {subcategories.map((item, idx) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  className={`px-3.5 py-1.5 rounded-xl border text-xs font-semibold transition-all ${
-                    idx === 0
-                      ? "bg-sky-500/20 border-sky-400/40 text-sky-200"
-                      : "bg-slate-900/70 border-slate-800 hover:text-slate-200 text-slate-400"
-                  }`}
+            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+              <span className="font-semibold text-slate-300">📡 공인 검증 데이터:</span>
+              {dataSources.map((ds) => (
+                <span
+                  key={ds.name}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-950/40 border border-sky-800/40 text-sky-300 font-medium"
                 >
-                  {item.label}
-                </Link>
+                  <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-pulse" />
+                  <span className="font-bold">{ds.name}</span>
+                  <span className="text-slate-400 text-[10px]">({ds.desc})</span>
+                </span>
               ))}
             </div>
           </DomainContextHeader>
@@ -111,6 +106,9 @@ export default async function PredictionPoliticsPage() {
             games={mappedGames}
             userId={user?.id}
             userPredictions={userPredictions}
+            basePath="/prediction/politics"
+            showCategoryFilter={false}
+            showSortToolbar={true}
           />
         </FadeIn>
       </div>
