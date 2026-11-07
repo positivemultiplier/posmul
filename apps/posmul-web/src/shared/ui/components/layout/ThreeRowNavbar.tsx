@@ -637,6 +637,15 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                 <span className="w-2 h-2 rounded-full bg-white" />
                 <span>LIVE</span>
               </Link>
+
+              {/* 🥊 맞짱 내기 챌린지 뱃지 */}
+              <Link
+                href="/challenge"
+                className="ml-1.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-black shadow-lg shadow-amber-500/20 border border-amber-400/40 hover:scale-105 transition-all"
+              >
+                <span>🥊</span>
+                <span>맞짱</span>
+              </Link>
             </nav>
           </div>
 
