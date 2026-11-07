@@ -518,3 +518,69 @@ export async function addGalleryCommentAction(params: {
     return { success: false, error: err?.message || "댓글 작성 오류" };
   }
 }
+
+/**
+ * 글 작성 시 연동할 수 있는 활성 예측 게임 목록 조회
+ */
+export async function getActivePredictionGamesForForumAction(): Promise<{
+  success: boolean;
+  games: Array<{
+    id: string;
+    title: string;
+    category: string;
+    subcategory?: string;
+    options: Array<{ id: string; text: string; odds?: number }>;
+    allocatedPrizePool: number;
+    participantsCount: number;
+  }>;
+}> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .schema("prediction")
+      .from("prediction_games")
+      .select("game_id, title, category, subcategory, game_options, difficulty, status")
+      .in("status", ["ACTIVE", "DRAFT"])
+      .order("created_at", { ascending: false })
+      .limit(20);
+
+    if (error || !data) {
+      return { success: false, games: [] };
+    }
+
+    const mapped = data.map((g) => {
+      let optionsList: Array<{ id: string; text: string }> = [];
+      try {
+        const parsed = typeof g.game_options === "string" ? JSON.parse(g.game_options) : g.game_options;
+        if (parsed?.options && Array.isArray(parsed.options)) {
+          optionsList = parsed.options.map((opt: any, idx: number) => ({
+            id: opt.id || `opt-${idx}`,
+            text: opt.label || opt.text || `선택지 ${idx + 1}`,
+          }));
+        }
+      } catch {}
+
+      if (optionsList.length === 0) {
+        optionsList = [
+          { id: "yes", text: "상승/찬성 (Yes)" },
+          { id: "no", text: "하락/반대 (No)" },
+        ];
+      }
+
+      return {
+        id: g.game_id,
+        title: g.title,
+        category: g.category || "ECONOMY",
+        subcategory: g.subcategory || undefined,
+        options: optionsList,
+        allocatedPrizePool: 2200,
+        participantsCount: 14,
+      };
+    });
+
+    return { success: true, games: mapped };
+  } catch (err) {
+    console.error("getActivePredictionGamesForForumAction error:", err);
+    return { success: false, games: [] };
+  }
+}
+
