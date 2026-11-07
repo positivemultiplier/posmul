@@ -32,14 +32,15 @@ export function HeroLandingSection({ totalPool, totalUsers }: HeroLandingSection
 
         {/* 🌟 핵심 브랜드 카피 (헤드라인: '선택'과 '훈련'에 확실한 시각적 포인트) */}
         <div className="space-y-4 sm:space-y-5">
-          {/* 1. 오늘의 당신은 과거 수많은 \n 선택의 합입니다. */}
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight leading-snug sm:leading-tight break-keep">
-            오늘의 당신은 과거 수많은
-            <br />
-            <span className="relative inline-block my-1 px-2.5 py-0.5 rounded-xl bg-blue-500/15 border border-blue-400/50 text-blue-400 font-black shadow-[0_0_20px_rgba(59,130,246,0.35)]">
-              선택
+          {/* 1. 오늘의 당신은 과거 수많은 \n 선택의 합입니다. (글자 짤림 방지 및 반응형 튜닝) */}
+          <h1 className="text-2xl sm:text-3xl md:text-[38px] lg:text-[44px] font-black text-white tracking-tight leading-snug sm:leading-tight break-keep">
+            <span className="block mb-1 sm:mb-2">오늘의 당신은 과거 수많은</span>
+            <span className="inline-flex items-center gap-1.5 flex-wrap justify-center">
+              <span className="relative inline-block px-2.5 py-0.5 rounded-xl bg-blue-500/15 border border-blue-400/50 text-blue-400 font-black shadow-[0_0_20px_rgba(59,130,246,0.35)]">
+                선택
+              </span>
+              <span className="whitespace-nowrap">의 합입니다.</span>
             </span>
-            의 합입니다.
           </h1>
 
           {/* 2. 지난 선택들에 후회는 없으신가요? (회색, 아주 작게, 선택 강조) */}
@@ -49,24 +50,28 @@ export function HeroLandingSection({ totalPool, totalUsers }: HeroLandingSection
               선택
             </span>
             들에{" "}
-            <span className="text-slate-300 border-b border-rose-500/70 pb-0.5">
+            <span className="text-slate-300 border-b border-rose-500/70 pb-0.5 whitespace-nowrap">
               후회는 없으신가요?
             </span>
           </p>
 
-          {/* 3. 합리적 선택은 타고나는 것이 아니라, \n 훈련 되는 것입니다. (선택, 훈련 강조) */}
+          {/* 3. 합리적 선택은 타고나는 것이 아니라, \n 훈련 되는 것입니다. (선택, 훈련 강조, 줄바꿈 최적화) */}
           <div className="pt-2 sm:pt-3">
-            <p className="text-lg sm:text-2xl md:text-3xl font-black text-slate-100 leading-snug sm:leading-snug break-keep">
-              합리적{" "}
-              <span className="relative inline-block px-2 py-0.5 rounded-xl bg-blue-500/15 border border-blue-400/50 text-blue-400 font-black shadow-[0_0_16px_rgba(59,130,246,0.3)]">
-                선택
+            <p className="text-lg sm:text-2xl md:text-[28px] font-black text-slate-100 leading-snug break-keep">
+              <span className="inline-flex items-center gap-1.5 flex-wrap justify-center mb-1">
+                <span>합리적</span>
+                <span className="relative inline-block px-2 py-0.5 rounded-xl bg-blue-500/15 border border-blue-400/50 text-blue-400 font-black shadow-[0_0_16px_rgba(59,130,246,0.3)]">
+                  선택
+                </span>
+                <span className="whitespace-nowrap">은 타고나는 것이 아니라,</span>
               </span>
-              은 타고나는 것이 아니라,
-              <br />
-              <span className="relative inline-block mt-2 px-3 py-1 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-blue-500/20 border-2 border-emerald-400/60 text-emerald-300 font-black shadow-[0_0_30px_rgba(16,185,129,0.35)] animate-pulse">
-                훈련
-              </span>{" "}
-              되는 것입니다.
+              <br className="hidden sm:inline" />
+              <span className="inline-flex items-center gap-1.5 flex-wrap justify-center mt-1 sm:mt-0">
+                <span className="relative inline-block px-3 py-1 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-blue-500/20 border-2 border-emerald-400/60 text-emerald-300 font-black shadow-[0_0_30px_rgba(16,185,129,0.35)] animate-pulse">
+                  훈련
+                </span>
+                <span className="whitespace-nowrap">되는 것입니다.</span>
+              </span>
             </p>
           </div>
         </div>

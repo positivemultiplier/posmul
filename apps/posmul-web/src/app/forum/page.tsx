@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import { MessageSquare, Flame, TrendingUp, Sparkles, Trophy, Award } from "lucide-react";
 import { GalleryPostList } from "./components/GalleryPostList";
 import { DomainContextHeader } from "@/shared/ui/components/layout/DomainContextHeader";
@@ -52,7 +52,15 @@ export default function ForumPage() {
         </div>
 
         {/* 메인 갤러리 테이블 */}
-        <GalleryPostList />
+        <Suspense
+          fallback={
+            <div className="p-12 text-center text-slate-500 text-xs">
+              갤러리를 불러오는 중입니다...
+            </div>
+          }
+        >
+          <GalleryPostList />
+        </Suspense>
       </div>
     </div>
   );
