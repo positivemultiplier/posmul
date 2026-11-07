@@ -121,3 +121,4 @@ PosMul v2.0은 수동 운영 부담을 최소화하기 위해 **수집 ➔ 생�
 | **Consume** | `/api/consume/time/campaigns`<br>`/api/consume/time/view`<br>`/api/consume/money/stores`<br>`/api/consume/cloud/projects` | 광고 캠페인 시청 완료 시 PMP 지급, 지역 상점 결제, 크라우드 펀딩 참여 |
 | **Forum** | `/api/forum/posts`<br>`/api/forum/activity`<br>`/api/forum/delegate` | 아고라·예산·뉴스 게시글 CRUD 및 활동 PMP 보상 지급 |
 | **Admin** | `/api/admin/prediction/create-game`<br>`/api/admin/scheduler/sync`<br>`/api/admin/economy` | 관리자 백오피스 전용 수동 게임 생성, 스케줄러 동기화, 경제 지표 제어 |
+

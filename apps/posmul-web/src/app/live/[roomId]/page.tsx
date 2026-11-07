@@ -5,9 +5,12 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   ArrowLeft,
+  ArrowRight,
   Users,
   Send,
   Trophy,
+  ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { LIVE_ROOMS } from "../live-rooms.data";
@@ -35,7 +38,7 @@ export default function LiveRoomPage() {
   const [inputMessage, setInputMessage] = useState("");
   const [myTeam, setMyTeam] = useState<"A" | "B">("A");
   const [onlineCount, setOnlineCount] = useState<number>(roomData.viewerCount);
-  const [lastSentAt, setLastSentAt] = useState<number>(0); // 1초 쿨다운 도배 방지
+  const [lastSentAt, setLastSentAt] = useState<number>(0); // 0.8초 쿨다운 도배 방지
   const [voteStats, setVoteStats] = useState({
     ratioA: roomData.predictionGame?.optionA.ratio || 60,
     ratioB: roomData.predictionGame?.optionB.ratio || 40,
@@ -51,29 +54,27 @@ export default function LiveRoomPage() {
     getRecentLiveMessagesAction(roomId).then((res) => {
       if (res.success && res.messages.length > 0) {
         setMessages(res.messages);
+      } else if (roomData.initialMessages && roomData.initialMessages.length > 0) {
+        setMessages(roomData.initialMessages);
       } else {
-        // 초기 기본 대화 샘플
         setMessages([
           {
             id: "init-1",
-            sender: "타이거즈v",
+            sender: "시민응원단",
             teamTag: roomData.predictionGame?.optionA.label || "A팀",
             teamColor: "bg-sky-500/20 text-sky-300 border-sky-400/40",
-            message: "오늘 8회말 투아웃만 막으면 우승각이다 가자아아!!",
-            time: "13:25",
-          },
-          {
-            id: "init-2",
-            sender: "푸른피의사자",
-            teamTag: roomData.predictionGame?.optionB.label || "B팀",
-            teamColor: "bg-rose-500/20 text-rose-300 border-rose-400/40",
-            message: "아직 9회 남아있음 역전 쓰리런 홈런 터진다 ㅋㅋ",
-            time: "13:26",
+            message: "실시간 라이브 응원톡에 오신 것을 환영합니다! 함께 응원해요 🔥",
+            time: "방금",
           },
         ]);
       }
     });
-  }, [roomId, roomData.predictionGame?.optionA.label, roomData.predictionGame?.optionB.label]);
+  }, [
+    roomId,
+    roomData.initialMessages,
+    roomData.predictionGame?.optionA.label,
+    roomData.predictionGame?.optionB.label,
+  ]);
 
   // 2. Supabase Realtime Broadcast 채널 연결
   useEffect(() => {
@@ -126,14 +127,14 @@ export default function LiveRoomPage() {
     }
   }, [messages]);
 
-  // 3. 메시지 전송 (1초 도배 방지 쿨다운 + 30개 버퍼 자동 보존)
+  // 3. 메시지 전송 (0.8초 도배 방지 쿨다운 + 30개 버퍼 자동 보존)
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim()) return;
 
     const now = Date.now();
     if (now - lastSentAt < 800) {
-      return; // 0.8초 내 연속 타자 쿨다운 (비용 절감 & 도배 방지)
+      return;
     }
     setLastSentAt(now);
 
@@ -158,7 +159,6 @@ export default function LiveRoomPage() {
     setMessages((prev) => [...prev.slice(-100), newMsg]);
     setInputMessage("");
 
-    // A. 실시간 브로드캐스트 즉시 전송
     if (channelRef.current) {
       channelRef.current.send({
         type: "broadcast",
@@ -167,7 +167,6 @@ export default function LiveRoomPage() {
       });
     }
 
-    // B. 새로고침해도 남도록 최근 30개 버퍼에 비동기 저장
     saveLiveMessageBufferAction({
       roomId,
       sender: newMsg.sender,
@@ -274,11 +273,11 @@ export default function LiveRoomPage() {
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* 좌측 (7 cols): 매치 상황판 & 실시간 승부예측 화력 배틀 */}
         <div className="lg:col-span-7 flex flex-col space-y-5">
-          {/* A. 실시간 경기 스코어보드 전광판 */}
+          {/* A. 실시간 경기/방영 스코어보드 전광판 */}
           {roomData.matchScore && (
             <div className="rounded-3xl bg-gradient-to-br from-[#121621] to-[#0c0f17] border border-white/[0.08] p-6 shadow-2xl relative overflow-hidden">
               <div className="flex items-center justify-between pb-4 border-b border-white/[0.06] text-xs">
-                <span className="font-bold text-slate-400">실시간 경기 현황</span>
+                <span className="font-bold text-slate-400">실시간 현황 전광판</span>
                 <span className="font-extrabold text-red-400 bg-red-500/15 border border-red-500/30 px-2.5 py-0.5 rounded-full animate-pulse">
                   {roomData.matchScore.statusText}
                 </span>
@@ -286,10 +285,10 @@ export default function LiveRoomPage() {
 
               <div className="py-6 flex items-center justify-around">
                 <div className="text-center space-y-1">
-                  <div className="text-sm sm:text-base font-extrabold text-slate-200">
+                  <div className="text-xs sm:text-sm font-extrabold text-slate-300">
                     {roomData.matchScore.teamA}
                   </div>
-                  <div className="text-4xl sm:text-5xl font-black text-sky-400 font-mono tracking-tight">
+                  <div className="text-3xl sm:text-5xl font-black text-sky-400 font-mono tracking-tight">
                     {roomData.matchScore.scoreA}
                   </div>
                 </div>
@@ -297,17 +296,20 @@ export default function LiveRoomPage() {
                 <div className="text-xl sm:text-2xl font-black text-slate-600">VS</div>
 
                 <div className="text-center space-y-1">
-                  <div className="text-sm sm:text-base font-extrabold text-slate-200">
+                  <div className="text-xs sm:text-sm font-extrabold text-slate-300">
                     {roomData.matchScore.teamB}
                   </div>
-                  <div className="text-4xl sm:text-5xl font-black text-rose-400 font-mono tracking-tight">
+                  <div className="text-3xl sm:text-5xl font-black text-rose-400 font-mono tracking-tight">
                     {roomData.matchScore.scoreB}
                   </div>
                 </div>
               </div>
 
-              <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs text-slate-400">
-                <span>네이버 응원톡 스타일 실시간 동기화</span>
+              <div className="pt-3 border-t border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400">
+                <span className="inline-flex items-center gap-1.5 text-emerald-300 font-semibold">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>검증 데이터: {roomData.predictionGame?.oracleLabel}</span>
+                </span>
                 <span className="text-amber-300 font-bold">
                   💰 {roomData.predictionGame?.totalPoolPmc.toLocaleString()} PMC 상금풀 연동
                 </span>
@@ -315,18 +317,18 @@ export default function LiveRoomPage() {
             </div>
           )}
 
-          {/* B. 실시간 승부예측 화력 투표 게이지 */}
+          {/* B. 실시간 승부예측 화력 투표 게이지 + 공식 예측 마켓 PMP 베팅 연동 */}
           {roomData.predictionGame && (
-            <div className="rounded-3xl bg-[#111520] border border-white/[0.08] p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between">
+            <div className="rounded-3xl bg-[#111520] border border-white/[0.08] p-6 space-y-5 shadow-xl">
+              <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
-                  <Trophy className="w-4 h-4 text-amber-400" />
-                  <h3 className="text-sm font-extrabold text-white">
+                  <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
+                  <h3 className="text-sm sm:text-base font-extrabold text-white">
                     {roomData.predictionGame.question}
                   </h3>
                 </div>
-                <span className="text-xs font-bold text-sky-400">
-                  클릭 시 채팅 뱃지 즉시 변경!
+                <span className="text-[11px] font-bold text-sky-400 shrink-0">
+                  응원 클릭 시 내 채팅 뱃지 변경!
                 </span>
               </div>
 
@@ -340,7 +342,7 @@ export default function LiveRoomPage() {
                   </span>
                 </div>
 
-                <div className="h-3 w-full bg-slate-900 rounded-full overflow-hidden flex p-0.5 border border-white/[0.08]">
+                <div className="h-3.5 w-full bg-slate-900 rounded-full overflow-hidden flex p-0.5 border border-white/[0.08]">
                   <div
                     className="bg-gradient-to-r from-sky-500 to-blue-600 h-full rounded-l-full transition-all duration-300"
                     style={{ width: `${voteStats.ratioA}%` }}
@@ -352,12 +354,12 @@ export default function LiveRoomPage() {
                 </div>
 
                 <div className="flex justify-between text-[11px] text-slate-500 font-mono">
-                  <span>{voteStats.countA.toLocaleString()}명 지지</span>
-                  <span>{voteStats.countB.toLocaleString()}명 지지</span>
+                  <span>{voteStats.countA.toLocaleString()}명 실시간 응원</span>
+                  <span>{voteStats.countB.toLocaleString()}명 실시간 응원</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={() => handleLiveVote("A")}
@@ -382,6 +384,30 @@ export default function LiveRoomPage() {
                   <span>🔥 {roomData.predictionGame.optionB.label} 응원</span>
                 </button>
               </div>
+
+              {/* 🎯 공식 예측 게임 상세 페이지로 이동하여 실제 PMP 베팅 & PMC 보상 참여 */}
+              <div className="pt-3 border-t border-white/[0.08]">
+                <Link
+                  href={`/prediction/${roomData.predictionGame.slug || roomData.predictionGame.id}`}
+                  className="w-full p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/20 via-sky-500/20 to-indigo-500/20 hover:from-amber-500/30 hover:to-indigo-500/30 border border-amber-400/40 flex items-center justify-between gap-3 transition group"
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Sparkles className="w-4 h-4 text-amber-300 shrink-0" />
+                    <div className="text-left">
+                      <div className="text-xs font-black text-white group-hover:text-amber-200 transition">
+                        이 매치 공식 예측 게임에서 PMP 베팅 참여하기
+                      </div>
+                      <div className="text-[11px] text-slate-300">
+                        적중 시 <span className="text-amber-300 font-bold">{roomData.predictionGame.totalPoolPmc.toLocaleString()} PMC</span> 상금풀 배당 ({roomData.predictionGame.oracleLabel} 정산)
+                      </div>
+                    </div>
+                  </div>
+                  <span className="px-3 py-1.5 rounded-xl bg-amber-400 text-slate-950 font-black text-xs shrink-0 flex items-center gap-1 group-hover:translate-x-0.5 transition-transform">
+                    <span>베팅하러 가기</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </span>
+                </Link>
+              </div>
             </div>
           )}
         </div>
@@ -393,7 +419,7 @@ export default function LiveRoomPage() {
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
               <span>실시간 라이브 톡</span>
             </div>
-            <span className="text-[11px] text-sky-400 font-semibold">최근 대화 자동 보존됨</span>
+            <span className="text-[11px] text-sky-400 font-semibold">최근 30개 대화 자동 보존</span>
           </div>
 
           <div

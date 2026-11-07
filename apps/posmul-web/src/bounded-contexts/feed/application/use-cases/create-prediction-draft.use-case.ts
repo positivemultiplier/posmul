@@ -42,6 +42,7 @@ const VALID_ORACLE_TYPES = new Set<SettlementSourceType>([
   "dart",
   "kobis",
   "kcontent",
+  "coingecko",
   "fmp",
   "alpha-vantage",
   "football_data",

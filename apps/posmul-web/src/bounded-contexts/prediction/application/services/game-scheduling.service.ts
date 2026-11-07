@@ -47,11 +47,13 @@ function resolveTemplateSubcategory(template: ScheduledGameTemplate): string | n
       return "earnings";
     case "alpha-vantage":
       return "stocks";
+    case "coingecko":
+      return "crypto";
     case "kobis":
       return "movie";
     case "kcontent": {
       const sub = String(template.sourceConfig?.subCategory ?? "");
-      if (sub.startsWith("drama")) return "drama";
+      if (sub.startsWith("drama") || sub.startsWith("ott")) return "drama";
       if (sub.startsWith("variety")) return "variety";
       if (sub.startsWith("music")) return "music";
       return null;
@@ -552,6 +554,36 @@ export class GameSchedulingService {
         chartSource: "circle_melon_weekly",
       },
     });
+
+    // 4-5. OTT 한국 드라마 넷플릭스 주간 TOP 10 1위 달성 예측
+    this.templates.push({
+      id: "kcontent-ott-netflix-top1",
+      title: "[OTT·드라마] 금주 화제작 한국 드라마, 넷플릭스 한국 TOP 10 1위 수성할까?",
+      description:
+        "주말 방영 및 공개 직후 한국 넷플릭스 시리즈 TOP 10 공식 순위(Tudum / FlixPatrol 집계)에서 한국 드라마가 1위를 차지할지 예측하세요.\n📅 마감: 일요일 21:00 | 📺 정산: 월요일 11:00 공식 순위 집계",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "yes", label: "한국 드라마 1위 수성 (Yes)", description: "넷플릭스 한국 시리즈 1위" },
+        { id: "no", label: "해외 시리즈·예능 1위 (No)", description: "1위 수성 실패" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(4, 12),
+      duration: 81,
+      settlementDelay: 14,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 3000,
+      creatorId: systemUserId,
+      category: "entertainment",
+      importance: "high",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "kcontent",
+      sourceConfig: {
+        subCategory: "ott_top1",
+        metric: "netflix_kr_series_top10",
+        optionMapping: { above: "yes", below: "no" },
+      },
+    });
   }
 
   /**
@@ -584,6 +616,37 @@ export class GameSchedulingService {
         symbol: "QQQ",
         comparisonType: "price_change_direction",
         optionMapping: { up: "up", down: "down" },
+      },
+    });
+
+    this.templates.push({
+      id: "btc-weekly-target",
+      title: "[암호화폐] 비트코인(BTC) 이번 주 $95,000 돌파할까?",
+      description:
+        "글로벌 현물 ETF 자금 유입과 거시 유동성 흐름 속에서 비트코인(BTC) 시세가 이번 주 마감 기준 $95,000를 돌파할지 예측하세요.\n📅 마감: 일요일 23:00 | ₿ 정산: CoinGecko 글로벌 인덱스 실시간 API",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "yes", label: "$95,000 돌파 (Yes)", description: "BTC ≥ $95,000" },
+        { id: "no", label: "$95,000 미달 (No)", description: "BTC < $95,000" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(1, 9),
+      duration: 158,
+      settlementDelay: 1,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 100000 as PmpAmount,
+      maxParticipants: 5000,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "high",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "coingecko",
+      sourceConfig: {
+        coinId: "bitcoin",
+        vsCurrency: "usd",
+        comparisonType: "threshold",
+        threshold: 95000,
+        optionMapping: { above: "yes", below: "no" },
       },
     });
   }
@@ -734,18 +797,20 @@ export class GameSchedulingService {
         .replace(/-/g, "");
       const slug = `${template.id}-${closeDateKst}`;
 
+      // 동일 slug 또는 동일 external_id(템플릿 ID)가 이미 ACTIVE 상태로 존재하면 중복 생성 원천 차단
       const { data: existing } = await supabaseAdmin
         .schema("prediction")
         .from("prediction_games")
         .select("game_id")
-        .eq("slug", slug)
+        .or(`slug.eq.${slug},and(external_id.eq.${template.id},status.eq.ACTIVE)`)
+        .limit(1)
         .maybeSingle();
       if (existing) {
         return null;
       }
 
       const hasOracleAdapter =
-        !!template.sourceType && template.sourceType !== "kcontent";
+        !!template.sourceType && template.sourceType !== "manual";
 
       // 크론에는 로그인 사용자가 없으므로(RLS 차단) 서비스 롤로 직접 저장
       const { data: inserted, error } = await supabaseAdmin

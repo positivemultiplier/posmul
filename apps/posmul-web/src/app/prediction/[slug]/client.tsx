@@ -9,12 +9,20 @@ import { ProbabilityLineChart } from "@/bounded-contexts/prediction/presentation
 import { BettingDistributionChart } from "@/bounded-contexts/prediction/presentation/components/charts/BettingDistributionChart";
 import { ParticipantTimelineChart } from "@/bounded-contexts/prediction/presentation/components/charts/ParticipantTimelineChart";
 import { CompactMoneyWaveCard } from "@/bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
-import { PredictionComments } from "@/bounded-contexts/prediction/presentation/components/PredictionComments";
 import { GalleryPostList } from "@/app/forum/components/GalleryPostList";
 import { BalancedDecisionBriefing } from "@/bounded-contexts/prediction/presentation/components/BalancedDecisionBriefing";
 import { placeBet } from "../sports/soccer/[slug]/actions";
-import { FadeIn } from "@/shared/ui/components/animations";
-import { Users, BarChart2, Info, ArrowLeft, Trophy, Calendar, Clock, Activity, TrendingUp, PieChart } from "lucide-react";
+import {
+  Users,
+  ArrowLeft,
+  ArrowRight,
+  Clock,
+  TrendingUp,
+  PieChart,
+  ShieldCheck,
+  Radio,
+  Database,
+} from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/shared/ui/components/base";
 
@@ -41,12 +49,108 @@ interface PredictionGameDetail {
   settlementTime: string;
   status: "ACTIVE" | "ENDED" | "SETTLED";
   category: string;
+  subcategory?: string;
+  dataSource?: string;
+  externalId?: string;
+  settlementType?: string;
+  liveRoom?: {
+    id: string;
+    title: string;
+    viewerCount: number;
+    statusText: string;
+  };
   creator: {
     name: string;
     reputation: number;
     avatar: string;
   };
   prizePool: number;
+}
+
+function getOracleSpecInfo(dataSource?: string, title?: string) {
+  const ds = (dataSource || "").toLowerCase();
+  const t = (title || "").toUpperCase();
+
+  if (ds === "kobis" || t.includes("박스오피스")) {
+    return {
+      provider: "영화진흥위원회 통합전산망 (KOBIS Open API)",
+      endpoint: "searchDailyBoxOfficeList / searchWeeklyBoxOfficeList",
+      badge: "🎬 KOBIS 공인 박스오피스 오라클",
+      scheduleDesc: "주말 마감 후 월요일 09:00 공식 누적 관객수 자동 정산",
+    };
+  }
+  if (ds === "kcontent" || t.includes("시청률") || t.includes("드라마") || t.includes("OTT") || t.includes("예능") || t.includes("K-POP")) {
+    if (t.includes("OTT") || t.includes("넷플릭스")) {
+      return {
+        provider: "Netflix Tudum / FlixPatrol 공식 TOP 10 집계",
+        endpoint: "KContentOracleAdapter (ott_top1)",
+        badge: "📺 글로벌 OTT 공식 순위 오라클",
+        scheduleDesc: "집계 발표 직후 대한민국 시리즈 TOP 10 1위 여부 정산",
+      };
+    }
+    if (t.includes("K-POP") || t.includes("음원")) {
+      return {
+        provider: "써클차트(Circle Chart) · 멜론 주간 디지털 차트",
+        endpoint: "KContentOracleAdapter (music_chart_top10)",
+        badge: "🎵 공인 음원차트 오라클",
+        scheduleDesc: "주간 차트 발표 시점 TOP 10 진입 여부 정산",
+      };
+    }
+    return {
+      provider: "닐슨코리아(Nielsen Korea) 전국 가구 시청률 공시",
+      endpoint: "KContentOracleAdapter (nielsen_national_household)",
+      badge: "📺 닐슨코리아 공인 시청률 오라클",
+      scheduleDesc: "본방송 익일 오전 07:00~09:00 공식 시청률 발표 즉시 정산",
+    };
+  }
+  if (ds === "coingecko" || t.includes("비트코인") || t.includes("BTC")) {
+    return {
+      provider: "CoinGecko 글로벌 암호화폐 인덱스 Public API v3",
+      endpoint: "api.coingecko.com/api/v3/simple/price",
+      badge: "₿ CoinGecko 실시간 시세 오라클",
+      scheduleDesc: "마감 시각 기준 글로벌 USD/KRW 인덱스가격 자동 대조 정산",
+    };
+  }
+  if (ds === "alpha-vantage" || t.includes("나스닥") || t.includes("코스피")) {
+    return {
+      provider: "Alpha Vantage Global Market Data / KRX 종가",
+      endpoint: "TIME_SERIES_DAILY (Official Close Price)",
+      badge: "📈 글로벌 증시 공식 종가 오라클",
+      scheduleDesc: "정규장 마감 후 전일 종가 대비 상승/하락 자동 판정",
+    };
+  }
+  if (ds === "dart" || t.includes("실적공시") || t.includes("영업이익")) {
+    return {
+      provider: "금융감독원 전자공시시스템 (OpenDART API)",
+      endpoint: "opendart.fss.or.kr/api/fnlttSinglAcntAll.json",
+      badge: "📑 금감원 OpenDART 전자공시 오라클",
+      scheduleDesc: "분기·사업보고서 연결재무제표 영업이익 확정치 자동 정산",
+    };
+  }
+  if (ds === "ecos" || t.includes("한국은행") || t.includes("금통위") || t.includes("경상수지")) {
+    return {
+      provider: "한국은행 경제통계시스템 (BOK ECOS Open API)",
+      endpoint: "ecos.bok.or.kr/api/StatisticSearch (722Y001 / 200Y101)",
+      badge: "🏦 한국은행 ECOS 공식 통계 오라클",
+      scheduleDesc: "금통위/속보치 공식 발표 1~2시간 후 ECOS 통계표 자동 정산",
+    };
+  }
+  if (ds === "football_data" || ds === "thesportsdb" || t.includes("EPL") || t.includes("KBO") || t.includes("프로야구")) {
+    return {
+      provider: t.includes("KBO") || t.includes("프로야구")
+        ? "KBO 공식 기록실 & TheSportsDB 매치 스코어"
+        : "Football-Data.org / EPL 공식 경기 기록",
+      endpoint: "Match Official FullTime Score & Player Stats",
+      badge: "⚽ 공식 스포츠 매치 기록 오라클",
+      scheduleDesc: "경기 종료(Full-Time) 공식 기록 확정 직후 자동 정산",
+    };
+  }
+  return {
+    provider: "통계청 국가통계포털 (KOSIS) · 국회 열린국회정보 API",
+    endpoint: "kosis.kr/openapi / open.assembly.go.kr",
+    badge: "🏛️ 국가 공인 오픈데이터 오라클",
+    scheduleDesc: "공식 통계 및 본회의 표결 공표 직후 자동 정산",
+  };
 }
 
 interface UniversalPredictionDetailClientProps {
@@ -71,7 +175,6 @@ export function UniversalPredictionDetailClient({
   game,
   userBalance,
   userBets,
-  slug,
 }: UniversalPredictionDetailClientProps) {
   const [activeTab, setActiveTab] = useState<TabType>("analysis");
   const [isPending, startTransition] = useTransition();
@@ -80,6 +183,8 @@ export function UniversalPredictionDetailClient({
   const [selectedOption, setSelectedOption] = useState<string>(game.options[0]?.id || "");
   const [stakeAmount, setStakeAmount] = useState<number>(game.minimumStake || 100);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+
+  const oracleSpec = getOracleSpecInfo(game.dataSource, game.title);
 
   const handlePlaceBet = async () => {
     if (!selectedOption) return;
@@ -130,20 +235,56 @@ export function UniversalPredictionDetailClient({
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
+        {/* 🔴 연동된 실시간 라이브 응원톡 배너 (존재할 경우 상단 하이라이트) */}
+        {game.liveRoom && (
+          <Link
+            href={`/live/${game.liveRoom.id}`}
+            className="block rounded-2xl bg-gradient-to-r from-red-950/70 via-rose-900/40 to-slate-900 border border-red-500/40 hover:border-red-400 p-4 shadow-xl transition group"
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600 text-white text-[11px] font-black shrink-0 shadow-md">
+                  <Radio className="w-3.5 h-3.5 animate-pulse" />
+                  <span>LIVE 응원톡</span>
+                </span>
+                <div>
+                  <div className="text-sm font-black text-white group-hover:text-red-300 transition">
+                    {game.liveRoom.title} ({game.liveRoom.viewerCount.toLocaleString()}명 실시간 접속 중)
+                  </div>
+                  <div className="text-xs text-slate-300">
+                    현재 상태: <span className="text-red-300 font-bold">{game.liveRoom.statusText}</span> · 내 예측 팀 뱃지를 달고 실시간으로 응원해보세요!
+                  </div>
+                </div>
+              </div>
+              <span className="px-4 py-2 rounded-xl bg-red-600 group-hover:bg-red-500 text-white font-black text-xs shrink-0 flex items-center gap-1 self-end sm:self-center shadow-md">
+                <span>라이브 응원톡 입장</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </div>
+          </Link>
+        )}
+
         {/* Game Title & Header */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 text-xs text-slate-400 font-semibold">
-            <span>{game.creator.avatar} {game.creator.name}</span>
+        <div className="space-y-3">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 font-semibold">
+            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-700/50 font-bold">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+              <span>{oracleSpec.badge}</span>
+            </span>
             <span>•</span>
             <span className="text-amber-400 flex items-center gap-1">
               <Clock className="w-3.5 h-3.5" />
-              마감: {new Date(game.endTime).toLocaleDateString('ko-KR')}
+              마감: {new Date(game.endTime).toLocaleDateString("ko-KR")}
+            </span>
+            <span>•</span>
+            <span className="text-sky-400 font-bold">
+              참여자 {game.participantCount.toLocaleString()}명 · 총 베팅 {game.totalVolume.toLocaleString()} PMP
             </span>
           </div>
           <h1 className="text-2xl md:text-3xl font-extrabold text-white leading-tight">
             {game.title}
           </h1>
-          <p className="text-sm text-slate-400 leading-relaxed">
+          <p className="text-sm text-slate-400 leading-relaxed whitespace-pre-line">
             {game.description}
           </p>
         </div>
@@ -191,6 +332,33 @@ export function UniversalPredictionDetailClient({
                   }))}
                   isDarkMode={true}
                 />
+              </div>
+            </Card>
+
+            {/* 🏛️ 공인 검증 데이터 오라클 명세 카드 (Verified Oracle Spec) */}
+            <Card className="p-5 bg-gradient-to-r from-slate-900 via-slate-900/95 to-emerald-950/20 border-emerald-500/30 space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs sm:text-sm font-extrabold text-emerald-300 flex items-center gap-2">
+                  <Database className="w-4 h-4 text-emerald-400" />
+                  <span>공인 데이터 오라클 자동 정산 명세 (Verified Resolution Spec)</span>
+                </h3>
+                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black">
+                  ⚡ AUTO-ORACLE 연동 완료
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06]">
+                  <div className="text-[10px] text-slate-400 font-bold mb-0.5">공식 검증 기관 / API</div>
+                  <div className="font-extrabold text-white">{oracleSpec.provider}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06]">
+                  <div className="text-[10px] text-slate-400 font-bold mb-0.5">데이터 파이프라인 코드</div>
+                  <div className="font-mono text-[11px] text-sky-300 truncate">{oracleSpec.endpoint}</div>
+                </div>
+                <div className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06]">
+                  <div className="text-[10px] text-slate-400 font-bold mb-0.5">정산 스케줄 원칙</div>
+                  <div className="font-semibold text-amber-300">{oracleSpec.scheduleDesc}</div>
+                </div>
               </div>
             </Card>
 
@@ -274,7 +442,7 @@ export function UniversalPredictionDetailClient({
                       <div key={b.betId} className="flex justify-between items-center p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs">
                         <div>
                           <span className="font-bold text-blue-300">{b.selectedOption}</span>
-                          <div className="text-[10px] text-slate-500">{new Date(b.createdAt).toLocaleString('ko-KR')}</div>
+                          <div className="text-[10px] text-slate-500">{new Date(b.createdAt).toLocaleString("ko-KR")}</div>
                         </div>
                         <span className="font-extrabold text-amber-300">{b.betAmount.toLocaleString()} PMP</span>
                       </div>

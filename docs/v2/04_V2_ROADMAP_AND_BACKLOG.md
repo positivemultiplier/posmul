@@ -102,3 +102,4 @@
 * **관련 파일**:
   - `src/app/forum/components/GalleryPostList.tsx`
   - `src/app/prediction/user-suggestions/page.tsx`
+

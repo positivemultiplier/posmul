@@ -231,6 +231,20 @@ export function resolveGameVisualMeta(
     };
   }
 
+  if (t.includes("KBO") || t.includes("프로야구") || t.includes("한국시리즈") || sub === "baseball") {
+    return {
+      symbol: "KBO",
+      subLabel: "FINAL",
+      bgClass: "bg-gradient-to-br from-red-600 to-rose-800",
+      textClass: "text-white font-black text-xs",
+      borderClass: "border-red-400/40",
+      categoryLabel: "프로야구",
+      sourceLabel: "KBO 공식기록",
+      visualMode: "gauge",
+      accentHex: "#ef4444",
+    };
+  }
+
   if (cat === "SPORTS" || t.includes("EPL") || t.includes("손흥민")) {
     return {
       symbol: "EPL",
@@ -245,6 +259,20 @@ export function resolveGameVisualMeta(
     };
   }
 
+  if (t.includes("OTT") || t.includes("넷플릭스")) {
+    return {
+      symbol: "OTT",
+      subLabel: "TOP1",
+      bgClass: "bg-gradient-to-br from-rose-600 to-purple-900",
+      textClass: "text-white font-black text-xs",
+      borderClass: "border-rose-400/40",
+      categoryLabel: "OTT·드라마",
+      sourceLabel: "Netflix Tudum",
+      visualMode: "gauge",
+      accentHex: "#f43f5e",
+    };
+  }
+
   if (cat === "ENTERTAINMENT" || t.includes("K-POP") || t.includes("박스오피스") || t.includes("시청률")) {
     const isMusic = t.includes("K-POP") || t.includes("음원");
     const isMovie = t.includes("박스오피스") || t.includes("영화");
@@ -254,8 +282,8 @@ export function resolveGameVisualMeta(
       bgClass: "bg-gradient-to-br from-fuchsia-600 to-purple-800",
       textClass: "text-white font-black text-xs",
       borderClass: "border-fuchsia-400/40",
-      categoryLabel: isMusic ? "K-POP 차트" : isMovie ? "박스오피스" : "시청률",
-      sourceLabel: isMovie ? "KOBIS 영화진흥위" : "공인 집계",
+      categoryLabel: isMusic ? "K-POP 차트" : isMovie ? "박스오피스" : "드라마·예능 시청률",
+      sourceLabel: isMovie ? "KOBIS 영화진흥위" : isMusic ? "써클·멜론차트" : "닐슨코리아 시청률",
       visualMode: "list",
       accentHex: "#d946ef",
     };

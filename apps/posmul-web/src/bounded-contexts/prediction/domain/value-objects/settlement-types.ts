@@ -12,7 +12,8 @@ export type SettlementSourceType =
   | "fmp"
   | "ecos"
   | "kobis"
-  | "kcontent";
+  | "kcontent"
+  | "coingecko";
 
 export type SettlementMethod = "auto" | "semi_auto" | "manual";
 

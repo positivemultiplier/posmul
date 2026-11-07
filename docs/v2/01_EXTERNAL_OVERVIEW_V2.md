@@ -140,3 +140,4 @@ PosMul은 정부 보조금에만 의존하지 않고 **민간 광고·ESG 기금
   - `economy`, `prediction`, `donation`, `forum`, `consume`, `ranking` 등 9개 도메인이 코드 레벨뿐 아니라 PostgreSQL 데이터베이스 스키마 레벨에서도 완벽히 격리(Schema-per-Context)되어 금융급 데이터 정합성을 보장합니다.
 * **3-Row Tone-on-Tone 시민 여정 UI**:
   - 상단 고정 3단 네비게이션이 시민의 5단계 여정(공론 ➔ 소비 ➔ 예측 ➔ 기부 ➔ 랭킹)과 도메인별 고유 컬러 톤을 일관되게 안내하여 복잡한 생태계를 직관적으로 탐색할 수 있습니다.
+

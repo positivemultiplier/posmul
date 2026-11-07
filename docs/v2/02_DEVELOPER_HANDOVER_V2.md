@@ -237,3 +237,4 @@ npx vercel --prod --yes
 (Invoke-WebRequest -Uri "https://posmul.com" -UseBasicParsing).StatusCode
 ```
 > **원칙**: 위 3단계 게이트를 모두 통과하고 `https://posmul.com` 라이브 반영이 확인되기 전에는 절대 작업을 종료하지 않습니다.
+

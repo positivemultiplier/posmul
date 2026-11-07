@@ -19,10 +19,12 @@ import {
   SettlementSourceType,
 } from "../../domain/value-objects/settlement-types";
 import { AlphaVantageOracleAdapter } from "../../infrastructure/oracle/alpha-vantage.adapter";
+import { CoinGeckoOracleAdapter } from "../../infrastructure/oracle/coingecko.adapter";
 import { DartOracleAdapter } from "../../infrastructure/oracle/dart.adapter";
 import { EcosOracleAdapter } from "../../infrastructure/oracle/ecos.adapter";
 import { FmpOracleAdapter } from "../../infrastructure/oracle/fmp.adapter";
 import { FootballDataOracleAdapter } from "../../infrastructure/oracle/football-data.adapter";
+import { KContentOracleAdapter } from "../../infrastructure/oracle/kcontent.adapter";
 import { KobisOracleAdapter } from "../../infrastructure/oracle/kobis.adapter";
 import { KosisOracleAdapter } from "../../infrastructure/oracle/kosis.adapter";
 
@@ -52,6 +54,8 @@ export class SettlementOrchestratorService {
       new EcosOracleAdapter(),
       new DartOracleAdapter(),
       new KobisOracleAdapter(),
+      new KContentOracleAdapter(),
+      new CoinGeckoOracleAdapter(),
       new FootballDataOracleAdapter(),
       new AlphaVantageOracleAdapter(),
       new FmpOracleAdapter(),
