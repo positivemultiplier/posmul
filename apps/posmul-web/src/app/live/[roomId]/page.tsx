@@ -5,22 +5,21 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
   ArrowLeft,
-  Radio,
   Users,
   Send,
-  Flame,
-  ThumbsUp,
-  Sparkles,
   Trophy,
-  Share2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { LIVE_ROOMS, LiveEventRoom } from "../live-rooms.data";
+import { LIVE_ROOMS } from "../live-rooms.data";
+import {
+  getRecentLiveMessagesAction,
+  saveLiveMessageBufferAction,
+} from "../actions/live.actions";
 
 interface ChatMessage {
   id: string;
   sender: string;
-  teamTag?: string; // 예: "KIA 응원", "삼성 응원", "나스닥 롱"
+  teamTag?: string;
   teamColor?: string;
   message: string;
   time: string;
@@ -32,36 +31,11 @@ export default function LiveRoomPage() {
   const roomId = params.roomId as string;
   const roomData = LIVE_ROOMS.find((r) => r.id === roomId) || LIVE_ROOMS[0];
 
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: "init-1",
-      sender: "타이거즈v",
-      teamTag: roomData.predictionGame?.optionA.label || "A팀",
-      teamColor: "bg-sky-500/20 text-sky-300 border-sky-400/40",
-      message: "오늘 8회말 투아웃만 막으면 우승각이다 가자아아!!",
-      time: "13:25",
-    },
-    {
-      id: "init-2",
-      sender: "푸른피의사자",
-      teamTag: roomData.predictionGame?.optionB.label || "B팀",
-      teamColor: "bg-rose-500/20 text-rose-300 border-rose-400/40",
-      message: "아직 9회 남아있음 역전 쓰리런 홈런 터진다 ㅋㅋ",
-      time: "13:26",
-    },
-    {
-      id: "init-3",
-      sender: "동학개미대장",
-      teamTag: roomData.predictionGame?.optionA.label || "A팀",
-      teamColor: "bg-sky-500/20 text-sky-300 border-sky-400/40",
-      message: "긴장되서 손에 땀남 ㄷㄷ",
-      time: "13:27",
-    },
-  ]);
-
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [myTeam, setMyTeam] = useState<"A" | "B">("A");
   const [onlineCount, setOnlineCount] = useState<number>(roomData.viewerCount);
+  const [lastSentAt, setLastSentAt] = useState<number>(0); // 1초 쿨다운 도배 방지
   const [voteStats, setVoteStats] = useState({
     ratioA: roomData.predictionGame?.optionA.ratio || 60,
     ratioB: roomData.predictionGame?.optionB.ratio || 40,
@@ -72,7 +46,36 @@ export default function LiveRoomPage() {
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
 
-  // 1. Supabase Realtime Broadcast 채널 연결 (초경량 인메모리 고속 전송)
+  // 1. 방 입장 시 최근 30개 대화 버퍼 불러오기 (새로고침해도 보존)
+  useEffect(() => {
+    getRecentLiveMessagesAction(roomId).then((res) => {
+      if (res.success && res.messages.length > 0) {
+        setMessages(res.messages);
+      } else {
+        // 초기 기본 대화 샘플
+        setMessages([
+          {
+            id: "init-1",
+            sender: "타이거즈v",
+            teamTag: roomData.predictionGame?.optionA.label || "A팀",
+            teamColor: "bg-sky-500/20 text-sky-300 border-sky-400/40",
+            message: "오늘 8회말 투아웃만 막으면 우승각이다 가자아아!!",
+            time: "13:25",
+          },
+          {
+            id: "init-2",
+            sender: "푸른피의사자",
+            teamTag: roomData.predictionGame?.optionB.label || "B팀",
+            teamColor: "bg-rose-500/20 text-rose-300 border-rose-400/40",
+            message: "아직 9회 남아있음 역전 쓰리런 홈런 터진다 ㅋㅋ",
+            time: "13:26",
+          },
+        ]);
+      }
+    });
+  }, [roomId, roomData.predictionGame?.optionA.label, roomData.predictionGame?.optionB.label]);
+
+  // 2. Supabase Realtime Broadcast 채널 연결
   useEffect(() => {
     const supabase = createClient();
     const channel = supabase.channel(`live-room-${roomId}`, {
@@ -82,12 +85,10 @@ export default function LiveRoomPage() {
       },
     });
 
-    // 실시간 메시지 수신
     channel
       .on("broadcast", { event: "chat_message" }, ({ payload }) => {
         setMessages((prev) => [...prev.slice(-100), payload]);
       })
-      // 실시간 투표 카운트 업데이트 수신
       .on("broadcast", { event: "live_vote" }, ({ payload }) => {
         setVoteStats((prev) => {
           const newA = payload.team === "A" ? prev.countA + 1 : prev.countA;
@@ -101,7 +102,6 @@ export default function LiveRoomPage() {
           };
         });
       })
-      // 실시간 접속자 집계 (Presence)
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
         const connectedUsers = Object.keys(state).length;
@@ -120,17 +120,22 @@ export default function LiveRoomPage() {
     };
   }, [roomId, roomData.viewerCount]);
 
-  // 메시지 올 때마다 자동 하단 스크롤
   useEffect(() => {
     if (chatScrollRef.current) {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
   }, [messages]);
 
-  // 2. 메시지 전송
+  // 3. 메시지 전송 (1초 도배 방지 쿨다운 + 30개 버퍼 자동 보존)
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputMessage.trim()) return;
+
+    const now = Date.now();
+    if (now - lastSentAt < 800) {
+      return; // 0.8초 내 연속 타자 쿨다운 (비용 절감 & 도배 방지)
+    }
+    setLastSentAt(now);
 
     const teamLabel =
       myTeam === "A"
@@ -150,21 +155,29 @@ export default function LiveRoomPage() {
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
 
-    // 내 화면에 즉시 추가
     setMessages((prev) => [...prev.slice(-100), newMsg]);
     setInputMessage("");
 
-    // 접속 중인 모든 사람에게 브로드캐스트 전송
+    // A. 실시간 브로드캐스트 즉시 전송
     if (channelRef.current) {
-      await channelRef.current.send({
+      channelRef.current.send({
         type: "broadcast",
         event: "chat_message",
         payload: newMsg,
       });
     }
+
+    // B. 새로고침해도 남도록 최근 30개 버퍼에 비동기 저장
+    saveLiveMessageBufferAction({
+      roomId,
+      sender: newMsg.sender,
+      teamTag: newMsg.teamTag,
+      teamColor: newMsg.teamColor,
+      message: newMsg.message,
+    });
   };
 
-  // 3. 1-클릭 화력 리액션 (🔥, 🎉, 👏)
+  // 4. 화력 리액션
   const sendQuickReaction = async (emoji: string) => {
     const teamLabel =
       myTeam === "A"
@@ -188,7 +201,7 @@ export default function LiveRoomPage() {
     setMessages((prev) => [...prev.slice(-100), newMsg]);
 
     if (channelRef.current) {
-      await channelRef.current.send({
+      channelRef.current.send({
         type: "broadcast",
         event: "chat_message",
         payload: newMsg,
@@ -196,7 +209,7 @@ export default function LiveRoomPage() {
     }
   };
 
-  // 4. 실시간 응원 베팅 투표
+  // 5. 응원 투표
   const handleLiveVote = async (team: "A" | "B") => {
     setMyTeam(team);
     setVoteStats((prev) => {
@@ -212,7 +225,7 @@ export default function LiveRoomPage() {
     });
 
     if (channelRef.current) {
-      await channelRef.current.send({
+      channelRef.current.send({
         type: "broadcast",
         event: "live_vote",
         payload: { team },
@@ -257,7 +270,7 @@ export default function LiveRoomPage() {
         </div>
       </header>
 
-      {/* 2. 메인 컨텐츠 영역 (좌측 스코어/예측보드 + 우측 고속 채팅 스트림) */}
+      {/* 2. 메인 컨텐츠 영역 */}
       <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
         {/* 좌측 (7 cols): 매치 상황판 & 실시간 승부예측 화력 배틀 */}
         <div className="lg:col-span-7 flex flex-col space-y-5">
@@ -317,7 +330,6 @@ export default function LiveRoomPage() {
                 </span>
               </div>
 
-              {/* 양자 대결 화력 게이지 바 */}
               <div className="space-y-1.5">
                 <div className="flex justify-between text-xs font-black">
                   <span className="text-sky-400">
@@ -345,7 +357,6 @@ export default function LiveRoomPage() {
                 </div>
               </div>
 
-              {/* 원클릭 응원 팀 선택 버튼 */}
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <button
                   type="button"
@@ -377,16 +388,14 @@ export default function LiveRoomPage() {
 
         {/* 우측 (5 cols): 초경량 고속 실시간 채팅 스트림 */}
         <div className="lg:col-span-5 rounded-3xl bg-[#111520] border border-white/[0.08] flex flex-col h-[650px] shadow-2xl overflow-hidden">
-          {/* 채팅 헤더 */}
           <div className="px-4 py-3 bg-[#0c0f17] border-b border-white/[0.08] flex items-center justify-between text-xs font-bold text-slate-300">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>실시간 라이브 톡 (무제한 고속 스트림)</span>
+              <span>실시간 라이브 톡</span>
             </div>
-            <span className="text-[11px] text-slate-500">인메모리 브로드캐스트</span>
+            <span className="text-[11px] text-sky-400 font-semibold">최근 대화 자동 보존됨</span>
           </div>
 
-          {/* 실시간 채팅 메시지 목록 */}
           <div
             ref={chatScrollRef}
             className="flex-1 p-4 overflow-y-auto space-y-2.5 divide-y divide-white/[0.03] text-xs font-sans"
@@ -492,4 +501,3 @@ export default function LiveRoomPage() {
     </div>
   );
 }
-

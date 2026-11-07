@@ -594,9 +594,6 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
               <span className="text-2xl font-black bg-gradient-to-r from-sky-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent tracking-tight">
                 PosMul
               </span>
-              <span className="hidden xl:inline-block px-2 py-0.5 rounded-md bg-white/[0.04] border border-white/[0.08] text-[10px] font-semibold text-slate-400 group-hover:text-slate-200 transition-colors">
-                시민 주권 생태계
-              </span>
             </Link>
 
             {/* Desktop: Row 1 메인 도메인 (시민 선순환 순서: 포럼 ➔ 소비 ➔ 예측 ➔ 기부 ➔ 랭킹 | 기타) */}
@@ -627,22 +624,19 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                       <span className="text-xs font-bold tracking-tight">
                         {data.title}
                       </span>
-                      <span
-                        className={`hidden lg:inline-block text-[9px] font-semibold px-1.5 py-0.2 rounded border ${
-                          isSelected
-                            ? "bg-black/25 text-white border-white/25"
-                            : "bg-slate-900/80 text-slate-500 border-slate-800"
-                        }`}
-                      >
-                        {meta.assetBadge}
-                      </span>
                     </Link>
-                    {showCycleArrow && (
-                      <ArrowRight className="hidden xl:block w-3 h-3 text-slate-700 mx-0.5 shrink-0" />
-                    )}
                   </div>
                 );
               })}
+
+              {/* 🔴 LIVE (응원톡) 눈에 띄는 화려한 뱃지 */}
+              <Link
+                href="/live"
+                className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white text-xs font-black shadow-lg shadow-red-500/25 border border-red-400/40 hover:scale-105 transition-all animate-pulse"
+              >
+                <span className="w-2 h-2 rounded-full bg-white" />
+                <span>LIVE</span>
+              </Link>
             </nav>
           </div>
 
