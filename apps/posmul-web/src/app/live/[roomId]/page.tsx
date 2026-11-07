@@ -1,0 +1,495 @@
+"use client";
+
+import React, { useEffect, useState, useRef } from "react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import {
+  ArrowLeft,
+  Radio,
+  Users,
+  Send,
+  Flame,
+  ThumbsUp,
+  Sparkles,
+  Trophy,
+  Share2,
+} from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { LIVE_ROOMS, LiveEventRoom } from "../live-rooms.data";
+
+interface ChatMessage {
+  id: string;
+  sender: string;
+  teamTag?: string; // 예: "KIA 응원", "삼성 응원", "나스닥 롱"
+  teamColor?: string;
+  message: string;
+  time: string;
+  isReaction?: boolean;
+}
+
+export default function LiveRoomPage() {
+  const params = useParams();
+  const roomId = params.roomId as string;
+  const roomData = LIVE_ROOMS.find((r) => r.id === roomId) || LIVE_ROOMS[0];
+
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: "init-1",
+      sender: "타이거즈v",
+      teamTag: roomData.predictionGame?.optionA.label || "A팀",
+      teamColor: "bg-sky-500/20 text-sky-300 border-sky-400/40",
+      message: "오늘 8회말 투아웃만 막으면 우승각이다 가자아아!!",
+      time: "13:25",
+    },
+    {
+      id: "init-2",
+      sender: "푸른피의사자",
+      teamTag: roomData.predictionGame?.optionB.label || "B팀",
+      teamColor: "bg-rose-500/20 text-rose-300 border-rose-400/40",
+      message: "아직 9회 남아있음 역전 쓰리런 홈런 터진다 ㅋㅋ",
+      time: "13:26",
+    },
+    {
+      id: "init-3",
+      sender: "동학개미대장",
+      teamTag: roomData.predictionGame?.optionA.label || "A팀",
+      teamColor: "bg-sky-500/20 text-sky-300 border-sky-400/40",
+      message: "긴장되서 손에 땀남 ㄷㄷ",
+      time: "13:27",
+    },
+  ]);
+
+  const [inputMessage, setInputMessage] = useState("");
+  const [myTeam, setMyTeam] = useState<"A" | "B">("A");
+  const [onlineCount, setOnlineCount] = useState<number>(roomData.viewerCount);
+  const [voteStats, setVoteStats] = useState({
+    ratioA: roomData.predictionGame?.optionA.ratio || 60,
+    ratioB: roomData.predictionGame?.optionB.ratio || 40,
+    countA: roomData.predictionGame?.optionA.count || 890,
+    countB: roomData.predictionGame?.optionB.count || 580,
+  });
+
+  const chatScrollRef = useRef<HTMLDivElement>(null);
+  const channelRef = useRef<any>(null);
+
+  // 1. Supabase Realtime Broadcast 채널 연결 (초경량 인메모리 고속 전송)
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase.channel(`live-room-${roomId}`, {
+      config: {
+        broadcast: { self: false },
+        presence: { key: `user-${Math.random().toString(36).substring(7)}` },
+      },
+    });
+
+    // 실시간 메시지 수신
+    channel
+      .on("broadcast", { event: "chat_message" }, ({ payload }) => {
+        setMessages((prev) => [...prev.slice(-100), payload]);
+      })
+      // 실시간 투표 카운트 업데이트 수신
+      .on("broadcast", { event: "live_vote" }, ({ payload }) => {
+        setVoteStats((prev) => {
+          const newA = payload.team === "A" ? prev.countA + 1 : prev.countA;
+          const newB = payload.team === "B" ? prev.countB + 1 : prev.countB;
+          const total = newA + newB;
+          return {
+            countA: newA,
+            countB: newB,
+            ratioA: Math.round((newA / total) * 100),
+            ratioB: 100 - Math.round((newA / total) * 100),
+          };
+        });
+      })
+      // 실시간 접속자 집계 (Presence)
+      .on("presence", { event: "sync" }, () => {
+        const state = channel.presenceState();
+        const connectedUsers = Object.keys(state).length;
+        setOnlineCount(roomData.viewerCount + connectedUsers);
+      })
+      .subscribe(async (status) => {
+        if (status === "SUBSCRIBED") {
+          await channel.track({ online_at: new Date().toISOString() });
+        }
+      });
+
+    channelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [roomId, roomData.viewerCount]);
+
+  // 메시지 올 때마다 자동 하단 스크롤
+  useEffect(() => {
+    if (chatScrollRef.current) {
+      chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // 2. 메시지 전송
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputMessage.trim()) return;
+
+    const teamLabel =
+      myTeam === "A"
+        ? roomData.predictionGame?.optionA.label || "A팀"
+        : roomData.predictionGame?.optionB.label || "B팀";
+    const teamColor =
+      myTeam === "A"
+        ? "bg-sky-500/20 text-sky-300 border-sky-400/40"
+        : "bg-rose-500/20 text-rose-300 border-rose-400/40";
+
+    const newMsg: ChatMessage = {
+      id: `msg-${Date.now()}-${Math.random()}`,
+      sender: "나(시민)",
+      teamTag: teamLabel,
+      teamColor,
+      message: inputMessage.trim(),
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    // 내 화면에 즉시 추가
+    setMessages((prev) => [...prev.slice(-100), newMsg]);
+    setInputMessage("");
+
+    // 접속 중인 모든 사람에게 브로드캐스트 전송
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: "broadcast",
+        event: "chat_message",
+        payload: newMsg,
+      });
+    }
+  };
+
+  // 3. 1-클릭 화력 리액션 (🔥, 🎉, 👏)
+  const sendQuickReaction = async (emoji: string) => {
+    const teamLabel =
+      myTeam === "A"
+        ? roomData.predictionGame?.optionA.label || "A팀"
+        : roomData.predictionGame?.optionB.label || "B팀";
+    const teamColor =
+      myTeam === "A"
+        ? "bg-sky-500/20 text-sky-300 border-sky-400/40"
+        : "bg-rose-500/20 text-rose-300 border-rose-400/40";
+
+    const newMsg: ChatMessage = {
+      id: `rx-${Date.now()}-${Math.random()}`,
+      sender: "나(시민)",
+      teamTag: teamLabel,
+      teamColor,
+      message: emoji.repeat(3),
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      isReaction: true,
+    };
+
+    setMessages((prev) => [...prev.slice(-100), newMsg]);
+
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: "broadcast",
+        event: "chat_message",
+        payload: newMsg,
+      });
+    }
+  };
+
+  // 4. 실시간 응원 베팅 투표
+  const handleLiveVote = async (team: "A" | "B") => {
+    setMyTeam(team);
+    setVoteStats((prev) => {
+      const newA = team === "A" ? prev.countA + 1 : prev.countA;
+      const newB = team === "B" ? prev.countB + 1 : prev.countB;
+      const total = newA + newB;
+      return {
+        countA: newA,
+        countB: newB,
+        ratioA: Math.round((newA / total) * 100),
+        ratioB: 100 - Math.round((newA / total) * 100),
+      };
+    });
+
+    if (channelRef.current) {
+      await channelRef.current.send({
+        type: "broadcast",
+        event: "live_vote",
+        payload: { team },
+      });
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col">
+      {/* 1. 상단 라이브 헤더 바 */}
+      <header className="bg-[#111520] border-b border-white/[0.08] px-4 py-3 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/live"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/40 text-[10px] font-black">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" />
+                  LIVE
+                </span>
+                <span className="text-xs font-bold text-slate-400">
+                  {roomData.categoryLabel}
+                </span>
+              </div>
+              <h1 className="text-sm sm:text-base font-black text-white truncate max-w-xs sm:max-w-md">
+                {roomData.title}
+              </h1>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 border border-white/[0.08] text-xs font-bold text-slate-300">
+              <Users className="w-3.5 h-3.5 text-red-400" />
+              <span>{onlineCount.toLocaleString()}명 접속 중</span>
+            </span>
+          </div>
+        </div>
+      </header>
+
+      {/* 2. 메인 컨텐츠 영역 (좌측 스코어/예측보드 + 우측 고속 채팅 스트림) */}
+      <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+        {/* 좌측 (7 cols): 매치 상황판 & 실시간 승부예측 화력 배틀 */}
+        <div className="lg:col-span-7 flex flex-col space-y-5">
+          {/* A. 실시간 경기 스코어보드 전광판 */}
+          {roomData.matchScore && (
+            <div className="rounded-3xl bg-gradient-to-br from-[#121621] to-[#0c0f17] border border-white/[0.08] p-6 shadow-2xl relative overflow-hidden">
+              <div className="flex items-center justify-between pb-4 border-b border-white/[0.06] text-xs">
+                <span className="font-bold text-slate-400">실시간 경기 현황</span>
+                <span className="font-extrabold text-red-400 bg-red-500/15 border border-red-500/30 px-2.5 py-0.5 rounded-full animate-pulse">
+                  {roomData.matchScore.statusText}
+                </span>
+              </div>
+
+              <div className="py-6 flex items-center justify-around">
+                <div className="text-center space-y-1">
+                  <div className="text-sm sm:text-base font-extrabold text-slate-200">
+                    {roomData.matchScore.teamA}
+                  </div>
+                  <div className="text-4xl sm:text-5xl font-black text-sky-400 font-mono tracking-tight">
+                    {roomData.matchScore.scoreA}
+                  </div>
+                </div>
+
+                <div className="text-xl sm:text-2xl font-black text-slate-600">VS</div>
+
+                <div className="text-center space-y-1">
+                  <div className="text-sm sm:text-base font-extrabold text-slate-200">
+                    {roomData.matchScore.teamB}
+                  </div>
+                  <div className="text-4xl sm:text-5xl font-black text-rose-400 font-mono tracking-tight">
+                    {roomData.matchScore.scoreB}
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-white/[0.06] flex items-center justify-between text-xs text-slate-400">
+                <span>네이버 응원톡 스타일 실시간 동기화</span>
+                <span className="text-amber-300 font-bold">
+                  💰 {roomData.predictionGame?.totalPoolPmc.toLocaleString()} PMC 상금풀 연동
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* B. 실시간 승부예측 화력 투표 게이지 */}
+          {roomData.predictionGame && (
+            <div className="rounded-3xl bg-[#111520] border border-white/[0.08] p-6 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Trophy className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-sm font-extrabold text-white">
+                    {roomData.predictionGame.question}
+                  </h3>
+                </div>
+                <span className="text-xs font-bold text-sky-400">
+                  클릭 시 채팅 뱃지 즉시 변경!
+                </span>
+              </div>
+
+              {/* 양자 대결 화력 게이지 바 */}
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-xs font-black">
+                  <span className="text-sky-400">
+                    {roomData.predictionGame.optionA.label} ({voteStats.ratioA}%)
+                  </span>
+                  <span className="text-rose-400">
+                    {roomData.predictionGame.optionB.label} ({voteStats.ratioB}%)
+                  </span>
+                </div>
+
+                <div className="h-3 w-full bg-slate-900 rounded-full overflow-hidden flex p-0.5 border border-white/[0.08]">
+                  <div
+                    className="bg-gradient-to-r from-sky-500 to-blue-600 h-full rounded-l-full transition-all duration-300"
+                    style={{ width: `${voteStats.ratioA}%` }}
+                  />
+                  <div
+                    className="bg-gradient-to-r from-rose-500 to-red-600 h-full rounded-r-full transition-all duration-300"
+                    style={{ width: `${voteStats.ratioB}%` }}
+                  />
+                </div>
+
+                <div className="flex justify-between text-[11px] text-slate-500 font-mono">
+                  <span>{voteStats.countA.toLocaleString()}명 지지</span>
+                  <span>{voteStats.countB.toLocaleString()}명 지지</span>
+                </div>
+              </div>
+
+              {/* 원클릭 응원 팀 선택 버튼 */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => handleLiveVote("A")}
+                  className={`p-3 rounded-2xl text-xs font-black border transition flex items-center justify-center gap-2 ${
+                    myTeam === "A"
+                      ? "bg-sky-500 text-slate-950 border-sky-400 shadow-lg shadow-sky-500/30 scale-[1.02]"
+                      : "bg-slate-900 text-slate-300 border-white/[0.08] hover:border-sky-500/50"
+                  }`}
+                >
+                  <span>👍 {roomData.predictionGame.optionA.label} 응원</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleLiveVote("B")}
+                  className={`p-3 rounded-2xl text-xs font-black border transition flex items-center justify-center gap-2 ${
+                    myTeam === "B"
+                      ? "bg-rose-500 text-white border-rose-400 shadow-lg shadow-rose-500/30 scale-[1.02]"
+                      : "bg-slate-900 text-slate-300 border-white/[0.08] hover:border-rose-500/50"
+                  }`}
+                >
+                  <span>🔥 {roomData.predictionGame.optionB.label} 응원</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 우측 (5 cols): 초경량 고속 실시간 채팅 스트림 */}
+        <div className="lg:col-span-5 rounded-3xl bg-[#111520] border border-white/[0.08] flex flex-col h-[650px] shadow-2xl overflow-hidden">
+          {/* 채팅 헤더 */}
+          <div className="px-4 py-3 bg-[#0c0f17] border-b border-white/[0.08] flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>실시간 라이브 톡 (무제한 고속 스트림)</span>
+            </div>
+            <span className="text-[11px] text-slate-500">인메모리 브로드캐스트</span>
+          </div>
+
+          {/* 실시간 채팅 메시지 목록 */}
+          <div
+            ref={chatScrollRef}
+            className="flex-1 p-4 overflow-y-auto space-y-2.5 divide-y divide-white/[0.03] text-xs font-sans"
+          >
+            {messages.map((m) => (
+              <div key={m.id} className="pt-2 flex items-start gap-2 animate-in fade-in duration-150">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1.5 mb-0.5">
+                    {m.teamTag && (
+                      <span
+                        className={`px-1.5 py-0.2 rounded text-[10px] font-black border ${
+                          m.teamColor || "bg-slate-800 text-slate-300 border-slate-700"
+                        }`}
+                      >
+                        {m.teamTag}
+                      </span>
+                    )}
+                    <span className="font-extrabold text-slate-300">{m.sender}</span>
+                    <span className="text-[10px] text-slate-600 font-mono ml-auto">
+                      {m.time}
+                    </span>
+                  </div>
+                  <p
+                    className={`leading-relaxed break-words ${
+                      m.isReaction
+                        ? "text-xl py-0.5 animate-bounce"
+                        : "text-slate-100 font-medium"
+                    }`}
+                  >
+                    {m.message}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* 퀵 리액션 이모지 연타 바 */}
+          <div className="px-3 py-1.5 bg-[#0c0f17] border-t border-white/[0.06] flex items-center justify-around">
+            <button
+              type="button"
+              onClick={() => sendQuickReaction("🔥")}
+              className="text-base hover:scale-125 transition-transform p-1"
+              title="불꽃 연타"
+            >
+              🔥
+            </button>
+            <button
+              type="button"
+              onClick={() => sendQuickReaction("🎉")}
+              className="text-base hover:scale-125 transition-transform p-1"
+              title="축하 연타"
+            >
+              🎉
+            </button>
+            <button
+              type="button"
+              onClick={() => sendQuickReaction("👏")}
+              className="text-base hover:scale-125 transition-transform p-1"
+              title="박수 연타"
+            >
+              👏
+            </button>
+            <button
+              type="button"
+              onClick={() => sendQuickReaction("😱")}
+              className="text-base hover:scale-125 transition-transform p-1"
+              title="경악 연타"
+            >
+              😱
+            </button>
+            <button
+              type="button"
+              onClick={() => sendQuickReaction("🚀")}
+              className="text-base hover:scale-125 transition-transform p-1"
+              title="떡상 연타"
+            >
+              🚀
+            </button>
+          </div>
+
+          {/* 하단 메시지 입력창 */}
+          <form
+            onSubmit={handleSendMessage}
+            className="p-3 bg-[#0c0f17] border-t border-white/[0.08] flex items-center gap-2"
+          >
+            <input
+              type="text"
+              placeholder="실시간 응원 메시지 남기기..."
+              value={inputMessage}
+              onChange={(e) => setInputMessage(e.target.value)}
+              className="flex-1 bg-[#121621] border border-white/[0.08] rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-red-500 placeholder:text-slate-600"
+            />
+            <button
+              type="submit"
+              className="p-2 bg-red-600 hover:bg-red-500 text-white rounded-xl transition shrink-0"
+              title="전송"
+            >
+              <Send className="w-4 h-4" />
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
