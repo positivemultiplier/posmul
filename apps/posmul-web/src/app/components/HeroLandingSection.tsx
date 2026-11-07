@@ -31,41 +31,59 @@ export function HeroLandingSection({ totalPool, totalUsers }: HeroLandingSection
         </div>
 
         {/* 🌟 핵심 브랜드 카피 (헤드라인: '선택'과 '훈련'에 확실한 시각적 포인트) */}
-        <div className="space-y-5">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-white tracking-tight leading-[1.3]">
-            오늘의 당신은 과거 수많은{" "}
-            <span className="relative inline-block px-2 py-0.5 rounded-xl bg-blue-500/10 border border-blue-400/40 text-blue-400 font-black shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+        <div className="space-y-4 sm:space-y-5">
+          {/* 1. 오늘의 당신은 과거 수많은 \n 선택의 합입니다. */}
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight leading-snug sm:leading-tight break-keep">
+            오늘의 당신은 과거 수많은
+            <br />
+            <span className="relative inline-block my-1 px-2.5 py-0.5 rounded-xl bg-blue-500/15 border border-blue-400/50 text-blue-400 font-black shadow-[0_0_20px_rgba(59,130,246,0.35)]">
               선택
             </span>
             의 합입니다.
           </h1>
 
-          <p className="text-lg sm:text-xl md:text-2xl font-bold text-slate-400">
-            지난 선택들에 <span className="text-slate-200 border-b-2 border-rose-500/60 pb-0.5">후회는 없으신가요?</span>
+          {/* 2. 지난 선택들에 후회는 없으신가요? (회색, 아주 작게, 선택 강조) */}
+          <p className="text-xs sm:text-sm text-slate-400 font-medium tracking-wide">
+            지난{" "}
+            <span className="px-1.5 py-0.5 rounded-md bg-blue-500/10 border border-blue-400/40 text-blue-400 font-bold shadow-[0_0_10px_rgba(59,130,246,0.25)]">
+              선택
+            </span>
+            들에{" "}
+            <span className="text-slate-300 border-b border-rose-500/70 pb-0.5">
+              후회는 없으신가요?
+            </span>
           </p>
 
-          <div className="pt-2">
-            <p className="text-xl sm:text-2xl md:text-4xl font-black text-slate-100 leading-snug">
-              합리적 <span className="text-blue-400 font-black">선택</span>은 타고나는 것이 아니라,{" "}
-              <br className="hidden sm:inline" />
-              <span className="relative inline-block mt-1 sm:mt-0 px-3 py-1 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-blue-500/20 border-2 border-emerald-400/60 text-emerald-300 font-black shadow-[0_0_30px_rgba(16,185,129,0.35)] animate-pulse">
-                훈련
+          {/* 3. 합리적 선택은 타고나는 것이 아니라, \n 훈련 되는 것입니다. (선택, 훈련 강조) */}
+          <div className="pt-2 sm:pt-3">
+            <p className="text-lg sm:text-2xl md:text-3xl font-black text-slate-100 leading-snug sm:leading-snug break-keep">
+              합리적{" "}
+              <span className="relative inline-block px-2 py-0.5 rounded-xl bg-blue-500/15 border border-blue-400/50 text-blue-400 font-black shadow-[0_0_16px_rgba(59,130,246,0.3)]">
+                선택
               </span>
+              은 타고나는 것이 아니라,
+              <br />
+              <span className="relative inline-block mt-2 px-3 py-1 rounded-2xl bg-gradient-to-r from-emerald-500/20 via-teal-500/20 to-blue-500/20 border-2 border-emerald-400/60 text-emerald-300 font-black shadow-[0_0_30px_rgba(16,185,129,0.35)] animate-pulse">
+                훈련
+              </span>{" "}
               되는 것입니다.
             </p>
           </div>
         </div>
 
-        {/* 바디 설명 */}
-        <div className="max-w-2xl mx-auto pt-3 space-y-2">
-          <p className="text-base sm:text-lg font-bold text-slate-200">
+        {/* 4 & 5. 바디 설명 및 브랜드 슬로건 */}
+        <div className="max-w-2xl mx-auto pt-2 space-y-2">
+          {/* 4. 세상의 흐름을 예측하고 올바른곳에 가치를 흘려보내는 훈련 (회색, 아주 작게, 훈련 강조) */}
+          <p className="text-xs sm:text-sm text-slate-400 font-normal tracking-wide break-keep">
             세상의 흐름을 예측하고 올바른 곳에 가치를 흘려보내는{" "}
-            <span className="text-emerald-400 font-extrabold underline decoration-emerald-500/50 underline-offset-4">
+            <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-400/40 text-emerald-400 font-bold shadow-[0_0_10px_rgba(16,185,129,0.25)]">
               훈련
             </span>
             ,
           </p>
-          <p className="text-lg sm:text-xl font-black text-amber-400 tracking-wide">
+
+          {/* 5. PosMul(긍정승수)에서 지금 시작하세요. */}
+          <p className="text-base sm:text-lg md:text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-yellow-500 tracking-wide">
             PosMul(긍정승수)에서 지금 시작하세요.
           </p>
         </div>
