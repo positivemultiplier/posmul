@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { checkIsIpBanned, banIp } from "@/shared/lib/security/ip-ban";
+import { checkTextForBannedWords } from "@/shared/lib/security/banned-words";
 
 async function getClientIpFromHeaders(): Promise<string> {
   try {
@@ -316,6 +317,15 @@ export async function createGalleryPostAction(params: {
       };
     }
 
+    // 3. 금지어(욕설/스팸/불법키워드) 검사
+    const bannedCheck = await checkTextForBannedWords(`${params.title} ${params.content}`);
+    if (bannedCheck.hasBannedWord) {
+      return {
+        success: false,
+        error: `등록할 수 없는 금지어('${bannedCheck.detectedWord}')가 포함되어 있습니다.`,
+      };
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -490,6 +500,15 @@ export async function addGalleryCommentAction(params: {
       };
     }
 
+    // 3. 댓글 금지어 검사
+    const bannedCheck = await checkTextForBannedWords(params.content);
+    if (bannedCheck.hasBannedWord) {
+      return {
+        success: false,
+        error: `댓글에 등록할 수 없는 금지어('${bannedCheck.detectedWord}')가 포함되어 있습니다.`,
+      };
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -656,6 +675,243 @@ export async function getActivePredictionGamesForForumAction(): Promise<{
   } catch (err) {
     console.error("getActivePredictionGamesForForumAction error:", err);
     return { success: false, games: [] };
+  }
+}
+
+/**
+ * 게시글 수정 (작성자 본인 검증)
+ */
+export async function updateGalleryPostAction(params: {
+  postId: string;
+  title: string;
+  content: string;
+  category?: string;
+  tag?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "로그인이 필요합니다." };
+    }
+
+    // 금지어 검사
+    const bannedCheck = await checkTextForBannedWords(`${params.title} ${params.content}`);
+    if (bannedCheck.hasBannedWord) {
+      return {
+        success: false,
+        error: `수정 내용에 금지어('${bannedCheck.detectedWord}')가 포함되어 있습니다.`,
+      };
+    }
+
+    // 작성자 본인 확인
+    const { data: post, error: fetchError } = await supabaseAdmin
+      .schema("forum")
+      .from("forum_posts")
+      .select("id, author_id, metadata, tags")
+      .eq("id", params.postId)
+      .maybeSingle();
+
+    if (fetchError || !post) {
+      return { success: false, error: "게시글을 찾을 수 없습니다." };
+    }
+
+    // 어드민 여부 확인
+    const isAdmin = user.email?.includes("admin") || user.id === "00000000-0000-0000-0000-000000000001";
+    if (post.author_id !== user.id && !isAdmin) {
+      return { success: false, error: "본인이 작성한 글만 수정할 수 있습니다." };
+    }
+
+    const updatedTags = params.category ? [params.category] : post.tags;
+    if (params.tag && !updatedTags.includes(params.tag)) {
+      updatedTags.push(params.tag);
+    }
+
+    const meta = (post.metadata as any) || {};
+    if (params.category) {
+      meta.categoryName = DEFAULT_CATEGORY_MAP[params.category] || "자유";
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .schema("forum")
+      .from("forum_posts")
+      .update({
+        title: params.title.trim(),
+        content: params.content.trim(),
+        tags: updatedTags,
+        metadata: meta,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", params.postId);
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    revalidatePath("/forum");
+    revalidatePath(`/forum/${params.postId}`);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "게시글 수정 실패" };
+  }
+}
+
+/**
+ * 게시글 삭제 (작성자 본인 검증)
+ */
+export async function deleteGalleryPostAction(
+  postId: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "로그인이 필요합니다." };
+    }
+
+    // 작성자 확인
+    const { data: post, error: fetchError } = await supabaseAdmin
+      .schema("forum")
+      .from("forum_posts")
+      .select("id, author_id")
+      .eq("id", postId)
+      .maybeSingle();
+
+    if (fetchError || !post) {
+      return { success: false, error: "게시글을 찾을 수 없습니다." };
+    }
+
+    const isAdmin = user.email?.includes("admin") || user.id === "00000000-0000-0000-0000-000000000001";
+    if (post.author_id !== user.id && !isAdmin) {
+      return { success: false, error: "본인이 작성한 글만 삭제할 수 있습니다." };
+    }
+
+    const { error: delError } = await supabaseAdmin
+      .schema("forum")
+      .from("forum_posts")
+      .delete()
+      .eq("id", postId);
+
+    if (delError) {
+      return { success: false, error: delError.message };
+    }
+
+    revalidatePath("/forum");
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "게시글 삭제 실패" };
+  }
+}
+
+/**
+ * 댓글 수정 (작성자 본인 검증)
+ */
+export async function updateGalleryCommentAction(params: {
+  commentId: string;
+  content: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "로그인이 필요합니다." };
+    }
+
+    // 금지어 검사
+    const bannedCheck = await checkTextForBannedWords(params.content);
+    if (bannedCheck.hasBannedWord) {
+      return {
+        success: false,
+        error: `댓글에 금지어('${bannedCheck.detectedWord}')가 포함되어 있습니다.`,
+      };
+    }
+
+    // 작성자 확인
+    const { data: comment, error: fetchError } = await supabaseAdmin
+      .schema("forum")
+      .from("forum_comments")
+      .select("id, author_id, post_id")
+      .eq("id", params.commentId)
+      .maybeSingle();
+
+    if (fetchError || !comment) {
+      return { success: false, error: "댓글을 찾을 수 없습니다." };
+    }
+
+    const isAdmin = user.email?.includes("admin") || user.id === "00000000-0000-0000-0000-000000000001";
+    if (comment.author_id !== user.id && !isAdmin) {
+      return { success: false, error: "본인이 작성한 댓글만 수정할 수 있습니다." };
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .schema("forum")
+      .from("forum_comments")
+      .update({
+        content: params.content.trim(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", params.commentId);
+
+    if (updateError) {
+      return { success: false, error: updateError.message };
+    }
+
+    revalidatePath(`/forum/${comment.post_id}`);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "댓글 수정 실패" };
+  }
+}
+
+/**
+ * 댓글 삭제 (작성자 본인 검증)
+ */
+export async function deleteGalleryCommentAction(params: {
+  commentId: string;
+  postId: string;
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: "로그인이 필요합니다." };
+    }
+
+    // 작성자 확인
+    const { data: comment, error: fetchError } = await supabaseAdmin
+      .schema("forum")
+      .from("forum_comments")
+      .select("id, author_id")
+      .eq("id", params.commentId)
+      .maybeSingle();
+
+    if (fetchError || !comment) {
+      return { success: false, error: "댓글을 찾을 수 없습니다." };
+    }
+
+    const isAdmin = user.email?.includes("admin") || user.id === "00000000-0000-0000-0000-000000000001";
+    if (comment.author_id !== user.id && !isAdmin) {
+      return { success: false, error: "본인이 작성한 댓글만 삭제할 수 있습니다." };
+    }
+
+    const { error: delError } = await supabaseAdmin
+      .schema("forum")
+      .from("forum_comments")
+      .delete()
+      .eq("id", params.commentId);
+
+    if (delError) {
+      return { success: false, error: delError.message };
+    }
+
+    revalidatePath(`/forum/${params.postId}`);
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err.message || "댓글 삭제 실패" };
   }
 }
 

@@ -11,10 +11,13 @@ import {
   ArrowRight,
   TrendingUp,
   Share2,
-  Bookmark,
-  Award,
-  Eye,
   Clock,
+  Eye,
+  Edit3,
+  Trash2,
+  Check,
+  X,
+  ShieldAlert,
 } from "lucide-react";
 import {
   GalleryPostDTO,
@@ -22,7 +25,11 @@ import {
   getGalleryPostDetailAction,
   voteGalleryPostAction,
   addGalleryCommentAction,
+  deleteGalleryPostAction,
+  updateGalleryCommentAction,
+  deleteGalleryCommentAction,
 } from "../actions/gallery.actions";
+import { createClient } from "@/lib/supabase/client";
 
 export default function ForumPostDetailPage() {
   const params = useParams();
@@ -32,11 +39,30 @@ export default function ForumPostDetailPage() {
   const [post, setPost] = useState<GalleryPostDTO | null>(null);
   const [comments, setComments] = useState<GalleryCommentDTO[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  // 댓글 작성 상태
   const [newComment, setNewComment] = useState("");
   const [isCommentSubmitting, setIsCommentSubmitting] = useState(false);
   const [rewardNotice, setRewardNotice] = useState<string | null>(null);
 
+  // 댓글 인라인 수정 상태
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingContent, setEditingContent] = useState("");
+  const [isCommentUpdating, setIsCommentUpdating] = useState(false);
+
+  // 세션 유저 및 게시글 상세 로드
   useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        setCurrentUserId(user.id);
+        const adminCheck = user.email?.includes("admin") || user.id === "00000000-0000-0000-0000-000000000001";
+        setIsAdmin(!!adminCheck);
+      }
+    });
+
     if (!postId) return;
     setIsLoading(true);
     getGalleryPostDetailAction(postId).then((res) => {
@@ -69,7 +95,24 @@ export default function ForumPostDetailPage() {
     }
   };
 
-  // 댓글 작성
+  // 게시글 본인 삭제
+  const handleDeletePost = async () => {
+    if (!confirm("정말로 이 게시글을 삭제하시겠습니까?")) return;
+
+    try {
+      const res = await deleteGalleryPostAction(postId);
+      if (res.success) {
+        alert("게시글이 성공적으로 삭제되었습니다.");
+        router.push("/forum");
+      } else {
+        alert(res.error || "삭제 실패");
+      }
+    } catch (err: any) {
+      alert(`게시글 삭제 중 에러: ${err.message}`);
+    }
+  };
+
+  // 신규 댓글 등록
   const handleAddComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !post) return;
@@ -98,6 +141,59 @@ export default function ForumPostDetailPage() {
     }
   };
 
+  // 댓글 수정 저장
+  const handleSaveCommentUpdate = async (commentId: string) => {
+    if (!editingContent.trim()) {
+      alert("수정할 댓글 내용을 입력해주세요.");
+      return;
+    }
+
+    setIsCommentUpdating(true);
+    try {
+      const res = await updateGalleryCommentAction({
+        commentId,
+        content: editingContent,
+      });
+
+      if (res.success) {
+        setComments((prev) =>
+          prev.map((c) => (c.id === commentId ? { ...c, content: editingContent } : c))
+        );
+        setEditingCommentId(null);
+        setEditingContent("");
+      } else {
+        alert(res.error || "댓글 수정 실패");
+      }
+    } catch (err: any) {
+      alert(`댓글 수정 중 에러: ${err.message}`);
+    } finally {
+      setIsCommentUpdating(false);
+    }
+  };
+
+  // 댓글 삭제
+  const handleDeleteComment = async (commentId: string) => {
+    if (!confirm("이 댓글을 삭제하시겠습니까?")) return;
+
+    try {
+      const res = await deleteGalleryCommentAction({
+        commentId,
+        postId,
+      });
+
+      if (res.success) {
+        setComments((prev) => prev.filter((c) => c.id !== commentId));
+        setPost((prev) =>
+          prev ? { ...prev, commentCount: Math.max(0, prev.commentCount - 1) } : null
+        );
+      } else {
+        alert(res.error || "댓글 삭제 실패");
+      }
+    } catch (err: any) {
+      alert(`댓글 삭제 중 에러: ${err.message}`);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#07090e] text-slate-100 flex items-center justify-center text-xs text-slate-500">
@@ -119,6 +215,8 @@ export default function ForumPostDetailPage() {
       </div>
     );
   }
+
+  const isPostAuthor = currentUserId && (currentUserId === post.authorId || isAdmin);
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 py-6 sm:py-8 px-4 sm:px-6">
@@ -158,14 +256,34 @@ export default function ForumPostDetailPage() {
         <article className="rounded-3xl bg-[#111520] border border-white/[0.08] shadow-2xl p-6 sm:p-8 space-y-6">
           {/* 글 헤더 */}
           <div className="space-y-3 pb-5 border-b border-white/[0.08]">
-            <div className="flex flex-wrap items-center gap-2 text-xs">
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-400/30">
-                {post.tag || post.categoryName || "자유"}
-              </span>
-              {post.isConcept && (
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-400/40">
-                  🔥 개념글 (포텐)
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-500/15 text-sky-300 border border-sky-400/30">
+                  {post.tag || post.categoryName || "자유"}
                 </span>
+                {post.isConcept && (
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-400/40">
+                    🔥 개념글 (포텐)
+                  </span>
+                )}
+              </div>
+
+              {/* 본인 또는 관리자 글 수정/삭제 버튼 */}
+              {isPostAuthor && (
+                <div className="flex items-center gap-1.5">
+                  <Link
+                    href={`/forum/${post.id}/edit`}
+                    className="px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-semibold text-sky-400 flex items-center gap-1 transition"
+                  >
+                    <Edit3 className="w-3 h-3" /> 수정
+                  </Link>
+                  <button
+                    onClick={handleDeletePost}
+                    className="px-2.5 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-800/80 text-xs font-semibold text-rose-300 flex items-center gap-1 transition"
+                  >
+                    <Trash2 className="w-3 h-3" /> 삭제
+                  </button>
+                </div>
               )}
             </div>
 
@@ -207,7 +325,7 @@ export default function ForumPostDetailPage() {
             </div>
           </div>
 
-          {/* 📊 연동된 예측 마켓 인터랙티브 카드 (설정된 미리보기 블록) */}
+          {/* 📊 연동된 예측 마켓 인터랙티브 카드 */}
           {post.gameTitle && post.gameId && (
             <Link
               href={`/prediction/${post.gameId}`}
@@ -243,7 +361,7 @@ export default function ForumPostDetailPage() {
             </Link>
           )}
 
-          {/* 📝 본문 내용 (HTML 짤방 및 에디터 서식 반영) */}
+          {/* 📝 본문 내용 (HTML 짤방 및 유튜브 iframe 반영) */}
           <div
             className="prose prose-invert max-w-none text-slate-100 text-sm sm:text-base leading-relaxed py-4 overflow-hidden break-words"
             dangerouslySetInnerHTML={{ __html: post.content }}
@@ -305,32 +423,91 @@ export default function ForumPostDetailPage() {
                   아직 작성된 댓글이 없습니다. 첫 번째 댓글을 남겨보세요!
                 </div>
               ) : (
-                comments.map((c) => (
-                  <div
-                    key={c.id}
-                    className="p-4 rounded-2xl bg-[#0c0f17] border border-white/[0.06] space-y-1.5 text-xs sm:text-sm"
-                  >
-                    <div className="flex justify-between items-center text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-slate-200">
-                          {c.authorName}
-                        </span>
-                        {c.authorBadge && (
-                          <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-sky-950 text-sky-300 border border-sky-800">
-                            {c.authorBadge}
+                comments.map((c) => {
+                  const isCommentAuthor = currentUserId && (currentUserId === c.authorId || isAdmin);
+                  const isEditing = editingCommentId === c.id;
+
+                  return (
+                    <div
+                      key={c.id}
+                      className="p-4 rounded-2xl bg-[#0c0f17] border border-white/[0.06] space-y-2 text-xs sm:text-sm"
+                    >
+                      <div className="flex justify-between items-center text-xs">
+                        <div className="flex items-center gap-2">
+                          <span className="font-extrabold text-slate-200">
+                            {c.authorName}
                           </span>
+                          {c.authorBadge && (
+                            <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-sky-950 text-sky-300 border border-sky-800">
+                              {c.authorBadge}
+                            </span>
+                          )}
+                          <span className="text-slate-500 font-mono text-[11px]">
+                            {new Date(c.createdAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                        </div>
+
+                        {/* 댓글 수정/삭제 버튼 */}
+                        {isCommentAuthor && !isEditing && (
+                          <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                            <button
+                              onClick={() => {
+                                setEditingCommentId(c.id);
+                                setEditingContent(c.content);
+                              }}
+                              className="hover:text-sky-400 transition flex items-center gap-0.5"
+                            >
+                              <Edit3 className="w-3 h-3" /> 수정
+                            </button>
+                            <span>·</span>
+                            <button
+                              onClick={() => handleDeleteComment(c.id)}
+                              className="hover:text-rose-400 transition flex items-center gap-0.5"
+                            >
+                              <Trash2 className="w-3 h-3" /> 삭제
+                            </button>
+                          </div>
                         )}
                       </div>
-                      <span className="text-slate-500 font-mono text-[11px]">
-                        {new Date(c.createdAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
+
+                      {/* 인라인 수정 폼 or 일반 본문 */}
+                      {isEditing ? (
+                        <div className="space-y-2 pt-1">
+                          <input
+                            type="text"
+                            value={editingContent}
+                            onChange={(e) => setEditingContent(e.target.value)}
+                            className="w-full bg-[#111520] border border-sky-500/50 rounded-xl px-3 py-2 text-xs sm:text-sm text-white focus:outline-none"
+                            autoFocus
+                          />
+                          <div className="flex justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                setEditingCommentId(null);
+                                setEditingContent("");
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-300 hover:text-white text-xs"
+                            >
+                              취소
+                            </button>
+                            <button
+                              onClick={() => handleSaveCommentUpdate(c.id)}
+                              disabled={isCommentUpdating}
+                              className="px-3 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold disabled:opacity-50"
+                            >
+                              {isCommentUpdating ? "저장 중..." : "수정 완료"}
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-slate-300 leading-relaxed whitespace-pre-wrap">{c.content}</p>
+                      )}
                     </div>
-                    <p className="text-slate-300 leading-relaxed">{c.content}</p>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -339,4 +516,3 @@ export default function ForumPostDetailPage() {
     </div>
   );
 }
-

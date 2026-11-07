@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { banIp, unbanIp } from "@/shared/lib/security/ip-ban";
+import {
+  getAllBannedWords,
+  addBannedWord,
+  deleteBannedWord,
+} from "@/shared/lib/security/banned-words";
 
 export async function GET(req: NextRequest) {
   try {
@@ -71,6 +76,9 @@ export async function GET(req: NextRequest) {
       console.warn("banned_ips fetch warning:", banError.message);
     }
 
+    // 4. 금지어 목록 조회
+    const bannedWords = await getAllBannedWords();
+
     return NextResponse.json({
       success: true,
       pagination: {
@@ -83,10 +91,12 @@ export async function GET(req: NextRequest) {
         totalPosts: totalPostsCount || 0,
         totalComments: totalCommentsCount || 0,
         totalBannedIps: totalBannedCount || 0,
+        totalBannedWords: bannedWords.length,
       },
       posts: posts || [],
       comments: comments || [],
       bannedIps: bannedIps || [],
+      bannedWords: bannedWords || [],
     });
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
@@ -106,6 +116,8 @@ export async function POST(req: NextRequest) {
       ip,
       reason,
       expiresHours,
+      word,
+      wordId,
     } = body;
     const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000001";
 
@@ -316,6 +328,40 @@ export async function POST(req: NextRequest) {
         bannedIp: targetIp || null,
         ipBanned,
       });
+    }
+
+    // 9. 금지어 추가
+    if (action === "add-banned-word") {
+      if (!word) {
+        return NextResponse.json({ success: false, error: "금지어 단어가 필요합니다." }, { status: 400 });
+      }
+
+      const result = await addBannedWord({
+        word,
+        reason: reason || "관리자 지정 금지어",
+        createdBy: "ADMIN",
+      });
+
+      if (!result.success) {
+        return NextResponse.json({ success: false, error: result.error }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, message: `'${word}' 금지어 등록 완료` });
+    }
+
+    // 10. 금지어 삭제
+    if (action === "delete-banned-word") {
+      const target = wordId || word;
+      if (!target) {
+        return NextResponse.json({ success: false, error: "삭제할 금지어 식별자가 필요합니다." }, { status: 400 });
+      }
+
+      const result = await deleteBannedWord(target);
+      if (!result.success) {
+        return NextResponse.json({ success: false, error: result.error }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, message: "금지어 삭제 완료" });
     }
 
     return NextResponse.json({ success: false, error: "Invalid action" }, { status: 400 });

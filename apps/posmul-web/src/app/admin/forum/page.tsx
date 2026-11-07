@@ -64,6 +64,15 @@ interface BannedIpItem {
   created_at: string;
 }
 
+interface BannedWordItem {
+  id: string;
+  word: string;
+  reason?: string;
+  is_active: boolean;
+  created_at: string;
+  created_by?: string;
+}
+
 interface PaginationMeta {
   page: number;
   limit: number;
@@ -72,12 +81,18 @@ interface PaginationMeta {
 }
 
 export default function AdminForumPage() {
-  const [activeTab, setActiveTab] = useState<"posts" | "comments" | "ip-defense">("posts");
+  const [activeTab, setActiveTab] = useState<"posts" | "comments" | "ip-defense" | "banned-words">("posts");
   const [posts, setPosts] = useState<ForumPostItem[]>([]);
   const [comments, setComments] = useState<ForumCommentItem[]>([]);
   const [bannedIps, setBannedIps] = useState<BannedIpItem[]>([]);
+  const [bannedWords, setBannedWords] = useState<BannedWordItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  // 금지어 폼 상태
+  const [newBannedWord, setNewBannedWord] = useState("");
+  const [newBannedWordReason, setNewBannedWordReason] = useState("");
+  const [bannedWordKeyword, setBannedWordKeyword] = useState("");
 
   // 검색 & 필터 & 페이징 상태
   const [searchQuery, setSearchQuery] = useState("");
@@ -96,6 +111,7 @@ export default function AdminForumPage() {
     totalPosts: 0,
     totalComments: 0,
     totalBannedIps: 0,
+    totalBannedWords: 0,
   });
 
   // 토론글 작성 드로어/폼 토글
@@ -128,6 +144,7 @@ export default function AdminForumPage() {
           setPosts(data.posts || []);
           setComments(data.comments || []);
           setBannedIps(data.bannedIps || []);
+          setBannedWords(data.bannedWords || []);
           if (data.pagination) setPagination(data.pagination);
           if (data.stats) setStats(data.stats);
         } else {
@@ -390,6 +407,65 @@ export default function AdminForumPage() {
     }
   };
 
+  // 금지어 추가
+  const handleAddBannedWord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newBannedWord.trim()) {
+      alert("추가할 금지어 단어를 입력해주세요.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/admin/forum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add-banned-word",
+          word: newBannedWord.trim(),
+          reason: newBannedWordReason.trim() || "관리자 지정 금지어",
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert(`🚫 금지어 '${newBannedWord.trim()}'이(가) 등록되었습니다.`);
+        setNewBannedWord("");
+        setNewBannedWordReason("");
+        fetchData();
+      } else {
+        alert(`금지어 등록 실패: ${data.error}`);
+      }
+    } catch (e: any) {
+      alert(`Error adding banned word: ${e.message}`);
+    }
+  };
+
+  // 금지어 삭제
+  const handleDeleteBannedWord = async (wordId: string, word: string) => {
+    if (!confirm(`'${word}' 금지어를 삭제하시겠습니까?`)) return;
+
+    try {
+      const res = await fetch("/api/admin/forum", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete-banned-word",
+          wordId,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert(`'${word}' 금지어가 삭제되었습니다.`);
+        fetchData();
+      } else {
+        alert(`금지어 삭제 실패: ${data.error}`);
+      }
+    } catch (e: any) {
+      alert(`Error deleting banned word: ${e.message}`);
+    }
+  };
+
   // 차단 IP 목록 필터링
   const filteredBannedIps = bannedIps.filter((b) => {
     if (!ipFilterKeyword) return true;
@@ -577,6 +653,17 @@ export default function AdminForumPage() {
           >
             <ShieldAlert className="w-4 h-4" />
             🛡️ 봇 방어 & IP 차단 ({activeBannedCount})
+          </button>
+          <button
+            onClick={() => setActiveTab("banned-words")}
+            className={`px-5 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${
+              activeTab === "banned-words"
+                ? "border-amber-500 text-amber-400 bg-amber-500/10 rounded-t-xl"
+                : "border-transparent text-slate-400 hover:text-slate-200"
+            }`}
+          >
+            <AlertTriangle className="w-4 h-4" />
+            🚫 금지어 & 욕설 필터 ({bannedWords.length})
           </button>
         </div>
 
@@ -983,6 +1070,115 @@ export default function AdminForumPage() {
                       ))}
                     </tbody>
                   </table>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+        {/* Tab 4: 금지어 & 욕설 필터 관리 */}
+        {activeTab === "banned-words" && (
+          <div className="space-y-6">
+            {/* New Banned Word Form */}
+            <form onSubmit={handleAddBannedWord} className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <h2 className="text-lg font-bold text-slate-200 flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-400" /> 신규 금지어 등록
+              </h2>
+              <p className="text-xs text-slate-400">
+                게시글 및 댓글에 등록을 차단할 부적절한 단어, 욕설, 광고 도배 키워드를 추가합니다. 등록된 단어가 포함되면 작성 시 즉시 거부됩니다.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 block mb-1">금지할 단어</label>
+                  <input
+                    type="text"
+                    value={newBannedWord}
+                    onChange={(e) => setNewBannedWord(e.target.value)}
+                    placeholder="예: 카지노, 불법도박, 비방단어"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 transition"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-semibold text-slate-400 block mb-1">차단 사유 (선택)</label>
+                  <input
+                    type="text"
+                    value={newBannedWordReason}
+                    onChange={(e) => setNewBannedWordReason(e.target.value)}
+                    placeholder="예: 불법 도박 스팸 방지"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500 transition"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 bg-amber-600 hover:bg-amber-500 text-slate-950 font-black rounded-xl text-xs transition shadow-lg shadow-amber-900/30 flex items-center gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  금지어 즉시 등록
+                </button>
+              </div>
+            </form>
+
+            {/* Banned Words List & Search */}
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                <div>
+                  <h2 className="text-lg font-bold text-slate-200 flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-400" /> 활성 금지어 목록 ({bannedWords.length}개)
+                  </h2>
+                  <span className="text-xs text-slate-500">
+                    실시간 포럼 작성 필터에 즉시 적용됩니다.
+                  </span>
+                </div>
+
+                <div className="relative w-full sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    value={bannedWordKeyword}
+                    onChange={(e) => setBannedWordKeyword(e.target.value)}
+                    placeholder="금지어 단어 검색..."
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-3 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-amber-500"
+                  />
+                </div>
+              </div>
+
+              {bannedWords.length === 0 ? (
+                <div className="bg-slate-950/60 border border-slate-800/80 rounded-xl p-8 text-center text-slate-400 text-xs">
+                  현재 등록된 금지어가 없습니다.
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2 pt-2">
+                  {bannedWords
+                    .filter((bw) =>
+                      !bannedWordKeyword
+                        ? true
+                        : bw.word.toLowerCase().includes(bannedWordKeyword.toLowerCase()) ||
+                          (bw.reason && bw.reason.toLowerCase().includes(bannedWordKeyword.toLowerCase()))
+                    )
+                    .map((bw) => (
+                      <div
+                        key={bw.id}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-950 border border-amber-900/50 hover:border-amber-500/50 transition group"
+                      >
+                        <span className="font-bold text-amber-300 text-xs">{bw.word}</span>
+                        {bw.reason && (
+                          <span className="text-[10px] text-slate-500 font-normal">({bw.reason})</span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBannedWord(bw.id, bw.word)}
+                          className="text-slate-500 hover:text-rose-400 transition p-0.5"
+                          title="금지어 삭제"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
                 </div>
               )}
             </div>
