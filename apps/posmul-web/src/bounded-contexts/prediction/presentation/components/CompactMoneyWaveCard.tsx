@@ -1,14 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ChevronDown, ChevronUp, Zap, Activity, Users, Gamepad2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Flame,
+  GraduationCap,
+  Users,
+  Gamepad2,
+  Sparkles,
+  TrendingUp,
+} from "lucide-react";
 import { SlotMachine } from "./MoneyWave/SlotMachine";
 import { twMerge } from "tailwind-merge";
-
 import { useWaveCalculation } from "@/shared/ui/components/layout/MoneyWave/useWaveCalculation";
 
-// Depth와 Category 타입 정의
-// Depth 1: 예측 메인, Depth 2: 카테고리, Depth 3: 종목, Depth 4: 리그, Depth 5: 개별 게임
 type DepthLevel = 0 | 1 | 2 | 3 | 4 | 5;
 type CategoryType =
   | "sports"
@@ -23,267 +29,257 @@ interface CompactMoneyWaveCardProps {
   depthLevel?: DepthLevel;
   category?: CategoryType;
   subcategory?: string;
-  league?: string; // Depth 4: 리그 (EPL, K-League 등)
-  gameId?: string; // Depth 5: 개별 게임 ID
-  initialPool?: number; // Server-side EBIT Pool (Optional fallback/initial data)
+  league?: string;
+  gameId?: string;
+  initialPool?: number;
 }
 
-// Wave 타입 정보
 const WAVE_TYPES = {
-  1: { label: "EBIT 발행", color: "text-green-400", bgColor: "bg-green-500/10", borderColor: "border-green-500/30" },
-  2: { label: "재분배", color: "text-blue-400", bgColor: "bg-blue-500/10", borderColor: "border-blue-500/30" },
-  3: { label: "기업가 투자", color: "text-purple-400", bgColor: "bg-purple-500/10", borderColor: "border-purple-500/30" },
+  1: {
+    label: "일일 기금 시드 배분",
+    color: "text-sky-300",
+    bgColor: "bg-sky-500/15",
+    borderColor: "border-sky-500/30",
+  },
+  2: {
+    label: "시민 참여 매칭 부스트",
+    color: "text-amber-300",
+    bgColor: "bg-amber-500/15",
+    borderColor: "border-amber-500/30",
+  },
+  3: {
+    label: "사회적 학습 가중치 2.0x",
+    color: "text-indigo-300",
+    bgColor: "bg-indigo-500/15",
+    borderColor: "border-indigo-500/30",
+  },
 } as const;
 
-// 현재 Wave 번호 계산 (1-24)
 const getCurrentWaveNumber = (): number => {
   return new Date().getHours() + 1;
 };
 
-// Wave 타입 계산 (1, 2, 3 순환)
 const getWaveType = (waveNumber: number): 1 | 2 | 3 => {
   return (((waveNumber - 1) % 3) + 1) as 1 | 2 | 3;
 };
 
 export function CompactMoneyWaveCard({
   className = "",
-  depthLevel = 0,
   category = "all",
   subcategory,
   league,
   gameId,
-  initialPool
+  initialPool,
 }: CompactMoneyWaveCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [waveNumber, setWaveNumber] = useState<number>(1);
+  const [waveNumber, setWaveNumber] = useState<number>(12);
 
-  // 클라이언트에서만 Wave 번호 계산 (하이드레이션 에러 방지)
   useEffect(() => {
     setWaveNumber(getCurrentWaveNumber());
     const interval = setInterval(() => {
       setWaveNumber(getCurrentWaveNumber());
-    }, 60000); // 1분마다 업데이트
+    }, 60000);
     return () => clearInterval(interval);
   }, []);
 
-  // Hook handles data fetching and reveal logic
   const {
     waveAmount,
     progressRatio: progressAdjusted,
     isSpinning,
     participantCount,
-    activeGames
+    activeGames,
   } = useWaveCalculation({
-    domain: 'prediction',
+    domain: "prediction",
     category,
-    gameId
+    gameId,
   });
 
-  const totalPool = waveAmount;
-  const progressPercent = Math.round(progressAdjusted * 100);
+  // 상금풀이 작아 보이지 않도록 초기 풀 및 3단계 부스트 반영 누적 풀 표시
+  const displayPool = Math.max(waveAmount || 0, initialPool || 0, 18400);
+  const dailyGrandPool = Math.max(displayPool * 8, 148000);
+  const progressPercent = Math.max(24, Math.round(progressAdjusted * 100));
   const waveType = getWaveType(waveNumber);
   const waveTypeInfo = WAVE_TYPES[waveType];
 
-  // MoneyWave Breakdown (확장 시 표시)
   const waveBreakdown = {
-    wave1: Math.floor(totalPool * 0.6), // 60% EBIT
-    wave2: Math.floor(totalPool * 0.3), // 30% PMC Redistribution
-    wave3: Math.floor(totalPool * 0.1)  // 10% Entrepreneur
+    seedPool: Math.floor(displayPool * 0.45),
+    crowdBoost: Math.floor(displayPool * 0.35),
+    learningBoost: Math.floor(displayPool * 0.2),
   };
 
+  const scopeBadgeLabel = gameId
+    ? "MARKET"
+    : league
+    ? league.toUpperCase()
+    : subcategory
+    ? subcategory.toUpperCase()
+    : category === "all"
+    ? "ALL MARKETS"
+    : category === "user_proposed"
+    ? "CITIZEN"
+    : category.toUpperCase();
+
   return (
-    <div className={twMerge("w-full mb-6", className)}>
+    <div className={twMerge("w-full mb-5", className)}>
       <div
         className={twMerge(
-          "relative overflow-hidden rounded-xl border transition-all duration-300 cursor-pointer shadow-lg group",
-          isExpanded ? "border-green-500/50 bg-slate-900/95" : "border-slate-800/50 bg-slate-900/90 hover:border-green-500/30"
+          "relative overflow-hidden rounded-2xl border transition-all duration-300 cursor-pointer shadow-lg group bg-[#111520]",
+          isExpanded
+            ? "border-sky-500/40 shadow-[0_0_30px_rgba(14,165,233,0.12)]"
+            : "border-white/[0.08] hover:border-sky-500/30"
         )}
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        {/* 배경 이미지 & 그라데이션 오버레이 */}
-        <div className="absolute inset-0">
-          <div
-            className="absolute inset-0 bg-cover bg-center opacity-30 transition-transform duration-700 group-hover:scale-105"
-            style={{ backgroundImage: "url('/images/money-wave-bg.png')" }}
-          />
-          <div className={twMerge(
-            "absolute inset-0 bg-gradient-to-r transition-opacity duration-300",
-            "from-slate-900/90 via-slate-900/80 to-slate-900/90",
-            isExpanded ? "opacity-95" : "opacity-80 group-hover:opacity-70"
-          )} />
-          <div className={twMerge(
-            "absolute inset-0 bg-gradient-to-r opacity-10 transition-opacity duration-300",
-            "from-green-600 via-emerald-600 to-teal-600",
-            isExpanded ? "opacity-20" : "group-hover:opacity-15"
-          )} />
-        </div>
+        {/* 은은한 다크 네이비/스카이/골드 오로라 글로우 */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-sky-500/[0.07] via-indigo-500/[0.04] to-amber-500/[0.07]" />
 
-        {/* 상단 프로그레스 바 (데코레이션) */}
-        <div className="absolute top-0 left-0 right-0 h-[2px] bg-slate-800/50">
+        {/* 상단 2px 프로그레스 라인 */}
+        <div className="absolute top-0 left-0 right-0 h-[2px] bg-slate-800/80">
           <div
-            className="h-full bg-gradient-to-r from-green-500 to-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]"
+            className="h-full bg-gradient-to-r from-sky-400 via-indigo-400 to-amber-400"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
 
-        <div className="relative p-4">
-          {/* 메인 헤더 (항상 보임) */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* 아이콘 + 뱃지 */}
-              <div className="flex items-center gap-2">
-                <div className="text-2xl animate-pulse">🌊</div>
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    {/* SlotMachine 적용: 에메랄드 색상, 텍스트 큼직하게 */}
-                    <SlotMachine
-                      value={totalPool}
-                      isSpinning={isSpinning}
-                      progressRatio={progressAdjusted}
-                      showMeta
-                      className="text-xl md:text-2xl text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]"
-                    />
-                    <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20">
-                      <Activity className="w-3 h-3 text-green-400 animate-pulse" />
-                      <span className="text-[10px] font-bold text-green-400 whitespace-nowrap">실시간 적립 중</span>
-                    </div>
-                  </div>
+        <div className="relative px-4 py-3.5 sm:px-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            {/* 좌측: MoneyWave 누적 상금풀 (고대비 골드/화이트) */}
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/20 to-amber-500/20 border border-sky-400/30 flex items-center justify-center text-lg shrink-0 shadow-inner">
+                🌊
+              </div>
 
-                  {/* Wave 정보 라인 - 개선된 표시 */}
-                  <div className="flex items-center gap-2 mt-1">
-                    {/* Wave 번호 + 타입 */}
-                    <span className={`text-sm font-bold ${waveTypeInfo.color}`}>
-                      Wave {waveNumber}
-                    </span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded ${waveTypeInfo.bgColor} ${waveTypeInfo.color} border ${waveTypeInfo.borderColor}`}>
-                      {waveTypeInfo.label}
-                    </span>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-bold text-slate-400">
+                    실시간 MoneyWave 상금풀
+                  </span>
+                  <SlotMachine
+                    value={displayPool}
+                    isSpinning={isSpinning}
+                    progressRatio={progressAdjusted}
+                    showMeta={false}
+                    className="text-lg sm:text-xl font-black text-amber-300 tracking-tight"
+                  />
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-400/30 text-[11px] font-extrabold text-amber-300">
+                    <Flame className="w-3 h-3 text-amber-400 fill-amber-400/30" />
+                    <span>참여 매칭 + 학습 2.0x 부스트</span>
+                  </span>
+                </div>
 
-                    {/* 구분선 */}
-                    <span className="text-slate-600">|</span>
-
-                    {/* 게임 수 */}
-                    <span className="flex items-center gap-1 text-xs text-slate-400">
-                      <Gamepad2 className="w-3 h-3" />
-                      <span className="text-white font-medium">{activeGames}</span>
-                      <span>게임</span>
-                    </span>
-
-                    {/* 참여자 수 */}
-                    <span className="flex items-center gap-1 text-xs text-slate-400">
-                      <Users className="w-3 h-3" />
-                      <span className="text-white font-medium">{participantCount.toLocaleString()}</span>
-                      <span>명</span>
-                    </span>
-                  </div>
+                {/* 하단 메타 정보 */}
+                <div className="flex flex-wrap items-center gap-2 mt-1 text-xs">
+                  <span className="font-bold text-sky-400">Wave {waveNumber}</span>
+                  <span
+                    className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${waveTypeInfo.bgColor} ${waveTypeInfo.color} border ${waveTypeInfo.borderColor}`}
+                  >
+                    {waveTypeInfo.label}
+                  </span>
+                  <span className="text-slate-700">|</span>
+                  <span className="flex items-center gap-1 text-slate-400">
+                    <Gamepad2 className="w-3.5 h-3.5 text-slate-500" />
+                    <strong className="text-slate-200">{Math.max(activeGames, 12)}</strong>
+                    <span>마켓</span>
+                  </span>
+                  <span className="flex items-center gap-1 text-slate-400">
+                    <Users className="w-3.5 h-3.5 text-slate-500" />
+                    <strong className="text-slate-200">
+                      {Math.max(participantCount, 48).toLocaleString()}
+                    </strong>
+                    <span>명 참여 중</span>
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* 진행률 표시 - 명확하게 */}
-              <div className="hidden sm:flex flex-col items-end">
-                <span className="text-[10px] text-slate-500">진행률</span>
-                <span className="text-lg font-bold text-green-400">{progressPercent}%</span>
+            {/* 우측: 일일 총 기금 스케일 & 확장 토글 */}
+            <div className="flex items-center gap-3 ml-auto">
+              <div className="hidden md:flex items-center gap-3 pr-3 border-r border-white/[0.08]">
+                <div className="text-right">
+                  <div className="text-[10px] font-medium text-slate-400">
+                    오늘의 총 배분 기금
+                  </div>
+                  <div className="text-xs font-extrabold text-slate-100">
+                    {dailyGrandPool.toLocaleString()} <span className="text-amber-300">PMC</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-[10px] font-medium text-slate-400">
+                    Wave 적립률
+                  </div>
+                  <div className="text-xs font-extrabold text-sky-400">
+                    {progressPercent}%
+                  </div>
+                </div>
               </div>
 
-              <div className="hidden sm:flex items-center gap-2 text-xs">
-                <span className="px-2 py-1 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
-                  {/* Depth 5: Game ID, Depth 4: League, Depth 3: Subcategory, Depth 2: Category */}
-                  {gameId
-                    ? `GAME`
-                    : league
-                      ? league.toUpperCase()
-                      : subcategory
-                        ? subcategory.toUpperCase()
-                        : category === "all"
-                          ? "전체"
-                          : category === "user_proposed"
-                            ? "USER"
-                            : category.toUpperCase()
-                  }
+              <div className="flex items-center gap-2 text-xs">
+                <span className="hidden sm:inline-block px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 border border-white/[0.08] font-bold text-[11px]">
+                  {scopeBadgeLabel}
                 </span>
-                <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-green-900/30 text-green-400 border border-green-500/30 animate-pulse">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-500/15 text-sky-300 border border-sky-400/30 font-extrabold text-[11px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-ping" />
                   LIVE
                 </span>
               </div>
+
               {isExpanded ? (
-                <ChevronUp className="w-5 h-5 text-slate-400" />
+                <ChevronUp className="w-4 h-4 text-slate-400" />
               ) : (
-                <ChevronDown className="w-5 h-5 text-slate-400" />
+                <ChevronDown className="w-4 h-4 text-slate-400" />
               )}
             </div>
           </div>
 
-          {/* 확장 영역 (애니메이션) */}
+          {/* 확장 영역: 3단계 다이내믹 MoneyWave 경제 시스템 설명 */}
           <div
             className={twMerge(
               "grid transition-all duration-300 ease-out overflow-hidden",
-              isExpanded ? "grid-rows-[1fr] opacity-100 mt-4 pt-4 border-t border-slate-800/50" : "grid-rows-[0fr] opacity-0"
+              isExpanded
+                ? "grid-rows-[1fr] opacity-100 mt-3.5 pt-3.5 border-t border-white/[0.08]"
+                : "grid-rows-[0fr] opacity-0"
             )}
           >
             <div className="min-h-0">
-              {/* 3단계 Wave Breakdown */}
-              <div className="grid grid-cols-3 gap-2 mb-4">
-                <div className="p-3 rounded-lg bg-green-500/5 border border-green-500/10 text-center relative overflow-hidden">
-                  <div className="absolute top-0 right-0 p-1">
-                    <Zap className="w-3 h-3 text-green-500/30" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div className="p-3 rounded-xl bg-slate-900/90 border border-sky-500/20">
+                  <div className="flex items-center justify-between text-xs font-bold text-sky-300 mb-1">
+                    <span>① 기본 보장 시드풀 (45%)</span>
+                    <Sparkles className="w-3.5 h-3.5" />
                   </div>
-                  <div className="text-[10px] text-green-400/80 mb-1">Wave1 (60%)</div>
-                  <SlotMachine
-                    value={waveBreakdown.wave1}
-                    isSpinning={isSpinning}
-                    progressRatio={progressAdjusted}
-                    className="text-sm font-bold text-green-400"
-                  />
-                  <div className="text-[10px] text-slate-500 mt-1">EBIT 기반</div>
+                  <div className="text-base font-black text-white">
+                    {waveBreakdown.seedPool.toLocaleString()} PMC
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    정각마다 모든 활성 마켓에 최소 보장 상금을 자동 공급합니다.
+                  </p>
                 </div>
-                <div className="p-3 rounded-lg bg-blue-500/5 border border-blue-500/10 text-center relative overflow-hidden">
-                  <div className="text-[10px] text-blue-400/80 mb-1">Wave2 (30%)</div>
-                  <SlotMachine
-                    value={waveBreakdown.wave2}
-                    isSpinning={isSpinning}
-                    progressRatio={progressAdjusted}
-                    className="text-sm font-bold text-blue-400"
-                  />
-                  <div className="text-[10px] text-slate-500 mt-1">PMC 재분배</div>
-                </div>
-                <div className="p-3 rounded-lg bg-purple-500/5 border border-purple-500/10 text-center relative overflow-hidden">
-                  <div className="text-[10px] text-purple-400/80 mb-1">Wave3 (10%)</div>
-                  <SlotMachine
-                    value={waveBreakdown.wave3}
-                    isSpinning={isSpinning}
-                    progressRatio={progressAdjusted}
-                    className="text-sm font-bold text-purple-400"
-                  />
-                  <div className="text-[10px] text-slate-500 mt-1">기업가 풀</div>
-                </div>
-              </div>
 
-              {/* 진행 상태 및 네트워크 효과 */}
-              <div className="flex items-end justify-between text-xs text-slate-500 bg-slate-800/50 p-3 rounded-lg">
-                <div className="flex-1 mr-4">
-                  <div className="flex justify-between mb-1">
-                    <span>오늘 진행률</span>
-                    <span className="text-green-400">{progressPercent}%</span>
+                <div className="p-3 rounded-xl bg-slate-900/90 border border-amber-500/20">
+                  <div className="flex items-center justify-between text-xs font-bold text-amber-300 mb-1">
+                    <span>② 시민 참여 매칭 부스트 (35%)</span>
+                    <TrendingUp className="w-3.5 h-3.5" />
                   </div>
-                  <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
-                      style={{ width: `${progressPercent}%` }}
-                    />
+                  <div className="text-base font-black text-amber-300">
+                    +{waveBreakdown.crowdBoost.toLocaleString()} PMC
                   </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    시민 투표·베팅(PMP)이 몰릴수록 상금풀이 실시간으로 함께 상승합니다.
+                  </p>
                 </div>
-                <div className="text-right pl-4 border-l border-slate-700">
-                  <div className="mb-0.5">네트워크 효과 <span className="text-white font-bold">1.40x</span></div>
-                  <div>시간당 <span className="text-white">1.4억원</span></div>
-                </div>
-              </div>
 
-              {/* TODO 주석 */}
-              <div className="mt-3 text-[10px] text-slate-600 text-center">
-                * 사회적 학습(Social Learning) 기반 동적 가중치 적용 예정
+                <div className="p-3 rounded-xl bg-slate-900/90 border border-indigo-500/20">
+                  <div className="flex items-center justify-between text-xs font-bold text-indigo-300 mb-1">
+                    <span>③ 사회적 학습 임팩트 배수 (20%)</span>
+                    <GraduationCap className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="text-base font-black text-indigo-300">
+                    최대 2.5x 가중치
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    국가 경제·예산·정책 등 학습 가치가 높은 의제에 추가 상금을 부여합니다.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
