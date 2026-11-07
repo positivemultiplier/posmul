@@ -4,15 +4,48 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { ArrowLeft, Award, CheckCircle2, Clock, RefreshCw, Trophy, Users, Coins } from "lucide-react";
 
+interface NormalizedOption {
+  id: string;
+  label: string;
+  odds?: number;
+}
+
 interface GameSettlementItem {
   game_id: string;
   id?: string;
   title: string;
   category: string;
   status: string;
-  game_options?: { options: string[] };
+  game_options?: any;
+  options?: any;
   created_at: string;
   actual_result?: { winningOption?: string };
+}
+
+function parseGameOptions(raw: any): NormalizedOption[] {
+  if (!raw) return [{ id: "yes", label: "Yes" }, { id: "no", label: "No" }];
+
+  let list: any[] = [];
+  if (Array.isArray(raw)) {
+    list = raw;
+  } else if (raw.options && Array.isArray(raw.options)) {
+    list = raw.options;
+  } else {
+    return [{ id: "yes", label: "Yes" }, { id: "no", label: "No" }];
+  }
+
+  return list.map((item, idx) => {
+    if (typeof item === "string") {
+      return { id: item, label: item };
+    }
+    if (typeof item === "object" && item !== null) {
+      const id = String(item.id || item.value || `opt-${idx}`);
+      const label = String(item.label || item.text || item.title || item.name || id);
+      const odds = typeof item.currentOdds === "number" ? item.currentOdds : undefined;
+      return { id, label, odds };
+    }
+    return { id: String(item), label: String(item) };
+  });
 }
 
 export default function PredictionSettlementDashboardPage() {
@@ -174,7 +207,7 @@ export default function PredictionSettlementDashboardPage() {
           <div className="space-y-4">
             {games.map((game, idx) => {
               const gId = game.game_id || game.id || `game-${idx}`;
-              const options = game.game_options?.options || ["Yes", "No"];
+              const options = parseGameOptions(game.game_options || game.options);
               const isSettled = game.status === "SETTLED";
               const winningOption = game.actual_result?.winningOption;
 
@@ -217,12 +250,12 @@ export default function PredictionSettlementDashboardPage() {
 
                     <div className="flex flex-wrap gap-2">
                       {options.map((opt, optIdx) => {
-                        const isWinOpt = isSettled && winningOption === opt;
+                        const isWinOpt = isSettled && (winningOption === opt.id || winningOption === opt.label);
 
                         return (
                           <button
                             key={optIdx}
-                            onClick={() => handleSettle(gId, opt)}
+                            onClick={() => handleSettle(gId, opt.id)}
                             disabled={isSettled || settlingGameId === gId}
                             className={`px-4 py-2 text-xs font-bold rounded-xl border transition flex items-center gap-1.5 shadow ${
                               isSettled
@@ -232,7 +265,7 @@ export default function PredictionSettlementDashboardPage() {
                                 : "bg-amber-950 hover:bg-amber-900 border-amber-800 text-amber-300"
                             }`}
                           >
-                            {isWinOpt ? "🏆 [승리 옵션 확정됨]" : `[${opt}] 승리로 정산`}
+                            {isWinOpt ? `🏆 [승리: ${opt.label}]` : `[${opt.label}] 승리로 정산`}
                           </button>
                         );
                       })}

@@ -4,23 +4,66 @@ import { banIp, unbanIp } from "@/shared/lib/security/ip-ban";
 
 export async function GET(req: NextRequest) {
   try {
-    // 1. 최신 게시글 50개 조회
-    const { data: posts, error: postsError } = await supabaseAdmin
+    const url = new URL(req.url);
+    const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
+    const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") || "20", 10)));
+    const search = url.searchParams.get("search")?.trim() || "";
+    const status = url.searchParams.get("status") || "all";
+    const sortBy = url.searchParams.get("sortBy") || "latest";
+    const offset = (page - 1) * limit;
+
+    // 1. 게시글 쿼리 구성
+    let postsQuery = supabaseAdmin
       .schema("forum")
       .from("forum_posts")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(50);
+      .select("*", { count: "exact" });
+
+    // 상태 필터
+    if (status && status !== "all") {
+      postsQuery = postsQuery.eq("status", status);
+    }
+
+    // 검색 필터 (제목, 내용, IP)
+    if (search) {
+      postsQuery = postsQuery.or(`title.ilike.%${search}%,content.ilike.%${search}%,author_ip.ilike.%${search}%`);
+    }
+
+    // 정렬
+    if (sortBy === "likes") {
+      postsQuery = postsQuery.order("like_count", { ascending: false });
+    } else if (sortBy === "comments") {
+      postsQuery = postsQuery.order("comment_count", { ascending: false });
+    } else if (sortBy === "views") {
+      postsQuery = postsQuery.order("view_count", { ascending: false });
+    } else {
+      postsQuery = postsQuery.order("created_at", { ascending: false });
+    }
+
+    // 페이징
+    const { data: posts, error: postsError, count: totalPostsCount } = await postsQuery
+      .range(offset, offset + limit - 1);
 
     if (postsError) {
       return NextResponse.json({ success: false, error: postsError.message }, { status: 500 });
     }
 
-    // 2. 차단된 IP 목록 조회
-    const { data: bannedIps, error: banError } = await supabaseAdmin
+    // 2. 최신 댓글 목록 (최신 30개)
+    const { data: comments, error: commentsError, count: totalCommentsCount } = await supabaseAdmin
+      .schema("forum")
+      .from("forum_comments")
+      .select("*", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    if (commentsError) {
+      console.warn("forum_comments fetch warning:", commentsError.message);
+    }
+
+    // 3. 차단된 IP 목록 조회 (최신 100개)
+    const { data: bannedIps, error: banError, count: totalBannedCount } = await supabaseAdmin
       .schema("forum")
       .from("banned_ips")
-      .select("*")
+      .select("*", { count: "exact" })
       .order("created_at", { ascending: false })
       .limit(100);
 
@@ -30,7 +73,19 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
+      pagination: {
+        page,
+        limit,
+        totalPosts: totalPostsCount || 0,
+        totalPages: Math.ceil((totalPostsCount || 0) / limit),
+      },
+      stats: {
+        totalPosts: totalPostsCount || 0,
+        totalComments: totalCommentsCount || 0,
+        totalBannedIps: totalBannedCount || 0,
+      },
       posts: posts || [],
+      comments: comments || [],
       bannedIps: bannedIps || [],
     });
   } catch (err: any) {
@@ -41,7 +96,17 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, title, content, postId, status, ip, reason, expiresHours } = body;
+    const {
+      action,
+      title,
+      content,
+      postId,
+      commentId,
+      status,
+      ip,
+      reason,
+      expiresHours,
+    } = body;
     const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000001";
 
     // 1. 신규 포럼 글 생성
@@ -54,9 +119,12 @@ export async function POST(req: NextRequest) {
         .schema("forum")
         .from("forum_posts")
         .insert({
-          title,
-          content,
+          title: title.trim(),
+          content: content.trim(),
           status: "published",
+          category_id: "040567a7-dd38-4826-896b-08da1bfcd25d",
+          post_type: "debate",
+          section: "DEBATE",
           author_id: SYSTEM_USER_ID,
           author_ip: "127.0.0.1 (관리자)",
           created_at: new Date().toISOString(),
@@ -82,15 +150,10 @@ export async function POST(req: NextRequest) {
         .schema("forum")
         .from("forum_posts")
         .update({ status, updated_at: new Date().toISOString() })
-        .eq("id", postId);
+        .or(`id.eq.${postId},post_id.eq.${postId}`);
 
       if (error) {
-        // fallback to post_id if id eq failed
-        await supabaseAdmin
-          .schema("forum")
-          .from("forum_posts")
-          .update({ status, updated_at: new Date().toISOString() })
-          .eq("post_id", postId);
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
       }
 
       return NextResponse.json({ success: true });
@@ -156,7 +219,6 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: "postId required" }, { status: 400 });
       }
 
-      // 작성자 IP 조회
       const { data: postRecord } = await supabaseAdmin
         .schema("forum")
         .from("forum_posts")
@@ -164,7 +226,6 @@ export async function POST(req: NextRequest) {
         .or(`id.eq.${postId},post_id.eq.${postId}`)
         .maybeSingle();
 
-      // 게시글 삭제
       const { error: delError } = await supabaseAdmin
         .schema("forum")
         .from("forum_posts")
@@ -190,6 +251,68 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         success: true,
         purgedPostId: postId,
+        bannedIp: targetIp || null,
+        ipBanned,
+      });
+    }
+
+    // 7. 댓글 일반 삭제
+    if (action === "delete-comment") {
+      if (!commentId) {
+        return NextResponse.json({ success: false, error: "commentId required" }, { status: 400 });
+      }
+
+      const { error } = await supabaseAdmin
+        .schema("forum")
+        .from("forum_comments")
+        .delete()
+        .eq("id", commentId);
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true });
+    }
+
+    // 8. 악성 댓글 삭제 + 작성자 IP 즉시 차단
+    if (action === "purge-comment-and-ban-ip") {
+      if (!commentId) {
+        return NextResponse.json({ success: false, error: "commentId required" }, { status: 400 });
+      }
+
+      const { data: commentRecord } = await supabaseAdmin
+        .schema("forum")
+        .from("forum_comments")
+        .select("id, content, author_ip")
+        .eq("id", commentId)
+        .maybeSingle();
+
+      const { error: delError } = await supabaseAdmin
+        .schema("forum")
+        .from("forum_comments")
+        .delete()
+        .eq("id", commentId);
+
+      if (delError) {
+        return NextResponse.json({ success: false, error: delError.message }, { status: 500 });
+      }
+
+      const targetIp = commentRecord?.author_ip;
+      let ipBanned = false;
+
+      if (targetIp && targetIp !== "127.0.0.1" && !targetIp.includes("관리자")) {
+        await banIp({
+          ip: targetIp,
+          reason: reason || `악성/스팸 댓글 작성으로 IP 영구 차단됨 (댓글: ${commentRecord?.content?.slice(0, 20)})`,
+          bannedBy: "ADMIN_COMMENT_PURGE",
+        });
+        ipBanned = true;
+      }
+
+      return NextResponse.json({
+        success: true,
+        purgedCommentId: commentId,
         bannedIp: targetIp || null,
         ipBanned,
       });

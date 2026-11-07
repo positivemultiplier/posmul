@@ -12,6 +12,12 @@ import {
   Award,
 } from "lucide-react";
 
+interface NormalizedOption {
+  id: string;
+  label: string;
+  odds?: number;
+}
+
 interface PredictionGame {
   game_id?: string;
   id?: string;
@@ -19,10 +25,37 @@ interface PredictionGame {
   description: string;
   category: string;
   status: string;
-  game_options?: { options: string[] };
+  game_options?: any;
+  options?: any;
   min_bet_amount: number;
   max_bet_amount: number;
   created_at: string;
+}
+
+function parseGameOptions(raw: any): NormalizedOption[] {
+  if (!raw) return [{ id: "yes", label: "Yes" }, { id: "no", label: "No" }];
+
+  let list: any[] = [];
+  if (Array.isArray(raw)) {
+    list = raw;
+  } else if (raw.options && Array.isArray(raw.options)) {
+    list = raw.options;
+  } else {
+    return [{ id: "yes", label: "Yes" }, { id: "no", label: "No" }];
+  }
+
+  return list.map((item, idx) => {
+    if (typeof item === "string") {
+      return { id: item, label: item };
+    }
+    if (typeof item === "object" && item !== null) {
+      const id = String(item.id || item.value || `opt-${idx}`);
+      const label = String(item.label || item.text || item.title || item.name || id);
+      const odds = typeof item.currentOdds === "number" ? item.currentOdds : undefined;
+      return { id, label, odds };
+    }
+    return { id: String(item), label: String(item) };
+  });
 }
 
 export default function AdminPredictionDashboard() {
@@ -88,9 +121,10 @@ export default function AdminPredictionDashboard() {
     const targetGameId = game.game_id || game.id;
     if (!targetGameId) return;
 
-    const options = game.game_options?.options || ["Yes", "No"];
-    const currentBet = betState[targetGameId] || { optionId: options[0], amount: 1000 };
-    const selectedOption = currentBet.optionId || options[0] || "Yes";
+    const options = parseGameOptions(game.game_options || game.options);
+    const defaultOptionId = options[0]?.id || "yes";
+    const currentBet = betState[targetGameId] || { optionId: defaultOptionId, amount: 1000 };
+    const selectedOption = currentBet.optionId || defaultOptionId;
     const amount = currentBet.amount || 1000;
 
     setBetLoading(targetGameId);
@@ -124,11 +158,11 @@ export default function AdminPredictionDashboard() {
   };
 
   // 4. 승부 정산 제출 처리
-  const handleSettleSubmit = async (game: PredictionGame, winningOption: string) => {
+  const handleSettleSubmit = async (game: PredictionGame, winningOptionId: string, winningOptionLabel: string) => {
     const targetGameId = game.game_id || game.id;
     if (!targetGameId) return;
 
-    if (!confirm(`'${winningOption}' 옵션을 승리로 확정하고 정산을 완료하시겠습니까?`)) {
+    if (!confirm(`'${winningOptionLabel}' (${winningOptionId}) 옵션을 승리로 확정하고 정산을 완료하시겠습니까?`)) {
       return;
     }
 
@@ -139,7 +173,7 @@ export default function AdminPredictionDashboard() {
         body: JSON.stringify({
           action: "settle",
           gameId: targetGameId,
-          winningOption,
+          winningOption: winningOptionId,
         }),
       });
 
@@ -300,8 +334,9 @@ export default function AdminPredictionDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {games.map((game, gameIdx) => {
                 const targetGameId = game.game_id || game.id || `game-${gameIdx}`;
-                const options = game.game_options?.options || ["Yes", "No"];
-                const currentBet = betState[targetGameId] || { optionId: options[0], amount: 1000 };
+                const options = parseGameOptions(game.game_options || game.options);
+                const defaultOptionId = options[0]?.id || "yes";
+                const currentBet = betState[targetGameId] || { optionId: defaultOptionId, amount: 1000 };
 
                 return (
                   <div
@@ -339,20 +374,20 @@ export default function AdminPredictionDashboard() {
                       <div className="grid grid-cols-2 gap-2">
                         {options.map((opt, idx) => (
                           <button
-                            key={`${targetGameId}-${opt}-${idx}`}
+                            key={`${targetGameId}-${opt.id}-${idx}`}
                             onClick={() =>
                               setBetState((prev) => ({
                                 ...prev,
-                                [targetGameId]: { ...currentBet, optionId: opt },
+                                [targetGameId]: { ...currentBet, optionId: opt.id },
                               }))
                             }
                             className={`py-2 px-3 rounded-xl text-xs font-medium border transition ${
-                              currentBet.optionId === opt
+                              currentBet.optionId === opt.id
                                 ? "bg-indigo-600 border-indigo-400 text-white font-bold shadow"
                                 : "bg-slate-950 border-slate-800 text-slate-300 hover:bg-slate-850"
                             }`}
                           >
-                            {opt}
+                            {opt.label} {opt.odds ? `(${opt.odds}x)` : ""}
                           </button>
                         ))}
                       </div>
@@ -392,16 +427,16 @@ export default function AdminPredictionDashboard() {
                         <div className="flex gap-1.5">
                           {options.map((opt, idx) => (
                             <button
-                              key={`settle-${targetGameId}-${opt}-${idx}`}
-                              onClick={() => handleSettleSubmit(game, opt)}
+                              key={`settle-${targetGameId}-${opt.id}-${idx}`}
+                              onClick={() => handleSettleSubmit(game, opt.id, opt.label)}
                               disabled={game.status === "SETTLED"}
                               className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg border transition ${
                                 game.status === "SETTLED"
-                                  ? "bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed"
+                                    ? "bg-slate-950 border-slate-800 text-slate-600 cursor-not-allowed"
                                   : "bg-amber-950 hover:bg-amber-900 border-amber-800/80 text-amber-300 shadow"
                               }`}
                             >
-                              [{opt}] 승리 확정
+                              [{opt.label}] 승리 확정
                             </button>
                           ))}
                         </div>
