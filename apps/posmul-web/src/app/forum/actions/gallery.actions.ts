@@ -3,6 +3,24 @@
 import { createClient } from "@/lib/supabase/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { checkIsIpBanned, banIp } from "@/shared/lib/security/ip-ban";
+
+async function getClientIpFromHeaders(): Promise<string> {
+  try {
+    const h = await headers();
+    const forwarded = h.get("x-forwarded-for");
+    if (forwarded) {
+      const first = forwarded.split(",")[0].trim();
+      if (first) return first;
+    }
+    const realIp = h.get("x-real-ip");
+    if (realIp) return realIp.trim();
+    const cfIp = h.get("cf-connecting-ip");
+    if (cfIp) return cfIp.trim();
+  } catch {}
+  return "127.0.0.1";
+}
 
 export interface GalleryPostDTO {
   id: string;
@@ -271,8 +289,33 @@ export async function createGalleryPostAction(params: {
   gameId?: string;
   gameTitle?: string;
   tag?: string;
+  honeypot?: string;
 }): Promise<{ success: boolean; post?: GalleryPostDTO; error?: string }> {
   try {
+    const clientIp = await getClientIpFromHeaders();
+
+    // 1. IP 차단 여부 검사
+    const ipStatus = await checkIsIpBanned(clientIp);
+    if (ipStatus.banned) {
+      return {
+        success: false,
+        error: `접근이 제한된 IP입니다: ${ipStatus.reason || "비정상 활동 탐지"}`,
+      };
+    }
+
+    // 2. 허니팟 봇 트랩 검사
+    if (params.honeypot && params.honeypot.trim().length > 0) {
+      await banIp({
+        ip: clientIp,
+        reason: "허니팟 트랩 감지 (스팸 봇 자동 차단)",
+        bannedBy: "SYSTEM_HONEYPOT",
+      });
+      return {
+        success: false,
+        error: "비정상적인 접근 패턴이 감지되어 IP가 즉시 차단되었습니다.",
+      };
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -318,6 +361,7 @@ export async function createGalleryPostAction(params: {
       .insert({
         category_id: "040567a7-dd38-4826-896b-08da1bfcd25d", // 기본 카테고리
         author_id: authorId,
+        author_ip: clientIp,
         title: params.title.trim(),
         content: params.content.trim(),
         post_type: "debate",
@@ -419,8 +463,33 @@ export async function addGalleryCommentAction(params: {
   postId: string;
   content: string;
   gameId?: string;
+  honeypot?: string;
 }): Promise<{ success: boolean; comment?: GalleryCommentDTO; earnedPmp?: number; error?: string }> {
   try {
+    const clientIp = await getClientIpFromHeaders();
+
+    // 1. IP 차단 여부 검사
+    const ipStatus = await checkIsIpBanned(clientIp);
+    if (ipStatus.banned) {
+      return {
+        success: false,
+        error: `접근이 제한된 IP입니다: ${ipStatus.reason || "비정상 활동 탐지"}`,
+      };
+    }
+
+    // 2. 허니팟 봇 트랩 검사
+    if (params.honeypot && params.honeypot.trim().length > 0) {
+      await banIp({
+        ip: clientIp,
+        reason: "허니팟 트랩 감지 (댓글 스팸 봇 자동 차단)",
+        bannedBy: "SYSTEM_HONEYPOT",
+      });
+      return {
+        success: false,
+        error: "비정상적인 접근 패턴이 감지되어 IP가 즉시 차단되었습니다.",
+      };
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -454,6 +523,7 @@ export async function addGalleryCommentAction(params: {
         id: commentId,
         post_id: params.postId,
         author_id: authorId,
+        author_ip: clientIp,
         content: params.content.trim(),
         depth: 0,
         path: commentId,

@@ -37,6 +37,7 @@ export default function ForumWritePage() {
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("economy");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [honeypot, setHoneypot] = useState("");
 
   // 예측 게임 연동 상태
   const [availableGames, setAvailableGames] = useState<AttachedGame[]>([]);
@@ -92,6 +93,7 @@ export default function ForumWritePage() {
         category,
         gameId: selectedGame?.id,
         gameTitle: selectedGame?.title,
+        honeypot,
       });
 
       if (res.success && res.post) {
@@ -142,6 +144,18 @@ export default function ForumWritePage() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* 안티 스팸 봇 방어 허니팟 트랩 필드 (정상 사용자에겐 보이지 않음) */}
+            <input
+              type="text"
+              name="website_url_hp"
+              value={honeypot}
+              onChange={(e) => setHoneypot(e.target.value)}
+              style={{ display: "none", position: "absolute", left: "-9999px" }}
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+            />
+
             {/* 1. 카테고리 선택 및 예측 연동 버튼 바 */}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-2">

@@ -7,6 +7,11 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../../../lib/supabase/server";
+import {
+  getClientIp,
+  checkIsIpBanned,
+  banIp,
+} from "../../../../../../shared/lib/security/ip-ban";
 
 // 댓글 PMP 보상
 const COMMENT_PMP_REWARD = 20;
@@ -173,6 +178,7 @@ async function createCommentOrThrow(params: {
   depth: number;
   path: string;
   parentCommentId: string | null;
+  authorIp?: string;
 }): Promise<{ id: string; content: string; pmp_earned: number; created_at: string }> {
   const { data: comment, error: commentError } = await params.supabase
     .schema("forum")
@@ -185,6 +191,7 @@ async function createCommentOrThrow(params: {
       depth: params.depth,
       path: params.path,
       status: "published",
+      author_ip: params.authorIp || null,
       pmp_earned: COMMENT_PMP_REWARD,
     })
     .select("id, content, pmp_earned, created_at")
@@ -274,6 +281,23 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const clientIp = getClientIp(request);
+
+    // 1. IP 차단 여부 실시간 검증
+    const ipCheck = await checkIsIpBanned(clientIp);
+    if (ipCheck.banned) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "IP_BANNED",
+            message: ipCheck.reason || "차단된 IP입니다.",
+          },
+        },
+        { status: 403 }
+      );
+    }
+
     const postId = await getPostId(params);
     const supabase = await createClient();
 
@@ -293,6 +317,7 @@ export async function POST(
       depth: threadInfo.depth,
       path: threadInfo.path,
       parentCommentId: threadInfo.parentCommentId,
+      authorIp: clientIp,
     });
 
     await updatePostAfterComment({

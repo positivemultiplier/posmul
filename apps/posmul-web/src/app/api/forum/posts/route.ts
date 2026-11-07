@@ -7,6 +7,11 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
+import {
+  getClientIp,
+  checkIsIpBanned,
+  banIp,
+} from "../../../../shared/lib/security/ip-ban";
 
 // PMP 보상 규칙
 const PMP_REWARDS = {
@@ -181,6 +186,18 @@ async function awardPmpForPost(params: {
  */
 export async function POST(request: NextRequest) {
   try {
+    const clientIp = getClientIp(request);
+
+    // 1. IP 차단 여부 실시간 검증 (블랙리스트 차단)
+    const ipCheck = await checkIsIpBanned(clientIp);
+    if (ipCheck.banned) {
+      return jsonError(
+        403,
+        "IP_BANNED",
+        ipCheck.reason || "비정상 활동 또는 스팸 방지 정책에 의해 차단된 IP입니다."
+      );
+    }
+
     const supabase = await createClient();
 
     // 현재 사용자 확인
@@ -194,6 +211,25 @@ export async function POST(request: NextRequest) {
     }
 
     const body: unknown = await request.json();
+
+    // 2. 허니팟 (Honeypot) 봇 자동 탐지 & 즉시 IP 차단
+    if (isRecord(body)) {
+      const honeypotVal = body["website_url_hp"] || body["company_hp"];
+      if (typeof honeypotVal === "string" && honeypotVal.trim() !== "") {
+        // 봇으로 판정! 해당 IP 즉시 블랙리스트 등록
+        await banIp({
+          ip: clientIp,
+          reason: "허니팟 자동 탐지 (스팸 봇 자동 글작성 시도)",
+          bannedBy: "BOT_HONEYPOT_AUTOBAN",
+        });
+        return jsonError(
+          403,
+          "BOT_DETECTED",
+          "비정상적인 자동화 봇 접근이 감지되어 접속이 차단되었습니다."
+        );
+      }
+    }
+
     const parsedBodyResult = parseCreateForumPostBody(body);
     if (parsedBodyResult.ok === false) return parsedBodyResult.response;
     const { categoryId, title, content, postType, tags } = parsedBodyResult.data;
@@ -241,6 +277,7 @@ export async function POST(request: NextRequest) {
         post_type: postType,
         tags,
         status: "published",
+        author_ip: clientIp,
         pmp_earned: PMP_REWARDS[postType as keyof typeof PMP_REWARDS] || 0,
       })
       .select("id, title, post_type, pmp_earned, created_at")

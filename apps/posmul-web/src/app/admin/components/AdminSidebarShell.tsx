@@ -102,8 +102,9 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
       },
       {
         href: "/admin/forum",
-        label: "포럼 갤러리 관리",
+        label: "포럼 & 봇 방어 관리",
         icon: MessageSquare,
+        badge: "IP차단",
       },
       {
         href: "/admin/economy",
