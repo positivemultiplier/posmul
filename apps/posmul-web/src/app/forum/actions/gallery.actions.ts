@@ -445,13 +445,18 @@ export async function addGalleryCommentAction(params: {
       if (userBet?.selected_option) betOptionLabel = userBet.selected_option;
     }
 
+    const commentId = crypto.randomUUID();
+
     const { data: comment, error } = await supabaseAdmin
       .schema("forum")
       .from("forum_comments")
       .insert({
+        id: commentId,
         post_id: params.postId,
         author_id: authorId,
         content: params.content.trim(),
+        depth: 0,
+        path: commentId,
         pmp_earned: 10,
         status: "published",
         metadata: {

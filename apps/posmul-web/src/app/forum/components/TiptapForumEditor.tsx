@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
@@ -20,6 +20,7 @@ import {
   Sparkles,
   Undo,
   Redo,
+  Loader2,
 } from "lucide-react";
 
 interface TiptapForumEditorProps {
@@ -29,6 +30,27 @@ interface TiptapForumEditorProps {
   onAttachPredictionClick?: () => void;
 }
 
+// 서버 스토리지로 파일 업로드 헬퍼
+async function uploadImageFile(file: File): Promise<string | null> {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch("/api/forum/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await res.json();
+    if (data.success && data.url) {
+      return data.url;
+    }
+    console.error("Upload failed:", data.error);
+    return null;
+  } catch (err) {
+    console.error("Upload error:", err);
+    return null;
+  }
+}
+
 export function TiptapForumEditor({
   content,
   onChange,
@@ -36,6 +58,7 @@ export function TiptapForumEditor({
   onAttachPredictionClick,
 }: TiptapForumEditorProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -46,9 +69,9 @@ export function TiptapForumEditor({
       }),
       Image.configure({
         inline: true,
-        allowBase64: true, // 로컬 캡처 및 복사-붙여넣기 짤 즉시 허용
+        allowBase64: true, // fallback 허용
         HTMLAttributes: {
-          class: "rounded-xl max-h-[480px] object-contain my-3 border border-slate-700/60 shadow-lg mx-auto",
+          class: "rounded-xl max-h-[480px] object-contain my-3 border border-slate-700/60 shadow-lg mx-auto block",
         },
       }),
       Link.configure({
@@ -67,28 +90,29 @@ export function TiptapForumEditor({
     editorProps: {
       attributes: {
         class:
-          "prose prose-invert max-w-none min-h-[220px] max-h-[500px] overflow-y-auto px-4 py-3 focus:outline-none text-slate-100 text-sm leading-relaxed",
+          "prose prose-invert max-w-none min-h-[260px] max-h-[550px] overflow-y-auto px-4 py-3 focus:outline-none text-slate-100 text-sm leading-relaxed",
       },
-      // 이미지 클립보드 복사+붙여넣기 (Ctrl + V 짤 첨부 핸들러)
+      // 이미지 클립보드 복사+붙여넣기 (Ctrl + V 짤 첨부 시 스토리지 자동 업로드)
       handlePaste: (view, event) => {
         const items = Array.from(event.clipboardData?.items || []);
         for (const item of items) {
           if (item.type.indexOf("image") === 0) {
             const file = item.getAsFile();
             if (file) {
-              const reader = new FileReader();
-              reader.onload = (readerEvent) => {
-                const base64 = readerEvent.target?.result as string;
-                if (base64) {
+              setIsUploading(true);
+              uploadImageFile(file).then((url) => {
+                setIsUploading(false);
+                if (url) {
                   view.dispatch(
                     view.state.tr.replaceSelectionWith(
-                      view.state.schema.nodes.image.create({ src: base64 })
+                      view.state.schema.nodes.image.create({ src: url })
                     )
                   );
+                } else {
+                  alert("이미지 업로드에 실패했습니다. 네트워크 상태를 확인해주세요.");
                 }
-              };
-              reader.readAsDataURL(file);
-              return true; // 에디터 기본 텍스트 붙여넣기 방지 및 이미지 삽입 완료
+              });
+              return true; // 기본 텍스트 삽입 방지
             }
           }
         }
@@ -99,17 +123,16 @@ export function TiptapForumEditor({
         const hasFiles = event.dataTransfer?.files?.length;
         if (hasFiles && event.dataTransfer.files[0].type.startsWith("image/")) {
           const file = event.dataTransfer.files[0];
-          const reader = new FileReader();
-          reader.onload = (readerEvent) => {
-            const base64 = readerEvent.target?.result as string;
-            if (base64) {
+          setIsUploading(true);
+          uploadImageFile(file).then((url) => {
+            setIsUploading(false);
+            if (url) {
               const { tr } = view.state;
               const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos || 0;
-              tr.insert(pos, view.state.schema.nodes.image.create({ src: base64 }));
+              tr.insert(pos, view.state.schema.nodes.image.create({ src: url }));
               view.dispatch(tr);
             }
-          };
-          reader.readAsDataURL(file);
+          });
           return true;
         }
         return false;
@@ -121,17 +144,17 @@ export function TiptapForumEditor({
   });
 
   // 로컬 파일 업로드 버튼 클릭 시
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && file.type.startsWith("image/") && editor) {
-      const reader = new FileReader();
-      reader.onload = (readerEvent) => {
-        const base64 = readerEvent.target?.result as string;
-        if (base64) {
-          editor.chain().focus().setImage({ src: base64 }).run();
-        }
-      };
-      reader.readAsDataURL(file);
+      setIsUploading(true);
+      const url = await uploadImageFile(file);
+      setIsUploading(false);
+      if (url) {
+        editor.chain().focus().setImage({ src: url }).run();
+      } else {
+        alert("이미지 업로드에 실패했습니다.");
+      }
     }
     if (e.target) e.target.value = "";
   };
@@ -158,7 +181,15 @@ export function TiptapForumEditor({
   }
 
   return (
-    <div className="w-full rounded-2xl bg-slate-950/90 border border-slate-800/80 overflow-hidden shadow-inner flex flex-col focus-within:border-sky-500/50 transition-colors">
+    <div className="w-full rounded-2xl bg-slate-950/90 border border-slate-800/80 overflow-hidden shadow-inner flex flex-col focus-within:border-sky-500/50 transition-colors relative">
+      {/* 이미지 업로드 중 로딩 오버레이 */}
+      {isUploading && (
+        <div className="absolute inset-0 z-30 bg-black/60 backdrop-blur-xs flex items-center justify-center gap-2 text-xs font-bold text-sky-400">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span>짤방 이미지를 클라우드에 업로드 중...</span>
+        </div>
+      )}
+
       {/* 숨겨진 이미지 파일 인풋 */}
       <input
         ref={fileInputRef}
@@ -277,11 +308,11 @@ export function TiptapForumEditor({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold bg-slate-800/70 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/60 transition"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-800/80 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/60 transition"
             title="사진 첨부 (클립보드 짤방 Ctrl+V도 가능)"
           >
             <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="text-[11px]">사진/짤</span>
+            <span className="text-[11px]">사진/짤방</span>
           </button>
 
           {/* 🔗 링크 */}
@@ -337,10 +368,9 @@ export function TiptapForumEditor({
 
       {/* 하단 단축 안내 */}
       <div className="px-3 py-1.5 bg-slate-950 border-t border-slate-900 text-[11px] text-slate-500 flex items-center justify-between">
-        <span>💡 캡처 화면 복사 후 <strong>Ctrl + V</strong>로 바로 이미지를 붙여넣을 수 있습니다.</span>
-        <span>Markdown 문법 지원</span>
+        <span>💡 캡처 화면 복사 후 <strong>Ctrl + V</strong>로 고용량 짤방도 바로 첨부할 수 있습니다.</span>
+        <span>클라우드 저장소 자동 최적화</span>
       </div>
     </div>
   );
 }
-
