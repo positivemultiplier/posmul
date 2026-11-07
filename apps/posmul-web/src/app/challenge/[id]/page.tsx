@@ -17,6 +17,9 @@ import {
   ShieldCheck,
   AlertCircle,
   Sparkles,
+  Swords,
+  LogIn,
+  Download,
 } from "lucide-react";
 import { UserChallengeDTO, ChallengeCommentDTO } from "../types";
 import {
@@ -25,6 +28,7 @@ import {
   getChallengeCommentsAction,
   postChallengeCommentAction,
   settleChallengeAction,
+  getRivalRecordAction,
 } from "../actions/challenge.actions";
 
 export default function ChallengeDetailPage() {
@@ -38,9 +42,21 @@ export default function ChallengeDetailPage() {
   const [selectedBetOption, setSelectedBetOption] = useState<string>("B");
   const [betAmount, setBetAmount] = useState<number>(300);
 
+  // 라이벌 전적
+  const [rivalRecord, setRivalRecord] = useState<{
+    isSelf: boolean;
+    isLoggedIn: boolean;
+    myWins: number;
+    hostWins: number;
+    totalMatches: number;
+    netPmpWon: number;
+  } | null>(null);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isBetting, setIsBetting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [certCopied, setCertCopied] = useState(false);
+  const [showCertModal, setShowCertModal] = useState(false);
   const [timeLeftStr, setTimeLeftStr] = useState("");
 
   const commentEndRef = useRef<HTMLDivElement>(null);
@@ -51,10 +67,16 @@ export default function ChallengeDetailPage() {
       const res = await getChallengeDetailAction(challengeId);
       if (res.success && res.challenge) {
         setChallenge(res.challenge);
-        // 기본 베팅 선택지를 호스트 반대편으로 설정
         if (res.challenge.options.length >= 2 && !res.challenge.myBet) {
           setSelectedBetOption(res.challenge.options[1].id);
         }
+
+        // 호스트와의 1:1 라이벌 전적 로드
+        getRivalRecordAction(res.challenge.hostId).then((rRes) => {
+          if (rRes.success) {
+            setRivalRecord(rRes);
+          }
+        });
       }
       const cRes = await getChallengeCommentsAction(challengeId);
       if (cRes.success) {
@@ -67,7 +89,6 @@ export default function ChallengeDetailPage() {
 
   useEffect(() => {
     loadData();
-    // 10초마다 가볍게 갱신
     const interval = setInterval(loadData, 10000);
     return () => clearInterval(interval);
   }, [challengeId]);
@@ -97,9 +118,16 @@ export default function ChallengeDetailPage() {
     return () => clearInterval(timer);
   }, [challenge]);
 
-  // 3. 베팅 제출
+  // 3. 베팅 제출 (로그인 필수)
   const handleBetSubmit = async () => {
     if (!challenge || challenge.myBet || challenge.status !== "OPEN") return;
+
+    if (rivalRecord && !rivalRecord.isLoggedIn) {
+      if (confirm("상대방과 라이벌 전적을 영구 기록하려면 로그인이 필요합니다. 로그인 페이지로 이동할까요?")) {
+        router.push(`/auth/login?redirectTo=/challenge/${challengeId}`);
+      }
+      return;
+    }
 
     setIsBetting(true);
     try {
@@ -111,6 +139,8 @@ export default function ChallengeDetailPage() {
 
       if (res.success) {
         await loadData();
+      } else if (res.requireLogin) {
+        router.push(`/auth/login?redirectTo=/challenge/${challengeId}`);
       } else {
         alert(res.error || "베팅 참여 실패");
       }
@@ -172,6 +202,16 @@ export default function ChallengeDetailPage() {
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, "_blank");
   };
 
+  // 승리 인증 텍스트 복사
+  const handleCopyVictoryCert = () => {
+    if (!challenge) return;
+    const winningLabel = challenge.winningOptionLabel || "승리";
+    const certText = `🏆 [PosMul 승리 인증서]\n대결 주제: "${challenge.title}"\n결과: [${winningLabel}] 최종 적중 성공!\n호스트 [${challenge.hostName}]을(를) 꺾고 PMP 쟁취 완료 👑\n👉 https://posmul.com/challenge/${challenge.id}`;
+    navigator.clipboard.writeText(certText);
+    setCertCopied(true);
+    setTimeout(() => setCertCopied(false), 2000);
+  };
+
   if (isLoading || !challenge) {
     return (
       <div className="min-h-screen bg-[#07090e] text-slate-100 flex items-center justify-center p-4">
@@ -187,6 +227,7 @@ export default function ChallengeDetailPage() {
   const isSettled = challenge.status === "SETTLED";
   const optionA = challenge.options[0];
   const optionB = challenge.options[1];
+  const isWinner = challenge.myBet && challenge.winningOptionId && challenge.myBet.optionId === challenge.winningOptionId;
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 py-6 px-4 sm:px-6">
@@ -219,9 +260,35 @@ export default function ChallengeDetailPage() {
           </div>
         </div>
 
-        {/* 1. 상태 배너 (정산/마감 알림) */}
+        {/* 🌟 1:1 라이벌 전적실 배지 (로그인 유저 대상 영구 기록) */}
+        {rivalRecord && !rivalRecord.isSelf && rivalRecord.isLoggedIn && (
+          <div className="p-3 rounded-2xl bg-gradient-to-r from-red-950/40 via-purple-950/30 to-slate-900 border border-red-500/30 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <Swords className="w-4 h-4 text-red-400 shrink-0" />
+              <span className="font-bold text-slate-200">
+                호스트 <strong className="text-amber-400">[{challenge.hostName}]</strong>님과의 1:1 라이벌 전적:
+              </span>
+            </div>
+            <div className="flex items-center gap-2 font-mono font-black">
+              {rivalRecord.totalMatches > 0 ? (
+                <>
+                  <span className="text-emerald-400">{rivalRecord.myWins}승</span>
+                  <span className="text-slate-600">-</span>
+                  <span className="text-rose-400">{rivalRecord.hostWins}패</span>
+                  <span className="text-[11px] text-amber-300 ml-1">
+                    ({rivalRecord.netPmpWon >= 0 ? `+${rivalRecord.netPmpWon}` : rivalRecord.netPmpWon} PMP)
+                  </span>
+                </>
+              ) : (
+                <span className="text-slate-400 text-[11px]">첫 맞짱 대결! 🥊</span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* 1. 상태 배너 (정산/마감 알림 & 승리 인증서 버튼) */}
         {isSettled ? (
-          <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs flex items-center justify-between">
+          <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Trophy className="w-5 h-5 text-amber-400 shrink-0" />
               <span>
@@ -231,7 +298,16 @@ export default function ChallengeDetailPage() {
                 </span>
               </span>
             </div>
-            <span className="text-[11px] font-mono text-emerald-400">PMP 배분 완료</span>
+            {isWinner && (
+              <button
+                type="button"
+                onClick={() => setShowCertModal(true)}
+                className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shrink-0 flex items-center gap-1 shadow-md transition"
+              >
+                <Trophy className="w-3.5 h-3.5" />
+                <span>승리 인증서 자랑하기 👑</span>
+              </button>
+            )}
           </div>
         ) : isClosedOrLocked ? (
           <div className="p-3.5 rounded-2xl bg-amber-950/70 border border-amber-500/40 text-amber-300 text-xs flex items-center justify-between">
@@ -325,6 +401,22 @@ export default function ChallengeDetailPage() {
 
           {!challenge.myBet && !isClosedOrLocked ? (
             <div className="space-y-4">
+              {/* 비로그인 유저일 때 로그인 유도 배너 */}
+              {rivalRecord && !rivalRecord.isLoggedIn && (
+                <div className="p-3 rounded-2xl bg-blue-950/60 border border-blue-500/30 flex items-center justify-between text-xs">
+                  <span className="text-blue-300">
+                    전적을 기록하고 PMP를 뺏어오려면 로그인이 필요합니다.
+                  </span>
+                  <Link
+                    href={`/auth/login?redirectTo=/challenge/${challengeId}`}
+                    className="px-3 py-1.5 rounded-xl bg-blue-500 hover:bg-blue-400 text-slate-950 font-black shrink-0 flex items-center gap-1"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>3초 로그인</span>
+                  </Link>
+                </div>
+              )}
+
               {/* 옵션 선택 버튼들 */}
               <div className="grid grid-cols-2 gap-3">
                 {challenge.options.map((opt) => (
@@ -488,8 +580,54 @@ export default function ChallengeDetailPage() {
             </button>
           </form>
         </div>
+
+        {/* 🌟 6. 황금 승리 인증서 모달 (승리자 전용) */}
+        {showCertModal && (
+          <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-[#111520] border-2 border-amber-400/60 rounded-3xl p-6 max-w-sm w-full space-y-5 shadow-2xl text-center relative">
+              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 text-slate-950 flex items-center justify-center mx-auto text-3xl shadow-lg shadow-amber-500/30">
+                👑
+              </div>
+              <div className="space-y-1">
+                <div className="text-[10px] font-black tracking-widest text-amber-400 uppercase">
+                  PosMul Victory Certificate
+                </div>
+                <h3 className="text-xl font-black text-white">
+                  맞짱 대결 승리 인증서
+                </h3>
+                <p className="text-xs text-slate-400">
+                  호스트 [{challenge.hostName}]님과의 한판 승부에서 완승!
+                </p>
+              </div>
+
+              {/* 인증서 박스 */}
+              <div className="p-4 rounded-2xl bg-[#090b12] border border-amber-500/30 text-left space-y-2 text-xs font-mono">
+                <div className="text-slate-400 text-[11px]">대결: "{challenge.title}"</div>
+                <div className="text-amber-300 font-bold">내 선택: [{challenge.winningOptionLabel}] 적중!</div>
+                <div className="text-emerald-400 font-bold">획득 상금: +{challenge.myBet?.amountPmp.toLocaleString()} PMP</div>
+              </div>
+
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={handleCopyVictoryCert}
+                  className="w-full py-3 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs flex items-center justify-center gap-1.5 shadow-lg transition"
+                >
+                  {certCopied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  <span>{certCopied ? "자랑용 인증서 복사 완료!" : "카톡/단톡방에 자랑하기 복사"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCertModal(false)}
+                  className="w-full py-2 text-xs text-slate-500 hover:text-slate-300 transition"
+                >
+                  닫기
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

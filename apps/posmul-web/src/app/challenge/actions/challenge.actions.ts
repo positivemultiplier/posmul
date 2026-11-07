@@ -10,7 +10,7 @@ import {
 } from "../types";
 
 /**
- * 1. 30초 인스턴트 내기 생성 (초기 베팅 포함)
+ * 1. 30초 인스턴트 내기 생성 (로그인 필수)
  */
 export async function createChallengeAction(params: {
   title: string;
@@ -20,18 +20,22 @@ export async function createChallengeAction(params: {
   durationHours: number; // 몇 시간 뒤 마감할지
   hostOptionIndex: number; // 호스트가 선택한 옵션 인덱스 (0, 1)
   hostBetAmount: number; // 호스트가 건 PMP (예: 500)
-}): Promise<{ success: boolean; challengeId?: string; error?: string }> {
+}): Promise<{ success: boolean; challengeId?: string; requireLogin?: boolean; error?: string }> {
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const hostId = user?.id || "00000000-0000-0000-0000-000000000001";
+    if (!user) {
+      return { success: false, requireLogin: true, error: "내기 룸을 개설하려면 로그인이 필요합니다." };
+    }
+
+    const hostId = user.id;
     const hostName =
-      user?.user_metadata?.name ||
-      user?.user_metadata?.full_name ||
-      user?.email?.split("@")[0] ||
+      user.user_metadata?.name ||
+      user.user_metadata?.full_name ||
+      user.email?.split("@")[0] ||
       "방장시민";
 
     if (!params.title.trim() || params.options.length < 2) {
@@ -196,24 +200,28 @@ export async function getChallengeDetailAction(
 }
 
 /**
- * 3. 친구의 도전 수락 & 맞불 베팅 참여
+ * 3. 친구의 도전 수락 & 맞불 베팅 참여 (로그인 필수 - 라이벌 전적 기록용)
  */
 export async function participateChallengeAction(params: {
   challengeId: string;
   optionId: string;
   amountPmp: number;
-}): Promise<{ success: boolean; error?: string }> {
+}): Promise<{ success: boolean; requireLogin?: boolean; error?: string }> {
   try {
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    const userId = user?.id || `anon-${Math.random().toString(36).substring(7)}`;
+    if (!user) {
+      return { success: false, requireLogin: true, error: "상대방과 라이벌 전적을 기록하려면 로그인이 필요합니다." };
+    }
+
+    const userId = user.id;
     const userName =
-      user?.user_metadata?.name ||
-      user?.user_metadata?.full_name ||
-      user?.email?.split("@")[0] ||
+      user.user_metadata?.name ||
+      user.user_metadata?.full_name ||
+      user.email?.split("@")[0] ||
       `도전자_${userId.substring(0, 4)}`;
 
     const { data: challenge } = await supabaseAdmin
@@ -445,6 +453,119 @@ export async function getPublicChallengesAction(): Promise<{
     return { success: true, challenges };
   } catch (err) {
     return { success: false, challenges: [] };
+  }
+}
+
+/**
+ * 7. 호스트와 현재 유저 간의 1:1 라이벌 전적 조회 (N승 N패, 뺏어온 PMP)
+ */
+export async function getRivalRecordAction(hostId: string): Promise<{
+  success: boolean;
+  isSelf: boolean;
+  isLoggedIn: boolean;
+  rivalName?: string;
+  myWins: number;
+  hostWins: number;
+  totalMatches: number;
+  netPmpWon: number;
+}> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return {
+        success: true,
+        isSelf: false,
+        isLoggedIn: false,
+        myWins: 0,
+        hostWins: 0,
+        totalMatches: 0,
+        netPmpWon: 0,
+      };
+    }
+
+    if (user.id === hostId) {
+      return {
+        success: true,
+        isSelf: true,
+        isLoggedIn: true,
+        myWins: 0,
+        hostWins: 0,
+        totalMatches: 0,
+        netPmpWon: 0,
+      };
+    }
+
+    // 두 유저가 참여했고 이미 정산된(SETTLED) 챌린지들 조회
+    const { data: myBets } = await supabaseAdmin
+      .schema("prediction")
+      .from("user_challenge_bets")
+      .select("challenge_id, option_id, amount_pmp")
+      .eq("user_id", user.id);
+
+    if (!myBets || myBets.length === 0) {
+      return {
+        success: true,
+        isSelf: false,
+        isLoggedIn: true,
+        myWins: 0,
+        hostWins: 0,
+        totalMatches: 0,
+        netPmpWon: 0,
+      };
+    }
+
+    const challengeIds = myBets.map((b) => b.challenge_id);
+    const { data: hostChallenges } = await supabaseAdmin
+      .schema("prediction")
+      .from("user_challenges")
+      .select("id, host_id, status, winning_option_id, options")
+      .eq("host_id", hostId)
+      .eq("status", "SETTLED")
+      .in("id", challengeIds);
+
+    let myWins = 0;
+    let hostWins = 0;
+    let netPmpWon = 0;
+
+    (hostChallenges || []).forEach((c) => {
+      const myBet = myBets.find((b) => b.challenge_id === c.id);
+      if (!myBet || !c.winning_option_id) return;
+
+      // 호스트의 베팅 옵션 찾기 (첫 번째 옵션이거나 호스트 픽)
+      const isMyWin = myBet.option_id === c.winning_option_id;
+      if (isMyWin) {
+        myWins += 1;
+        netPmpWon += myBet.amount_pmp;
+      } else {
+        hostWins += 1;
+        netPmpWon -= myBet.amount_pmp;
+      }
+    });
+
+    return {
+      success: true,
+      isSelf: false,
+      isLoggedIn: true,
+      myWins,
+      hostWins,
+      totalMatches: myWins + hostWins,
+      netPmpWon,
+    };
+  } catch (err) {
+    console.error("getRivalRecordAction error:", err);
+    return {
+      success: false,
+      isSelf: false,
+      isLoggedIn: false,
+      myWins: 0,
+      hostWins: 0,
+      totalMatches: 0,
+      netPmpWon: 0,
+    };
   }
 }
 

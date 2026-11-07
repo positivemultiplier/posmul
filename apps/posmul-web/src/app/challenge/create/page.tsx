@@ -83,6 +83,10 @@ export default function CreateChallengePage() {
 
       if (res.success && res.challengeId) {
         setCreatedChallengeId(res.challengeId);
+      } else if ((res as any).requireLogin) {
+        if (confirm("내기 룸을 개설하려면 로그인이 필요합니다. 로그인 페이지로 이동할까요?")) {
+          router.push(`/auth/login?redirectTo=/challenge/create`);
+        }
       } else {
         alert(res.error || "챌린지 생성에 실패했습니다.");
       }
