@@ -31,20 +31,32 @@ function isDevelopment() {
 }
 
 function buildUserIdentity(user: User) {
-    const username = user.email?.split('@')[0] || `user_${user.id.slice(0, 8)}`;
+    const rawNickname =
+        (user.user_metadata?.display_name as string | undefined) ||
+        (user.user_metadata?.nickname as string | undefined);
+
+    const username =
+        (user.user_metadata?.username as string | undefined) ||
+        rawNickname ||
+        user.email?.split('@')[0] ||
+        `user_${user.id.slice(0, 8)}`;
+
     const displayName =
+        rawNickname ||
         (user.user_metadata?.full_name as string | undefined) ||
         (user.user_metadata?.name as string | undefined) ||
         username;
 
-    return { username, displayName };
+    const sido = (user.user_metadata?.sido as string | undefined) || '서울특별시';
+
+    return { username, displayName, sido };
 }
 
 async function ensureUserProfile(
     adminSupabase: ReturnType<typeof createAdminSupabaseClient>,
     user: User
 ): Promise<{ onboardingCompleted: boolean; defaultLanding: string }> {
-    const { username, displayName } = buildUserIdentity(user);
+    const { username, displayName, sido } = buildUserIdentity(user);
 
     const { data: existingProfile } = await adminSupabase
         .schema('user')
@@ -78,6 +90,21 @@ async function ensureUserProfile(
 
     if (profileError) {
         void profileError;
+    }
+
+    // ranking.user_scores에 지역(시·도) 자동 연동
+    try {
+        await adminSupabase
+            .schema('ranking')
+            .from('user_scores')
+            .upsert({
+                user_id: user.id,
+                sido,
+                job_group: '주권시민',
+                updated_at: new Date().toISOString(),
+            }, { onConflict: 'user_id' });
+    } catch {
+        // 무시
     }
 
     return {
