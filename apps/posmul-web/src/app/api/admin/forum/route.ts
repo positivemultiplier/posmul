@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
         .schema("forum")
         .from("forum_posts")
         .update({ status, updated_at: new Date().toISOString() })
-        .or(`id.eq.${postId},post_id.eq.${postId}`);
+        .eq("id", postId);
 
       if (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
         .schema("forum")
         .from("forum_posts")
         .delete()
-        .or(`id.eq.${postId},post_id.eq.${postId}`);
+        .eq("id", postId);
 
       if (error) {
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
@@ -231,39 +231,51 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, error: "postId required" }, { status: 400 });
       }
 
+      // 게시글 및 작성자 IP 조회
       const { data: postRecord } = await supabaseAdmin
         .schema("forum")
         .from("forum_posts")
         .select("id, title, author_ip")
-        .or(`id.eq.${postId},post_id.eq.${postId}`)
+        .eq("id", postId)
         .maybeSingle();
 
+      const rawIp = postRecord?.author_ip?.trim();
+      let ipBanned = false;
+      let targetIp: string | null = null;
+
+      // 작성자 IP가 유효하면 즉시 IP 차단 등록
+      if (
+        rawIp &&
+        rawIp !== "127.0.0.1" &&
+        !rawIp.includes("관리자") &&
+        rawIp !== "기록 없음"
+      ) {
+        targetIp = rawIp.split(" ")[0].trim();
+        const banRes = await banIp({
+          ip: targetIp,
+          reason: reason || `스팸/악성 게시글 작성으로 영구 차단됨 (글: ${postRecord?.title?.slice(0, 20)})`,
+          bannedBy: "ADMIN_SPAM_PURGE",
+        });
+        if (banRes.success) {
+          ipBanned = true;
+        }
+      }
+
+      // 게시글 삭제
       const { error: delError } = await supabaseAdmin
         .schema("forum")
         .from("forum_posts")
         .delete()
-        .or(`id.eq.${postId},post_id.eq.${postId}`);
+        .eq("id", postId);
 
       if (delError) {
         return NextResponse.json({ success: false, error: delError.message }, { status: 500 });
       }
 
-      const targetIp = postRecord?.author_ip;
-      let ipBanned = false;
-
-      if (targetIp && targetIp !== "127.0.0.1" && !targetIp.includes("관리자")) {
-        await banIp({
-          ip: targetIp,
-          reason: reason || `스팸/악성 게시글 작성으로 영구 차단됨 (글: ${postRecord?.title?.slice(0, 20)})`,
-          bannedBy: "ADMIN_SPAM_PURGE",
-        });
-        ipBanned = true;
-      }
-
       return NextResponse.json({
         success: true,
         purgedPostId: postId,
-        bannedIp: targetIp || null,
+        bannedIp: targetIp,
         ipBanned,
       });
     }

@@ -234,6 +234,11 @@ export default function AdminForumPage() {
 
   // 게시글 일반 삭제
   const handleDeletePost = async (postId: string) => {
+    if (!postId || postId.startsWith("post-")) {
+      alert("유효하지 않은 게시글 ID입니다.");
+      return;
+    }
+
     if (!confirm("이 게시글을 삭제하시겠습니까?")) return;
 
     try {
@@ -247,7 +252,9 @@ export default function AdminForumPage() {
       });
       const data = await res.json();
       if (data.success) {
-        fetchData();
+        alert("게시글이 삭제되었습니다.");
+        setPosts((prev) => prev.filter((p) => (p.id || p.post_id) !== postId));
+        fetchData(page);
       } else {
         alert(`삭제 실패: ${data.error}`);
       }
@@ -258,7 +265,12 @@ export default function AdminForumPage() {
 
   // 게시글 스팸 삭제 + 작성자 IP 영구 차단
   const handlePurgeAndBan = async (postId: string, ip?: string) => {
-    const confirmMsg = ip
+    if (!postId || postId.startsWith("post-")) {
+      alert("유효하지 않은 게시글 ID입니다.");
+      return;
+    }
+
+    const confirmMsg = ip && ip !== "기록 없음"
       ? `🚨 [스팸 글 삭제 + IP 영구 차단]\n게시글을 삭제하고 해당 IP (${ip})를 즉시 영구 차단하시겠습니까?`
       : "🚨 [스팸 글 삭제]\n게시글을 삭제하시겠습니까?";
 
@@ -281,7 +293,8 @@ export default function AdminForumPage() {
             ? `✅ 글 삭제 및 IP (${data.bannedIp})가 영구 차단되었습니다!`
             : "✅ 글이 삭제되었습니다."
         );
-        fetchData();
+        setPosts((prev) => prev.filter((p) => (p.id || p.post_id) !== postId));
+        fetchData(page);
       } else {
         alert(`차단 처리 실패: ${data.error}`);
       }
