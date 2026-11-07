@@ -1,211 +1,190 @@
 import React from "react";
-import Link from "next/link";
-import {
-  Target,
-  Rss,
-  MessageSquare,
-  Coins,
-  TrendingUp,
-  Activity,
-  Zap,
-  ArrowRight,
-  ShieldCheck,
-  BarChart3,
-} from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { LIVE_ROOMS } from "@/app/live/live-rooms.data";
+import { parseGameOptions } from "@/bounded-contexts/prediction/infrastructure/repositories/prediction-query.repository";
+import {
+  AdminOverviewClient,
+  type AdminGameRow,
+  type AdminSettlementSourceRow,
+  type AdminLiveRoomSummary,
+} from "./components/AdminOverviewClient";
 
-export const revalidate = 0; // 실시간 라이브 데이터
+export const revalidate = 0;
 
 export default async function AdminMainPage() {
-  // Supabase 실데이터 통계 요약 조회
-  let activeGamesCount = 0;
-  let settledGamesCount = 0;
-  let totalBetsCount = 0;
-  let totalFeedItemsCount = 0;
-
-  try {
-    const { count: activeCount } = await supabaseAdmin
+  // Supabase 실데이터 병렬 조회
+  const [
+    gamesRes,
+    settledCountRes,
+    predictionsRes,
+    feedCountRes,
+    billsCountRes,
+    forumCountRes,
+    liveMsgCountRes,
+    settlementSourcesRes,
+  ] = await Promise.all([
+    supabaseAdmin
+      .schema("prediction")
+      .from("prediction_games")
+      .select(
+        "game_id, slug, title, category, subcategory, status, data_source, external_id, settlement_type, registration_end, settlement_date, game_options, created_at"
+      )
+      .in("status", ["ACTIVE", "SETTLED"])
+      .order("created_at", { ascending: false })
+      .limit(60),
+    supabaseAdmin
       .schema("prediction")
       .from("prediction_games")
       .select("*", { count: "exact", head: true })
-      .eq("status", "ACTIVE");
-
-    const { count: settledCount } = await supabaseAdmin
-      .schema("prediction")
-      .from("prediction_games")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "SETTLED");
-
-    const { count: betsCount } = await supabaseAdmin
+      .eq("status", "SETTLED"),
+    supabaseAdmin
       .schema("prediction")
       .from("predictions")
-      .select("*", { count: "exact", head: true });
-
-    const { count: feedCount } = await supabaseAdmin
+      .select("bet_amount")
+      .eq("is_active", true),
+    supabaseAdmin
       .schema("feed")
       .from("feed_items")
-      .select("*", { count: "exact", head: true });
+      .select("*", { count: "exact", head: true }),
+    supabaseAdmin
+      .schema("feed")
+      .from("assembly_bills")
+      .select("*", { count: "exact", head: true }),
+    supabaseAdmin
+      .schema("forum")
+      .from("forum_posts")
+      .select("*", { count: "exact", head: true }),
+    supabaseAdmin
+      .schema("forum")
+      .from("live_room_messages")
+      .select("*", { count: "exact", head: true }),
+    supabaseAdmin
+      .schema("prediction")
+      .from("settlement_sources")
+      .select("id, game_id, source_type, source_config, external_id, scheduled_at")
+      .order("scheduled_at", { ascending: true }),
+  ]);
 
-    activeGamesCount = activeCount || 0;
-    settledGamesCount = settledCount || 0;
-    totalBetsCount = betsCount || 0;
-    totalFeedItemsCount = feedCount || 0;
-  } catch (err) {
-    console.error("Admin Main Page Stats Error:", err);
-  }
+  const rawGames = gamesRes.data || [];
+  const activeGames = rawGames.filter((g) => g.status === "ACTIVE");
+  const predictions = predictionsRes.data || [];
+  const totalStakePmp = predictions.reduce(
+    (acc, row) => acc + (Number(row.bet_amount) || 0),
+    0
+  );
 
-  const adminModules = [
+  // 게임 ID -> 제목 맵
+  const gameTitleMap = new Map<string, string>();
+  rawGames.forEach((g) => {
+    gameTitleMap.set(g.game_id, g.title);
+  });
+
+  const mappedGames: AdminGameRow[] = rawGames.map((g) => {
+    const parsed = parseGameOptions(g.game_options);
+    return {
+      game_id: g.game_id,
+      slug: g.slug,
+      title: g.title,
+      category: g.category || "ECONOMY",
+      subcategory: g.subcategory,
+      status: g.status,
+      data_source: g.data_source,
+      external_id: g.external_id,
+      settlement_type: g.settlement_type,
+      registration_end: g.registration_end,
+      settlement_date: g.settlement_date,
+      options:
+        parsed.length >= 2
+          ? parsed.map((o: any, i: number) => ({
+              id: o.id || `opt_${i + 1}`,
+              label: o.label || o.text || `옵션 ${i + 1}`,
+            }))
+          : [
+              { id: "yes", label: "Yes" },
+              { id: "no", label: "No" },
+            ],
+    };
+  });
+
+  const mappedSettlementSources: AdminSettlementSourceRow[] = (
+    settlementSourcesRes.data || []
+  ).map((s: any) => ({
+    id: s.id,
+    game_id: s.game_id,
+    game_title: gameTitleMap.get(s.game_id) || `Game ${String(s.game_id).slice(0, 8)}`,
+    source_type: s.source_type,
+    external_id: s.external_id,
+    scheduled_at: s.scheduled_at,
+    config_summary: JSON.stringify(s.source_config || {}),
+  }));
+
+  // 카테고리별 분포 집계
+  const catMeta: Array<{
+    category: string;
+    label: string;
+    colorClass: string;
+  }> = [
     {
-      title: "예측 게임 관리자 (Prediction)",
-      description: "RSS AI 수집 ➔ 예측 게임 자동 생성, 베팅 모니터링 및 승부 정산(Settlement)",
-      href: "/admin/prediction",
-      icon: Target,
-      color: "from-blue-500 to-indigo-600",
-      badge: "핵심 모듈",
-      stats: `${activeGamesCount}개 활성 중 / ${settledGamesCount}개 정산 완료`,
+      category: "ECONOMY",
+      label: "📈 경제 · 증시 · 실적 · 거시지표",
+      colorClass: "bg-gradient-to-r from-sky-500 to-blue-600",
     },
     {
-      title: "피드 & AI 수집기 (Feed Ingest)",
-      description: "RSS 원문 뉴스 피드 수집 현황, Gemini AI 원문 분류 및 초안 파이프라인 관리",
-      href: "/admin/feed",
-      icon: Rss,
-      color: "from-emerald-500 to-teal-600",
-      badge: "AI Ingestion",
-      stats: `${totalFeedItemsCount}개 피드 수집됨`,
+      category: "ENTERTAINMENT",
+      label: "🎬 엔터 · 박스오피스 · 드라마 시청률 · 음원",
+      colorClass: "bg-gradient-to-r from-fuchsia-500 to-purple-600",
     },
     {
-      title: "포럼 & 시민 토론 (Forum)",
-      description: "시민 이슈 토론 게시글, 정책 피드백 및 기여도 모니터링",
-      href: "/admin/forum",
-      icon: MessageSquare,
-      color: "from-purple-500 to-pink-600",
-      badge: "Community",
-      stats: "토론 게시판 시스템",
+      category: "SPORTS",
+      label: "⚽ 스포츠 · 프로야구(KBO) · 해외축구(EPL)",
+      colorClass: "bg-gradient-to-r from-emerald-500 to-teal-600",
     },
     {
-      title: "경제 & 포인트 시스템 (Economy)",
-      description: "PMP/PMC 포인트 발급, MoneyWave 분배 및 지역 경제 유통 현황",
-      href: "/admin/economy",
-      icon: Coins,
-      color: "from-amber-500 to-orange-600",
-      badge: "PMP / PMC",
-      stats: `총 ${totalBetsCount}건 베팅 참여`,
+      category: "POLITICS",
+      label: "🏛️ 정치 · 국회 본회의 입법 · 정책",
+      colorClass: "bg-gradient-to-r from-amber-500 to-orange-600",
+    },
+    {
+      category: "INVEST",
+      label: "💳 소비 · 트렌드 · 소셜 임팩트",
+      colorClass: "bg-gradient-to-r from-indigo-500 to-violet-600",
     },
   ];
 
+  const categoryBreakdown = catMeta.map((m) => ({
+    ...m,
+    count: activeGames.filter((g) => g.category === m.category).length,
+  }));
+
+  const liveRoomsSummary: AdminLiveRoomSummary[] = LIVE_ROOMS.map((r) => ({
+    id: r.id,
+    categoryLabel: r.categoryLabel,
+    title: r.title,
+    viewerCount: r.viewerCount,
+    statusText: r.matchScore?.statusText || "LIVE",
+    linkedGameSlug: r.predictionGame?.slug || r.predictionGame?.id || "",
+    linkedGameQuestion: r.predictionGame?.question || "",
+    oracleLabel: r.predictionGame?.oracleLabel || "공인 오라클",
+    totalPoolPmc: r.predictionGame?.totalPoolPmc || 20000,
+  }));
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-8 font-sans">
-      <div className="max-w-6xl mx-auto space-y-10">
-        
-        {/* Header Section */}
-        <div className="border-b border-slate-800 pb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <span className="px-3 py-1 bg-indigo-950 border border-indigo-800 text-indigo-400 rounded-full text-xs font-semibold flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5" /> PosMul System Admin
-              </span>
-            </div>
-            <h1 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-300 to-purple-400">
-              PosMul 통합 관리자 메인 포털
-            </h1>
-            <p className="text-slate-400 text-sm mt-1">
-              AI 뉴스 피드 수집부터 예측 게임, 경제 정산까지 전체 서비스를 통합 관리합니다.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              href="/prediction"
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold border border-slate-700 transition flex items-center gap-1.5"
-            >
-              🌐 메인 유저 서비스로 이동 <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-        </div>
-
-        {/* Live Overview Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
-            <div className="flex justify-between items-center text-slate-400 mb-2">
-              <span className="text-xs font-medium">활성 예측 게임</span>
-              <Activity className="w-4 h-4 text-emerald-400" />
-            </div>
-            <div className="text-2xl font-black text-emerald-400">{activeGamesCount}개</div>
-            <div className="text-[11px] text-slate-500 mt-1">AI 자동 생성 진행 중</div>
-          </div>
-
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
-            <div className="flex justify-between items-center text-slate-400 mb-2">
-              <span className="text-xs font-medium">정산 완료 게임</span>
-              <BarChart3 className="w-4 h-4 text-amber-400" />
-            </div>
-            <div className="text-2xl font-black text-amber-400">{settledGamesCount}개</div>
-            <div className="text-[11px] text-slate-500 mt-1">승부 정산 100% 완료</div>
-          </div>
-
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
-            <div className="flex justify-between items-center text-slate-400 mb-2">
-              <span className="text-xs font-medium">누적 베팅 수</span>
-              <TrendingUp className="w-4 h-4 text-blue-400" />
-            </div>
-            <div className="text-2xl font-black text-blue-400">{totalBetsCount}건</div>
-            <div className="text-[11px] text-slate-500 mt-1">유저 예측 참여 기록</div>
-          </div>
-
-          <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-5">
-            <div className="flex justify-between items-center text-slate-400 mb-2">
-              <span className="text-xs font-medium">수집된 피드</span>
-              <Zap className="w-4 h-4 text-purple-400" />
-            </div>
-            <div className="text-2xl font-black text-purple-400">{totalFeedItemsCount}개</div>
-            <div className="text-[11px] text-slate-500 mt-1">RSS 파이프라인 수집</div>
-          </div>
-        </div>
-
-        {/* Modules Grid */}
-        <div className="space-y-4">
-          <h2 className="text-xl font-bold text-slate-200 flex items-center gap-2">
-            🚀 관리자 기능 모듈
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {adminModules.map((mod, idx) => {
-              const Icon = mod.icon;
-              return (
-                <Link
-                  key={idx}
-                  href={mod.href}
-                  className="group bg-slate-900 border border-slate-800 hover:border-indigo-500/60 rounded-2xl p-6 transition duration-200 flex flex-col justify-between shadow-lg relative overflow-hidden"
-                >
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-start">
-                      <div className={`p-3 rounded-xl bg-gradient-to-br ${mod.color} text-white shadow-md`}>
-                        <Icon className="w-6 h-6" />
-                      </div>
-                      <span className="px-2.5 py-1 bg-slate-800 text-slate-400 border border-slate-700 rounded-full text-[11px] font-semibold">
-                        {mod.badge}
-                      </span>
-                    </div>
-
-                    <div>
-                      <h3 className="text-lg font-bold text-slate-100 group-hover:text-indigo-300 transition flex items-center gap-1.5">
-                        {mod.title}
-                        <ArrowRight className="w-4 h-4 opacity-0 group-hover:opacity-100 transition transform group-hover:translate-x-1" />
-                      </h3>
-                      <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">{mod.description}</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 pt-4 border-t border-slate-800/80 flex justify-between items-center text-xs text-slate-400">
-                    <span>라이브 상태:</span>
-                    <span className="font-semibold text-slate-200">{mod.stats}</span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
+    <AdminOverviewClient
+      metrics={{
+        activeGamesCount: activeGames.length,
+        settledGamesCount: settledCountRes.count || 0,
+        totalBetsCount: predictions.length,
+        totalStakePmp,
+        feedItemsCount: feedCountRes.count || 0,
+        billsCount: billsCountRes.count || 0,
+        forumPostsCount: forumCountRes.count || 0,
+        liveMessagesCount: liveMsgCountRes.count || 0,
+        settlementQueueCount: mappedSettlementSources.length,
+      }}
+      categoryBreakdown={categoryBreakdown}
+      games={mappedGames}
+      settlementSources={mappedSettlementSources}
+      liveRooms={liveRoomsSummary}
+    />
   );
 }

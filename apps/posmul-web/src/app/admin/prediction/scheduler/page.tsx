@@ -1,285 +1,249 @@
-/**
- * 스케줄러 관리 페이지 (관리자)
- * 
- * 스케줄러 상태 확인, 수동 동기화, 설정 관리
- */
-
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
+import React, { useState, useEffect } from "react";
+import {
+  CalendarClock,
+  CheckCircle2,
+  Database,
+  RefreshCw,
+  ShieldCheck,
+  Zap,
+} from "lucide-react";
+import {
+  AdminBadge,
+  AdminButton,
+  AdminCard,
+  AdminCardContent,
+  AdminCardDescription,
+  AdminCardHeader,
+  AdminCardTitle,
+  AdminTable,
+  AdminTableBody,
+  AdminTableCell,
+  AdminTableHead,
+  AdminTableHeader,
+  AdminTableRow,
+} from "../../components/shadcn-admin-ui";
 
-interface SchedulerStatus {
-    isRunning: boolean;
-    footballEnabled: boolean;
-    earningsEnabled: boolean;
-    templatesCount: number;
-    lastSync: string;
-    nextSync: string;
+interface OracleStatusPayload {
+  verifiedAt: string;
+  liveMarketSnapshot: {
+    btcUsd: number;
+    btcKrw: number;
+    btcChange24h: number;
+    ethUsd: number;
+    usdKrw: number;
+  };
+  oracleAdapters: Array<{
+    sourceType: string;
+    name: string;
+    category: string;
+    configured: boolean;
+    status: string;
+  }>;
+  summary: {
+    activeGamesCount: number;
+    registeredSettlementSourcesCount: number;
+  };
+  registeredSettlementSources: Array<{
+    id: string;
+    game_id: string;
+    source_type: string;
+    external_id: string | null;
+    scheduled_at: string;
+  }>;
 }
 
 export default function SchedulerPage() {
-    const [status, setStatus] = useState<SchedulerStatus | null>(null);
-    const [isSyncing, setIsSyncing] = useState(false);
-    const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [oracleData, setOracleData] = useState<OracleStatusPayload | null>(null);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
 
-    // 상태 조회
-    const fetchStatus = async () => {
-        try {
-            const res = await fetch("/api/admin/scheduler/sync");
-            const data = await res.json();
-            setStatus(data);
-        } catch (error) {
-            console.error("Failed to fetch status:", error);
-        }
-    };
-
-    // 수동 동기화
-    const triggerSync = async () => {
-        setIsSyncing(true);
-        setSyncResult(null);
-        try {
-            const res = await fetch("/api/admin/scheduler/sync", { method: "POST" });
-            const data = await res.json();
-            if (data.success) {
-                setSyncResult(`✅ 동기화 완료! Football: ${data.stats?.footballGames ?? 0}개, Earnings: ${data.stats?.earningsGames ?? 0}개`);
-                fetchStatus();
-            } else {
-                setSyncResult(`❌ 동기화 실패: ${data.error}`);
-            }
-        } catch (error) {
-            setSyncResult("❌ 동기화 중 오류 발생");
-        } finally {
-            setIsSyncing(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchStatus();
-        const interval = setInterval(fetchStatus, 30000); // 30초마다 갱신
-        return () => clearInterval(interval);
-    }, []);
-
-    return (
-        <div className="min-h-screen bg-gray-100">
-            <header className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4 py-6">
-                    <h1 className="text-2xl font-bold text-gray-900">⏰ 스케줄러 관리</h1>
-                    <p className="text-sm text-gray-500 mt-1">
-                        정기 게임 자동 생성 스케줄러를 관리합니다.
-                    </p>
-                </div>
-            </header>
-
-            <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-                {/* 상태 요약 */}
-                <section className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">📊 스케줄러 상태</h2>
-
-                    {status ? (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            <StatusCard
-                                title="상태"
-                                value={status.isRunning ? "실행 중" : "중지됨"}
-                                color={status.isRunning ? "green" : "red"}
-                            />
-                            <StatusCard
-                                title="Football Data"
-                                value={status.footballEnabled ? "활성" : "비활성"}
-                                color={status.footballEnabled ? "green" : "gray"}
-                            />
-                            <StatusCard
-                                title="Earnings Calendar"
-                                value={status.earningsEnabled ? "활성" : "비활성"}
-                                color={status.earningsEnabled ? "green" : "gray"}
-                            />
-                            <StatusCard
-                                title="템플릿"
-                                value={`${status.templatesCount}개`}
-                                color="blue"
-                            />
-                        </div>
-                    ) : (
-                        <div className="text-gray-500">상태 로딩 중...</div>
-                    )}
-
-                    {status && (
-                        <div className="mt-4 text-sm text-gray-500">
-                            <p>마지막 동기화: {new Date(status.lastSync).toLocaleString("ko-KR")}</p>
-                            <p>다음 예정: {new Date(status.nextSync).toLocaleString("ko-KR")}</p>
-                        </div>
-                    )}
-                </section>
-
-                {/* 수동 동기화 */}
-                <section className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">🔄 수동 동기화</h2>
-                    <p className="text-sm text-gray-500 mb-4">
-                        외부 API에서 최신 데이터를 가져와 게임 템플릿을 업데이트합니다.
-                    </p>
-
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={triggerSync}
-                            disabled={isSyncing}
-                            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isSyncing ? "동기화 중..." : "지금 동기화 실행"}
-                        </button>
-
-                        {syncResult && (
-                            <span className={`text-sm ${syncResult.startsWith("✅") ? "text-green-600" : "text-red-600"}`}>
-                                {syncResult}
-                            </span>
-                        )}
-                    </div>
-                </section>
-
-                {/* 데이터 소스 설정 */}
-                <section className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">📡 데이터 소스</h2>
-
-                    <div className="space-y-4">
-                        <DataSourceCard
-                            name="Football Data API"
-                            icon="⚽"
-                            description="프리미어리그, 챔피언스리그 등 축구 경기 일정"
-                            enabled={true}
-                            leagues={["PL", "CL", "BL1", "SA", "PD", "FL1"]}
-                        />
-                        <DataSourceCard
-                            name="FMP Earnings Calendar"
-                            icon="📈"
-                            description="빅테크/금융 기업 분기 실적 발표 일정"
-                            enabled={true}
-                            companies={["AAPL", "MSFT", "GOOGL", "NVDA", "TSLA", "AMZN"]}
-                        />
-                        <DataSourceCard
-                            name="Alpha Vantage"
-                            icon="📊"
-                            description="일일 주가 데이터 (나스닥, 엔비디아 등)"
-                            enabled={true}
-                        />
-                        <DataSourceCard
-                            name="DART 공시"
-                            icon="🏢"
-                            description="한국 기업 분기 실적 (삼성전자, 현대차, SK하이닉스)"
-                            enabled={true}
-                        />
-                        <DataSourceCard
-                            name="KOSIS 통계"
-                            icon="📉"
-                            description="경제 지표 (소비자물가, 실업률, GDP)"
-                            enabled={true}
-                        />
-                    </div>
-                </section>
-
-                {/* Cron 설정 가이드 */}
-                <section className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4">⚙️ Cron 설정 가이드</h2>
-                    <p className="text-sm text-gray-500 mb-4">
-                        자동 동기화를 위해 아래 설정을 추가하세요.
-                    </p>
-
-                    <div className="bg-gray-900 rounded-lg p-4 overflow-x-auto">
-                        <pre className="text-sm text-green-400">
-                            {`// vercel.json
-{
-  "crons": [
-    {
-      "path": "/api/admin/scheduler/sync",
-      "schedule": "0 * * * *"  // 매시 정각
+  const loadOracleAndScheduler = async () => {
+    try {
+      const res = await fetch("/api/prediction/oracle-status");
+      const data = await res.json();
+      if (data.success) {
+        setOracleData(data);
+      }
+    } catch (e) {
+      console.error(e);
     }
-  ]
-}
+  };
 
-// 환경 변수
-CRON_SECRET=your-secret-key`}
-                        </pre>
-                    </div>
+  useEffect(() => {
+    loadOracleAndScheduler();
+  }, []);
 
-                    <div className="mt-4 text-sm text-gray-500">
-                        <p>💡 Vercel Pro 플랜 이상에서 Cron Jobs 사용 가능</p>
-                        <p>💡 무료 대안: GitHub Actions, Supabase pg_cron</p>
-                    </div>
-                </section>
-            </main>
+  const handleTriggerSync = async () => {
+    setIsSyncing(true);
+    setSyncMessage(null);
+    try {
+      const res = await fetch("/api/admin/scheduler/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ materializeTemplates: true }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSyncMessage(
+          `✅ 마스터 스케줄러 동기화 완료! (템플릿 ${data.stats?.templateGames ?? 0}개 스캔, 신규 생성 ${data.stats?.createdGamesCount ?? 0}개)`
+        );
+        loadOracleAndScheduler();
+      } else {
+        setSyncMessage(`❌ 동기화 실패: ${data.error}`);
+      }
+    } catch (e: any) {
+      setSyncMessage(`❌ 동기화 오류: ${e?.message}`);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* 헤더 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-zinc-800/80 pb-5">
+        <div>
+          <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
+            <CalendarClock className="w-6 h-6 text-sky-400" />
+            <span>마스터 스케줄러 & 9대 오라클 동기화 센터</span>
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+            정기 예측 템플릿 자동 발행 및 9대 공인 데이터 오라클(KOBIS, 닐슨/K-Content, CoinGecko, DART, KOSIS, ECOS 등) 실시간 상태를 관리합니다.
+          </p>
         </div>
-    );
-}
 
-function StatusCard({
-    title,
-    value,
-    color,
-}: {
-    title: string;
-    value: string;
-    color: "green" | "red" | "gray" | "blue";
-}) {
-    const colors = {
-        green: "bg-green-100 text-green-800",
-        red: "bg-red-100 text-red-800",
-        gray: "bg-gray-100 text-gray-800",
-        blue: "bg-blue-100 text-blue-800",
-    };
+        <AdminButton
+          variant="default"
+          onClick={handleTriggerSync}
+          disabled={isSyncing}
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+          <span>{isSyncing ? "동기화 실행 중..." : "지금 마스터 동기화 실행"}</span>
+        </AdminButton>
+      </div>
 
-    return (
-        <div className="p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-500">{title}</p>
-            <p className={`mt-1 px-2 py-1 rounded inline-block text-sm font-medium ${colors[color]}`}>
-                {value}
-            </p>
+      {syncMessage && (
+        <div className="p-4 rounded-xl bg-sky-950/30 border border-sky-500/40 text-xs font-bold text-sky-200">
+          {syncMessage}
         </div>
-    );
-}
+      )}
 
-function DataSourceCard({
-    name,
-    icon,
-    description,
-    enabled,
-    leagues,
-    companies,
-}: {
-    name: string;
-    icon: string;
-    description: string;
-    enabled: boolean;
-    leagues?: string[];
-    companies?: string[];
-}) {
-    return (
-        <div className="flex items-start justify-between p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-start gap-3">
-                <span className="text-2xl">{icon}</span>
-                <div>
-                    <p className="font-medium text-gray-900">{name}</p>
-                    <p className="text-sm text-gray-500">{description}</p>
-                    {leagues && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                            {leagues.map((l) => (
-                                <span key={l} className="px-2 py-0.5 bg-green-100 text-green-800 rounded text-xs">
-                                    {l}
-                                </span>
-                            ))}
-                        </div>
-                    )}
-                    {companies && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                            {companies.map((c) => (
-                                <span key={c} className="px-2 py-0.5 bg-blue-100 text-blue-800 rounded text-xs">
-                                    {c}
-                                </span>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-            <span className={`px-2 py-1 rounded-full text-xs ${enabled ? "bg-green-100 text-green-800" : "bg-gray-200 text-gray-600"}`}>
-                {enabled ? "활성" : "비활성"}
-            </span>
+      {/* 실시간 글로벌 시세 스냅샷 */}
+      {oracleData && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <AdminCard>
+            <AdminCardHeader className="pb-2">
+              <AdminCardTitle className="text-xs text-zinc-400">
+                실시간 Bitcoin (CoinGecko)
+              </AdminCardTitle>
+            </AdminCardHeader>
+            <AdminCardContent>
+              <div className="text-2xl font-black text-amber-300 font-mono">
+                ${oracleData.liveMarketSnapshot.btcUsd.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-zinc-400 mt-1">
+                ₩{oracleData.liveMarketSnapshot.btcKrw.toLocaleString()}
+              </div>
+            </AdminCardContent>
+          </AdminCard>
+
+          <AdminCard>
+            <AdminCardHeader className="pb-2">
+              <AdminCardTitle className="text-xs text-zinc-400">
+                실시간 USD/KRW 환율
+              </AdminCardTitle>
+            </AdminCardHeader>
+            <AdminCardContent>
+              <div className="text-2xl font-black text-sky-300 font-mono">
+                ₩{oracleData.liveMarketSnapshot.usdKrw.toLocaleString()}
+              </div>
+              <div className="text-[11px] text-zinc-400 mt-1">
+                ExchangeRate Open API 연동
+              </div>
+            </AdminCardContent>
+          </AdminCard>
+
+          <AdminCard>
+            <AdminCardHeader className="pb-2">
+              <AdminCardTitle className="text-xs text-zinc-400">
+                연결된 공인 오라클 어댑터
+              </AdminCardTitle>
+            </AdminCardHeader>
+            <AdminCardContent>
+              <div className="text-2xl font-black text-emerald-400">
+                {oracleData.oracleAdapters.length}개 가동 중
+              </div>
+              <div className="text-[11px] text-zinc-400 mt-1">
+                SettlementOrchestrator 통합
+              </div>
+            </AdminCardContent>
+          </AdminCard>
+
+          <AdminCard>
+            <AdminCardHeader className="pb-2">
+              <AdminCardTitle className="text-xs text-zinc-400">
+                자동 정산 예약 대기열
+              </AdminCardTitle>
+            </AdminCardHeader>
+            <AdminCardContent>
+              <div className="text-2xl font-black text-white">
+                {oracleData.summary.registeredSettlementSourcesCount}건
+              </div>
+              <div className="text-[11px] text-zinc-400 mt-1">
+                활성 예측 게임 {oracleData.summary.activeGamesCount}개 중
+              </div>
+            </AdminCardContent>
+          </AdminCard>
         </div>
-    );
+      )}
+
+      {/* 9대 공인 데이터 오라클 어댑터 테이블 */}
+      <AdminCard>
+        <AdminCardHeader>
+          <AdminCardTitle className="flex items-center gap-2">
+            <Database className="w-4 h-4 text-emerald-400" />
+            <span>9대 공인 데이터 오라클 어댑터 명세</span>
+          </AdminCardTitle>
+          <AdminCardDescription>
+            SettlementOrchestratorService에 등록된 외부 검증 데이터 파이프라인 목록
+          </AdminCardDescription>
+        </AdminCardHeader>
+        <AdminCardContent>
+          <AdminTable>
+            <AdminTableHeader>
+              <AdminTableRow>
+                <AdminTableHead>오라클 코드</AdminTableHead>
+                <AdminTableHead>공인 기관 / 데이터 소스명</AdminTableHead>
+                <AdminTableHead>적용 도메인</AdminTableHead>
+                <AdminTableHead className="text-right">상태</AdminTableHead>
+              </AdminTableRow>
+            </AdminTableHeader>
+            <AdminTableBody>
+              {(oracleData?.oracleAdapters || []).map((ad) => (
+                <AdminTableRow key={ad.sourceType}>
+                  <AdminTableCell className="font-mono font-bold text-sky-300">
+                    {ad.sourceType}
+                  </AdminTableCell>
+                  <AdminTableCell className="font-bold text-white">
+                    {ad.name}
+                  </AdminTableCell>
+                  <AdminTableCell className="text-zinc-400">
+                    {ad.category}
+                  </AdminTableCell>
+                  <AdminTableCell className="text-right">
+                    <AdminBadge variant="success">
+                      <CheckCircle2 className="w-3 h-3" />
+                      <span>{ad.status}</span>
+                    </AdminBadge>
+                  </AdminTableCell>
+                </AdminTableRow>
+              ))}
+            </AdminTableBody>
+          </AdminTable>
+        </AdminCardContent>
+      </AdminCard>
+    </div>
+  );
 }

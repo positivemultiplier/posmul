@@ -1,169 +1,219 @@
-/**
- * 예측 게임 목록 페이지 (관리자)
- */
-
+import React from "react";
 import Link from "next/link";
+import { ExternalLink, PlusCircle, Scale, ShieldCheck } from "lucide-react";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+import {
+  AdminBadge,
+  AdminCard,
+  AdminCardContent,
+  AdminCardDescription,
+  AdminCardHeader,
+  AdminCardTitle,
+  AdminTable,
+  AdminTableBody,
+  AdminTableCell,
+  AdminTableHead,
+  AdminTableHeader,
+  AdminTableRow,
+} from "../../components/shadcn-admin-ui";
 
-// 임시 데이터
-const mockGames = {
-    active: [
-        { id: "1", title: "[EPL] 맨유 vs 첼시", category: "sports", participants: 234, totalStake: 1250000, endTime: "2026-01-13 23:00" },
-        { id: "2", title: "오늘 나스닥 등락", category: "economy", participants: 156, totalStake: 890000, endTime: "2026-01-14 05:00" },
-        { id: "3", title: "비트코인 시간별 등락", category: "economy", participants: 89, totalStake: 450000, endTime: "2026-01-13 18:00" },
-    ],
-    pending: [
-        { id: "4", title: "삼성전자 Q1 실적", category: "economy", scheduledAt: "2026-01-15 09:00" },
-        { id: "5", title: "애플 분기 매출", category: "technology", scheduledAt: "2026-01-20 22:00" },
-    ],
-    completed: [
-        { id: "6", title: "어제 코스피 등락", category: "economy", result: "상승", participants: 312, distributed: 1680000 },
-        { id: "7", title: "EPL 아스널 vs 리버풀", category: "sports", result: "홈팀 승", participants: 456, distributed: 2340000 },
-    ],
-};
+export const revalidate = 0;
 
-export default function GamesListPage() {
-    return (
-        <div className="min-h-screen bg-gray-100">
-            <header className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
-                    <h1 className="text-2xl font-bold text-gray-900">🎮 게임 목록</h1>
-                    <Link
-                        href="/admin/prediction/games/create"
-                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                    >
-                        + 새 게임 생성
-                    </Link>
-                </div>
-            </header>
+export default async function GamesListPage() {
+  const { data: games } = await supabaseAdmin
+    .schema("prediction")
+    .from("prediction_games")
+    .select(
+      "game_id, slug, title, category, subcategory, status, data_source, external_id, settlement_type, registration_end, settlement_date, min_bet_amount, max_bet_amount, created_at"
+    )
+    .in("status", ["ACTIVE", "SETTLED", "CLOSED"])
+    .order("created_at", { ascending: false })
+    .limit(100);
 
-            <main className="max-w-7xl mx-auto px-4 py-8 space-y-8">
-                {/* 활성 게임 */}
-                <section className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <span className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></span>
-                        활성 게임 ({mockGames.active.length})
-                    </h2>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">게임명</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">카테고리</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">참여자</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">총 베팅</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">종료 시간</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">액션</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {mockGames.active.map((game) => (
-                                    <tr key={game.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-4 font-medium text-gray-900">{game.title}</td>
-                                        <td className="px-4 py-4">
-                                            <CategoryBadge category={game.category} />
-                                        </td>
-                                        <td className="px-4 py-4 text-gray-600">{game.participants}명</td>
-                                        <td className="px-4 py-4 text-gray-600">{game.totalStake.toLocaleString()} PMP</td>
-                                        <td className="px-4 py-4 text-gray-600">{game.endTime}</td>
-                                        <td className="px-4 py-4">
-                                            <Link href={`/admin/prediction/games/${game.id}`} className="text-blue-600 hover:underline mr-3">
-                                                상세
-                                            </Link>
-                                            <button className="text-red-600 hover:underline">중지</button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
+  const allGames = games || [];
+  const activeGames = allGames.filter((g) => g.status === "ACTIVE");
+  const settledGames = allGames.filter((g) => g.status === "SETTLED");
 
-                {/* 대기 중 게임 */}
-                <section className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <span className="w-3 h-3 bg-yellow-500 rounded-full"></span>
-                        대기 중 ({mockGames.pending.length})
-                    </h2>
-                    <div className="space-y-3">
-                        {mockGames.pending.map((game) => (
-                            <div key={game.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                                <div>
-                                    <p className="font-medium text-gray-900">{game.title}</p>
-                                    <p className="text-sm text-gray-500">예정: {game.scheduledAt}</p>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <CategoryBadge category={game.category} />
-                                    <button className="text-blue-600 hover:underline">수정</button>
-                                    <button className="text-red-600 hover:underline">삭제</button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
-                {/* 완료된 게임 */}
-                <section className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                        <span className="w-3 h-3 bg-gray-400 rounded-full"></span>
-                        완료된 게임 ({mockGames.completed.length})
-                    </h2>
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
-                            <thead className="bg-gray-50">
-                                <tr>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">게임명</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">결과</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">참여자</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">분배금액</th>
-                                    <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">액션</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-200">
-                                {mockGames.completed.map((game) => (
-                                    <tr key={game.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-4 font-medium text-gray-900">{game.title}</td>
-                                        <td className="px-4 py-4">
-                                            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                                                {game.result}
-                                            </span>
-                                        </td>
-                                        <td className="px-4 py-4 text-gray-600">{game.participants}명</td>
-                                        <td className="px-4 py-4 text-gray-600">{game.distributed.toLocaleString()} PMC</td>
-                                        <td className="px-4 py-4">
-                                            <Link href={`/admin/prediction/games/${game.id}`} className="text-blue-600 hover:underline">
-                                                상세보기
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
-            </main>
+  return (
+    <div className="space-y-6">
+      {/* 상단 헤더 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-zinc-800/80 pb-5">
+        <div>
+          <h1 className="text-2xl font-black text-white tracking-tight">
+            🎮 전체 예측 게임 마스터 테이블
+          </h1>
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+            Supabase prediction.prediction_games 실시간 DB 연동 · 총 {allGames.length}개 등록됨
+          </p>
         </div>
-    );
-}
 
-function CategoryBadge({ category }: { category: string }) {
-    const colors: Record<string, string> = {
-        sports: "bg-green-100 text-green-800",
-        economy: "bg-blue-100 text-blue-800",
-        technology: "bg-purple-100 text-purple-800",
-        entertainment: "bg-pink-100 text-pink-800",
-        politics: "bg-orange-100 text-orange-800",
-    };
-    const labels: Record<string, string> = {
-        sports: "스포츠",
-        economy: "경제",
-        technology: "기술",
-        entertainment: "엔터",
-        politics: "정치",
-    };
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/prediction/settlement"
+            className="px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition"
+          >
+            <Scale className="w-3.5 h-3.5" />
+            <span>정산 센터</span>
+          </Link>
+          <Link
+            href="/admin/prediction/games/create"
+            className="px-3.5 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-bold flex items-center gap-1.5 transition shadow-sm"
+          >
+            <PlusCircle className="w-3.5 h-3.5" />
+            <span>신규 예측 생성</span>
+          </Link>
+        </div>
+      </div>
 
-    return (
-        <span className={`px-2 py-1 rounded-full text-xs ${colors[category] ?? "bg-gray-100 text-gray-800"}`}>
-            {labels[category] ?? category}
-        </span>
-    );
+      {/* 1. 진행 중인 활성 게임 테이블 */}
+      <AdminCard>
+        <AdminCardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <AdminCardTitle className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                <span>진행 중인 예측 마켓 ({activeGames.length}개)</span>
+              </AdminCardTitle>
+              <AdminCardDescription>
+                현재 유저들이 PMP로 베팅 참여 중인 공식 예측 게임 목록
+              </AdminCardDescription>
+            </div>
+            <AdminBadge variant="success">ACTIVE</AdminBadge>
+          </div>
+        </AdminCardHeader>
+        <AdminCardContent>
+          <AdminTable>
+            <AdminTableHeader>
+              <AdminTableRow>
+                <AdminTableHead>카테고리</AdminTableHead>
+                <AdminTableHead>게임 제목 & 슬러그</AdminTableHead>
+                <AdminTableHead>공인 데이터 오라클</AdminTableHead>
+                <AdminTableHead>베팅 범위</AdminTableHead>
+                <AdminTableHead>마감 시각</AdminTableHead>
+                <AdminTableHead className="text-right">액션</AdminTableHead>
+              </AdminTableRow>
+            </AdminTableHeader>
+            <AdminTableBody>
+              {activeGames.map((game) => (
+                <AdminTableRow key={game.game_id}>
+                  <AdminTableCell>
+                    <AdminBadge variant="secondary">{game.category}</AdminBadge>
+                    {game.subcategory && (
+                      <div className="text-[10px] font-mono text-zinc-500 mt-0.5">
+                        {game.subcategory}
+                      </div>
+                    )}
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <div className="font-bold text-white max-w-md line-clamp-1">
+                      {game.title}
+                    </div>
+                    <div className="text-[11px] font-mono text-zinc-500">
+                      /{game.slug || game.game_id}
+                    </div>
+                  </AdminTableCell>
+                  <AdminTableCell>
+                    <AdminBadge variant="info">
+                      <ShieldCheck className="w-3 h-3" />
+                      <span>{game.data_source || "manual"}</span>
+                    </AdminBadge>
+                  </AdminTableCell>
+                  <AdminTableCell className="font-mono text-xs text-zinc-300">
+                    {(game.min_bet_amount || 100).toLocaleString()} ~{" "}
+                    {(game.max_bet_amount || 50000).toLocaleString()} PMP
+                  </AdminTableCell>
+                  <AdminTableCell className="font-mono text-xs text-zinc-400">
+                    {game.registration_end
+                      ? new Date(game.registration_end).toLocaleDateString("ko-KR")
+                      : "-"}
+                  </AdminTableCell>
+                  <AdminTableCell className="text-right">
+                    <div className="inline-flex items-center gap-2">
+                      <Link
+                        href={`/prediction/${game.slug || game.game_id}`}
+                        target="_blank"
+                        className="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs font-semibold inline-flex items-center gap-1"
+                      >
+                        <span>마켓 열기</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+                      <Link
+                        href="/admin/prediction/settlement"
+                        className="px-2.5 py-1 rounded bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 text-xs font-bold"
+                      >
+                        정산
+                      </Link>
+                    </div>
+                  </AdminTableCell>
+                </AdminTableRow>
+              ))}
+            </AdminTableBody>
+          </AdminTable>
+        </AdminCardContent>
+      </AdminCard>
+
+      {/* 2. 정산 완료된 게임 테이블 */}
+      <AdminCard>
+        <AdminCardHeader>
+          <AdminCardTitle>
+            🏆 정산 완료된 게임 ({settledGames.length}개)
+          </AdminCardTitle>
+          <AdminCardDescription>
+            오라클 또는 운영자 판정을 통해 승자에게 PMC 상금 배분이 완료된 게임
+          </AdminCardDescription>
+        </AdminCardHeader>
+        <AdminCardContent>
+          {settledGames.length === 0 ? (
+            <div className="py-8 text-center text-xs text-zinc-500">
+              아직 정산 완료된 게임이 없습니다.
+            </div>
+          ) : (
+            <AdminTable>
+              <AdminTableHeader>
+                <AdminTableRow>
+                  <AdminTableHead>카테고리</AdminTableHead>
+                  <AdminTableHead>게임 제목</AdminTableHead>
+                  <AdminTableHead>데이터 소스</AdminTableHead>
+                  <AdminTableHead>정산일</AdminTableHead>
+                  <AdminTableHead className="text-right">상세</AdminTableHead>
+                </AdminTableRow>
+              </AdminTableHeader>
+              <AdminTableBody>
+                {settledGames.map((game) => (
+                  <AdminTableRow key={game.game_id}>
+                    <AdminTableCell>
+                      <AdminBadge variant="outline">{game.category}</AdminBadge>
+                    </AdminTableCell>
+                    <AdminTableCell className="font-bold text-zinc-300">
+                      {game.title}
+                    </AdminTableCell>
+                    <AdminTableCell>
+                      <AdminBadge variant="secondary">
+                        {game.data_source || "manual"}
+                      </AdminBadge>
+                    </AdminTableCell>
+                    <AdminTableCell className="font-mono text-xs text-zinc-400">
+                      {game.settlement_date
+                        ? new Date(game.settlement_date).toLocaleDateString("ko-KR")
+                        : "-"}
+                    </AdminTableCell>
+                    <AdminTableCell className="text-right">
+                      <Link
+                        href={`/prediction/${game.slug || game.game_id}`}
+                        target="_blank"
+                        className="text-sky-400 hover:underline text-xs font-semibold inline-flex items-center gap-1"
+                      >
+                        <span>결과 보기</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </Link>
+                    </AdminTableCell>
+                  </AdminTableRow>
+                ))}
+              </AdminTableBody>
+            </AdminTable>
+          )}
+        </AdminCardContent>
+      </AdminCard>
+    </div>
+  );
 }
