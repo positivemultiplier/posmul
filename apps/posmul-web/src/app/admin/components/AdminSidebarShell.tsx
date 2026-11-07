@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
+  Users,
   Target,
   ListFilter,
   PlusCircle,
@@ -46,6 +47,11 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
         label: "통합 커맨드 대시보드",
         icon: LayoutDashboard,
         badge: "v2.5",
+      },
+      {
+        href: "/admin/users",
+        label: "시민 회원 관리",
+        icon: Users,
       },
     ],
   },
