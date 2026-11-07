@@ -97,8 +97,6 @@ export default {
       },
     },
   },  plugins: [
-    // 향후 플러그인 추가 시 사용
-    // '@tailwindcss/forms',
-    // '@tailwindcss/typography',
+    require('@tailwindcss/typography'),
   ],
 } satisfies Config;
