@@ -125,11 +125,18 @@ export async function deleteBannedWord(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const admin = getAdminClient();
-    const { error } = await admin
-      .schema("forum")
-      .from("banned_words")
-      .delete()
-      .or(`id.eq.${wordIdOrWord},word.eq.${wordIdOrWord}`);
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+      wordIdOrWord.trim()
+    );
+
+    let query = admin.schema("forum").from("banned_words").delete();
+    if (isUuid) {
+      query = query.eq("id", wordIdOrWord.trim());
+    } else {
+      query = query.eq("word", wordIdOrWord.trim());
+    }
+
+    const { error } = await query;
 
     if (error) {
       return { success: false, error: error.message };
