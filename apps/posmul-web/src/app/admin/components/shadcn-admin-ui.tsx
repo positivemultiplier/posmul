@@ -108,8 +108,10 @@ export type AdminBadgeVariant =
   | "success"
   | "warning"
   | "destructive"
+  | "danger"
   | "live"
-  | "info";
+  | "info"
+  | "purple";
 
 export function AdminBadge({
   className,
@@ -124,8 +126,10 @@ export function AdminBadge({
     success: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
     warning: "bg-amber-500/15 text-amber-300 border-amber-500/30",
     destructive: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+    danger: "bg-rose-500/20 text-rose-300 border-rose-500/40",
     live: "bg-red-500/20 text-red-400 border-red-500/40",
     info: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+    purple: "bg-purple-500/15 text-purple-300 border-purple-500/30",
   };
 
   return (
@@ -144,12 +148,15 @@ export function AdminBadge({
 
 export type AdminButtonVariant =
   | "default"
+  | "primary"
   | "secondary"
   | "outline"
   | "ghost"
   | "destructive"
+  | "danger"
   | "amber"
-  | "emerald";
+  | "emerald"
+  | "success";
 
 export function AdminButton({
   className,
@@ -164,6 +171,8 @@ export function AdminButton({
   const variants: Record<AdminButtonVariant, string> = {
     default:
       "bg-zinc-100 text-zinc-950 hover:bg-white shadow-sm font-bold",
+    primary:
+      "bg-blue-600 text-white hover:bg-blue-500 shadow-sm font-bold",
     secondary:
       "bg-zinc-800 text-zinc-100 hover:bg-zinc-700 border border-zinc-700/80 font-semibold",
     outline:
@@ -171,9 +180,13 @@ export function AdminButton({
     ghost: "hover:bg-zinc-800/70 text-zinc-300 hover:text-white font-medium",
     destructive:
       "bg-rose-600 text-white hover:bg-rose-500 shadow-sm font-bold",
+    danger:
+      "bg-rose-600 text-white hover:bg-rose-500 shadow-sm font-bold",
     amber:
       "bg-amber-500 text-slate-950 hover:bg-amber-400 shadow-sm font-extrabold",
     emerald:
+      "bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm font-bold",
+    success:
       "bg-emerald-600 text-white hover:bg-emerald-500 shadow-sm font-bold",
   };
 

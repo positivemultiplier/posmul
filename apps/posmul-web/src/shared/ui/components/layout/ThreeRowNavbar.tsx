@@ -648,13 +648,17 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
               <>
                 <Link
                   href="/dashboard"
-                  className="px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-xl transition-all duration-200 border border-slate-700/60 text-xs font-semibold"
+                  className="px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-xl transition-all duration-200 border border-slate-700/60 text-xs font-semibold flex items-center gap-1"
                 >
-                  대시보드
+                  <span>📊 내 대시보드</span>
                 </Link>
-                <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-200">
+                <Link
+                  href="/dashboard?onboarding=1"
+                  title="개인맞춤 설정"
+                  className="w-7 h-7 rounded-full bg-slate-800 hover:bg-blue-600/40 border border-slate-700 hover:border-blue-400/50 flex items-center justify-center text-xs font-bold text-slate-200 transition-colors"
+                >
                   {user.email?.[0]?.toUpperCase() ?? "U"}
-                </div>
+                </Link>
                 <button
                   onClick={handleSignOut}
                   className="px-2.5 py-1.5 bg-rose-950/30 hover:bg-rose-900/50 text-rose-300 rounded-xl transition-all duration-200 border border-rose-800/30 text-xs font-medium"
@@ -664,6 +668,12 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
               </>
             ) : (
               <>
+                <Link
+                  href="/dashboard"
+                  className="px-2.5 py-1.5 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-800 transition-colors text-xs font-semibold"
+                >
+                  📊 MY
+                </Link>
                 <Link
                   href="/auth/login"
                   className="px-3 py-1.5 text-slate-300 hover:text-white transition-colors text-xs font-semibold"

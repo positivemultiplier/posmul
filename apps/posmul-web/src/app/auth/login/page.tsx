@@ -55,7 +55,22 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      router.push("/dashboard");
+      let targetRoute = "/dashboard";
+      try {
+        const profRes = await fetch("/api/user/profile");
+        const profJson = await profRes.json();
+        if (profJson?.success) {
+          if (!profJson.onboardingCompleted) {
+            targetRoute = "/dashboard?onboarding=1";
+          } else if (profJson.personalization?.defaultLanding) {
+            targetRoute = profJson.personalization.defaultLanding;
+          }
+        }
+      } catch {
+        // 기본 대시보드 이동
+      }
+
+      router.push(targetRoute);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "이메일 로그인 중 오류가 발생했습니다.");
