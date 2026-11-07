@@ -40,14 +40,50 @@ export async function GET() {
       };
     }
 
-    // 3. 예측 게임 배팅 내역 조회 (prediction.predictions + prediction_games)
+    // 3. 실제 불변 원장 테이블 (economy.pmp_pmc_transactions) 조회
+    const { data: rawLedgerTxs } = await admin
+      .schema("economy")
+      .from("pmp_pmc_transactions")
+      .select("transaction_id, transaction_type, pmp_amount, pmc_amount, description, created_at, metadata")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
+      .limit(30);
+
+    const mappedLedgerTxs = (rawLedgerTxs || []).map((tx: any) => {
+      const isPmp = tx.pmp_amount !== null && tx.pmp_amount !== undefined && tx.pmp_amount !== 0;
+      const amount = isPmp ? Number(tx.pmp_amount) : Number(tx.pmc_amount || 0);
+      const currency = isPmp ? "PMP" : "PMC";
+
+      let type: "prediction" | "donation" | "consume" | "reward" = "reward";
+      const txTypeUpper = String(tx.transaction_type || "").toUpperCase();
+
+      if (txTypeUpper.includes("PREDICT") || txTypeUpper.includes("SPEND")) {
+        type = "prediction";
+      } else if (txTypeUpper.includes("DONAT")) {
+        type = "donation";
+      } else if (txTypeUpper.includes("CONSUME")) {
+        type = "consume";
+      }
+
+      return {
+        id: `tx-${tx.transaction_id}`,
+        type,
+        title: tx.description || `원장 거래 (#${tx.transaction_id.substring(0, 8)})`,
+        amount,
+        currency,
+        status: "completed",
+        createdAt: tx.created_at,
+      };
+    });
+
+    // 4. 기존 예측 게임 배팅 내역 보완
     const { data: predictionBets } = await admin
       .schema("prediction")
       .from("predictions")
       .select("prediction_id, game_id, bet_amount, is_active, created_at")
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
-      .limit(15);
+      .limit(10);
 
     const gameIds = Array.from(
       new Set((predictionBets || []).map((b: any) => b.game_id).filter(Boolean))
@@ -65,16 +101,15 @@ export async function GET() {
       }
     }
 
-    // 4. 통합 원장(Ledger Transactions) 조합
-    const transactions = [
+    const fallbackTxs = [
       {
-        id: "tx-bonus-welcome",
+        id: "tx-starter-grant",
         type: "reward",
-        title: "🎁 시민 기본 활동 보너스 적립",
+        title: "🎁 주권시민 기본 활동 보너스 적립",
         amount: +10000,
         currency: "PMP",
         status: "completed",
-        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(),
+        createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
       },
       {
         id: "tx-don-001",
@@ -84,15 +119,6 @@ export async function GET() {
         currency: "PMC",
         status: "completed",
         createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-      },
-      {
-        id: "tx-con-001",
-        type: "consume",
-        title: "🎬 Major League 캠페인 시청 적립",
-        amount: +250,
-        currency: "PMP",
-        status: "completed",
-        createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
       },
       ...(predictionBets || []).map((bet: any) => {
         const gameInfo = gameMap.get(bet.game_id);
@@ -111,13 +137,24 @@ export async function GET() {
           createdAt: bet.created_at,
         };
       }),
-    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    ];
+
+    // 실제 원장 기록 우선, 없으면 fallback과 병합하여 중복 제거
+    const seenIds = new Set<string>();
+    const allTransactions = [...mappedLedgerTxs, ...fallbackTxs]
+      .filter((tx) => {
+        if (seenIds.has(tx.id)) return false;
+        seenIds.add(tx.id);
+        return true;
+      })
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     return NextResponse.json({
       success: true,
       userId,
       assets,
-      transactions,
+      transactions: allTransactions,
+      ledgerVerifiedCount: mappedLedgerTxs.length,
     });
   } catch (error: any) {
     return NextResponse.json(

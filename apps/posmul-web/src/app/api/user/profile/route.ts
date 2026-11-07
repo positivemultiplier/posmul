@@ -295,45 +295,63 @@ export async function POST(request: NextRequest) {
     const BONUS_PMP = 5000;
     const BONUS_PMC = 500;
 
-    const { data: existingAccount } = await admin
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .select("user_id, pmp_balance, pmc_balance")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    const newPmp = Number(existingAccount?.pmp_balance || 0) + BONUS_PMP;
-    const newPmc = Number(existingAccount?.pmc_balance || 0) + BONUS_PMC;
-    const now = new Date().toISOString();
-
-    if (existingAccount) {
-      await admin
+    // 1. 보안 감사 및 매크로 어뷰징 방지: 24시간 이내 수령 이력 원장 검사
+    if (user) {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data: recentBonus } = await admin
         .schema("economy")
-        .from("pmp_pmc_accounts")
-        .update({
-          pmp_balance: newPmp,
-          pmc_balance: newPmc,
-          updated_at: now,
-        })
-        .eq("user_id", userId);
-    } else if (user) {
-      await admin
-        .schema("economy")
-        .from("pmp_pmc_accounts")
-        .insert({
-          user_id: userId,
-          pmp_balance: 10000 + BONUS_PMP,
-          pmc_balance: 1000 + BONUS_PMC,
-          created_at: now,
-          updated_at: now,
-        });
+        .from("pmp_pmc_transactions")
+        .select("transaction_id, created_at")
+        .eq("user_id", userId)
+        .eq("transaction_type", "REWARD_DAILY_BONUS")
+        .gte("created_at", oneDayAgo)
+        .limit(1);
+
+      if (recentBonus && recentBonus.length > 0) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "오늘의 시민 활동 보너스를 이미 수령하셨습니다. (24시간당 1회 지급)",
+          },
+          { status: 429 }
+        );
+      }
     }
+
+    // 2. ACID 보장 원자적 원장(Ledger) RPC 호출
+    const { data: rpcResult, error: rpcError } = await admin.rpc(
+      "execute_ledger_transaction",
+      {
+        p_user_id: userId,
+        p_transaction_type: "REWARD_DAILY_BONUS",
+        p_pmp_change: BONUS_PMP,
+        p_pmc_change: BONUS_PMC,
+        p_description: "시민 대시보드 일일 활동 응원 보너스",
+        p_metadata: {
+          ip: request.headers.get("x-forwarded-for") || "unknown",
+          user_agent: request.headers.get("user-agent") || "unknown",
+          granted_at: new Date().toISOString(),
+        },
+      }
+    );
+
+    if (rpcError) {
+      return NextResponse.json(
+        { success: false, error: `원장 기록 실패: ${rpcError.message}` },
+        { status: 500 }
+      );
+    }
+
+    const row = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
+    const newPmp = Number(row?.new_pmp_balance ?? 15000);
+    const newPmc = Number(row?.new_pmc_balance ?? 1500);
 
     return NextResponse.json({
       success: true,
-      message: `🎁 시민 활동 보너스 +${BONUS_PMP.toLocaleString()} PMP & +${BONUS_PMC.toLocaleString()} PMC가 즉시 충전되었습니다!`,
-      pmpBalance: existingAccount ? newPmp : 15000,
-      pmcBalance: existingAccount ? newPmc : 1500,
+      message: `🎁 시민 활동 보너스 +${BONUS_PMP.toLocaleString()} PMP & +${BONUS_PMC.toLocaleString()} PMC가 안전하게 원장에 기록되어 충전되었습니다!`,
+      pmpBalance: newPmp,
+      pmcBalance: newPmc,
+      transactionId: row?.transaction_id,
     });
   } catch (err: any) {
     return NextResponse.json(

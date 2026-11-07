@@ -86,33 +86,33 @@ async function processWithdrawalRefund(
     return { success: false, error: "철회 처리에 실패했습니다." };
   }
 
-  // PMP 환불
+  // PMP 환불 (ACID 보장 원장 기록 함수 호출)
   if (refundAmount > 0) {
-    const { data: accountData } = await supabase
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .select("pmp_balance")
-      .eq("user_id", userId)
-      .single();
+    const { error: ledgerError } = await supabase.rpc(
+      "execute_ledger_transaction",
+      {
+        p_user_id: userId,
+        p_transaction_type: "PMP_REFUND",
+        p_pmp_change: refundAmount,
+        p_pmc_change: 0,
+        p_description: `예측 배팅 철회 환불 (#${predictionId.substring(0, 8)})`,
+        p_metadata: {
+          prediction_id: predictionId,
+          game_id: gameId,
+          reason: "user_withdrawal",
+          refunded_at: new Date().toISOString(),
+        },
+      }
+    );
 
-    // 방어적 처리: 스키마 접근 시 배열로 반환될 수 있음
-    const account = Array.isArray(accountData) ? accountData[0] : accountData;
-    const newBalance = Number(account?.pmp_balance ?? 0) + refundAmount;
-
-    const { error: refundError } = await supabase
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .update({ pmp_balance: newBalance })
-      .eq("user_id", userId);
-
-    if (refundError) {
+    if (ledgerError) {
       // 롤백
       await supabase
         .schema("prediction")
         .from("predictions")
         .update({ is_active: true })
         .eq("prediction_id", predictionId);
-      return { success: false, error: "환불 처리에 실패했습니다." };
+      return { success: false, error: `환불 처리에 실패했습니다: ${ledgerError.message}` };
     }
   }
 
