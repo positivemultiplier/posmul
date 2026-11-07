@@ -4,8 +4,13 @@ export interface LiveEventRoom {
   categoryLabel: string;
   title: string;
   subtitle: string;
-  status: "LIVE" | "UPCOMING" | "ENDED";
+  status: "LIVE" | "UPCOMING" | "CLOSED" | "ENDED";
   viewerCount: number;
+  registrationEnd?: string; // 마감 시간 (ISO 문자열)
+  settlementDate?: string; // 정산 예정일 (ISO 문자열)
+  settledAt?: string | null; // 실제 정산 완료 일시
+  winningOptionId?: string | null; // 정산 승리 옵션 ID
+  winningOptionLabel?: string | null; // 정산 승리 옵션 텍스트
   matchScore?: {
     teamA: string;
     teamB: string;
@@ -41,6 +46,8 @@ export const LIVE_ROOMS: LiveEventRoom[] = [
     subtitle: "우승 트로피를 결정짓는 마지막 승부! 이닝별 실시간 응원톡 & 승부예측",
     status: "LIVE",
     viewerCount: 1482,
+    registrationEnd: "2026-11-11T05:18:04.160Z",
+    settlementDate: "2026-11-12T05:18:04.160Z",
     matchScore: {
       teamA: "KIA 타이거즈",
       teamB: "삼성 라이온즈",
@@ -84,6 +91,8 @@ export const LIVE_ROOMS: LiveEventRoom[] = [
     subtitle: "지금 TV 보면서 실시간 엔딩 장면 같이 떠들어요! 내일 아침 닐슨 시청률 12% 넘을까?",
     status: "LIVE",
     viewerCount: 1165,
+    registrationEnd: "2026-11-14T12:00:00.000Z",
+    settlementDate: "2026-11-15T00:00:00.000Z",
     matchScore: {
       teamA: "전회차 시청률",
       teamB: "목표 돌파 기준",
@@ -127,6 +136,8 @@ export const LIVE_ROOMS: LiveEventRoom[] = [
     subtitle: "거시지표 발표 직후 정규장 개장! QQQ 상승 마감 vs 하락 마감 실시간 배틀",
     status: "LIVE",
     viewerCount: 924,
+    registrationEnd: "2026-11-13T13:57:48.242Z",
+    settlementDate: "2026-11-14T13:57:48.242Z",
     matchScore: {
       teamA: "QQQ (나스닥 100)",
       teamB: "전일 종가 대비",
@@ -170,6 +181,8 @@ export const LIVE_ROOMS: LiveEventRoom[] = [
     subtitle: "CoinGecko 글로벌 시세 연동! 기관 ETF 자금 유입 속 $95K 저항선 뚫을까?",
     status: "LIVE",
     viewerCount: 840,
+    registrationEnd: "2026-11-13T02:58:15.718Z",
+    settlementDate: "2026-11-14T02:58:15.718Z",
     matchScore: {
       teamA: "BTC 현재가",
       teamB: "돌파 목표가",
@@ -213,6 +226,8 @@ export const LIVE_ROOMS: LiveEventRoom[] = [
     subtitle: "손흥민 주장 선발 출격! 북런던 더비 실시간 중계 응원톡 & 공격포인트 내기",
     status: "LIVE",
     viewerCount: 1054,
+    registrationEnd: "2026-11-11T02:59:19.655Z",
+    settlementDate: "2026-11-12T02:59:19.655Z",
     matchScore: {
       teamA: "토트넘 (SON 7)",
       teamB: "아스날",
@@ -256,6 +271,8 @@ export const LIVE_ROOMS: LiveEventRoom[] = [
     subtitle: "주말 화제작 정주행하면서 명장면 토크! 이번 주 넷플릭스 한국 1위 수성할까?",
     status: "LIVE",
     viewerCount: 645,
+    registrationEnd: "2026-11-12T05:18:04.160Z",
+    settlementDate: "2026-11-13T05:18:04.160Z",
     matchScore: {
       teamA: "현재 한국 순위",
       teamB: "글로벌 비영어권",
@@ -292,6 +309,28 @@ export const LIVE_ROOMS: LiveEventRoom[] = [
     ],
   },
 ];
+
+/**
+ * 마감 시간(registrationEnd) 및 정산(settledAt) 기준 라이브 룸의 실효 상태 판정
+ * - SETTLED / settledAt 존재: ENDED (정산 완료)
+ * - CLOSED 또는 현재 시간이 registrationEnd 초과 시: CLOSED (마감 완료)
+ * - 그 외: LIVE 또는 UPCOMING
+ */
+export function getLiveRoomEffectiveStatus(room: LiveEventRoom): "LIVE" | "UPCOMING" | "CLOSED" | "ENDED" {
+  if (room.settledAt || room.status === "ENDED") {
+    return "ENDED";
+  }
+  if (room.status === "CLOSED") {
+    return "CLOSED";
+  }
+  if (room.registrationEnd) {
+    const endMs = new Date(room.registrationEnd).getTime();
+    if (!isNaN(endMs) && endMs <= Date.now()) {
+      return "CLOSED";
+    }
+  }
+  return room.status;
+}
 
 /**
  * 특정 예측 게임 ID 또는 slug로 연동된 라이브 응원톡 룸 찾기
