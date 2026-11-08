@@ -39,6 +39,15 @@ export const metadata: Metadata = {
     siteName: "PosMul",
     type: "website",
   },
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+    },
+  },
 };
 
 export const viewport: Viewport = {
