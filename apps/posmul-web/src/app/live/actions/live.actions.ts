@@ -1,7 +1,9 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { LIVE_ROOMS, LiveEventRoom, getLiveRoomEffectiveStatus } from "../live-rooms.data";
+import { ChallengeOption, UserChallengeDTO } from "@/app/challenge/types";
 
 export interface LiveMessageDTO {
   id: string;
@@ -164,4 +166,293 @@ export async function saveLiveMessageBufferAction(params: {
     console.warn("saveLiveMessageBuffer non-fatal error:", err);
   }
 }
+
+/**
+ * [LIVE 킬러 기능] 시청자 실시간 번개 예측 개설 액션
+ */
+export async function createLiveQuickChallengeAction(params: {
+  roomId: string;
+  title: string;
+  options: string[]; // 2개 옵션 ["A", "B"]
+  durationMinutes: number; // 몇 분 뒤 마감할지 (3, 5, 10분)
+  hostPickIndex: number; // 0 or 1
+  hostBetAmount: number; // 기본 100포
+}): Promise<{
+  success: boolean;
+  challenge?: UserChallengeDTO;
+  requireLogin?: boolean;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return {
+        success: false,
+        requireLogin: true,
+        error: "실시간 번개 예측을 만들려면 로그인이 필요합니다.",
+      };
+    }
+
+    const hostId = user.id;
+    const hostName =
+      user.user_metadata?.name ||
+      user.user_metadata?.full_name ||
+      user.email?.split("@")[0] ||
+      "열혈시청자";
+
+    if (!params.title.trim() || params.options.length < 2) {
+      return { success: false, error: "질문과 2개의 선택지를 입력해 주세요." };
+    }
+
+    const now = new Date();
+    const eventStartAt = new Date(now.getTime() + params.durationMinutes * 60 * 1000);
+    const settlementAt = new Date(eventStartAt.getTime() + 10 * 60 * 1000); // 마감 후 10분 뒤 정산
+
+    const optionIds = ["A", "B"];
+    const initialOptions: ChallengeOption[] = params.options.slice(0, 2).map((label, idx) => {
+      const isHostPick = idx === params.hostPickIndex;
+      return {
+        id: optionIds[idx],
+        label: label.trim(),
+        votes: isHostPick ? 1 : 0,
+        pmp: isHostPick ? params.hostBetAmount : 0,
+        ratio: isHostPick ? 100 : 0,
+      };
+    });
+
+    const totalPool = params.hostBetAmount;
+    const hostFee = Math.floor(totalPool * 0.03);
+
+    // 1. 챌린지 생성
+    const { data: challenge, error: challengeError } = await supabaseAdmin
+      .schema("prediction")
+      .from("user_challenges")
+      .insert({
+        host_id: hostId,
+        host_name: hostName,
+        title: `[LIVE] ${params.title.trim()}`,
+        options: initialOptions,
+        category: "SPORTS",
+        visibility: "PUBLIC",
+        event_start_at: eventStartAt.toISOString(),
+        settlement_at: settlementAt.toISOString(),
+        status: "OPEN",
+        total_pool_pmp: totalPool,
+        host_fee_pmp: hostFee,
+      })
+      .select("*")
+      .single();
+
+    if (challengeError || !challenge) {
+      console.error("createLiveQuickChallengeAction error:", challengeError);
+      return { success: false, error: challengeError?.message || "번개 예측 생성 실패" };
+    }
+
+    // 2. 호스트 첫 베팅 기록
+    const hostOptionId = optionIds[params.hostPickIndex];
+    await supabaseAdmin
+      .schema("prediction")
+      .from("user_challenge_bets")
+      .insert({
+        challenge_id: challenge.id,
+        user_id: hostId,
+        user_name: hostName,
+        option_id: hostOptionId,
+        amount_pmp: params.hostBetAmount,
+      });
+
+    const challengeDTO: UserChallengeDTO = {
+      id: challenge.id,
+      hostId: challenge.host_id,
+      hostName: challenge.host_name,
+      title: challenge.title,
+      options: initialOptions,
+      category: "SPORTS",
+      visibility: "PUBLIC",
+      eventStartAt: challenge.event_start_at,
+      settlementAt: challenge.settlement_at,
+      status: "OPEN",
+      totalPoolPmp: totalPool,
+      hostFeePmp: hostFee,
+      disputeCount: 0,
+      createdAt: challenge.created_at,
+      myBet: {
+        optionId: hostOptionId,
+        amountPmp: params.hostBetAmount,
+      },
+    };
+
+    return { success: true, challenge: challengeDTO };
+  } catch (err: any) {
+    console.error("createLiveQuickChallengeAction exception:", err);
+    return { success: false, error: err?.message || "번개 예측 생성 중 오류가 발생했습니다." };
+  }
+}
+
+/**
+ * [LIVE 킬러 기능] 채팅창 인라인 챌린지 원클릭 투표/베팅
+ */
+export async function quickVoteLiveChallengeAction(params: {
+  challengeId: string;
+  optionId: "A" | "B";
+  amountPmp: number;
+}): Promise<{
+  success: boolean;
+  options?: ChallengeOption[];
+  totalPool?: number;
+  requireLogin?: boolean;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return {
+        success: false,
+        requireLogin: true,
+        error: "예측에 참여하려면 로그인이 필요합니다.",
+      };
+    }
+
+    const userId = user.id;
+    const userName =
+      user.user_metadata?.name ||
+      user.user_metadata?.full_name ||
+      user.email?.split("@")[0] ||
+      `시청자_${userId.substring(0, 4)}`;
+
+    const { data: challenge } = await supabaseAdmin
+      .schema("prediction")
+      .from("user_challenges")
+      .select("*")
+      .eq("id", params.challengeId)
+      .single();
+
+    if (!challenge) {
+      return { success: false, error: "해당 번개 예측을 찾을 수 없습니다." };
+    }
+
+    if (Date.now() >= new Date(challenge.event_start_at).getTime() || challenge.status !== "OPEN") {
+      return { success: false, error: "이미 마감된 번개 예측입니다." };
+    }
+
+    // 중복 투표 검사
+    const { data: existingBet } = await supabaseAdmin
+      .schema("prediction")
+      .from("user_challenge_bets")
+      .select("id")
+      .eq("challenge_id", params.challengeId)
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (existingBet) {
+      return { success: false, error: "이미 이 예측에 참여하셨습니다!" };
+    }
+
+    // 베팅 레코드 저장
+    await supabaseAdmin
+      .schema("prediction")
+      .from("user_challenge_bets")
+      .insert({
+        challenge_id: params.challengeId,
+        user_id: userId,
+        user_name: userName,
+        option_id: params.optionId,
+        amount_pmp: params.amountPmp,
+      });
+
+    // 옵션 통계 재계산
+    const currentOptions = (challenge.options as ChallengeOption[]) || [];
+    const updatedOptions = currentOptions.map((opt) => {
+      if (opt.id === params.optionId) {
+        return {
+          ...opt,
+          votes: (opt.votes || 0) + 1,
+          pmp: (opt.pmp || 0) + params.amountPmp,
+        };
+      }
+      return opt;
+    });
+
+    const newTotalPmp = updatedOptions.reduce((acc, cur) => acc + (cur.pmp || 0), 0);
+    const finalOptions = updatedOptions.map((opt) => ({
+      ...opt,
+      ratio: newTotalPmp > 0 ? Math.round(((opt.pmp || 0) / newTotalPmp) * 100) : 0,
+    }));
+
+    await supabaseAdmin
+      .schema("prediction")
+      .from("user_challenges")
+      .update({
+        options: finalOptions,
+        total_pool_pmp: newTotalPmp,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", params.challengeId);
+
+    return {
+      success: true,
+      options: finalOptions,
+      totalPool: newTotalPmp,
+    };
+  } catch (err: any) {
+    console.error("quickVoteLiveChallengeAction exception:", err);
+    return { success: false, error: err?.message || "투표 처리 중 오류가 발생했습니다." };
+  }
+}
+
+/**
+ * [LIVE] 최근 생성된 진행 중인 시청자 챌린지 목록 조회
+ */
+export async function getLiveActiveChallengesAction(): Promise<{
+  success: boolean;
+  challenges: UserChallengeDTO[];
+}> {
+  try {
+    const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabaseAdmin
+      .schema("prediction")
+      .from("user_challenges")
+      .select("*")
+      .gte("created_at", twoHoursAgo)
+      .like("title", "[LIVE]%")
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (error || !data) {
+      return { success: false, challenges: [] };
+    }
+
+    const dtos: UserChallengeDTO[] = data.map((d: any) => ({
+      id: d.id,
+      hostId: d.host_id,
+      hostName: d.host_name,
+      title: d.title.replace(/^\[LIVE\]\s*/, ""),
+      options: d.options || [],
+      category: d.category,
+      visibility: d.visibility,
+      eventStartAt: d.event_start_at,
+      settlementAt: d.settlement_at,
+      status: d.status,
+      totalPoolPmp: d.total_pool_pmp || 0,
+      hostFeePmp: d.host_fee_pmp || 0,
+      disputeCount: d.dispute_count || 0,
+      createdAt: d.created_at,
+    }));
+
+    return { success: true, challenges: dtos };
+  } catch (err) {
+    console.error("getLiveActiveChallengesAction error:", err);
+    return { success: false, challenges: [] };
+  }
+}
+
 

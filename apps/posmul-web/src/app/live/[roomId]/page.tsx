@@ -15,6 +15,8 @@ import {
   Clock,
   AlertCircle,
   CheckCircle2,
+  Zap,
+  Flame,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { LIVE_ROOMS, LiveEventRoom, getLiveRoomEffectiveStatus } from "../live-rooms.data";
@@ -22,7 +24,15 @@ import {
   getRecentLiveMessagesAction,
   saveLiveMessageBufferAction,
   getLiveRoomDetailAction,
+  quickVoteLiveChallengeAction,
+  getLiveActiveChallengesAction,
 } from "../actions/live.actions";
+import {
+  LiveChallengeCard,
+  LiveChallengePayload,
+} from "../components/LiveChallengeCard";
+import { LiveQuickChallengeModal } from "../components/LiveQuickChallengeModal";
+import { UserChallengeDTO } from "@/app/challenge/types";
 
 interface ChatMessage {
   id: string;
@@ -32,6 +42,8 @@ interface ChatMessage {
   message: string;
   time: string;
   isReaction?: boolean;
+  isChallenge?: boolean;
+  challengeData?: LiveChallengePayload;
 }
 
 export default function LiveRoomPage() {
@@ -50,6 +62,11 @@ export default function LiveRoomPage() {
     getLiveRoomEffectiveStatus(initialRoom)
   );
 
+  // 실시간 번개 예측 상태
+  const [isChallengeModalOpen, setIsChallengeModalOpen] = useState(false);
+  const [activeChallenges, setActiveChallenges] = useState<LiveChallengePayload[]>([]);
+  const [userVotes, setUserVotes] = useState<Record<string, "A" | "B">>({});
+
   const [voteStats, setVoteStats] = useState({
     ratioA: initialRoom.predictionGame?.optionA.ratio || 60,
     ratioB: initialRoom.predictionGame?.optionB.ratio || 40,
@@ -60,7 +77,7 @@ export default function LiveRoomPage() {
   const chatScrollRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<any>(null);
 
-  // 1. 방 최신 상태 DB 동기화
+  // 1. 방 최신 상태 DB 동기화 및 실시간 시청자 번개 예측 로드
   useEffect(() => {
     getLiveRoomDetailAction(roomId).then((res) => {
       if (res.success && res.room) {
@@ -74,6 +91,21 @@ export default function LiveRoomPage() {
             countB: res.room.predictionGame.optionB.count,
           });
         }
+      }
+    });
+
+    // 최근 진행 중인 시청자 번개 예측 로드
+    getLiveActiveChallengesAction().then((res) => {
+      if (res.success && res.challenges) {
+        const mapped: LiveChallengePayload[] = res.challenges.map((c) => ({
+          id: c.id,
+          title: c.title,
+          hostName: c.hostName,
+          options: c.options,
+          eventStartAt: c.eventStartAt,
+          totalPoolPmp: c.totalPoolPmp,
+        }));
+        setActiveChallenges(mapped);
       }
     });
   }, [roomId]);
@@ -183,6 +215,45 @@ export default function LiveRoomPage() {
           };
         });
       })
+      .on("broadcast", { event: "live_challenge_drop" }, ({ payload }) => {
+        const challengeMsg: ChatMessage = {
+          id: `cmsg-${payload.id}-${Date.now()}`,
+          sender: payload.hostName,
+          teamTag: "⚡번개예측",
+          teamColor: "bg-amber-500/20 text-amber-300 border-amber-400/40",
+          message: payload.title,
+          time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          isChallenge: true,
+          challengeData: payload,
+        };
+        setMessages((prev) => [...prev.slice(-100), challengeMsg]);
+        setActiveChallenges((prev) => [payload, ...prev.filter((c) => c.id !== payload.id)].slice(0, 5));
+      })
+      .on("broadcast", { event: "live_challenge_vote" }, ({ payload }) => {
+        // payload: { challengeId, options, totalPool }
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.challengeData && m.challengeData.id === payload.challengeId) {
+              return {
+                ...m,
+                challengeData: {
+                  ...m.challengeData,
+                  options: payload.options,
+                  totalPoolPmp: payload.totalPool,
+                },
+              };
+            }
+            return m;
+          })
+        );
+        setActiveChallenges((prev) =>
+          prev.map((c) =>
+            c.id === payload.challengeId
+              ? { ...c, options: payload.options, totalPoolPmp: payload.totalPool }
+              : c
+          )
+        );
+      })
       .on("presence", { event: "sync" }, () => {
         const state = channel.presenceState();
         const connectedUsers = Object.keys(state).length;
@@ -206,6 +277,113 @@ export default function LiveRoomPage() {
       chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }
   }, [messages]);
+
+  // 번개 예측 생성 완료 시 채팅방 브로드캐스트
+  const handleChallengeCreated = (challenge: UserChallengeDTO) => {
+    const payload: LiveChallengePayload = {
+      id: challenge.id,
+      title: challenge.title.replace(/^\[LIVE\]\s*/, ""),
+      hostName: challenge.hostName,
+      options: challenge.options,
+      eventStartAt: challenge.eventStartAt,
+      totalPoolPmp: challenge.totalPoolPmp,
+    };
+
+    const newMsg: ChatMessage = {
+      id: `cmsg-${challenge.id}-${Date.now()}`,
+      sender: challenge.hostName,
+      teamTag: "⚡번개예측",
+      teamColor: "bg-amber-500/20 text-amber-300 border-amber-400/40",
+      message: payload.title,
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      isChallenge: true,
+      challengeData: payload,
+    };
+
+    setMessages((prev) => [...prev.slice(-100), newMsg]);
+    setActiveChallenges((prev) => [payload, ...prev.filter((c) => c.id !== payload.id)].slice(0, 5));
+
+    // 호스트 본인의 투표 기억
+    if (challenge.myBet?.optionId) {
+      setUserVotes((prev) => ({
+        ...prev,
+        [challenge.id]: challenge.myBet!.optionId as "A" | "B",
+      }));
+    }
+
+    // 다른 참여자들에게 실시간 브로드캐스트
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: "broadcast",
+        event: "live_challenge_drop",
+        payload,
+      });
+    }
+  };
+
+  // 채팅창 인라인 챌린지 원클릭 투표 핸들러
+  const handleQuickVote = async (challengeId: string, optionId: "A" | "B"): Promise<boolean> => {
+    const res = await quickVoteLiveChallengeAction({
+      challengeId,
+      optionId,
+      amountPmp: 100, // 기본 100포 밀어주기
+    });
+
+    if (res.requireLogin) {
+      if (confirm("예측 투표에 참여하려면 로그인이 필요합니다. 로그인 페이지로 이동할까요?")) {
+        window.location.href = `/auth/login?redirectTo=/live/${roomId}`;
+      }
+      return false;
+    }
+
+    if (!res.success || !res.options) {
+      alert(res.error || "투표에 실패했습니다.");
+      return false;
+    }
+
+    // 내 투표 기록
+    setUserVotes((prev) => ({ ...prev, [challengeId]: optionId }));
+
+    // 로컬 메시지 및 활성 챌린지 갱신
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.challengeData && m.challengeData.id === challengeId) {
+          return {
+            ...m,
+            challengeData: {
+              ...m.challengeData,
+              options: res.options!,
+              totalPoolPmp: res.totalPool || m.challengeData.totalPoolPmp,
+            },
+          };
+        }
+        return m;
+      })
+    );
+
+    setActiveChallenges((prev) =>
+      prev.map((c) =>
+        c.id === challengeId
+          ? { ...c, options: res.options!, totalPoolPmp: res.totalPool || c.totalPoolPmp }
+          : c
+      )
+    );
+
+    // 다른 시청자들에게 실시간 비율 갱신 브로드캐스트
+    if (channelRef.current) {
+      channelRef.current.send({
+        type: "broadcast",
+        event: "live_challenge_vote",
+        payload: {
+          challengeId,
+          options: res.options,
+          totalPool: res.totalPool,
+        },
+      });
+    }
+
+    return true;
+  };
 
   // 5. 메시지 전송 (마감 또는 정산 완료 시 전송 차단)
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -610,43 +788,93 @@ export default function LiveRoomPage() {
                 </>
               )}
             </div>
-            <span className="text-[11px] text-sky-400 font-semibold">대화 자동 보존</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsChallengeModalOpen(true)}
+                disabled={isClosedOrEnded}
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[11px] font-bold transition-all cursor-pointer disabled:opacity-50"
+              >
+                <Zap className="w-3 h-3 fill-amber-400 animate-pulse" />
+                <span>번개 예측 개설</span>
+              </button>
+              <span className="text-[11px] text-sky-400 font-semibold">대화 자동 보존</span>
+            </div>
           </div>
+
+          {/* 상단 고정: 실시간 시청자 번개 예측 핫 티커 */}
+          {activeChallenges.length > 0 && (
+            <div className="px-3 py-2 bg-gradient-to-r from-amber-950/40 via-purple-950/40 to-slate-900 border-b border-amber-500/20 flex items-center justify-between text-xs overflow-x-auto gap-2 scrollbar-none">
+              <div className="flex items-center gap-1.5 shrink-0 text-amber-300 font-bold text-[11px]">
+                <Flame className="w-3.5 h-3.5 text-orange-400 animate-bounce shrink-0" />
+                <span>진행 중인 시청자 예측 ({activeChallenges.length})</span>
+              </div>
+              <div className="flex items-center gap-2 overflow-x-auto py-0.5">
+                {activeChallenges.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={`/challenge/${c.id}`}
+                    target="_blank"
+                    className="shrink-0 px-2 py-0.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700 text-[11px] text-slate-200 flex items-center gap-1 transition"
+                  >
+                    <span className="truncate max-w-[140px] font-medium">{c.title}</span>
+                    <span className="text-amber-400 font-mono font-bold text-[10px]">
+                      {c.totalPoolPmp}P
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div
             ref={chatScrollRef}
             className="flex-1 p-4 overflow-y-auto space-y-2.5 divide-y divide-white/[0.03] text-xs font-sans"
           >
-            {messages.map((m) => (
-              <div key={m.id} className="pt-2 flex items-start gap-2 animate-in fade-in duration-150">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    {m.teamTag && (
-                      <span
-                        className={`px-1.5 py-0.2 rounded text-[10px] font-black border ${
-                          m.teamColor || "bg-slate-800 text-slate-300 border-slate-700"
-                        }`}
-                      >
-                        {m.teamTag}
-                      </span>
-                    )}
-                    <span className="font-extrabold text-slate-300">{m.sender}</span>
-                    <span className="text-[10px] text-slate-600 font-mono ml-auto">
-                      {m.time}
-                    </span>
+            {messages.map((m) => {
+              if (m.isChallenge && m.challengeData) {
+                return (
+                  <div key={m.id} className="pt-2 animate-in fade-in duration-200">
+                    <LiveChallengeCard
+                      challenge={m.challengeData}
+                      onQuickVote={handleQuickVote}
+                      userVote={userVotes[m.challengeData.id] || null}
+                    />
                   </div>
-                  <p
-                    className={`leading-relaxed break-words ${
-                      m.isReaction
-                        ? "text-xl py-0.5 animate-bounce"
-                        : "text-slate-100 font-medium"
-                    }`}
-                  >
-                    {m.message}
-                  </p>
+                );
+              }
+
+              return (
+                <div key={m.id} className="pt-2 flex items-start gap-2 animate-in fade-in duration-150">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-0.5">
+                      {m.teamTag && (
+                        <span
+                          className={`px-1.5 py-0.2 rounded text-[10px] font-black border ${
+                            m.teamColor || "bg-slate-800 text-slate-300 border-slate-700"
+                          }`}
+                        >
+                          {m.teamTag}
+                        </span>
+                      )}
+                      <span className="font-extrabold text-slate-300">{m.sender}</span>
+                      <span className="text-[10px] text-slate-600 font-mono ml-auto">
+                        {m.time}
+                      </span>
+                    </div>
+                    <p
+                      className={`leading-relaxed break-words ${
+                        m.isReaction
+                          ? "text-xl py-0.5 animate-bounce"
+                          : "text-slate-100 font-medium"
+                      }`}
+                    >
+                      {m.message}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* 퀵 리액션 이모지 연타 바 (마감/정산 시 비활성화) */}
@@ -709,6 +937,22 @@ export default function LiveRoomPage() {
               isClosedOrEnded ? "bg-[#0a0d14]" : "bg-[#0c0f17]"
             }`}
           >
+            {/* ⚡ 번개 예측 개설 숏컷 버튼 */}
+            <button
+              type="button"
+              onClick={() => setIsChallengeModalOpen(true)}
+              disabled={isClosedOrEnded}
+              className={`p-2 rounded-xl flex items-center gap-1 font-bold text-xs transition shrink-0 cursor-pointer ${
+                isClosedOrEnded
+                  ? "bg-slate-900 text-slate-600 border border-slate-800 cursor-not-allowed"
+                  : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 shadow-md shadow-amber-500/20 active:scale-95"
+              }`}
+              title="실시간 번개 예측 개설"
+            >
+              <Zap className="w-4 h-4 fill-slate-950" />
+              <span className="hidden sm:inline">번개예측</span>
+            </button>
+
             <input
               type="text"
               placeholder={
@@ -742,6 +986,14 @@ export default function LiveRoomPage() {
           </form>
         </div>
       </div>
+
+      {/* ⚡ 실시간 시청자 번개 예측 개설 모달 */}
+      <LiveQuickChallengeModal
+        roomId={roomId}
+        isOpen={isChallengeModalOpen}
+        onClose={() => setIsChallengeModalOpen(false)}
+        onCreated={handleChallengeCreated}
+      />
     </div>
   );
 }
