@@ -6,10 +6,12 @@ export async function GET(request: NextRequest) {
 
   const forwardedHost = request.headers.get("x-forwarded-host");
   const isLocalEnv = process.env.NODE_ENV === "development";
-  const redirectOrigin = forwardedHost && !isLocalEnv ? `https://${forwardedHost}` : requestUrl.origin;
+  const redirectOrigin =
+    forwardedHost && !isLocalEnv ? `https://${forwardedHost}` : requestUrl.origin;
 
-  const callbackUrl = `${redirectOrigin}/api/auth/naver/callback`;
-  const state = JSON.stringify({ next, nonce: Math.random().toString(36).substring(7) });
+  // 네이버 개발자 센터에 등록된 정확한 Callback URL 사용 (/auth/callback)
+  const callbackUrl = `${redirectOrigin}/auth/callback`;
+  const state = `naver_${Math.random().toString(36).substring(2, 12)}`;
 
   const clientId = process.env.NAVER_CLIENT_ID;
 
@@ -23,6 +25,17 @@ export async function GET(request: NextRequest) {
   naverAuthUrl.searchParams.set("redirect_uri", callbackUrl);
   naverAuthUrl.searchParams.set("state", state);
 
-  return NextResponse.redirect(naverAuthUrl.toString());
-}
+  const response = NextResponse.redirect(naverAuthUrl.toString());
+  response.cookies.set("posmul_oauth_provider", "naver", {
+    path: "/",
+    maxAge: 600,
+    sameSite: "lax",
+  });
+  response.cookies.set("posmul_oauth_next", next, {
+    path: "/",
+    maxAge: 600,
+    sameSite: "lax",
+  });
 
+  return response;
+}

@@ -6,10 +6,12 @@ export async function GET(request: NextRequest) {
 
   const forwardedHost = request.headers.get("x-forwarded-host");
   const isLocalEnv = process.env.NODE_ENV === "development";
-  const redirectOrigin = forwardedHost && !isLocalEnv ? `https://${forwardedHost}` : requestUrl.origin;
+  const redirectOrigin =
+    forwardedHost && !isLocalEnv ? `https://${forwardedHost}` : requestUrl.origin;
 
-  const callbackUrl = `${redirectOrigin}/api/auth/kakao/callback`;
-  const state = JSON.stringify({ next, nonce: Math.random().toString(36).substring(7) });
+  // 카카오 개발자 콘솔에 등록된 정확한 Redirect URI 사용 (/auth/callback)
+  const callbackUrl = `${redirectOrigin}/auth/callback`;
+  const state = `kakao_${Math.random().toString(36).substring(2, 12)}`;
 
   const clientId = process.env.KAKAO_REST_API_KEY;
 
@@ -23,6 +25,17 @@ export async function GET(request: NextRequest) {
   kakaoAuthUrl.searchParams.set("response_type", "code");
   kakaoAuthUrl.searchParams.set("state", state);
 
-  return NextResponse.redirect(kakaoAuthUrl.toString());
-}
+  const response = NextResponse.redirect(kakaoAuthUrl.toString());
+  response.cookies.set("posmul_oauth_provider", "kakao", {
+    path: "/",
+    maxAge: 600,
+    sameSite: "lax",
+  });
+  response.cookies.set("posmul_oauth_next", next, {
+    path: "/",
+    maxAge: 600,
+    sameSite: "lax",
+  });
 
+  return response;
+}

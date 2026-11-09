@@ -11,12 +11,14 @@ function LoginForm() {
   const [mode, setMode] = useState<"social" | "email">("social");
   const [isLoading, setIsLoading] = useState(false);
   const [loadingProvider, setLoadingProvider] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [error, setError] = useState<string | null>(
+    searchParams.get("error")
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const redirectTarget =
     searchParams.get("redirectTo") ||
     searchParams.get("redirect") ||
