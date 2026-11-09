@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const callbackUrl = `${redirectOrigin}/auth/callback`;
   const state = `kakao_${Math.random().toString(36).substring(2, 12)}`;
 
-  const clientId = process.env.KAKAO_REST_API_KEY;
+  const clientId = process.env.KAKAO_REST_API_KEY?.trim();
 
   if (!clientId) {
     return NextResponse.redirect(`${redirectOrigin}/auth/login?error=kakao_not_configured`);

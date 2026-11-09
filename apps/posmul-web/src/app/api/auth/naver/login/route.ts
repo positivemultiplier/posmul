@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const callbackUrl = `${redirectOrigin}/auth/callback`;
   const state = `naver_${Math.random().toString(36).substring(2, 12)}`;
 
-  const clientId = process.env.NAVER_CLIENT_ID;
+  const clientId = process.env.NAVER_CLIENT_ID?.trim();
 
   if (!clientId) {
     return NextResponse.redirect(`${redirectOrigin}/auth/login?error=naver_not_configured`);

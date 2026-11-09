@@ -58,9 +58,14 @@ async function completeCustomOAuthLogin(params: {
   });
 
   // 2. 매직링크 생성 (신규 유저든 기존 유저든 user 객체와 hashed_token을 정확히 반환함)
+  // 주의: generateLink 호출 후 verifyOtp 전에 updateUserById(email_confirm: true)를 호출하면
+  // 발급된 hashed_token이 즉시 만료(otp_expired)되므로 절대 중간에 updateUserById를 호출하지 않음!
   const { data: linkData, error: linkError } = await adminSupabase.auth.admin.generateLink({
     type: "magiclink",
     email,
+    options: {
+      data: metadataPayload,
+    },
   });
 
   if (linkError || !linkData?.properties?.hashed_token || !linkData?.user) {
@@ -72,16 +77,7 @@ async function completeCustomOAuthLogin(params: {
 
   const targetUser = linkData.user;
 
-  // 기존 유저의 메타데이터 최신화 및 이메일 인증 완료 보장
-  await adminSupabase.auth.admin.updateUserById(targetUser.id, {
-    email_confirm: true,
-    user_metadata: {
-      ...targetUser.user_metadata,
-      ...metadataPayload,
-    },
-  });
-
-  // 3. SSR 클라이언트를 통해 verifyOtp 실행 -> 쿠키 캡처
+  // 3. SSR 클라이언트를 통해 verifyOtp 즉시 실행 -> 쿠키 캡처
   const capturedCookies: Array<{ name: string; value: string; options?: any }> = [];
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -108,17 +104,24 @@ async function completeCustomOAuthLogin(params: {
   });
 
   if (otpError) {
-    // fallback: type 'email' 재시도
-    const { error: retryError } = await supabase.auth.verifyOtp({
-      token_hash: hashedToken,
-      type: "email",
+    console.error(`[${provider}] verifyOtp error:`, otpError);
+    return NextResponse.redirect(
+      `${redirectOrigin}/auth/login?error=${encodeURIComponent(
+        otpError.message || `${provider}_verify_otp_failed`
+      )}`
+    );
+  }
+
+  // 3-1. 세션 발급 완료 후 기존 유저의 메타데이터 최신화 (세션 토큰에 영향 없음)
+  try {
+    await adminSupabase.auth.admin.updateUserById(targetUser.id, {
+      user_metadata: {
+        ...targetUser.user_metadata,
+        ...metadataPayload,
+      },
     });
-    if (retryError) {
-      console.error(`[${provider}] verifyOtp error:`, retryError);
-      return NextResponse.redirect(
-        `${redirectOrigin}/auth/login?error=${provider}_verify_otp_failed`
-      );
-    }
+  } catch (metaErr) {
+    console.warn(`[${provider}] metadata update non-fatal error:`, metaErr);
   }
 
   // 4. PosMul 프로필 및 10,000 PMP + 1,000 PMC 환영 보너스 계좌 생성 보장
@@ -181,8 +184,8 @@ export async function GET(request: NextRequest) {
   // ============================================================================
   if (state.startsWith("kakao_") || cookieProvider === "kakao") {
     try {
-      const clientId = process.env.KAKAO_REST_API_KEY;
-      const clientSecret = process.env.KAKAO_CLIENT_SECRET;
+      const clientId = process.env.KAKAO_REST_API_KEY?.trim();
+      const clientSecret = process.env.KAKAO_CLIENT_SECRET?.trim();
 
       const tokenRes = await fetch("https://kauth.kakao.com/oauth/token", {
         method: "POST",
@@ -250,8 +253,8 @@ export async function GET(request: NextRequest) {
   // ============================================================================
   if (state.startsWith("naver_") || cookieProvider === "naver") {
     try {
-      const clientId = process.env.NAVER_CLIENT_ID;
-      const clientSecret = process.env.NAVER_CLIENT_SECRET;
+      const clientId = process.env.NAVER_CLIENT_ID?.trim();
+      const clientSecret = process.env.NAVER_CLIENT_SECRET?.trim();
 
       const tokenUrl = new URL("https://nid.naver.com/oauth2.0/token");
       tokenUrl.searchParams.set("grant_type", "authorization_code");
