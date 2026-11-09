@@ -104,11 +104,51 @@ export async function GET() {
       },
     };
 
+    const meta = user?.user_metadata || {};
+    const appMeta = user?.app_metadata || {};
+    let currentProvider = "email";
+    if (
+      meta.provider === "kakao" ||
+      meta.kakao_id ||
+      appMeta.provider === "kakao" ||
+      user?.email?.startsWith("kakao_") ||
+      user?.email?.includes("@kakao")
+    ) {
+      currentProvider = "kakao";
+    } else if (
+      meta.provider === "naver" ||
+      meta.naver_id ||
+      appMeta.provider === "naver" ||
+      user?.email?.startsWith("naver_") ||
+      meta.naver_id != null
+    ) {
+      currentProvider = "naver";
+    } else if (
+      appMeta.provider === "google" ||
+      meta.iss?.includes("google") ||
+      user?.email?.endsWith("@gmail.com")
+    ) {
+      currentProvider = "google";
+    }
+
+    const connectedProviders: string[] = [];
+    if (meta.kakao_id || currentProvider === "kakao") connectedProviders.push("kakao");
+    if (meta.naver_id || currentProvider === "naver") connectedProviders.push("naver");
+    if (appMeta.provider === "google" || meta.iss?.includes("google") || currentProvider === "google") {
+      connectedProviders.push("google");
+    }
+    if (connectedProviders.length === 0) connectedProviders.push("email");
+
     return NextResponse.json({
       success: true,
       isAuthenticated,
       userId,
       email: user?.email || "citizen@posmul.com",
+      provider: currentProvider,
+      connectedProviders,
+      kakaoConnected: connectedProviders.includes("kakao"),
+      naverConnected: connectedProviders.includes("naver"),
+      googleConnected: connectedProviders.includes("google"),
       displayName:
         profile?.display_name ||
         user?.user_metadata?.display_name ||

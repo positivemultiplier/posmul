@@ -116,6 +116,11 @@ export interface UserDashboardProps {
     isAuthenticated: boolean;
     userId: string;
     email: string;
+    provider?: string;
+    connectedProviders?: string[];
+    kakaoConnected?: boolean;
+    naverConnected?: boolean;
+    googleConnected?: boolean;
     displayName: string;
     username: string;
     bio: string;
@@ -1579,6 +1584,101 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                         value={initialData.email}
                         className="w-full px-3.5 py-2.5 rounded-xl bg-zinc-900/60 border border-zinc-800/60 text-sm text-zinc-500 cursor-not-allowed"
                       />
+                    </div>
+                  </div>
+
+                  {/* 간편 로그인 연동 관리 카드 */}
+                  <div className="p-4 rounded-xl bg-zinc-950/80 border border-zinc-800/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-xs font-bold text-white flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-emerald-400" />
+                          간편 로그인 연동 관리 (소셜 계정 매핑)
+                        </h4>
+                        <p className="text-[11px] text-zinc-400 mt-0.5">
+                          자주 사용하는 소셜 계정을 연동하면 카카오, 네이버, 구글 어디로 로그인해도 내 포인트와 예측 전적이 그대로 유지됩니다.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                      {/* 카카오 */}
+                      <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#FEE500]" />
+                          <div>
+                            <div className="text-xs font-bold text-white">카카오톡</div>
+                            <div className="text-[10px] text-zinc-400">
+                              {initialData.kakaoConnected || initialData.provider === "kakao"
+                                ? "연동 완료"
+                                : "미연동"}
+                            </div>
+                          </div>
+                        </div>
+                        {initialData.kakaoConnected || initialData.provider === "kakao" ? (
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            연결됨
+                          </span>
+                        ) : (
+                          <Link
+                            href="/api/auth/kakao/login?next=/dashboard"
+                            className="text-[10px] font-bold text-[#FEE500] hover:underline"
+                          >
+                            연동하기 →
+                          </Link>
+                        )}
+                      </div>
+
+                      {/* 네이버 */}
+                      <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#03C75A]" />
+                          <div>
+                            <div className="text-xs font-bold text-white">네이버</div>
+                            <div className="text-[10px] text-zinc-400">
+                              {initialData.naverConnected || initialData.provider === "naver"
+                                ? "연동 완료"
+                                : "미연동"}
+                            </div>
+                          </div>
+                        </div>
+                        {initialData.naverConnected || initialData.provider === "naver" ? (
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            연결됨
+                          </span>
+                        ) : (
+                          <Link
+                            href="/api/auth/naver/login?next=/dashboard"
+                            className="text-[10px] font-bold text-[#03C75A] hover:underline"
+                          >
+                            연동하기 →
+                          </Link>
+                        )}
+                      </div>
+
+                      {/* 구글 */}
+                      <div className="p-3 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="w-2.5 h-2.5 rounded-full bg-blue-400" />
+                          <div>
+                            <div className="text-xs font-bold text-white">구글</div>
+                            <div className="text-[10px] text-zinc-400">
+                              {initialData.googleConnected || initialData.provider === "google"
+                                ? "연동 완료"
+                                : "미연동"}
+                            </div>
+                          </div>
+                        </div>
+                        {initialData.googleConnected || initialData.provider === "google" ? (
+                          <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            연결됨
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-zinc-500">
+                            기본 이메일
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 

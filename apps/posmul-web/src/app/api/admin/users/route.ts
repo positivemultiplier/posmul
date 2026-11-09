@@ -7,6 +7,7 @@ export async function GET(request: NextRequest) {
     const search = (searchParams.get("search") || "").trim().toLowerCase();
     const status = searchParams.get("status") || "all";
     const sido = searchParams.get("sido") || "all";
+    const providerFilter = searchParams.get("provider") || "all";
 
     // 1. user.profiles, auth.users, pmp_pmc_accounts, user_scores 병렬 조회
     const [profilesRes, accountsRes, scoresRes, authUsersRes] = await Promise.all([
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
         .schema("ranking")
         .from("user_scores")
         .select("user_id, sido, job_group, contribution_score, overall_rank"),
-      supabaseAdmin.auth.admin.listUsers({ perPage: 100 }),
+      supabaseAdmin.auth.admin.listUsers({ perPage: 1000 }),
     ]);
 
     const accountsMap = new Map<string, { pmp: number; pmc: number }>();
@@ -45,13 +46,49 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. 통합 회원 리스트 구성
-    let users = (profilesRes.data || []).map((p: any) => {
+    const allUsers = (profilesRes.data || []).map((p: any) => {
       const authUser = authMap.get(p.id);
       const acc = accountsMap.get(p.id) || { pmp: 0, pmc: 0 };
       const score = scoresMap.get(p.id);
 
       const email = authUser?.email || p.email || (p.username?.includes("@") ? p.username : "-");
-      const provider = authUser?.app_metadata?.provider || (email.endsWith("@gmail.com") ? "google" : "email");
+      const meta = authUser?.user_metadata || {};
+      const appMeta = authUser?.app_metadata || {};
+
+      // 소셜 프로바이더 정밀 판별
+      let provider = "email";
+      if (
+        meta.provider === "kakao" ||
+        meta.kakao_id ||
+        appMeta.provider === "kakao" ||
+        email.startsWith("kakao_") ||
+        email.includes("@kakao")
+      ) {
+        provider = "kakao";
+      } else if (
+        meta.provider === "naver" ||
+        meta.naver_id ||
+        appMeta.provider === "naver" ||
+        email.startsWith("naver_") ||
+        meta.naver_id != null
+      ) {
+        provider = "naver";
+      } else if (
+        appMeta.provider === "google" ||
+        meta.iss?.includes("google") ||
+        email.endsWith("@gmail.com")
+      ) {
+        provider = "google";
+      }
+
+      // 연동된 모든 소셜 채널 수집
+      const connectedProviders: string[] = [];
+      if (meta.kakao_id || provider === "kakao") connectedProviders.push("kakao");
+      if (meta.naver_id || provider === "naver") connectedProviders.push("naver");
+      if (appMeta.provider === "google" || meta.iss?.includes("google") || provider === "google") {
+        connectedProviders.push("google");
+      }
+      if (connectedProviders.length === 0) connectedProviders.push("email");
 
       return {
         id: p.id,
@@ -59,6 +96,9 @@ export async function GET(request: NextRequest) {
         displayName: p.display_name || p.username || "시민",
         email,
         provider,
+        connectedProviders,
+        kakaoId: meta.kakao_id || null,
+        naverId: meta.naver_id || null,
         accountStatus: p.account_status || "active", // active, suspended, banned
         emailVerified: Boolean(p.email_verified || authUser?.email_confirmed_at),
         createdAt: p.created_at || authUser?.created_at || new Date().toISOString(),
@@ -71,9 +111,18 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // 전체 가입 채널별 통계 산출 (필터링 전 기준)
+    const totalUsers = allUsers.length;
+    const kakaoUsers = allUsers.filter((u) => u.provider === "kakao").length;
+    const naverUsers = allUsers.filter((u) => u.provider === "naver").length;
+    const googleUsers = allUsers.filter((u) => u.provider === "google").length;
+    const emailUsers = allUsers.filter((u) => u.provider === "email").length;
+
     // 3. 필터링 적용
+    let filteredUsers = allUsers;
+
     if (search) {
-      users = users.filter(
+      filteredUsers = filteredUsers.filter(
         (u) =>
           u.displayName.toLowerCase().includes(search) ||
           u.username.toLowerCase().includes(search) ||
@@ -82,19 +131,24 @@ export async function GET(request: NextRequest) {
     }
 
     if (status !== "all") {
-      users = users.filter((u) => u.accountStatus === status);
+      filteredUsers = filteredUsers.filter((u) => u.accountStatus === status);
     }
 
     if (sido !== "all") {
-      users = users.filter((u) => u.sido === sido);
+      filteredUsers = filteredUsers.filter((u) => u.sido === sido);
+    }
+
+    if (providerFilter !== "all") {
+      filteredUsers = filteredUsers.filter((u) => u.provider === providerFilter);
     }
 
     // 4. 통계 집계
-    const totalUsers = users.length;
-    const activeUsers = users.filter((u) => u.accountStatus === "active").length;
-    const suspendedUsers = users.filter((u) => u.accountStatus === "suspended" || u.accountStatus === "banned").length;
+    const activeUsers = filteredUsers.filter((u) => u.accountStatus === "active").length;
+    const suspendedUsers = filteredUsers.filter(
+      (u) => u.accountStatus === "suspended" || u.accountStatus === "banned"
+    ).length;
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
-    const todayNewUsers = users.filter((u) => new Date(u.createdAt).getTime() >= oneDayAgo).length;
+    const todayNewUsers = allUsers.filter((u) => new Date(u.createdAt).getTime() >= oneDayAgo).length;
 
     return NextResponse.json({
       success: true,
@@ -103,8 +157,12 @@ export async function GET(request: NextRequest) {
         activeUsers,
         suspendedUsers,
         todayNewUsers,
+        kakaoUsers,
+        naverUsers,
+        googleUsers,
+        emailUsers,
       },
-      users,
+      users: filteredUsers,
     });
   } catch (err: any) {
     return NextResponse.json(

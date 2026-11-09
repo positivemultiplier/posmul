@@ -40,6 +40,9 @@ interface AdminUserItem {
   displayName: string;
   email: string;
   provider: string;
+  connectedProviders?: string[];
+  kakaoId?: string | null;
+  naverId?: string | null;
   accountStatus: "active" | "suspended" | "banned";
   emailVerified: boolean;
   createdAt: string;
@@ -56,6 +59,10 @@ interface UserStats {
   activeUsers: number;
   suspendedUsers: number;
   todayNewUsers: number;
+  kakaoUsers?: number;
+  naverUsers?: number;
+  googleUsers?: number;
+  emailUsers?: number;
 }
 
 const SIDO_OPTIONS = [
@@ -79,6 +86,39 @@ const SIDO_OPTIONS = [
   "제주특별자치도",
 ];
 
+function renderProviderBadge(provider: string) {
+  switch (provider) {
+    case "kakao":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#FEE500]/20 text-[#FEE500] border border-[#FEE500]/40">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#FEE500]" />
+          카카오 간편가입
+        </span>
+      );
+    case "naver":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-[#03C75A]/20 text-[#03C75A] border border-[#03C75A]/40">
+          <span className="w-1.5 h-1.5 rounded-full bg-[#03C75A]" />
+          네이버 간편가입
+        </span>
+      );
+    case "google":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
+          구글 소셜로그인
+        </span>
+      );
+    default:
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium bg-zinc-800 text-zinc-300 border border-zinc-700/60">
+          <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+          일반 이메일
+        </span>
+      );
+  }
+}
+
 export default function AdminUsersPage() {
   const [users, setUsers] = useState<AdminUserItem[]>([]);
   const [stats, setStats] = useState<UserStats>({
@@ -86,11 +126,16 @@ export default function AdminUsersPage() {
     activeUsers: 0,
     suspendedUsers: 0,
     todayNewUsers: 0,
+    kakaoUsers: 0,
+    naverUsers: 0,
+    googleUsers: 0,
+    emailUsers: 0,
   });
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sidoFilter, setSidoFilter] = useState("all");
+  const [providerFilter, setProviderFilter] = useState("all");
 
   // 포인트 지급/회수 모달 상태
   const [selectedUser, setSelectedUser] = useState<AdminUserItem | null>(null);
@@ -106,6 +151,7 @@ export default function AdminUsersPage() {
       if (search) params.set("search", search);
       if (statusFilter !== "all") params.set("status", statusFilter);
       if (sidoFilter !== "all") params.set("sido", sidoFilter);
+      if (providerFilter !== "all") params.set("provider", providerFilter);
 
       const res = await fetch(`/api/admin/users?${params.toString()}`);
       const data = await res.json();
@@ -118,7 +164,7 @@ export default function AdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, sidoFilter]);
+  }, [search, statusFilter, sidoFilter, providerFilter]);
 
   useEffect(() => {
     fetchUsers();
@@ -256,6 +302,113 @@ export default function AdminUsersPage() {
         </AdminCard>
       </div>
 
+      {/* 간편가입 소셜 채널별 현황 위젯 */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <button
+          type="button"
+          onClick={() => setProviderFilter(providerFilter === "kakao" ? "all" : "kakao")}
+          className={`p-3 rounded-xl border text-left transition-all ${
+            providerFilter === "kakao"
+              ? "bg-[#FEE500]/15 border-[#FEE500] ring-1 ring-[#FEE500]"
+              : "bg-zinc-900/60 border-zinc-800 hover:border-[#FEE500]/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-[#FEE500] flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#FEE500]" />
+              카카오 가입
+            </span>
+            <span className="text-[10px] text-zinc-400 font-mono">
+              {stats.totalUsers > 0
+                ? `${Math.round(((stats.kakaoUsers || 0) / stats.totalUsers) * 100)}%`
+                : "0%"}
+            </span>
+          </div>
+          <div className="text-lg font-black text-white mt-1">
+            {(stats.kakaoUsers || 0).toLocaleString()}
+            <span className="text-xs font-normal text-zinc-400 ml-1">명</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setProviderFilter(providerFilter === "naver" ? "all" : "naver")}
+          className={`p-3 rounded-xl border text-left transition-all ${
+            providerFilter === "naver"
+              ? "bg-[#03C75A]/15 border-[#03C75A] ring-1 ring-[#03C75A]"
+              : "bg-zinc-900/60 border-zinc-800 hover:border-[#03C75A]/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-[#03C75A] flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#03C75A]" />
+              네이버 가입
+            </span>
+            <span className="text-[10px] text-zinc-400 font-mono">
+              {stats.totalUsers > 0
+                ? `${Math.round(((stats.naverUsers || 0) / stats.totalUsers) * 100)}%`
+                : "0%"}
+            </span>
+          </div>
+          <div className="text-lg font-black text-white mt-1">
+            {(stats.naverUsers || 0).toLocaleString()}
+            <span className="text-xs font-normal text-zinc-400 ml-1">명</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setProviderFilter(providerFilter === "google" ? "all" : "google")}
+          className={`p-3 rounded-xl border text-left transition-all ${
+            providerFilter === "google"
+              ? "bg-blue-500/15 border-blue-500 ring-1 ring-blue-500"
+              : "bg-zinc-900/60 border-zinc-800 hover:border-blue-500/50"
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-blue-400 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-400" />
+              구글 가입
+            </span>
+            <span className="text-[10px] text-zinc-400 font-mono">
+              {stats.totalUsers > 0
+                ? `${Math.round(((stats.googleUsers || 0) / stats.totalUsers) * 100)}%`
+                : "0%"}
+            </span>
+          </div>
+          <div className="text-lg font-black text-white mt-1">
+            {(stats.googleUsers || 0).toLocaleString()}
+            <span className="text-xs font-normal text-zinc-400 ml-1">명</span>
+          </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setProviderFilter(providerFilter === "email" ? "all" : "email")}
+          className={`p-3 rounded-xl border text-left transition-all ${
+            providerFilter === "email"
+              ? "bg-zinc-800 border-zinc-500 ring-1 ring-zinc-500"
+              : "bg-zinc-900/60 border-zinc-800 hover:border-zinc-700"
+          }`}
+        >
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-zinc-300 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-zinc-400" />
+              이메일 가입
+            </span>
+            <span className="text-[10px] text-zinc-400 font-mono">
+              {stats.totalUsers > 0
+                ? `${Math.round(((stats.emailUsers || 0) / stats.totalUsers) * 100)}%`
+                : "0%"}
+            </span>
+          </div>
+          <div className="text-lg font-black text-white mt-1">
+            {(stats.emailUsers || 0).toLocaleString()}
+            <span className="text-xs font-normal text-zinc-400 ml-1">명</span>
+          </div>
+        </button>
+      </div>
+
       {/* 필터 및 검색 툴바 */}
       <AdminCard>
         <AdminCardContent className="p-4 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4">
@@ -271,6 +424,19 @@ export default function AdminUsersPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* 가입 경로 (소셜 프로바이더) 필터 */}
+            <select
+              value={providerFilter}
+              onChange={(e) => setProviderFilter(e.target.value)}
+              className="px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-blue-500"
+            >
+              <option value="all">전체 가입경로</option>
+              <option value="kakao">🟡 카카오 간편가입</option>
+              <option value="naver">🟢 네이버 간편가입</option>
+              <option value="google">🔵 구글 로그인</option>
+              <option value="email">✉️ 일반 이메일</option>
+            </select>
+
             {/* 상태 필터 */}
             <select
               value={statusFilter}
@@ -320,6 +486,7 @@ export default function AdminUsersPage() {
             <AdminTableHeader>
               <AdminTableRow>
                 <AdminTableHead>시민 닉네임 / 이메일</AdminTableHead>
+                <AdminTableHead>가입 경로</AdminTableHead>
                 <AdminTableHead>소속 지역 / 직군</AdminTableHead>
                 <AdminTableHead>보유 PMP (포인트)</AdminTableHead>
                 <AdminTableHead>보유 PMC (화폐)</AdminTableHead>
@@ -331,7 +498,7 @@ export default function AdminUsersPage() {
             <AdminTableBody>
               {users.length === 0 ? (
                 <AdminTableRow>
-                  <AdminTableCell colSpan={7} className="text-center py-12 text-zinc-500">
+                  <AdminTableCell colSpan={8} className="text-center py-12 text-zinc-500">
                     검색 조건에 일치하는 회원이 없습니다.
                   </AdminTableCell>
                 </AdminTableRow>
@@ -348,11 +515,30 @@ export default function AdminUsersPage() {
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-1.5 font-bold text-white text-sm">
                             <span>{u.displayName}</span>
-                            <span className="text-[10px] font-normal text-zinc-500">
-                              ({u.provider})
-                            </span>
                           </div>
                           <p className="text-xs text-zinc-400 font-mono">{u.email}</p>
+                          {u.kakaoId && (
+                            <span className="inline-block text-[10px] text-yellow-400/80 font-mono">
+                              Kakao ID: {u.kakaoId}
+                            </span>
+                          )}
+                          {u.naverId && (
+                            <span className="inline-block text-[10px] text-emerald-400/80 font-mono">
+                              Naver ID: {u.naverId.slice(0, 10)}...
+                            </span>
+                          )}
+                        </div>
+                      </AdminTableCell>
+
+                      {/* 가입 경로 (소셜 프로바이더 배지) */}
+                      <AdminTableCell>
+                        <div className="flex flex-col gap-1 items-start">
+                          {renderProviderBadge(u.provider)}
+                          {u.connectedProviders && u.connectedProviders.length > 1 && (
+                            <span className="text-[10px] text-zinc-500">
+                              + {u.connectedProviders.filter((p) => p !== u.provider).join(", ")}
+                            </span>
+                          )}
                         </div>
                       </AdminTableCell>
 
