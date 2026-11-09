@@ -129,6 +129,16 @@ export default function SignupPage() {
     }
   };
 
+  const handleKakaoSignup = () => {
+    setIsLoading(true);
+    window.location.href = "/api/auth/kakao/login?next=/dashboard";
+  };
+
+  const handleNaverSignup = () => {
+    setIsLoading(true);
+    window.location.href = "/api/auth/naver/login?next=/dashboard";
+  };
+
   const handleEmailSignup = async (e: FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -298,30 +308,45 @@ export default function SignupPage() {
                   소셜 로그인으로 가입 시, 가입 직후 대시보드에서 <strong>활동 닉네임과 지역</strong>을 간편하게 설정할 수 있습니다.
                 </p>
 
+                {/* 1. 카카오 1초 가입 */}
+                <HoverLift>
+                  <button
+                    onClick={handleKakaoSignup}
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-[#FEE500] hover:bg-[#FDD835] text-[#191919] rounded-xl font-bold transition-all duration-200 shadow-md text-sm active:scale-98 cursor-pointer disabled:opacity-50"
+                  >
+                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="#191919">
+                      <path d="M12 3C6.48 3 2 6.58 2 11c0 2.79 1.84 5.24 4.61 6.63-.2.73-.73 2.73-.84 3.16-.13.52.19.51.4.37.16-.11 2.54-1.73 3.53-2.4.7.1 1.42.15 2.15.15 5.52 0 10-3.58 10-8S17.52 3 12 3z" />
+                    </svg>
+                    <span>카카오로 1초 간편 가입</span>
+                  </button>
+                </HoverLift>
+
+                {/* 2. 네이버 1초 가입 */}
+                <HoverLift>
+                  <button
+                    onClick={handleNaverSignup}
+                    disabled={isLoading}
+                    className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-[#03C75A] hover:bg-[#02b351] text-white rounded-xl font-bold transition-all duration-200 shadow-md text-sm active:scale-98 cursor-pointer disabled:opacity-50"
+                  >
+                    <svg className="w-4 h-4 shrink-0 fill-current" viewBox="0 0 24 24">
+                      <path d="M16.273 12.845L7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727v12.845z" />
+                    </svg>
+                    <span>네이버로 1초 간편 가입</span>
+                  </button>
+                </HoverLift>
+
+                {/* 3. 구글 가입 */}
                 <HoverLift>
                   <button
                     onClick={handleGoogleSignup}
                     disabled={isLoading}
-                    className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white text-gray-900 rounded-xl font-bold hover:bg-gray-100 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg text-sm"
+                    className="w-full flex items-center justify-center gap-3 px-6 py-3.5 bg-slate-100 hover:bg-white text-slate-900 rounded-xl font-bold transition-all duration-200 shadow-md text-sm active:scale-98 cursor-pointer disabled:opacity-50 border border-slate-200"
                   >
-                    {isLoading ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      <Chrome className="w-5 h-5 text-red-500" />
-                    )}
+                    <Chrome className="w-5 h-5 text-rose-500 shrink-0" />
                     <span>Google로 계속하기</span>
                   </button>
                 </HoverLift>
-
-                <button
-                  disabled
-                  className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-[#FEE500] text-[#000000] rounded-xl font-bold opacity-50 cursor-not-allowed text-sm"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M12 3C6.48 3 2 6.58 2 11c0 2.79 1.84 5.24 4.61 6.63-.2.73-.73 2.73-.84 3.16-.13.52.19.51.4.37.16-.11 2.54-1.73 3.53-2.4.7.1 1.42.15 2.15.15 5.52 0 10-3.58 10-8S17.52 3 12 3z" />
-                  </svg>
-                  <span>Kakao로 계속하기 (준비중)</span>
-                </button>
               </div>
             ) : (
               /* Email Signup Form */
