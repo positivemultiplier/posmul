@@ -24,15 +24,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
-      - name: Use Node.js 20.x
-        uses: actions/setup-node@v4
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v7
         with:
-          node-version: 20.x
+          node-version: 24.x
           cache: "pnpm"
 
       - name: Install dependencies
@@ -50,15 +50,15 @@ jobs:
     needs: quality
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
-      - name: Use Node.js 20.x
-        uses: actions/setup-node@v4
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v7
         with:
-          node-version: 20.x
+          node-version: 24.x
           cache: "pnpm"
 
       - name: Install dependencies
@@ -73,15 +73,15 @@ jobs:
     needs: [quality, test]
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
-      - name: Use Node.js 20.x
-        uses: actions/setup-node@v4
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v7
         with:
-          node-version: 20.x
+          node-version: 24.x
           cache: "pnpm"
 
       - name: Install dependencies
@@ -115,15 +115,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
-      - name: Use Node.js 20.x
-        uses: actions/setup-node@v4
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v7
         with:
-          node-version: 20.x
+          node-version: 24.x
           cache: "pnpm"
 
       - name: Install dependencies & browsers
@@ -154,7 +154,7 @@ jobs:
           CI: "true"
 
       - name: Upload Playwright Report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: playwright-report
