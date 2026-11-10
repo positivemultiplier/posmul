@@ -69,10 +69,20 @@ import { CreatePredictionGameRequest } from "../application/use-cases/create-pre
 // 타임아웃 60초 설정 (DB 연동)
 jest.setTimeout(60000);
 
-describe("Core Business Flow: Prediction -> Economy -> Donation", () => {
+const hasValidSupabaseEnv = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL &&
+    process.env.SUPABASE_SERVICE_ROLE_KEY &&
+    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("localhost") &&
+    !process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")
+);
+
+// CI 환경이거나 실제 Supabase DB 연결 정보가 없으면 통합 테스트를 스킵합니다.
+const describeIntegration = (hasValidSupabaseEnv && !process.env.CI) ? describe : describe.skip;
+
+describeIntegration("Core Business Flow: Prediction -> Economy -> Donation", () => {
     // Supabase 어드민(서비스 롤) 클라이언트 (테스트 유저 생성 및 잔고 조작용)
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
     // 테스트 변수

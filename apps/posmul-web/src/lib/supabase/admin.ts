@@ -2,8 +2,8 @@
 import { createClient } from "@supabase/supabase-js";
 
 // Service Role Key is required for admin operations (bypassing RLS)
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co";
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "placeholder-service-role-key";
 
 // Note: This module should only be imported in server-side contexts
 // Checking keys at runtime to avoid build-time errors if CLIENT bundle tries to process this file
