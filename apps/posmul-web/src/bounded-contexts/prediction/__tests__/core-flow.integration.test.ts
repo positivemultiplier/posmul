@@ -309,11 +309,12 @@ describe("Core Business Flow: Prediction -> Economy -> Donation", () => {
             throw new Error("Failed to insert target institute: " + insertError.message);
         }
 
+        const donateAmount = Math.max(1000, Math.floor((accAAfter?.pmc_balance || 1000) / 100) * 100);
         const donationReq = {
             type: DonationType.INSTITUTE,
             instituteId: targetInstituteId,
             category: DonationCategory.ENVIRONMENT,
-            amount: accAAfter?.pmc_balance >= 1000 ? accAAfter.pmc_balance : 1000,
+            amount: donateAmount,
             description: "Test donation to environmental organization",
             frequency: DonationFrequency.ONE_TIME,
             message: "For the environment"
