@@ -25,7 +25,7 @@ export async function getLiveRoomsWithStatusAction(): Promise<{
   try {
     const gameIds = LIVE_ROOMS.map((r) => r.predictionGame?.id).filter(Boolean) as string[];
 
-    let dbGameMap = new Map<string, any>();
+    const dbGameMap = new Map<string, any>();
     if (gameIds.length > 0) {
       const { data: dbGames } = await supabaseAdmin
         .schema("prediction")
@@ -40,7 +40,7 @@ export async function getLiveRoomsWithStatusAction(): Promise<{
 
     const mergedRooms = LIVE_ROOMS.map((room) => {
       const g = room.predictionGame?.id ? dbGameMap.get(room.predictionGame.id) : null;
-      let effectiveRoom: LiveEventRoom = { ...room };
+      const effectiveRoom: LiveEventRoom = { ...room };
 
       if (g) {
         effectiveRoom.registrationEnd = g.registration_end || effectiveRoom.registrationEnd;
