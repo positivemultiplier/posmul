@@ -1,6 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local", ".env"],
+  "globalPassThroughEnv": ["CI", "TZ", "RUN_INTEGRATION", "NEXT_PUBLIC_SUPABASE_URL", "NEXT_PUBLIC_SUPABASE_ANON_KEY", "SUPABASE_SERVICE_ROLE_KEY"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

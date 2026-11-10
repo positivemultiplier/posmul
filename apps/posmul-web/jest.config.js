@@ -27,6 +27,8 @@ module.exports = {
   testPathIgnorePatterns: [
     '<rootDir>/tests/', // Exclude Playwright tests
     '<rootDir>/node_modules/',
+    // 실제 DB가 필요한 통합 테스트는 기본 단위 테스트에서 제외 (pnpm test:integration 으로 별도 실행)
+    ...(process.env.RUN_INTEGRATION === 'true' ? [] : ['\\.integration\\.test\\.ts$']),
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
