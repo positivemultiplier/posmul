@@ -25,8 +25,6 @@ export interface PlaceBetRequest {
   optionId: string;
   stakeAmount: number;
   confidence?: number; // 0-1 사이 신뢰도 (선택사항, 기본 0.5)
-  rankedOptionIds?: string[];
-  avoidOptionId?: string;
 }
 
 export interface PlaceBetResponse {
@@ -69,8 +67,6 @@ export async function placeBet(request: PlaceBetRequest): Promise<PlaceBetRespon
       selectedOptionId: request.optionId,
       stakeAmount: createPmpAmount(request.stakeAmount),
       confidence: request.confidence ?? 0.5,
-      rankedOptionIds: request.rankedOptionIds,
-      avoidOptionId: request.avoidOptionId,
     });
 
     if (result.success === false) {

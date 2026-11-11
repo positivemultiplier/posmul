@@ -124,10 +124,6 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
           const last = predictions[predictions.length - 1];
           const predictionPayload = {
             selectedOptionId: last.selectedOptionId,
-            ...(last.rankedOptionIds && last.rankedOptionIds.length > 0
-              ? { rankedOptionIds: [...last.rankedOptionIds] }
-              : {}),
-            ...(last.avoidOptionId ? { avoidOptionId: last.avoidOptionId } : {}),
           };
 
           const { data: predictionId, error: rpcError } = await supabase
@@ -163,10 +159,6 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
             user_id: p.userId,
             prediction_data: {
               selectedOptionId: p.selectedOptionId,
-              ...(p.rankedOptionIds && p.rankedOptionIds.length > 0
-                ? { rankedOptionIds: [...p.rankedOptionIds] }
-                : {}),
-              ...(p.avoidOptionId ? { avoidOptionId: p.avoidOptionId } : {}),
             },
             confidence_level: Math.round(p.confidence * 100),
             bet_amount: Number(p.stake),
@@ -1061,8 +1053,6 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
       for (const predRow of predictionRows) {
         const predData = predRow.prediction_data as {
           selectedOptionId?: string;
-          rankedOptionIds?: string[];
-          avoidOptionId?: string;
         } | null;
         const selectedOptionId = predData?.selectedOptionId || "unknown";
 
@@ -1073,13 +1063,6 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
           // DB에서 Decimal로 반환되므로 정수로 변환 (parseInt 사용)
           stake: createPmpAmount(parseInt(String(predRow.bet_amount), 10)) as any,
           confidence: predRow.confidence_level / 100,
-          rankedOptionIds: Array.isArray(predData?.rankedOptionIds)
-            ? predData.rankedOptionIds
-            : undefined,
-          avoidOptionId:
-            typeof predData?.avoidOptionId === "string"
-              ? predData.avoidOptionId
-              : undefined,
         });
 
         if (predictionResult.success) {

@@ -20,6 +20,11 @@ import {
   type BrierLearningResult,
   type UserLearningProfileSummary,
 } from "../../domain/services/collective-intelligence-engine";
+import {
+  calculateAgencyTheoryMetrics,
+  calculateProspectConfidenceAdjustment,
+  calculateSeededMultiplier,
+} from "../../domain/services/prediction-economic-model";
 
 type PmpAmount = number;
 type PmcAmount = number;
@@ -113,11 +118,12 @@ export class PredictionSettlementService {
     moneyWaveSeedPool: number = PredictionSettlementService.DEFAULT_LIQUIDITY_SEED,
     feeRate: number = 0.02
   ): number {
-    const effectiveTarget = Math.max(targetOptionStake, 1000);
-    const otherStake = Math.max(0, totalAllOptionsStake - targetOptionStake);
-    const distributablePool = otherStake + moneyWaveSeedPool;
-    const grossMultiplier = 1 + distributablePool / effectiveTarget;
-    return Number((grossMultiplier * (1 - feeRate)).toFixed(2));
+    return calculateSeededMultiplier(
+      targetOptionStake,
+      totalAllOptionsStake,
+      moneyWaveSeedPool,
+      feeRate
+    );
   }
 
   /**
@@ -181,11 +187,12 @@ export class PredictionSettlementService {
       result.allocatedMoneyWavePool
     );
 
-    // 승자별 정산 계산 (패자 풀 + MoneyWave 시드 풀 결합, 얼리버드 시간 가중치 적용)
+    // 승자별 정산 계산 (패자 풀 + MoneyWave 시드 풀 결합, 얼리버드 + Agency/Prospect 보너스)
     const winnerSettlements = this.calculateWinnerPayouts(
       winners,
       losersStaked,
       moneyWaveDistribution.totalPool,
+      participants.length,
       result.gameOpenTime,
       result.gameCloseTime
     );
@@ -238,6 +245,7 @@ export class PredictionSettlementService {
     winners: ParticipantPredictionData[],
     losersStaked: PmpAmount,
     moneyWavePool: PmcAmount,
+    totalParticipants: number,
     gameOpenTime?: Date,
     gameCloseTime?: Date
   ): SettlementCalculationData[] {
@@ -276,10 +284,31 @@ export class PredictionSettlementService {
       const netWinning = Math.floor(grossWinning - platformFee);
       const finalWinning = Math.max(netWinning, this.MIN_WINNING_THRESHOLD);
 
-      const agencyBonus =
-        winner.confidenceLevel && winner.confidenceLevel >= 0.8
-          ? Math.floor(finalWinning * this.AGENCY_BONUS_RATE)
-          : 0;
+      // confidenceLevel 0~100 또는 0~1 스케일 모두 안전 정규화 후 Agency · Prospect 적정확신 보너스 계산
+      const normalizedConf =
+        winner.confidenceLevel === undefined
+          ? 0.5
+          : winner.confidenceLevel > 1
+          ? winner.confidenceLevel / 100
+          : winner.confidenceLevel;
+
+      const prospectAdj = calculateProspectConfidenceAdjustment(1.0, normalizedConf);
+      const agencyAdj = calculateAgencyTheoryMetrics({
+        accuracy: 1.0,
+        confidence: normalizedConf,
+        totalParticipants: Math.max(totalParticipants, winners.length),
+        totalCorrectPredictions: winners.length,
+      });
+
+      const effectiveAgencyBonusRate =
+        normalizedConf >= 0.8
+          ? Math.max(
+              this.AGENCY_BONUS_RATE,
+              Math.min(0.25, prospectAdj.confidenceBonus + agencyAdj.exclusivityBonus * 0.5)
+            )
+          : Math.min(0.15, prospectAdj.confidenceBonus * 0.5);
+
+      const agencyBonus = Math.floor(finalWinning * effectiveAgencyBonusRate);
 
       return {
         userId: winner.userId,
@@ -291,7 +320,7 @@ export class PredictionSettlementService {
         platformFee,
         netProfit: finalWinning - winner.stakedAmount,
         agencyBonus,
-        settlementReason: `예측 성공 (지분 ${(shareRatio * 100).toFixed(1)}%, 얼리버드 ${earlyBirdWeight}x)`,
+        settlementReason: `예측 성공 (지분 ${(shareRatio * 100).toFixed(1)}%, 얼리버드 ${earlyBirdWeight}x, 신뢰도 ${Math.round(normalizedConf * 100)}%)`,
       };
     });
   }

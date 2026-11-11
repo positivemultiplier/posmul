@@ -24,6 +24,12 @@ import {
   EconomyKernel,
   getEconomyKernel,
 } from "../../../../shared/economy-kernel/services/economy-kernel.service";
+import {
+  assessPortfolioRisk,
+  calculateAgencyTheoryMetrics,
+  calculateCapmRiskPremium as computeCapmRiskPremium,
+  calculateProspectConfidenceAdjustment,
+} from "./prediction-economic-model";
 
 /**
  * 예측 경제 서비스 에러
@@ -411,33 +417,11 @@ export class PredictionEconomicService {
     remainingAfterParticipation: number
   ): PmpParticipationCheck["riskAssessment"] {
     void remainingAfterParticipation;
-    const riskRatio = requiredAmount / currentBalance;
-
-    let riskLevel: "LOW" | "MEDIUM" | "HIGH";
-    let riskScore: number;
-    let recommendation: string;
-
-    if (riskRatio <= 0.1) {
-      riskLevel = "LOW";
-      riskScore = riskRatio * 5; // 0-0.5 범위
-      recommendation =
-        "Safe participation level. Low impact on your PmpAmount portfolio.";
-    } else if (riskRatio <= 0.3) {
-      riskLevel = "MEDIUM";
-      riskScore = 0.5 + (riskRatio - 0.1) * 2.5; // 0.5-1.0 범위
-      recommendation =
-        "Moderate risk. Consider your confidence level before participating.";
-    } else {
-      riskLevel = "HIGH";
-      riskScore = Math.min(1.0, 0.8 + (riskRatio - 0.3) * 0.5);
-      recommendation =
-        "High risk participation. Only proceed if you have high confidence.";
-    }
-
+    const assessed = assessPortfolioRisk(currentBalance, requiredAmount);
     return {
-      riskLevel,
-      riskScore,
-      recommendation,
+      riskLevel: assessed.riskLevel,
+      riskScore: assessed.riskScore,
+      recommendation: assessed.recommendation,
     };
   }
 
@@ -449,14 +433,8 @@ export class PredictionEconomicService {
     accuracy: number,
     confidence: number
   ): number {
-    // 과신 페널티: 신뢰도가 정확도를 크게 초과하면 보너스 감소
-    const overconfidencePenalty = Math.max(0, confidence - accuracy);
-
-    // 적정 신뢰도 보너스: 정확도와 신뢰도가 일치할 때 최대
-    const calibrationBonus = 1 - Math.abs(confidence - accuracy);
-
-    // 최종 보너스 (0-0.2 범위)
-    return Math.max(0, calibrationBonus * 0.2 - overconfidencePenalty * 0.1);
+    return calculateProspectConfidenceAdjustment(accuracy, confidence)
+      .confidenceBonus;
   }
 
   /**
@@ -469,21 +447,12 @@ export class PredictionEconomicService {
     totalParticipants: number,
     totalCorrectPredictions: number
   ): number {
-    // 정보 품질 스코어
-    const informationQuality = accuracy * confidence;
-
-    // 집단 지성 효과 (많은 사람이 참여할수록 정보 가치 증가)
-    const collectiveIntelligenceBonus = Math.min(0.1, totalParticipants / 1000);
-
-    // 독점적 정보 보너스 (정답자가 적을수록 더 높은 보상)
-    const exclusivityBonus =
-      totalCorrectPredictions > 0
-        ? Math.min(0.15, 1 / totalCorrectPredictions)
-        : 0;
-
-    return (
-      informationQuality * 0.1 + collectiveIntelligenceBonus + exclusivityBonus
-    );
+    return calculateAgencyTheoryMetrics({
+      accuracy,
+      confidence,
+      totalParticipants,
+      totalCorrectPredictions,
+    }).totalAdjustmentRate;
   }
 
   /**
@@ -495,16 +464,7 @@ export class PredictionEconomicService {
     totalParticipants: number,
     accuracy: number
   ): number {
-    // 베타 계산 (게임 중요도와 참여자 수 기반)
-    const beta = (gameImportance / 5) * Math.min(1.5, totalParticipants / 100);
-
-    // 시장 위험 프리미엄 (3% 기본값)
-    const marketRiskPremium = 0.03;
-
-    // 개별 위험 조정 (정확도 기반)
-    const individualRiskAdjustment = accuracy * 0.02;
-
-    return beta * marketRiskPremium + individualRiskAdjustment;
+    return computeCapmRiskPremium(gameImportance, totalParticipants, accuracy);
   }
 }
 

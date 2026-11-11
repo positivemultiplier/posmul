@@ -102,8 +102,6 @@ async function getGameHistoryFallback(
         .map((bet) => {
             const pData = bet.prediction_data as {
                 selectedOptionId?: string;
-                avoidOptionId?: string;
-                rankedOptionIds?: string[];
             } | null;
             if (!pData?.selectedOptionId) return null;
             const rawConf = Number(bet.confidence_level);
@@ -117,8 +115,6 @@ async function getGameHistoryFallback(
                 stakeAmount: Number(bet.bet_amount) || 100,
                 confidence: normalizedConf,
                 createdAt: bet.created_at,
-                avoidOptionId: pData.avoidOptionId,
-                rankedOptionIds: pData.rankedOptionIds,
             };
         })
         .filter((s): s is NonNullable<typeof s> => s !== null);

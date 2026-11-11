@@ -21,13 +21,25 @@ import {
   type PredictionGameDetail,
 } from "../[slug]/client";
 import {
-  analyzeSocialChoiceAggregation,
   computeBayesianMarketPosterior,
   summarizeUserLearningProfile,
   type CollectiveParticipationSignal,
   type SettledPredictionRecord,
   type UserLearningProfileSummary,
 } from "../../../bounded-contexts/prediction/domain/services/collective-intelligence-engine";
+import { analyzePredictionCapmAndEconomy } from "../../../bounded-contexts/prediction/domain/services/prediction-economic-model";
+
+function mapDifficultyToImportance(raw: unknown, optionCount: number): number {
+  if (typeof raw === "number" && Number.isFinite(raw)) {
+    return Math.min(5, Math.max(1, raw));
+  }
+  const normalized = String(raw || "").toLowerCase();
+  if (normalized === "easy" || normalized === "low") return 2;
+  if (normalized === "hard" || normalized === "high") return 4;
+  if (normalized === "expert" || normalized === "extreme") return 5;
+  if (normalized === "medium" || normalized === "normal") return 3;
+  return optionCount >= 4 ? 4 : 3;
+}
 
 function mapStatus(value: unknown): "ACTIVE" | "ENDED" | "SETTLED" {
   if (value === "ACTIVE") return "ACTIVE";
@@ -152,8 +164,6 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
   betsData.forEach((bet) => {
     const pData = bet.prediction_data as {
       selectedOptionId?: string;
-      rankedOptionIds?: string[];
-      avoidOptionId?: string;
     } | null;
     const optId = pData?.selectedOptionId;
     const amt = Number(bet.bet_amount) || 0;
@@ -173,13 +183,6 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
         confidence,
         createdAt: bet.created_at,
         skillWeight: isCurrentUser ? userLearningProfile?.skillWeight : 1.0,
-        rankedOptionIds: Array.isArray(pData?.rankedOptionIds)
-          ? pData.rankedOptionIds
-          : undefined,
-        avoidOptionId:
-          typeof pData?.avoidOptionId === "string"
-            ? pData.avoidOptionId
-            : undefined,
       });
     }
     calculatedTotalVolume += amt;
@@ -195,19 +198,15 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     }
   }
 
-  // 1) 순차 베이지안 사후확률 계산 & 2) 애로우/콩도르세/보르다 사회선택 분석 실행
+  // 1) 순차 베이지안 사후확률 계산
   const collectiveOptions = parsedOptions.map((opt) => ({
     id: opt.id,
     label: opt.text,
     priorProbability: opt.currentOdds,
   }));
   const bayesianResult = computeBayesianMarketPosterior(collectiveOptions, signals);
-  const socialChoiceResult = analyzeSocialChoiceAggregation(collectiveOptions, signals);
 
   const bayesianById = new Map(bayesianResult.options.map((o) => [o.optionId, o]));
-  const bordaById = new Map(
-    socialChoiceResult.bordaRanking.map((b) => [b.optionId, b])
-  );
 
   const finalTotalVolume =
     calculatedTotalVolume > 0
@@ -222,6 +221,40 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
       : Number(boostedGame.total_participants_count) ||
         Number(stats?.total_participants) ||
         18;
+
+  const prizePool = Math.round(Number(boostedGame.allocated_prize_pool) || 25000);
+  const gameImportance = mapDifficultyToImportance(
+    (dbGame as { difficulty?: unknown }).difficulty,
+    parsedOptions.length
+  );
+
+  // 2) CAPM · Agency Theory · Behavioral Economics 시장 분석 실행
+  const capmInputs = parsedOptions.map((opt, idx) => {
+    const optVol = optionVolumes[opt.id] || 0;
+    const bayes = bayesianById.get(opt.id);
+    const prob = bayes
+      ? bayes.bayesianProbability
+      : opt.currentOdds || 1 / parsedOptions.length;
+    const clampedProb = Math.max(0.02, Math.min(0.98, prob));
+    return {
+      id: opt.id || `option-${idx}`,
+      label: opt.text || `옵션 ${idx + 1}`,
+      probability: clampedProb,
+      volume: optVol > 0 ? optVol : Math.round(finalTotalVolume * clampedProb),
+    };
+  });
+
+  const marketEconomy = analyzePredictionCapmAndEconomy({
+    options: capmInputs,
+    totalVolume: finalTotalVolume,
+    participantCount,
+    prizePool,
+    gameImportance,
+    normalizedEntropy: bayesianResult.normalizedEntropy,
+  });
+  const optionEconomyById = new Map(
+    marketEconomy.options.map((m) => [m.optionId, m])
+  );
 
   const effectiveType = mapDbPredictionType(dbGame.prediction_type, parsedOptions.length) as
     | "binary"
@@ -248,9 +281,10 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     description: dbGame.description || "",
     predictionType: effectiveType,
     options: parsedOptions.map((opt, idx) => {
+      const optionId = opt.id || `option-${idx}`;
       const optVol = optionVolumes[opt.id] || 0;
       const bayes = bayesianById.get(opt.id);
-      const borda = bordaById.get(opt.id);
+      const econ = optionEconomyById.get(optionId);
       const prob = bayes
         ? bayes.bayesianProbability
         : opt.currentOdds || 1 / parsedOptions.length;
@@ -258,15 +292,17 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
       const odds = clampedProb > 0 ? Number((1 / clampedProb).toFixed(2)) : 2.0;
 
       return {
-        id: opt.id || `option-${idx}`,
+        id: optionId,
         label: opt.text || `옵션 ${idx + 1}`,
         description: opt.description,
         probability: Number(clampedProb.toFixed(4)),
         rawVolumeProbability: bayes?.rawVolumeProbability,
         priorProbability: bayes?.priorProbability ?? opt.currentOdds,
         credibleInterval: bayes?.credibleInterval,
-        bordaRank: borda?.rank,
-        bordaNormalizedScore: borda?.normalizedScore,
+        capmBeta: econ?.capmBeta,
+        capmRequiredReturn: econ?.capmRequiredReturn,
+        jensenAlpha: econ?.jensenAlpha,
+        agencyExclusivityBonus: econ?.agencyExclusivityBonus,
         odds: Math.min(Math.max(odds, 1.01), 99),
         volume: optVol > 0 ? optVol : Math.round(finalTotalVolume * clampedProb),
         change24h: idx === 0 ? 2.4 : -1.2,
@@ -277,8 +313,9 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
       totalPriorStrength: bayesianResult.totalPriorStrength,
       normalizedEntropy: bayesianResult.normalizedEntropy,
       isLowSampleStabilized: bayesianResult.isLowSampleStabilized,
-      socialChoice: socialChoiceResult,
       recentOptionShares,
+      gameImportance,
+      marketEconomy,
     },
     totalVolume: finalTotalVolume,
     participantCount,
@@ -303,7 +340,7 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
       reputation: 4.9,
       avatar: "🏛️",
     },
-    prizePool: Math.round(Number(boostedGame.allocated_prize_pool) || 25000),
+    prizePool,
     minimumStake: Number(dbGame.min_bet_amount) || 100,
     maximumStake: Number(dbGame.max_bet_amount) || 50000,
   };
