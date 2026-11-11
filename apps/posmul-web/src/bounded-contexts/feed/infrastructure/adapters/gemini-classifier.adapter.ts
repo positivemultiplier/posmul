@@ -7,9 +7,15 @@ import {
 } from "../../domain/services/llm-classifier.service";
 import { ContentClassification } from "../../domain/value-objects/feed-types";
 import { validateGeneratedDraft } from "./draft-quality-gate";
-import { ExaoneClient, extractJsonFromText } from "./exaone-client";
+import { ExaoneClient } from "./exaone-client";
+import {
+  CustomGeminiCaller,
+  GeminiClient,
+  LlmProvider,
+  resolveLlmOrder,
+} from "./gemini-client";
 
-export type LlmProvider = "exaone" | "gemini";
+export type { LlmProvider };
 
 export interface StructuredBlueprint {
   title: string;
@@ -110,14 +116,8 @@ export interface MultiLlmDeps {
   exaoneClient?: ExaoneClient;
   geminiApiKey?: string;
   geminiModels?: string[];
-  geminiCaller?: (
-    systemPrompt: string,
-    userPrompt: string,
-    timeoutMs?: number
-  ) => Promise<string>;
+  geminiCaller?: CustomGeminiCaller;
 }
-
-const DEFAULT_GEMINI_MODELS = ["gemini-3.8-flash", "gemini-flash-latest"];
 
 const ALLOWED_CATEGORIES = new Set([
   "SPORTS",
@@ -136,125 +136,22 @@ const ALLOWED_CATEGORIES = new Set([
  */
 export class GeminiClassifierAdapter implements ILlmClassifierService {
   private readonly exaone: ExaoneClient;
-  private readonly geminiApiKey: string;
-  private readonly geminiModels: string[];
-  private readonly customGeminiCaller?: MultiLlmDeps["geminiCaller"];
+  private readonly gemini: GeminiClient;
 
   constructor(deps?: MultiLlmDeps) {
     this.exaone = deps?.exaoneClient ?? new ExaoneClient();
-    this.geminiApiKey = (
-      deps?.geminiApiKey ??
-      process.env.GOOGLE_GEMINI_API_KEY ??
-      process.env.GEMINI_API_KEY ??
-      ""
-    ).trim();
-    this.geminiModels = deps?.geminiModels ?? DEFAULT_GEMINI_MODELS;
-    this.customGeminiCaller = deps?.geminiCaller;
-  }
-
-  private hasGemini(): boolean {
-    return Boolean(this.customGeminiCaller) || this.geminiApiKey.length > 0;
+    this.gemini = new GeminiClient({
+      apiKey: deps?.geminiApiKey,
+      models: deps?.geminiModels,
+      customCaller: deps?.geminiCaller,
+    });
   }
 
   /**
    * 콘텐츠 언어·도메인에 따라 1순위/2순위 LLM 순서 결정
    */
   public resolveProviderOrder(content: string): LlmProvider[] {
-    const cleanText = content
-      .replace(/\[POSMUL_BLUEPRINT\][\s\S]*?\[\/POSMUL_BLUEPRINT\]/g, "")
-      .trim();
-    const koreanMatches = cleanText.match(/[가-힣]/g) ?? [];
-    const koreanRatio =
-      cleanText.length > 0 ? koreanMatches.length / cleanText.length : 0;
-    const isKoreanContext =
-      koreanRatio >= 0.08 ||
-      /국회|한국|코스피|코스닥|원\/달러|금융통화위원회|통계청|멜론|케이팝|법안/.test(
-        cleanText
-      );
-
-    const preferred: LlmProvider[] = isKoreanContext
-      ? ["exaone", "gemini"]
-      : ["gemini", "exaone"];
-
-    return preferred.filter((provider) =>
-      provider === "exaone" ? this.exaone.isConfigured() : this.hasGemini()
-    );
-  }
-
-  private async callGeminiJson<T>(
-    systemPrompt: string,
-    userPrompt: string,
-    timeoutMs = 22000
-  ): Promise<T> {
-    if (this.customGeminiCaller) {
-      const text = await this.customGeminiCaller(
-        systemPrompt,
-        userPrompt,
-        timeoutMs
-      );
-      return extractJsonFromText<T>(text);
-    }
-
-    if (!this.geminiApiKey) {
-      throw new Error("GOOGLE_GEMINI_API_KEY is not configured");
-    }
-
-    let lastError: Error | null = null;
-    for (const model of this.geminiModels) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
-          this.geminiApiKey
-        )}`;
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            systemInstruction: { parts: [{ text: systemPrompt }] },
-            contents: [{ role: "user", parts: [{ text: userPrompt }] }],
-            generationConfig: {
-              temperature: 0.25,
-              maxOutputTokens: 1600,
-              responseMimeType: "application/json",
-            },
-          }),
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          const errText = await response.text().catch(() => "");
-          lastError = new Error(
-            `Gemini(${model}) error ${response.status}: ${errText.slice(0, 200)}`
-          );
-          continue;
-        }
-
-        const payload = (await response.json()) as {
-          candidates?: Array<{
-            content?: { parts?: Array<{ text?: string }> };
-          }>;
-        };
-        const rawText =
-          payload.candidates?.[0]?.content?.parts
-            ?.map((p) => p.text ?? "")
-            .join("")
-            .trim() ?? "";
-
-        if (!rawText) {
-          lastError = new Error(`Gemini(${model}) returned empty text`);
-          continue;
-        }
-
-        return extractJsonFromText<T>(rawText);
-      } catch (err) {
-        lastError = err instanceof Error ? err : new Error(String(err));
-      } finally {
-        clearTimeout(timer);
-      }
-    }
-
-    throw lastError ?? new Error("All Gemini models failed");
+    return resolveLlmOrder(content, this.exaone, this.gemini);
   }
 
   private async invokeProviderJson<T>(
@@ -269,7 +166,7 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
         timeoutMs: 25000,
       });
     }
-    return this.callGeminiJson<T>(systemPrompt, userPrompt, 22000);
+    return this.gemini.generateJson<T>(systemPrompt, userPrompt, 22000, 0.25);
   }
 
   public async classify(content: string): Promise<Result<ClassificationResult>> {

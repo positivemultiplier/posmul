@@ -1463,9 +1463,6 @@ export function UniversalPredictionDetailClient({
             <BalancedDecisionBriefing
               gameId={game.id}
               gameTitle={game.title}
-              onRewardClaimed={(earned) => {
-                setBalance((prev) => ({ ...prev, pmp: prev.pmp + earned }));
-              }}
             />
 
             {/* 3️⃣ 📋 의제 정보 & 공식 판정 기준 (심플 콤팩트 카드) */}

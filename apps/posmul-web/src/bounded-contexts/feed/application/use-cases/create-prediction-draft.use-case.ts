@@ -8,6 +8,7 @@ import {
 import { settlementOrchestrator } from "@/bounded-contexts/prediction/application/services/settlement-orchestrator.service";
 import type { SettlementSourceType } from "@/bounded-contexts/prediction/domain/value-objects/settlement-types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { balancedBriefingService } from "../../../prediction/application/services/balanced-briefing.service";
 
 import { IFeedItemRepository } from "../../domain/repositories/feed.repository";
 import {
@@ -253,6 +254,20 @@ async function insertPredictionGameFromDraft(
       },
       scheduledAt: settlementDate,
     });
+  }
+
+  // AI 균형 의사결정 브리핑 사전 생성 (베스트에포트 — 실패 시 상세 페이지 조회 시 보강)
+  if (createdGameId) {
+    try {
+      await balancedBriefingService.getOrCreateForGameId(createdGameId, {
+        timeoutMs: 14000,
+      });
+    } catch (briefingError) {
+      console.warn(
+        "[CreatePredictionDraft] AI 균형 브리핑 사전 생성 건너뜀:",
+        briefingError,
+      );
+    }
   }
 
   return createdGameId;

@@ -1,326 +1,448 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Scale,
-  TrendingUp,
-  TrendingDown,
+  AlertTriangle,
+  BarChart3,
+  Cpu,
   Info,
-  ExternalLink,
-  Sparkles,
-  CheckCircle2,
-  Award,
-  ChevronRight,
-  BookOpen,
-  Newspaper,
+  Layers,
+  Scale,
+  ShieldAlert,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
-import {
+
+import { getBalancedBriefingAction } from "../../../../app/prediction/components/prediction-briefing.actions";
+import type {
   BalancedBriefingDTO,
-  getBalancedBriefingAction,
-  claimBriefingRewardAction,
-} from "../../../../app/prediction/components/prediction-briefing.actions";
+  OptionScenarioBriefing,
+  ScenarioTone,
+} from "../../domain/value-objects/briefing.types";
 
 interface BalancedDecisionBriefingProps {
   gameId: string;
-  gameTitle: string;
-  onRewardClaimed?: (pmp: number) => void;
+  gameTitle?: string;
 }
 
-export function BalancedDecisionBriefing({
-  gameId,
-  gameTitle,
-  onRewardClaimed,
-}: BalancedDecisionBriefingProps) {
-  const [briefing, setBriefing] = useState<BalancedBriefingDTO | null>(null);
-  const [isRewarded, setIsRewarded] = useState(false);
-  const [activeTab, setActiveTab] = useState<"neutral" | "yes" | "no">("neutral");
-  const [readTabs, setReadTabs] = useState<Set<string>>(new Set(["neutral"]));
-  const [isClaiming, setIsClaiming] = useState(false);
-  const [rewardMsg, setRewardMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    getBalancedBriefingAction(gameId).then((res) => {
-      if (res.success && res.briefing) {
-        setBriefing(res.briefing);
-        if (res.isRewarded) setIsRewarded(true);
-      }
-    });
-  }, [gameId]);
-
-  const handleTabChange = (tab: "neutral" | "yes" | "no") => {
-    setActiveTab(tab);
-    setReadTabs((prev) => new Set([...prev, tab]));
-  };
-
-  const allRead = readTabs.has("neutral") && readTabs.has("yes") && readTabs.has("no");
-
-  const handleClaimReward = async () => {
-    if (!allRead || isRewarded || isClaiming) return;
-    setIsClaiming(true);
-    try {
-      const res = await claimBriefingRewardAction(gameId);
-      if (res.success) {
-        setIsRewarded(true);
-        setRewardMsg(res.message);
-        onRewardClaimed?.(res.earnedPmp ?? 20);
-        setTimeout(() => setRewardMsg(null), 5000);
-      } else {
-        alert(res.message);
-      }
-    } catch (err: any) {
-      alert(err?.message || "보상 수령 오류");
-    } finally {
-      setIsClaiming(false);
-    }
-  };
-
-  if (!briefing) {
-    return (
-      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center text-xs text-slate-500">
-        AI 균형 브리핑 데이터를 분석 중입니다...
-      </div>
-    );
+const TONE_STYLE: Record<
+  ScenarioTone,
+  {
+    tabActive: string;
+    panelBg: string;
+    badgeBg: string;
+    headingText: string;
+    dotBg: string;
+    icon: React.ReactNode;
   }
+> = {
+  bull: {
+    tabActive: "bg-blue-950 text-blue-200 shadow-md border border-blue-700/80",
+    panelBg: "bg-blue-950/25 border-blue-800/50",
+    badgeBg: "bg-blue-900/80 text-blue-200 border-blue-700",
+    headingText: "text-blue-200",
+    dotBg: "bg-blue-400",
+    icon: <TrendingUp className="w-3.5 h-3.5 text-blue-400 shrink-0" />,
+  },
+  bear: {
+    tabActive: "bg-rose-950 text-rose-200 shadow-md border border-rose-700/80",
+    panelBg: "bg-rose-950/25 border-rose-800/50",
+    badgeBg: "bg-rose-900/80 text-rose-200 border-rose-700",
+    headingText: "text-rose-200",
+    dotBg: "bg-rose-400",
+    icon: <TrendingDown className="w-3.5 h-3.5 text-rose-400 shrink-0" />,
+  },
+  neutral: {
+    tabActive: "bg-amber-950/80 text-amber-200 shadow-md border border-amber-700/80",
+    panelBg: "bg-amber-950/20 border-amber-800/50",
+    badgeBg: "bg-amber-900/70 text-amber-200 border-amber-700",
+    headingText: "text-amber-200",
+    dotBg: "bg-amber-400",
+    icon: <Scale className="w-3.5 h-3.5 text-amber-400 shrink-0" />,
+  },
+  darkhorse: {
+    tabActive: "bg-purple-950/80 text-purple-200 shadow-md border border-purple-700/80",
+    panelBg: "bg-purple-950/25 border-purple-800/50",
+    badgeBg: "bg-purple-900/80 text-purple-200 border-purple-700",
+    headingText: "text-purple-200",
+    dotBg: "bg-purple-400",
+    icon: <AlertTriangle className="w-3.5 h-3.5 text-purple-400 shrink-0" />,
+  },
+};
 
+function getModeHeadline(mode: BalancedBriefingDTO["mode"]): {
+  subtitle: string;
+  description: string;
+} {
+  switch (mode) {
+    case "WIN_DRAW_LOSE":
+      return {
+        subtitle: "3방향 균형 분석 · 중립 팩트 및 결과별 시나리오",
+        description:
+          "양 팀의 승패 변수뿐 아니라 무승부·동결이 나타나는 제3의 전개 조건까지 입체적으로 비교합니다.",
+      };
+    case "RANKING":
+      return {
+        subtitle: "다구간·랭킹 분포 매트릭스 · 선택지별 성립 조건",
+        description:
+          "현재 기준선 대비 각 구간·후보가 적중할 조건과 시장이 간과하기 쉬운 변동성 변수를 비교합니다.",
+      };
+    default:
+      return {
+        subtitle: "양자택일 대조 분석 · 중립 팩트 및 양측 핵심 논거",
+        description:
+          "한쪽 확증편향을 줄이기 위해 중립 기준선과 양측 시나리오의 핵심 촉매·리스크를 대조합니다.",
+      };
+  }
+}
+
+function NeutralFactSheet({
+  briefing,
+}: {
+  briefing: BalancedBriefingDTO;
+}) {
   return (
-    <div className="space-y-4 p-5 sm:p-6 rounded-3xl bg-gradient-to-b from-slate-900 via-slate-900/80 to-slate-950 border border-slate-800 shadow-2xl relative overflow-hidden">
-      {/* 배경 장식 */}
-      <div className="absolute top-0 right-0 w-64 h-32 bg-blue-500/5 blur-3xl pointer-events-none" />
-
-      {/* 상단 헤더 */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+    <div className="space-y-4 p-5 rounded-2xl bg-slate-950/75 border border-slate-800/80 text-xs">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-950 text-indigo-300 border border-indigo-800/60 flex items-center gap-1">
-              <Scale className="w-3 h-3 text-indigo-400" />
-              <span>AI 균형 의사결정 브리핑</span>
-            </span>
-            <span className="text-[11px] text-amber-400 font-bold flex items-center gap-1">
-              <Sparkles className="w-3.5 h-3.5" />
-              양쪽 시각 완독 시 +20 PMP
-            </span>
-          </div>
-          <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
-            <span>편향 없는 3단 분석: 중립 팩트 · YES 논거 · NO 논거</span>
-          </h3>
-          <p className="text-xs text-slate-400">
-            결정하기 전, 양쪽 진영의 핵심 팩트와 언론사 보도를 대조하며 합리적인 선택을 훈련하세요.
+          <span className="text-[10px] font-extrabold text-sky-400 tracking-wider uppercase">
+            Official Fact Check
+          </span>
+          <h4 className="text-sm font-extrabold text-white">
+            {briefing.neutralFacts.title}
+          </h4>
+          <p className="text-slate-300/90 leading-relaxed whitespace-pre-line">
+            {briefing.neutralFacts.description}
           </p>
         </div>
+        <span className="px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 text-[10px] font-mono border border-slate-700 shrink-0 self-start">
+          출처: {briefing.neutralFacts.source}
+        </span>
+      </div>
 
-        {/* 완독 진행도 인디케이터 */}
-        <div className="flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-2xl border border-slate-800 text-xs shrink-0">
-          <BookOpen className="w-4 h-4 text-slate-400" />
-          <span className="text-slate-400">학습 진행도:</span>
-          <span className="font-extrabold text-blue-400">{readTabs.size} / 3</span>
-          {allRead && <CheckCircle2 className="w-4 h-4 text-emerald-400" />}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+        <div className="p-3 rounded-xl bg-slate-900/85 border border-slate-800 space-y-1">
+          <span className="text-[10px] text-slate-400 font-bold">현재 기준선</span>
+          <div className="text-xs sm:text-sm font-black text-amber-300 leading-snug">
+            {briefing.neutralFacts.currentValue}
+          </div>
+        </div>
+        <div className="p-3 rounded-xl bg-slate-900/85 border border-slate-800 space-y-1">
+          <span className="text-[10px] text-slate-400 font-bold">시장 맥락·추이</span>
+          <div className="text-xs font-bold text-slate-200 leading-snug">
+            {briefing.neutralFacts.historicalContext}
+          </div>
+        </div>
+        <div className="p-3 rounded-xl bg-slate-900/85 border border-slate-800 space-y-1">
+          <span className="text-[10px] text-slate-400 font-bold">마감·정산 일정</span>
+          <div className="text-xs font-bold text-slate-200 leading-snug">
+            {briefing.neutralFacts.officialSchedule}
+          </div>
         </div>
       </div>
 
-      {/* 3단 탭 셀렉터 */}
-      <div className="grid grid-cols-3 gap-2 p-1.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs font-bold">
-        <button
-          onClick={() => handleTabChange("neutral")}
-          className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-            activeTab === "neutral"
-              ? "bg-slate-800 text-white shadow-md border border-slate-700"
-              : "text-slate-400 hover:text-white"
-          }`}
-        >
-          <Info className="w-3.5 h-3.5 text-blue-400" />
-          <span>⚖️ 중립 팩트</span>
-          {readTabs.has("neutral") && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
-        </button>
-
-        <button
-          onClick={() => handleTabChange("yes")}
-          className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-            activeTab === "yes"
-              ? "bg-blue-950 text-blue-300 shadow-md border border-blue-800"
-              : "text-slate-400 hover:text-white"
-          }`}
-        >
-          <TrendingUp className="w-3.5 h-3.5 text-blue-400" />
-          <span className="line-clamp-1">🔵 YES 논거</span>
-          {readTabs.has("yes") && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
-        </button>
-
-        <button
-          onClick={() => handleTabChange("no")}
-          className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
-            activeTab === "no"
-              ? "bg-rose-950 text-rose-300 shadow-md border border-rose-800"
-              : "text-slate-400 hover:text-white"
-          }`}
-        >
-          <TrendingDown className="w-3.5 h-3.5 text-rose-400" />
-          <span className="line-clamp-1">🔴 NO 논거</span>
-          {readTabs.has("no") && <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />}
-        </button>
-      </div>
-
-      {/* 탭 1: ⚖️ 중립 팩트체크 (Fact Sheet) */}
-      {activeTab === "neutral" && (
-        <div className="space-y-4 p-5 rounded-2xl bg-slate-950/70 border border-slate-800/80 text-xs animate-in fade-in duration-200">
-          <div className="flex justify-between items-start">
-            <div className="space-y-1">
-              <span className="text-[10px] font-extrabold text-blue-400 tracking-wider">OFFICIAL FACT CHECK</span>
-              <h4 className="text-sm font-extrabold text-white">{briefing.neutralFacts.title}</h4>
-              <p className="text-slate-400 leading-relaxed">{briefing.neutralFacts.description}</p>
-            </div>
-            <span className="px-2.5 py-1 rounded-lg bg-slate-900 text-slate-300 text-[10px] font-mono border border-slate-700 shrink-0">
-              출처: {briefing.neutralFacts.source}
+      {briefing.tailRiskNote && (
+        <div className="p-3 rounded-xl bg-purple-950/30 border border-purple-800/50 flex items-start gap-2 text-[11px] text-purple-200">
+          <ShieldAlert className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-extrabold text-purple-300 mr-1.5">
+              주의 변수 · 꼬리위험:
             </span>
+            <span>{briefing.tailRiskNote}</span>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 font-bold">현재 공식 수치</span>
-              <div className="text-sm font-black text-amber-300">{briefing.neutralFacts.currentValue}</div>
-            </div>
-            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 font-bold">역사적 평균치</span>
-              <div className="text-sm font-bold text-slate-200">{briefing.neutralFacts.historicalContext}</div>
-            </div>
-            <div className="p-3 rounded-xl bg-slate-900/80 border border-slate-800 space-y-1">
-              <span className="text-[10px] text-slate-500 font-bold">공식 발표 일정</span>
-              <div className="text-sm font-bold text-slate-200">{briefing.neutralFacts.officialSchedule}</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 탭 2: 🔵 YES 지지 논거 (Bull Case) */}
-      {activeTab === "yes" && (
-        <div className="space-y-3 p-5 rounded-2xl bg-blue-950/30 border border-blue-800/50 text-xs animate-in fade-in duration-200">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-black bg-blue-900/80 text-blue-300 border border-blue-700">
-              YES 진영 시각
-            </span>
-            <h4 className="text-sm font-extrabold text-blue-100">{briefing.yesCase.label}</h4>
-          </div>
-          <p className="text-blue-200/90 font-medium leading-relaxed pb-1">
-            "{briefing.yesCase.coreThesis}"
-          </p>
-
-          <div className="space-y-2.5 pt-1">
-            {briefing.yesCase.arguments.map((arg, idx) => (
-              <div key={idx} className="p-3.5 rounded-xl bg-slate-950 border border-blue-900/40 space-y-1.5">
-                <div className="font-extrabold text-blue-300 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                  <span>{arg.point}</span>
-                </div>
-                <p className="text-slate-300 leading-relaxed text-[11px]">{arg.detail}</p>
-                {arg.sourceTitle && (
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[10px] text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <Newspaper className="w-3 h-3 text-slate-400" />
-                      <span>{arg.sourceMedia}: {arg.sourceTitle}</span>
-                    </span>
-                    {arg.sourceUrl && (
-                      <a
-                        href={arg.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-400 hover:underline flex items-center gap-0.5"
-                      >
-                        <span>원문 확인</span>
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 탭 3: 🔴 NO 지지 논거 (Bear Case) */}
-      {activeTab === "no" && (
-        <div className="space-y-3 p-5 rounded-2xl bg-rose-950/30 border border-rose-800/50 text-xs animate-in fade-in duration-200">
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-0.5 rounded text-[10px] font-black bg-rose-900/80 text-rose-300 border border-rose-700">
-              NO 진영 시각
-            </span>
-            <h4 className="text-sm font-extrabold text-rose-100">{briefing.noCase.label}</h4>
-          </div>
-          <p className="text-rose-200/90 font-medium leading-relaxed pb-1">
-            "{briefing.noCase.coreThesis}"
-          </p>
-
-          <div className="space-y-2.5 pt-1">
-            {briefing.noCase.arguments.map((arg, idx) => (
-              <div key={idx} className="p-3.5 rounded-xl bg-slate-950 border border-rose-900/40 space-y-1.5">
-                <div className="font-extrabold text-rose-300 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
-                  <span>{arg.point}</span>
-                </div>
-                <p className="text-slate-300 leading-relaxed text-[11px]">{arg.detail}</p>
-                {arg.sourceTitle && (
-                  <div className="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[10px] text-slate-500">
-                    <span className="flex items-center gap-1">
-                      <Newspaper className="w-3 h-3 text-slate-400" />
-                      <span>{arg.sourceMedia}: {arg.sourceTitle}</span>
-                    </span>
-                    {arg.sourceUrl && (
-                      <a
-                        href={arg.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-rose-400 hover:underline flex items-center gap-0.5"
-                      >
-                        <span>원문 확인</span>
-                        <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
-                    )}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* AI 총평 및 완독 보상 획득 버튼 영역 */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-800">
-        <p className="text-[11px] text-slate-400 italic">
-          💡 <strong className="text-slate-300 not-italic">AI 오라클 코멘트:</strong> {briefing.aiInsight}
-        </p>
-
-        {isRewarded ? (
-          <div className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-950/60 border border-emerald-800/60 text-xs font-bold text-emerald-300 shrink-0">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-            <span>균형 시각 인증 완료 (+20 PMP 획득)</span>
-          </div>
-        ) : (
-          <button
-            onClick={handleClaimReward}
-            disabled={!allRead || isClaiming}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black shadow-lg transition-all shrink-0 ${
-              allRead
-                ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white hover:from-emerald-500 hover:to-teal-500 shadow-emerald-500/20 animate-pulse"
-                : "bg-slate-800 text-slate-500 cursor-not-allowed opacity-60"
-            }`}
-          >
-            <Award className="w-4 h-4" />
-            <span>
-              {allRead
-                ? "3단 시각 완독 완료! +20 PMP 받기"
-                : `남은 탭 ${3 - readTabs.size}개를 마저 읽으세요 (+20 PMP)`}
-            </span>
-          </button>
-        )}
-      </div>
-
-      {/* 리워드 토스트 안내 */}
-      {rewardMsg && (
-        <div className="p-3 rounded-xl bg-emerald-950 border border-emerald-700 text-xs font-extrabold text-emerald-200 animate-in slide-in-from-bottom duration-300 flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-amber-300" />
-          <span>{rewardMsg}</span>
         </div>
       )}
     </div>
   );
 }
 
+function ScenarioDetailPanel({
+  scenario,
+}: {
+  scenario: OptionScenarioBriefing;
+}) {
+  const style = TONE_STYLE[scenario.tone] ?? TONE_STYLE.neutral;
+
+  return (
+    <div className={`space-y-3 p-5 rounded-2xl border text-xs ${style.panelBg}`}>
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={`px-2 py-0.5 rounded text-[10px] font-black border ${style.badgeBg}`}
+        >
+          {scenario.stanceTag}
+        </span>
+        <h4 className={`text-sm font-extrabold ${style.headingText}`}>
+          {scenario.optionLabel}
+        </h4>
+      </div>
+
+      <p className="text-slate-100/90 font-medium leading-relaxed">
+        {scenario.coreThesis}
+      </p>
+
+      {scenario.probabilityCue && (
+        <div className="text-[11px] text-slate-300 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800/80">
+          <span className="font-bold text-amber-300 mr-1">트리거 조건:</span>
+          {scenario.probabilityCue}
+        </div>
+      )}
+
+      <div className="space-y-2.5 pt-1">
+        {scenario.arguments.map((arg, idx) => (
+          <div
+            key={idx}
+            className="p-3.5 rounded-xl bg-slate-950/90 border border-slate-800/90 space-y-1.5"
+          >
+            <div className={`font-extrabold flex items-center gap-1.5 ${style.headingText}`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${style.dotBg}`} />
+              <span>{arg.point}</span>
+            </div>
+            <p className="text-slate-300 leading-relaxed text-[11px]">
+              {arg.detail}
+            </p>
+            {arg.triggerCondition && (
+              <div className="pt-1 border-t border-slate-800/70 text-[10px] text-slate-400">
+                <span className="font-semibold text-slate-300">확인 지표: </span>
+                {arg.triggerCondition}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function RankingMatrixPanel({
+  briefing,
+}: {
+  briefing: BalancedBriefingDTO;
+}) {
+  return (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {briefing.scenarios.map((scenario) => {
+          const style = TONE_STYLE[scenario.tone] ?? TONE_STYLE.neutral;
+          return (
+            <div
+              key={scenario.optionId}
+              className={`p-4 rounded-2xl border space-y-2.5 text-xs ${style.panelBg}`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0">
+                  {style.icon}
+                  <h4 className={`font-black text-sm truncate ${style.headingText}`}>
+                    {scenario.optionLabel}
+                  </h4>
+                </div>
+                <span
+                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${style.badgeBg}`}
+                >
+                  {scenario.stanceTag}
+                </span>
+              </div>
+
+              <p className="text-slate-200 leading-relaxed">
+                {scenario.coreThesis}
+              </p>
+
+              {scenario.probabilityCue && (
+                <div className="text-[11px] text-amber-200/90 bg-slate-950/60 px-2.5 py-1.5 rounded-lg border border-slate-800/80">
+                  조건: {scenario.probabilityCue}
+                </div>
+              )}
+
+              <div className="space-y-1.5 pt-1">
+                {scenario.arguments.slice(0, 2).map((arg, idx) => (
+                  <div
+                    key={idx}
+                    className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-1"
+                  >
+                    <div className="font-bold text-slate-200 text-[11px]">
+                      • {arg.point}
+                    </div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      {arg.detail}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {briefing.tailRiskNote && (
+        <div className="p-3.5 rounded-xl bg-purple-950/30 border border-purple-800/50 flex items-start gap-2 text-xs text-purple-200">
+          <ShieldAlert className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-extrabold text-purple-300 mr-1.5">
+              꼬리위험 · 다크호스 체크:
+            </span>
+            <span>{briefing.tailRiskNote}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function BalancedDecisionBriefing({
+  gameId,
+}: BalancedDecisionBriefingProps) {
+  const [briefing, setBriefing] = useState<BalancedBriefingDTO | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<string>("neutral");
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+    setActiveTab("neutral");
+
+    getBalancedBriefingAction(gameId)
+      .then((res) => {
+        if (mounted && res.success && res.briefing) {
+          setBriefing(res.briefing);
+        }
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [gameId]);
+
+  if (loading) {
+    return (
+      <div className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 text-center text-xs text-slate-400">
+        LG EXAONE · Gemini가 게임 유형에 맞춘 균형 의사결정 브리핑을 생성 중입니다...
+      </div>
+    );
+  }
+
+  if (!briefing) {
+    return null;
+  }
+
+  const headline = getModeHeadline(briefing.mode);
+  const selectedScenario = briefing.scenarios.find((s) => s.optionId === activeTab);
+
+  return (
+    <div className="space-y-4 p-5 sm:p-6 rounded-3xl bg-gradient-to-b from-slate-900 via-slate-900/80 to-slate-950 border border-slate-800 shadow-2xl relative overflow-hidden">
+      <div className="absolute top-0 right-0 w-64 h-32 bg-blue-500/5 blur-3xl pointer-events-none" />
+
+      {/* 상단 헤더 (완독 PMP 보상 요소 완전 제거) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-slate-800">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-950 text-indigo-300 border border-indigo-800/60 flex items-center gap-1">
+              <Scale className="w-3 h-3 text-indigo-400" />
+              <span>AI 균형 의사결정 브리핑</span>
+            </span>
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-950 text-slate-300 border border-slate-700/70 flex items-center gap-1">
+              <Cpu className="w-3 h-3 text-emerald-400" />
+              <span>{briefing.providerBadge}</span>
+            </span>
+          </div>
+          <h3 className="text-base sm:text-lg font-black text-white">
+            {headline.subtitle}
+          </h3>
+          <p className="text-xs text-slate-400">{headline.description}</p>
+        </div>
+      </div>
+
+      {/* 유형별 탭/뷰 네비게이션 */}
+      {briefing.mode === "RANKING" ? (
+        <div className="grid grid-cols-2 gap-2 p-1.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => setActiveTab("neutral")}
+            className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+              activeTab === "neutral"
+                ? "bg-slate-800 text-white shadow-md border border-slate-700"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Info className="w-3.5 h-3.5 text-sky-400" />
+            <span>⚖️ 기준선 & 분포 팩트</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("matrix")}
+            className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+              activeTab === "matrix"
+                ? "bg-indigo-950 text-indigo-200 shadow-md border border-indigo-700/80"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <BarChart3 className="w-3.5 h-3.5 text-indigo-400" />
+            <span>📊 선택지 {briefing.scenarios.length}개 비교</span>
+          </button>
+        </div>
+      ) : (
+        <div
+          className={`grid gap-2 p-1.5 rounded-2xl bg-slate-950 border border-slate-800 text-xs font-bold ${
+            briefing.mode === "WIN_DRAW_LOSE"
+              ? "grid-cols-2 sm:grid-cols-4"
+              : "grid-cols-3"
+          }`}
+        >
+          <button
+            type="button"
+            onClick={() => setActiveTab("neutral")}
+            className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+              activeTab === "neutral"
+                ? "bg-slate-800 text-white shadow-md border border-slate-700"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Info className="w-3.5 h-3.5 text-sky-400 shrink-0" />
+            <span className="truncate">⚖️ 중립 팩트</span>
+          </button>
+
+          {briefing.scenarios.map((scenario) => {
+            const style = TONE_STYLE[scenario.tone] ?? TONE_STYLE.neutral;
+            const isSelected = activeTab === scenario.optionId;
+            return (
+              <button
+                type="button"
+                key={scenario.optionId}
+                onClick={() => setActiveTab(scenario.optionId)}
+                className={`py-2 px-3 rounded-xl flex items-center justify-center gap-1.5 transition-all ${
+                  isSelected
+                    ? style.tabActive
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                {style.icon}
+                <span className="truncate">{scenario.optionLabel}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 본문 콘텐츠 */}
+      {activeTab === "neutral" && <NeutralFactSheet briefing={briefing} />}
+      {briefing.mode === "RANKING" && activeTab === "matrix" && (
+        <RankingMatrixPanel briefing={briefing} />
+      )}
+      {briefing.mode !== "RANKING" && selectedScenario && (
+        <ScenarioDetailPanel scenario={selectedScenario} />
+      )}
+
+      {/* 하단 AI 오라클 인사이트 */}
+      <div className="pt-3 border-t border-slate-800 flex items-start gap-2 text-[11px] text-slate-400">
+        <Layers className="w-3.5 h-3.5 text-indigo-400 shrink-0 mt-0.5" />
+        <p className="italic leading-relaxed">
+          <strong className="text-slate-200 not-italic mr-1">
+            AI 오라클 인사이트:
+          </strong>
+          {briefing.aiInsight}
+        </p>
+      </div>
+    </div>
+  );
+}

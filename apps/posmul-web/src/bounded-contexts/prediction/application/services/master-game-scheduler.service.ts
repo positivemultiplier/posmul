@@ -10,6 +10,7 @@
  * - FMP Earnings: 미국 빅테크 분기 실적 발표
  */
 
+import { balancedBriefingService } from "./balanced-briefing.service";
 import { CreatePredictionGameUseCase } from "../use-cases/create-prediction-game.use-case";
 import { EarningsCalendarSchedulerService } from "./earnings-calendar-scheduler.service";
 import { FootballMatchSchedulerService } from "./football-match-scheduler.service";
@@ -158,6 +159,21 @@ export class MasterGameSchedulerService {
         if (createdId) {
           createdGameIds.push(createdId);
         }
+      }
+    }
+
+    // 신규 생성된 게임들의 AI 균형 의사결정 브리핑을 4개씩 병렬 배치로 사전 생성 (베스트에포트)
+    if (createdGameIds.length > 0) {
+      const batchSize = 4;
+      for (let i = 0; i < createdGameIds.length; i += batchSize) {
+        const batch = createdGameIds.slice(i, i + batchSize);
+        await Promise.allSettled(
+          batch.map((gameId) =>
+            balancedBriefingService.getOrCreateForGameId(gameId, {
+              timeoutMs: 12000,
+            }),
+          ),
+        );
       }
     }
 
