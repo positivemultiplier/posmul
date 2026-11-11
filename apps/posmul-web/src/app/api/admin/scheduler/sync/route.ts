@@ -18,7 +18,11 @@ export async function POST(request: NextRequest) {
 
   try {
 
-    let body: { materializeTemplates?: boolean; category?: string } = {};
+    let body: {
+      materializeTemplates?: boolean;
+      category?: string;
+      backfillMissingBriefings?: boolean;
+    } = {};
     try {
       body = await request.json();
     } catch {
@@ -30,6 +34,7 @@ export async function POST(request: NextRequest) {
     const syncResult = await scheduler.triggerSync({
       materializeTemplates: body.materializeTemplates ?? false,
       category: body.category,
+      backfillMissingBriefings: body.backfillMissingBriefings,
     });
 
     return NextResponse.json({
@@ -42,6 +47,7 @@ export async function POST(request: NextRequest) {
         templateGames: syncResult.totalTemplates,
         createdGamesCount: syncResult.createdGameIds.length,
         createdGameIds: syncResult.createdGameIds,
+        backfilledBriefings: syncResult.backfilledBriefings,
       },
     });
   } catch (error: any) {

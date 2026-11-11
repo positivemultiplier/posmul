@@ -104,6 +104,7 @@ function formatKstDateTime(iso?: string | null): string {
   if (Number.isNaN(d.getTime())) return "게임 마감·정산 일정에 따름";
   return `${new Intl.DateTimeFormat("ko-KR", {
     timeZone: "Asia/Seoul",
+    year: "numeric",
     month: "long",
     day: "numeric",
     weekday: "short",
@@ -645,6 +646,88 @@ export class BalancedBriefingService {
     }
 
     return result.briefing;
+  }
+
+  /**
+   * ACTIVE 게임 중 metadata.briefing(v2)이 누락된 건을 소규모 배치로 보강 (자가치유)
+   */
+  public async backfillMissingActiveBriefings(options?: {
+    limit?: number;
+    batchSize?: number;
+    delayMs?: number;
+    timeoutMs?: number;
+  }): Promise<{ checked: number; backfilled: number; failed: number }> {
+    const limit = options?.limit ?? 15;
+    const batchSize = Math.max(1, options?.batchSize ?? 2);
+    const delayMs = Math.max(0, options?.delayMs ?? 1200);
+    const timeoutMs = options?.timeoutMs ?? 16000;
+
+    const { data, error } = await supabaseAdmin
+      .schema("prediction")
+      .from("prediction_games")
+      .select("game_id, prediction_type, game_options, metadata")
+      .eq("status", "ACTIVE")
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error || !data) {
+      return { checked: 0, backfilled: 0, failed: 0 };
+    }
+
+    const targets = (
+      data as Array<{
+        game_id: string;
+        prediction_type: string | null;
+        game_options: unknown;
+        metadata: Record<string, unknown> | null;
+      }>
+    )
+      .filter((row) => {
+        const parsedOptions = parseRawOptions(row.game_options);
+        const expectedMode = resolveBriefingMode(
+          row.prediction_type,
+          parsedOptions.length
+        );
+        const existing = row.metadata?.briefing as
+          | Partial<BalancedBriefingDTO>
+          | undefined;
+        return !(
+          existing &&
+          existing.version === 2 &&
+          existing.mode === expectedMode &&
+          Array.isArray(existing.scenarios) &&
+          existing.scenarios.length === parsedOptions.length
+        );
+      })
+      .slice(0, limit);
+
+    let backfilled = 0;
+    let failed = 0;
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+    for (let i = 0; i < targets.length; i += batchSize) {
+      if (i > 0 && delayMs > 0) {
+        await sleep(delayMs);
+      }
+      const batch = targets.slice(i, i + batchSize);
+      const settled = await Promise.allSettled(
+        batch.map((t) => this.getOrCreateForGameId(t.game_id, { timeoutMs }))
+      );
+      for (const res of settled) {
+        if (
+          res.status === "fulfilled" &&
+          res.value &&
+          !res.value.providerBadge.includes("대기")
+        ) {
+          backfilled += 1;
+        } else {
+          failed += 1;
+        }
+      }
+    }
+
+    return { checked: targets.length, backfilled, failed };
   }
 }
 

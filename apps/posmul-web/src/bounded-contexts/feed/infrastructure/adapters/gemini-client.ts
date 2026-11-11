@@ -66,11 +66,27 @@ export class GeminiClient {
 
     let lastError: Error | null = null;
     const perModelTimeoutMs = Math.min(
-      8500,
+      9500,
       Math.max(4500, Math.floor(timeoutMs * 0.6))
     );
 
-    for (const model of this.models) {
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+    const attemptModels = [
+      ...this.models,
+      this.models.includes("gemini-3.5-flash-lite")
+        ? "gemini-3.5-flash-lite"
+        : this.models[0],
+    ].filter((m): m is string => Boolean(m));
+
+    for (let idx = 0; idx < attemptModels.length; idx += 1) {
+      const model = attemptModels[idx];
+      if (idx > 0 && lastError && /429|503|RESOURCE_EXHAUSTED|UNAVAILABLE/i.test(lastError.message)) {
+        // 일시적 과부하·RPM 버스트 시 짧은 백오프로 성공률 향상
+        await sleep(idx === attemptModels.length - 1 ? 1500 : 700);
+      }
+
       const controller = new AbortController();
       const timer = setTimeout(() => controller.abort(), perModelTimeoutMs);
       try {

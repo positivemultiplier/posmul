@@ -139,11 +139,13 @@ export class MasterGameSchedulerService {
   async triggerSync(options?: {
     materializeTemplates?: boolean;
     category?: string;
+    backfillMissingBriefings?: boolean;
   }): Promise<{
     footballAdded: number;
     earningsAdded: number;
     totalTemplates: number;
     createdGameIds: string[];
+    backfilledBriefings: number;
   }> {
     const syncStats = await this.syncAllSources();
     const createdGameIds: string[] = [];
@@ -162,24 +164,47 @@ export class MasterGameSchedulerService {
       }
     }
 
-    // 신규 생성된 게임들의 AI 균형 의사결정 브리핑을 4개씩 병렬 배치로 사전 생성 (베스트에포트)
+    // 신규 생성된 게임들의 AI 균형 의사결정 브리핑을 2개씩 완만히 사전 생성 (RPM 429 방지)
+    const sleep = (ms: number) =>
+      new Promise<void>((resolve) => setTimeout(resolve, ms));
+
     if (createdGameIds.length > 0) {
-      const batchSize = 4;
+      const batchSize = 2;
       for (let i = 0; i < createdGameIds.length; i += batchSize) {
+        if (i > 0) {
+          await sleep(1200);
+        }
         const batch = createdGameIds.slice(i, i + batchSize);
         await Promise.allSettled(
           batch.map((gameId) =>
             balancedBriefingService.getOrCreateForGameId(gameId, {
-              timeoutMs: 12000,
+              timeoutMs: 16000,
             }),
           ),
         );
       }
     }
 
+    // 일시적 LLM 오류로 브리핑이 비어있는 기존 ACTIVE 게임 자가치유 보강
+    let backfilledBriefings = 0;
+    if (
+      options?.backfillMissingBriefings === true ||
+      options?.materializeTemplates === true
+    ) {
+      const backfillRes =
+        await balancedBriefingService.backfillMissingActiveBriefings({
+          limit: 15,
+          batchSize: 2,
+          delayMs: 1200,
+          timeoutMs: 16000,
+        });
+      backfilledBriefings = backfillRes.backfilled;
+    }
+
     return {
       ...syncStats,
       createdGameIds,
+      backfilledBriefings,
     };
   }
 
