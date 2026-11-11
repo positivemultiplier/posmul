@@ -775,7 +775,7 @@ export function ClientPredictionGamesGrid({
           </div>
         )}
 
-        {/* 카드 그리드 (대화면 3~4열 Polymarket 스타일) */}
+        {/* 카드 그리드 (3열 Polymarket 넉넉한 와이드 스타일) */}
         {sortedGames.length === 0 ? (
           <div className="text-center py-16 text-slate-400 bg-[#121621] rounded-2xl border border-white/[0.06]">
             <p className="text-sm font-semibold">조건에 맞는 예측 마켓이 없습니다.</p>
@@ -784,7 +784,7 @@ export function ClientPredictionGamesGrid({
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-5">
             {sortedGames.map((game, index) => {
               const myPrediction = getPredictionForGame(game.id);
 

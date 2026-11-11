@@ -303,30 +303,43 @@ export function resolveGameVisualMeta(
 }
 
 /**
- * 제목 앞의 [미국증시] 같은 말머리를 분리하여 깔끔한 본문 질문만 반환
+ * 제목 앞의 [미국증시] 같은 말머리 및 이모지(🔥 등)를 완벽히 분리
  */
 export function splitTitlePrefix(rawTitle: string): {
+  prefixEmoji: string | null;
   prefixTag: string | null;
   cleanTitle: string;
 } {
-  const match = rawTitle.match(/^\[([^\]]+)\]\s*(.+)$/);
-  if (match) {
+  const emojiRegex = /^(\p{Extended_Pictographic}|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F]|\uD83E[\uDD00-\uDDFF]|[\u2600-\u27BF])\s*/u;
+  let title = rawTitle.trim();
+  let prefixEmoji: string | null = null;
+  const emojiMatch = title.match(emojiRegex);
+  if (emojiMatch) {
+    prefixEmoji = emojiMatch[1];
+    title = title.slice(emojiMatch[0].length).trim();
+  }
+
+  const tagMatch = title.match(/^\[([^\]]+)\]\s*(.+)$/);
+  if (tagMatch) {
     return {
-      prefixTag: match[1].trim(),
-      cleanTitle: match[2].trim(),
+      prefixEmoji,
+      prefixTag: tagMatch[1].trim(),
+      cleanTitle: tagMatch[2].trim(),
     };
   }
+
   return {
+    prefixEmoji,
     prefixTag: null,
-    cleanTitle: rawTitle.trim(),
+    cleanTitle: title,
   };
 }
 
 /**
- * 선택지 텍스트에서 괄호 설명 등을 다듬어 깔끔한 버튼 라벨 생성
+ * 선택지 텍스트에서 불필요한 긴 부가설명 괄호만 정돈하여 캡슐 버튼에 맞춤
  */
 function shortenOptionLabel(text: string, fallback: string): string {
-  const cleaned = text.replace(/\s*\([^)]*\)\s*/g, "").trim();
+  const cleaned = text.replace(/\s*\([^)]*\)\s*/g, " ").trim();
   return cleaned || text || fallback;
 }
 
@@ -337,7 +350,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
   onViewDetails,
 }) => {
   const hasParticipated = Boolean(myPrediction && myPrediction.is_active);
-  const { prefixTag, cleanTitle } = splitTitlePrefix(game.title);
+  const { prefixEmoji, prefixTag, cleanTitle } = splitTitlePrefix(game.title);
   const meta = resolveGameVisualMeta(game.title, game.category, game.subcategory);
 
   const firstOption = game.options[0] ?? { id: "yes", text: "예 (Yes)", currentOdds: 0.58 };
@@ -353,7 +366,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
     if (days > 0) return `${days}일 남음`;
-    return `${ Math.max(1, hours) }시간 남음`;
+    return `${Math.max(1, hours)}시간 남음`;
   };
 
   // 학습 가중치 배수 (1.5x ~ 2.3x)
@@ -364,26 +377,26 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
 
   // 1. 양자택일용 반원형 아크 게이지 (3번째 사진 스타일: 45% 하락 우세 / 67% 상승 우세)
   const renderArcGauge = (percentage: number) => {
-    const radius = 26;
+    const radius = 24;
     const circumference = Math.PI * radius;
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
     const isUp = percentage >= 50;
 
     return (
-      <div className="relative flex flex-col items-center justify-center shrink-0 w-[74px] h-[46px]">
-        <svg className="w-[72px] h-[42px] overflow-visible" viewBox="0 0 70 40">
+      <div className="relative flex flex-col items-center justify-center shrink-0 w-[72px] h-[44px]">
+        <svg className="w-[70px] h-[38px] overflow-visible" viewBox="0 0 70 36">
           <path
-            d="M 7 35 A 28 28 0 0 1 63 35"
+            d="M 8 32 A 27 27 0 0 1 62 32"
             fill="none"
             stroke="rgba(255,255,255,0.1)"
-            strokeWidth="6"
+            strokeWidth="5.5"
             strokeLinecap="round"
           />
           <path
-            d="M 7 35 A 28 28 0 0 1 63 35"
+            d="M 8 32 A 27 27 0 0 1 62 32"
             fill="none"
             stroke={isUp ? "#10b981" : "#f43f5e"}
-            strokeWidth="6"
+            strokeWidth="5.5"
             strokeLinecap="round"
             strokeDasharray={circumference}
             strokeDashoffset={strokeDashoffset}
@@ -391,10 +404,10 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
           />
         </svg>
         <div className="absolute bottom-0 flex flex-col items-center leading-none">
-          <span className="text-[14px] font-black text-white tracking-tight">
+          <span className="text-[13px] font-black text-white tracking-tight">
             {percentage}%
           </span>
-          <span className={`text-[9px] font-bold ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
+          <span className={`text-[8.5px] font-bold ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
             {isUp ? "상승 우세" : "하락 우세"}
           </span>
         </div>
@@ -408,14 +421,14 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
     const maxLabel = maxVal === p1 ? "승 우세" : maxVal === p3 ? "패 우세" : "무승부";
     const maxColor = maxVal === p1 ? "text-emerald-400" : maxVal === p3 ? "text-rose-400" : "text-amber-300";
 
-    const radius = 17;
+    const radius = 16;
     const circ = 2 * Math.PI * radius;
     const offset1 = circ - (p1 / 100) * circ;
     const offset2 = circ - ((p1 + p2) / 100) * circ;
 
     return (
-      <div className="relative flex flex-col items-center justify-center shrink-0 w-[74px] h-[46px]">
-        <svg className="w-[42px] h-[42px] -rotate-90 overflow-visible" viewBox="0 0 44 44">
+      <div className="relative flex flex-col items-center justify-center shrink-0 w-[72px] h-[44px]">
+        <svg className="w-[40px] h-[40px] -rotate-90 overflow-visible" viewBox="0 0 44 44">
           <circle cx="22" cy="22" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4.5" />
           {/* 패(원정) */}
           <circle cx="22" cy="22" r={radius} fill="none" stroke="#f43f5e" strokeWidth="4.5" strokeDasharray={circ} strokeDashoffset={0} />
@@ -434,13 +447,13 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
 
   // 3. 다자선택(Ranking/Multi) 전용 1위 독주 링 게이지
   const renderMultiGauge = (topPct: number) => {
-    const radius = 17;
+    const radius = 16;
     const circ = 2 * Math.PI * radius;
     const offset = circ - (topPct / 100) * circ;
 
     return (
-      <div className="relative flex flex-col items-center justify-center shrink-0 w-[74px] h-[46px]">
-        <svg className="w-[42px] h-[42px] -rotate-90 overflow-visible" viewBox="0 0 44 44">
+      <div className="relative flex flex-col items-center justify-center shrink-0 w-[72px] h-[44px]">
+        <svg className="w-[40px] h-[40px] -rotate-90 overflow-visible" viewBox="0 0 44 44">
           <circle cx="22" cy="22" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4.5" />
           <circle
             cx="22"
@@ -464,7 +477,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
 
   return (
     <div
-      className={`group relative rounded-2xl bg-[#121621] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#161b28] flex flex-col justify-between h-[238px] cursor-pointer ${
+      className={`group relative rounded-2xl bg-[#121621] p-4 transition-all duration-200 hover:-translate-y-0.5 hover:bg-[#161b28] flex flex-col justify-between h-[254px] cursor-pointer ${
         hasParticipated
           ? "border border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.08)]"
           : "border border-white/[0.08] hover:border-sky-400/40 hover:shadow-[0_8px_30px_rgba(0,0,0,0.45)]"
@@ -473,7 +486,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
         if (onViewDetails) onViewDetails(game.id);
       }}
     >
-      {/* 참여 완료 배지 (참여한 경우에만 우측 상단에 깔끔하게 표시) */}
+      {/* 참여 완료 배지 */}
       {hasParticipated && (
         <div className="absolute -top-2.5 right-3 z-20 inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-bold shadow-md">
           <CheckCircle2 className="w-3 h-3" />
@@ -484,55 +497,63 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
         </div>
       )}
 
-      {/* 1. 상단 헤더: 44x44 심볼 아바타 + 카테고리/출처 + 굵은 핵심 제목 (+ 게이지 모드 시 우측 아크 게이지) */}
-      <div className="flex items-start gap-3">
-        {/* 저작권 안전 44x44 마이크로 심볼 아바타 */}
-        <div
-          className={`w-11 h-11 rounded-xl ${meta.bgClass} border ${meta.borderClass} flex flex-col items-center justify-center shrink-0 shadow-inner`}
-        >
-          <span className={meta.textClass}>{meta.symbol}</span>
-          {meta.subLabel && (
-            <span className="text-[8px] font-bold opacity-80 text-white leading-none mt-0.5">
-              {meta.subLabel}
-            </span>
-          )}
-        </div>
+      {/* 🌟 1행 헤더: [아바타 + 카테고리/출처/D-day] vs [우측 게이지] (텍스트 찌그러짐 원천 차단) */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          {/* 저작권 안전 40x40 마이크로 심볼 아바타 */}
+          <div
+            className={`w-10 h-10 rounded-xl ${meta.bgClass} border ${meta.borderClass} flex flex-col items-center justify-center shrink-0 shadow-inner`}
+          >
+            <span className={meta.textClass}>{meta.symbol}</span>
+            {meta.subLabel && (
+              <span className="text-[7.5px] font-bold opacity-80 text-white leading-none mt-0.5">
+                {meta.subLabel}
+              </span>
+            )}
+          </div>
 
-        {/* 제목 및 메타 라벨 */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 mb-0.5">
-            <span className="font-bold text-sky-400">
+          {/* 카테고리 & 출처 & 기간 (세로 깨짐 방지: 가로 폭 넉넉히 확보) */}
+          <div className="flex flex-col min-w-0">
+            <span className="text-[12px] font-black text-sky-400 truncate leading-tight">
               {prefixTag || meta.categoryLabel}
             </span>
-            <span className="text-slate-600">·</span>
-            <span className="truncate text-slate-400">{meta.sourceLabel}</span>
-            <span className="text-slate-600">·</span>
-            <span className="text-slate-500 shrink-0">{getCompactTimeRemaining()}</span>
+            <div className="flex items-center gap-1 text-[10.5px] text-slate-400 mt-0.5 whitespace-nowrap">
+              <span className="truncate max-w-[95px] text-slate-400">{meta.sourceLabel}</span>
+              <span className="text-slate-600">·</span>
+              <span className="text-slate-500 font-medium shrink-0">{getCompactTimeRemaining()}</span>
+            </div>
           </div>
-          <h3 className="text-[14px] font-bold text-slate-100 group-hover:text-white leading-snug line-clamp-2">
-            {cleanTitle}
-          </h3>
         </div>
 
-        {/* 우측 상단 게이지: 양자택일은 아크 게이지로 일원화, 승무패는 3색 세그먼트, 다자선택은 1위 링 게이지 */}
-        {game.predictionType === PredictionType.BINARY ? (
-          renderArcGauge(leadPct)
-        ) : game.predictionType === PredictionType.WIN_DRAW_LOSE ? (
-          renderWdlGauge(
-            Math.round((game.options[0]?.currentOdds || 0.45) * 100),
-            Math.round((game.options[1]?.currentOdds || 0.25) * 100),
-            Math.round((game.options[2]?.currentOdds || 0.3) * 100)
-          )
-        ) : (
-          renderMultiGauge(leadPct)
-        )}
+        {/* 우측 상단 게이지 */}
+        <div className="shrink-0 pl-1">
+          {game.predictionType === PredictionType.BINARY ? (
+            renderArcGauge(leadPct)
+          ) : game.predictionType === PredictionType.WIN_DRAW_LOSE ? (
+            renderWdlGauge(
+              Math.round((game.options[0]?.currentOdds || 0.45) * 100),
+              Math.round((game.options[1]?.currentOdds || 0.25) * 100),
+              Math.round((game.options[2]?.currentOdds || 0.3) * 100)
+            )
+          ) : (
+            renderMultiGauge(leadPct)
+          )}
+        </div>
       </div>
 
-      {/* 2. 중단 인터랙티브 선택 영역: 3번째 사진의 '타원형 둥근 캡슐 버튼' 스타일로 전면 일원화 */}
-      <div className="my-auto pt-2">
+      {/* 🌟 2행 제목: 카드 가로 전체폭(Full Width)을 쓰는 시원한 2줄 제목 (10글자 잘림 해결) */}
+      <div className="my-1 min-h-[42px] flex items-center">
+        <h3 className="text-[14px] font-bold text-slate-100 group-hover:text-white leading-snug line-clamp-2">
+          {prefixEmoji && <span className="mr-1">{prefixEmoji}</span>}
+          {cleanTitle}
+        </h3>
+      </div>
+
+      {/* 🌟 3행 캡슐 버튼: 3번째 사진의 둥근 타원형 캡슐 버튼 (선택지 텍스트 넉넉히 노출) */}
+      <div className="my-1">
         {game.predictionType === PredictionType.BINARY ? (
-          /* 양자택일: 3번째 사진 완벽 재현 (좌측 녹색 캡슐 vs 우측 자주/자색 캡슐) */
-          <div className="grid grid-cols-2 gap-2.5">
+          /* 양자택일: 녹색 캡슐 vs 자주/자색 캡슐 */
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
               onClick={(e) => {
@@ -541,9 +562,9 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
                   onParticipate(game.id);
                 }
               }}
-              className="group/btn flex items-center justify-between px-3.5 py-2 rounded-full border border-emerald-500/35 bg-emerald-950/30 hover:bg-emerald-900/50 hover:border-emerald-400 transition-all duration-150 text-left shadow-sm"
+              className="group/btn flex items-center justify-between px-3 py-2 rounded-full border border-emerald-500/35 bg-emerald-950/30 hover:bg-emerald-900/50 hover:border-emerald-400 transition-all duration-150 text-left shadow-sm min-w-0"
             >
-              <span className="text-[12px] font-extrabold text-emerald-300 truncate mr-1 group-hover/btn:text-emerald-200">
+              <span className="text-[11.5px] font-extrabold text-emerald-300 truncate mr-1 group-hover/btn:text-emerald-200">
                 {shortenOptionLabel(firstOption.text, "Yes")}
               </span>
               <span className="text-[12px] font-black text-white shrink-0">
@@ -559,9 +580,9 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
                   onParticipate(game.id);
                 }
               }}
-              className="group/btn flex items-center justify-between px-3.5 py-2 rounded-full border border-rose-500/35 bg-rose-950/30 hover:bg-rose-900/50 hover:border-rose-400 transition-all duration-150 text-left shadow-sm"
+              className="group/btn flex items-center justify-between px-3 py-2 rounded-full border border-rose-500/35 bg-rose-950/30 hover:bg-rose-900/50 hover:border-rose-400 transition-all duration-150 text-left shadow-sm min-w-0"
             >
-              <span className="text-[12px] font-extrabold text-rose-300 truncate mr-1 group-hover/btn:text-rose-200">
+              <span className="text-[11.5px] font-extrabold text-rose-300 truncate mr-1 group-hover/btn:text-rose-200">
                 {shortenOptionLabel(secondOption.text, "No")}
               </span>
               <span className="text-[12px] font-black text-white shrink-0">
@@ -570,7 +591,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
             </button>
           </div>
         ) : game.predictionType === PredictionType.WIN_DRAW_LOSE ? (
-          /* 승무패 (3지선다): 3분할 둥근 캡슐 버튼 (승 | 무 | 패) */
+          /* 승무패: 3분할 둥근 캡슐 (승 | 무 | 패) */
           <div className="grid grid-cols-3 gap-1.5">
             {game.options.slice(0, 3).map((opt, idx) => {
               const pct = Math.round((opt.currentOdds || 0.33) * 100);
@@ -590,7 +611,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
                       onParticipate(game.id);
                     }
                   }}
-                  className={`flex items-center justify-between px-2.5 py-2 rounded-full border ${colorTheme} transition-all duration-150 text-left`}
+                  className={`flex items-center justify-between px-2.5 py-2 rounded-full border ${colorTheme} transition-all duration-150 text-left min-w-0`}
                 >
                   <span className="text-[11px] font-extrabold truncate mr-1">
                     {shortenOptionLabel(opt.text, idx === 0 ? "승" : idx === 1 ? "무" : "패")}
@@ -601,7 +622,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
             })}
           </div>
         ) : (
-          /* 다자선택 (Ranking / Multi): Top 2개 캡슐 + 외 N개 뱃지 */
+          /* 다자선택 (Top 2개 캡슐 버튼) */
           <div className="grid grid-cols-2 gap-2">
             {game.options.slice(0, 2).map((opt, idx) => {
               const pct = Math.round((opt.currentOdds || 0.25) * 100);
@@ -615,10 +636,10 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
                       onParticipate(game.id);
                     }
                   }}
-                  className="flex items-center justify-between px-3 py-2 rounded-full border border-sky-500/35 bg-sky-950/30 hover:bg-sky-900/50 hover:border-sky-400 transition-all duration-150 text-left"
+                  className="flex items-center justify-between px-3 py-2 rounded-full border border-sky-500/35 bg-sky-950/30 hover:bg-sky-900/50 hover:border-sky-400 transition-all duration-150 text-left min-w-0"
                 >
                   <span className="text-[11px] font-extrabold text-sky-300 truncate mr-1">
-                    {opt.text}
+                    {shortenOptionLabel(opt.text, `선택 ${idx + 1}`)}
                   </span>
                   <span className="text-[11px] font-black text-white shrink-0">{pct}%</span>
                 </button>
@@ -628,33 +649,39 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
         )}
       </div>
 
-      {/* 3. 하단 푸터: 상금풀(PMC) + 학습/참여 부스트 배지 + 참여자 수 */}
-      <div className="pt-2.5 border-t border-white/[0.06] flex items-center justify-between text-[11px]">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="inline-flex items-center gap-1 font-extrabold text-amber-300">
+      {/* 🌟 4행 하단 메타: 상금풀 + 학습배수 + 참여자수 + 북마크 */}
+      <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px]">
+        {/* 좌측: 상금풀 + 가중치 배지 */}
+        <div className="flex items-center gap-2">
+          <span className="font-extrabold text-amber-400 flex items-center gap-1">
             <span>💰</span>
-            <span>{Math.round(game.allocatedPrizePool || 1200).toLocaleString()} PMC</span>
+            <span>{(game.allocatedPrizePool || game.totalStake || 3200).toLocaleString()} PMC</span>
           </span>
-          <span
-            className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-md bg-sky-500/10 border border-sky-500/20 text-sky-300 text-[10px] font-bold"
-            title="공적 학습 가치 및 시민 참여 열기에 따른 MoneyWave 상금 부스트 배율"
-          >
-            <GraduationCap className="w-3 h-3 text-sky-400" />
+          <span className="px-1.5 py-0.5 rounded-md bg-sky-500/10 text-sky-300 border border-sky-500/25 text-[10px] font-bold flex items-center gap-0.5">
+            <GraduationCap className="w-2.5 h-2.5" />
             <span>{learningMultiplier}x</span>
           </span>
-          {game.currentParticipants >= 8 && (
-            <span className="inline-flex items-center text-orange-400" title="참여 급상승 마켓">
-              <Flame className="w-3.5 h-3.5 fill-orange-500/30" />
-            </span>
+          {game.gameImportanceScore >= 95 && (
+            <Flame className="w-3.5 h-3.5 text-orange-400 fill-orange-400" />
           )}
         </div>
 
-        <div className="flex items-center gap-2.5 text-slate-400 shrink-0">
-          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-400">
+        {/* 우측: 참여 인원 + 북마크 아이콘 */}
+        <div className="flex items-center gap-2.5 text-slate-400">
+          <span className="flex items-center gap-1 text-[11px]">
             <Users className="w-3 h-3 text-slate-500" />
-            <span>{game.currentParticipants.toLocaleString()}명</span>
+            <span>{game.currentParticipants || 8}명</span>
           </span>
-          <Bookmark className="w-3.5 h-3.5 text-slate-500 group-hover:text-slate-300 transition-colors" />
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+            }}
+            className="text-slate-500 hover:text-slate-300 transition-colors p-0.5"
+            aria-label="북마크"
+          >
+            <Bookmark className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
     </div>
