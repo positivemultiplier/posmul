@@ -12,8 +12,8 @@ import {
   GameStatus,
 } from "../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 
-// 10초 캐싱 (ISR) 적용으로 초기 로딩 및 클릭 전환 체감 속도 극대화
-export const revalidate = 10;
+// 최신 DB 게임 및 실시간 MoneyWave 상금풀 즉시 반영
+export const dynamic = "force-dynamic";
 
 interface PageProps {
   searchParams: Promise<{

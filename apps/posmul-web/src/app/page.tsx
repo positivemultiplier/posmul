@@ -25,7 +25,7 @@ export default async function Home() {
       .select("*")
       .eq("status", "ACTIVE")
       .order("created_at", { ascending: false })
-      .limit(10),
+      .limit(30),
     supabase
       .schema("economy")
       .from("pmp_pmc_accounts")

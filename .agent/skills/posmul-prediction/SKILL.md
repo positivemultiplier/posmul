@@ -167,6 +167,7 @@ GitHub Actions CI 파이프라인의 성공을 보장하기 위한 개발 규칙
    - **3행 선택지**: Top 2 순위 카드(`1위` 앰버 배지 + 미니 점유율 바 / `2위` 스카이 배지 + 미니 점유율 바) + 하단 3위 요약 및 `+{N-2}명 경쟁` 표시.
 
 ### 7.2 대표 스포트라이트 Hero 카드 (`ClientPredictionGamesGrid.tsx`)
+- **균형 큐레이션 & 자동 순환**: 스포트라이트 후보(최대 5개)는 `RANKING`, `WIN_DRAW_LOSE`, `BINARY` 3대 분류와 주요 카테고리를 우선 1개씩 편성하며, **5초 간격 자동 슬라이드(Auto-play)** 와 마우스 오버 일시정지, 수동 전환/재생 토글(`⏸/▶`) 및 분류 뱃지를 제공합니다.
 - 옵션 확률 계산 시 `100 - pct1`의 2분법 가정 금지. `isBinary`, `isWdl`, `isRanking`을 구분하여 각 옵션의 실제 `currentOdds`로 `pcts` 산출.
 - 우측 SVG 시계열 차트(`buildSpotlightChartPaths`)는 Binary(2선), WDL(3선: 에메랄드/앰버/로즈), Ranking(상위 3선 + `1위/2위/3위` 배지 및 `외 +N개 후보` 표기)을 동일 색상 매핑으로 렌더링.
 

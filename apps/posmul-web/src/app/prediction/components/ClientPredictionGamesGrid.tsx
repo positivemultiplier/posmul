@@ -23,6 +23,8 @@ import {
   Search,
   GraduationCap,
   TrendingUp,
+  Pause,
+  Play,
 } from "lucide-react";
 
 export interface PredictionGame {
@@ -176,6 +178,8 @@ export function ClientPredictionGamesGrid({
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [spotlightIndex, setSpotlightIndex] = useState<number>(0);
+  const [isAutoPlaying, setIsAutoPlaying] = useState<boolean>(true);
+  const [isSpotlightHovered, setIsSpotlightHovered] = useState<boolean>(false);
 
   useEffect(() => {
     setSortBy(initialSort);
@@ -229,18 +233,58 @@ export function ClientPredictionGamesGrid({
     );
   }, [filteredGames, sortBy]);
 
-  // 스포트라이트 후보 (상금풀 + 중요도 기준 상위 5개)
+  // 스포트라이트 후보: RANKING / WIN_DRAW_LOSE / BINARY 3대 분류 및 카테고리 균형 큐레이션 (최대 5개)
   const spotlightCandidates = useMemo(() => {
     const base = filteredGames.length > 0 ? filteredGames : games;
-    return [...base]
-      .sort(
-        (a, b) =>
-          (b.allocatedPrizePool || 0) +
-          (b.gameImportanceScore || 1) * 300 -
-          ((a.allocatedPrizePool || 0) + (a.gameImportanceScore || 1) * 300)
-      )
-      .slice(0, 5);
+    const scoreOf = (g: PredictionGame) =>
+      (g.allocatedPrizePool || 0) + (g.gameImportanceScore || 1) * 300;
+    const ranked = [...base].sort((a, b) => scoreOf(b) - scoreOf(a));
+
+    const picked: PredictionGame[] = [];
+    const pickedIds = new Set<string>();
+    const pickedCategories = new Set<string>();
+
+    const pickOne = (predicate: (g: PredictionGame) => boolean) => {
+      const found = ranked.find((g) => !pickedIds.has(g.id) && predicate(g));
+      if (found) {
+        picked.push(found);
+        pickedIds.add(found.id);
+        if (found.category) pickedCategories.add(found.category);
+      }
+    };
+
+    // 1~3번 슬라이드에 3대 분류(Ranking, WDL, Binary) 대표 마켓 우선 편성
+    pickOne(
+      (g) => g.predictionType === PredictionType.RANKING || g.options.length >= 4
+    );
+    pickOne((g) => g.predictionType === PredictionType.WIN_DRAW_LOSE);
+    pickOne((g) => g.predictionType === PredictionType.BINARY);
+
+    // 남은 슬라이드는 아직 노출 안 된 카테고리 우선 + 점수 순 채우기
+    for (let i = picked.length; i < 5; i++) {
+      pickOne((g) => Boolean(g.category && !pickedCategories.has(g.category)));
+    }
+    for (const g of ranked) {
+      if (picked.length >= 5) break;
+      if (!pickedIds.has(g.id)) {
+        picked.push(g);
+        pickedIds.add(g.id);
+      }
+    }
+
+    return picked;
   }, [filteredGames, games]);
+
+  // 자동 슬라이드 전환 (5초 간격, 마우스 오버 시 일시정지)
+  useEffect(() => {
+    if (!isAutoPlaying || isSpotlightHovered || spotlightCandidates.length <= 1) {
+      return;
+    }
+    const timer = setInterval(() => {
+      setSpotlightIndex((prev) => (prev + 1) % spotlightCandidates.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [isAutoPlaying, isSpotlightHovered, spotlightCandidates.length]);
 
   const safeSpotlightIdx =
     spotlightCandidates.length > 0 ? spotlightIndex % spotlightCandidates.length : 0;
@@ -281,7 +325,11 @@ export function ClientPredictionGamesGrid({
       {featuredGame && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
           {/* 좌측 (8 cols): Featured Market Spotlight */}
-          <div className="lg:col-span-8 flex flex-col justify-between">
+          <div
+            className="lg:col-span-8 flex flex-col justify-between"
+            onMouseEnter={() => setIsSpotlightHovered(true)}
+            onMouseLeave={() => setIsSpotlightHovered(false)}
+          >
             {(() => {
               const meta = resolveGameVisualMeta(
                 featuredGame.title,
@@ -363,7 +411,35 @@ export function ClientPredictionGamesGrid({
                       </div>
                     </Link>
 
-                    <div className="flex items-center gap-2 text-slate-400 shrink-0">
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-slate-400 shrink-0">
+                      <span
+                        className={`hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
+                          isRanking
+                            ? "bg-sky-500/10 text-sky-300 border-sky-500/30"
+                            : isWdl
+                            ? "bg-amber-500/10 text-amber-300 border-amber-500/30"
+                            : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
+                        }`}
+                      >
+                        {isRanking ? "🏆 다자 순위" : isWdl ? "⚖️ 3지선다 승부" : "⚡ 양자택일"}
+                      </span>
+                      {spotlightCandidates.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => setIsAutoPlaying((prev) => !prev)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900/90 hover:bg-slate-800 border border-white/[0.08] text-[11px] font-bold text-slate-300 hover:text-white transition"
+                          title={isAutoPlaying ? "자동 슬라이드 일시정지" : "자동 슬라이드 재생"}
+                        >
+                          {isAutoPlaying ? (
+                            <Pause className="w-3 h-3 text-sky-400" />
+                          ) : (
+                            <Play className="w-3 h-3 text-emerald-400" />
+                          )}
+                          <span>
+                            {safeSpotlightIdx + 1}/{spotlightCandidates.length}
+                          </span>
+                        </button>
+                      )}
                       <Link
                         href={targetHref}
                         className="p-2 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/[0.06] text-slate-400 hover:text-white transition"
@@ -565,20 +641,29 @@ export function ClientPredictionGamesGrid({
             {/* 스포트라이트 하단 캐러셀 컨트롤 바 (< 이전 의제 | 다음 의제 >) */}
             {spotlightCandidates.length > 1 && (
               <div className="flex items-center justify-between mt-3 px-1">
-                <div className="flex items-center gap-1.5">
-                  {spotlightCandidates.map((cand, idx) => (
-                    <button
-                      key={cand.id}
-                      type="button"
-                      onClick={() => setSpotlightIndex(idx)}
-                      className={`h-2 rounded-full transition-all ${
-                        idx === safeSpotlightIdx
-                          ? "w-6 bg-sky-400"
-                          : "w-2 bg-slate-700 hover:bg-slate-500"
-                      }`}
-                      aria-label={`대표 마켓 ${idx + 1}번 보기`}
-                    />
-                  ))}
+                <div className="flex items-center gap-2.5">
+                  <div className="flex items-center gap-1.5">
+                    {spotlightCandidates.map((cand, idx) => (
+                      <button
+                        key={cand.id}
+                        type="button"
+                        onClick={() => setSpotlightIndex(idx)}
+                        className={`h-2 rounded-full transition-all ${
+                          idx === safeSpotlightIdx
+                            ? "w-6 bg-sky-400"
+                            : "w-2 bg-slate-700 hover:bg-slate-500"
+                        }`}
+                        aria-label={`대표 마켓 ${idx + 1}번 보기`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-[10.5px] font-semibold text-slate-500">
+                    {isAutoPlaying && !isSpotlightHovered
+                      ? "자동 순환"
+                      : isSpotlightHovered
+                      ? "마우스 일시정지"
+                      : "수동 선택"}
+                  </span>
                 </div>
 
                 <div className="flex items-center gap-2">
