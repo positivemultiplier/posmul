@@ -362,7 +362,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
     Math.min(2.5, Number((0.9 + (game.gameImportanceScore || 2.5) * 0.3).toFixed(1)))
   );
 
-  // 반원형 아크 게이지 렌더링 (Polymarket Bitcoin Up or Down 스타일)
+  // 1. 양자택일용 반원형 아크 게이지 (3번째 사진 스타일: 45% 하락 우세 / 67% 상승 우세)
   const renderArcGauge = (percentage: number) => {
     const radius = 26;
     const circumference = Math.PI * radius;
@@ -370,12 +370,12 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
     const isUp = percentage >= 50;
 
     return (
-      <div className="relative flex flex-col items-center justify-center shrink-0 w-[72px] h-[46px]">
-        <svg className="w-[70px] h-[42px] overflow-visible" viewBox="0 0 70 40">
+      <div className="relative flex flex-col items-center justify-center shrink-0 w-[74px] h-[46px]">
+        <svg className="w-[72px] h-[42px] overflow-visible" viewBox="0 0 70 40">
           <path
             d="M 7 35 A 28 28 0 0 1 63 35"
             fill="none"
-            stroke="rgba(255,255,255,0.08)"
+            stroke="rgba(255,255,255,0.1)"
             strokeWidth="6"
             strokeLinecap="round"
           />
@@ -402,46 +402,61 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
     );
   };
 
-  // 미니 스파크라인 차트 렌더링 (Polymarket Anthropic 트렌드 카드 스타일)
-  const renderMiniSparkline = () => {
-    const seed = game.id.charCodeAt(0) + game.id.charCodeAt(game.id.length - 1);
-    const y1 = 26 - (seed % 8);
-    const y2 = 20 + ((seed * 3) % 9);
-    const y3 = 18 - ((seed * 7) % 7);
-    const y4 = Math.max(6, Math.min(28, Math.round(32 - (leadPct / 100) * 24)));
-    const pathD = `M 0 ${y1} C 35 ${y1 - 4}, 55 ${y2}, 90 ${y2 - 2} C 125 ${y3}, 155 ${y3 + 3}, 200 ${y4}`;
-    const areaD = `${pathD} L 200 34 L 0 34 Z`;
-    const gradientId = `spark-${game.id.slice(0, 8)}`;
+  // 2. 승무패(3지선다) 전용 3색 도넛 세그먼트 아크 게이지 (승: 에메랄드 / 무: 슬레이트 / 패: 로즈)
+  const renderWdlGauge = (p1: number, p2: number, p3: number) => {
+    const maxVal = Math.max(p1, p2, p3);
+    const maxLabel = maxVal === p1 ? "승 우세" : maxVal === p3 ? "패 우세" : "무승부";
+    const maxColor = maxVal === p1 ? "text-emerald-400" : maxVal === p3 ? "text-rose-400" : "text-amber-300";
+
+    const radius = 17;
+    const circ = 2 * Math.PI * radius;
+    const offset1 = circ - (p1 / 100) * circ;
+    const offset2 = circ - ((p1 + p2) / 100) * circ;
 
     return (
-      <div className="relative h-9 w-full overflow-hidden rounded-lg bg-slate-950/60 border border-white/[0.04] px-2.5 flex items-center justify-between">
-        <svg
-          className="absolute inset-0 h-full w-full"
-          viewBox="0 0 200 34"
-          preserveAspectRatio="none"
-        >
-          <defs>
-            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={meta.accentHex} stopOpacity="0.32" />
-              <stop offset="100%" stopColor={meta.accentHex} stopOpacity="0.0" />
-            </linearGradient>
-          </defs>
-          <path d={areaD} fill={`url(#${gradientId})`} />
-          <path
-            d={pathD}
+      <div className="relative flex flex-col items-center justify-center shrink-0 w-[74px] h-[46px]">
+        <svg className="w-[42px] h-[42px] -rotate-90 overflow-visible" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4.5" />
+          {/* 패(원정) */}
+          <circle cx="22" cy="22" r={radius} fill="none" stroke="#f43f5e" strokeWidth="4.5" strokeDasharray={circ} strokeDashoffset={0} />
+          {/* 무승부 */}
+          <circle cx="22" cy="22" r={radius} fill="none" stroke="#94a3b8" strokeWidth="4.5" strokeDasharray={circ} strokeDashoffset={offset2} />
+          {/* 승(홈) */}
+          <circle cx="22" cy="22" r={radius} fill="none" stroke="#10b981" strokeWidth="4.5" strokeDasharray={circ} strokeDashoffset={offset1} />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+          <span className="text-[12px] font-black text-white">{maxVal}%</span>
+          <span className={`text-[8px] font-extrabold ${maxColor} mt-0.5`}>{maxLabel}</span>
+        </div>
+      </div>
+    );
+  };
+
+  // 3. 다자선택(Ranking/Multi) 전용 1위 독주 링 게이지
+  const renderMultiGauge = (topPct: number) => {
+    const radius = 17;
+    const circ = 2 * Math.PI * radius;
+    const offset = circ - (topPct / 100) * circ;
+
+    return (
+      <div className="relative flex flex-col items-center justify-center shrink-0 w-[74px] h-[46px]">
+        <svg className="w-[42px] h-[42px] -rotate-90 overflow-visible" viewBox="0 0 44 44">
+          <circle cx="22" cy="22" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4.5" />
+          <circle
+            cx="22"
+            cy="22"
+            r={radius}
             fill="none"
-            stroke={meta.accentHex}
-            strokeWidth="2"
+            stroke="#38bdf8"
+            strokeWidth="4.5"
+            strokeDasharray={circ}
+            strokeDashoffset={offset}
             strokeLinecap="round"
           />
         </svg>
-        <div className="relative z-10 flex items-center justify-between w-full text-[11px]">
-          <span className="text-slate-400 font-medium truncate max-w-[65%]">
-            컨센서스 · <strong className="text-slate-200">{shortenOptionLabel(firstOption.text, "찬성")}</strong>
-          </span>
-          <span className="font-black text-white text-xs bg-slate-900/90 px-1.5 py-0.5 rounded border border-white/10">
-            {leadPct}%
-          </span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+          <span className="text-[12px] font-black text-white">{topPct}%</span>
+          <span className="text-[8px] font-extrabold text-sky-400 mt-0.5">1위 독주</span>
         </div>
       </div>
     );
@@ -499,118 +514,114 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
           </h3>
         </div>
 
-        {/* 게이지 모드일 경우 우측 상단에 Polymarket 스타일 반원형 게이지 배치 */}
-        {meta.visualMode === "gauge" && game.predictionType === PredictionType.BINARY && (
+        {/* 우측 상단 게이지: 양자택일은 아크 게이지로 일원화, 승무패는 3색 세그먼트, 다자선택은 1위 링 게이지 */}
+        {game.predictionType === PredictionType.BINARY ? (
           renderArcGauge(leadPct)
+        ) : game.predictionType === PredictionType.WIN_DRAW_LOSE ? (
+          renderWdlGauge(
+            Math.round((game.options[0]?.currentOdds || 0.45) * 100),
+            Math.round((game.options[1]?.currentOdds || 0.25) * 100),
+            Math.round((game.options[2]?.currentOdds || 0.3) * 100)
+          )
+        ) : (
+          renderMultiGauge(leadPct)
         )}
       </div>
 
-      {/* 2. 중단 인터랙티브 선택 영역 (중복 텍스트 없이 게임 성격별 최적 UI 렌더링) */}
+      {/* 2. 중단 인터랙티브 선택 영역: 3번째 사진의 '타원형 둥근 캡슐 버튼' 스타일로 전면 일원화 */}
       <div className="my-auto pt-2">
         {game.predictionType === PredictionType.BINARY ? (
-          meta.visualMode === "list" ? (
-            /* 유형 B (실적공시·차트 등): 선택지 리스트 + 우측 확률 & 인라인 Yes/No 미니 버튼 */
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-white/[0.05] hover:border-emerald-500/30 transition-colors">
-                <span className="text-xs font-medium text-slate-200 truncate">
-                  {shortenOptionLabel(firstOption.text, "돌파 · 달성")}
-                </span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs font-extrabold text-white">{leadPct}%</span>
-                  <span
-                    onClick={(e) => {
-                      if (onParticipate) {
-                        e.stopPropagation();
-                        onParticipate(game.id);
-                      }
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 text-[11px] font-extrabold transition-colors"
-                  >
-                    Yes
-                  </span>
-                </div>
-              </div>
+          /* 양자택일: 3번째 사진 완벽 재현 (좌측 녹색 캡슐 vs 우측 자주/자색 캡슐) */
+          <div className="grid grid-cols-2 gap-2.5">
+            <button
+              type="button"
+              onClick={(e) => {
+                if (onParticipate) {
+                  e.stopPropagation();
+                  onParticipate(game.id);
+                }
+              }}
+              className="group/btn flex items-center justify-between px-3.5 py-2 rounded-full border border-emerald-500/35 bg-emerald-950/30 hover:bg-emerald-900/50 hover:border-emerald-400 transition-all duration-150 text-left shadow-sm"
+            >
+              <span className="text-[12px] font-extrabold text-emerald-300 truncate mr-1 group-hover/btn:text-emerald-200">
+                {shortenOptionLabel(firstOption.text, "Yes")}
+              </span>
+              <span className="text-[12px] font-black text-white shrink-0">
+                {leadPct}%
+              </span>
+            </button>
 
-              <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-white/[0.05] hover:border-rose-500/30 transition-colors">
-                <span className="text-xs font-medium text-slate-300 truncate">
-                  {shortenOptionLabel(secondOption.text, "미달 · 유지")}
-                </span>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-xs font-extrabold text-slate-300">{secondPct}%</span>
-                  <span
-                    onClick={(e) => {
-                      if (onParticipate) {
-                        e.stopPropagation();
-                        onParticipate(game.id);
-                      }
-                    }}
-                    className="px-2.5 py-1 rounded-lg bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-[11px] font-extrabold transition-colors"
-                  >
-                    No
-                  </span>
-                </div>
-              </div>
-            </div>
-          ) : (
-            /* 유형 A & C (등락 게이지 / 거시 스파크라인): 원클릭 양방향 액션 버튼 */
-            <div className="space-y-2">
-              {meta.visualMode === "sparkline" && renderMiniSparkline()}
-              <div className="grid grid-cols-2 gap-2">
-                <div
-                  onClick={(e) => {
-                    if (onParticipate) {
-                      e.stopPropagation();
-                      onParticipate(game.id);
-                    }
-                  }}
-                  className="flex items-center justify-between px-3 py-2 rounded-xl bg-emerald-500/12 hover:bg-emerald-500/25 border border-emerald-500/25 transition-all group/btn"
-                >
-                  <span className="text-xs font-extrabold text-emerald-300 truncate mr-1">
-                    {shortenOptionLabel(firstOption.text, "Yes")}
-                  </span>
-                  <span className="text-xs font-black text-white shrink-0">
-                    {leadPct}%
-                  </span>
-                </div>
-                <div
-                  onClick={(e) => {
-                    if (onParticipate) {
-                      e.stopPropagation();
-                      onParticipate(game.id);
-                    }
-                  }}
-                  className="flex items-center justify-between px-3 py-2 rounded-xl bg-rose-500/12 hover:bg-rose-500/25 border border-rose-500/25 transition-all group/btn"
-                >
-                  <span className="text-xs font-extrabold text-rose-300 truncate mr-1">
-                    {shortenOptionLabel(secondOption.text, "No")}
-                  </span>
-                  <span className="text-xs font-black text-slate-200 shrink-0">
-                    {secondPct}%
-                  </span>
-                </div>
-              </div>
-            </div>
-          )
-        ) : (
-          /* 다지선다 (WIN_DRAW_LOSE / RANKING) */
-          <div className="space-y-1.5">
-            {game.options.slice(0, 2).map((opt, idx) => {
+            <button
+              type="button"
+              onClick={(e) => {
+                if (onParticipate) {
+                  e.stopPropagation();
+                  onParticipate(game.id);
+                }
+              }}
+              className="group/btn flex items-center justify-between px-3.5 py-2 rounded-full border border-rose-500/35 bg-rose-950/30 hover:bg-rose-900/50 hover:border-rose-400 transition-all duration-150 text-left shadow-sm"
+            >
+              <span className="text-[12px] font-extrabold text-rose-300 truncate mr-1 group-hover/btn:text-rose-200">
+                {shortenOptionLabel(secondOption.text, "No")}
+              </span>
+              <span className="text-[12px] font-black text-white shrink-0">
+                {secondPct}%
+              </span>
+            </button>
+          </div>
+        ) : game.predictionType === PredictionType.WIN_DRAW_LOSE ? (
+          /* 승무패 (3지선다): 3분할 둥근 캡슐 버튼 (승 | 무 | 패) */
+          <div className="grid grid-cols-3 gap-1.5">
+            {game.options.slice(0, 3).map((opt, idx) => {
               const pct = Math.round((opt.currentOdds || 0.33) * 100);
+              const colorTheme =
+                idx === 0
+                  ? "border-emerald-500/35 bg-emerald-950/30 text-emerald-300 hover:border-emerald-400"
+                  : idx === 1
+                  ? "border-slate-500/35 bg-slate-900/40 text-slate-300 hover:border-slate-400"
+                  : "border-rose-500/35 bg-rose-950/30 text-rose-300 hover:border-rose-400";
               return (
-                <div
+                <button
                   key={opt.id || idx}
-                  className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-xl bg-slate-900/90 border border-white/[0.05] hover:border-sky-500/30 transition-colors"
+                  type="button"
+                  onClick={(e) => {
+                    if (onParticipate) {
+                      e.stopPropagation();
+                      onParticipate(game.id);
+                    }
+                  }}
+                  className={`flex items-center justify-between px-2.5 py-2 rounded-full border ${colorTheme} transition-all duration-150 text-left`}
                 >
-                  <span className="text-xs font-medium text-slate-200 truncate">
+                  <span className="text-[11px] font-extrabold truncate mr-1">
+                    {shortenOptionLabel(opt.text, idx === 0 ? "승" : idx === 1 ? "무" : "패")}
+                  </span>
+                  <span className="text-[11px] font-black text-white shrink-0">{pct}%</span>
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          /* 다자선택 (Ranking / Multi): Top 2개 캡슐 + 외 N개 뱃지 */
+          <div className="grid grid-cols-2 gap-2">
+            {game.options.slice(0, 2).map((opt, idx) => {
+              const pct = Math.round((opt.currentOdds || 0.25) * 100);
+              return (
+                <button
+                  key={opt.id || idx}
+                  type="button"
+                  onClick={(e) => {
+                    if (onParticipate) {
+                      e.stopPropagation();
+                      onParticipate(game.id);
+                    }
+                  }}
+                  className="flex items-center justify-between px-3 py-2 rounded-full border border-sky-500/35 bg-sky-950/30 hover:bg-sky-900/50 hover:border-sky-400 transition-all duration-150 text-left"
+                >
+                  <span className="text-[11px] font-extrabold text-sky-300 truncate mr-1">
                     {opt.text}
                   </span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-extrabold text-white">{pct}%</span>
-                    <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/30 text-[10px] font-bold">
-                      선택
-                    </span>
-                  </div>
-                </div>
+                  <span className="text-[11px] font-black text-white shrink-0">{pct}%</span>
+                </button>
               );
             })}
           </div>

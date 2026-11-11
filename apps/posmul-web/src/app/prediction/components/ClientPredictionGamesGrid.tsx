@@ -8,6 +8,7 @@ import {
   resolveGameVisualMeta,
   splitTitlePrefix,
 } from "../../../bounded-contexts/prediction/presentation/components/PredictionGameCard";
+import { MoneyWaveWaterfallCard } from "../../../bounded-contexts/prediction/presentation/components/MoneyWaveWaterfallCard";
 import {
   PredictionType,
   GameStatus,
@@ -573,41 +574,10 @@ export function ClientPredictionGamesGrid({
             )}
           </div>
 
-          {/* 우측 (4 cols): MoneyWave 부스트 미니 카드 2종 + Hot Topics TOP 5 */}
+          {/* 우측 (4 cols): 실시간 폭포수 MoneyWave 카드 + Hot Topics TOP 5 */}
           <div className="lg:col-span-4 flex flex-col justify-between space-y-3.5">
-            {/* 상단 미니 배너 1: MoneyWave Prize Pool */}
-            <div className="rounded-2xl bg-gradient-to-br from-[#151b2b] to-[#111520] border border-white/[0.08] p-4 relative overflow-hidden">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
-                  <TrendingUp className="w-3.5 h-3.5" />
-                  <span>MoneyWave 참여 매칭 부스트</span>
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-300 border border-amber-400/30">
-                  ACTIVE
-                </span>
-              </div>
-              <p className="text-xs text-slate-300">
-                현재 마켓 누적 상금{" "}
-                <strong className="text-white font-black">
-                  {totalActivePrizePool.toLocaleString()} PMC
-                </strong>{" "}
-                · 투표가 몰릴수록 상금이 실시간 증가합니다
-              </p>
-            </div>
-
-            {/* 상단 미니 배너 2: 사회적 학습 가중치 안내 */}
-            <div className="rounded-2xl bg-gradient-to-br from-[#141829] to-[#111520] border border-sky-500/20 p-4 relative overflow-hidden">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-extrabold text-sky-300 flex items-center gap-1.5">
-                  <GraduationCap className="w-4 h-4 text-sky-400" />
-                  <span>사회적 학습 임팩트 최대 2.5x</span>
-                </span>
-                <span className="text-[10px] font-bold text-slate-400">STEP 3 · 학습</span>
-              </div>
-              <p className="text-xs text-slate-400">
-                공인 경제지표(KOSIS·DART·한국은행) 및 주요 입법 의제 적중 시 추가 PMC 가중치가 지급됩니다
-              </p>
-            </div>
+            {/* 상단: 일정 시간마다 물폭포가 쏟아져 차오르는 실시간 MoneyWave 풀 카드 */}
+            <MoneyWaveWaterfallCard totalPrizePool={totalActivePrizePool} />
 
             {/* 하단 Hot topics TOP 5 랭킹 보드 */}
             <div className="rounded-2xl bg-[#121621] border border-white/[0.08] p-4 flex-1 flex flex-col justify-between">

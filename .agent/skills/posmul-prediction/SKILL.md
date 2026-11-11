@@ -98,3 +98,4 @@ GitHub Actions CI 파이프라인의 성공을 보장하기 위한 개발 규칙
 2. **ESLint / TypeScript 규칙**:
    - 값이 재할당되지 않는 변수는 반드시 `const`로 선언합니다 (`let` 금지).
    - 모든 Server Action 및 UseCase 입력 파라미터는 Zod 스키마(`CreatePredictionGameRequestSchema` 등)를 통해 `safeParse` 검증을 거칩니다.
+

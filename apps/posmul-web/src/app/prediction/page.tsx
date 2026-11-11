@@ -1,6 +1,5 @@
 import { createClient } from "../../lib/supabase/server";
 import { FadeIn } from "../../shared/ui/components/animations";
-import { CompactMoneyWaveCard } from "../../bounded-contexts/prediction/presentation/components/CompactMoneyWaveCard";
 import { ClientPredictionGamesGrid, type SortOption } from "./components/ClientPredictionGamesGrid";
 import { getAggregatedPrizePool } from "../../bounded-contexts/prediction/application/prediction-pool.service";
 import {
@@ -8,7 +7,6 @@ import {
   mapPredictionGameRowToCardModel,
   type PredictionGameRow,
 } from "./components/prediction-game-mapper";
-import { DomainContextHeader } from "../../shared/ui/components/layout/DomainContextHeader";
 import {
   PredictionType,
   GameStatus,
@@ -130,63 +128,10 @@ export default async function PredictionPage({ searchParams }: PageProps) {
     mappedGames = fallbackGames;
   }
 
-  const dataSources = [
-    { name: "Alpha Vantage", desc: "실시간 주가" },
-    { name: "DART", desc: "기업 실적 공시" },
-    { name: "KOSIS", desc: "국가 통계" },
-    { name: "KOBIS·닐슨", desc: "문화·시청률" },
-    { name: "중앙선관위", desc: "공식 선거·의안" },
-  ];
-
-  const headerTitle =
-    filterParam === "hot"
-      ? "🔥 인기·핫이슈 예측 마켓"
-      : filterParam === "high-pool"
-        ? "💰 고액 상금풀 예측 마켓"
-        : filterParam === "closing"
-          ? "⏰ 마감 임박 예측 마켓"
-          : "🎯 전체 예측 마켓";
-
   return (
     <div className="min-h-screen bg-[#090b12] text-slate-100">
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+      <div className="mx-auto max-w-7xl px-4 pt-4 pb-12 sm:px-6 lg:px-8">
         <FadeIn>
-          <DomainContextHeader
-            domain="prediction"
-            title={headerTitle}
-            subtitle="무위험 참여 자산(PMP)으로 미래 이슈를 예측하고, 적중 시 MoneyWave 상금풀에서 PMC를 획득하세요"
-            metrics={[
-              {
-                label: "MoneyWave 상금풀",
-                value: Math.round(platformTotalPool || 66461),
-                unit: "PMC",
-              },
-              { label: "진행 중 마켓", value: mappedGames.length, unit: "개" },
-            ]}
-          >
-            <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 공인 검증 데이터:</span>
-              {dataSources.map((ds) => (
-                <span
-                  key={ds.name}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-sky-950/40 border border-sky-800/40 text-sky-300 font-medium"
-                >
-                  <span className="w-1.5 h-1.5 bg-sky-400 rounded-full animate-pulse" />
-                  <span className="font-bold">{ds.name}</span>
-                  <span className="text-slate-400 text-[10px]">({ds.desc})</span>
-                </span>
-              ))}
-            </div>
-          </DomainContextHeader>
-
-          <div className="mb-6">
-            <CompactMoneyWaveCard
-              depthLevel={1}
-              category="all"
-              initialPool={platformTotalPool}
-            />
-          </div>
-
           <ClientPredictionGamesGrid
             games={mappedGames}
             userId={user?.id}
