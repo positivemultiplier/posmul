@@ -54,6 +54,9 @@ export function extractJsonFromText<T = unknown>(raw: string): T {
 }
 
 export class ExaoneClient {
+  private static consecutiveTimeouts = 0;
+  private static cooldownUntilMs = 0;
+
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly model: string;
@@ -90,8 +93,13 @@ export class ExaoneClient {
       throw new Error("EXAONE_API_KEY is not configured");
     }
 
+    if (Date.now() < ExaoneClient.cooldownUntilMs) {
+      throw new Error("EXAONE circuit breaker active (temporary cooldown after timeout)");
+    }
+
     const controller = new AbortController();
-    const timeoutMs = options?.timeoutMs ?? 25000;
+    // EXAONE 지연 시 Gemini 폴백 예산을 확보하기 위해 호출 상한을 9초로 제한
+    const timeoutMs = Math.min(options?.timeoutMs ?? 9000, 9000);
     const timer = setTimeout(() => controller.abort(), timeoutMs);
 
     try {
@@ -115,6 +123,12 @@ export class ExaoneClient {
 
       if (!response.ok) {
         const errBody = await response.text().catch(() => "");
+        if (response.status >= 500) {
+          ExaoneClient.consecutiveTimeouts += 1;
+          if (ExaoneClient.consecutiveTimeouts >= 2) {
+            ExaoneClient.cooldownUntilMs = Date.now() + 120_000;
+          }
+        }
         throw new Error(
           `EXAONE API error ${response.status}: ${errBody.slice(0, 240)}`
         );
@@ -133,6 +147,9 @@ export class ExaoneClient {
       const content = message?.content?.trim() ?? "";
       const reasoning = message?.reasoning_content?.trim() ?? "";
 
+      ExaoneClient.consecutiveTimeouts = 0;
+      ExaoneClient.cooldownUntilMs = 0;
+
       if (content) {
         try {
           return extractJsonFromText<T>(content);
@@ -150,6 +167,17 @@ export class ExaoneClient {
       }
 
       throw new Error("EXAONE returned empty message content");
+    } catch (err) {
+      if (
+        err instanceof Error &&
+        (err.name === "AbortError" || /aborted|timeout/i.test(err.message))
+      ) {
+        ExaoneClient.consecutiveTimeouts += 1;
+        if (ExaoneClient.consecutiveTimeouts >= 2) {
+          ExaoneClient.cooldownUntilMs = Date.now() + 120_000;
+        }
+      }
+      throw err;
     } finally {
       clearTimeout(timer);
     }

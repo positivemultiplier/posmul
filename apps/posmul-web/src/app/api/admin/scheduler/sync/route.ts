@@ -4,6 +4,9 @@ import { getMasterScheduler } from "@/bounded-contexts/prediction/application/se
 import { getCreatePredictionGameUseCase } from "@/bounded-contexts/prediction/di-container";
 import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
+
 /**
  * POST /api/admin/scheduler/sync
  * 정기 경제지표(한국은행 ECOS, 통계청 KOSIS, 금감원 DART), K-콘텐츠(KOBIS/드라마/예능/가요),

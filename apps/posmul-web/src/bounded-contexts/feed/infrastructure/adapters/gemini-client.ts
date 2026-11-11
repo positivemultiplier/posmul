@@ -2,7 +2,12 @@ import { ExaoneClient, extractJsonFromText } from "./exaone-client";
 
 export type LlmProvider = "exaone" | "gemini";
 
-export const DEFAULT_GEMINI_MODELS = ["gemini-3.8-flash", "gemini-flash-latest"];
+export const DEFAULT_GEMINI_MODELS = [
+  "gemini-3.5-flash",
+  "gemini-3.5-flash-lite",
+  "gemini-flash-lite-latest",
+  "gemini-flash-latest",
+];
 
 export type CustomGeminiCaller = (
   systemPrompt: string,
@@ -23,6 +28,7 @@ export class GeminiClient {
   private readonly apiKey: string;
   private readonly models: string[];
   private readonly customCaller?: CustomGeminiCaller;
+  private lastSucceededModel: string | null = null;
 
   constructor(options?: GeminiClientOptions) {
     this.apiKey = (
@@ -40,7 +46,7 @@ export class GeminiClient {
   }
 
   public getPrimaryModelName(): string {
-    return this.models[0] ?? "gemini-3.8-flash";
+    return this.lastSucceededModel ?? this.models[0] ?? "gemini-3.5-flash";
   }
 
   public async generateJson<T>(
@@ -59,9 +65,14 @@ export class GeminiClient {
     }
 
     let lastError: Error | null = null;
+    const perModelTimeoutMs = Math.min(
+      8500,
+      Math.max(4500, Math.floor(timeoutMs * 0.6))
+    );
+
     for (const model of this.models) {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      const timer = setTimeout(() => controller.abort(), perModelTimeoutMs);
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
           this.apiKey
@@ -105,6 +116,7 @@ export class GeminiClient {
           continue;
         }
 
+        this.lastSucceededModel = model;
         return extractJsonFromText<T>(rawText);
       } catch (err) {
         lastError = err instanceof Error ? err : new Error(String(err));

@@ -8,6 +8,7 @@ import {
 import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 /**
  * GET /api/cron/feed-ingest
