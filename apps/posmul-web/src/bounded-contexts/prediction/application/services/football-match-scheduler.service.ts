@@ -67,8 +67,11 @@ const LEAGUE_NAMES: Record<string, string> = {
     WC: "월드컵",
 };
 
-// 지원 리그 목록 (무료 플랜 기준)
-const SUPPORTED_LEAGUES = ["PL", "CL", "BL1", "SA", "PD", "FL1"];
+// 주요 빅 4리그 우선 조회 (Football-Data 무료 플랜 10 req/min 및 크론 타임아웃 방지)
+const SUPPORTED_LEAGUES = ["PL", "CL", "BL1", "PD"];
+
+const SYSTEM_SCHEDULER_USER_ID =
+    "00000000-0000-0000-0000-000000000001" as UserId;
 
 export class FootballMatchSchedulerService {
     private readonly apiKey: string;
@@ -81,7 +84,7 @@ export class FootballMatchSchedulerService {
             throw new Error("FOOTBALL_DATA_API_KEY is not set");
         }
         this.apiKey = apiKey;
-        this.systemUserId = "system-scheduler" as UserId;
+        this.systemUserId = SYSTEM_SCHEDULER_USER_ID;
     }
 
     /**
@@ -123,15 +126,18 @@ export class FootballMatchSchedulerService {
     /**
      * 모든 지원 리그의 예정된 경기 조회
      */
-    async fetchAllUpcomingMatches(days: number = 7): Promise<FootballDataMatch[]> {
+    async fetchAllUpcomingMatches(days: number = 14): Promise<FootballDataMatch[]> {
         const allMatches: FootballDataMatch[] = [];
         const dateFrom = new Date();
         const dateTo = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
 
-        for (const league of SUPPORTED_LEAGUES) {
+        for (let idx = 0; idx < SUPPORTED_LEAGUES.length; idx++) {
+            const league = SUPPORTED_LEAGUES[idx];
             try {
-                // API 레이트 리밋 방지 (10 req/min)
-                await new Promise(resolve => setTimeout(resolve, 6000));
+                if (idx > 0) {
+                    // API 레이트 리밋 방지 (10 req/min 한도 내 1.2초 간격)
+                    await new Promise(resolve => setTimeout(resolve, 1200));
+                }
 
                 const matches = await this.fetchUpcomingMatches(league, dateFrom, dateTo);
                 allMatches.push(...matches);
@@ -150,38 +156,58 @@ export class FootballMatchSchedulerService {
      * 경기를 게임 템플릿으로 변환
      */
     convertMatchToTemplate(match: FootballDataMatch): ScheduledGameTemplate {
+        const now = new Date();
         const matchDate = new Date(match.utcDate);
         const leagueName = LEAGUE_NAMES[match.competition.code] ?? match.competition.name;
 
-        // 경기 시작 2시간 전에 게임 생성
-        const scheduledTime = new Date(matchDate.getTime() - 2 * 60 * 60 * 1000);
+        // 즉시 참여 오픈, 경기 시작 10분 전 마감
+        const scheduledTime = now;
+        const closeTime = new Date(matchDate.getTime() - 10 * 60 * 1000);
+        const duration = Math.max(
+            2,
+            Math.round(((closeTime.getTime() - scheduledTime.getTime()) / (60 * 60 * 1000)) * 10) / 10
+        );
 
-        // 경기 시작 시 베팅 마감
-        const duration = 2; // 2시간 (게임 생성부터 경기 시작까지)
+        // 경기 종료 후 약 1시간 뒤 정산 (경기 진행 2시간 + 여유 1시간)
+        const settlementDelay = 3;
 
-        // 경기 종료 후 1시간 뒤 정산 (보통 경기는 2시간)
-        const settlementDelay = 3; // 3시간
+        const kstKickoff = new Intl.DateTimeFormat("ko-KR", {
+            timeZone: "Asia/Seoul",
+            month: "long",
+            day: "numeric",
+            weekday: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+            hour12: false,
+        }).format(matchDate);
+
+        const homeName = match.homeTeam.shortName || match.homeTeam.name;
+        const awayName = match.awayTeam.shortName || match.awayTeam.name;
 
         return {
             id: `football-${match.id}`,
-            title: `[${leagueName}] ${match.homeTeam.shortName} vs ${match.awayTeam.shortName}`,
-            description: `${leagueName} ${match.matchday}라운드 경기 결과를 예측하세요!\n\n🏠 홈: ${match.homeTeam.name}\n✈️ 원정: ${match.awayTeam.name}`,
+            title: `[${leagueName}] ${homeName} vs ${awayName}, 90분 승무패 결과는?`,
+            description: [
+                `🎯 매치 정보: ${leagueName} 매치데이 ${match.matchday} (${homeName} 홈 vs ${awayName} 원정)`,
+                `🗓️ 킥오프 일정: ${kstKickoff} (KST 기준) · 경기 시작 10분 전 참여 마감`,
+                `⚖️ 판정 기준: 연장·승부차기 제외 정규시간(90분+추가시간) 공식 스코어 기준 Football-Data API 자동 정산`,
+            ].join("\n"),
             predictionType: PredictionType.WIN_DRAW_LOSE,
             options: [
                 {
                     id: "HOME_TEAM",
-                    label: `${match.homeTeam.shortName} 승`,
-                    description: "홈팀 승리"
+                    label: `${homeName} 승`,
+                    description: `${match.homeTeam.name} 정규시간 승리`,
                 },
                 {
                     id: "DRAW",
                     label: "무승부",
-                    description: "동점"
+                    description: "정규시간 동점 무승부",
                 },
                 {
                     id: "AWAY_TEAM",
-                    label: `${match.awayTeam.shortName} 승`,
-                    description: "원정팀 승리"
+                    label: `${awayName} 승`,
+                    description: `${match.awayTeam.name} 정규시간 승리`,
                 },
             ],
             scheduledTime,
@@ -258,11 +284,17 @@ export class FootballMatchSchedulerService {
     }
 
     /**
-     * 이번 주 예정된 모든 경기에 대해 게임 템플릿 생성
+     * 향후 2주 예정 경기 중 빅매치 최대 6경기에 대해 게임 템플릿 생성
      */
     async generateWeeklyGameTemplates(): Promise<ScheduledGameTemplate[]> {
-        const matches = await this.fetchAllUpcomingMatches(7);
-        return matches.map(match => this.convertMatchToTemplate(match));
+        const matches = await this.fetchAllUpcomingMatches(14);
+        const nowMs = Date.now();
+        const futureMatches = matches.filter(
+            (m) => new Date(m.utcDate).getTime() > nowMs + 90 * 60 * 1000
+        );
+        return futureMatches
+            .slice(0, 6)
+            .map(match => this.convertMatchToTemplate(match));
     }
 
     /**

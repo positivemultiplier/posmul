@@ -4,6 +4,7 @@ import { FetchBillsUseCase } from "./application/use-cases/fetch-bills.use-case"
 import { FinancialMarketCollector } from "./infrastructure/collectors/financial-market.collector";
 import { BoxOfficeCollector } from "./infrastructure/collectors/boxoffice.collector";
 import { GeminiClassifierAdapter } from "./infrastructure/adapters/gemini-classifier.adapter";
+import { ClassifyContentUseCase } from "./application/use-cases/classify-content.use-case";
 import { CreatePredictionDraftUseCase } from "./application/use-cases/create-prediction-draft.use-case";
 
 let feedRepositoryInstance: SupabaseFeedRepository | null = null;
@@ -37,6 +38,12 @@ export function getBoxOfficeCollector(): BoxOfficeCollector {
 
 export function getGeminiClassifierAdapter(): GeminiClassifierAdapter {
   return new GeminiClassifierAdapter();
+}
+
+export function getClassifyContentUseCase(): ClassifyContentUseCase {
+  const repo = getFeedRepository();
+  const classifier = getGeminiClassifierAdapter();
+  return new ClassifyContentUseCase(repo, classifier);
 }
 
 export function getCreatePredictionDraftUseCase(): CreatePredictionDraftUseCase {

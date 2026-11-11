@@ -6,13 +6,14 @@ import {
   ContentClassification,
   ProcessStatus,
 } from "../../domain/value-objects/feed-types";
+import { serializeBlueprint } from "../adapters/gemini-classifier.adapter";
 
-export interface BoxOfficeMovie {
-  rank: number;
+interface BoxOfficeMovie {
+  rank: string;
+  movieCd: string;
   movieNm: string;
-  openDt: string;
-  audiAcc: number;
-  audiCnt: number;
+  audiAcc: string;
+  audiCnt: string;
 }
 
 interface EntertainmentFeedTopic {
@@ -21,110 +22,131 @@ interface EntertainmentFeedTopic {
   summary: string;
 }
 
+/** KOBIS 일별 박스오피스 API 조회 (실존 작품명 기반 팩트 생성) */
 async function fetchKobisTopics(
-  kobisKey: string,
-  todayStr: string
+  apiKey: string,
+  bucketKey: string
 ): Promise<EntertainmentFeedTopic[]> {
-  const topics: EntertainmentFeedTopic[] = [];
   const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
-  const targetDt =
-    yesterday.toISOString().split("T")[0]?.replace(/-/g, "") ?? "20260101";
+  const targetDt = yesterday.toISOString().split("T")[0]!.replace(/-/g, "");
 
-  const kobisUrl = `https://www.kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json?key=${kobisKey}&targetDt=${targetDt}`;
-  const res = await fetch(kobisUrl);
-  if (!res.ok) return topics;
+  const url = `http://kobis.or.kr/kobisopenapi/webservice/rest/boxoffice/searchDailyBoxOfficeList.json?key=${encodeURIComponent(
+    apiKey
+  )}&targetDt=${targetDt}`;
 
-  const data = await res.json();
-  const movieList = data.boxOfficeResult?.dailyBoxOfficeList as
-    | BoxOfficeMovie[]
-    | undefined;
-  if (!movieList || movieList.length === 0) return topics;
+  const res = await fetch(url, { next: { revalidate: 3600 } });
+  if (!res.ok) return [];
 
-  const top1 = movieList[0];
-  const top2 = movieList[1];
+  const data = (await res.json()) as {
+    boxOfficeResult?: { dailyBoxOfficeList?: BoxOfficeMovie[] };
+  };
+  const list = data.boxOfficeResult?.dailyBoxOfficeList ?? [];
+  if (list.length === 0) return [];
+
+  const topics: EntertainmentFeedTopic[] = [];
+  const top1 = list[0];
+  const top2 = list[1];
 
   if (top1) {
-    const accMan = Math.round(Number(top1.audiAcc) / 10000);
-    const nextMilestoneMan = Math.ceil((accMan + 50) / 100) * 100;
+    const accCount = Number(top1.audiAcc || 0);
+    const accMan = Math.round(accCount / 10000);
+    const milestoneStep = accMan >= 300 ? 50 : accMan >= 100 ? 30 : 20;
+    const nextMilestoneMan =
+      Math.max(10, Math.ceil((accMan + milestoneStep) / 10) * 10);
+
+    const blueprint = serializeBlueprint({
+      title: `[박스오피스] '${top1.movieNm}' 이번 주말 누적 관객 ${nextMilestoneMan.toLocaleString()}만 명 돌파할까?`,
+      summary: [
+        `🎯 기준선: 영진위 KOBIS 집계 기준 '${top1.movieNm}'의 현재 누적 관객 수는 약 ${accMan.toLocaleString()}만 명(박스오피스 1위)입니다.`,
+        `📈 돌파 요인: 현재 예매율 및 주말 가족·커플 관객 유입이 유지될 경우 ${nextMilestoneMan.toLocaleString()}만 명 도달 가능성이 높습니다.`,
+        `📉 미달 요인: 신작 개봉에 따른 상영관 점유율 분산 여부가 핵심 변수입니다.`,
+        `⚖️ 판정 기준: 주말 마감 후 월요일 오전 KOBIS 공식 누적 관객 수로 자동 정산합니다.`,
+      ].join("\n"),
+      keywords: [top1.movieNm, "박스오피스", "KOBIS"],
+      category: "ENTERTAINMENT",
+      subcategory: "movie",
+      predictionType: "BINARY",
+      options: [
+        `${nextMilestoneMan.toLocaleString()}만 명 이상 돌파`,
+        `${nextMilestoneMan.toLocaleString()}만 명 미만 유지`,
+      ],
+      resolutionCriteria: `영진위 통합전산망(KOBIS) '${top1.movieNm}' 공식 누적 관객 수 기준`,
+      closingHoursFromNow: 72,
+      settlementDelayHours: 12,
+      oracleType: "kobis",
+      oracleConfig: {
+        movieCd: top1.movieCd,
+        movieNm: top1.movieNm,
+        targetAudiAcc: nextMilestoneMan * 10000,
+      },
+      baselineFact: `'${top1.movieNm}' 현재 누적 ${accMan.toLocaleString()}만 명`,
+    });
+
     topics.push({
-      title: `[박스오피스] '${top1.movieNm}' 이번 주말 박스오피스 1위 수성할까? (현재 누적 ${accMan.toLocaleString()}만 명)`,
-      link: `https://posmul.org/entertainment/boxoffice/${encodeURIComponent(top1.movieNm)}-${todayStr}`,
-      summary: `영진위 통합전산망(KOBIS) 현재 박스오피스 1위 '${top1.movieNm}'이 이번 주말에도 1위를 지키고 누적 ${nextMilestoneMan.toLocaleString()}만 관객을 돌파할지 예측합니다. [마감: 금요일 18:00 / 정산: 월요일 09:00 KOBIS 공식 집계]`,
+      title: `[박스오피스] '${top1.movieNm}' ${nextMilestoneMan.toLocaleString()}만 관객 돌파 예측`,
+      link: `https://posmul.org/entertainment/boxoffice/${encodeURIComponent(
+        top1.movieCd || top1.movieNm
+      )}-${bucketKey}`,
+      summary: `KOBIS 박스오피스 1위 '${top1.movieNm}' 누적 관객 예측\n\n${blueprint}`,
     });
   }
 
-  if (top2) {
+  if (top1 && top2) {
+    const blueprint = serializeBlueprint({
+      title: `[극장 맞대결] 이번 주말 박스오피스 1위는 '${top1.movieNm}' vs '${top2.movieNm}' 중 어느 작품일까?`,
+      summary: [
+        `🎯 기준선: 현재 일별 박스오피스 1위는 '${top1.movieNm}', 2위는 '${top2.movieNm}'입니다.`,
+        `📈 1위 수성 시나리오: '${top1.movieNm}'의 입소문과 좌석판매율 우위가 주말까지 이어지는 경우입니다.`,
+        `📉 역전 시나리오: '${top2.movieNm}' 또는 제3의 신작이 주말 스크린 확보로 순위를 뒤집는 경우입니다.`,
+        `⚖️ 판정 기준: KOBIS 주말 박스오피스 1위 작품 공식 발표 기준으로 정산합니다.`,
+      ].join("\n"),
+      keywords: [top1.movieNm, top2.movieNm, "주말박스오피스"],
+      category: "ENTERTAINMENT",
+      subcategory: "movie",
+      predictionType: "WIN_DRAW_LOSE",
+      options: [top1.movieNm, top2.movieNm, "그 외 다른 작품 1위"],
+      resolutionCriteria: "영진위 통합전산망(KOBIS) 주말 박스오피스 1위 공식 순위",
+      closingHoursFromNow: 72,
+      settlementDelayHours: 12,
+      oracleType: "kobis",
+      baselineFact: `1위 ${top1.movieNm} vs 2위 ${top2.movieNm}`,
+    });
+
     topics.push({
-      title: `[박스오피스] '${top2.movieNm}' 주말 일일 관객 15만 명 돌파할까?`,
-      link: `https://posmul.org/entertainment/boxoffice/${encodeURIComponent(top2.movieNm)}-${todayStr}`,
-      summary: `박스오피스 2위 '${top2.movieNm}'의 주말 관객 동원력과 역주행 가능성을 예측합니다. [정산: 영진위 KOBIS 일별 박스오피스 기준]`,
+      title: `[극장 맞대결] '${top1.movieNm}' vs '${top2.movieNm}' 주말 1위 대결`,
+      link: `https://posmul.org/entertainment/boxoffice/versus-${bucketKey}`,
+      summary: `주말 박스오피스 1위 맞대결\n\n${blueprint}`,
     });
   }
 
   return topics;
 }
 
-function getStandardKContentTopics(todayStr: string): EntertainmentFeedTopic[] {
-  return [
-    {
-      title: `[영화·KOBIS] 이번 주말 박스오피스 1위 작품, 주말 관객 50만 명 돌파할까?`,
-      link: `https://posmul.org/entertainment/boxoffice/weekend-top1-${todayStr}`,
-      summary: `영진위 통합전산망(KOBIS) 주말 박스오피스(금~일) 1위 영화의 주말 관객 동원력이 50만 명을 넘길지 예측합니다. (금요일 18:00 마감 ➔ 월요일 09:00 KOBIS 정산)`,
-    },
-    {
-      title: `[주말드라마] 금토·주말 미니시리즈 전국 가구 최고 시청률 12.0% 돌파할까?`,
-      link: `https://posmul.org/entertainment/drama/weekend-rating-${todayStr}`,
-      summary: `이번 주 방영되는 주말 미니시리즈 중 닐슨코리아 전국 가구 기준 시청률 12.0%를 돌파하는 흥행작이 나올지 예측합니다. (본방 1시간 전 마감 ➔ 익일 09:00 시청률 정산)`,
-    },
-    {
-      title: `[일요예능] 일요일 저녁 프라임타임 예능 동시간대 시청률 1위 수성할까?`,
-      link: `https://posmul.org/entertainment/variety/sunday-rating-${todayStr}`,
-      summary: `일요일 황금시간대 대표 예능 프로그램의 닐슨코리아 수도권·전국 가구 시청률 1위 달성 여부를 예측합니다. (일요일 17:00 마감 ➔ 월요일 09:00 정산)`,
-    },
-    {
-      title: `[K-POP 음원] 금주 컴백 타이틀곡, 발매 24시간 내 멜론 TOP 10 진입할까?`,
-      link: `https://posmul.org/entertainment/music/melon-top10-${todayStr}`,
-      summary: `이번 주 발매되는 주요 K-POP 아티스트의 신곡이 멜론 TOP 100 및 써클차트 일간 TOP 10에 진입할지 예측합니다. (발매 1시간 전 마감 ➔ 익일 13:00 정산)`,
-    },
-    {
-      title: `[글로벌 K-POP] K-POP 아티스트 곡, 이번 주 미국 빌보드 Hot 100 차트인 성공할까?`,
-      link: `https://posmul.org/entertainment/music/billboard-hot100-${todayStr}`,
-      summary: `글로벌 스트리밍과 음원 판매량을 합산한 미국 Billboard Hot 100 최신 차트에 K-POP 트랙이 진입할지 예측합니다.`,
-    },
-  ];
-}
-
 export class BoxOfficeCollector {
   constructor(private feedItemRepository: IFeedItemRepository) {}
 
   /**
-   * 영화(KOBIS 박스오피스), 드라마·예능(시청률), 가요(멜론·써클·빌보드 차트) 정기 예측 토픽 수집
+   * 실존 영화 작품명(KOBIS API)이 확인될 때만 박스오피스 예측 토픽 수집
+   * - KOBIS_API_KEY가 없는 상태에서 추상 '작품군/걸그룹' 템플릿을 매일 복제하던 동작 제거
    */
   async collect(): Promise<Result<FeedItem[]>> {
+    const kobisKey = process.env.KOBIS_API_KEY?.trim();
+    if (!kobisKey) {
+      return success([]);
+    }
+
     const collectedItems: FeedItem[] = [];
-
     try {
-      const todayStr = new Date().toISOString().split("T")[0] ?? "2026-11-05";
-      const kobisKey = process.env.KOBIS_API_KEY;
-      const entertainmentTopics: EntertainmentFeedTopic[] = [];
+      const now = new Date();
+      const bucketKey = `${now.getUTCFullYear()}-w${Math.ceil(
+        (now.getTime() - new Date(now.getUTCFullYear(), 0, 1).getTime()) /
+          (7 * 24 * 60 * 60 * 1000)
+      )}`;
 
-      if (kobisKey) {
-        try {
-          const kobisTopics = await fetchKobisTopics(kobisKey, todayStr);
-          entertainmentTopics.push(...kobisTopics);
-        } catch {
-          // KOBIS 호출 실패 시 기본 K-콘텐츠 정기 토픽으로 보강
-        }
-      }
-
-      // 드라마·예능·가요 정기 토픽 상시 보강
-      entertainmentTopics.push(...getStandardKContentTopics(todayStr));
-
-      for (const topic of entertainmentTopics) {
+      const topics = await fetchKobisTopics(kobisKey, bucketKey);
+      for (const topic of topics) {
         const exists = await this.feedItemRepository.findByLink(topic.link);
-        if (exists.success && exists.data) {
-          continue;
-        }
+        if (exists.success && exists.data) continue;
 
         const newItem = FeedItem.create({
           sourceId: "550e8400-e29b-41d4-a716-446655440007",
@@ -136,8 +158,10 @@ export class BoxOfficeCollector {
           processStatus: ProcessStatus.CLASSIFIED,
         });
 
-        await this.feedItemRepository.save(newItem);
-        collectedItems.push(newItem);
+        const saveRes = await this.feedItemRepository.save(newItem);
+        if (saveRes.success) {
+          collectedItems.push(newItem);
+        }
       }
 
       return success(collectedItems);

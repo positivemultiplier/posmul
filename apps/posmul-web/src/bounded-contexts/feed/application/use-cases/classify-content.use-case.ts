@@ -45,8 +45,15 @@ export class ClassifyContentUseCase {
 
                 const { classification } = classResult.data;
 
-                // Entity Update
-                item.classify(classification);
+                // PREDICTION / FORUM만 다음 파이프라인(CLASSIFIED)으로 넘기고, 비예측/잡음은 IGNORED로 제외
+                if (
+                    classification === ContentClassification.UNCLASSIFIED ||
+                    classification === ContentClassification.DISCARD
+                ) {
+                    item.markAsIgnored(classification);
+                } else {
+                    item.classify(classification);
+                }
 
                 // Save
                 const saveResult = await this.feedRepo.update(item);

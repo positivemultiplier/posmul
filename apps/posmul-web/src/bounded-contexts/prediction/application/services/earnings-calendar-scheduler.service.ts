@@ -24,7 +24,7 @@ interface FmpEarningsEvent {
 
 // 주요 관심 기업 목록 (한국어 이름 포함)
 const TRACKED_COMPANIES: Record<string, { name: string; category: "technology" | "economy"; importance: "high" | "critical" }> = {
-    // 미국 빅테크
+    // 미국 빅테크 & 글로벌 관심 기업
     AAPL: { name: "애플", category: "technology", importance: "critical" },
     MSFT: { name: "마이크로소프트", category: "technology", importance: "critical" },
     GOOGL: { name: "구글(알파벳)", category: "technology", importance: "critical" },
@@ -32,8 +32,13 @@ const TRACKED_COMPANIES: Record<string, { name: string; category: "technology" |
     NVDA: { name: "엔비디아", category: "technology", importance: "critical" },
     META: { name: "메타", category: "technology", importance: "high" },
     TSLA: { name: "테슬라", category: "technology", importance: "critical" },
+    NFLX: { name: "넷플릭스", category: "technology", importance: "high" },
+    AVGO: { name: "브로드컴", category: "technology", importance: "high" },
+    ORCL: { name: "오라클", category: "technology", importance: "high" },
+    BILI: { name: "빌리빌리", category: "technology", importance: "high" },
+    NIO: { name: "니오", category: "technology", importance: "high" },
 
-    // 미국 금융/기타
+    // 미국 금융/리테일
     JPM: { name: "JP모건", category: "economy", importance: "high" },
     BAC: { name: "뱅크오브아메리카", category: "economy", importance: "high" },
     WMT: { name: "월마트", category: "economy", importance: "high" },
@@ -43,9 +48,12 @@ const TRACKED_COMPANIES: Record<string, { name: string; category: "technology" |
     INTC: { name: "인텔", category: "technology", importance: "high" },
 };
 
+const SYSTEM_SCHEDULER_USER_ID =
+    "00000000-0000-0000-0000-000000000001" as UserId;
+
 export class EarningsCalendarSchedulerService {
     private readonly apiKey: string;
-    private readonly baseUrl = "https://financialmodelingprep.com/api/v3";
+    private readonly baseUrl = "https://financialmodelingprep.com/stable";
     private readonly systemUserId: UserId;
 
     constructor() {
@@ -54,11 +62,11 @@ export class EarningsCalendarSchedulerService {
             throw new Error("FMP_API_KEY is not set");
         }
         this.apiKey = apiKey;
-        this.systemUserId = "system-scheduler" as UserId;
+        this.systemUserId = SYSTEM_SCHEDULER_USER_ID;
     }
 
     /**
-     * 특정 기간의 실적 발표 일정 조회
+     * 특정 기간의 실적 발표 일정 조회 (FMP /stable/earnings-calendar 사용)
      */
     async fetchEarningsCalendar(
         from: Date,
@@ -68,7 +76,7 @@ export class EarningsCalendarSchedulerService {
             const fromStr = from.toISOString().split("T")[0];
             const toStr = to.toISOString().split("T")[0];
 
-            const url = `${this.baseUrl}/earning_calendar?from=${fromStr}&to=${toStr}&apikey=${this.apiKey}`;
+            const url = `${this.baseUrl}/earnings-calendar?from=${fromStr}&to=${toStr}&apikey=${this.apiKey}`;
 
             const response = await fetch(url);
 
@@ -78,6 +86,7 @@ export class EarningsCalendarSchedulerService {
             }
 
             const data: FmpEarningsEvent[] = await response.json();
+            if (!Array.isArray(data)) return [];
 
             // 관심 기업만 필터링
             return data.filter(event =>
@@ -90,11 +99,11 @@ export class EarningsCalendarSchedulerService {
     }
 
     /**
-     * 이번 주 실적 발표 일정 조회
+     * 향후 21일 실적 발표 일정 조회
      */
     async fetchWeeklyEarnings(): Promise<FmpEarningsEvent[]> {
         const from = new Date();
-        const to = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        const to = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000);
         return this.fetchEarningsCalendar(from, to);
     }
 
@@ -116,13 +125,15 @@ export class EarningsCalendarSchedulerService {
             return null;
         }
 
-        const earningsDate = new Date(event.date);
+        const now = new Date();
+        const earningsDate = new Date(`${event.date}T13:00:00Z`);
 
-        // 실적 발표 7일 전부터 게임 시작
-        const scheduledTime = new Date(earningsDate.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-        // 실적 발표 시점까지 참여 가능
-        const duration = 7 * 24; // 7일 (시간 단위)
+        // 즉시 참여 오픈, 발표 직전 마감
+        const scheduledTime = now;
+        const duration = Math.max(
+            2,
+            Math.round(((earningsDate.getTime() - now.getTime()) / (60 * 60 * 1000)) * 10) / 10
+        );
 
         // 실적 발표 24시간 후 정산
         const settlementDelay = 24;
@@ -136,10 +147,18 @@ export class EarningsCalendarSchedulerService {
             return null;
         }
 
+        const timeLabel =
+            event.time === "bmo" ? "미국 장 시작 전" : event.time === "amc" ? "미국 장 마감 후" : "공시 예정";
+
         return {
             id: `earnings-${event.symbol}-${event.date}`,
-            title: `${companyInfo.name}(${event.symbol}) 분기 실적 예측`,
-            description: `${companyInfo.name}의 이번 분기 실적이 애널리스트 예상(EPS $${epsEstimate.toFixed(2)})을 상회할까요?\n\n📅 실적 발표: ${event.date}\n⏰ 발표 시점: ${event.time === 'bmo' ? '장 시작 전' : event.time === 'amc' ? '장 마감 후' : event.time}`,
+            title: `[미국 실적] ${companyInfo.name}(${event.symbol}), 분기 EPS 예상($${epsEstimate.toFixed(2)}) 상회할까?`,
+            description: [
+                `🎯 기준선: 애널리스트 컨센서스 EPS $${epsEstimate.toFixed(2)} (${companyInfo.name} · ${event.symbol})`,
+                `📈 어닝 서프라이즈(Beat): 실제 발표 EPS > $${epsEstimate.toFixed(2)}`,
+                `📉 어닝 쇼크(Miss): 실제 발표 EPS ≤ $${epsEstimate.toFixed(2)}`,
+                `⚖️ 판정 기준: ${event.date} (${timeLabel}) 실적 공시 확정치(FMP API) 기준 정산`,
+            ].join("\n"),
             predictionType: PredictionType.BINARY,
             options: [
                 {

@@ -75,12 +75,23 @@ export async function GET(request: NextRequest) {
         : { error: (billsRes as any).error?.message || "Failed" };
     }
 
-    // 수집 완료 후 자동으로 AI 예측 게임 카드로 승격/생성
+    // 1차 수집된 미분류(PENDING) 최신 RSS 뉴스를 LG EXAONE + Gemini 듀얼 AI로 자동 분류
     try {
-      const { getCreatePredictionDraftUseCase } = await import("@/bounded-contexts/feed/di-container");
+      const { getClassifyContentUseCase, getCreatePredictionDraftUseCase } = await import(
+        "@/bounded-contexts/feed/di-container"
+      );
+      const classifyUseCase = getClassifyContentUseCase();
+      const classifyRes = await classifyUseCase.execute(8);
+      results.aiClassification = classifyRes.success
+        ? classifyRes.data
+        : { error: (classifyRes as any).error?.message || "Classification failed" };
+
+      // 2차로 분류 완료된(CLASSIFIED) 피드를 품질 게이트 검증 후 고품질 예측 게임으로 발행
       const draftUseCase = getCreatePredictionDraftUseCase();
-      const draftRes = await draftUseCase.execute(5);
-      results.autoCreatedGames = draftRes.success ? draftRes.data : { error: "Failed to create drafts" };
+      const draftRes = await draftUseCase.execute(6);
+      results.autoCreatedGames = draftRes.success
+        ? draftRes.data
+        : { error: (draftRes as any).error?.message || "Failed to create drafts" };
     } catch (draftErr: any) {
       results.autoCreatedGames = { error: draftErr?.message || "Auto creation skipped" };
     }

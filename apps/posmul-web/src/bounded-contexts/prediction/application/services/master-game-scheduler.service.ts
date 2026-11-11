@@ -96,7 +96,7 @@ export class MasterGameSchedulerService {
     if (this.footballScheduler) {
       try {
         const footballTemplates =
-          await this.footballScheduler.generateDailyGameTemplates();
+          await this.footballScheduler.generateWeeklyGameTemplates();
         newTemplates.push(...footballTemplates);
         footballAdded = footballTemplates.length;
       } catch {

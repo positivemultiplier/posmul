@@ -13,6 +13,7 @@ export interface IRssSourceRepository {
 export interface IFeedItemRepository {
     save(item: FeedItem): Promise<Result<void>>;
     findByLink(link: string): Promise<Result<FeedItem | null>>;
+    findExistingLinks?(links: string[]): Promise<Result<Set<string>>>;
     findPendingItems(limit: number): Promise<Result<FeedItem[]>>;
     findItemsByStatus(status: ProcessStatus, limit: number): Promise<Result<FeedItem[]>>;
     update(item: FeedItem): Promise<Result<void>>;

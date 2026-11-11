@@ -92,4 +92,11 @@ export class FeedItem extends Entity<FeedItemProps> {
     public markAsDrafted() {
         this.props.processStatus = ProcessStatus.DRAFT_CREATED;
     }
+
+    // 비예측/중복/저품질 아이템 큐 제외 처리
+    public markAsIgnored(classification: ContentClassification = ContentClassification.DISCARD) {
+        this.props.aiClassification = classification;
+        this.props.processStatus = ProcessStatus.IGNORED;
+        this.props.processedAt = new Date();
+    }
 }

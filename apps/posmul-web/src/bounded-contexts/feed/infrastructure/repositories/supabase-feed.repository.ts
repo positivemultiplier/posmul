@@ -154,6 +154,8 @@ export class SupabaseFeedRepository implements IRssSourceRepository, IFeedItemRe
             .from("items")
             .select("*")
             .eq("process_status", ProcessStatus.PENDING)
+            .order("published_at", { ascending: false, nullsFirst: false })
+            .order("created_at", { ascending: false })
             .limit(limit);
 
         if (error) return failure(new Error(error.message));
@@ -162,12 +164,36 @@ export class SupabaseFeedRepository implements IRssSourceRepository, IFeedItemRe
         return success(items);
     }
 
+    async findExistingLinks(links: string[]): Promise<Result<Set<string>>> {
+        if (links.length === 0) return success(new Set());
+        const existing = new Set<string>();
+        const chunkSize = 100;
+
+        for (let i = 0; i < links.length; i += chunkSize) {
+            const chunk = links.slice(i, i + chunkSize);
+            const { data, error } = await supabaseAdmin
+                .schema("feed")
+                .from("items")
+                .select("link")
+                .in("link", chunk);
+
+            if (error) return failure(new Error(error.message));
+            for (const row of (data || []) as Array<{ link: string | null }>) {
+                if (row.link) existing.add(row.link);
+            }
+        }
+
+        return success(existing);
+    }
+
     async findItemsByStatus(status: ProcessStatus, limit: number): Promise<Result<FeedItem[]>> {
         const { data, error } = await supabaseAdmin
             .schema("feed")
             .from("items")
             .select("*")
             .eq("process_status", status)
+            .order("published_at", { ascending: false, nullsFirst: false })
+            .order("created_at", { ascending: false })
             .limit(limit);
 
         if (error) return failure(new Error(error.message));

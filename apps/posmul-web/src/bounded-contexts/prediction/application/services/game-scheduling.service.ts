@@ -468,7 +468,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "high",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "kobis",
       sourceConfig: {
         mode: "audience_threshold",
@@ -499,7 +499,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "medium",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "kcontent",
       sourceConfig: {
         subCategory: "drama_rating",
@@ -531,7 +531,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "medium",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "kcontent",
       sourceConfig: {
         subCategory: "variety_rating_rank1",
@@ -560,7 +560,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "high",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "kcontent",
       sourceConfig: {
         subCategory: "music_chart_top10",
@@ -589,7 +589,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "high",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "kcontent",
       sourceConfig: {
         subCategory: "ott_top1",
@@ -652,7 +652,7 @@ export class GameSchedulingService {
       category: "economy",
       importance: "high",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "coingecko",
       sourceConfig: {
         coinId: "bitcoin",
@@ -690,7 +690,7 @@ export class GameSchedulingService {
       category: "sports",
       importance: "critical",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "football_data",
       sourceConfig: {
         competition: "PL",
@@ -721,7 +721,7 @@ export class GameSchedulingService {
       category: "sports",
       importance: "high",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "manual",
     });
 
@@ -746,7 +746,7 @@ export class GameSchedulingService {
       category: "sports",
       importance: "medium",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "manual",
     });
   }
@@ -776,7 +776,7 @@ export class GameSchedulingService {
       category: "politics",
       importance: "high",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "manual",
     });
 
@@ -802,7 +802,7 @@ export class GameSchedulingService {
       category: "politics",
       importance: "medium",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "manual",
     });
   }
@@ -866,7 +866,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "high",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "kcontent",
       sourceConfig: {
         subCategory: "music_chart_rank1",
@@ -897,7 +897,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "high",
       recurrence: "weekly",
-      isActive: true,
+      isActive: false,
       sourceType: "kobis",
       sourceConfig: {
         mode: "weekend_rank1_group",
@@ -928,7 +928,7 @@ export class GameSchedulingService {
       category: "technology",
       importance: "high",
       recurrence: "monthly",
-      isActive: true,
+      isActive: false,
       sourceType: "kosis",
       sourceConfig: {
         subCategory: "retail",
@@ -959,7 +959,7 @@ export class GameSchedulingService {
       category: "sports",
       importance: "high",
       recurrence: "monthly",
-      isActive: true,
+      isActive: false,
       sourceType: "manual",
     });
   }
@@ -1321,7 +1321,9 @@ export class GameSchedulingService {
     difficulty: string
   ): ScheduledGameTemplate | null {
     const now = new Date();
-    const templates = this.templates.filter((t) => t.category === category);
+    const templates = this.templates.filter(
+      (t) => t.isActive && t.category === category
+    );
 
     if (templates.length === 0) return null;
 
