@@ -116,8 +116,8 @@ export const ProbabilityLineChart = ({ data, lines, isDarkMode = true }: Probabi
         return (
             <div className="w-full h-[280px] flex items-center justify-center rounded-xl bg-gray-900/50 border border-gray-800/50">
                 <div className="text-center">
-                    <div className="text-gray-500 text-sm">아직 베팅 데이터가 없습니다</div>
-                    <div className="text-gray-600 text-xs mt-1">첫 번째 베팅을 해보세요!</div>
+                    <div className="text-gray-500 text-sm">아직 참여 데이터가 없습니다</div>
+                    <div className="text-gray-600 text-xs mt-1">첫 번째 예측 투표를 시작해보세요!</div>
                 </div>
             </div>
         );
@@ -133,7 +133,7 @@ export const ProbabilityLineChart = ({ data, lines, isDarkMode = true }: Probabi
                 <ResponsiveContainer width="100%" height="100%">
                     <RechartsLineChart
                         data={data}
-                        margin={{ top: 10, right: 15, left: -20, bottom: 20 }}
+                        margin={{ top: 10, right: 15, left: 0, bottom: 20 }}
                     >
                         <defs>
                             {/* 각 라인별 그라디언트 (glow 효과) */}
@@ -183,7 +183,7 @@ export const ProbabilityLineChart = ({ data, lines, isDarkMode = true }: Probabi
                             minTickGap={60}
                         />
 
-                        {/* Y축 (0~100%) */}
+                        {/* Y축 (0~100%) - 좌측 잘림 현상 완벽 방지 */}
                         <YAxis
                             axisLine={false}
                             tickLine={false}
@@ -195,8 +195,8 @@ export const ProbabilityLineChart = ({ data, lines, isDarkMode = true }: Probabi
                                 fontFamily: "Arial, sans-serif",
                             }}
                             tickFormatter={(value) => `${value}%`}
-                            dx={-5}
-                            width={45}
+                            dx={-2}
+                            width={42}
                         />
 
                         {/* 툴팁 */}

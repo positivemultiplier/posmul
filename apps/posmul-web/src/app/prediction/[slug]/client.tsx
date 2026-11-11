@@ -408,32 +408,18 @@ export function UniversalPredictionDetailClient({
               </div>
             </Card>
 
-            {/* 🏛️ 공인 검증 데이터 오라클 명세 카드 */}
-            <Card className="p-5 bg-gradient-to-r from-[#111622] via-[#0f172a] to-emerald-950/20 border-emerald-500/30 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs sm:text-sm font-extrabold text-emerald-300 flex items-center gap-2">
-                  <Database className="w-4 h-4 text-emerald-400" />
-                  <span>공인 데이터 오라클 자동 판정 기준 (Verified Resolution Spec)</span>
-                </h3>
-                <span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-black">
-                  ⚡ AUTO-ORACLE 검증 완료
-                </span>
+            {/* 🏛️ 공인 검증 오라클 정보 (초슬림 1줄 배너로 콤팩트 축소) */}
+            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#111622] border border-white/[0.08] text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <Database className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="text-slate-300 font-bold truncate">{oracleSpec.provider}</span>
+                <span className="text-slate-600 hidden sm:inline">·</span>
+                <span className="text-slate-400 text-[11px] truncate hidden sm:inline">{oracleSpec.scheduleDesc}</span>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs pt-1">
-                <div className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06]">
-                  <div className="text-[10px] text-slate-400 font-bold mb-0.5">공식 검증 기관 / 공시</div>
-                  <div className="font-extrabold text-white">{oracleSpec.provider}</div>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06]">
-                  <div className="text-[10px] text-slate-400 font-bold mb-0.5">데이터 파이프라인 식별자</div>
-                  <div className="font-mono text-[11px] text-sky-300 truncate">{oracleSpec.endpoint}</div>
-                </div>
-                <div className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06]">
-                  <div className="text-[10px] text-slate-400 font-bold mb-0.5">판정 스케줄 원칙</div>
-                  <div className="font-semibold text-amber-300">{oracleSpec.scheduleDesc}</div>
-                </div>
-              </div>
-            </Card>
+              <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-500/30 shrink-0">
+                공인 오라클 자동판정
+              </span>
+            </div>
 
             {/* ⚖️ AI 균형 의사결정 브리핑 (중립 팩트체크 + 찬성 논거 + 반대 논거) */}
             <BalancedDecisionBriefing
@@ -550,8 +536,11 @@ export function UniversalPredictionDetailClient({
             </div>
           </div>
 
-          {/* Right Column: 시민 예측 참여 패널 & 황금 모래시계 위젯 (1 col) */}
+          {/* Right Column: 황금 모래시계 위젯 (최상단) & 시민 예측 참여 패널 (1 col) */}
           <div className="space-y-5">
+            {/* ⏳ 상세페이지 황금 모래시계 위젯 (시선 집중 최상단 배치) */}
+            <MoneyWaveWaterfallCard totalPrizePool={Math.round(game.prizePool || 22817)} />
+
             {/* 🎯 시민 예측 참여 패널 */}
             <Card className="p-5 bg-gradient-to-b from-[#131b2e] via-[#0f172a] to-[#090b12] border-white/[0.1] space-y-5 shadow-2xl">
               <div className="flex justify-between items-center pb-3 border-b border-white/[0.08]">
@@ -691,9 +680,6 @@ export function UniversalPredictionDetailClient({
                   : "🎯 예측 투표 참여하기"}
               </button>
             </Card>
-
-            {/* ⏳ 상세페이지 황금 모래시계 위젯 (구형 가로띠 대체) */}
-            <MoneyWaveWaterfallCard totalPrizePool={Math.round(game.prizePool || 22817)} />
           </div>
         </div>
       </main>
