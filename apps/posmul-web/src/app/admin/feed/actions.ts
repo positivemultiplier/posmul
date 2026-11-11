@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { assertAdminSession } from "@/shared/lib/security/admin-auth";
 import { revalidatePath } from "next/cache";
 import {
   getFetchRssItemsUseCase,
@@ -52,6 +53,7 @@ const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000001";
  * 피드 및 의안 통계 조회
  */
 export async function getFeedStats(): Promise<FeedStatsDTO> {
+  await assertAdminSession();
   try {
     const [itemsRes, billsRes, publishedRes, sourcesRes] = await Promise.all([
       supabaseAdmin
@@ -121,6 +123,7 @@ export async function getFeedItems(filter?: {
   status?: string;
   limit?: number;
 }): Promise<FeedItemDTO[]> {
+  await assertAdminSession();
   try {
     const [itemsRes, sourcesRes] = await Promise.all([
       supabaseAdmin
@@ -177,6 +180,7 @@ export async function getFeedItems(filter?: {
  * 국회 의안 목록 조회
  */
 export async function getBills(limit: number = 30): Promise<BillDTO[]> {
+  await assertAdminSession();
   try {
     const { data, error } = await supabaseAdmin
       .schema("feed")
@@ -215,6 +219,7 @@ export interface PublishGameInput {
  * Draft를 정식 예측 게임으로 발행 (Publish)
  */
 export async function publishToPredictionGame(input: PublishGameInput): Promise<{ success: boolean; gameId?: string; error?: string }> {
+  await assertAdminSession();
   try {
     const duration = input.durationDays ?? 7;
     const now = new Date();
@@ -301,6 +306,7 @@ export async function publishToPredictionGame(input: PublishGameInput): Promise<
  * 피드 아이템 제외/보관 처리 (IGNORED)
  */
 export async function ignoreFeedItem(feedItemId: string): Promise<{ success: boolean; error?: string }> {
+  await assertAdminSession();
   try {
     const { error } = await supabaseAdmin
       .schema("feed")
@@ -326,6 +332,7 @@ export async function ignoreFeedItem(feedItemId: string): Promise<{ success: boo
  * 카테고리별 RSS 수집 실행 액션
  */
 export async function fetchFeedsByCategoryAction(category?: string): Promise<{ success: boolean; message: string }> {
+  await assertAdminSession();
   try {
     const useCase = getFetchRssItemsUseCase();
     const result = await useCase.execute({ category });
@@ -351,6 +358,7 @@ export async function fetchFeedsByCategoryAction(category?: string): Promise<{ s
  * 실시간 환율 및 비트코인/코스피 경제 지표 수집 액션
  */
 export async function fetchMarketIndicatorsAction(): Promise<{ success: boolean; message: string }> {
+  await assertAdminSession();
   try {
     const collector = getFinancialMarketCollector();
     const result = await collector.collect();
@@ -375,6 +383,7 @@ export async function fetchMarketIndicatorsAction(): Promise<{ success: boolean;
  * 박스오피스 및 대중문화/시청률 수집 액션
  */
 export async function fetchBoxOfficeAction(): Promise<{ success: boolean; message: string }> {
+  await assertAdminSession();
   try {
     const collector = getBoxOfficeCollector();
     const result = await collector.collect();
@@ -399,6 +408,7 @@ export async function fetchBoxOfficeAction(): Promise<{ success: boolean; messag
  * 국회 의안 신규 수집 액션
  */
 export async function fetchBillsAction(): Promise<{ success: boolean; message: string }> {
+  await assertAdminSession();
   try {
     const useCase = getFetchBillsUseCase();
     const result = await useCase.execute();
@@ -423,6 +433,7 @@ export async function fetchBillsAction(): Promise<{ success: boolean; message: s
  * 전체 다채널 통합 원클릭 수집 액션
  */
 export async function fetchAllFeedsAction(): Promise<{ success: boolean; message: string }> {
+  await assertAdminSession();
   try {
     const [rssRes, marketRes, movieRes] = await Promise.allSettled([
       fetchFeedsByCategoryAction("ALL"),
@@ -456,6 +467,7 @@ export async function generateAiDraftForFeedItemAction(
   };
   error?: string;
 }> {
+  await assertAdminSession();
   try {
     const { data: item, error } = await supabaseAdmin
       .schema("feed")
@@ -496,6 +508,7 @@ export async function generateAiDraftForFeedItemAction(
  * 국회 의안 처리 결과 기반 자동 정산 실행 액션
  */
 export async function autoSettleBillsAction() {
+  await assertAdminSession();
   try {
     const { getAutoSettleByBillUseCase } = await import(
       "@/bounded-contexts/prediction/di-container"

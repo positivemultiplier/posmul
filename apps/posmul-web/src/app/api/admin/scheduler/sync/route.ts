@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { getMasterScheduler } from "@/bounded-contexts/prediction/application/services/master-game-scheduler.service";
 import { getCreatePredictionGameUseCase } from "@/bounded-contexts/prediction/di-container";
+import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 
 /**
  * POST /api/admin/scheduler/sync
@@ -9,17 +10,10 @@ import { getCreatePredictionGameUseCase } from "@/bounded-contexts/prediction/di
  * 글로벌 실적(FMP) 및 축구 경기(Football-Data) 스케줄러 동기화 엔드포인트
  */
 export async function POST(request: NextRequest) {
-  try {
-    const authHeader = request.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
+  const auth = await requireAdminApi(request, { allowCronSecret: true });
+  if (!auth.ok) return auth.response;
 
-    // CRON_SECRET이 설정된 환경에서는 Authorization 헤더가 없거나 불일치하면 거부
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
+  try {
 
     let body: { materializeTemplates?: boolean; category?: string } = {};
     try {
@@ -62,7 +56,10 @@ export async function POST(request: NextRequest) {
  * GET /api/admin/scheduler/sync
  * 현재 등록된 정기 예측 게임 템플릿 및 오라클 상태 조회
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await requireAdminApi(request, { allowCronSecret: true });
+  if (!auth.ok) return auth.response;
+
   try {
     const createGameUseCase = getCreatePredictionGameUseCase();
     const scheduler = getMasterScheduler(createGameUseCase);

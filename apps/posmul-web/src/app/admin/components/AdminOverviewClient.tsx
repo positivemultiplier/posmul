@@ -216,7 +216,7 @@ export function AdminOverviewClient({
       `settle-${gameId}`,
       `'${winningOption}' 승리 정산`,
       () =>
-        fetch("/api/dev/pipeline", {
+        fetch("/api/admin/prediction/pipeline", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({

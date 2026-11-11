@@ -166,26 +166,27 @@ function ForumAgoraContent() {
   useEffect(() => {
     const fetchRealForumPosts = async () => {
       try {
-        const res = await fetch("/api/admin/forum");
-        const data = await res.json();
-        if (data.success && data.posts) {
-          const mapped: AgoraTopic[] = data.posts.map(
+        const res = await fetch("/api/forum/posts?limit=20");
+        const json = await res.json();
+        const rawPosts = json?.data?.posts;
+        if (json.success && Array.isArray(rawPosts)) {
+          const mapped: AgoraTopic[] = rawPosts.map(
             (p: Record<string, unknown>) => ({
-              id: String(p.post_id || p.id),
+              id: String(p.id),
               title: String(p.title ?? ""),
               description: String(p.content ?? ""),
               type: "debate",
               author: "시민참여단",
-              createdAt: new Date(String(p.created_at ?? Date.now()))
+              createdAt: new Date(String(p.createdAt ?? Date.now()))
                 .toISOString()
                 .slice(0, 10),
-              participantCount: 150,
-              commentCount: 42,
-              voteCount: 300,
-              agreeVotes: 210,
-              disagreeVotes: 90,
+              participantCount: Number(p.viewCount ?? 150),
+              commentCount: Number(p.commentCount ?? 0),
+              voteCount: Number(p.likeCount ?? 0),
+              agreeVotes: Number(p.likeCount ?? 0),
+              disagreeVotes: 0,
               status: "active",
-              pmpReward: 30,
+              pmpReward: Number(p.pmpEarned ?? 30),
               isHot: true,
             })
           );

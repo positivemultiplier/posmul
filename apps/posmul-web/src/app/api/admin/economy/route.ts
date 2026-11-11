@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await requireAdminApi(req);
+  if (!auth.ok) return auth.response;
+
   try {
     // 1. 전체 베팅 내역 통계 (PMP 베팅 유통량 계산)
     const { data: bets, error: betsError } = await supabaseAdmin
@@ -63,6 +67,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdminApi(req);
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await req.json();
     const { action, userId, amount } = body;

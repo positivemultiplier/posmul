@@ -2,6 +2,7 @@ import { createPmpAmount, createUserId, isFailure } from "@posmul/auth-economy-s
 
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAdminApi } from "../../../../shared/lib/security/admin-auth";
 import { CreatePredictionGameUseCase } from "../../../../bounded-contexts/prediction/application/use-cases/create-prediction-game.use-case";
 import { GetPredictionGamesUseCase } from "../../../../bounded-contexts/prediction/application/use-cases/get-prediction-games.use-case";
 import { SupabasePredictionGameRepository } from "../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
@@ -109,6 +110,15 @@ export async function GET(request: NextRequest) {
  * 새 예측 게임 생성
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAdminApi(request);
+  if (!auth.ok) return auth.response;
+  if (auth.authType !== "admin") {
+    return NextResponse.json(
+      { success: false, error: { code: "FORBIDDEN", message: "Admin access required" } },
+      { status: 403 }
+    );
+  }
+
   try {
     const body: unknown = await request.json();
 
@@ -149,7 +159,7 @@ export async function POST(request: NextRequest) {
       startTime: validatedBody.startTime,
       endTime: validatedBody.endTime,
       settlementTime: validatedBody.settlementTime,
-      creatorId: createUserId(validatedBody.creatorId),
+      creatorId: createUserId(auth.user.id),
       minimumStake: createPmpAmount(validatedBody.minimumStake),
       maximumStake: createPmpAmount(validatedBody.maximumStake),
       maxParticipants: validatedBody.maxParticipants,

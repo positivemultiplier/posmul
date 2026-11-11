@@ -13,7 +13,8 @@
  * @since 2024-12
  */
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "../../../../lib/supabase/server";
+import { supabaseAdmin } from "../../../../lib/supabase/admin";
+import { requireAdminApi } from "../../../../shared/lib/security/admin-auth";
 import { getSettlePredictionGameUseCase } from "../../../../bounded-contexts/prediction/di-container";
 import { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
 
@@ -22,6 +23,15 @@ import { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
  * 예측 게임 정산 실행
  */
 export async function POST(request: NextRequest) {
+  const auth = await requireAdminApi(request);
+  if (!auth.ok) return auth.response;
+  if (auth.authType !== "admin") {
+    return NextResponse.json(
+      { success: false, error: { code: "FORBIDDEN", message: "Admin access required" } },
+      { status: 403 }
+    );
+  }
+
   try {
     const body = await request.json();
 
@@ -39,41 +49,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. 현재 사용자 확인 (Admin 권한 체크)
-    const supabase = await createClient();
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "UNAUTHORIZED",
-            message: "Authentication required",
-          },
-        },
-        { status: 401 }
-      );
-    }
-
-    // TODO: 실제 Admin 권한 체크 (현재는 로그인만 확인)
-    // const isAdmin = await checkAdminRole(user.id);
-    // if (!isAdmin) {
-    //   return NextResponse.json(
-    //     { success: false, error: { code: "FORBIDDEN", message: "Admin access required" } },
-    //     { status: 403 }
-    //   );
-    // }
-
-    // 2. 게임 정산 Use Case 실행 (DB 함수 호출)
+    // 게임 정산 Use Case 실행 (DB 함수 호출)
     const settleUseCase = getSettlePredictionGameUseCase();
     const result = await settleUseCase.execute({
       gameId: body.gameId as PredictionGameId,
       correctOptionId: body.correctOptionId,
-      adminUserId: user.id as UserId,
+      adminUserId: auth.user.id as UserId,
     });
 
     if (result.success === false) {
@@ -123,31 +104,13 @@ export async function POST(request: NextRequest) {
  * GET /api/predictions/settle
  * 정산 대기 중인 게임 목록 조회
  */
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
+  const auth = await requireAdminApi(request);
+  if (!auth.ok) return auth.response;
+
   try {
-    const supabase = await createClient();
-
-    // 인증 확인
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: {
-            code: "UNAUTHORIZED",
-            message: "Authentication required",
-          },
-        },
-        { status: 401 }
-      );
-    }
-
     // 정산 대기 중인 게임 조회 (ACTIVE 상태 + 정산 시간 경과)
-    const { data: pendingGames, error } = await supabase
+    const { data: pendingGames, error } = await supabaseAdmin
       .schema("prediction")
       .from("prediction_games")
       .select(

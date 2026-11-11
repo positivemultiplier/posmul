@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 import { FetchRssItemsUseCase } from "@/bounded-contexts/feed/application/use-cases/fetch-rss-items.use-case";
 import { FetchBillsUseCase } from "@/bounded-contexts/feed/application/use-cases/fetch-bills.use-case";
 import { ClassifyContentUseCase } from "@/bounded-contexts/feed/application/use-cases/classify-content.use-case";
@@ -29,12 +30,8 @@ function formatError(error: any) {
 }
 
 export async function GET(request: NextRequest) {
-    // 간단한 API Key 인증 (Cron Job 보안)
-    const authHeader = request.headers.get("authorization");
-    if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-        // 개발 환경 편의를 위해 일단 주석 처리 또는 warning
-        // return new NextResponse("Unauthorized", { status: 401 });
-    }
+    const auth = await requireAdminApi(request, { allowCronSecret: true });
+    if (!auth.ok) return auth.response;
 
     const repo = new SupabaseFeedRepository();
     const classifier = new GeminiClassifierAdapter();

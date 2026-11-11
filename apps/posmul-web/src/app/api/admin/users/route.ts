@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAdminApi(request);
+  if (!auth.ok) return auth.response;
+
   try {
     const { searchParams } = new URL(request.url);
     const search = (searchParams.get("search") || "").trim().toLowerCase();
@@ -173,6 +177,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const auth = await requireAdminApi(request);
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await request.json();
     const { action, userId } = body;

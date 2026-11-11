@@ -6,6 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 
 interface CreateGameRequest {
     title: string;
@@ -27,33 +28,18 @@ interface CreateGameRequest {
 }
 
 export async function POST(request: NextRequest) {
+    const auth = await requireAdminApi(request);
+    if (!auth.ok) return auth.response;
+    if (auth.authType !== "admin") {
+        return NextResponse.json(
+            { success: false, error: { code: "FORBIDDEN", message: "Admin access required" } },
+            { status: 403 }
+        );
+    }
+    const user = auth.user;
+
     try {
         const supabase = await createClient();
-
-        // 인증 확인
-        const { data: { user }, error: authError } = await supabase.auth.getUser();
-        if (authError || !user) {
-            return NextResponse.json(
-                { success: false, error: "Unauthorized" },
-                { status: 401 }
-            );
-        }
-
-        // 관리자 권한 확인 (TODO: 실제 권한 체크)
-        const { data: profile } = await supabase
-            .from("user_profiles")
-            .select("role")
-            .eq("id", user.id)
-            .single();
-
-        // 임시로 모든 사용자 허용 (실제로는 role 체크 필요)
-        // if (profile?.role !== "admin") {
-        //   return NextResponse.json(
-        //     { success: false, error: "Admin access required" },
-        //     { status: 403 }
-        //   );
-        // }
-
         const body: CreateGameRequest = await request.json();
 
         // 유효성 검사
@@ -113,6 +99,9 @@ export async function POST(request: NextRequest) {
 
 // 게임 목록 조회
 export async function GET(request: NextRequest) {
+    const auth = await requireAdminApi(request);
+    if (!auth.ok) return auth.response;
+
     try {
         const supabase = await createClient();
         const url = new URL(request.url);

@@ -1,7 +1,9 @@
 import React from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ExternalLink, PlusCircle, Scale, ShieldCheck } from "lucide-react";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAdminSession } from "@/shared/lib/security/admin-auth";
 import {
   AdminBadge,
   AdminCard,
@@ -20,6 +22,14 @@ import {
 export const revalidate = 0;
 
 export default async function GamesListPage() {
+  const auth = await requireAdminSession();
+  if (!auth.ok) {
+    if (auth.reason === "UNAUTHORIZED") {
+      redirect("/auth/login?redirect=/admin/prediction/games");
+    }
+    return null;
+  }
+
   const { data: games } = await supabaseAdmin
     .schema("prediction")
     .from("prediction_games")

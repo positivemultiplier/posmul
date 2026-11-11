@@ -6,18 +6,31 @@ import {
 
 import { NextRequest, NextResponse } from "next/server";
 
+import { requireAdminApi } from "../../../../../../shared/lib/security/admin-auth";
 import { getSettlePredictionGameUseCase } from "../../../../../../bounded-contexts/prediction/di-container";
 import { MCPPredictionGameRepository } from "../../../../../../bounded-contexts/prediction/infrastructure/repositories/mcp-prediction-game.repository";
 import { SupabasePredictionRepository } from "../../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction.repository";
 
 /**
  * POST /api/predictions/games/[gameId]/settle
- * 예측 게임 정산 (DB 함수 호출)
+ * 예측 게임 정산 (DB 함수 호출, Admin 전용)
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ gameId: string }> }
 ) {
+  const auth = await requireAdminApi(request);
+  if (!auth.ok) return auth.response;
+  if (auth.authType !== "admin") {
+    return NextResponse.json(
+      {
+        success: false,
+        error: { code: "FORBIDDEN", message: "Admin privileges required" },
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     const { gameId } = await params;
     const body = await request.json();
@@ -35,14 +48,14 @@ export async function POST(
       );
     }
 
-    // 필수 필드 검증
-    if (!body.correctOptionId || !body.adminUserId) {
+    // 필수 필드 검증 (adminUserId는 서버 인증 세션에서 강제 주입)
+    if (!body.correctOptionId) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: "MISSING_REQUIRED_FIELDS",
-            message: "correctOptionId and adminUserId are required",
+            message: "correctOptionId is required",
           },
         },
         { status: 400 }
@@ -56,7 +69,7 @@ export async function POST(
     const settlementRequest = {
       gameId: gameId as PredictionGameId,
       correctOptionId: body.correctOptionId,
-      adminUserId: body.adminUserId as UserId,
+      adminUserId: auth.user.id as UserId,
     };
 
     // UseCase 실행
@@ -152,6 +165,9 @@ export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ gameId: string }> }
 ) {
+  const auth = await requireAdminApi(request);
+  if (!auth.ok) return auth.response;
+
   try {
     const { gameId } = await params;
 

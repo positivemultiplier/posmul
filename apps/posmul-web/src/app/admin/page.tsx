@@ -1,5 +1,7 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAdminSession } from "@/shared/lib/security/admin-auth";
 import { LIVE_ROOMS } from "@/app/live/live-rooms.data";
 import { parseGameOptions } from "@/bounded-contexts/prediction/infrastructure/repositories/prediction-query.repository";
 import {
@@ -12,6 +14,14 @@ import {
 export const revalidate = 0;
 
 export default async function AdminMainPage() {
+  const auth = await requireAdminSession();
+  if (!auth.ok) {
+    if (auth.reason === "UNAUTHORIZED") {
+      redirect("/auth/login?redirect=/admin");
+    }
+    return null;
+  }
+
   // Supabase 실데이터 병렬 조회
   const [
     gamesRes,

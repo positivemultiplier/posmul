@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdminApi(req);
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await req.json();
     const {
@@ -20,7 +24,10 @@ export async function POST(req: NextRequest) {
     }
 
     const slug = `${title.substring(0, 20).replace(/\s+/g, "-").toLowerCase()}-${Date.now()}`;
-    const SYSTEM_USER_ID = "00000000-0000-0000-0000-000000000001";
+    const creatorId =
+      auth.authType === "admin"
+        ? auth.user.id
+        : "00000000-0000-0000-0000-000000000001";
 
     const { data: newGame, error } = await supabaseAdmin
       .schema("prediction")
@@ -30,7 +37,7 @@ export async function POST(req: NextRequest) {
         description: description || title,
         status: "ACTIVE",
         category: category || "POLITICS",
-        creator_id: SYSTEM_USER_ID,
+        creator_id: creatorId,
         prediction_type: "BINARY",
         game_options: { options },
         registration_start: new Date().toISOString(),

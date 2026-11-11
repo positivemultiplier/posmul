@@ -7,20 +7,13 @@ import {
 } from "@/bounded-contexts/feed/di-container";
 import { settlementOrchestrator } from "@/bounded-contexts/prediction/application/services/settlement-orchestrator.service";
 import { getAutoSettleByBillUseCase } from "@/bounded-contexts/prediction/di-container";
+import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 
 export async function GET(request: Request) {
+  const auth = await requireAdminApi(request, { allowCronSecret: true });
+  if (!auth.ok) return auth.response;
+
   try {
-    // 1. Cron Secret 인증 검사 (프로덕션 보안용)
-    const authHeader = request.headers.get("authorization");
-    const cronSecret = process.env.CRON_SECRET;
-
-    if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized cron execution" },
-        { status: 401 }
-      );
-    }
-
     const logs: string[] = [];
 
     // 2. RSS 뉴스 및 피드 수집

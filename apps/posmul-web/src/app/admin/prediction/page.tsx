@@ -72,7 +72,7 @@ export default function AdminPredictionDashboard() {
   const fetchGames = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/dev/pipeline");
+      const res = await fetch("/api/admin/prediction/pipeline");
       const data = await res.json();
       if (data.success) {
         setGames(data.games || []);
@@ -95,7 +95,7 @@ export default function AdminPredictionDashboard() {
     setIngestLoading(true);
     setLogs(["AI Pipeline execution started..."]);
     try {
-      const res = await fetch("/api/dev/pipeline", {
+      const res = await fetch("/api/admin/prediction/pipeline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "ingest-and-draft" }),
@@ -130,7 +130,7 @@ export default function AdminPredictionDashboard() {
     setBetLoading(targetGameId);
 
     try {
-      const res = await fetch("/api/dev/pipeline", {
+      const res = await fetch("/api/admin/prediction/pipeline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -167,7 +167,7 @@ export default function AdminPredictionDashboard() {
     }
 
     try {
-      const res = await fetch("/api/dev/pipeline", {
+      const res = await fetch("/api/admin/prediction/pipeline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

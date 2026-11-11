@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { settlementOrchestrator } from "@/bounded-contexts/prediction/application/services/settlement-orchestrator.service";
 import { getAutoSettleByBillUseCase } from "@/bounded-contexts/prediction/di-container";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -16,24 +17,10 @@ export const dynamic = "force-dynamic";
  * 3. 마감 기한이 지난 만료 예측 게임 스캔 및 모니터링
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireAdminApi(request, { allowCronSecret: true });
+  if (!auth.ok) return auth.response;
+
   try {
-    const { searchParams } = new URL(request.url);
-    const authHeader = request.headers.get("authorization");
-    const secretParam = searchParams.get("secret");
-
-    const expectedSecret = process.env.CRON_SECRET;
-    if (expectedSecret) {
-      const isAuthorized =
-        authHeader === `Bearer ${expectedSecret}` ||
-        secretParam === expectedSecret;
-      if (!isAuthorized) {
-        return NextResponse.json(
-          { success: false, error: "Unauthorized cron request" },
-          { status: 401 }
-        );
-      }
-    }
-
     const startTime = Date.now();
     const logs: string[] = [];
     logs.push(

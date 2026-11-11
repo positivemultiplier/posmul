@@ -5,6 +5,7 @@ import {
   getBoxOfficeCollector,
   getFetchBillsUseCase,
 } from "@/bounded-contexts/feed/di-container";
+import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -14,26 +15,15 @@ export const dynamic = "force-dynamic";
  *
  * Query Params:
  * - category: 'all' | 'sports' | 'economy' | 'entertainment' | 'market' | 'bills' (기본값: 'all')
- * - secret: CRON_SECRET 환경변수 일치 여부 확인 (설정된 경우)
+ * - secret: CRON_SECRET 환경변수 일치 여부 확인 (또는 관리자 세션 필수)
  */
 export async function GET(request: NextRequest) {
+  const auth = await requireAdminApi(request, { allowCronSecret: true });
+  if (!auth.ok) return auth.response;
+
   try {
     const { searchParams } = new URL(request.url);
     const category = searchParams.get("category") || "all";
-    const authHeader = request.headers.get("authorization");
-    const secretParam = searchParams.get("secret");
-
-    const expectedSecret = process.env.CRON_SECRET;
-    if (expectedSecret) {
-      const isAuthorized =
-        authHeader === `Bearer ${expectedSecret}` || secretParam === expectedSecret;
-      if (!isAuthorized) {
-        return NextResponse.json(
-          { success: false, error: "Unauthorized cron request" },
-          { status: 401 }
-        );
-      }
-    }
 
     const results: Record<string, any> = {};
 

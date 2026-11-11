@@ -14,7 +14,6 @@ import {
   GameStatus,
 } from "../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 import {
-  Sparkles,
   Flame,
   ChevronLeft,
   ChevronRight,
@@ -837,34 +836,6 @@ export function ClientPredictionGamesGrid({
                 </button>
               </div>
             )}
-
-            <button
-              type="button"
-              onClick={async () => {
-                try {
-                  const btn = document.getElementById("ai-ingest-btn");
-                  if (btn) btn.innerText = "⏳ 생성 중...";
-                  const res = await fetch("/api/cron/feed-ingest");
-                  const data = await res.json();
-                  if (data.success) {
-                    window.location.reload();
-                  } else {
-                    alert("생성 중 오류 발생: " + (data.error || "알 수 없음"));
-                  }
-                } catch (err: unknown) {
-                  const message = err instanceof Error ? err.message : "알 수 없는 오류";
-                  alert("요청 실패: " + message);
-                } finally {
-                  const btn = document.getElementById("ai-ingest-btn");
-                  if (btn) btn.innerText = "✨ AI 의제 생성";
-                }
-              }}
-              id="ai-ingest-btn"
-              className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all"
-            >
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              <span>✨ AI 의제 생성</span>
-            </button>
           </div>
         </div>
 

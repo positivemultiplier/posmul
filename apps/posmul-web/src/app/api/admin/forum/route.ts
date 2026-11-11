@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 import { banIp, unbanIp } from "@/shared/lib/security/ip-ban";
 import {
   getAllBannedWords,
@@ -8,6 +9,9 @@ import {
 } from "@/shared/lib/security/banned-words";
 
 export async function GET(req: NextRequest) {
+  const auth = await requireAdminApi(req);
+  if (!auth.ok) return auth.response;
+
   try {
     const url = new URL(req.url);
     const page = Math.max(1, parseInt(url.searchParams.get("page") || "1", 10));
@@ -104,6 +108,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const auth = await requireAdminApi(req);
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await req.json();
     const {

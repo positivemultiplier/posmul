@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { initializeTestData } from "../../../../lib/supabase/direct-client";
+import { blockInProduction, requireAdminApi } from "@/shared/lib/security/admin-auth";
 
 /**
  * POST /api/test/init
- * 테스트 데이터 초기화
+ * 테스트 데이터 초기화 (개발 전용 + Admin 권한 필수, 프로덕션 차단)
  */
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
+  const blocked = blockInProduction();
+  if (blocked) return blocked;
+
+  const auth = await requireAdminApi(request);
+  if (!auth.ok) return auth.response;
+
   try {
     const result = await initializeTestData();
     

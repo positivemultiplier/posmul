@@ -57,7 +57,7 @@ export default function PredictionSettlementDashboardPage() {
   const fetchGames = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/dev/pipeline");
+      const res = await fetch("/api/admin/prediction/pipeline");
       const data = await res.json();
       if (data.success) {
         setGames(data.games || []);
@@ -84,7 +84,7 @@ export default function PredictionSettlementDashboardPage() {
     setSettlingGameId(gameId);
 
     try {
-      const res = await fetch("/api/dev/pipeline", {
+      const res = await fetch("/api/admin/prediction/pipeline", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

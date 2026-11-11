@@ -2,6 +2,8 @@ import { PredictionGameId, UserId, isFailure } from "@posmul/auth-economy-sdk";
 
 import { NextRequest, NextResponse } from "next/server";
 
+import { createClient } from "../../../../../lib/supabase/server";
+import { resolveAdminUser } from "../../../../../shared/lib/security/admin-auth";
 import { DeletePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/delete-prediction-game.use-case";
 import { GetPredictionGameByIdUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/get-prediction-game-by-id.use-case";
 import { UpdatePredictionGameUseCase } from "../../../../../bounded-contexts/prediction/application/use-cases/update-prediction-game.use-case";
@@ -102,6 +104,24 @@ export async function PUT(
   { params }: { params: Promise<{ gameId: string }> }
 ) {
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "UNAUTHORIZED",
+            message: "Authentication required",
+          },
+        },
+        { status: 401 }
+      );
+    }
+
     const { gameId } = await params;
     const body: unknown = await request.json();
 
@@ -141,11 +161,31 @@ export async function PUT(
     const useCase = new UpdatePredictionGameUseCase(repository);
 
     const parsedBody = parseUpdateGameRequestBody(body);
+    const adminInfo = await resolveAdminUser(user);
+    if (
+      parsedBody.updatedBy &&
+      parsedBody.updatedBy !== user.id &&
+      !adminInfo.isAdmin
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "FORBIDDEN",
+            message: "You can only update your own game unless you are an admin",
+          },
+        },
+        { status: 403 }
+      );
+    }
+
+    const effectiveUpdatedBy =
+      adminInfo.isAdmin && parsedBody.updatedBy ? parsedBody.updatedBy : user.id;
 
     // UseCase 실행
     const result = await useCase.execute({
       gameId: gameId as PredictionGameId,
-      updatedBy: parsedBody.updatedBy as UserId,
+      updatedBy: effectiveUpdatedBy as UserId,
       updates: {
         title: parsedBody.updates.title,
         description: parsedBody.updates.description,
@@ -228,6 +268,24 @@ export async function DELETE(
   { params }: { params: Promise<{ gameId: string }> }
 ) {
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+    if (authError || !user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "UNAUTHORIZED",
+            message: "Authentication required",
+          },
+        },
+        { status: 401 }
+      );
+    }
+
     const { gameId } = await params;
     const { searchParams } = new URL(request.url);
     const deletedBy = searchParams.get("deletedBy");
@@ -246,18 +304,21 @@ export async function DELETE(
       );
     }
 
-    if (!deletedBy) {
+    const adminInfo = await resolveAdminUser(user);
+    if (deletedBy && deletedBy !== user.id && !adminInfo.isAdmin) {
       return NextResponse.json(
         {
           success: false,
           error: {
-            code: "MISSING_USER_ID",
-            message: "User ID is required for deletion",
+            code: "FORBIDDEN",
+            message: "Only the game creator or admin can delete this game",
           },
         },
-        { status: 400 }
+        { status: 403 }
       );
     }
+    const effectiveDeletedBy =
+      adminInfo.isAdmin && deletedBy ? deletedBy : user.id;
 
     // Repository 및 UseCase 초기화
     const repository = new SupabasePredictionGameRepository(
@@ -268,7 +329,7 @@ export async function DELETE(
     // UseCase 실행
     const result = await useCase.execute({
       gameId: gameId as PredictionGameId,
-      deletedBy: deletedBy as UserId,
+      deletedBy: effectiveDeletedBy as UserId,
       reason,
     });
 

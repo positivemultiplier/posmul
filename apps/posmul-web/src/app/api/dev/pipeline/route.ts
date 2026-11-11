@@ -2,9 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCreatePredictionDraftUseCase, getFetchRssItemsUseCase } from "@/bounded-contexts/feed/di-container";
 import { getParticipatePredictionUseCase } from "@/bounded-contexts/prediction/di-container";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { blockInProduction, requireAdminApi } from "@/shared/lib/security/admin-auth";
 import { isFailure } from "@posmul/auth-economy-sdk";
 
 export async function GET(req: NextRequest) {
+  const blocked = blockInProduction();
+  if (blocked) return blocked;
+
+  const auth = await requireAdminApi(req);
+  if (!auth.ok) return auth.response;
+
   try {
     // 1. Supabase prediction.prediction_games 테이블에서 최근 생성된 게임 10개 조회
     const { data: games, error } = await supabaseAdmin
@@ -30,6 +37,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const blocked = blockInProduction();
+  if (blocked) return blocked;
+
+  const auth = await requireAdminApi(req);
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await req.json();
     const { action, gameId, optionId, amount, userId } = body;
