@@ -181,3 +181,4 @@ ALTER FUNCTION prediction.update_prediction_statistics() SET search_path = predi
 ALTER FUNCTION prediction.create_game_snapshots() SET search_path = prediction, public;
 ALTER FUNCTION economy.tg_touch_account_activity_stats_from_transaction() SET search_path = economy, public;
 ALTER FUNCTION economy.get_kst_hour_activity_multiplier(timestamp with time zone) SET search_path = economy, public;
+
