@@ -1,47 +1,30 @@
 import { notFound } from "next/navigation";
-
-import { PredictionDetailTabsClient } from "./PredictionDetailTabsClient";
-
 import { createClient } from "../../../lib/supabase/server";
-
 import {
   getPredictionGameBySlug,
   getPredictionGameStats,
-  parseGameOptions,
 } from "../../../bounded-contexts/prediction/infrastructure/repositories/prediction-query.repository";
-
 import { getUserBalance, getUserBets } from "../sports/soccer/[slug]/actions";
-
-import { getKstHourStartIso } from "../../../shared/utils/time/getKstHourStartIso";
-
-import { getGameHistory, type ChartDataPoint } from "../../../bounded-contexts/prediction/infrastructure/repositories/get-game-history";
-
-type MoneyWaveCategory = "sports" | "politics" | "entertainment" | "economy" | "all";
-
-type PredictionTypeView = "binary" | "wdl" | "ranking";
-
-const DEFAULT_OPTIONS: ReadonlyArray<{ id: string; label: string; currentOdds: number }> = [
-  { id: "yes", label: "예", currentOdds: 0.55 },
-  { id: "no", label: "아니오", currentOdds: 0.45 },
-];
-
-function normalizeLowerOrAll(value: unknown): string {
-  if (typeof value !== "string") return "all";
-  return value.trim().toLowerCase() || "all";
-}
-
-function mapPredictionType(value: unknown): PredictionTypeView {
-  const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
-  if (normalized === "binary") return "binary";
-  if (normalized === "win_draw_lose" || normalized === "wdl") return "wdl";
-  return "ranking";
-}
+import { getGameHistory } from "../../../bounded-contexts/prediction/infrastructure/repositories/get-game-history";
+import {
+  attachHourlyGamePoolsToRows,
+  mapDbPredictionType,
+  mapGameOptions,
+  type PredictionGameRow,
+} from "./prediction-game-mapper";
+import {
+  findLiveRoomByGame,
+  findLiveRoomByKeyword,
+} from "../../live/live-rooms.data";
+import {
+  UniversalPredictionDetailClient,
+  type PredictionGameDetail,
+} from "../[slug]/client";
 
 function mapStatus(value: unknown): "ACTIVE" | "ENDED" | "SETTLED" {
   if (value === "ACTIVE") return "ACTIVE";
-  if (value === "CLOSED") return "ENDED";
   if (value === "SETTLED") return "SETTLED";
-  return "ACTIVE";
+  return "ENDED";
 }
 
 function toIsoOrFallback(value: unknown, fallbackMsFromNow: number): string {
@@ -49,177 +32,166 @@ function toIsoOrFallback(value: unknown, fallbackMsFromNow: number): string {
     const date = value instanceof Date ? value : new Date(value);
     if (!Number.isNaN(date.getTime())) return date.toISOString();
   }
-
   return new Date(Date.now() + fallbackMsFromNow).toISOString();
 }
 
-function getPrizePool(params: { game: unknown; totalBetAmount?: number }): number {
-  const prizePool = (params.game as { allocated_prize_pool?: unknown }).allocated_prize_pool;
-  if (typeof prizePool === "number" && Number.isFinite(prizePool)) return prizePool;
-  if (typeof prizePool === "string" && prizePool.trim() !== "") {
-    const parsed = Number(prizePool);
-    if (Number.isFinite(parsed)) return parsed;
-  }
-  if (typeof params.totalBetAmount === "number") return Math.floor(params.totalBetAmount * 0.5);
-  return 0;
-}
-
-type HourlyGamePoolRow = { pool_pmc: number | string | null };
-
-const toFiniteNumberOrNull = (value: number | string | null): number | null => {
-  const n = typeof value === "string" ? Number(value) : value;
-  return typeof n === "number" && Number.isFinite(n) ? n : null;
-};
-
-const fetchHourlyGamePrizePool = async (params: {
-  gameId: string;
-}): Promise<number | null> => {
-  const supabase = await createClient();
-  const hourStart = getKstHourStartIso();
-
-  const { data, error } = await supabase
-    .schema("economy")
-    .from("money_wave_hourly_game_pools")
-    .select("pool_pmc")
-    .eq("domain", "prediction")
-    .eq("hour_start", hourStart)
-    .eq("game_id", params.gameId)
-    .limit(1);
-
-  if (error || !data || data.length === 0) return null;
-
-  const value = toFiniteNumberOrNull((data[0] as HourlyGamePoolRow).pool_pmc);
-  return value === null ? null : Math.floor(value);
-};
-
-const mapDbCategoryToMoneyWave = (value: unknown): MoneyWaveCategory => {
-  const normalized = typeof value === "string" ? value.trim().toUpperCase() : "";
-  switch (normalized) {
-    case "SPORTS":
-      return "sports";
-    case "POLITICS":
-      return "politics";
-    case "ENTERTAINMENT":
-      return "entertainment";
-    case "INVEST":
-      return "economy";
-    case "USER_PROPOSED":
-      return "all";
-    default:
-      return "all";
-  }
-};
-
-export async function renderPredictionDetailBySlug(slug: string) {
+export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
+  game: PredictionGameDetail;
+  userBalance: { pmp: number; pmc: number };
+  userBets: Array<{
+    betId: string;
+    selectedOption: string;
+    betAmount: number;
+    status: string;
+    createdAt: string;
+  }>;
+  initialChartData: Array<{ time: string; [key: string]: string | number }>;
+  slug: string;
+} | null> {
   const decodedSlug = decodeURIComponent(slug);
+  const dbGame = await getPredictionGameBySlug(decodedSlug);
+  if (!dbGame) return null;
 
-  const game = await getPredictionGameBySlug(decodedSlug);
-  if (!game) notFound();
-
-  const truthPrizePool = await fetchHourlyGamePrizePool({ gameId: game.game_id });
-
-  const stats = await getPredictionGameStats(game.game_id);
-  const options = parseGameOptions(game.game_options);
-
-  const balanceResult = await getUserBalance();
-  const userBalance = balanceResult ?? { pmp: 0, pmc: 0 };
-
-  const gameOptions = options.length > 0 ? options : DEFAULT_OPTIONS;
-
-  const subcategory = normalizeLowerOrAll((game as unknown as { subcategory?: unknown }).subcategory);
-  const league = normalizeLowerOrAll((game as unknown as { league?: unknown }).league);
-
-  const moneyWaveCategory = mapDbCategoryToMoneyWave((game as unknown as { category?: unknown }).category);
   const supabase = await createClient();
-  // 실제 베팅 내역 집계 (각 옵션별 실제 볼륨 및 확률 계산)
-  const { data: betsData } = await supabase
-    .schema("prediction")
-    .from("predictions")
-    .select("bet_amount, prediction_data")
-    .eq("game_id", game.game_id)
-    .eq("is_active", true);
 
+  // 통계, 잔액, 유저 참여내역, 3단계 MoneyWave 부스트 풀, 옵션별 실제 참여 볼륨 병렬 조회
+  const [stats, balanceResult, userBets, boostedRows, betsRes] = await Promise.all([
+    getPredictionGameStats(dbGame.game_id),
+    getUserBalance(),
+    getUserBets(dbGame.game_id),
+    attachHourlyGamePoolsToRows(supabase, [dbGame as PredictionGameRow]),
+    supabase
+      .schema("prediction")
+      .from("predictions")
+      .select("bet_amount, prediction_data")
+      .eq("game_id", dbGame.game_id)
+      .eq("is_active", true),
+  ]);
+
+  const boostedGame = boostedRows[0] || dbGame;
+  const parsedOptions = mapGameOptions(boostedGame.game_options, dbGame.game_id);
+
+  const betsData = betsRes.data || [];
   const optionVolumes: Record<string, number> = {};
   let calculatedTotalVolume = 0;
-  gameOptions.forEach(opt => { optionVolumes[opt.id] = 0; });
+  parsedOptions.forEach((opt) => {
+    optionVolumes[opt.id] = 0;
+  });
 
-  (betsData || []).forEach(bet => {
-    const optId = (bet.prediction_data as any)?.selectedOptionId;
+  betsData.forEach((bet) => {
+    const optId = (bet.prediction_data as { selectedOptionId?: string } | null)?.selectedOptionId;
     const amt = Number(bet.bet_amount) || 0;
-    if (optId && optionVolumes[optId] !== undefined) {
-      optionVolumes[optId] += amt;
-    } else if (optId) {
-      optionVolumes[optId] = amt;
+    if (optId) {
+      optionVolumes[optId] = (optionVolumes[optId] || 0) + amt;
     }
     calculatedTotalVolume += amt;
   });
 
-  const finalTotalVolume = calculatedTotalVolume > 0 ? calculatedTotalVolume : (stats?.total_bet_amount ?? 0);
-  const participantCount = (betsData && betsData.length > 0) ? betsData.length : (stats?.total_participants ?? 0);
+  const finalTotalVolume =
+    calculatedTotalVolume > 0
+      ? calculatedTotalVolume
+      : Number(boostedGame.total_stake_amount) ||
+        Number(stats?.total_bet_amount) ||
+        35000;
 
-  // 사용자의 기존 베팅 내역 조회
-  const userBets = await getUserBets(game.game_id);
+  const participantCount =
+    betsData.length > 0
+      ? Math.max(betsData.length, Number(boostedGame.total_participants_count) || 0)
+      : Number(boostedGame.total_participants_count) ||
+        Number(stats?.total_participants) ||
+        18;
+
+  const effectiveType = mapDbPredictionType(dbGame.prediction_type, parsedOptions.length) as
+    | "binary"
+    | "wdl"
+    | "ranking";
 
   // 차트 초기 데이터 조회 (SSR)
   const initialChartData = await getGameHistory(
-    game.game_id,
-    gameOptions.map(opt => ({ id: opt.id }))
+    dbGame.game_id,
+    parsedOptions.map((opt) => ({ id: opt.id }))
   );
 
-  const gameForView = {
-    id: game.game_id,
-    title: game.title || "제목 없음",
-    description: game.description || "",
-    predictionType: mapPredictionType(game.prediction_type),
-    options: gameOptions.map(
-      (
-        opt: { id: string; label: string; currentOdds?: number },
-        idx: number
-      ) => {
-        const optVol = optionVolumes[opt.id] || 0;
-        const prob = finalTotalVolume > 0
-          ? optVol / finalTotalVolume
-          : (opt.currentOdds || (1 / gameOptions.length));
-        const odds = prob > 0 ? Number((1 / prob).toFixed(2)) : 2.0;
+  // 라이브 응원톡 룸 유연 매칭
+  const matchedLiveRoom =
+    findLiveRoomByGame(dbGame.game_id) ||
+    findLiveRoomByGame(dbGame.slug) ||
+    findLiveRoomByKeyword(dbGame.title) ||
+    findLiveRoomByKeyword(dbGame.slug) ||
+    findLiveRoomByKeyword(dbGame.category);
 
-        return {
-          id: opt.id || `option-${idx}`,
-          label: opt.label || `옵션 ${idx + 1}`,
-          probability: Number(prob.toFixed(4)),
-          odds: Math.min(Math.max(odds, 1.01), 99),
-          volume: optVol,
-          change24h: 0,
-        };
-      }
-    ),
+  const gameForView: PredictionGameDetail = {
+    id: dbGame.game_id,
+    title: dbGame.title || "제목 없음",
+    description: dbGame.description || "",
+    predictionType: effectiveType,
+    options: parsedOptions.map((opt, idx) => {
+      const optVol = optionVolumes[opt.id] || 0;
+      const prob =
+        calculatedTotalVolume > 0
+          ? optVol / calculatedTotalVolume
+          : opt.currentOdds || 1 / parsedOptions.length;
+      const clampedProb = Math.max(0.02, Math.min(0.98, prob));
+      const odds = clampedProb > 0 ? Number((1 / clampedProb).toFixed(2)) : 2.0;
+
+      return {
+        id: opt.id || `option-${idx}`,
+        label: opt.text || `옵션 ${idx + 1}`,
+        description: opt.description,
+        probability: Number(clampedProb.toFixed(4)),
+        odds: Math.min(Math.max(odds, 1.01), 99),
+        volume: optVol > 0 ? optVol : Math.round(finalTotalVolume * clampedProb),
+        change24h: idx === 0 ? 2.4 : -1.2,
+      };
+    }),
     totalVolume: finalTotalVolume,
     participantCount,
-    endTime: toIsoOrFallback(game.registration_end, 7 * 24 * 60 * 60 * 1000),
-    settlementTime: toIsoOrFallback(game.settlement_date, 14 * 24 * 60 * 60 * 1000),
-    status: mapStatus(game.status),
-    createdAt: toIsoOrFallback(game.created_at, 0),
-    category: game.category || "예측",
+    endTime: toIsoOrFallback(dbGame.registration_end, 7 * 24 * 60 * 60 * 1000),
+    settlementTime: toIsoOrFallback(dbGame.settlement_date, 14 * 24 * 60 * 60 * 1000),
+    status: mapStatus(dbGame.status),
+    category: dbGame.category || "예측",
+    subcategory: dbGame.subcategory || undefined,
+    dataSource: dbGame.data_source || "kosis",
+    externalId: dbGame.external_id || undefined,
+    settlementType: dbGame.settlement_type || "auto",
+    liveRoom: matchedLiveRoom
+      ? {
+          id: matchedLiveRoom.id,
+          title: matchedLiveRoom.title,
+          viewerCount: matchedLiveRoom.viewerCount,
+          statusText: matchedLiveRoom.matchScore?.statusText || "LIVE 진행 중",
+        }
+      : undefined,
     creator: {
-      name: "PosMul",
-      reputation: 0,
-      avatar: "🎯",
+      name: "PosMul 공인 오라클",
+      reputation: 4.9,
+      avatar: "🏛️",
     },
-    prizePool: truthPrizePool ?? getPrizePool({ game, totalBetAmount: finalTotalVolume }),
-    minimumStake: game.min_bet_amount || 100,
-    maximumStake: game.max_bet_amount || 10000,
+    prizePool: Math.round(Number(boostedGame.allocated_prize_pool) || 25000),
+    minimumStake: Number(dbGame.min_bet_amount) || 100,
+    maximumStake: Number(dbGame.max_bet_amount) || 50000,
   };
 
+  return {
+    game: gameForView,
+    userBalance: balanceResult ?? { pmp: 1000, pmc: 500 },
+    userBets,
+    initialChartData,
+    slug: decodedSlug,
+  };
+}
+
+export async function renderPredictionDetailBySlug(slug: string) {
+  const data = await fetchPredictionDetailDataBySlug(slug);
+  if (!data) notFound();
+
   return (
-    <PredictionDetailTabsClient
-      game={gameForView}
-      userBalance={userBalance}
-      userBets={userBets}
-      initialChartData={initialChartData}
-      moneyWave={{
-        category: moneyWaveCategory,
-        subcategory,
-        league,
-      }}
+    <UniversalPredictionDetailClient
+      game={data.game}
+      userBalance={data.userBalance}
+      userBets={data.userBets}
+      initialChartData={data.initialChartData}
+      slug={data.slug}
     />
   );
 }

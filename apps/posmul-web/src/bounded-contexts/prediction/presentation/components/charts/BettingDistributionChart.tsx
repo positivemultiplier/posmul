@@ -29,7 +29,7 @@ export const BettingDistributionChart = ({ data, isDarkMode = true }: BettingDis
       innerRadius={45}
       outerRadius={70}
       centerText={`${(totalAmount / 10000).toFixed(1)}만`}
-      centerSubText="총 베팅액"
+      centerSubText="총 참여 PMP"
       showTooltip={true}
       showLegend={false}
       isDarkMode={isDarkMode}

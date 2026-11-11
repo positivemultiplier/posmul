@@ -15,6 +15,7 @@ export type PredictionGameCardModel = {
   options: Array<{
     id: string;
     text: string;
+    description?: string;
     currentOdds: number;
   }>;
   startTime: string | Date;
@@ -239,15 +240,26 @@ const clamp = (value: number, min: number, max: number): number => {
   return Math.max(min, Math.min(max, value));
 };
 
-export const mapDbPredictionType = (value: unknown): PredictionType => {
-  switch (value) {
-    case "BINARY":
-      return PredictionType.BINARY;
-    case "WIN_DRAW_LOSE":
-      return PredictionType.WIN_DRAW_LOSE;
+export const mapDbPredictionType = (
+  value: unknown,
+  optionsCount?: number
+): PredictionType => {
+  const normalized = typeof value === "string" ? value.trim().toUpperCase() : "";
+  switch (normalized) {
     case "RANKING":
       return PredictionType.RANKING;
+    case "WIN_DRAW_LOSE":
+    case "WDL":
+      return optionsCount && optionsCount >= 4
+        ? PredictionType.RANKING
+        : PredictionType.WIN_DRAW_LOSE;
+    case "BINARY":
+      if (optionsCount === 3) return PredictionType.WIN_DRAW_LOSE;
+      if (optionsCount && optionsCount >= 4) return PredictionType.RANKING;
+      return PredictionType.BINARY;
     default:
+      if (optionsCount === 3) return PredictionType.WIN_DRAW_LOSE;
+      if (optionsCount && optionsCount >= 4) return PredictionType.RANKING;
       return PredictionType.BINARY;
   }
 };
@@ -289,7 +301,7 @@ const extractOptionId = (opt: unknown, fallback: string): string => {
   return fallback;
 };
 
-const mapGameOptions = (
+export const mapGameOptions = (
   value: unknown,
   gameId: string
 ): PredictionGameCardModel["options"] => {
@@ -320,6 +332,10 @@ const mapGameOptions = (
       .map((raw, idx) => {
         const id = extractOptionId(raw, `opt-${idx + 1}`);
         const text = extractOptionText(raw, `옵션 ${idx + 1}`);
+        const description =
+          isRecord(raw) && typeof raw.description === "string" && raw.description.trim()
+            ? raw.description.trim()
+            : undefined;
 
         const currentOddsRaw = isRecord(raw) ? raw.currentOdds : undefined;
         const ratioRaw = isRecord(raw) ? raw.ratio : undefined;
@@ -344,10 +360,18 @@ const mapGameOptions = (
             const p3 = Math.max(0.1, Number((1 - p1 - p2).toFixed(2)));
             return idx === 0 ? p1 : idx === 1 ? p2 : p3;
           }
+          if (totalCount >= 4) {
+            const weights = Array.from({ length: totalCount }, (_, i) => {
+              const seed = (hash + i * 17) % 10;
+              return (totalCount - i) * 1.4 + seed * 0.4;
+            });
+            const weightSum = weights.reduce((a, b) => a + b, 0);
+            return Number((weights[idx] / weightSum).toFixed(2));
+          }
           return Number((1 / totalCount).toFixed(2));
         })();
 
-        return { id, text, currentOdds };
+        return { id, text, description, currentOdds };
       })
       .filter((v): v is NonNullable<typeof v> => Boolean(v && v.text));
 
@@ -387,6 +411,8 @@ export const mapPredictionGameRowToCardModel = (
   );
   const fallbackPool = Math.round(450 * importance + (hashGameId(row.game_id) % 500));
 
+  const options = mapGameOptions(row.game_options, row.game_id);
+
   return {
     id: row.game_id,
     slug,
@@ -396,8 +422,8 @@ export const mapPredictionGameRowToCardModel = (
     category: typeof row.category === "string" ? row.category : undefined,
     subcategory: typeof row.subcategory === "string" ? row.subcategory : undefined,
     dataSource: typeof row.data_source === "string" ? row.data_source : undefined,
-    predictionType: mapDbPredictionType(row.prediction_type),
-    options: mapGameOptions(row.game_options, row.game_id),
+    predictionType: mapDbPredictionType(row.prediction_type, options.length),
+    options,
     startTime: row.registration_start ?? defaultStart,
     endTime: row.registration_end ?? defaultEnd,
     settlementTime: row.settlement_date ?? defaultSettlement,

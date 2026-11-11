@@ -15,9 +15,9 @@ export const ParticipantTimelineChart = ({ data, isDarkMode = false }: Participa
   const tooltipText = isDarkMode ? "#f8fafc" : "#111827"; // slate-50 : gray-900
 
   return (
-    <div className="w-full h-44">
+    <div className="w-full h-52">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 10, right: 15, left: -20, bottom: 5 }}>
+        <BarChart data={data} margin={{ top: 10, right: 15, left: 0, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" stroke={gridColor} vertical={false} />
           <XAxis
             dataKey="time"
@@ -29,6 +29,7 @@ export const ParticipantTimelineChart = ({ data, isDarkMode = false }: Participa
           <YAxis
             stroke={axisColor}
             fontSize={12}
+            width={40}
             tickLine={false}
             axisLine={false}
           />

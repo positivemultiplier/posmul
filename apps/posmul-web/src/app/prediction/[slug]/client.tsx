@@ -1,22 +1,10 @@
 /**
  * Universal Prediction Game Detail Client Component
- * 모든 예측 카드의 클릭에 대응하는 범용 상세페이지 클라이언트 컴포넌트
- * 마스터 레이아웃:
- * 1. 🔴 LIVE 연동 배너 (상시/매칭 연동)
- * 2. 🌟 메인 비주얼 헤더 (아바타 심볼 + 2줄 제목 + 합의 아크 게이지)
- * 3. 2-Column 그리드:
- *    - 좌측 (2 Cols):
- *      ① ⚖️ AI 균형 의사결정 브리핑 (중립 팩트체크 & 찬/반 균형 논거 1순위 노출)
- *      ② 📊 집단지성 데이터 차트 센터 (확률 추이 / 의견 분포 파이 / 시민 참여 추이 / 내 참여 내역 탭 통합)
- *      ③ 📋 의제 심층 배경 및 공식 판정 본문 (의제 스토리 + 공인 오라클 명세 박스 흡수 + 100% 환불 안전 규정)
- *      ④ 💬 이 의제 전용 시민 토론 갤러리
- *    - 우측 (1 Col):
- *      ① ⏳ MoneyWave 황금 모래시계 위젯 (시선 집중 최상단)
- *      ② 🎯 시민 예측 참여 패널 (에메랄드/로즈 캡슐 토글 버튼 + PMP 설정)
+ * 모든 예측 카드(Binary / 승무패 WDL / 랭킹 Ranking)의 특성에 완벽 대응하는 통합 상세페이지 컴포넌트
  */
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { ProbabilityLineChart } from "@/bounded-contexts/prediction/presentation/components/charts/ProbabilityLineChart";
 import { BettingDistributionChart } from "@/bounded-contexts/prediction/presentation/components/charts/BettingDistributionChart";
 import { ParticipantTimelineChart } from "@/bounded-contexts/prediction/presentation/components/charts/ParticipantTimelineChart";
@@ -44,21 +32,24 @@ import {
   FileText,
   MessageSquare,
   BarChart3,
-  Calendar,
+  Trophy,
+  Scale,
+  Layers,
 } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/shared/ui/components/base";
 
-interface PredictionOption {
+export interface PredictionOption {
   id: string;
   label: string;
+  description?: string;
   probability: number;
   odds: number;
   volume: number;
   change24h: number;
 }
 
-interface PredictionGameDetail {
+export interface PredictionGameDetail {
   id: string;
   title: string;
   description: string;
@@ -90,6 +81,126 @@ interface PredictionGameDetail {
   prizePool: number;
 }
 
+interface UniversalPredictionDetailClientProps {
+  game: PredictionGameDetail;
+  userBalance: {
+    pmp: number;
+    pmc: number;
+  };
+  userBets: Array<{
+    betId: string;
+    selectedOption: string;
+    betAmount: number;
+    status: string;
+    createdAt: string;
+  }>;
+  slug: string;
+  initialChartData?: Array<{ time: string; [key: string]: string | number }>;
+}
+
+type ChartTabType = "trend" | "distribution" | "participants" | "my_bets";
+
+interface OptionColorTheme {
+  hex: string;
+  activeCard: string;
+  inactiveCard: string;
+  badgeBg: string;
+  text: string;
+  barBg: string;
+  chipBorder: string;
+}
+
+const BINARY_THEMES: OptionColorTheme[] = [
+  {
+    hex: "#10B981",
+    activeCard:
+      "border-emerald-400 bg-emerald-950/70 text-white ring-2 ring-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.25)]",
+    inactiveCard:
+      "border-emerald-500/30 bg-emerald-950/20 text-slate-300 hover:border-emerald-500/60",
+    badgeBg: "bg-emerald-500 text-slate-950",
+    text: "text-emerald-400",
+    barBg: "bg-emerald-500",
+    chipBorder: "border-emerald-500/40 bg-emerald-950/30 text-emerald-300",
+  },
+  {
+    hex: "#F43F5E",
+    activeCard:
+      "border-rose-400 bg-rose-950/70 text-white ring-2 ring-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.25)]",
+    inactiveCard:
+      "border-rose-500/30 bg-rose-950/20 text-slate-300 hover:border-rose-500/60",
+    badgeBg: "bg-rose-500 text-white",
+    text: "text-rose-400",
+    barBg: "bg-rose-500",
+    chipBorder: "border-rose-500/40 bg-rose-950/30 text-rose-300",
+  },
+];
+
+const WDL_THEMES: OptionColorTheme[] = [
+  BINARY_THEMES[0], // 1안 (승/첫번째): 에메랄드
+  {
+    hex: "#F59E0B",
+    activeCard:
+      "border-amber-400 bg-amber-950/65 text-white ring-2 ring-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.25)]",
+    inactiveCard:
+      "border-amber-500/30 bg-amber-950/20 text-slate-300 hover:border-amber-500/60",
+    badgeBg: "bg-amber-400 text-slate-950",
+    text: "text-amber-400",
+    barBg: "bg-amber-400",
+    chipBorder: "border-amber-500/40 bg-amber-950/30 text-amber-300",
+  },
+  BINARY_THEMES[1], // 3안 (패/세번째): 로즈
+];
+
+const RANKING_THEMES: OptionColorTheme[] = [
+  {
+    hex: "#38BDF8",
+    activeCard:
+      "border-sky-400 bg-sky-950/70 text-white ring-2 ring-sky-500/50 shadow-[0_0_15px_rgba(56,189,248,0.25)]",
+    inactiveCard:
+      "border-sky-500/25 bg-slate-950/60 text-slate-300 hover:border-sky-400/60",
+    badgeBg: "bg-sky-400 text-slate-950",
+    text: "text-sky-400",
+    barBg: "bg-sky-500",
+    chipBorder: "border-sky-500/40 bg-sky-950/30 text-sky-300",
+  },
+  {
+    hex: "#A855F7",
+    activeCard:
+      "border-purple-400 bg-purple-950/70 text-white ring-2 ring-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.25)]",
+    inactiveCard:
+      "border-purple-500/25 bg-slate-950/60 text-slate-300 hover:border-purple-400/60",
+    badgeBg: "bg-purple-500 text-white",
+    text: "text-purple-400",
+    barBg: "bg-purple-500",
+    chipBorder: "border-purple-500/40 bg-purple-950/30 text-purple-300",
+  },
+  BINARY_THEMES[0],
+  WDL_THEMES[1],
+  BINARY_THEMES[1],
+  {
+    hex: "#06B6D4",
+    activeCard:
+      "border-cyan-400 bg-cyan-950/70 text-white ring-2 ring-cyan-500/50 shadow-[0_0_15px_rgba(6,182,212,0.25)]",
+    inactiveCard:
+      "border-cyan-500/25 bg-slate-950/60 text-slate-300 hover:border-cyan-400/60",
+    badgeBg: "bg-cyan-400 text-slate-950",
+    text: "text-cyan-400",
+    barBg: "bg-cyan-500",
+    chipBorder: "border-cyan-500/40 bg-cyan-950/30 text-cyan-300",
+  },
+  {
+    hex: "#EC4899",
+    activeCard:
+      "border-pink-400 bg-pink-950/70 text-white ring-2 ring-pink-500/50 shadow-[0_0_15px_rgba(236,72,153,0.25)]",
+    inactiveCard:
+      "border-pink-500/25 bg-slate-950/60 text-slate-300 hover:border-pink-400/60",
+    badgeBg: "bg-pink-500 text-white",
+    text: "text-pink-400",
+    barBg: "bg-pink-500",
+    chipBorder: "border-pink-500/40 bg-pink-950/30 text-pink-300",
+  },
+];
+
 function getOracleSpecInfo(dataSource?: string, title?: string) {
   const ds = (dataSource || "").toLowerCase();
   const t = (title || "").toUpperCase();
@@ -102,7 +213,7 @@ function getOracleSpecInfo(dataSource?: string, title?: string) {
       scheduleDesc: "주말 마감 후 월요일 09:00 공식 누적 관객수 자동 판정",
     };
   }
-  if (ds === "kcontent" || t.includes("시청률") || t.includes("드라마") || t.includes("OTT") || t.includes("예능") || t.includes("K-POP")) {
+  if (ds === "kcontent" || t.includes("시청률") || t.includes("드라마") || t.includes("OTT") || t.includes("예능") || t.includes("K-POP") || t.includes("멜론")) {
     if (t.includes("OTT") || t.includes("넷플릭스")) {
       return {
         provider: "Netflix Tudum / FlixPatrol 공식 TOP 10 집계",
@@ -111,12 +222,12 @@ function getOracleSpecInfo(dataSource?: string, title?: string) {
         scheduleDesc: "집계 발표 직후 대한민국 시리즈 TOP 10 1위 여부 판정",
       };
     }
-    if (t.includes("K-POP") || t.includes("음원")) {
+    if (t.includes("K-POP") || t.includes("음원") || t.includes("멜론")) {
       return {
         provider: "써클차트(Circle Chart) · 멜론 주간 디지털 차트",
         endpoint: "KContentOracleAdapter (music_chart_top10)",
         badge: "🎵 공인 음원차트 오라클",
-        scheduleDesc: "주간 차트 발표 시점 TOP 10 진입 여부 판정",
+        scheduleDesc: "주간 차트 발표 시점 순위 자동 대조 판정",
       };
     }
     return {
@@ -128,18 +239,18 @@ function getOracleSpecInfo(dataSource?: string, title?: string) {
   }
   if (ds === "coingecko" || t.includes("비트코인") || t.includes("BTC")) {
     return {
-      provider: "CoinGecko 글로벌 암호화폐 인덱스 Public API v3",
+      provider: "CoinGecko 글로벌 암호화폐 인덱스 · 업비트 시세",
       endpoint: "api.coingecko.com/api/v3/simple/price",
       badge: "₿ CoinGecko 실시간 시세 오라클",
-      scheduleDesc: "마감 시각 기준 글로벌 USD/KRW 인덱스가격 자동 대조 판정",
+      scheduleDesc: "마감 시각 기준 공식 종가/고가 인덱스 자동 대조 판정",
     };
   }
   if (ds === "alpha-vantage" || t.includes("나스닥") || t.includes("코스피") || t.includes("삼성전자")) {
     return {
-      provider: "Alpha Vantage Global Market Data / KRX 종가",
+      provider: "KRX 한국거래소 종가 / Alpha Vantage Global Market",
       endpoint: "TIME_SERIES_DAILY (Official Close Price)",
-      badge: "📈 글로벌 증시 공식 종가 오라클",
-      scheduleDesc: "정규장 마감 후 전일 종가 대비 상승/하락 자동 판정",
+      badge: "📈 증시 공식 종가 오라클",
+      scheduleDesc: "정규장 마감 후 공식 확정 종가 자동 대조 판정",
     };
   }
   if (ds === "dart" || t.includes("실적공시") || t.includes("영업이익")) {
@@ -150,15 +261,23 @@ function getOracleSpecInfo(dataSource?: string, title?: string) {
       scheduleDesc: "분기·사업보고서 연결재무제표 영업이익 확정치 자동 판정",
     };
   }
-  if (ds === "ecos" || t.includes("한국은행") || t.includes("금통위") || t.includes("경상수지")) {
+  if (ds === "ecos" || t.includes("한국은행") || t.includes("금통위") || t.includes("경상수지") || t.includes("GDP")) {
     return {
       provider: "한국은행 경제통계시스템 (BOK ECOS Open API)",
       endpoint: "ecos.bok.or.kr/api/StatisticSearch (722Y001 / 200Y101)",
       badge: "🏦 한국은행 ECOS 공식 통계 오라클",
-      scheduleDesc: "금통위/속보치 공식 발표 1~2시간 후 ECOS 통계표 자동 판정",
+      scheduleDesc: "금통위/속보치 공식 발표 직후 ECOS 통계표 자동 판정",
     };
   }
-  if (ds === "football_data" || ds === "thesportsdb" || t.includes("EPL") || t.includes("KBO") || t.includes("프로야구")) {
+  if (ds === "football_data" || ds === "thesportsdb" || t.includes("EPL") || t.includes("KBO") || t.includes("프로야구") || t.includes("손흥민") || t.includes("LCK") || t.includes("T1")) {
+    if (t.includes("LCK") || t.includes("T1") || t.includes("젠지")) {
+      return {
+        provider: "LCK 공식 경기 기록실 & Riot Esports API",
+        endpoint: "lolesports / Match Official Series Result",
+        badge: "⚔️ LCK 공식 매치 오라클",
+        scheduleDesc: "공식 매치 세트 스코어 종료 즉시 자동 판정",
+      };
+    }
     return {
       provider: t.includes("KBO") || t.includes("프로야구")
         ? "KBO 공식 기록실 & TheSportsDB 매치 스코어"
@@ -176,46 +295,126 @@ function getOracleSpecInfo(dataSource?: string, title?: string) {
   };
 }
 
-interface UniversalPredictionDetailClientProps {
-  game: PredictionGameDetail;
-  userBalance: {
-    pmp: number;
-    pmc: number;
-  };
-  userBets: Array<{
-    betId: string;
-    selectedOption: string;
-    betAmount: number;
-    status: string;
-    createdAt: string;
-  }>;
-  slug: string;
+function getShortOptionTag(label: string, fallback: string) {
+  const clean = label.replace(/\([^)]*\)/g, "").trim();
+  if (!clean) return fallback;
+  return clean.length > 9 ? `${clean.slice(0, 9)}…` : clean;
 }
-
-type ChartTabType = "trend" | "distribution" | "participants" | "my_bets";
 
 export function UniversalPredictionDetailClient({
   game,
   userBalance,
   userBets,
+  initialChartData,
 }: UniversalPredictionDetailClientProps) {
   const [chartTab, setChartTab] = useState<ChartTabType>("trend");
   const [isPending, startTransition] = useTransition();
   const [balance, setBalance] = useState(userBalance);
   const [bets, setBets] = useState(userBets);
+
+  // 옵션 개수와 선언된 predictionType을 결합해 실제 3대 분류 결정
+  const effectiveType: "binary" | "wdl" | "ranking" = useMemo(() => {
+    if (game.predictionType === "ranking" || game.options.length >= 4) return "ranking";
+    if (game.predictionType === "wdl" || game.options.length === 3) return "wdl";
+    return "binary";
+  }, [game.predictionType, game.options.length]);
+
   const [selectedOption, setSelectedOption] = useState<string>(game.options[0]?.id || "");
   const [stakeAmount, setStakeAmount] = useState<number>(game.minimumStake || 100);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
-  // 메인 피드 카드와의 일관된 시각적 연속성 (아이콘, 색상, 카테고리 태그)
+  // 메인 피드 카드와의 일관된 시각적 연속성
   const { prefixEmoji, prefixTag, cleanTitle } = splitTitlePrefix(game.title);
   const meta = resolveGameVisualMeta(game.title, game.category, game.subcategory);
   const oracleSpec = getOracleSpecInfo(game.dataSource, game.title);
 
-  // 1위 옵션 확률 및 합의 아크 게이지 계산
-  const firstOpt = game.options[0] ?? { probability: 0.5 };
+  // 옵션별 고유 테마 컬러 맵 (모든 차트/게이지/선택버튼에서 1:1 색 일관성 보장)
+  const optionThemeMap = useMemo(() => {
+    const palette =
+      effectiveType === "binary"
+        ? BINARY_THEMES
+        : effectiveType === "wdl"
+        ? WDL_THEMES
+        : RANKING_THEMES;
+
+    const map: Record<string, OptionColorTheme> = {};
+    game.options.forEach((opt, idx) => {
+      map[opt.id] = palette[idx % palette.length];
+    });
+    return map;
+  }, [game.options, effectiveType]);
+
+  // 랭킹 분류용: 확률 내림차순 정렬 (원래 인덱스와 매칭 유지)
+  const sortedOptionsByProb = useMemo(() => {
+    return [...game.options].sort((a, b) => b.probability - a.probability);
+  }, [game.options]);
+
+  const topOption = sortedOptionsByProb[0] ?? game.options[0] ?? { id: "opt-1", label: "선택 1", probability: 0.5 };
+  const firstOpt = game.options[0] ?? { id: "opt-1", label: "찬성", probability: 0.5 };
   const leadPct = Math.round((firstOpt.probability || 0.5) * 100);
   const isUp = leadPct >= 50;
+
+  // 시계열 차트 데이터 조립 (실제 히스토리 우선 -> 없으면 합계 100% 보존 보간 추이 생성)
+  const lineChartData = useMemo(() => {
+    if (initialChartData && initialChartData.length >= 2) {
+      // 값 정규화 (0~1 소수 범위면 100 곱하기)
+      let maxVal = 0;
+      initialChartData.forEach((pt) => {
+        game.options.forEach((opt) => {
+          const v = Number(pt[opt.id]);
+          if (Number.isFinite(v) && v > maxVal) maxVal = v;
+        });
+      });
+      const scale = maxVal > 0 && maxVal <= 1.05 ? 100 : 1;
+
+      return initialChartData.map((pt) => {
+        const formatted: { time: string; [key: string]: string | number } = {
+          time: pt.time,
+        };
+        game.options.forEach((opt) => {
+          const v = Number(pt[opt.id]);
+          formatted[opt.id] = Number.isFinite(v)
+            ? Math.round(v * scale)
+            : Math.round((opt.probability || 0) * 100);
+        });
+        return formatted;
+      });
+    }
+
+    // 다중 옵션에서도 합계 100%가 정확히 유지되는 시계열 추이 생성
+    const currentPcts = game.options.map((o) => Math.max(1, Math.round((o.probability || 0) * 100)));
+    const curSum = currentPcts.reduce((a, b) => a + b, 0) || 100;
+    const normalizedCurrent = currentPcts.map((p) => Math.round((p / curSum) * 100));
+
+    const buildPoint = (timeLabel: string, shifts: number[]) => {
+      const shifted = normalizedCurrent.map((p, idx) => Math.max(2, p + (shifts[idx] ?? 0)));
+      const sum = shifted.reduce((a, b) => a + b, 0);
+      const res: { time: string; [key: string]: string | number } = { time: timeLabel };
+      let runningSum = 0;
+      game.options.forEach((opt, idx) => {
+        if (idx === game.options.length - 1) {
+          res[opt.id] = Math.max(1, 100 - runningSum);
+        } else {
+          const val = Math.max(1, Math.round((shifted[idx] / sum) * 100));
+          res[opt.id] = val;
+          runningSum += val;
+        }
+      });
+      return res;
+    };
+
+    const shifts00 = game.options.map((_, i) => (i === 0 ? -6 : i === 1 ? 4 : 2));
+    const shifts06 = game.options.map((_, i) => (i === 0 ? -2 : i === 1 ? 3 : -1));
+    const shifts12 = game.options.map((_, i) => (i === 0 ? 4 : i === 1 ? -3 : -1));
+    const shiftsNow = game.options.map(() => 0);
+
+    return [
+      buildPoint("00:00", shifts00),
+      buildPoint("06:00", shifts06),
+      buildPoint("12:00", shifts12),
+      buildPoint("현재", shiftsNow),
+    ];
+  }, [initialChartData, game.options]);
 
   const handlePlaceBet = async () => {
     if (!selectedOption) return;
@@ -227,7 +426,6 @@ export function UniversalPredictionDetailClient({
           setBalance({ ...balance, pmp: result.newBalance });
           setFeedbackMsg("🎉 예측 투표에 성공적으로 참여하였습니다!");
           setBets([
-            ...bets,
             {
               betId: `bet-${Date.now()}`,
               selectedOption,
@@ -235,6 +433,7 @@ export function UniversalPredictionDetailClient({
               status: "ACTIVE",
               createdAt: new Date().toISOString(),
             },
+            ...bets,
           ]);
         } else {
           setFeedbackMsg(result.message || result.error || "예측 참여에 실패하였습니다.");
@@ -244,6 +443,385 @@ export function UniversalPredictionDetailClient({
       }
     });
   };
+
+  // ==========================================================
+  // 헤더 우측 게이지 3종 렌더링 (Binary / WDL / Ranking)
+  // ==========================================================
+  const renderHeaderGauge = () => {
+    if (effectiveType === "wdl") {
+      // 3색 도넛 세그먼트 게이지
+      const p1 = Math.round((game.options[0]?.probability || 0.4) * 100);
+      const p2 = Math.round((game.options[1]?.probability || 0.3) * 100);
+      const p3 = Math.max(1, 100 - p1 - p2);
+      const maxOpt = topOption;
+      const maxPct = Math.round((maxOpt.probability || 0.4) * 100);
+      const maxColorClass = optionThemeMap[maxOpt.id]?.text || "text-emerald-400";
+
+      const radius = 22;
+      const circ = 2 * Math.PI * radius;
+      const offset1 = circ - (p1 / 100) * circ;
+      const offset2 = circ - ((p1 + p2) / 100) * circ;
+
+      return (
+        <div className="flex items-center gap-3 shrink-0 self-end md:self-center pl-2">
+          <div className="hidden sm:flex flex-col items-end text-[10.5px] font-bold space-y-0.5">
+            <div className="flex items-center gap-1.5 text-emerald-400">
+              <span>{getShortOptionTag(game.options[0]?.label || "1안", "1안")}</span>
+              <span className="font-black">{p1}%</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-amber-400">
+              <span>{getShortOptionTag(game.options[1]?.label || "2안", "2안")}</span>
+              <span className="font-black">{p2}%</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-rose-400">
+              <span>{getShortOptionTag(game.options[2]?.label || "3안", "3안")}</span>
+              <span className="font-black">{p3}%</span>
+            </div>
+          </div>
+
+          <div className="relative flex flex-col items-center justify-center w-[62px] h-[62px]">
+            <svg className="w-[62px] h-[62px] -rotate-90 overflow-visible" viewBox="0 0 56 56">
+              <circle cx="28" cy="28" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5.5" />
+              <circle cx="28" cy="28" r={radius} fill="none" stroke="#F43F5E" strokeWidth="5.5" strokeDasharray={circ} strokeDashoffset={0} />
+              <circle cx="28" cy="28" r={radius} fill="none" stroke="#F59E0B" strokeWidth="5.5" strokeDasharray={circ} strokeDashoffset={offset2} />
+              <circle cx="28" cy="28" r={radius} fill="none" stroke="#10B981" strokeWidth="5.5" strokeDasharray={circ} strokeDashoffset={offset1} />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+              <span className="text-[14px] font-black text-white">{maxPct}%</span>
+              <span className={`text-[9px] font-extrabold ${maxColorClass} mt-0.5`}>선두</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (effectiveType === "ranking") {
+      // 1위 독주 스카이 블루 링 게이지
+      const topPct = Math.round((topOption.probability || 0.35) * 100);
+      const radius = 22;
+      const circ = 2 * Math.PI * radius;
+      const offset = circ - (topPct / 100) * circ;
+
+      return (
+        <div className="flex items-center gap-3 shrink-0 self-end md:self-center pl-2">
+          <div className="hidden sm:flex flex-col items-end">
+            <span className="text-[10px] font-bold text-sky-400">🥇 현재 1위 후보</span>
+            <span className="text-xs font-black text-white max-w-[120px] truncate">
+              {topOption.label}
+            </span>
+          </div>
+
+          <div className="relative flex flex-col items-center justify-center w-[62px] h-[62px]">
+            <svg className="w-[62px] h-[62px] -rotate-90 overflow-visible" viewBox="0 0 56 56">
+              <circle cx="28" cy="28" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="5.5" />
+              <circle
+                cx="28"
+                cy="28"
+                r={radius}
+                fill="none"
+                stroke="#38BDF8"
+                strokeWidth="5.5"
+                strokeDasharray={circ}
+                strokeDashoffset={offset}
+                strokeLinecap="round"
+              />
+            </svg>
+            <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+              <span className="text-[14px] font-black text-white">{topPct}%</span>
+              <span className="text-[9px] font-extrabold text-sky-400 mt-0.5">1위 독주</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Binary: 반원 아크 게이지
+    return (
+      <div className="flex items-center gap-3 shrink-0 self-end md:self-center pl-2">
+        <div className="relative flex flex-col items-center justify-center w-[88px] h-[54px]">
+          <svg className="w-[84px] h-[48px] overflow-visible" viewBox="0 0 70 38">
+            <path
+              d="M 8 34 A 27 27 0 0 1 62 34"
+              fill="none"
+              stroke="rgba(255,255,255,0.1)"
+              strokeWidth="5.5"
+              strokeLinecap="round"
+            />
+            <path
+              d="M 8 34 A 27 27 0 0 1 62 34"
+              fill="none"
+              stroke={isUp ? "#10b981" : "#f43f5e"}
+              strokeWidth="5.5"
+              strokeLinecap="round"
+              strokeDasharray={Math.PI * 27}
+              strokeDashoffset={Math.PI * 27 * (1 - leadPct / 100)}
+              className="transition-all duration-700"
+            />
+          </svg>
+          <div className="absolute bottom-0 flex flex-col items-center leading-none">
+            <span className="text-[15px] font-black text-white tracking-tight">
+              {leadPct}%
+            </span>
+            <span className={`text-[9.5px] font-bold ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
+              {isUp ? `${getShortOptionTag(firstOpt.label, "상승/찬성")} 우세` : `${getShortOptionTag(game.options[1]?.label || "반대", "반대")} 우세`}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // ==========================================================
+  // 우측 참여 패널 옵션 선택 UI (3종 분류별 차별화 렌더링)
+  // ==========================================================
+  const renderParticipationOptions = () => {
+    // 1️⃣ Binary (양자택일): 대립 점유율 바 + 2분할 에메랄드 vs 로즈 캡슐
+    if (effectiveType === "binary") {
+      const opt1 = game.options[0];
+      const opt2 = game.options[1];
+      const p1 = Math.round((opt1?.probability || 0.5) * 100);
+      const p2 = Math.max(1, 100 - p1);
+
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <span className="flex items-center gap-1.5">
+              <Scale className="w-3.5 h-3.5 text-emerald-400" />
+              <span>양자택일 예측 선택</span>
+            </span>
+            <span className="text-[10.5px] text-slate-400">
+              {p1}% vs {p2}%
+            </span>
+          </div>
+
+          {/* 2분할 점유율 배틀 게이지 바 */}
+          <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden flex border border-white/[0.06]">
+            <div
+              className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
+              style={{ width: `${p1}%` }}
+            />
+            <div
+              className="h-full bg-gradient-to-r from-rose-500 to-pink-500 transition-all duration-500"
+              style={{ width: `${p2}%` }}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-2.5">
+            {game.options.map((opt, idx) => {
+              const isSelected = selectedOption === opt.id;
+              const theme = optionThemeMap[opt.id] || BINARY_THEMES[idx % 2];
+
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setSelectedOption(opt.id)}
+                  className={`p-3.5 rounded-2xl border text-left flex justify-between items-center transition-all ${
+                    isSelected ? theme.activeCard : theme.inactiveCard
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                    <span
+                      className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
+                        isSelected ? theme.badgeBg : "bg-slate-800 text-slate-400"
+                      }`}
+                    >
+                      {isSelected ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-xs truncate">{opt.label}</div>
+                      <div className="text-[10.5px] text-slate-400 mt-0.5 truncate">
+                        {opt.description ? `${opt.description} · ` : ""}예상 리워드 {(opt.odds || 2.0).toFixed(2)}x
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-sm font-black shrink-0 ${theme.text}`}>
+                    {((opt.probability || 0.5) * 100).toFixed(0)}%
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // 2️⃣ WDL (승무패 · 3지선다): 3색 스코어 요약칩 + 3색 밸런스 바 + 3색 캡슐 카드
+    if (effectiveType === "wdl") {
+      const p0 = Math.round((game.options[0]?.probability || 0.34) * 100);
+      const p1 = Math.round((game.options[1]?.probability || 0.33) * 100);
+      const p2 = Math.max(1, 100 - p0 - p1);
+      const wdlPcts = [p0, p1, p2];
+
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <span className="flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-amber-400" />
+              <span>승무패 · 3지선다 선택</span>
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded bg-amber-950/60 text-amber-300 border border-amber-500/30">
+              3파전 균형
+            </span>
+          </div>
+
+          {/* 3열 콤팩트 스코어보드 퀵 셀렉트 칩 */}
+          <div className="grid grid-cols-3 gap-1.5">
+            {game.options.slice(0, 3).map((opt, idx) => {
+              const isSelected = selectedOption === opt.id;
+              const theme = optionThemeMap[opt.id] || WDL_THEMES[idx];
+              return (
+                <button
+                  key={`chip-${opt.id}`}
+                  type="button"
+                  onClick={() => setSelectedOption(opt.id)}
+                  className={`p-2 rounded-xl border text-center transition-all ${
+                    isSelected
+                      ? `${theme.chipBorder} ring-1 ring-white/40`
+                      : "border-white/[0.07] bg-slate-950/60 text-slate-400 hover:border-white/20"
+                  }`}
+                >
+                  <div className="text-[10px] font-bold truncate">
+                    {getShortOptionTag(opt.label, `선택 ${idx + 1}`)}
+                  </div>
+                  <div className={`text-sm font-black mt-0.5 ${theme.text}`}>
+                    {wdlPcts[idx]}%
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 3색 밸런스 점유율 바 */}
+          <div className="w-full h-2 rounded-full bg-slate-900 overflow-hidden flex border border-white/[0.06]">
+            <div className="h-full bg-emerald-500 transition-all duration-500" style={{ width: `${p0}%` }} />
+            <div className="h-full bg-amber-400 transition-all duration-500" style={{ width: `${p1}%` }} />
+            <div className="h-full bg-rose-500 transition-all duration-500" style={{ width: `${p2}%` }} />
+          </div>
+
+          {/* 3색 개별 선택 카드 (긴 옵션 라벨도 깨지지 않게 온전히 표시) */}
+          <div className="grid grid-cols-1 gap-2">
+            {game.options.map((opt, idx) => {
+              const isSelected = selectedOption === opt.id;
+              const theme = optionThemeMap[opt.id] || WDL_THEMES[idx % 3];
+
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setSelectedOption(opt.id)}
+                  className={`p-3 rounded-2xl border text-left flex justify-between items-center transition-all ${
+                    isSelected ? theme.activeCard : theme.inactiveCard
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                    <span
+                      className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black ${
+                        isSelected ? theme.badgeBg : "bg-slate-800 text-slate-300"
+                      }`}
+                    >
+                      {isSelected ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-xs truncate">{opt.label}</div>
+                      <div className="text-[10.5px] text-slate-400 mt-0.5 truncate">
+                        {opt.description ? `${opt.description} · ` : ""}예상 리워드 {(opt.odds || 3.0).toFixed(2)}x
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-sm font-black shrink-0 ${theme.text}`}>
+                    {((opt.probability || 0.33) * 100).toFixed(0)}%
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // 3️⃣ Ranking (랭킹 · 다지선다 순위 예측): 🥇🥈🥉 실시간 순위 경쟁 프로그레스 리스트
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+          <span className="flex items-center gap-1.5">
+            <Trophy className="w-3.5 h-3.5 text-sky-400" />
+            <span>순위 경쟁 후보 선택 ({game.options.length}개)</span>
+          </span>
+          <span className="text-[10px] px-2 py-0.5 rounded bg-sky-950/70 text-sky-300 border border-sky-500/30">
+            실시간 지지율 순
+          </span>
+        </div>
+
+        <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1">
+          {sortedOptionsByProb.map((opt, rankIdx) => {
+            const isSelected = selectedOption === opt.id;
+            const theme = optionThemeMap[opt.id] || RANKING_THEMES[rankIdx % RANKING_THEMES.length];
+            const pct = Math.round((opt.probability || 0.2) * 100);
+            const rankBadge =
+              rankIdx === 0
+                ? "bg-amber-400 text-slate-950"
+                : rankIdx === 1
+                ? "bg-slate-300 text-slate-950"
+                : rankIdx === 2
+                ? "bg-amber-700 text-white"
+                : "bg-slate-800 text-slate-400";
+
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => setSelectedOption(opt.id)}
+                className={`relative overflow-hidden w-full p-3 rounded-2xl border text-left transition-all ${
+                  isSelected ? theme.activeCard : theme.inactiveCard
+                }`}
+              >
+                {/* 배경 지분율 프로그레스 바 (미세한 실시간 게이지 효과) */}
+                <div
+                  className={`absolute left-0 top-0 bottom-0 opacity-15 transition-all duration-500 ${theme.barBg}`}
+                  style={{ width: `${pct}%` }}
+                />
+
+                <div className="relative z-10 flex justify-between items-center">
+                  <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                    <span
+                      className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-black ${
+                        isSelected ? theme.badgeBg : rankBadge
+                      }`}
+                    >
+                      {isSelected ? <CheckCircle2 className="w-3.5 h-3.5" /> : `${rankIdx + 1}위`}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-xs truncate flex items-center gap-1.5">
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: theme.hex }}
+                        />
+                        <span className="truncate">{opt.label}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 mt-0.5 truncate">
+                        {opt.description ? `${opt.description} · ` : ""}예상 리워드 {(opt.odds || 4.0).toFixed(2)}x
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span className={`text-sm font-black ${theme.text}`}>{pct}%</span>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const typeBadgeMeta =
+    effectiveType === "wdl"
+      ? { label: "승무패 · 3지선다", className: "bg-amber-950/70 text-amber-300 border-amber-700/50" }
+      : effectiveType === "ranking"
+      ? { label: "랭킹 · 순위예측", className: "bg-purple-950/70 text-purple-300 border-purple-700/50" }
+      : { label: "양자택일 · Binary", className: "bg-cyan-950/70 text-cyan-300 border-cyan-700/50" };
 
   return (
     <div className="min-h-screen bg-[#090b12] text-slate-100 selection:bg-cyan-500 selection:text-white">
@@ -257,20 +835,23 @@ export function UniversalPredictionDetailClient({
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
             <span>전체 예측 피드로 돌아가기</span>
           </Link>
-          <div className="flex items-center gap-3 text-xs">
+          <div className="flex items-center gap-2.5 text-xs">
+            <span className={`hidden sm:inline-flex px-2.5 py-0.5 rounded-full border font-bold ${typeBadgeMeta.className}`}>
+              {typeBadgeMeta.label}
+            </span>
             <span className="px-2.5 py-0.5 rounded-full bg-sky-950/80 text-sky-300 border border-sky-800/50 font-bold">
               {prefixTag || meta.categoryLabel}
             </span>
             <span className="text-amber-300 font-bold flex items-center gap-1">
               <Coins className="w-3.5 h-3.5 text-amber-400" />
-              <span>보유 참여자산: {balance.pmp.toLocaleString()} PMP</span>
+              <span>보유: {balance.pmp.toLocaleString()} PMP</span>
             </span>
           </div>
         </div>
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* 🔴 연동된 실시간 라이브 응원톡 전면 배너 (존재할 경우) */}
+        {/* 🔴 연동된 실시간 라이브 응원톡 전면 배너 */}
         {game.liveRoom ? (
           <Link
             href={`/live/${game.liveRoom.id}`}
@@ -313,7 +894,7 @@ export function UniversalPredictionDetailClient({
           </div>
         )}
 
-        {/* 🌟 상세페이지 메인 헤더: 마이크로 심볼 아바타 + 넉넉한 2줄 제목 + 반원 아크 게이지 */}
+        {/* 🌟 상세페이지 메인 헤더: 마이크로 심볼 아바타 + 제목 + 분류별 전용 게이지 */}
         <div className="rounded-2xl bg-[#111622] border border-white/[0.08] p-5 md:p-6 shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
@@ -342,7 +923,7 @@ export function UniversalPredictionDetailClient({
                   </span>
                   <span>•</span>
                   <span className="text-sky-400 font-bold">
-                    참여 시민 {game.participantCount.toLocaleString()}명 · 누적 참여량 {game.totalVolume.toLocaleString()} PMP
+                    참여 시민 {game.participantCount.toLocaleString()}명 · 누적 {game.totalVolume.toLocaleString()} PMP
                   </span>
                 </div>
 
@@ -353,38 +934,8 @@ export function UniversalPredictionDetailClient({
               </div>
             </div>
 
-            {/* 우측 헤더: 실시간 합의 아크 게이지 */}
-            <div className="flex items-center gap-3 shrink-0 self-end md:self-center pl-2">
-              <div className="relative flex flex-col items-center justify-center w-[84px] h-[52px]">
-                <svg className="w-[82px] h-[48px] overflow-visible" viewBox="0 0 70 38">
-                  <path
-                    d="M 8 34 A 27 27 0 0 1 62 34"
-                    fill="none"
-                    stroke="rgba(255,255,255,0.1)"
-                    strokeWidth="5.5"
-                    strokeLinecap="round"
-                  />
-                  <path
-                    d="M 8 34 A 27 27 0 0 1 62 34"
-                    fill="none"
-                    stroke={isUp ? "#10b981" : "#f43f5e"}
-                    strokeWidth="5.5"
-                    strokeLinecap="round"
-                    strokeDasharray={Math.PI * 27}
-                    strokeDashoffset={Math.PI * 27 * (1 - leadPct / 100)}
-                    className="transition-all duration-700"
-                  />
-                </svg>
-                <div className="absolute bottom-0 flex flex-col items-center leading-none">
-                  <span className="text-[15px] font-black text-white tracking-tight">
-                    {leadPct}%
-                  </span>
-                  <span className={`text-[9.5px] font-bold ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
-                    {isUp ? "상승/찬성 우세" : "하락/반대 우세"}
-                  </span>
-                </div>
-              </div>
-            </div>
+            {/* 우측 헤더: Binary / WDL / Ranking 전용 게이지 */}
+            {renderHeaderGauge()}
           </div>
         </div>
 
@@ -394,9 +945,8 @@ export function UniversalPredictionDetailClient({
           {/* Left Column (2 cols): 그래프 ➔ 의사결정 브리핑 ➔ 의제 정보 ➔ 소셜 갤러리 */}
           {/* ======================================================== */}
           <div className="lg:col-span-2 space-y-6">
-            {/* 1️⃣ 📊 집단지성 데이터 차트 센터 (그래프 1순위 최상단 노출!) */}
+            {/* 1️⃣ 📊 집단지성 데이터 차트 센터 */}
             <Card className="p-5 bg-[#111622] border-white/[0.08] space-y-4 shadow-xl">
-              {/* 차트 센터 상단 헤더 & 탭 바 */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="w-4 h-4 text-sky-400" />
@@ -406,7 +956,6 @@ export function UniversalPredictionDetailClient({
                   </span>
                 </div>
 
-                {/* 탭 전환 버튼 그룹 */}
                 <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold bg-slate-950/80 p-1 rounded-xl border border-white/[0.06]">
                   <button
                     type="button"
@@ -458,37 +1007,26 @@ export function UniversalPredictionDetailClient({
                 </div>
               </div>
 
-              {/* 탭 1: 실시간 시계열 확률 추이 차트 */}
+              {/* 탭 1: 실시간 시계열 확률 추이 차트 (안전한 opt.id dataKey 사용) */}
               {chartTab === "trend" && (
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-                    <span>시간대별 찬/반 확률 변동 추이</span>
+                    <span>
+                      {effectiveType === "ranking"
+                        ? "후보별 실시간 지지율 순위 경쟁 추이"
+                        : effectiveType === "wdl"
+                        ? "3대 선택지 실시간 여론 밸런스 추이"
+                        : "시간대별 찬/반 확률 변동 추이"}
+                    </span>
                     <span className="text-emerald-400 font-bold">● 실시간 마켓 데이터</span>
                   </div>
-                  <div className="h-64 w-full overflow-hidden flex flex-col justify-end">
+                  <div className="min-h-[260px] w-full flex flex-col justify-end">
                     <ProbabilityLineChart
-                      data={[
-                        {
-                          time: "00:00",
-                          ...(game.options.reduce((acc, opt) => ({ ...acc, [opt.label]: Math.round((opt.probability || 0.5) * 100) }), {})),
-                        },
-                        {
-                          time: "06:00",
-                          ...(game.options.reduce((acc, opt, idx) => ({ ...acc, [opt.label]: Math.min(95, Math.max(5, Math.round((opt.probability || 0.5) * 100) + (idx === 0 ? 4 : -4))) }), {})),
-                        },
-                        {
-                          time: "12:00",
-                          ...(game.options.reduce((acc, opt, idx) => ({ ...acc, [opt.label]: Math.min(95, Math.max(5, Math.round((opt.probability || 0.5) * 100) + (idx === 0 ? 8 : -8))) }), {})),
-                        },
-                        {
-                          time: "현재",
-                          ...(game.options.reduce((acc, opt) => ({ ...acc, [opt.label]: Math.round((opt.probability || 0.5) * 100) }), {})),
-                        },
-                      ]}
-                      lines={game.options.map((opt, i) => ({
-                        dataKey: opt.label,
+                      data={lineChartData}
+                      lines={game.options.map((opt, idx) => ({
+                        dataKey: opt.id,
                         name: opt.label,
-                        color: i === 0 ? "#10B981" : i === 1 ? "#F43F5E" : "#F59E0B",
+                        color: optionThemeMap[opt.id]?.hex || RANKING_THEMES[idx % RANKING_THEMES.length].hex,
                         strokeWidth: 2.5,
                       }))}
                       isDarkMode={true}
@@ -497,23 +1035,47 @@ export function UniversalPredictionDetailClient({
                 </div>
               )}
 
-              {/* 탭 2: 옵션별 참여 비중 분포 (파이 차트) */}
+              {/* 탭 2: 옵션별 참여 비중 분포 (도넛 차트 + 옵션 컬러 범례 매트릭스) */}
               {chartTab === "distribution" && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between text-xs text-slate-400 px-1">
                     <span>시민들이 선택한 각 옵션별 지분율 및 PMP 배분 현황</span>
                     <span className="text-purple-400 font-bold">누적 {game.totalVolume.toLocaleString()} PMP</span>
                   </div>
-                  <div className="h-64 flex items-center justify-center">
-                    <BettingDistributionChart
-                      data={game.options.map((opt, i) => ({
-                        option: opt.label,
-                        amount: opt.volume || 10000,
-                        percentage: Math.round((opt.probability || 0.5) * 100),
-                        color: ["#10B981", "#F43F5E", "#F59E0B", "#38BDF8"][i % 4],
-                      }))}
-                      isDarkMode={true}
-                    />
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-center py-2">
+                    <div className="flex items-center justify-center">
+                      <BettingDistributionChart
+                        data={game.options.map((opt, i) => ({
+                          option: opt.label,
+                          amount: opt.volume || Math.max(1000, Math.round((game.totalVolume || 35000) * (opt.probability || 0.3))),
+                          percentage: Math.round((opt.probability || 0.3) * 100),
+                          color: optionThemeMap[opt.id]?.hex || RANKING_THEMES[i % RANKING_THEMES.length].hex,
+                        }))}
+                        isDarkMode={true}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      {sortedOptionsByProb.map((opt, idx) => {
+                        const hex = optionThemeMap[opt.id]?.hex || RANKING_THEMES[idx % RANKING_THEMES.length].hex;
+                        const pct = Math.round((opt.probability || 0.3) * 100);
+                        const vol = opt.volume || Math.round((game.totalVolume || 35000) * (opt.probability || 0.3));
+                        return (
+                          <div
+                            key={`legend-${opt.id}`}
+                            className="flex items-center justify-between p-2.5 rounded-xl bg-slate-950/70 border border-white/[0.06] text-xs"
+                          >
+                            <div className="flex items-center gap-2 min-w-0 pr-2">
+                              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: hex }} />
+                              <span className="font-bold text-slate-200 truncate">{opt.label}</span>
+                            </div>
+                            <div className="flex items-center gap-2.5 shrink-0">
+                              <span className="text-[11px] text-slate-400">{vol.toLocaleString()} PMP</span>
+                              <span className="font-black text-white w-9 text-right">{pct}%</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               )}
@@ -525,7 +1087,7 @@ export function UniversalPredictionDetailClient({
                     <span>시간 경과에 따른 참여 시민 누적 증가 추이</span>
                     <span className="text-emerald-400 font-bold">총 {game.participantCount.toLocaleString()}명</span>
                   </div>
-                  <div className="h-64 flex items-center justify-center">
+                  <div className="min-h-[220px] flex items-center justify-center">
                     <ParticipantTimelineChart
                       data={[
                         { time: "월", count: Math.round(game.participantCount * 0.15) || 120 },
@@ -552,22 +1114,31 @@ export function UniversalPredictionDetailClient({
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {bets.map((b) => (
-                        <div key={b.betId} className="flex justify-between items-center p-3.5 rounded-xl bg-slate-950 border border-white/[0.06] text-xs">
-                          <div>
-                            <span className="font-extrabold text-sky-300">{b.selectedOption}</span>
-                            <div className="text-[10px] text-slate-500 mt-0.5">{new Date(b.createdAt).toLocaleString("ko-KR")}</div>
+                      {bets.map((b) => {
+                        const matchedOpt = game.options.find((o) => o.id === b.selectedOption);
+                        return (
+                          <div key={b.betId} className="flex justify-between items-center p-3.5 rounded-xl bg-slate-950 border border-white/[0.06] text-xs">
+                            <div>
+                              <span className="font-extrabold text-sky-300">
+                                {matchedOpt?.label || b.selectedOption}
+                              </span>
+                              <div className="text-[10px] text-slate-500 mt-0.5">
+                                {new Date(b.createdAt).toLocaleString("ko-KR")}
+                              </div>
+                            </div>
+                            <span className="font-black text-amber-300 text-sm">
+                              {b.betAmount.toLocaleString()} PMP
+                            </span>
                           </div>
-                          <span className="font-black text-amber-300 text-sm">{b.betAmount.toLocaleString()} PMP</span>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
               )}
             </Card>
 
-            {/* 2️⃣ ⚖️ AI 균형 의사결정 브리핑 (그래프 바로 아래에 배치하여 데이터 확인 후 숙의 유도) */}
+            {/* 2️⃣ ⚖️ AI 균형 의사결정 브리핑 */}
             <BalancedDecisionBriefing
               gameId={game.id}
               gameTitle={game.title}
@@ -576,7 +1147,7 @@ export function UniversalPredictionDetailClient({
               }}
             />
 
-            {/* 3️⃣ 📋 의제 정보 & 판정 규칙 (가볍고 심플하게 요약 노출) */}
+            {/* 3️⃣ 📋 의제 정보 & 공식 판정 기준 (심플 콤팩트 카드) */}
             <div className="rounded-2xl bg-[#111622] border border-white/[0.08] p-4 sm:p-5 space-y-3.5 shadow-lg">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-white">
@@ -588,14 +1159,12 @@ export function UniversalPredictionDetailClient({
                 </span>
               </div>
 
-              {/* 간단 의제 설명 */}
               {game.description && (
                 <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/50 p-3 rounded-xl border border-white/[0.04] whitespace-pre-line">
                   {game.description}
                 </p>
               )}
 
-              {/* 공인 오라클 출처 및 판정 일정 & 100% 환불 콤팩트 바 */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-slate-950/80 border border-white/[0.06] text-xs">
                 <div className="flex items-center gap-2 min-w-0">
                   <Database className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -637,13 +1206,13 @@ export function UniversalPredictionDetailClient({
           </div>
 
           {/* ======================================================== */}
-          {/* Right Column (1 col): 황금 모래시계 (최상단) & 참여 패널 */}
+          {/* Right Column (1 col): 황금 모래시계 (최상단) & 3종 맞춤형 참여 패널 */}
           {/* ======================================================== */}
           <div className="space-y-5">
             {/* ⏳ 상세페이지 황금 모래시계 위젯 (시선 집중 최상단 배치) */}
             <MoneyWaveWaterfallCard totalPrizePool={Math.round(game.prizePool || 22817)} />
 
-            {/* 🎯 시민 예측 참여 패널 */}
+            {/* 🎯 시민 예측 참여 패널 (Binary / WDL / Ranking 맞춤형 렌더링) */}
             <Card className="p-5 bg-gradient-to-b from-[#131b2e] via-[#0f172a] to-[#090b12] border-white/[0.1] space-y-5 shadow-2xl">
               <div className="flex justify-between items-center pb-3 border-b border-white/[0.08]">
                 <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
@@ -655,62 +1224,11 @@ export function UniversalPredictionDetailClient({
                 </span>
               </div>
 
-              {/* 🌟 옵션 선택: 둥근 타원형 캡슐 토글 버튼 스타일 */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-300 block">예측 옵션 선택</label>
-                <div className="grid grid-cols-1 gap-2.5">
-                  {game.options.map((opt, idx) => {
-                    const isSelected = selectedOption === opt.id;
-                    const isFirst = idx === 0;
-                    // 첫 번째 옵션은 에메랄드 테마, 두 번째 옵션은 로즈 테마
-                    const activeStyle = isFirst
-                      ? "border-emerald-400 bg-emerald-950/70 text-white ring-2 ring-emerald-500/50 shadow-[0_0_15px_rgba(16,185,129,0.25)]"
-                      : "border-rose-400 bg-rose-950/70 text-white ring-2 ring-rose-500/50 shadow-[0_0_15px_rgba(244,63,94,0.25)]";
-                    const inactiveStyle = isFirst
-                      ? "border-emerald-500/30 bg-emerald-950/20 text-slate-300 hover:border-emerald-500/60"
-                      : "border-rose-500/30 bg-rose-950/20 text-slate-300 hover:border-rose-500/60";
-
-                    return (
-                      <button
-                        key={opt.id}
-                        type="button"
-                        onClick={() => setSelectedOption(opt.id)}
-                        className={`p-3.5 rounded-2xl border text-left flex justify-between items-center transition-all ${
-                          isSelected ? activeStyle : inactiveStyle
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5 min-w-0">
-                          <span
-                            className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
-                              isSelected
-                                ? isFirst ? "bg-emerald-500 text-slate-950" : "bg-rose-500 text-white"
-                                : "bg-slate-800 text-slate-400"
-                            }`}
-                          >
-                            {isSelected ? <CheckCircle2 className="w-3.5 h-3.5" /> : idx + 1}
-                          </span>
-                          <div>
-                            <div className="font-extrabold text-xs truncate">{opt.label}</div>
-                            <div className="text-[10.5px] text-slate-400 mt-0.5">
-                              예상 리워드 배율 {(opt.odds || 2.0).toFixed(2)}x
-                            </div>
-                          </div>
-                        </div>
-                        <span
-                          className={`text-sm font-black shrink-0 ${
-                            isFirst ? "text-emerald-400" : "text-rose-400"
-                          }`}
-                        >
-                          {((opt.probability || 0.5) * 100).toFixed(0)}%
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
+              {/* 3대 분류 맞춤형 옵션 선택기 */}
+              {renderParticipationOptions()}
 
               {/* 참여 PMP 설정 */}
-              <div className="space-y-2">
+              <div className="space-y-2 pt-1">
                 <div className="flex justify-between text-xs font-bold">
                   <label className="text-slate-300">참여 PMP 설정</label>
                   <span className="text-amber-300">보유: {balance.pmp.toLocaleString()} PMP</span>
@@ -771,8 +1289,10 @@ export function UniversalPredictionDetailClient({
                     : "bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500 shadow-cyan-500/20 hover:from-sky-400 hover:to-emerald-400"
                 }`}
               >
-                {game.status !== "ACTIVE"
-                  ? "🛑 예측 마감된 의제"
+                {game.status === "SETTLED"
+                  ? "🏆 결과 정산 완료된 의제"
+                  : game.status !== "ACTIVE"
+                  ? "🛑 예측 참여 마감된 의제"
                   : isPending
                   ? "참여 처리 중..."
                   : stakeAmount > balance.pmp
