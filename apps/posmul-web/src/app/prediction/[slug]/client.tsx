@@ -1,6 +1,18 @@
 /**
  * Universal Prediction Game Detail Client Component
  * 모든 예측 카드의 클릭에 대응하는 범용 상세페이지 클라이언트 컴포넌트
+ * 마스터 레이아웃:
+ * 1. 🔴 LIVE 연동 배너 (상시/매칭 연동)
+ * 2. 🌟 메인 비주얼 헤더 (아바타 심볼 + 2줄 제목 + 합의 아크 게이지)
+ * 3. 2-Column 그리드:
+ *    - 좌측 (2 Cols):
+ *      ① ⚖️ AI 균형 의사결정 브리핑 (중립 팩트체크 & 찬/반 균형 논거 1순위 노출)
+ *      ② 📊 집단지성 데이터 차트 센터 (확률 추이 / 의견 분포 파이 / 시민 참여 추이 / 내 참여 내역 탭 통합)
+ *      ③ 📋 의제 심층 배경 및 공식 판정 본문 (의제 스토리 + 공인 오라클 명세 박스 흡수 + 100% 환불 안전 규정)
+ *      ④ 💬 이 의제 전용 시민 토론 갤러리
+ *    - 우측 (1 Col):
+ *      ① ⏳ MoneyWave 황금 모래시계 위젯 (시선 집중 최상단)
+ *      ② 🎯 시민 예측 참여 패널 (에메랄드/로즈 캡슐 토글 버튼 + PMP 설정)
  */
 "use client";
 
@@ -29,6 +41,10 @@ import {
   Coins,
   Sparkles,
   CheckCircle2,
+  FileText,
+  MessageSquare,
+  BarChart3,
+  Calendar,
 } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/shared/ui/components/base";
@@ -176,14 +192,14 @@ interface UniversalPredictionDetailClientProps {
   slug: string;
 }
 
-type TabType = "analysis" | "my_bets";
+type ChartTabType = "trend" | "distribution" | "participants" | "my_bets";
 
 export function UniversalPredictionDetailClient({
   game,
   userBalance,
   userBets,
 }: UniversalPredictionDetailClientProps) {
-  const [activeTab, setActiveTab] = useState<TabType>("analysis");
+  const [chartTab, setChartTab] = useState<ChartTabType>("trend");
   const [isPending, startTransition] = useTransition();
   const [balance, setBalance] = useState(userBalance);
   const [bets, setBets] = useState(userBets);
@@ -191,12 +207,12 @@ export function UniversalPredictionDetailClient({
   const [stakeAmount, setStakeAmount] = useState<number>(game.minimumStake || 100);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
-  // 메인 카드와의 비주얼 연속성 연동
+  // 메인 피드 카드와의 일관된 시각적 연속성 (아이콘, 색상, 카테고리 태그)
   const { prefixEmoji, prefixTag, cleanTitle } = splitTitlePrefix(game.title);
   const meta = resolveGameVisualMeta(game.title, game.category, game.subcategory);
   const oracleSpec = getOracleSpecInfo(game.dataSource, game.title);
 
-  // 1위 옵션 확률 및 게이지 퍼센티지 계산
+  // 1위 옵션 확률 및 합의 아크 게이지 계산
   const firstOpt = game.options[0] ?? { probability: 0.5 };
   const leadPct = Math.round((firstOpt.probability || 0.5) * 100);
   const isUp = leadPct >= 50;
@@ -254,8 +270,8 @@ export function UniversalPredictionDetailClient({
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* 🔴 연동된 실시간 라이브 응원톡 배너 (존재할 경우) */}
-        {game.liveRoom && (
+        {/* 🔴 연동된 실시간 라이브 응원톡 전면 배너 (존재할 경우) */}
+        {game.liveRoom ? (
           <Link
             href={`/live/${game.liveRoom.id}`}
             className="block rounded-2xl bg-gradient-to-r from-red-950/70 via-rose-900/40 to-slate-900 border border-red-500/40 hover:border-red-400 p-4 shadow-xl transition group"
@@ -281,13 +297,27 @@ export function UniversalPredictionDetailClient({
               </span>
             </div>
           </Link>
+        ) : (
+          <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-900/60 border border-white/[0.06] text-xs">
+            <div className="flex items-center gap-2 text-slate-400">
+              <Radio className="w-3.5 h-3.5 text-rose-500/70" />
+              <span>실시간 LIVE 응원톡 라운지가 열려있는 의제들을 확인해보세요.</span>
+            </div>
+            <Link
+              href="/live"
+              className="text-rose-400 hover:text-rose-300 font-bold flex items-center gap-1 transition"
+            >
+              <span>전체 LIVE 라운지 보기</span>
+              <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
         )}
 
-        {/* 🌟 상세페이지 헤더: 메인 카드의 마이크로 심볼 아바타 + 넉넉한 2줄 제목 + 반원 아크 게이지 결합 */}
+        {/* 🌟 상세페이지 메인 헤더: 마이크로 심볼 아바타 + 넉넉한 2줄 제목 + 반원 아크 게이지 */}
         <div className="rounded-2xl bg-[#111622] border border-white/[0.08] p-5 md:p-6 shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
-              {/* 메인 카드와 일치하는 마이크로 심볼 아바타 */}
+              {/* 메인 피드 카드와 일치하는 마이크로 심볼 아바타 */}
               <div
                 className={`w-14 h-14 rounded-2xl ${meta.bgClass} border ${meta.borderClass} flex flex-col items-center justify-center shrink-0 shadow-lg`}
               >
@@ -356,72 +386,15 @@ export function UniversalPredictionDetailClient({
               </div>
             </div>
           </div>
-
-          <p className="text-xs sm:text-sm text-slate-400 leading-relaxed mt-4 pt-4 border-t border-white/[0.06] whitespace-pre-line">
-            {game.description}
-          </p>
         </div>
 
         {/* 2-Column Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: 시계열 차트 & 분석 & 오라클 명세 (2 cols) */}
+          {/* ======================================================== */}
+          {/* Left Column (2 cols): 의사결정 브리핑 ➔ 차트 센터 ➔ 본문 ➔ 갤러리 */}
+          {/* ======================================================== */}
           <div className="lg:col-span-2 space-y-6">
-            {/* 실시간 시계열 집단지성 확률 차트 */}
-            <Card className="p-5 bg-[#111622] border-white/[0.08] space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-sky-400" />
-                  <span>실시간 집단지성 예측 확률 추이 (Polymarket Chart)</span>
-                </h3>
-                <span className="text-xs text-sky-400 font-bold bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/40">
-                  LIVE
-                </span>
-              </div>
-              <div className="h-64 w-full overflow-hidden flex flex-col justify-end">
-                <ProbabilityLineChart
-                  data={[
-                    {
-                      time: "00:00",
-                      ...(game.options.reduce((acc, opt) => ({ ...acc, [opt.label]: Math.round((opt.probability || 0.5) * 100) }), {})),
-                    },
-                    {
-                      time: "06:00",
-                      ...(game.options.reduce((acc, opt, idx) => ({ ...acc, [opt.label]: Math.min(95, Math.max(5, Math.round((opt.probability || 0.5) * 100) + (idx === 0 ? 4 : -4))) }), {})),
-                    },
-                    {
-                      time: "12:00",
-                      ...(game.options.reduce((acc, opt, idx) => ({ ...acc, [opt.label]: Math.min(95, Math.max(5, Math.round((opt.probability || 0.5) * 100) + (idx === 0 ? 8 : -8))) }), {})),
-                    },
-                    {
-                      time: "현재",
-                      ...(game.options.reduce((acc, opt) => ({ ...acc, [opt.label]: Math.round((opt.probability || 0.5) * 100) }), {})),
-                    },
-                  ]}
-                  lines={game.options.map((opt, i) => ({
-                    dataKey: opt.label,
-                    name: opt.label,
-                    color: i === 0 ? "#10B981" : i === 1 ? "#F43F5E" : "#F59E0B",
-                    strokeWidth: 2.5,
-                  }))}
-                  isDarkMode={true}
-                />
-              </div>
-            </Card>
-
-            {/* 🏛️ 공인 검증 오라클 정보 (초슬림 1줄 배너로 콤팩트 축소) */}
-            <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-[#111622] border border-white/[0.08] text-xs">
-              <div className="flex items-center gap-2 min-w-0">
-                <Database className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                <span className="text-slate-300 font-bold truncate">{oracleSpec.provider}</span>
-                <span className="text-slate-600 hidden sm:inline">·</span>
-                <span className="text-slate-400 text-[11px] truncate hidden sm:inline">{oracleSpec.scheduleDesc}</span>
-              </div>
-              <span className="text-[10px] font-extrabold text-emerald-400 bg-emerald-950/70 px-2 py-0.5 rounded border border-emerald-500/30 shrink-0">
-                공인 오라클 자동판정
-              </span>
-            </div>
-
-            {/* ⚖️ AI 균형 의사결정 브리핑 (중립 팩트체크 + 찬성 논거 + 반대 논거) */}
+            {/* 1️⃣ ⚖️ AI 균형 의사결정 브리핑 (화면 1순위 핵심 승격!) */}
             <BalancedDecisionBriefing
               gameId={game.id}
               gameTitle={game.title}
@@ -430,35 +403,117 @@ export function UniversalPredictionDetailClient({
               }}
             />
 
-            {/* 탭 네비게이션: 데이터 분석 vs 내 참여 내역 */}
-            <div className="border-b border-white/[0.08] flex gap-4 text-sm font-bold">
-              <button
-                onClick={() => setActiveTab("analysis")}
-                className={`pb-2 border-b-2 transition-colors ${
-                  activeTab === "analysis" ? "border-sky-400 text-sky-300" : "border-transparent text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                📊 집단지성 의견 분포
-              </button>
-              <button
-                onClick={() => setActiveTab("my_bets")}
-                className={`pb-2 border-b-2 transition-colors ${
-                  activeTab === "my_bets" ? "border-sky-400 text-sky-300" : "border-transparent text-slate-400 hover:text-slate-200"
-                }`}
-              >
-                💜 내 참여 내역 ({bets.length})
-              </button>
-            </div>
+            {/* 2️⃣ 📊 집단지성 데이터 차트 센터 (모든 그래프를 탭 뷰어로 1개 카드 통합!) */}
+            <Card className="p-5 bg-[#111622] border-white/[0.08] space-y-4 shadow-xl">
+              {/* 차트 센터 상단 헤더 & 탭 바 */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
+                <div className="flex items-center gap-2">
+                  <BarChart3 className="w-4 h-4 text-sky-400" />
+                  <span className="text-sm font-extrabold text-white">집단지성 데이터 센터</span>
+                  <span className="text-[10px] text-sky-400 font-bold bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/40">
+                    실시간 동기화
+                  </span>
+                </div>
 
-            {/* 탭 본문 */}
-            {activeTab === "analysis" && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Card className="p-4 bg-[#111622] border-white/[0.08] space-y-2">
-                  <h4 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                    <PieChart className="w-3.5 h-3.5 text-purple-400" />
-                    <span>옵션별 참여 비중 분포</span>
-                  </h4>
-                  <div className="h-44">
+                {/* 탭 전환 버튼 그룹 */}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold bg-slate-950/80 p-1 rounded-xl border border-white/[0.06]">
+                  <button
+                    type="button"
+                    onClick={() => setChartTab("trend")}
+                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                      chartTab === "trend"
+                        ? "bg-sky-500 text-white shadow-md font-extrabold"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    <span>실시간 확률 추이</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartTab("distribution")}
+                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                      chartTab === "distribution"
+                        ? "bg-sky-500 text-white shadow-md font-extrabold"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <PieChart className="w-3.5 h-3.5" />
+                    <span>참여 비중 분포</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartTab("participants")}
+                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                      chartTab === "participants"
+                        ? "bg-sky-500 text-white shadow-md font-extrabold"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Users className="w-3.5 h-3.5" />
+                    <span>시민 참여 추이</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartTab("my_bets")}
+                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                      chartTab === "my_bets"
+                        ? "bg-purple-600 text-white shadow-md font-extrabold"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <span>💜 내 참여 ({bets.length})</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* 탭 1: 실시간 시계열 확률 추이 차트 */}
+              {chartTab === "trend" && (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+                    <span>시간대별 찬/반 확률 변동 추이</span>
+                    <span className="text-emerald-400 font-bold">● 실시간 마켓 데이터</span>
+                  </div>
+                  <div className="h-64 w-full overflow-hidden flex flex-col justify-end">
+                    <ProbabilityLineChart
+                      data={[
+                        {
+                          time: "00:00",
+                          ...(game.options.reduce((acc, opt) => ({ ...acc, [opt.label]: Math.round((opt.probability || 0.5) * 100) }), {})),
+                        },
+                        {
+                          time: "06:00",
+                          ...(game.options.reduce((acc, opt, idx) => ({ ...acc, [opt.label]: Math.min(95, Math.max(5, Math.round((opt.probability || 0.5) * 100) + (idx === 0 ? 4 : -4))) }), {})),
+                        },
+                        {
+                          time: "12:00",
+                          ...(game.options.reduce((acc, opt, idx) => ({ ...acc, [opt.label]: Math.min(95, Math.max(5, Math.round((opt.probability || 0.5) * 100) + (idx === 0 ? 8 : -8))) }), {})),
+                        },
+                        {
+                          time: "현재",
+                          ...(game.options.reduce((acc, opt) => ({ ...acc, [opt.label]: Math.round((opt.probability || 0.5) * 100) }), {})),
+                        },
+                      ]}
+                      lines={game.options.map((opt, i) => ({
+                        dataKey: opt.label,
+                        name: opt.label,
+                        color: i === 0 ? "#10B981" : i === 1 ? "#F43F5E" : "#F59E0B",
+                        strokeWidth: 2.5,
+                      }))}
+                      isDarkMode={true}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* 탭 2: 옵션별 참여 비중 분포 (파이 차트) */}
+              {chartTab === "distribution" && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+                    <span>시민들이 선택한 각 옵션별 지분율 및 PMP 배분 현황</span>
+                    <span className="text-purple-400 font-bold">누적 {game.totalVolume.toLocaleString()} PMP</span>
+                  </div>
+                  <div className="h-64 flex items-center justify-center">
                     <BettingDistributionChart
                       data={game.options.map((opt, i) => ({
                         option: opt.label,
@@ -469,53 +524,122 @@ export function UniversalPredictionDetailClient({
                       isDarkMode={true}
                     />
                   </div>
-                </Card>
-                <Card className="p-4 bg-[#111622] border-white/[0.08] space-y-2">
-                  <h4 className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
-                    <Users className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>시민 참여 추이</span>
-                  </h4>
-                  <div className="h-44">
+                </div>
+              )}
+
+              {/* 탭 3: 시민 참여자 수 추이 */}
+              {chartTab === "participants" && (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+                    <span>시간 경과에 따른 참여 시민 누적 증가 추이</span>
+                    <span className="text-emerald-400 font-bold">총 {game.participantCount.toLocaleString()}명</span>
+                  </div>
+                  <div className="h-64 flex items-center justify-center">
                     <ParticipantTimelineChart
                       data={[
-                        { time: "월", count: 120 },
-                        { time: "화", count: 280 },
-                        { time: "수", count: 450 },
-                        { time: "목", count: 710 },
+                        { time: "월", count: Math.round(game.participantCount * 0.15) || 120 },
+                        { time: "화", count: Math.round(game.participantCount * 0.35) || 280 },
+                        { time: "수", count: Math.round(game.participantCount * 0.55) || 450 },
+                        { time: "목", count: Math.round(game.participantCount * 0.8) || 710 },
                         { time: "금", count: game.participantCount || 1248 },
                       ]}
                       isDarkMode={true}
                     />
                   </div>
-                </Card>
-              </div>
-            )}
+                </div>
+              )}
 
-            {activeTab === "my_bets" && (
-              <Card className="p-4 bg-[#111622] border-white/[0.08]">
-                {bets.length === 0 ? (
-                  <p className="text-xs text-slate-400 text-center py-8">아직 이 의제에 참여한 내역이 없습니다.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {bets.map((b) => (
-                      <div key={b.betId} className="flex justify-between items-center p-3 rounded-xl bg-slate-950 border border-white/[0.06] text-xs">
-                        <div>
-                          <span className="font-bold text-sky-300">{b.selectedOption}</span>
-                          <div className="text-[10px] text-slate-500">{new Date(b.createdAt).toLocaleString("ko-KR")}</div>
-                        </div>
-                        <span className="font-extrabold text-amber-300">{b.betAmount.toLocaleString()} PMP</span>
-                      </div>
-                    ))}
+              {/* 탭 4: 내 참여 내역 */}
+              {chartTab === "my_bets" && (
+                <div className="space-y-3">
+                  <div className="text-xs text-slate-400 px-1">
+                    본인이 이 의제에 참여한 예측 투표 내역입니다.
                   </div>
-                )}
-              </Card>
-            )}
+                  {bets.length === 0 ? (
+                    <div className="text-xs text-slate-400 text-center py-12 bg-slate-950/40 rounded-xl border border-white/[0.04]">
+                      아직 이 의제에 참여한 투표 내역이 없습니다. 우측 패널에서 첫 예측에 참여해보세요!
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {bets.map((b) => (
+                        <div key={b.betId} className="flex justify-between items-center p-3.5 rounded-xl bg-slate-950 border border-white/[0.06] text-xs">
+                          <div>
+                            <span className="font-extrabold text-sky-300">{b.selectedOption}</span>
+                            <div className="text-[10px] text-slate-500 mt-0.5">{new Date(b.createdAt).toLocaleString("ko-KR")}</div>
+                          </div>
+                          <span className="font-black text-amber-300 text-sm">{b.betAmount.toLocaleString()} PMP</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
 
-            {/* 댓글 및 시민 토론 갤러리 */}
+            {/* 3️⃣ 📋 의제 심층 배경 및 공식 판정 본문 (Market Overview & Rules) */}
+            {/* 사용자가 요청한 본문 신설 + 겉돌던 오라클 배너를 이 본문 규정 박스로 완벽 흡수 통합! */}
+            <div className="rounded-2xl bg-[#111622] border border-white/[0.08] p-5 md:p-6 space-y-6 shadow-xl">
+              {/* 본문 섹션 1: 의제 배경 및 개요 */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm font-extrabold text-white">
+                  <FileText className="w-4 h-4 text-sky-400" />
+                  <span>의제 배경 및 시장 개요 (Context & Story)</span>
+                </div>
+                <div className="text-xs sm:text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-4 rounded-xl border border-white/[0.05] whitespace-pre-line">
+                  {game.description ||
+                    "본 의제는 시민 집단지성을 통해 합리적인 결론을 도출하기 위한 공익/시장 예측 프로젝트입니다. 다양한 데이터와 팩트를 검토하여 신중하게 의사를 결정해보세요."}
+                </div>
+              </div>
+
+              {/* 본문 섹션 2: 공인 데이터 오라클 자동 판정 기준 (이전에 겉돌던 한줄 배너를 세련된 명세 박스로 흡수!) */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm font-extrabold text-white">
+                    <Database className="w-4 h-4 text-emerald-400" />
+                    <span>공인 데이터 오라클 자동 판정 기준 (Resolution Oracle Spec)</span>
+                  </div>
+                  <span className="text-[11px] font-black text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                    {oracleSpec.badge}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-white/[0.06] space-y-1">
+                    <div className="text-[11px] text-slate-400 font-bold">공식 데이터 출처</div>
+                    <div className="text-xs font-black text-slate-100">{oracleSpec.provider}</div>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-white/[0.06] space-y-1">
+                    <div className="text-[11px] text-slate-400 font-bold">검증 엔드포인트 / 기준</div>
+                    <div className="text-xs font-black text-emerald-300 font-mono truncate" title={oracleSpec.endpoint}>
+                      {oracleSpec.endpoint}
+                    </div>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-white/[0.06] space-y-1">
+                    <div className="text-[11px] text-slate-400 font-bold">자동 판정 일정 및 방식</div>
+                    <div className="text-xs font-semibold text-slate-200">{oracleSpec.scheduleDesc}</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 본문 섹션 3: 투명성 및 무효화(VOIDED) 100% 환불 안전 규정 */}
+              <div className="p-4 rounded-xl bg-sky-950/20 border border-sky-500/20 space-y-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-sky-300">
+                  <ShieldCheck className="w-4 h-4 text-sky-400" />
+                  <span>시민 자산 보호 및 무효화(VOIDED) 100% 환불 안전 규정</span>
+                </div>
+                <p className="text-[11.5px] text-slate-400 leading-relaxed">
+                  • 본 예측은 사람의 자의적 개입 없이 공인 오라클 스마트 컨트랙트에 의해 공식 통계 발표 즉시 자동 판정·정산됩니다.<br />
+                  • 경기 취소, 정부/공인기관의 데이터 공표 중단, 시스템 불가항력 오류 발생 시 해당 의제는 즉시 <strong className="text-slate-200">무효화(VOIDED)</strong> 처리되며 참여하신 모든 PMP는 <strong className="text-emerald-300">100% 전액 즉시 환불</strong>됩니다.
+                </p>
+              </div>
+            </div>
+
+            {/* 4️⃣ 💬 이 의제 전용 시민 토론 갤러리 */}
             <div className="space-y-4 pt-2">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-                  <span>💬 이 게임 전용 시민 토론 갤러리</span>
+                  <MessageSquare className="w-4 h-4 text-sky-400" />
+                  <span>이 의제 전용 시민 토론 갤러리</span>
                   <span className="text-xs text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">
                     건전 의견 작성 시 +10 PMP
                   </span>
@@ -536,7 +660,9 @@ export function UniversalPredictionDetailClient({
             </div>
           </div>
 
-          {/* Right Column: 황금 모래시계 위젯 (최상단) & 시민 예측 참여 패널 (1 col) */}
+          {/* ======================================================== */}
+          {/* Right Column (1 col): 황금 모래시계 (최상단) & 참여 패널 */}
+          {/* ======================================================== */}
           <div className="space-y-5">
             {/* ⏳ 상세페이지 황금 모래시계 위젯 (시선 집중 최상단 배치) */}
             <MoneyWaveWaterfallCard totalPrizePool={Math.round(game.prizePool || 22817)} />
@@ -553,7 +679,7 @@ export function UniversalPredictionDetailClient({
                 </span>
               </div>
 
-              {/* 🌟 옵션 선택: 3번째 사진의 둥근 타원형 캡슐 토글 버튼 스타일 일원화 */}
+              {/* 🌟 옵션 선택: 둥근 타원형 캡슐 토글 버튼 스타일 */}
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-300 block">예측 옵션 선택</label>
                 <div className="grid grid-cols-1 gap-2.5">

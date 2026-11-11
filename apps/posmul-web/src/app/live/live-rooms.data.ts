@@ -343,3 +343,36 @@ export function findLiveRoomByGame(gameIdOrSlug?: string | null): LiveEventRoom 
       r.predictionGame?.slug === gameIdOrSlug
   );
 }
+
+/**
+ * 게임 제목, 카테고리, 키워드로 연동된 라이브 응원톡 룸 유연 검색
+ */
+export function findLiveRoomByKeyword(keyword?: string | null): LiveEventRoom | undefined {
+  if (!keyword) return undefined;
+  const kw = keyword.toLowerCase();
+  return LIVE_ROOMS.find((r) => {
+    const titleMatch = r.title.toLowerCase().includes(kw) || kw.includes(r.id.toLowerCase());
+    const predMatch =
+      r.predictionGame &&
+      (r.predictionGame.question.toLowerCase().includes(kw) ||
+        kw.includes(r.predictionGame.slug.toLowerCase()));
+
+    const isEplMatch =
+      (kw.includes("epl") || kw.includes("손흥민") || kw.includes("토트넘") || kw.includes("arsenal") || kw.includes("해외축구")) &&
+      r.id.includes("epl");
+    const isKboMatch =
+      (kw.includes("kbo") || kw.includes("야구") || kw.includes("kia") || kw.includes("삼성") || kw.includes("한국시리즈")) &&
+      r.id.includes("kbo");
+    const isBtcMatch =
+      (kw.includes("btc") || kw.includes("비트코인") || kw.includes("암호화폐") || kw.includes("가상자산")) &&
+      r.id.includes("btc");
+    const isNasdaqMatch =
+      (kw.includes("나스닥") || kw.includes("nasdaq") || kw.includes("미국증시") || kw.includes("빅테크")) &&
+      r.id.includes("nasdaq");
+    const isOttMatch =
+      (kw.includes("ott") || kw.includes("드라마") || kw.includes("넷플릭스") || kw.includes("kcontent") || kw.includes("시청률")) &&
+      (r.id.includes("drama") || r.id.includes("ott"));
+
+    return titleMatch || predMatch || isEplMatch || isKboMatch || isBtcMatch || isNasdaqMatch || isOttMatch;
+  });
+}

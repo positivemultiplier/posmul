@@ -9,7 +9,10 @@ import {
   getPredictionGameStats,
   parseGameOptions,
 } from "@/bounded-contexts/prediction/infrastructure/repositories/prediction-query.repository";
-import { findLiveRoomByGame } from "@/app/live/live-rooms.data";
+import {
+  findLiveRoomByGame,
+  findLiveRoomByKeyword,
+} from "@/app/live/live-rooms.data";
 import {
   attachHourlyGamePoolsToRows,
   type PredictionGameRow,
@@ -93,7 +96,11 @@ export default async function PredictionDetailPage({
       24;
 
     const matchedLiveRoom =
-      findLiveRoomByGame(dbGame.game_id) || findLiveRoomByGame(dbGame.slug);
+      findLiveRoomByGame(dbGame.game_id) ||
+      findLiveRoomByGame(dbGame.slug) ||
+      findLiveRoomByKeyword(dbGame.title) ||
+      findLiveRoomByKeyword(dbGame.slug) ||
+      findLiveRoomByKeyword(dbGame.category);
 
     gameForView = {
       id: dbGame.game_id,
@@ -153,8 +160,24 @@ export default async function PredictionDetailPage({
     };
   } else if (SAMPLE_GAMES_MAP[decodedSlug]) {
     gameForView = SAMPLE_GAMES_MAP[decodedSlug];
+    const fallbackLive =
+      findLiveRoomByGame(gameForView.id) ||
+      findLiveRoomByGame(decodedSlug) ||
+      findLiveRoomByKeyword(gameForView.title) ||
+      findLiveRoomByKeyword(decodedSlug);
+    if (fallbackLive) {
+      gameForView.liveRoom = {
+        id: fallbackLive.id,
+        title: fallbackLive.title,
+        viewerCount: fallbackLive.viewerCount,
+        statusText: fallbackLive.matchScore?.statusText || "LIVE 진행 중",
+      };
+    }
     userBets = await getUserBets(gameForView.id);
   } else {
+    const fallbackLive =
+      findLiveRoomByGame(decodedSlug) ||
+      findLiveRoomByKeyword(decodedSlug);
     gameForView = {
       id: `game-fallback-${decodedSlug}`,
       title: decodedSlug.replace(/-/g, " ").toUpperCase(),
@@ -175,6 +198,14 @@ export default async function PredictionDetailPage({
       category: "이슈 예측",
       dataSource: "manual",
       settlementType: "auto",
+      liveRoom: fallbackLive
+        ? {
+            id: fallbackLive.id,
+            title: fallbackLive.title,
+            viewerCount: fallbackLive.viewerCount,
+            statusText: fallbackLive.matchScore?.statusText || "LIVE 진행 중",
+          }
+        : undefined,
       createdAt: new Date().toISOString(),
       creator: { name: "PosMul 오라클", reputation: 4.9, avatar: "🔮" },
       prizePool: 35000,
