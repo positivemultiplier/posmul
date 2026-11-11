@@ -6,6 +6,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
+import { computeBayesianPosteriorTimeline } from "../../domain/services/collective-intelligence-engine";
 
 export interface ChartDataPoint {
     time: string;
@@ -87,7 +88,7 @@ async function getGameHistoryFallback(
     const { data: bets, error } = await supabase
         .schema("prediction")
         .from("predictions")
-        .select("created_at, bet_amount, prediction_data")
+        .select("created_at, bet_amount, confidence_level, prediction_data")
         .eq("game_id", gameId)
         .eq("is_active", true)
         .order("created_at", { ascending: true });
@@ -96,52 +97,36 @@ async function getGameHistoryFallback(
         return [];
     }
 
-    const points: ChartDataPoint[] = [];
-    const optionInvestments: Record<string, number> = {};
-    let totalInvestment = 0;
+    // 순차 베이지안 사후확률 타임라인 계산 (소표본 100% 폭주 방지)
+    const signals = bets
+        .map((bet) => {
+            const pData = bet.prediction_data as {
+                selectedOptionId?: string;
+                avoidOptionId?: string;
+                rankedOptionIds?: string[];
+            } | null;
+            if (!pData?.selectedOptionId) return null;
+            const rawConf = Number(bet.confidence_level);
+            const normalizedConf = Number.isFinite(rawConf)
+                ? rawConf > 1
+                    ? rawConf / 100
+                    : rawConf
+                : 0.5;
+            return {
+                selectedOptionId: pData.selectedOptionId,
+                stakeAmount: Number(bet.bet_amount) || 100,
+                confidence: normalizedConf,
+                createdAt: bet.created_at,
+                avoidOptionId: pData.avoidOptionId,
+                rankedOptionIds: pData.rankedOptionIds,
+            };
+        })
+        .filter((s): s is NonNullable<typeof s> => s !== null);
 
-    options.forEach(opt => { optionInvestments[opt.id] = 0; });
-
-    // 시작점 (베팅 이전 기본 균등 확률)
-    if (bets.length > 0) {
-        const firstBetTime = new Date(bets[0].created_at);
-        const startTime = new Date(firstBetTime.getTime() - 5 * 60 * 1000);
-        const startPoint: ChartDataPoint = {
-            time: startTime.toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })
-        };
-        const initialProb = Math.round(100 / options.length);
-        options.forEach(opt => { startPoint[opt.id] = initialProb; });
-        points.push(startPoint);
-    }
-
-    bets.forEach((bet) => {
-        const pData = bet.prediction_data as { selectedOptionId: string };
-        const optionId = pData.selectedOptionId;
-        const amount = Number(bet.bet_amount);
-        const createdAt = new Date(bet.created_at);
-
-        if (optionInvestments[optionId] !== undefined) {
-            optionInvestments[optionId] += amount;
-            totalInvestment += amount;
-        }
-
-        const point: ChartDataPoint = {
-            time: createdAt.toLocaleTimeString("ko-KR", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit"
-            }),
-        };
-
-        options.forEach(opt => {
-            const invest = optionInvestments[opt.id] || 0;
-            point[opt.id] = totalInvestment > 0
-                ? Math.round((invest / totalInvestment) * 100)
-                : 0;
-        });
-
-        points.push(point);
-    });
+    const points: ChartDataPoint[] = computeBayesianPosteriorTimeline(
+        options.map((opt) => ({ id: opt.id, label: opt.id })),
+        signals
+    );
 
     if (points.length > 0) {
         const lastPoint = points[points.length - 1];

@@ -29,6 +29,7 @@ PosMul의 설계 철학:
 - CAPM 모델 도입 이유
 - 경제 시스템 설계 원칙
 - 사용자 경험 설계 철학
+- [PosMul 경제적 논거 백서: 사회선택·베이지안 확률·경험 편향 극복](./ECONOMIC_RATIONALE_SOCIAL_CHOICE_AND_BAYESIAN_LEARNING.md)
 
 ### ⭐ [Best Practices](./best-practices/) - 베스트 프랙티스
 

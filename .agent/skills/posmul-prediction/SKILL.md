@@ -180,3 +180,26 @@ GitHub Actions CI 파이프라인의 성공을 보장하기 위한 개발 규칙
    - `KST_OFFSET_MINUTES` 기반 타임존 독립 UTC epoch 계산(`getKstNowParts`, `kstWallTimeToUtc`) 및 진행 중 회차 우선 선택(`getNextWeeklySchedule`, `getNextMonthlySchedule`).
    - 전 카테고리(한국은행 ECOS, 통계청 KOSIS, 금감원 OpenDART, 영진위 KOBIS, K-Content, 글로벌 증시/코인, 스포츠 EPL/LCK/K리그, 정치·입법, 소비·트렌드 랭킹)에 걸쳐 `BINARY` · `WIN_DRAW_LOSE` · `RANKING` 템플릿 보유.
    - `/api/admin/scheduler/sync` (`materializeTemplates: true`) 또는 크론 실행 시 오라클 등록 및 `economy.compute_prediction_hourly_game_pools` 상금풀 산정 자동 수행.
+
+---
+
+## 8. 집단지성 경제학 · 사회선택 · 베이지안 학습 규격 (`collective-intelligence-engine.ts`)
+
+PosMul 예측 시장은 단순 여론조사(다수결)가 아닌 **경제학적 사회선택 · 베이지안 확률 추론 · 행동편향 교정 폐루프**로 동작하며, 관련 경제 논거 백서는 [`ECONOMIC_RATIONALE_SOCIAL_CHOICE_AND_BAYESIAN_LEARNING.md`](../../docs/explanation/ECONOMIC_RATIONALE_SOCIAL_CHOICE_AND_BAYESIAN_LEARNING.md)에 정의됩니다.
+
+### 8.1 핵심 도메인 엔진 (`apps/posmul-web/src/bounded-contexts/prediction/domain/services/collective-intelligence-engine.ts`)
+1. **애로우 불가능성 정리 대응 (기수적 선호 강도)**:
+   - 무위험 참여 자산 `PMP` 로그 스테이킹($\ln(1 + \text{stake}/250)$) $\times$ 확신도(`confidence`) $\times$ 학습 가중치(`skillWeight`)로 선호 강도를 집적해 단순 서수 다수결의 한계 완화.
+2. **콩도르세(Condorcet) & 보르다(Borda) 사회선택 (`analyzeSocialChoiceAggregation`)**:
+   - `WIN_DRAW_LOSE`, `RANKING` 등 $M \ge 3$ 게임에서 1순위 선택 외에 선택적 비선호(`avoidOptionId`) 및 순위(`rankedOptionIds`)를 `prediction_data` JSONB에 저장(기존 `selectedOptionId` 정산 RPC와 100% 하위 호환).
+   - `0~100` 정규화 보르다 합의 점수, 모든 옵션 쌍의 1:1 콩도르세 승률 매트릭스, 순환 역설(`hasCondorcetCycle`) 및 단순 다수결 왜곡 경보(`arrowDivergenceAlert`) 산출.
+3. **순차 베이지안 사후확률 엔진 (`computeBayesianMarketPosterior`, `computeBayesianPosteriorTimeline`)**:
+   - Dirichlet-Multinomial 켤레 사전분포 기반으로 시간 감쇠(반감기 14일) · `skillWeight` · 확신도 · 로그 스테이크를 반영한 사후확률, `credibleInterval`(95% 신뢰구간), 정규화된 Shannon Entropy(`normalizedEntropy`) 산출.
+   - `getGameHistoryFallback`(`get-game-history.ts`) 스냅샷 미생성 구간도 베이지안 사후확률 시계열로 계산.
+4. **경험 편향 진단 & Brier 지속 학습 폐루프 (`evaluateExperienceBias`, `computeBrierLearningUpdate`, `summarizeUserLearningProfile`, `PredictionSettlementService.evaluateSettlementLearningMetrics`)**:
+   - 참여 직전 과신(`overconfidenceRisk`) · 군중 쏠림(`herdingBiasRisk`) · 기저율 이탈(`baseRateNeglectRisk`) 실시간 코치 제공.
+   - 정산 시 Brier Score · Log Loss · Calibration Gap · Empirical Bayes Shrinkage 적용 EMA `skillWeight`($0.65 \sim 1.75$)를 산출해 다음 예측의 베이지안 업데이트에 환류.
+
+### 8.2 상세 UI (`client.tsx` · `prediction-detail-by-slug.tsx`) 필수 유지 규격
+- **참여 패널**: `confidencePct` 슬라이더(`50~95%`)를 반드시 `placeBet`에 전달(기본값 `0.5` 고정 금지)하고, `WIN_DRAW_LOSE`/`RANKING`에서 `avoidOptionId` 선택과 `evaluateExperienceBias` 실시간 편향 경고 표시 유지.
+- **차트 센터 `economics` 탭 (`베이지안 · 사회선택`)**: 애로우/콩도르세 경고 배너, 베이지안 vs 단순볼륨·95% 신뢰구간·보르다 점수 테이블, 콩도르세 1:1 매트릭스, 로그인 유저의 Brier/Calibration 학습 프로필 표시.

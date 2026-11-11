@@ -36,6 +36,10 @@ export interface ParticipatePredictionRequest {
   readonly stakeAmount: PmpAmount;
   readonly confidence: number; // 0-1 사이 신뢰도
   readonly reasoning?: string; // 선택 이유 (선택사항)
+  /** 보르다/콩도르세용 선호 순위 (선택) */
+  readonly rankedOptionIds?: readonly string[];
+  /** 보르다/콩도르세용 최하위 기피 옵션 ID (선택) */
+  readonly avoidOptionId?: string;
 }
 
 /**
@@ -119,6 +123,8 @@ export class ParticipatePredictionUseCase {
       stake: request.stakeAmount,
       confidence: request.confidence || 0.5,
       reasoning: request.reasoning,
+      rankedOptionIds: request.rankedOptionIds,
+      avoidOptionId: request.avoidOptionId,
     });
 
     if (!predictionResult.success) {

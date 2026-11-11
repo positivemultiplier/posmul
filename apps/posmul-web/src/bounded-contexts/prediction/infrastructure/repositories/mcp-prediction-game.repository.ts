@@ -122,12 +122,19 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
         // 참여(베팅)는 반드시 원자적으로 처리 (PMP 즉시 차감 + prediction insert)
         if (options?.skipGameUpdate) {
           const last = predictions[predictions.length - 1];
+          const predictionPayload = {
+            selectedOptionId: last.selectedOptionId,
+            ...(last.rankedOptionIds && last.rankedOptionIds.length > 0
+              ? { rankedOptionIds: [...last.rankedOptionIds] }
+              : {}),
+            ...(last.avoidOptionId ? { avoidOptionId: last.avoidOptionId } : {}),
+          };
 
           const { data: predictionId, error: rpcError } = await supabase
             .schema("prediction")
             .rpc("place_prediction_bet", {
               p_game_id: game.getId(),
-              p_prediction_data: { selectedOptionId: last.selectedOptionId },
+              p_prediction_data: predictionPayload,
               p_confidence_level: Math.round(last.confidence * 100),
               p_bet_amount: Number(last.stake),
               p_expected_reward: 0,
@@ -154,7 +161,13 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
             prediction_id: p.id,
             game_id: game.getId(),
             user_id: p.userId,
-            prediction_data: { selectedOptionId: p.selectedOptionId },
+            prediction_data: {
+              selectedOptionId: p.selectedOptionId,
+              ...(p.rankedOptionIds && p.rankedOptionIds.length > 0
+                ? { rankedOptionIds: [...p.rankedOptionIds] }
+                : {}),
+              ...(p.avoidOptionId ? { avoidOptionId: p.avoidOptionId } : {}),
+            },
             confidence_level: Math.round(p.confidence * 100),
             bet_amount: Number(p.stake),
             expected_reward: 0,
@@ -1046,7 +1059,11 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
 
       // 예측 정보 추가
       for (const predRow of predictionRows) {
-        const predData = predRow.prediction_data as { selectedOptionId?: string } | null;
+        const predData = predRow.prediction_data as {
+          selectedOptionId?: string;
+          rankedOptionIds?: string[];
+          avoidOptionId?: string;
+        } | null;
         const selectedOptionId = predData?.selectedOptionId || "unknown";
 
         const predictionResult = Prediction.create({
@@ -1056,6 +1073,13 @@ export class MCPPredictionGameRepository implements IPredictionGameRepository {
           // DB에서 Decimal로 반환되므로 정수로 변환 (parseInt 사용)
           stake: createPmpAmount(parseInt(String(predRow.bet_amount), 10)) as any,
           confidence: predRow.confidence_level / 100,
+          rankedOptionIds: Array.isArray(predData?.rankedOptionIds)
+            ? predData.rankedOptionIds
+            : undefined,
+          avoidOptionId:
+            typeof predData?.avoidOptionId === "string"
+              ? predData.avoidOptionId
+              : undefined,
         });
 
         if (predictionResult.success) {

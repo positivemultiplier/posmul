@@ -20,6 +20,14 @@ import {
   UniversalPredictionDetailClient,
   type PredictionGameDetail,
 } from "../[slug]/client";
+import {
+  analyzeSocialChoiceAggregation,
+  computeBayesianMarketPosterior,
+  summarizeUserLearningProfile,
+  type CollectiveParticipationSignal,
+  type SettledPredictionRecord,
+  type UserLearningProfileSummary,
+} from "../../../bounded-contexts/prediction/domain/services/collective-intelligence-engine";
 
 function mapStatus(value: unknown): "ACTIVE" | "ENDED" | "SETTLED" {
   if (value === "ACTIVE") return "ACTIVE";
@@ -46,6 +54,7 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     createdAt: string;
   }>;
   initialChartData: Array<{ time: string; [key: string]: string | number }>;
+  userLearningProfile?: UserLearningProfileSummary;
   slug: string;
 } | null> {
   const decodedSlug = decodeURIComponent(slug);
@@ -53,9 +62,12 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
   if (!dbGame) return null;
 
   const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  // 통계, 잔액, 유저 참여내역, 3단계 MoneyWave 부스트 풀, 옵션별 실제 참여 볼륨 병렬 조회
-  const [stats, balanceResult, userBets, boostedRows, betsRes] = await Promise.all([
+  // 통계, 잔액, 유저 참여내역, 3단계 MoneyWave 부스트 풀, 옵션별 실제 참여 볼륨, 과거 정산 이력 병렬 조회
+  const [stats, balanceResult, userBets, boostedRows, betsRes, userHistoryRes] = await Promise.all([
     getPredictionGameStats(dbGame.game_id),
     getUserBalance(),
     getUserBets(dbGame.game_id),
@@ -63,10 +75,68 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     supabase
       .schema("prediction")
       .from("predictions")
-      .select("bet_amount, prediction_data")
+      .select("user_id, bet_amount, confidence_level, prediction_data, created_at")
       .eq("game_id", dbGame.game_id)
-      .eq("is_active", true),
+      .eq("is_active", true)
+      .order("created_at", { ascending: true }),
+    user
+      ? supabase
+          .schema("prediction")
+          .from("predictions")
+          .select("game_id, confidence_level, prediction_data, created_at")
+          .eq("user_id", user.id)
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .limit(30)
+      : Promise.resolve({ data: null, error: null }),
   ]);
+
+  // 로그인 유저의 과거 정산 이력 기반 Brier · Calibration 지속 학습 프로필 계산
+  let userLearningProfile: UserLearningProfileSummary | undefined;
+  const rawUserHistory = userHistoryRes.data || [];
+  if (rawUserHistory.length > 0) {
+    const historyGameIds = Array.from(
+      new Set(rawUserHistory.map((r) => r.game_id).filter(Boolean))
+    );
+    const { data: settledGames } = await supabase
+      .schema("prediction")
+      .from("prediction_games")
+      .select("game_id, status, winning_option_id, game_options")
+      .in("game_id", historyGameIds)
+      .eq("status", "SETTLED");
+
+    if (settledGames && settledGames.length > 0) {
+      const settledMap = new Map(settledGames.map((sg) => [sg.game_id, sg]));
+      const settledRecords: SettledPredictionRecord[] = [];
+      for (const pred of rawUserHistory) {
+        const sg = settledMap.get(pred.game_id);
+        const winningOptionId = sg?.winning_option_id;
+        if (!sg || typeof winningOptionId !== "string" || !winningOptionId) continue;
+        const predData = pred.prediction_data as { selectedOptionId?: string } | null;
+        const selectedOptionId = predData?.selectedOptionId;
+        if (!selectedOptionId) continue;
+
+        const rawConf = Number(pred.confidence_level);
+        const confidence = Number.isFinite(rawConf)
+          ? rawConf > 1
+            ? rawConf / 100
+            : rawConf
+          : 0.5;
+        const optCount = mapGameOptions(sg.game_options, sg.game_id).length;
+
+        settledRecords.push({
+          selectedOptionId,
+          correctOptionId: winningOptionId,
+          confidence,
+          optionCount: Math.max(2, optCount),
+          createdAt: pred.created_at,
+        });
+      }
+      userLearningProfile = summarizeUserLearningProfile(settledRecords);
+    } else {
+      userLearningProfile = summarizeUserLearningProfile([]);
+    }
+  }
 
   const boostedGame = boostedRows[0] || dbGame;
   const parsedOptions = mapGameOptions(boostedGame.game_options, dbGame.game_id);
@@ -78,14 +148,66 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     optionVolumes[opt.id] = 0;
   });
 
+  const signals: CollectiveParticipationSignal[] = [];
   betsData.forEach((bet) => {
-    const optId = (bet.prediction_data as { selectedOptionId?: string } | null)?.selectedOptionId;
+    const pData = bet.prediction_data as {
+      selectedOptionId?: string;
+      rankedOptionIds?: string[];
+      avoidOptionId?: string;
+    } | null;
+    const optId = pData?.selectedOptionId;
     const amt = Number(bet.bet_amount) || 0;
     if (optId) {
       optionVolumes[optId] = (optionVolumes[optId] || 0) + amt;
+      const rawConf = Number(bet.confidence_level);
+      const confidence = Number.isFinite(rawConf)
+        ? rawConf > 1
+          ? rawConf / 100
+          : rawConf
+        : 0.5;
+      const isCurrentUser = Boolean(user && bet.user_id === user.id);
+      signals.push({
+        userId: bet.user_id,
+        selectedOptionId: optId,
+        stakeAmount: amt > 0 ? amt : 100,
+        confidence,
+        createdAt: bet.created_at,
+        skillWeight: isCurrentUser ? userLearningProfile?.skillWeight : 1.0,
+        rankedOptionIds: Array.isArray(pData?.rankedOptionIds)
+          ? pData.rankedOptionIds
+          : undefined,
+        avoidOptionId:
+          typeof pData?.avoidOptionId === "string"
+            ? pData.avoidOptionId
+            : undefined,
+      });
     }
     calculatedTotalVolume += amt;
   });
+
+  // 최근 10건 참여 비중 (군중 쏠림 / 최근 편향 진단용)
+  const recentSignals = signals.slice(-10);
+  const recentOptionShares: Record<string, number> = {};
+  if (recentSignals.length > 0) {
+    for (const sig of recentSignals) {
+      recentOptionShares[sig.selectedOptionId] =
+        (recentOptionShares[sig.selectedOptionId] || 0) + 1 / recentSignals.length;
+    }
+  }
+
+  // 1) 순차 베이지안 사후확률 계산 & 2) 애로우/콩도르세/보르다 사회선택 분석 실행
+  const collectiveOptions = parsedOptions.map((opt) => ({
+    id: opt.id,
+    label: opt.text,
+    priorProbability: opt.currentOdds,
+  }));
+  const bayesianResult = computeBayesianMarketPosterior(collectiveOptions, signals);
+  const socialChoiceResult = analyzeSocialChoiceAggregation(collectiveOptions, signals);
+
+  const bayesianById = new Map(bayesianResult.options.map((o) => [o.optionId, o]));
+  const bordaById = new Map(
+    socialChoiceResult.bordaRanking.map((b) => [b.optionId, b])
+  );
 
   const finalTotalVolume =
     calculatedTotalVolume > 0
@@ -127,10 +249,11 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     predictionType: effectiveType,
     options: parsedOptions.map((opt, idx) => {
       const optVol = optionVolumes[opt.id] || 0;
-      const prob =
-        calculatedTotalVolume > 0
-          ? optVol / calculatedTotalVolume
-          : opt.currentOdds || 1 / parsedOptions.length;
+      const bayes = bayesianById.get(opt.id);
+      const borda = bordaById.get(opt.id);
+      const prob = bayes
+        ? bayes.bayesianProbability
+        : opt.currentOdds || 1 / parsedOptions.length;
       const clampedProb = Math.max(0.02, Math.min(0.98, prob));
       const odds = clampedProb > 0 ? Number((1 / clampedProb).toFixed(2)) : 2.0;
 
@@ -139,11 +262,24 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
         label: opt.text || `옵션 ${idx + 1}`,
         description: opt.description,
         probability: Number(clampedProb.toFixed(4)),
+        rawVolumeProbability: bayes?.rawVolumeProbability,
+        priorProbability: bayes?.priorProbability ?? opt.currentOdds,
+        credibleInterval: bayes?.credibleInterval,
+        bordaRank: borda?.rank,
+        bordaNormalizedScore: borda?.normalizedScore,
         odds: Math.min(Math.max(odds, 1.01), 99),
         volume: optVol > 0 ? optVol : Math.round(finalTotalVolume * clampedProb),
         change24h: idx === 0 ? 2.4 : -1.2,
       };
     }),
+    collectiveIntelligence: {
+      effectiveEvidenceStrength: bayesianResult.effectiveEvidenceStrength,
+      totalPriorStrength: bayesianResult.totalPriorStrength,
+      normalizedEntropy: bayesianResult.normalizedEntropy,
+      isLowSampleStabilized: bayesianResult.isLowSampleStabilized,
+      socialChoice: socialChoiceResult,
+      recentOptionShares,
+    },
     totalVolume: finalTotalVolume,
     participantCount,
     endTime: toIsoOrFallback(dbGame.registration_end, 7 * 24 * 60 * 60 * 1000),
@@ -177,6 +313,7 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     userBalance: balanceResult ?? { pmp: 1000, pmc: 500 },
     userBets,
     initialChartData,
+    userLearningProfile,
     slug: decodedSlug,
   };
 }
@@ -191,6 +328,7 @@ export async function renderPredictionDetailBySlug(slug: string) {
       userBalance={data.userBalance}
       userBets={data.userBets}
       initialChartData={data.initialChartData}
+      userLearningProfile={data.userLearningProfile}
       slug={data.slug}
     />
   );

@@ -14,6 +14,13 @@
  *    GrossReward_i = s_i + (Pool_losers + Pool_moneyWave) * (EffectiveStake_i / Σ_winners EffectiveStake)
  */
 
+import {
+  computeBrierLearningUpdate,
+  summarizeUserLearningProfile,
+  type BrierLearningResult,
+  type UserLearningProfileSummary,
+} from "../../domain/services/collective-intelligence-engine";
+
 type PmpAmount = number;
 type PmcAmount = number;
 
@@ -332,5 +339,42 @@ export class PredictionSettlementService {
       default:
         return 1.0;
     }
+  }
+
+  /**
+   * 정산 시 Brier Score · Calibration 기반 지속 학습 지표 산출
+   * - 경험 편향(과신/과소신뢰)을 진단하고 다음 예측의 베이지안 스킬 가중치로 환류합니다.
+   */
+  public evaluateSettlementLearningMetrics(
+    winningOptionId: string,
+    optionCount: number,
+    participants: readonly ParticipantPredictionData[]
+  ): Array<{
+    userId: string;
+    learning: BrierLearningResult;
+    updatedProfile: UserLearningProfileSummary;
+  }> {
+    return participants.map((participant) => {
+      const conf =
+        participant.confidenceLevel && participant.confidenceLevel > 1
+          ? participant.confidenceLevel / 100
+          : participant.confidenceLevel ?? 0.5;
+
+      const record = {
+        selectedOptionId: participant.optionId,
+        correctOptionId: winningOptionId,
+        confidence: conf,
+        optionCount: Math.max(2, optionCount),
+        createdAt: participant.stakeTime,
+      };
+
+      const learning = computeBrierLearningUpdate(record);
+      const updatedProfile = summarizeUserLearningProfile([record]);
+      return {
+        userId: participant.userId,
+        learning,
+        updatedProfile,
+      };
+    });
   }
 }

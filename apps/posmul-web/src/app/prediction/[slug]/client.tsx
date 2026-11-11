@@ -15,6 +15,11 @@ import {
 } from "@/bounded-contexts/prediction/presentation/components/PredictionGameCard";
 import { GalleryPostList } from "@/app/forum/components/GalleryPostList";
 import { BalancedDecisionBriefing } from "@/bounded-contexts/prediction/presentation/components/BalancedDecisionBriefing";
+import {
+  evaluateExperienceBias,
+  type SocialChoiceAnalysisResult,
+  type UserLearningProfileSummary,
+} from "@/bounded-contexts/prediction/domain/services/collective-intelligence-engine";
 import { placeBet } from "../sports/soccer/[slug]/actions";
 import {
   Users,
@@ -35,6 +40,9 @@ import {
   Trophy,
   Scale,
   Layers,
+  Brain,
+  AlertTriangle,
+  SlidersHorizontal,
 } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/shared/ui/components/base";
@@ -44,9 +52,23 @@ export interface PredictionOption {
   label: string;
   description?: string;
   probability: number;
+  rawVolumeProbability?: number;
+  priorProbability?: number;
+  credibleInterval?: readonly [number, number];
+  bordaRank?: number;
+  bordaNormalizedScore?: number;
   odds: number;
   volume: number;
   change24h: number;
+}
+
+export interface PredictionCollectiveIntelligence {
+  effectiveEvidenceStrength: number;
+  totalPriorStrength: number;
+  normalizedEntropy: number;
+  isLowSampleStabilized: boolean;
+  socialChoice: SocialChoiceAnalysisResult;
+  recentOptionShares: Record<string, number>;
 }
 
 export interface PredictionGameDetail {
@@ -79,6 +101,7 @@ export interface PredictionGameDetail {
     avatar: string;
   };
   prizePool: number;
+  collectiveIntelligence?: PredictionCollectiveIntelligence;
 }
 
 interface UniversalPredictionDetailClientProps {
@@ -96,9 +119,10 @@ interface UniversalPredictionDetailClientProps {
   }>;
   slug: string;
   initialChartData?: Array<{ time: string; [key: string]: string | number }>;
+  userLearningProfile?: UserLearningProfileSummary;
 }
 
-type ChartTabType = "trend" | "distribution" | "participants" | "my_bets";
+type ChartTabType = "trend" | "distribution" | "participants" | "my_bets" | "economics";
 
 interface OptionColorTheme {
   hex: string;
@@ -306,6 +330,7 @@ export function UniversalPredictionDetailClient({
   userBalance,
   userBets,
   initialChartData,
+  userLearningProfile,
 }: UniversalPredictionDetailClientProps) {
   const [chartTab, setChartTab] = useState<ChartTabType>("trend");
   const [isPending, startTransition] = useTransition();
@@ -320,8 +345,41 @@ export function UniversalPredictionDetailClient({
   }, [game.predictionType, game.options.length]);
 
   const [selectedOption, setSelectedOption] = useState<string>(game.options[0]?.id || "");
+  const [confidencePct, setConfidencePct] = useState<number>(() => {
+    const initialProb = game.options[0]?.probability ?? 0.65;
+    return Math.min(95, Math.max(50, Math.round(initialProb * 100)));
+  });
+  const [avoidOptionId, setAvoidOptionId] = useState<string>("");
+  const [showSocialPreferenceOptions, setShowSocialPreferenceOptions] = useState<boolean>(false);
   const [stakeAmount, setStakeAmount] = useState<number>(game.minimumStake || 100);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
+
+  // 선택된 옵션에 대한 실시간 경험 편향(Experience Bias) 디바이어싱 진단
+  const biasReport = useMemo(() => {
+    const opt = game.options.find((o) => o.id === selectedOption);
+    if (!opt) return null;
+    const recentShare =
+      game.collectiveIntelligence?.recentOptionShares?.[opt.id] ?? opt.probability;
+    return evaluateExperienceBias({
+      selectedOptionId: opt.id,
+      confidence: confidencePct / 100,
+      stakeAmount,
+      marketBayesianProbability: opt.probability,
+      optionPriorProbability: opt.priorProbability ?? 1 / Math.max(2, game.options.length),
+      totalParticipants: game.participantCount,
+      recentOptionShare: recentShare,
+      userCalibrationGap: userLearningProfile?.calibrationGap,
+      userPastSettledCount: userLearningProfile?.settledCount,
+    });
+  }, [
+    game.options,
+    game.participantCount,
+    game.collectiveIntelligence,
+    selectedOption,
+    confidencePct,
+    stakeAmount,
+    userLearningProfile,
+  ]);
 
   // 메인 피드 카드와의 일관된 시각적 연속성
   const { prefixEmoji, prefixTag, cleanTitle } = splitTitlePrefix(game.title);
@@ -419,9 +477,21 @@ export function UniversalPredictionDetailClient({
   const handlePlaceBet = async () => {
     if (!selectedOption) return;
     setFeedbackMsg(null);
+    const sanitizedAvoidId =
+      effectiveType !== "binary" &&
+      avoidOptionId &&
+      avoidOptionId !== selectedOption
+        ? avoidOptionId
+        : undefined;
     startTransition(async () => {
       try {
-        const result = await placeBet({ gameId: game.id, optionId: selectedOption, stakeAmount });
+        const result = await placeBet({
+          gameId: game.id,
+          optionId: selectedOption,
+          stakeAmount,
+          confidence: confidencePct / 100,
+          avoidOptionId: sanitizedAvoidId,
+        });
         if (result.success && result.newBalance !== undefined) {
           setBalance({ ...balance, pmp: result.newBalance });
           setFeedbackMsg("🎉 예측 투표에 성공적으로 참여하였습니다!");
@@ -1004,6 +1074,18 @@ export function UniversalPredictionDetailClient({
                   >
                     <span>💜 내 참여 ({bets.length})</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setChartTab("economics")}
+                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                      chartTab === "economics"
+                        ? "bg-indigo-600 text-white shadow-md font-extrabold"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Brain className="w-3.5 h-3.5" />
+                    <span>베이지안 · 사회선택</span>
+                  </button>
                 </div>
               </div>
 
@@ -1136,6 +1218,202 @@ export function UniversalPredictionDetailClient({
                   )}
                 </div>
               )}
+
+              {/* 탭 5: 베이지안 업데이트 · 애로우/콩도르세/보르다 사회선택 · 경험 편향 지속학습 */}
+              {chartTab === "economics" && (
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
+                    <span className="text-xs text-slate-300 font-bold flex items-center gap-1.5">
+                      <Brain className="w-3.5 h-3.5 text-indigo-400" />
+                      <span>베이지안 사후확률 · 보르다/콩도르세 사회선택 합의 진단</span>
+                    </span>
+                    <span className="text-[10.5px] font-bold text-indigo-300 bg-indigo-950/70 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
+                      엔트로피 불확실성{" "}
+                      {Math.round((game.collectiveIntelligence?.normalizedEntropy ?? 0.6) * 100)}% ·{" "}
+                      {game.collectiveIntelligence?.isLowSampleStabilized
+                        ? "Prior 안정화 활성"
+                        : "증거 기반 수렴"}
+                    </span>
+                  </div>
+
+                  {/* 애로우 불가능성 / 콩도르세 순환 역설 / 다수결 괴리 알림 */}
+                  {game.collectiveIntelligence?.socialChoice.arrowDivergenceAlert && (
+                    <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-500/40 text-xs text-amber-200 flex items-start gap-2">
+                      <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                      <div>
+                        <div className="font-extrabold text-amber-300">
+                          애로우 · 콩도르세 사회선택 주의 신호
+                        </div>
+                        <p className="text-[11px] text-amber-200/90 mt-0.5">
+                          {game.collectiveIntelligence.socialChoice.arrowDivergenceAlert}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 1) 베이지안 사후확률 vs 단순 볼륨 비중 vs 보르다 합의 점수 비교 */}
+                  <div className="space-y-2">
+                    <div className="text-[11px] font-bold text-slate-400 px-1">
+                      옵션별 베이지안 사후확률 (95% 신뢰구간) · 보르다 합의 지수
+                    </div>
+                    <div className="space-y-2">
+                      {game.options.map((opt, idx) => {
+                        const hex = optionThemeMap[opt.id]?.hex || RANKING_THEMES[idx % RANKING_THEMES.length].hex;
+                        const bayesPct = Math.round(opt.probability * 100);
+                        const rawPct = Math.round((opt.rawVolumeProbability ?? opt.probability) * 100);
+                        const bordaRow = game.collectiveIntelligence?.socialChoice.bordaRanking.find(
+                          (b) => b.optionId === opt.id
+                        );
+                        const ci = opt.credibleInterval;
+                        const isCondorcetWinner =
+                          game.collectiveIntelligence?.socialChoice.condorcetWinnerId === opt.id;
+
+                        return (
+                          <div
+                            key={`bayes-${opt.id}`}
+                            className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06] space-y-1.5"
+                          >
+                            <div className="flex items-center justify-between gap-2 text-xs">
+                              <div className="flex items-center gap-2 min-w-0">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: hex }}
+                                />
+                                <span className="font-extrabold text-white truncate">
+                                  {opt.label}
+                                </span>
+                                {isCondorcetWinner && (
+                                  <span className="px-2 py-0.5 rounded-full text-[9.5px] font-black bg-emerald-500/15 text-emerald-300 border border-emerald-500/40 shrink-0">
+                                    👑 콩도르세 승자
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-3 shrink-0 text-[11px]">
+                                <span className="text-slate-400">
+                                  단순볼륨 {rawPct}%
+                                </span>
+                                <span className="font-black text-sky-300">
+                                  베이지안 {bayesPct}%
+                                </span>
+                              </div>
+                            </div>
+                            <div className="flex flex-wrap items-center justify-between gap-2 text-[10.5px] text-slate-400">
+                              <span>
+                                95% 신뢰구간:{" "}
+                                {ci
+                                  ? `${Math.round(ci[0] * 100)}% ~ ${Math.round(ci[1] * 100)}%`
+                                  : `${Math.max(1, bayesPct - 8)}% ~ ${Math.min(99, bayesPct + 8)}%`}
+                              </span>
+                              <span>
+                                보르다 합의: <strong className="text-indigo-300">{bordaRow?.rank ?? idx + 1}위</strong> (
+                                {bordaRow?.normalizedScore?.toFixed(1) ?? "50.0"}점
+                                {bordaRow && bordaRow.avoidPenaltyShare > 0
+                                  ? ` · 비선호 지목 ${Math.round(bordaRow.avoidPenaltyShare * 100)}%`
+                                  : ""}
+                                )
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* 2) 콩도르세 1:1 쌍대 비교 (WDL/Ranking 다지선다) */}
+                  {effectiveType !== "binary" &&
+                    game.collectiveIntelligence &&
+                    game.collectiveIntelligence.socialChoice.pairwiseMatrix.length > 0 && (
+                      <div className="p-3.5 rounded-xl bg-slate-950/70 border border-white/[0.06] space-y-2">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-extrabold text-slate-200">
+                            콩도르세 1:1 쌍대 비교 매트릭스 (Pairwise Matchup)
+                          </span>
+                          <span className="text-slate-400">
+                            {game.collectiveIntelligence.socialChoice.hasCondorcetCycle
+                              ? "⚠️ 순환 역설 상태"
+                              : game.collectiveIntelligence.socialChoice.condorcetWinnerId
+                              ? "✅ 일관된 콩도르세 승자 존재"
+                              : "표본 축적 중"}
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                          {game.collectiveIntelligence.socialChoice.pairwiseMatrix.slice(0, 6).map((cell) => {
+                            const labelA =
+                              game.options.find((o) => o.id === cell.optionAId)?.label ?? cell.optionAId;
+                            const labelB =
+                              game.options.find((o) => o.id === cell.optionBId)?.label ?? cell.optionBId;
+                            const pctA = Math.round(cell.aWinRate * 100);
+                            return (
+                              <div
+                                key={`${cell.optionAId}-${cell.optionBId}`}
+                                className="flex items-center justify-between px-2.5 py-1.5 rounded-lg bg-slate-900/90 border border-white/[0.04] text-[10.5px]"
+                              >
+                                <span className="truncate text-slate-300 max-w-[68%]">
+                                  {getShortOptionTag(labelA, "A")} vs {getShortOptionTag(labelB, "B")}
+                                </span>
+                                <span className="font-bold text-sky-300 shrink-0">
+                                  {pctA}% : {100 - pctA}%
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                  {/* 3) 나의 Brier Score · 경험 편향 교정(Calibration) 지속 학습 현황 */}
+                  <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-950/40 via-slate-950 to-slate-950 border border-indigo-500/25 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-extrabold text-indigo-300 flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>나의 지속적 확률 학습 & Brier 교정 프로필</span>
+                      </span>
+                      <span className="text-[10.5px] font-bold text-emerald-300">
+                        베이지안 스킬 가중치{" "}
+                        {(userLearningProfile?.skillWeight ?? 1.0).toFixed(2)}x
+                      </span>
+                    </div>
+                    {userLearningProfile && userLearningProfile.settledCount > 0 ? (
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
+                        <div className="p-2 rounded-lg bg-slate-900/80 border border-white/[0.05]">
+                          <div className="text-[10px] text-slate-400">정산 완료</div>
+                          <div className="text-xs font-black text-white mt-0.5">
+                            {userLearningProfile.settledCount}건
+                          </div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-900/80 border border-white/[0.05]">
+                          <div className="text-[10px] text-slate-400">Brier 오차</div>
+                          <div className="text-xs font-black text-sky-300 mt-0.5">
+                            {userLearningProfile.averageBrierScore.toFixed(3)}
+                          </div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-900/80 border border-white/[0.05]">
+                          <div className="text-[10px] text-slate-400">실제 적중률</div>
+                          <div className="text-xs font-black text-emerald-300 mt-0.5">
+                            {Math.round(userLearningProfile.winRate * 100)}%
+                          </div>
+                        </div>
+                        <div className="p-2 rounded-lg bg-slate-900/80 border border-white/[0.05]">
+                          <div className="text-[10px] text-slate-400">편향 진단</div>
+                          <div className="text-xs font-black text-amber-300 mt-0.5">
+                            {userLearningProfile.calibrationStatus === "OVERCONFIDENT"
+                              ? "과신 주의"
+                              : userLearningProfile.calibrationStatus === "UNDERCONFIDENT"
+                              ? "과소 신뢰"
+                              : userLearningProfile.calibrationStatus === "WELL_CALIBRATED"
+                              ? "균형 교정"
+                              : "표본 축적"}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-[11px] text-slate-400 leading-relaxed">
+                        첫 정산 결과가 쌓이면 Brier Score(확률 예측 정밀도)와 확신도 편향(과신·과소신뢰)을 자동 측정해, 다음 마켓의 집단지성 베이지안 반영 가중치가 성장합니다.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </Card>
 
             {/* 2️⃣ ⚖️ AI 균형 의사결정 브리핑 */}
@@ -1226,6 +1504,95 @@ export function UniversalPredictionDetailClient({
 
               {/* 3대 분류 맞춤형 옵션 선택기 */}
               {renderParticipationOptions()}
+
+              {/* 확률적 판단: 내 확신도(Confidence) 슬라이더 */}
+              <div className="p-3.5 rounded-2xl bg-slate-950/75 border border-white/[0.07] space-y-2.5">
+                <div className="flex items-center justify-between text-xs font-bold">
+                  <span className="text-slate-300 flex items-center gap-1.5">
+                    <SlidersHorizontal className="w-3.5 h-3.5 text-sky-400" />
+                    <span>내 확률적 확신도 (베이지안 강도)</span>
+                  </span>
+                  <span className="text-sky-300 font-black">{confidencePct}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={50}
+                  max={95}
+                  step={5}
+                  value={confidencePct}
+                  onChange={(e) => setConfidencePct(Number(e.target.value))}
+                  className="w-full accent-sky-400 cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-slate-500">
+                  <span>50% (조심스러운 탐색)</span>
+                  <span>75% (데이터 기반 확신)</span>
+                  <span>95% (고강도 확신)</span>
+                </div>
+
+                {/* WDL / RANKING 전용: 보르다 · 콩도르세 최하위 기피(비선호) 선택 (선택사항) */}
+                {effectiveType !== "binary" && game.options.length >= 3 && (
+                  <div className="pt-1 border-t border-white/[0.06]">
+                    <button
+                      type="button"
+                      onClick={() => setShowSocialPreferenceOptions((prev) => !prev)}
+                      className="text-[11px] font-bold text-indigo-300 hover:text-indigo-200 flex items-center gap-1"
+                    >
+                      <span>
+                        {showSocialPreferenceOptions ? "▾" : "▸"} 가장 피하고 싶은 선택(보르다 비선호) 함께 기록하기
+                      </span>
+                    </button>
+                    {showSocialPreferenceOptions && (
+                      <div className="mt-2 space-y-1.5">
+                        <p className="text-[10px] text-slate-400">
+                          1순위뿐 아니라 최하위 비선호를 표기하면 다수결 왜곡을 줄이는 보르다·콩도르세 합의에 반영됩니다.
+                        </p>
+                        <select
+                          value={avoidOptionId === selectedOption ? "" : avoidOptionId}
+                          onChange={(e) => setAvoidOptionId(e.target.value)}
+                          className="w-full bg-slate-900 border border-white/[0.1] rounded-xl px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-indigo-400"
+                        >
+                          <option value="">선택 안 함 (1순위만 반영)</option>
+                          {game.options
+                            .filter((opt) => opt.id !== selectedOption)
+                            .map((opt) => (
+                              <option key={`avoid-${opt.id}`} value={opt.id}>
+                                비선호(꼴찌): {opt.label}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 실시간 경험 편향(Experience Bias) 디바이어싱 코치 */}
+              {biasReport && (
+                <div
+                  className={`p-3 rounded-2xl border text-[11px] space-y-1 ${
+                    biasReport.riskLevel === "HIGH"
+                      ? "bg-amber-950/45 border-amber-500/40 text-amber-200"
+                      : biasReport.riskLevel === "MEDIUM"
+                      ? "bg-sky-950/35 border-sky-500/30 text-sky-200"
+                      : "bg-emerald-950/30 border-emerald-500/25 text-emerald-200"
+                  }`}
+                >
+                  <div className="flex items-center justify-between font-extrabold">
+                    <span className="flex items-center gap-1.5">
+                      <Brain className="w-3.5 h-3.5" />
+                      <span>경험 편향 & 과신 진단</span>
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/30">
+                      {biasReport.riskLevel === "HIGH"
+                        ? "⚠️ 편향 주의"
+                        : biasReport.riskLevel === "MEDIUM"
+                        ? "🔎 교정 권장"
+                        : "✅ 균형 판단"}
+                    </span>
+                  </div>
+                  <p className="leading-relaxed opacity-90">{biasReport.nudges[0]}</p>
+                </div>
+              )}
 
               {/* 참여 PMP 설정 */}
               <div className="space-y-2 pt-1">

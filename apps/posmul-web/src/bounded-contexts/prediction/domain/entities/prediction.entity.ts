@@ -39,6 +39,10 @@ export interface CreatePredictionInput {
   readonly stake: PmpAmount;
   readonly confidence: number; // 0-1 범위
   readonly reasoning?: string;
+  /** 보르다/콩도르세용 선호 순위 옵션 목록 (선택) */
+  readonly rankedOptionIds?: readonly string[];
+  /** 보르다/콩도르세용 최하위 기피 옵션 ID (선택) */
+  readonly avoidOptionId?: string;
 }
 
 /**
@@ -84,7 +88,9 @@ export class Prediction {
     private readonly _timestamps: Timestamps = {
       createdAt: new Date(),
       updatedAt: new Date(),
-    }
+    },
+    private readonly _rankedOptionIds?: readonly string[],
+    private readonly _avoidOptionId?: string
   ) {
     this.validateInvariants();
   }
@@ -112,7 +118,13 @@ export class Prediction {
       input.selectedOptionId,
       input.stake,
       input.confidence,
-      input.reasoning
+      input.reasoning,
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+      input.rankedOptionIds,
+      input.avoidOptionId
     );
 
     return success(prediction);
@@ -390,5 +402,11 @@ export class Prediction {
   }
   public get timestamps(): Timestamps {
     return this._timestamps;
+  }
+  public get rankedOptionIds(): readonly string[] | undefined {
+    return this._rankedOptionIds;
+  }
+  public get avoidOptionId(): string | undefined {
+    return this._avoidOptionId;
   }
 }

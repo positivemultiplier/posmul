@@ -58,7 +58,7 @@
 - **[tutorials/](./tutorials/)**: 신규 개발자 온보딩 튜토리얼
 - **[guides/](./guides/)**: 엔티티 추가 방법, 프론트엔드 개발 가이드, MoneyWave 로직 활성화 가이드
 - **[reference/](./reference/)**: API 문서, MCP 도구 레퍼런스, 프론트엔드 컴포넌트 가이드
-- **[explanation/](./explanation/)**: MoneyWave 1·2·3 원리, Next.js Server Actions, 아키텍처 철학
+- **[explanation/](./explanation/)**: MoneyWave 1·2·3 원리, Next.js Server Actions, 아키텍처 철학, [경제적 논거 백서(사회선택·베이지안·행동학습)](./explanation/ECONOMIC_RATIONALE_SOCIAL_CHOICE_AND_BAYESIAN_LEARNING.md)
 
 ---
 
