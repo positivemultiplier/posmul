@@ -391,19 +391,10 @@ export function UniversalPredictionDetailClient({
         {/* 2-Column Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* ======================================================== */}
-          {/* Left Column (2 cols): 의사결정 브리핑 ➔ 차트 센터 ➔ 본문 ➔ 갤러리 */}
+          {/* Left Column (2 cols): 그래프 ➔ 의사결정 브리핑 ➔ 의제 정보 ➔ 소셜 갤러리 */}
           {/* ======================================================== */}
           <div className="lg:col-span-2 space-y-6">
-            {/* 1️⃣ ⚖️ AI 균형 의사결정 브리핑 (화면 1순위 핵심 승격!) */}
-            <BalancedDecisionBriefing
-              gameId={game.id}
-              gameTitle={game.title}
-              onRewardClaimed={(earned) => {
-                setBalance((prev) => ({ ...prev, pmp: prev.pmp + earned }));
-              }}
-            />
-
-            {/* 2️⃣ 📊 집단지성 데이터 차트 센터 (모든 그래프를 탭 뷰어로 1개 카드 통합!) */}
+            {/* 1️⃣ 📊 집단지성 데이터 차트 센터 (그래프 1순위 최상단 노출!) */}
             <Card className="p-5 bg-[#111622] border-white/[0.08] space-y-4 shadow-xl">
               {/* 차트 센터 상단 헤더 & 탭 바 */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
@@ -576,66 +567,51 @@ export function UniversalPredictionDetailClient({
               )}
             </Card>
 
-            {/* 3️⃣ 📋 의제 심층 배경 및 공식 판정 본문 (Market Overview & Rules) */}
-            {/* 사용자가 요청한 본문 신설 + 겉돌던 오라클 배너를 이 본문 규정 박스로 완벽 흡수 통합! */}
-            <div className="rounded-2xl bg-[#111622] border border-white/[0.08] p-5 md:p-6 space-y-6 shadow-xl">
-              {/* 본문 섹션 1: 의제 배경 및 개요 */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2 text-sm font-extrabold text-white">
+            {/* 2️⃣ ⚖️ AI 균형 의사결정 브리핑 (그래프 바로 아래에 배치하여 데이터 확인 후 숙의 유도) */}
+            <BalancedDecisionBriefing
+              gameId={game.id}
+              gameTitle={game.title}
+              onRewardClaimed={(earned) => {
+                setBalance((prev) => ({ ...prev, pmp: prev.pmp + earned }));
+              }}
+            />
+
+            {/* 3️⃣ 📋 의제 정보 & 판정 규칙 (가볍고 심플하게 요약 노출) */}
+            <div className="rounded-2xl bg-[#111622] border border-white/[0.08] p-4 sm:p-5 space-y-3.5 shadow-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-white">
                   <FileText className="w-4 h-4 text-sky-400" />
-                  <span>의제 배경 및 시장 개요 (Context & Story)</span>
+                  <span>의제 정보 & 공식 판정 기준</span>
                 </div>
-                <div className="text-xs sm:text-sm text-slate-300 leading-relaxed bg-slate-950/60 p-4 rounded-xl border border-white/[0.05] whitespace-pre-line">
-                  {game.description ||
-                    "본 의제는 시민 집단지성을 통해 합리적인 결론을 도출하기 위한 공익/시장 예측 프로젝트입니다. 다양한 데이터와 팩트를 검토하여 신중하게 의사를 결정해보세요."}
-                </div>
+                <span className="text-[10.5px] font-bold text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                  {oracleSpec.badge}
+                </span>
               </div>
 
-              {/* 본문 섹션 2: 공인 데이터 오라클 자동 판정 기준 (이전에 겉돌던 한줄 배너를 세련된 명세 박스로 흡수!) */}
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm font-extrabold text-white">
-                    <Database className="w-4 h-4 text-emerald-400" />
-                    <span>공인 데이터 오라클 자동 판정 기준 (Resolution Oracle Spec)</span>
-                  </div>
-                  <span className="text-[11px] font-black text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                    {oracleSpec.badge}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-white/[0.06] space-y-1">
-                    <div className="text-[11px] text-slate-400 font-bold">공식 데이터 출처</div>
-                    <div className="text-xs font-black text-slate-100">{oracleSpec.provider}</div>
-                  </div>
-                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-white/[0.06] space-y-1">
-                    <div className="text-[11px] text-slate-400 font-bold">검증 엔드포인트 / 기준</div>
-                    <div className="text-xs font-black text-emerald-300 font-mono truncate" title={oracleSpec.endpoint}>
-                      {oracleSpec.endpoint}
-                    </div>
-                  </div>
-                  <div className="p-3.5 rounded-xl bg-slate-950/80 border border-white/[0.06] space-y-1">
-                    <div className="text-[11px] text-slate-400 font-bold">자동 판정 일정 및 방식</div>
-                    <div className="text-xs font-semibold text-slate-200">{oracleSpec.scheduleDesc}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 본문 섹션 3: 투명성 및 무효화(VOIDED) 100% 환불 안전 규정 */}
-              <div className="p-4 rounded-xl bg-sky-950/20 border border-sky-500/20 space-y-2">
-                <div className="flex items-center gap-2 text-xs font-bold text-sky-300">
-                  <ShieldCheck className="w-4 h-4 text-sky-400" />
-                  <span>시민 자산 보호 및 무효화(VOIDED) 100% 환불 안전 규정</span>
-                </div>
-                <p className="text-[11.5px] text-slate-400 leading-relaxed">
-                  • 본 예측은 사람의 자의적 개입 없이 공인 오라클 스마트 컨트랙트에 의해 공식 통계 발표 즉시 자동 판정·정산됩니다.<br />
-                  • 경기 취소, 정부/공인기관의 데이터 공표 중단, 시스템 불가항력 오류 발생 시 해당 의제는 즉시 <strong className="text-slate-200">무효화(VOIDED)</strong> 처리되며 참여하신 모든 PMP는 <strong className="text-emerald-300">100% 전액 즉시 환불</strong>됩니다.
+              {/* 간단 의제 설명 */}
+              {game.description && (
+                <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/50 p-3 rounded-xl border border-white/[0.04] whitespace-pre-line">
+                  {game.description}
                 </p>
+              )}
+
+              {/* 공인 오라클 출처 및 판정 일정 & 100% 환불 콤팩트 바 */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-slate-950/80 border border-white/[0.06] text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Database className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="text-slate-200 font-bold truncate">{oracleSpec.provider}</span>
+                  <span className="text-slate-600 hidden sm:inline">·</span>
+                  <span className="text-slate-400 text-[11px] truncate hidden sm:inline">{oracleSpec.scheduleDesc}</span>
+                </div>
+                <span className="text-[10.5px] text-sky-400 font-bold shrink-0 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
+                  <span>취소·무효 시 100% PMP 전액 환불</span>
+                </span>
               </div>
             </div>
 
-            {/* 4️⃣ 💬 이 의제 전용 시민 토론 갤러리 */}
-            <div className="space-y-4 pt-2">
+            {/* 4️⃣ 💬 이 의제 전용 시민 토론 갤러리 (소셜) */}
+            <div className="space-y-4 pt-1">
               <div className="flex items-center justify-between">
                 <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
                   <MessageSquare className="w-4 h-4 text-sky-400" />
