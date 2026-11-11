@@ -6,6 +6,7 @@ import {
 } from "@/bounded-contexts/feed/di-container";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireAdminApi } from "@/shared/lib/security/admin-auth";
+import { predictionLearningStatsService } from "@/bounded-contexts/prediction/application/services/prediction-learning-stats.service";
 
 export const dynamic = "force-dynamic";
 
@@ -120,57 +121,82 @@ async function handleManualSettle(
   }
 
   const nowIso = new Date().toISOString();
-  const { error: gameUpdateError } = await supabaseAdmin
-    .schema("prediction")
-    .from("prediction_games")
-    .update({
-      status: "SETTLED",
-      actual_result: { winningOption },
-      updated_at: nowIso,
-    })
-    .eq("game_id", gameId);
-
-  if (gameUpdateError) {
-    return NextResponse.json(
-      { success: false, error: gameUpdateError.message },
-      { status: 400 }
-    );
-  }
-
-  const { data: predictions, error: fetchError } = await supabaseAdmin
-    .schema("prediction")
-    .from("predictions")
-    .select("prediction_id, prediction_data")
-    .eq("game_id", gameId);
-
-  if (fetchError) {
-    return NextResponse.json(
-      { success: false, error: fetchError.message },
-      { status: 400 }
-    );
-  }
-
   let settledCount = 0;
   let winnerCount = 0;
+  let totalRewardDistributed = 0;
 
-  for (const pred of predictions || []) {
-    const selectedOption = (
-      pred.prediction_data as { selectedOptionId?: string } | null
-    )?.selectedOptionId;
-    if (selectedOption === winningOption) {
-      winnerCount++;
+  // 1. 정식 DB 정산 RPC 우선 시도 (보상 지급 + winning_option_id + settled_at + MoneyWave 이력 일관성 보장)
+  const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
+    "settle_prediction_game",
+    {
+      p_game_id: gameId,
+      p_correct_option_id: winningOption,
     }
+  );
 
-    await supabaseAdmin
+  if (!rpcError && rpcData) {
+    const rpcResult = rpcData as {
+      winners_count?: number;
+      losers_count?: number;
+      total_reward_distributed?: number;
+    };
+    winnerCount = Number(rpcResult.winners_count ?? 0);
+    settledCount = winnerCount + Number(rpcResult.losers_count ?? 0);
+    totalRewardDistributed = Number(rpcResult.total_reward_distributed ?? 0);
+  } else {
+    // RPC가 허용하지 않는 상태(예: 재정산 등)인 경우 최소 메타데이터만 안전 업데이트 (is_active 유지)
+    const { error: gameUpdateError } = await supabaseAdmin
       .schema("prediction")
-      .from("predictions")
+      .from("prediction_games")
       .update({
-        is_active: false,
+        status: "SETTLED",
+        winning_option_id: winningOption,
+        settled_at: nowIso,
+        actual_result: {
+          correctOptionId: winningOption,
+          winningOption,
+        },
         updated_at: nowIso,
       })
-      .eq("prediction_id", pred.prediction_id);
+      .eq("game_id", gameId);
 
-    settledCount++;
+    if (gameUpdateError) {
+      return NextResponse.json(
+        { success: false, error: gameUpdateError.message },
+        { status: 400 }
+      );
+    }
+
+    const { data: predictions, error: fetchError } = await supabaseAdmin
+      .schema("prediction")
+      .from("predictions")
+      .select("prediction_id, prediction_data")
+      .eq("game_id", gameId)
+      .eq("is_active", true);
+
+    if (fetchError) {
+      return NextResponse.json(
+        { success: false, error: fetchError.message },
+        { status: 400 }
+      );
+    }
+
+    for (const pred of predictions || []) {
+      const selectedOption = (
+        pred.prediction_data as { selectedOptionId?: string } | null
+      )?.selectedOptionId;
+      if (selectedOption === winningOption) {
+        winnerCount++;
+      }
+      settledCount++;
+    }
+  }
+
+  // 2. 참여자 Brier · Calibration · CAPM 학습 통계 및 통합 랭킹 동기화
+  try {
+    await predictionLearningStatsService.syncLearningStatsForGame(gameId);
+  } catch (statsError) {
+    void statsError;
   }
 
   return NextResponse.json({
@@ -178,6 +204,7 @@ async function handleManualSettle(
     message: `Successfully settled game with winning option '${winningOption}'`,
     settledCount,
     winnerCount,
+    totalRewardDistributed,
   });
 }
 

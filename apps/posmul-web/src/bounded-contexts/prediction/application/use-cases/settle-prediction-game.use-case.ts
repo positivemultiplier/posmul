@@ -22,6 +22,7 @@ import {
   publishEvent,
 } from "../../../../shared/events/domain-events";
 import { IPredictionGameRepository } from "../../domain/repositories/prediction-game.repository";
+import { predictionLearningStatsService } from "../services/prediction-learning-stats.service";
 
 /**
  * 예측 게임 정산 완료 이벤트
@@ -157,7 +158,14 @@ export class SettlePredictionGameUseCase {
         )
       );
 
-      // 6. 성공 응답 반환
+      // 6. 참여자 Brier · Calibration · CAPM 학습 통계 및 랭킹 동기화 (best-effort)
+      try {
+        await predictionLearningStatsService.syncLearningStatsForGame(request.gameId);
+      } catch (statsError) {
+        void statsError;
+      }
+
+      // 7. 성공 응답 반환
       return {
         success: true,
         data: {

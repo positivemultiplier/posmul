@@ -11,6 +11,7 @@ import type { PredictionGameId, UserId } from "@posmul/auth-economy-sdk";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 import { getSettlePredictionGameUseCase } from "../../di-container";
+import { predictionLearningStatsService } from "./prediction-learning-stats.service";
 import { IOracleProvider } from "../../domain/services/oracle/oracle.interface";
 import {
   GameResult,
@@ -195,6 +196,11 @@ export class SettlementOrchestratorService {
         rewardDistributed = Number(
           (rpcData as any).total_reward_distributed ?? 0
         );
+        try {
+          await predictionLearningStatsService.syncLearningStatsForGame(source.gameId);
+        } catch (statsError) {
+          void statsError;
+        }
       } else {
         return {
           success: false,

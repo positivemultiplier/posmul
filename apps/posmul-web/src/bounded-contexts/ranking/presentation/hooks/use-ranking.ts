@@ -26,6 +26,12 @@ export interface RankingEntry {
     donationPmc?: number;
     postsCount?: number;
     donationCount?: number;
+    brierScore?: number;
+    skillWeight?: number;
+    calibrationStatus?: string;
+    winRate?: number;
+    userBeta?: number;
+    settledCount?: number;
   };
   badge: string | null;
   isCurrentUser: boolean;

@@ -26,6 +26,12 @@ interface RankingEntry {
     donationPmc?: number;
     postsCount?: number;
     donationCount?: number;
+    brierScore?: number;
+    skillWeight?: number;
+    calibrationStatus?: string;
+    winRate?: number;
+    userBeta?: number;
+    settledCount?: number;
   };
   badge: string | null;
   isCurrentUser: boolean;
@@ -49,6 +55,12 @@ interface ScoreEntry {
   money_consume_pmc: number;
   cloud_consume_pmc: number;
   expect_pmc_earned: number;
+  expect_brier_score?: number | string | null;
+  expect_skill_weight?: number | string | null;
+  expect_calibration_status?: string | null;
+  expect_win_rate?: number | string | null;
+  expect_user_beta?: number | string | null;
+  expect_settled_count?: number | null;
   donation_total_pmc: number;
   donation_count: number;
 }
@@ -104,10 +116,23 @@ function getOverallBadge(score: number): string | null {
   return null;
 }
 
+// 배지 계산 - 예측 정밀도
+function getExpectBadge(entry: ScoreEntry): string | null {
+  const settled = Number(entry.expect_settled_count ?? 0);
+  const skillWeight = Number(entry.expect_skill_weight ?? 1.0);
+  const brierScore = Number(entry.expect_brier_score ?? 0.25);
+
+  if (settled >= 3 && skillWeight >= 1.2) return '🎯 초정밀 예측가';
+  if (settled >= 2 && brierScore <= 0.15) return '🔬 브라이어 우수';
+  if (settled >= 1) return '📊 예측 분석가';
+  return null;
+}
+
 // 배지 결정
-function getBadge(score: number, category: RankingCategory): string | null {
+function getBadge(score: number, category: RankingCategory, entry: ScoreEntry): string | null {
   if (category === 'donation') return getDonationBadge(score);
   if (category === 'forum') return getForumBadge(score);
+  if (category === 'expect') return getExpectBadge(entry);
   if (category === 'overall') return getOverallBadge(score);
   return null;
 }
@@ -122,7 +147,11 @@ function formatRankingEntry(
 ): RankingEntry {
   const profile = profileMap.get(entry.user_id);
   const score = getScoreByCategory(entry, category);
-  
+  const settledCount =
+    entry.expect_settled_count !== undefined && entry.expect_settled_count !== null
+      ? Number(entry.expect_settled_count)
+      : undefined;
+
   return {
     rank: index + 1,
     userId: entry.user_id,
@@ -139,8 +168,26 @@ function formatRankingEntry(
       donationPmc: entry.donation_total_pmc,
       postsCount: entry.forum_posts_count,
       donationCount: entry.donation_count,
+      brierScore:
+        entry.expect_brier_score !== undefined && entry.expect_brier_score !== null
+          ? Number(entry.expect_brier_score)
+          : undefined,
+      skillWeight:
+        entry.expect_skill_weight !== undefined && entry.expect_skill_weight !== null
+          ? Number(entry.expect_skill_weight)
+          : undefined,
+      calibrationStatus: entry.expect_calibration_status ?? undefined,
+      winRate:
+        entry.expect_win_rate !== undefined && entry.expect_win_rate !== null
+          ? Number(entry.expect_win_rate)
+          : undefined,
+      userBeta:
+        entry.expect_user_beta !== undefined && entry.expect_user_beta !== null
+          ? Number(entry.expect_user_beta)
+          : undefined,
+      settledCount,
     },
-    badge: getBadge(score, category),
+    badge: getBadge(score, category, entry),
     isCurrentUser: entry.user_id === currentUserId,
   };
 }

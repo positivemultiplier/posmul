@@ -7,13 +7,14 @@ on:
   workflow_dispatch:
     inputs:
       action:
-        description: '실행할 작업 (all, ingest_only, settle_only)'
+        description: '실행할 작업 (all, ingest_only, sync_only, settle_only)'
         required: true
         default: 'all'
         type: choice
         options:
           - all
           - ingest_only
+          - sync_only
           - settle_only
 
 jobs:
@@ -24,27 +25,27 @@ jobs:
       - name: Set Target Base URL
         id: config
         run: |
-          # Secrets에 APP_URL이 지정되어 있으면 사용, 없으면 기본 Vercel 배포 URL
+          # Secrets에 APP_URL이 지정되어 있으면 사용, 없으면 공식 프로덕션 도메인 사용
           BASE_URL="${{ secrets.APP_URL }}"
           if [ -z "$BASE_URL" ]; then
-            BASE_URL="https://posmul.vercel.app"
+            BASE_URL="https://posmul.com"
           fi
-          echo "BASE_URL=${BASE_URL}" >> $GITHUB_ENV
+          echo "BASE_URL=${BASE_URL%/}" >> $GITHUB_ENV
+          : > /tmp/cron_failed
+          : > /tmp/cron_results
 
-      - name: 1. 다채널 데이터 자동 수집 (Feed Ingest)
+      - name: 1. 다채널 피드 자동 수집 (Feed Ingest)
         if: ${{ github.event.inputs.action == 'all' || github.event.inputs.action == 'ingest_only' || github.event_name == 'schedule' }}
         run: |
-          echo "📡 다채널 피드 자동 수집 시작: ${BASE_URL}/api/cron/feed-ingest"
-          
-          AUTH_HEADER=""
+          URL="${BASE_URL}/api/cron/feed-ingest?category=all"
+          echo "📡 다채널 피드 자동 수집 시작: ${URL}"
+
+          CURL_ARGS=(-sS -w "\n%{http_code}" -X GET "${URL}" -H "Content-Type: application/json")
           if [ -n "${{ secrets.CRON_SECRET }}" ]; then
-            AUTH_HEADER="Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+            CURL_ARGS+=(-H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
           fi
 
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "${BASE_URL}/api/cron/feed-ingest?category=all" \
-            -H "${AUTH_HEADER}" \
-            -H "Content-Type: application/json" || echo "curl_error\n000")
-
+          RESPONSE=$(curl "${CURL_ARGS[@]}" || printf "curl_error\n000")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
 
@@ -53,24 +54,79 @@ jobs:
 
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
             echo "✅ 다채널 피드 수집 성공"
+            echo "- ✅ 피드 수집 (\`/api/cron/feed-ingest\`): HTTP ${HTTP_CODE}" >> /tmp/cron_results
           else
-            echo "⚠️ 수집 경고 (HTTP $HTTP_CODE)"
+            echo "❌ 피드 수집 실패 (HTTP $HTTP_CODE)"
+            echo "feed-ingest (HTTP $HTTP_CODE)" >> /tmp/cron_failed
+            echo "- ❌ 피드 수집 (\`/api/cron/feed-ingest\`): HTTP ${HTTP_CODE}" >> /tmp/cron_results
           fi
 
-      - name: 2. 만료 예측 게임 오라클 자동 정산 (Prediction Auto Settle)
+      - name: 2. 스케줄러 템플릿 구체화 동기화 (Scheduler Sync)
+        if: ${{ github.event.inputs.action == 'all' || github.event.inputs.action == 'sync_only' || github.event_name == 'schedule' }}
+        run: |
+          URL="${BASE_URL}/api/admin/scheduler/sync"
+          echo "🗓️ 스케줄러 템플릿 동기화 시작: ${URL}"
+
+          CURL_ARGS=(-sS -w "\n%{http_code}" -X POST "${URL}" -H "Content-Type: application/json" -d '{"materializeTemplates":true}')
+          if [ -n "${{ secrets.CRON_SECRET }}" ]; then
+            CURL_ARGS+=(-H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          fi
+
+          RESPONSE=$(curl "${CURL_ARGS[@]}" || printf "curl_error\n000")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "Response HTTP Code: $HTTP_CODE"
+          echo "Response Body: $BODY"
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ 스케줄러 동기화 성공"
+            echo "- ✅ 템플릿 동기화 (\`/api/admin/scheduler/sync\`): HTTP ${HTTP_CODE}" >> /tmp/cron_results
+          else
+            echo "❌ 스케줄러 동기화 실패 (HTTP $HTTP_CODE)"
+            echo "scheduler-sync (HTTP $HTTP_CODE)" >> /tmp/cron_failed
+            echo "- ❌ 템플릿 동기화 (\`/api/admin/scheduler/sync\`): HTTP ${HTTP_CODE}" >> /tmp/cron_results
+          fi
+
+      - name: 3. 활성 게임 예측 분포 스냅샷 (Trend Snapshot)
+        if: ${{ github.event.inputs.action == 'all' || github.event.inputs.action == 'sync_only' || github.event_name == 'schedule' }}
+        run: |
+          URL="${BASE_URL}/api/cron/trend-snapshot"
+          echo "📈 활성 게임 예측 분포 스냅샷 시작: ${URL}"
+
+          CURL_ARGS=(-sS -w "\n%{http_code}" -X GET "${URL}" -H "Content-Type: application/json")
+          if [ -n "${{ secrets.CRON_SECRET }}" ]; then
+            CURL_ARGS+=(-H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
+          fi
+
+          RESPONSE=$(curl "${CURL_ARGS[@]}" || printf "curl_error\n000")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+
+          echo "Response HTTP Code: $HTTP_CODE"
+          echo "Response Body: $BODY"
+
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ 트렌드 스냅샷 성공"
+            echo "- ✅ 트렌드 스냅샷 (\`/api/cron/trend-snapshot\`): HTTP ${HTTP_CODE}" >> /tmp/cron_results
+          else
+            echo "❌ 트렌드 스냅샷 실패 (HTTP $HTTP_CODE)"
+            echo "trend-snapshot (HTTP $HTTP_CODE)" >> /tmp/cron_failed
+            echo "- ❌ 트렌드 스냅샷 (\`/api/cron/trend-snapshot\`): HTTP ${HTTP_CODE}" >> /tmp/cron_results
+          fi
+
+      - name: 4. 만료 예측 게임 오라클 자동 정산 (Prediction Auto Settle)
         if: ${{ github.event.inputs.action == 'all' || github.event.inputs.action == 'settle_only' || github.event_name == 'schedule' }}
         run: |
-          echo "⚖️ 만료 예측 게임 자동 정산 시작: ${BASE_URL}/api/cron/prediction-settle"
-          
-          AUTH_HEADER=""
+          URL="${BASE_URL}/api/cron/prediction-settle"
+          echo "⚖️ 만료 예측 게임 자동 정산 시작: ${URL}"
+
+          CURL_ARGS=(-sS -w "\n%{http_code}" -X GET "${URL}" -H "Content-Type: application/json")
           if [ -n "${{ secrets.CRON_SECRET }}" ]; then
-            AUTH_HEADER="Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+            CURL_ARGS+=(-H "Authorization: Bearer ${{ secrets.CRON_SECRET }}")
           fi
 
-          RESPONSE=$(curl -s -w "\n%{http_code}" -X GET "${BASE_URL}/api/cron/prediction-settle" \
-            -H "${AUTH_HEADER}" \
-            -H "Content-Type: application/json" || echo "curl_error\n000")
-
+          RESPONSE=$(curl "${CURL_ARGS[@]}" || printf "curl_error\n000")
           HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
           BODY=$(echo "$RESPONSE" | sed '$d')
 
@@ -79,14 +135,28 @@ jobs:
 
           if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
             echo "✅ 자동 정산 성공"
+            echo "- ✅ 자동 정산 (\`/api/cron/prediction-settle\`): HTTP ${HTTP_CODE}" >> /tmp/cron_results
           else
-            echo "⚠️ 정산 경고 (HTTP $HTTP_CODE)"
+            echo "❌ 자동 정산 실패 (HTTP $HTTP_CODE)"
+            echo "prediction-settle (HTTP $HTTP_CODE)" >> /tmp/cron_failed
+            echo "- ❌ 자동 정산 (\`/api/cron/prediction-settle\`): HTTP ${HTTP_CODE}" >> /tmp/cron_results
           fi
 
-      - name: 3. 실행 요약 리포트 (Job Summary)
+      - name: 5. 실행 요약 리포트 및 상태 검증 (Job Summary)
+        if: always()
         run: |
-          echo "### 🚀 PosMul 무인 스케줄러 실행 완료" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 PosMul 무인 스케줄러 실행 결과" >> $GITHUB_STEP_SUMMARY
           echo "- **타겟 주소**: \`${BASE_URL}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **트리거 유형**: \`${{ github.event_name }}\`" >> $GITHUB_STEP_SUMMARY
           echo "- **실행 시간**: $(date -u)" >> $GITHUB_STEP_SUMMARY
-          echo "- **포함 작업**: 피드 수집, 오라클 의안 자동 정산" >> $GITHUB_STEP_SUMMARY
+          if [ -s /tmp/cron_results ]; then
+            cat /tmp/cron_results >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -s /tmp/cron_failed ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**실패한 작업**:" >> $GITHUB_STEP_SUMMARY
+            cat /tmp/cron_failed >> $GITHUB_STEP_SUMMARY
+            echo "::error::Cron scheduler had failures: $(tr '\n' ', ' < /tmp/cron_failed)"
+            exit 1
+          fi

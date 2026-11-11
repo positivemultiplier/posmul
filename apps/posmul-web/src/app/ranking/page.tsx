@@ -19,6 +19,8 @@ import {
   ArrowUpRight,
   MapPin,
   Briefcase,
+  Target,
+  Activity,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
@@ -288,6 +290,41 @@ function RankingCard({
                     포럼 {entry.details.forumPmp.toLocaleString()} PMP
                   </span>
                 )}
+                {entry.details.settledCount !== undefined && entry.details.settledCount > 0 && (
+                  <>
+                    {entry.details.brierScore !== undefined && (
+                      <span
+                        className="px-2 py-0.5 rounded-md bg-indigo-950/50 text-indigo-300 border border-indigo-800/40 flex items-center gap-1"
+                        title="Brier Score (0에 가까울수록 높은 예측 정밀도)"
+                      >
+                        <Target className="w-2.5 h-2.5 text-indigo-400" />
+                        Brier {entry.details.brierScore.toFixed(3)}
+                      </span>
+                    )}
+                    {entry.details.skillWeight !== undefined && (
+                      <span
+                        className="px-2 py-0.5 rounded-md bg-cyan-950/50 text-cyan-300 border border-cyan-800/40 flex items-center gap-1"
+                        title="베이지안 집단지성 숙련 가중치"
+                      >
+                        <Activity className="w-2.5 h-2.5 text-cyan-400" />
+                        가중치 {entry.details.skillWeight.toFixed(2)}x
+                      </span>
+                    )}
+                    {entry.details.winRate !== undefined && (
+                      <span className="px-2 py-0.5 rounded-md bg-amber-950/40 text-amber-300 border border-amber-800/30">
+                        적중 {Math.round(entry.details.winRate * 100)}% ({entry.details.settledCount}건)
+                      </span>
+                    )}
+                    {entry.details.userBeta !== undefined && (
+                      <span
+                        className="px-2 py-0.5 rounded-md bg-slate-800/80 text-slate-300 border border-slate-700/60"
+                        title="CAPM 위험 성향 계수 (1.0 기준 시장 중립)"
+                      >
+                        CAPM β {entry.details.userBeta.toFixed(2)}
+                      </span>
+                    )}
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -344,6 +381,35 @@ function CurrentUserDashboardCard({
           </div>
         </div>
       </div>
+
+      {user.details.settledCount !== undefined && user.details.settledCount > 0 && (
+        <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+          <div className="rounded-lg bg-slate-900/80 border border-slate-800 px-3 py-2">
+            <div className="text-[10px] text-slate-400">정밀도 (Brier)</div>
+            <div className="font-bold text-indigo-300 mt-0.5">
+              {(user.details.brierScore ?? 0.25).toFixed(3)}
+            </div>
+          </div>
+          <div className="rounded-lg bg-slate-900/80 border border-slate-800 px-3 py-2">
+            <div className="text-[10px] text-slate-400">숙련 가중치</div>
+            <div className="font-bold text-cyan-300 mt-0.5">
+              {(user.details.skillWeight ?? 1.0).toFixed(2)}x
+            </div>
+          </div>
+          <div className="rounded-lg bg-slate-900/80 border border-slate-800 px-3 py-2">
+            <div className="text-[10px] text-slate-400">정산 적중률</div>
+            <div className="font-bold text-amber-300 mt-0.5">
+              {Math.round((user.details.winRate ?? 0) * 100)}% ({user.details.settledCount}건)
+            </div>
+          </div>
+          <div className="rounded-lg bg-slate-900/80 border border-slate-800 px-3 py-2">
+            <div className="text-[10px] text-slate-400">CAPM β</div>
+            <div className="font-bold text-slate-200 mt-0.5">
+              {(user.details.userBeta ?? 1.0).toFixed(2)}
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="mt-5 pt-4 border-t border-slate-800/80">
         <div className="flex justify-between text-xs font-medium mb-1.5">

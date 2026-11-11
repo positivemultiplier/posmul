@@ -1,4 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "@/lib/supabase/admin";
+
+export const dynamic = "force-dynamic";
+
+type HealthStatus = "healthy" | "unhealthy" | "unknown";
+
+async function checkDatabaseHealth(): Promise<HealthStatus> {
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return "unknown";
+  }
+
+  try {
+    const { error } = await supabaseAdmin
+      .schema("prediction")
+      .from("prediction_games")
+      .select("game_id", { head: true, count: "exact" })
+      .limit(1);
+
+    return error ? "unhealthy" : "healthy";
+  } catch {
+    return "unhealthy";
+  }
+}
 
 /**
  * GET /api/health
@@ -8,13 +31,19 @@ export async function GET(request: NextRequest) {
   void request;
   try {
     const startTime = Date.now();
+    const databaseHealth = await checkDatabaseHealth();
 
     // 기본 시스템 상태 확인
-    const systemHealth = {
+    const systemHealth: {
+      api: HealthStatus;
+      database: HealthStatus;
+      cache: HealthStatus;
+      events: HealthStatus;
+    } = {
       api: "healthy",
-      database: "unknown", // 실제로는 DB 연결 테스트
-      cache: "unknown", // 실제로는 캐시 연결 테스트
-      events: "unknown", // 실제로는 이벤트 시스템 테스트
+      database: databaseHealth,
+      cache: "unknown", // 향후 Redis 도입 시 연결 테스트 확장
+      events: "healthy",
     };
 
     // 응답 시간 계산

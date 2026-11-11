@@ -10,12 +10,17 @@ const VALID_PASSWORDS = [
 export function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
-  // 1. 게이트 화면, 게이트 검증 API, OAuth 인증 콜백, 정적 파일, robots.txt 등은 미들웨어 통과
+  // 1. 게이트 화면, 게이트 검증 API, OAuth 인증 콜백, M2M 크론/헬스체크 API, 정적 파일 등은 미들웨어 통과
+  // (각 보호 API 라우트는 자체적으로 requireAdminApi(..., { allowCronSecret: true })로 인증 검증)
   if (
     pathname.startsWith("/gate") ||
     pathname.startsWith("/api/gate") ||
     pathname.startsWith("/auth/callback") ||
     pathname.startsWith("/api/auth/") ||
+    pathname.startsWith("/api/cron/") ||
+    pathname.startsWith("/api/admin/scheduler/sync") ||
+    pathname.startsWith("/api/ingest") ||
+    pathname === "/api/health" ||
     pathname.startsWith("/_next") ||
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||

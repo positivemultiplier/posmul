@@ -672,34 +672,39 @@ export class SupabasePredictionRepository implements IPredictionRepository {
     toDate?: Date
   ): Promise<Result<PredictionPerformanceStats, RepositoryError>> {
     try {
-      // 미리 계산된 통계가 있는지 확인
-      const { data: statsData, error: statsError } = await this.supabase
-        .from("user_prediction_stats")
-        .select("*")
-        .eq("user_id", userId)
-        .single();
-
-      if (statsError && statsError.code !== "PGRST116") {
-        return failure(
-          RepositoryHelpers.createQueryFailedError(
-            "getUserPerformanceStats - precomputed",
-            statsError.message,
-            statsError
+      // 미리 계산된 영구 학습 통계 확인 (기간 필터가 없는 경우 우선 사용)
+      if (!fromDate && !toDate) {
+        const { data: statsData, error: statsError } = await this.supabase
+          .schema("prediction")
+          .from("user_prediction_stats")
+          .select(
+            "settled_count, win_count, win_rate, average_confidence, total_staked, total_reward_pmc, roi_percentage"
           )
-        );
-      }
+          .eq("user_id", userId)
+          .maybeSingle();
 
-      if (statsData) {
-        const stats: PredictionPerformanceStats = {
-          totalPredictions: statsData.total_predictions,
-          correctPredictions: statsData.correct_predictions,
-          accuracyRate: statsData.accuracy_rate,
-          averageConfidence: statsData.average_confidence,
-          totalStaked: statsData.total_staked,
-          totalRewards: statsData.total_rewards,
-          roi: statsData.roi,
-        };
-        return success(stats);
+        if (statsError && statsError.code !== "PGRST116") {
+          return failure(
+            RepositoryHelpers.createQueryFailedError(
+              "getUserPerformanceStats - precomputed",
+              statsError.message,
+              statsError
+            )
+          );
+        }
+
+        if (statsData) {
+          const stats: PredictionPerformanceStats = {
+            totalPredictions: Number(statsData.settled_count ?? 0),
+            correctPredictions: Number(statsData.win_count ?? 0),
+            accuracyRate: Number(statsData.win_rate ?? 0),
+            averageConfidence: Number(statsData.average_confidence ?? 0.5),
+            totalStaked: Number(statsData.total_staked ?? 0),
+            totalRewards: Number(statsData.total_reward_pmc ?? 0),
+            roi: Number(statsData.roi_percentage ?? 0),
+          };
+          return success(stats);
+        }
       }
 
       // 실시간 계산

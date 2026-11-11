@@ -27,6 +27,10 @@ import {
   type SettledPredictionRecord,
   type UserLearningProfileSummary,
 } from "../../../bounded-contexts/prediction/domain/services/collective-intelligence-engine";
+import {
+  extractWinningOptionId,
+  resolveCanonicalOptionId,
+} from "../../../bounded-contexts/prediction/application/services/prediction-learning-stats.service";
 import { analyzePredictionCapmAndEconomy } from "../../../bounded-contexts/prediction/domain/services/prediction-economic-model";
 
 function mapDifficultyToImportance(raw: unknown, optionCount: number): number {
@@ -78,8 +82,8 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     data: { user },
   } = await supabase.auth.getUser();
 
-  // 통계, 잔액, 유저 참여내역, 3단계 MoneyWave 부스트 풀, 옵션별 실제 참여 볼륨, 과거 정산 이력 병렬 조회
-  const [stats, balanceResult, userBets, boostedRows, betsRes, userHistoryRes] = await Promise.all([
+  // 통계, 잔액, 유저 참여내역, 3단계 MoneyWave 부스트 풀, 옵션별 실제 참여 볼륨, 영구 학습 프로필 병렬 조회
+  const [stats, balanceResult, userBets, boostedRows, betsRes, userStatsRes] = await Promise.all([
     getPredictionGameStats(dbGame.game_id),
     getUserBalance(),
     getUserBets(dbGame.game_id),
@@ -94,59 +98,100 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     user
       ? supabase
           .schema("prediction")
-          .from("predictions")
-          .select("game_id, confidence_level, prediction_data, created_at")
+          .from("user_prediction_stats")
+          .select(
+            "settled_count, win_rate, average_confidence, average_brier_score, average_log_loss, calibration_gap, skill_weight, calibration_status, recent_trend"
+          )
           .eq("user_id", user.id)
-          .eq("is_active", true)
-          .order("created_at", { ascending: false })
-          .limit(30)
+          .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
   ]);
 
-  // 로그인 유저의 과거 정산 이력 기반 Brier · Calibration 지속 학습 프로필 계산
+  // 로그인 유저의 Brier · Calibration 지속 학습 프로필 로드 (DB 영구 프로필 우선, 미적재 시 fallback 계산)
   let userLearningProfile: UserLearningProfileSummary | undefined;
-  const rawUserHistory = userHistoryRes.data || [];
-  if (rawUserHistory.length > 0) {
-    const historyGameIds = Array.from(
-      new Set(rawUserHistory.map((r) => r.game_id).filter(Boolean))
-    );
-    const { data: settledGames } = await supabase
+  const persistedStats = userStatsRes.data;
+  if (persistedStats && !userStatsRes.error) {
+    userLearningProfile = {
+      settledCount: Number(persistedStats.settled_count ?? 0),
+      winRate: Number(persistedStats.win_rate ?? 0),
+      averageConfidence: Number(persistedStats.average_confidence ?? 0.5),
+      averageBrierScore: Number(persistedStats.average_brier_score ?? 0.25),
+      averageLogLoss: Number(persistedStats.average_log_loss ?? 0.6931),
+      calibrationGap: Number(persistedStats.calibration_gap ?? 0),
+      skillWeight: Number(persistedStats.skill_weight ?? 1.0),
+      calibrationStatus:
+        (persistedStats.calibration_status as UserLearningProfileSummary["calibrationStatus"]) ||
+        "INSUFFICIENT_DATA",
+      recentTrend:
+        (persistedStats.recent_trend as UserLearningProfileSummary["recentTrend"]) ||
+        "STABLE",
+    };
+  } else if (user) {
+    const { data: rawUserHistory } = await supabase
       .schema("prediction")
-      .from("prediction_games")
-      .select("game_id, status, winning_option_id, game_options")
-      .in("game_id", historyGameIds)
-      .eq("status", "SETTLED");
+      .from("predictions")
+      .select("game_id, confidence_level, prediction_data, is_active, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(30);
 
-    if (settledGames && settledGames.length > 0) {
-      const settledMap = new Map(settledGames.map((sg) => [sg.game_id, sg]));
-      const settledRecords: SettledPredictionRecord[] = [];
-      for (const pred of rawUserHistory) {
-        const sg = settledMap.get(pred.game_id);
-        const winningOptionId = sg?.winning_option_id;
-        if (!sg || typeof winningOptionId !== "string" || !winningOptionId) continue;
-        const predData = pred.prediction_data as { selectedOptionId?: string } | null;
-        const selectedOptionId = predData?.selectedOptionId;
-        if (!selectedOptionId) continue;
+    const activeOrSettledCandidates = (rawUserHistory || []).filter((r) => {
+      const pData = r.prediction_data as { withdrawn?: boolean } | null;
+      return !pData?.withdrawn;
+    });
 
-        const rawConf = Number(pred.confidence_level);
-        const confidence = Number.isFinite(rawConf)
-          ? rawConf > 1
-            ? rawConf / 100
-            : rawConf
-          : 0.5;
-        const optCount = mapGameOptions(sg.game_options, sg.game_id).length;
+    if (activeOrSettledCandidates.length > 0) {
+      const historyGameIds = Array.from(
+        new Set(activeOrSettledCandidates.map((r) => r.game_id).filter(Boolean))
+      );
+      const { data: settledGames } = await supabase
+        .schema("prediction")
+        .from("prediction_games")
+        .select("game_id, status, winning_option_id, actual_result, settled_at, game_options")
+        .in("game_id", historyGameIds)
+        .eq("status", "SETTLED");
 
-        settledRecords.push({
-          selectedOptionId,
-          correctOptionId: winningOptionId,
-          confidence,
-          optionCount: Math.max(2, optCount),
-          createdAt: pred.created_at,
-        });
+      if (settledGames && settledGames.length > 0) {
+        const settledMap = new Map(settledGames.map((sg) => [sg.game_id, sg]));
+        const settledRecords: SettledPredictionRecord[] = [];
+        for (const pred of activeOrSettledCandidates) {
+          const sg = settledMap.get(pred.game_id);
+          if (!sg) continue;
+          const rawWinning = extractWinningOptionId({
+            game_id: sg.game_id,
+            status: sg.status,
+            game_options: sg.game_options,
+            winning_option_id: sg.winning_option_id,
+            actual_result: sg.actual_result as Record<string, unknown> | null,
+            settled_at: sg.settled_at,
+          });
+          const predData = pred.prediction_data as { selectedOptionId?: string } | null;
+          const rawSelected = predData?.selectedOptionId;
+          if (!rawSelected || !rawWinning) continue;
+
+          const selectedResolved = resolveCanonicalOptionId(rawSelected, sg.game_options);
+          const winningResolved = resolveCanonicalOptionId(rawWinning, sg.game_options);
+          if (!selectedResolved.canonicalId || !winningResolved.canonicalId) continue;
+
+          const rawConf = Number(pred.confidence_level);
+          const confidence = Number.isFinite(rawConf)
+            ? rawConf > 1
+              ? rawConf / 100
+              : rawConf
+            : 0.5;
+
+          settledRecords.push({
+            selectedOptionId: selectedResolved.canonicalId,
+            correctOptionId: winningResolved.canonicalId,
+            confidence,
+            optionCount: Math.max(selectedResolved.optionCount, winningResolved.optionCount),
+            createdAt: pred.created_at,
+          });
+        }
+        userLearningProfile = summarizeUserLearningProfile(settledRecords);
+      } else {
+        userLearningProfile = summarizeUserLearningProfile([]);
       }
-      userLearningProfile = summarizeUserLearningProfile(settledRecords);
-    } else {
-      userLearningProfile = summarizeUserLearningProfile([]);
     }
   }
 

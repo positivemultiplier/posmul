@@ -30,6 +30,7 @@ interface PredictionData {
   user_id: string;
   bet_amount: number | null;
   is_active: boolean;
+  prediction_data: Record<string, unknown> | null;
 }
 
 interface GameData {
@@ -49,7 +50,7 @@ async function validateWithdrawal(
   const { data: prediction, error: predictionError } = await supabase
     .schema("prediction")
     .from("predictions")
-    .select("prediction_id, game_id, user_id, bet_amount, is_active")
+    .select("prediction_id, game_id, user_id, bet_amount, is_active, prediction_data")
     .eq("prediction_id", predictionId)
     .single();
 
@@ -90,13 +91,25 @@ async function processWithdrawal(
   predictionId: string,
   userId: string,
   betAmount: number,
-  gameTitle: string
+  gameTitle: string,
+  existingPredictionData: Record<string, unknown> | null
 ): Promise<{ success: boolean; error?: ErrorResponse }> {
-  // 예측 비활성화
+  const nowIso = new Date().toISOString();
+  const nextPredictionData = {
+    ...(existingPredictionData || {}),
+    withdrawn: true,
+    withdrawnAt: nowIso,
+  };
+
+  // 예측 비활성화 및 철회 플래그 기록 (정산 데이터와 구분)
   const { error: updateError } = await supabase
     .schema("prediction")
     .from("predictions")
-    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .update({
+      is_active: false,
+      prediction_data: nextPredictionData,
+      updated_at: nowIso,
+    })
     .eq("prediction_id", predictionId);
 
   if (updateError) {
@@ -116,7 +129,11 @@ async function processWithdrawal(
       await supabase
         .schema("prediction")
         .from("predictions")
-        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .update({
+          is_active: true,
+          prediction_data: existingPredictionData || {},
+          updated_at: new Date().toISOString(),
+        })
         .eq("prediction_id", predictionId);
 
       return { success: false, error: { code: "REFUND_FAILED", message: "PMP 환불에 실패했습니다.", status: 500 } };
@@ -155,7 +172,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const betAmount = prediction.bet_amount || 0;
 
     // 철회 처리
-    const withdrawResult = await processWithdrawal(supabase, predictionId, user.id, betAmount, game.title);
+    const withdrawResult = await processWithdrawal(
+      supabase,
+      predictionId,
+      user.id,
+      betAmount,
+      game.title,
+      prediction.prediction_data
+    );
     if (!withdrawResult.success && withdrawResult.error) {
       return NextResponse.json(
         { success: false, error: { code: withdrawResult.error.code, message: withdrawResult.error.message } },
