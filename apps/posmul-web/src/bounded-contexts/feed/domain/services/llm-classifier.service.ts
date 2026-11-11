@@ -16,6 +16,8 @@ export interface DraftResult {
   keywords: string[];
   predictionDraft?: {
     category?: string;
+    subcategory?: string;
+    predictionType?: "BINARY" | "WIN_DRAW_LOSE" | "RANKING";
     resolutionCriteria: string;
     options: string[];
     /** 이벤트 발생/발표 1시간 전 마감까지 남은 시간(시간 단위, 예: 일간=24, 주말=72, 주간=168) */

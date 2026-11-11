@@ -148,3 +148,34 @@ GitHub Actions CI 파이프라인의 성공을 보장하기 위한 개발 규칙
 
 
 
+
+---
+
+## 7. 예측 카드 · 스포트라이트 3대 분류 표준 & 시스템 파이프라인 (v2.2)
+
+### 7.1 메인 피드 카드 3대 분류 UI (`PredictionGameCard.tsx`)
+메인 피드 카드(`h-[254px]`)는 `PredictionType`에 따라 우측 상단 게이지와 3행 선택지 영역을 엄격히 분기합니다.
+1. **`BINARY` (양자택일 / 2개 선택지)**
+   - **우측 상단 게이지**: 반원형 아크 게이지 (`renderArcGauge`). 옵션 1의 키워드 기반 맥락형 우세 라벨 (`resolveBinaryArcLabel` — 상승/하락/유지/인상/인하/찬성/반대 우세) 표시.
+   - **3행 선택지**: 2분할 캡슐 (`에메랄드` vs `로즈`).
+2. **`WIN_DRAW_LOSE` (승무패 · 3지선다)**
+   - **우측 상단 게이지**: 3색 도넛 세그먼트 게이지 (`renderWdlGauge`) — 1번(`#10b981` 에메랄드), 2번(`#f59e0b` 앰버), 3번(`#f43f5e` 로즈) 통일. 스포츠 승/무/패 vs 일반 3지선다(`인상/동결/인하` 등)에 따른 동적 라벨(`resolveWdlArcLabel`).
+   - **3행 선택지**: 3분할 둥근 캡슐 (`에메랄드 | 앰버 | 로즈`).
+3. **`RANKING` (순위 · 다자 경쟁 / 4개 이상 선택지)**
+   - **옵션 정렬**: 카드와 스포트라이트 모두 `currentOdds` 내림차순 정렬(`rankingSortedOptions`) 적용.
+   - **우측 상단 게이지**: 1위 선두 링 게이지 (`renderMultiGauge`) — 45% 이상 시 `1위 독주`, 미만 시 `TOP N`.
+   - **3행 선택지**: Top 2 순위 카드(`1위` 앰버 배지 + 미니 점유율 바 / `2위` 스카이 배지 + 미니 점유율 바) + 하단 3위 요약 및 `+{N-2}명 경쟁` 표시.
+
+### 7.2 대표 스포트라이트 Hero 카드 (`ClientPredictionGamesGrid.tsx`)
+- 옵션 확률 계산 시 `100 - pct1`의 2분법 가정 금지. `isBinary`, `isWdl`, `isRanking`을 구분하여 각 옵션의 실제 `currentOdds`로 `pcts` 산출.
+- 우측 SVG 시계열 차트(`buildSpotlightChartPaths`)는 Binary(2선), WDL(3선: 에메랄드/앰버/로즈), Ranking(상위 3선 + `1위/2위/3위` 배지 및 `외 +N개 후보` 표기)을 동일 색상 매핑으로 렌더링.
+
+### 7.3 시스템적 DB 연동 게임 생성 파이프라인 (Zero-Hardcoding)
+모든 `ACTIVE` 예측 게임은 수동 하드코딩이 아닌 아래 두 시스템 엔진을 통해 `prediction.prediction_games` + `prediction.settlement_sources` + `economy.money_wave_hourly_game_pools`에 일관 생성됩니다.
+1. **뉴스/의안 피드 AI 자동 생성 (`CreatePredictionDraftUseCase` + `GeminiClassifierAdapter`)**:
+   - `BINARY`, `WIN_DRAW_LOSE`, `RANKING` 3가지 분류와 `ECONOMY` 포함한 6대 DB 카테고리(`ECONOMY | INVEST | SPORTS | ENTERTAINMENT | POLITICS | USER_PROPOSED`)를 모두 지원.
+   - 생성 시 `prediction_type`, `subcategory`, `difficulty`, `settlement_type`, `data_source`, `settlement_sources`를 함께 기록하고 `economy.compute_prediction_hourly_game_pools` RPC로 상금풀 즉시 배정.
+2. **정기 오라클 템플릿 스케줄러 (`MasterGameSchedulerService` + `GameSchedulingService`)**:
+   - `KST_OFFSET_MINUTES` 기반 타임존 독립 UTC epoch 계산(`getKstNowParts`, `kstWallTimeToUtc`) 및 진행 중 회차 우선 선택(`getNextWeeklySchedule`, `getNextMonthlySchedule`).
+   - 전 카테고리(한국은행 ECOS, 통계청 KOSIS, 금감원 OpenDART, 영진위 KOBIS, K-Content, 글로벌 증시/코인, 스포츠 EPL/LCK/K리그, 정치·입법, 소비·트렌드 랭킹)에 걸쳐 `BINARY` · `WIN_DRAW_LOSE` · `RANKING` 템플릿 보유.
+   - `/api/admin/scheduler/sync` (`materializeTemplates: true`) 또는 크론 실행 시 오라클 등록 및 `economy.compute_prediction_hourly_game_pools` 상금풀 산정 자동 수행.

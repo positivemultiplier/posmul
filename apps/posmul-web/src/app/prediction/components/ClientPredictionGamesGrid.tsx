@@ -103,41 +103,23 @@ const matchesCategory = (gameCategory: string | undefined, chipId: string): bool
 };
 
 /**
- * 스포트라이트 마켓용 결정론적 시계열 확률 곡선 SVG 좌표 생성
+ * 스포트라이트 마켓용 결정론적 시계열 다중 확률 곡선 SVG 좌표 생성 (Binary / WDL / Ranking 공용)
  */
-function buildSpotlightChartPaths(gameId: string, leadPct: number) {
+function buildSpotlightChartPaths(
+  gameId: string,
+  targetPcts: number[],
+  colors: string[]
+) {
   const seed =
     gameId.charCodeAt(0) * 13 +
     gameId.charCodeAt(Math.floor(gameId.length / 2)) * 7 +
     gameId.charCodeAt(gameId.length - 1) * 19;
 
-  // 차트 높이 180px (0% = 165, 80% = 20)
+  // 차트 높이 180px (0% = 165, 90% = 20)
   const pctToY = (pct: number) => {
     const clamped = Math.max(2, Math.min(88, pct));
     return Math.round(165 - (clamped / 90) * 145);
   };
-
-  const p0 = Math.max(30, Math.min(70, leadPct - 14 + (seed % 15)));
-  const p1 = Math.max(25, Math.min(75, p0 + ((seed % 19) - 8)));
-  const p2 = Math.max(28, Math.min(78, p1 - 6 + ((seed * 3) % 17)));
-  const p3 = Math.max(32, Math.min(82, Math.round((p2 + leadPct) / 2) + ((seed % 9) - 4)));
-  const p4 = leadPct;
-
-  const pts1 = [
-    [0, pctToY(p0)],
-    [95, pctToY(p0 + 3)],
-    [140, pctToY(p1)],
-    [225, pctToY(p1 - 4)],
-    [290, pctToY(p2)],
-    [365, pctToY(p3)],
-    [430, pctToY(p3 + 2)],
-    [485, pctToY(p4)],
-  ];
-
-  const pts2 = pts1.map(([x, y]) => {
-    const invPct = Math.max(5, 100 - Math.round(((165 - y) / 145) * 90));
-    return [x, pctToY(invPct)];
-  });
 
   const toStepCurve = (pts: number[][]) =>
     pts
@@ -149,12 +131,35 @@ function buildSpotlightChartPaths(gameId: string, leadPct: number) {
       })
       .join(" ");
 
-  return {
-    line1: toStepCurve(pts1),
-    line2: toStepCurve(pts2),
-    last1: pts1[pts1.length - 1],
-    last2: pts2[pts2.length - 1],
-  };
+  const xCoords = [0, 95, 140, 225, 290, 365, 430, 485];
+
+  const series = targetPcts.map((targetPct, sIdx) => {
+    const localSeed = seed + sIdx * 29;
+    const baseStart = Math.max(8, Math.min(82, targetPct + ((localSeed % 17) - 8)));
+    const p1 = Math.max(6, Math.min(84, baseStart + (((localSeed * 3) % 13) - 6)));
+    const p2 = Math.max(6, Math.min(84, Math.round((p1 + targetPct) / 2) + ((localSeed % 11) - 5)));
+    const p3 = Math.max(6, Math.min(85, Math.round((p2 + targetPct * 2) / 3) + ((localSeed % 7) - 3)));
+
+    const seriesPcts = [
+      baseStart,
+      Math.max(5, Math.min(85, baseStart + (sIdx % 2 === 0 ? 3 : -2))),
+      p1,
+      Math.max(5, Math.min(85, p1 + (sIdx % 2 === 0 ? -3 : 3))),
+      p2,
+      p3,
+      Math.max(5, Math.min(85, Math.round((p3 + targetPct) / 2))),
+      targetPct,
+    ];
+
+    const pts = xCoords.map((x, idx) => [x, pctToY(seriesPcts[idx])]);
+    return {
+      path: toStepCurve(pts),
+      last: pts[pts.length - 1],
+      color: colors[sIdx] || "#38bdf8",
+    };
+  });
+
+  return series;
 }
 
 export function ClientPredictionGamesGrid({
@@ -284,19 +289,48 @@ export function ClientPredictionGamesGrid({
                 featuredGame.subcategory
               );
               const { prefixTag, cleanTitle } = splitTitlePrefix(featuredGame.title);
-              const opt1 = featuredGame.options[0] ?? {
-                id: "yes",
-                text: "예 (Yes)",
-                currentOdds: 0.68,
-              };
-              const opt2 = featuredGame.options[1] ?? {
-                id: "no",
-                text: "아니오 (No)",
-                currentOdds: 0.32,
-              };
-              const pct1 = Math.round((opt1.currentOdds || 0.68) * 100);
-              const pct2 = Math.max(1, 100 - pct1);
-              const chart = buildSpotlightChartPaths(featuredGame.id, pct1);
+              const isBinary =
+                featuredGame.predictionType === PredictionType.BINARY ||
+                featuredGame.options.length <= 2;
+              const isWdl =
+                featuredGame.predictionType === PredictionType.WIN_DRAW_LOSE &&
+                featuredGame.options.length === 3;
+              const isRanking = !isBinary && !isWdl;
+
+              const rawOptions =
+                featuredGame.options.length > 0
+                  ? featuredGame.options
+                  : [
+                      { id: "yes", text: "예 (Yes)", currentOdds: 0.68 },
+                      { id: "no", text: "아니오 (No)", currentOdds: 0.32 },
+                    ];
+
+              const orderedOptions = isRanking
+                ? [...rawOptions].sort((a, b) => (b.currentOdds || 0) - (a.currentOdds || 0))
+                : rawOptions;
+
+              const topOptions = orderedOptions.slice(0, isBinary ? 2 : 3);
+              const seriesColors = isWdl
+                ? ["#10b981", "#f59e0b", "#f43f5e"]
+                : isRanking
+                ? ["#38bdf8", "#f59e0b", "#a78bfa"]
+                : ["#38bdf8", "#f59e0b"];
+
+              const pcts = topOptions.map((opt, idx) => {
+                if (typeof opt.currentOdds === "number" && opt.currentOdds > 0) {
+                  return Math.round(opt.currentOdds * 100);
+                }
+                if (isBinary && idx === 1 && topOptions[0]) {
+                  return Math.max(1, 100 - Math.round((topOptions[0].currentOdds || 0.6) * 100));
+                }
+                return Math.round(100 / Math.max(2, orderedOptions.length));
+              });
+
+              const chartSeries = buildSpotlightChartPaths(
+                featuredGame.id,
+                pcts,
+                seriesColors
+              );
               const targetHref = featuredGame.href ?? `${basePath}/${featuredGame.slug}`;
               const descFirstLine =
                 featuredGame.description.split("\n")[0] ||
@@ -352,21 +386,26 @@ export function ClientPredictionGamesGrid({
                     {/* 좌측 5 cols: 옵션 리스트 & 뉴스/데이터 학습 브리핑 */}
                     <div className="md:col-span-5 flex flex-col justify-between space-y-4">
                       <div className="space-y-2.5">
-                        {featuredGame.options.slice(0, 3).map((opt, idx) => {
-                          const pct =
-                            idx === 0
-                              ? pct1
-                              : idx === 1
-                              ? pct2
-                              : Math.round((opt.currentOdds || 0.2) * 100);
+                        {topOptions.map((opt, idx) => {
+                          const pct = pcts[idx] ?? 0;
+                          const colorDot = seriesColors[idx] || "#38bdf8";
                           return (
                             <Link
                               key={opt.id || idx}
                               href={targetHref}
                               className="flex items-center justify-between py-1.5 border-b border-white/[0.06] hover:border-sky-400/40 transition-colors group/opt"
                             >
-                              <span className="text-sm font-medium text-slate-200 group-hover/opt:text-white truncate pr-2">
-                                {opt.text}
+                              <span className="flex items-center gap-2 text-sm font-medium text-slate-200 group-hover/opt:text-white truncate pr-2">
+                                <span
+                                  className="w-2 h-2 rounded-full shrink-0"
+                                  style={{ backgroundColor: colorDot }}
+                                />
+                                {isRanking && (
+                                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-white/[0.06] text-sky-300 shrink-0">
+                                    {idx + 1}위
+                                  </span>
+                                )}
+                                <span className="truncate">{opt.text}</span>
                               </span>
                               <span className="text-xl font-black text-white tracking-tight shrink-0">
                                 {pct}%
@@ -374,6 +413,11 @@ export function ClientPredictionGamesGrid({
                             </Link>
                           );
                         })}
+                        {isRanking && orderedOptions.length > 3 && (
+                          <div className="text-[11px] font-semibold text-slate-400 text-right pt-0.5">
+                            외 +{orderedOptions.length - 3}개 후보 경쟁 중
+                          </div>
+                        )}
                       </div>
 
                       {/* PosMul 학습 브리핑 박스 (레퍼런스의 Reuters 뉴스 맥락 영역) */}
@@ -410,17 +454,24 @@ export function ClientPredictionGamesGrid({
                     {/* 우측 7 cols: 실시간 컨센서스 확률 추이 라인 차트 */}
                     <div className="md:col-span-7 flex flex-col justify-between bg-[#0d1018] rounded-xl p-4 border border-white/[0.05]">
                       {/* 상단 차트 범례 */}
-                      <div className="flex flex-wrap items-center gap-4 text-xs mb-2">
-                        <span className="inline-flex items-center gap-1.5 font-semibold text-slate-200">
-                          <span className="w-2 h-2 rounded-full bg-sky-400" />
-                          <span className="truncate max-w-[140px]">{opt1.text}</span>
-                          <strong className="text-white">{pct1}%</strong>
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 font-semibold text-slate-400">
-                          <span className="w-2 h-2 rounded-full bg-amber-400" />
-                          <span className="truncate max-w-[140px]">{opt2.text}</span>
-                          <strong className="text-slate-200">{pct2}%</strong>
-                        </span>
+                      <div className="flex flex-wrap items-center gap-3 text-xs mb-2">
+                        {topOptions.map((opt, idx) => (
+                          <span
+                            key={opt.id || idx}
+                            className={`inline-flex items-center gap-1.5 font-semibold ${
+                              idx === 0 ? "text-slate-100" : "text-slate-400"
+                            }`}
+                          >
+                            <span
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: seriesColors[idx] || "#38bdf8" }}
+                            />
+                            <span className="truncate max-w-[125px]">{opt.text}</span>
+                            <strong className={idx === 0 ? "text-white" : "text-slate-200"}>
+                              {pcts[idx] ?? 0}%
+                            </strong>
+                          </span>
+                        ))}
                       </div>
 
                       {/* SVG 시계열 차트 */}
@@ -460,41 +511,36 @@ export function ClientPredictionGamesGrid({
                             </g>
                           ))}
 
-                          {/* 2번 선택지 라인 (Amber) */}
-                          <path
-                            d={chart.line2}
-                            fill="none"
-                            stroke="#f59e0b"
-                            strokeWidth="2"
-                            strokeOpacity="0.8"
-                          />
-                          <circle
-                            cx={chart.last2[0]}
-                            cy={chart.last2[1]}
-                            r="4"
-                            fill="#f59e0b"
-                          />
-
-                          {/* 1번 선택지 메인 라인 (Sky Blue) */}
-                          <path
-                            d={chart.line1}
-                            fill="none"
-                            stroke="#38bdf8"
-                            strokeWidth="2.5"
-                          />
-                          <circle
-                            cx={chart.last1[0]}
-                            cy={chart.last1[1]}
-                            r="9"
-                            fill="#38bdf8"
-                            fillOpacity="0.2"
-                          />
-                          <circle
-                            cx={chart.last1[0]}
-                            cy={chart.last1[1]}
-                            r="4.5"
-                            fill="#38bdf8"
-                          />
+                          {/* 하위 옵션 라인부터 순차 렌더링 후 1번 메인 라인 최상단 */}
+                          {[...chartSeries]
+                            .map((s, originalIdx) => ({ ...s, originalIdx }))
+                            .reverse()
+                            .map((s) => (
+                              <g key={s.originalIdx}>
+                                <path
+                                  d={s.path}
+                                  fill="none"
+                                  stroke={s.color}
+                                  strokeWidth={s.originalIdx === 0 ? "2.5" : "2"}
+                                  strokeOpacity={s.originalIdx === 0 ? "1" : "0.82"}
+                                />
+                                {s.originalIdx === 0 && (
+                                  <circle
+                                    cx={s.last[0]}
+                                    cy={s.last[1]}
+                                    r="9"
+                                    fill={s.color}
+                                    fillOpacity="0.2"
+                                  />
+                                )}
+                                <circle
+                                  cx={s.last[0]}
+                                  cy={s.last[1]}
+                                  r={s.originalIdx === 0 ? "4.5" : "3.8"}
+                                  fill={s.color}
+                                />
+                              </g>
+                            ))}
                         </svg>
                       </div>
 

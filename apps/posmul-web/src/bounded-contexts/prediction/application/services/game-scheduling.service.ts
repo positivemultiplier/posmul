@@ -41,7 +41,7 @@ function resolveTemplateSubcategory(template: ScheduledGameTemplate): string | n
   switch (template.sourceType) {
     case "ecos":
     case "kosis":
-      return "indicators";
+      return template.category === "technology" ? "retail" : "indicators";
     case "dart":
     case "fmp":
       return "earnings";
@@ -49,6 +49,8 @@ function resolveTemplateSubcategory(template: ScheduledGameTemplate): string | n
       return "stocks";
     case "coingecko":
       return "crypto";
+    case "football_data":
+      return "soccer";
     case "kobis":
       return "movie";
     case "kcontent": {
@@ -58,8 +60,16 @@ function resolveTemplateSubcategory(template: ScheduledGameTemplate): string | n
       if (sub.startsWith("music")) return "music";
       return null;
     }
-    default:
+    default: {
+      if (template.category === "sports") {
+        if (template.id.includes("kbo") || template.id.includes("baseball")) return "baseball";
+        if (template.id.includes("lck") || template.id.includes("esports")) return "esports";
+        return "soccer";
+      }
+      if (template.category === "politics") return "legislation";
+      if (template.category === "technology") return "retail";
       return null;
+    }
   }
 }
 
@@ -146,6 +156,9 @@ export class GameSchedulingService {
     this.registerDartTemplates(systemUserId);
     this.registerKContentTemplates(systemUserId);
     this.registerGlobalMarketTemplates(systemUserId);
+    this.registerSportsTemplates(systemUserId);
+    this.registerPoliticsAndInvestTemplates(systemUserId);
+    this.registerRankingTemplates(systemUserId);
   }
 
   /**
@@ -651,75 +664,415 @@ export class GameSchedulingService {
     });
   }
 
-  private getNextDailyUSMarketOpen(): Date {
-    const now = new Date();
-    const result = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      20,
-      0,
-      0
-    );
-    if (result <= now) {
-      result.setDate(result.getDate() + 1);
-    }
-    return result;
+  /**
+   * 6. 스포츠 승무패(WIN_DRAW_LOSE) 및 리그 템플릿
+   */
+  private registerSportsTemplates(systemUserId: UserId): void {
+    // 6-1. EPL 주간 빅매치 승무패 (WIN_DRAW_LOSE 3지선다)
+    this.templates.push({
+      id: "sports-epl-bigmatch-wdl",
+      title: "[프리미어리그] 이번 주 EPL 빅매치 맞대결 최종 승무패 결과는?",
+      description:
+        "잉글랜드 프리미어리그(EPL) 이번 라운드 최고 빅매치의 정규시간 90분 승무패 결과를 예측하세요.\n📅 마감: 주말 경기 킥오프 1시간 전 | ⚽ 정산: Football-Data 공식 경기 결과 API",
+      predictionType: PredictionType.WIN_DRAW_LOSE,
+      options: [
+        { id: "win", label: "홈팀 승리 (Win)", description: "정규시간 홈팀 승리" },
+        { id: "draw", label: "무승부 (Draw)", description: "90분 정규시간 무승부" },
+        { id: "lose", label: "원정팀 승리 (Lose)", description: "정규시간 원정팀 승리" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(2, 10, 96),
+      duration: 96,
+      settlementDelay: 3,
+      minimumStake: 1000 as PmpAmount,
+      maximumStake: 100000 as PmpAmount,
+      maxParticipants: 4000,
+      creatorId: systemUserId,
+      category: "sports",
+      importance: "critical",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "football_data",
+      sourceConfig: {
+        competition: "PL",
+        market: "1X2",
+        optionMapping: { HOME_TEAM: "win", DRAW: "draw", AWAY_TEAM: "lose" },
+      },
+    });
+
+    // 6-2. e스포츠 LCK 빅매치 세트 스코어 3지선다 (WIN_DRAW_LOSE)
+    this.templates.push({
+      id: "sports-lck-bigmatch-wdl",
+      title: "[LCK·e스포츠] 이번 주 LCK 빅매치 상위 시드팀 세트별 승리 양상은?",
+      description:
+        "LoL 챔피언스 코리아(LCK) 주요 빅매치에서 탑 시드 팀이 2:0 완승, 2:1 신승, 또는 업셋 패배 중 어떤 결과를 만들지 예측하세요.\n📅 마감: 경기 시작 1시간 전 | 🎮 정산: LCK 공식 매치 데이터",
+      predictionType: PredictionType.WIN_DRAW_LOSE,
+      options: [
+        { id: "2_0", label: "상위 시드 2:0 완승", description: "압도적 세트 스윕" },
+        { id: "2_1", label: "2:1 풀세트 접전 승", description: "풀세트 혈투 끝 승리" },
+        { id: "upset", label: "언더독 업셋 승리", description: "하위 시드팀 이변 승리" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(3, 12, 72),
+      duration: 72,
+      settlementDelay: 4,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 80000 as PmpAmount,
+      maxParticipants: 3500,
+      creatorId: systemUserId,
+      category: "sports",
+      importance: "high",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "manual",
+    });
+
+    // 6-3. 국내 프로야구·축구 주간 다득점 돌파 (BINARY)
+    this.templates.push({
+      id: "sports-k-league-scoring-binary",
+      title: "[K리그·프로스포츠] 이번 주말 주요 빅매치 양팀 합산 3득점 이상 다득점 나올까?",
+      description:
+        "이번 주말 펼쳐지는 K리그·국내 프로스포츠 대표 라운드 매치에서 공격적인 다득점 경기가 나올지 예측하세요.\n📅 마감: 토요일 13:00 | 🏟️ 정산: 경기 종료 후 공식 스코어보드",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "yes", label: "3득점 이상 오버 (Yes)", description: "합산 득점 ≥ 3" },
+        { id: "no", label: "2득점 이하 언더 (No)", description: "합산 득점 ≤ 2" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(3, 10, 75),
+      duration: 75,
+      settlementDelay: 3,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 2500,
+      creatorId: systemUserId,
+      category: "sports",
+      importance: "medium",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "manual",
+    });
   }
 
   /**
-   * 다음 주간 특정 요일(0:일 ~ 6:토) 및 시각 계산
+   * 7. 정치·입법(POLITICS) 및 소비·투자 트렌드(INVEST) 템플릿
    */
-  private getNextWeeklySchedule(dayOfWeek: number, hour: number): Date {
-    const now = new Date();
-    const result = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      hour,
-      0,
-      0
-    );
-    const diff = (dayOfWeek + 7 - result.getDay()) % 7;
-    result.setDate(result.getDate() + diff);
-    if (result <= now) {
-      result.setDate(result.getDate() + 7);
-    }
-    return result;
+  private registerPoliticsAndInvestTemplates(systemUserId: UserId): void {
+    // 7-1. 국회 본회의 주요 민생·경제 법안 통과 여부 (BINARY)
+    this.templates.push({
+      id: "politics-assembly-bill-binary",
+      title: "[국회 본회의] 이번 주 상정된 핵심 민생·경제 법안 원안 가결 통과될까?",
+      description:
+        "국회 본회의 표결에 부쳐지는 주요 경제·민생 지원 법안이 재석의원 과반 찬성으로 가결될지 예측하세요.\n📅 마감: 본회의 개회 1시간 전 | 🏛️ 정산: 국회 열린국회정보 공식 의결 공시",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "yes", label: "원안·수정안 가결 (Yes)", description: "본회의 과반 찬성 통과" },
+        { id: "no", label: "보류·부결 (No)", description: "상정 보류 또는 부결" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(1, 9, 102),
+      duration: 102,
+      settlementDelay: 6,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 3000,
+      creatorId: systemUserId,
+      category: "politics",
+      importance: "high",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "manual",
+    });
+
+    // 7-2. 주간 정례 경제정책 여론 평가 3지선다 (WIN_DRAW_LOSE)
+    this.templates.push({
+      id: "politics-economic-policy-wdl",
+      title: "[국정·정책] 차기 주간 정례 경제정책 여론 평가 방향성은?",
+      description:
+        "주요 여론조사 기관의 차기 주간 정례 경제·민생 정책 평가에서 전주 대비 어떤 흐름이 우세할지 예측하세요.\n📅 마감: 목요일 18:00 | 📊 정산: 금요일 10:00 공식 여론조사 공표",
+      predictionType: PredictionType.WIN_DRAW_LOSE,
+      options: [
+        { id: "positive", label: "긍정 평가 우세", description: "전주 대비 긍정 응답 상승" },
+        { id: "neutral", label: "보합·오차범위 혼전", description: "±1.5%p 이내 횡보" },
+        { id: "negative", label: "부정 평가 우세", description: "전주 대비 부정 응답 확대" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(1, 10, 80),
+      duration: 80,
+      settlementDelay: 16,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 40000 as PmpAmount,
+      maxParticipants: 2500,
+      creatorId: systemUserId,
+      category: "politics",
+      importance: "medium",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "manual",
+    });
   }
 
-  private getNextMonthlySchedule(dayOfMonth: number, hour: number): Date {
-    const now = new Date();
-    const result = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      dayOfMonth,
-      hour,
-      0,
-      0
-    );
-    if (result <= now) {
-      result.setMonth(result.getMonth() + 1);
+  /**
+   * 8. 다자선택 순위 경쟁(RANKING) 전 카테고리 전용 템플릿
+   */
+  private registerRankingTemplates(systemUserId: UserId): void {
+    // 8-1. [경제] 글로벌·국내 자산군 주간 수익률 1위 (RANKING 5지선다)
+    this.templates.push({
+      id: "ranking-global-asset-weekly",
+      title: "[자산군 대전] 이번 주 주요 투자 자산군 중 주간 수익률 1위는?",
+      description:
+        "금주 글로벌 금융시장에서 미국 기술주(QQQ), 코스피 대형주, 비트코인(BTC), 국제 금(Gold), 장기 미 국채 중 가장 높은 주간 수익률을 기록할 자산을 예측하세요.\n📅 마감: 금요일 20:00 | 📈 정산: 주말 AlphaVantage·CoinGecko 종가 집계",
+      predictionType: PredictionType.RANKING,
+      options: [
+        { id: "qqq", label: "미국 빅테크 (QQQ)", description: "나스닥 100 기술주 ETF" },
+        { id: "btc", label: "비트코인 (BTC)", description: "글로벌 가상자산 대장주" },
+        { id: "kospi", label: "코스피 대형주 (KOSPI)", description: "국내 반도체·수출 대표주" },
+        { id: "gold", label: "국제 금 (Gold)", description: "안전자산 실물 ETF" },
+        { id: "bond", label: "미 장기 국채 (TLT)", description: "금리 인하 수혜 채권" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(1, 9, 107),
+      duration: 107,
+      settlementDelay: 12,
+      minimumStake: 1000 as PmpAmount,
+      maximumStake: 100000 as PmpAmount,
+      maxParticipants: 4000,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "critical",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "alpha-vantage",
+      sourceConfig: {
+        symbols: ["QQQ", "GLD", "TLT"],
+        market: "multi_asset_weekly_rank1",
+      },
+    });
+
+    // 8-2. [K-POP] 주간 음원 차트 1위 진영 경쟁 (RANKING 4지선다)
+    this.templates.push({
+      id: "ranking-kpop-chart-weekly",
+      title: "[K-POP 랭킹] 이번 주 멜론·써클 주간 디지털 차트 1위 진영은?",
+      description:
+        "이번 주 국내 음원 스트리밍 주간 종합 차트에서 1위 왕좌를 차지할 아티스트 진영을 예측하세요.\n📅 마감: 일요일 18:00 | 🎵 정산: 월요일 12:00 주간 차트 공식 발표",
+      predictionType: PredictionType.RANKING,
+      options: [
+        { id: "girlgroup", label: "4·5세대 걸그룹", description: "메이저 걸그룹 타이틀곡" },
+        { id: "solo", label: "솔로 음원 강자", description: "여성·남성 솔로 대표곡" },
+        { id: "boygroup", label: "글로벌 보이그룹", description: "코어 팬덤 화력 음원" },
+        { id: "ost_band", label: "밴드·OST·역주행", description: "드라마 OST 및 밴드 록" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(1, 10, 152),
+      duration: 152,
+      settlementDelay: 18,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 3500,
+      creatorId: systemUserId,
+      category: "entertainment",
+      importance: "high",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "kcontent",
+      sourceConfig: {
+        subCategory: "music_chart_rank1",
+        chartSource: "circle_melon_weekly",
+      },
+    });
+
+    // 8-3. [극장가] 주말 박스오피스 1위 장르군 경쟁 (RANKING 4지선다)
+    this.templates.push({
+      id: "ranking-boxoffice-weekend",
+      title: "[극장가 랭킹] 이번 주말 KOBIS 박스오피스 관객수 1위 작품군은?",
+      description:
+        "금·토·일 사흘간 영화진흥위원회 통합전산망(KOBIS) 주말 박스오피스에서 관객수 1위를 차지할 영화 장르·배급군을 예측하세요.\n📅 마감: 금요일 17:00 | 🎬 정산: 월요일 09:00 KOBIS 공식 집계",
+      predictionType: PredictionType.RANKING,
+      options: [
+        { id: "kr_action", label: "한국 액션·범죄 대작", description: "국내 텐트폴 배급작" },
+        { id: "hollywood", label: "할리우드 블록버스터", description: "메이저 스튜디오 외화" },
+        { id: "animation", label: "가족·일본 애니메이션", description: "가족 관객 & 팬덤 애니" },
+        { id: "kr_drama", label: "한국 로맨스·스릴러", description: "입소문 흥행 한국 영화" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(2, 10, 79),
+      duration: 79,
+      settlementDelay: 64,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 3000,
+      creatorId: systemUserId,
+      category: "entertainment",
+      importance: "high",
+      recurrence: "weekly",
+      isActive: true,
+      sourceType: "kobis",
+      sourceConfig: {
+        mode: "weekend_rank1_group",
+        periodType: "weekend",
+      },
+    });
+
+    // 8-4. [소비·트렌드(INVEST)] 월간 온라인 소비지출 증가율 1위 품목군 (RANKING 4지선다)
+    this.templates.push({
+      id: "ranking-invest-consumer-trend",
+      title: "[소비·트렌드] 이번 달 온라인 소비지출 전년비 증가율 1위 품목군은?",
+      description:
+        "통계청 온라인쇼핑동향 공식 통계에서 이번 달 전년 동월 대비 거래액 성장률 1위를 기록할 소비 품목군을 예측하세요.\n📅 마감: 월말 18:00 | 📊 정산: 통계청 KOSIS 온라인쇼핑동향 공표",
+      predictionType: PredictionType.RANKING,
+      options: [
+        { id: "ai_tech", label: "AI·디지털 가전", description: "스마트 기기·PC·가전 구독" },
+        { id: "travel", label: "해외여행·항공/숙박", description: "여행 및 교통 예약 서비스" },
+        { id: "food_wellness", label: "음식서비스·웰니스", description: "프리미엄 식품·배달·헬스" },
+        { id: "fashion_living", label: "패션·뷰티 리빙", description: "온라인 패션·화장품·생활용품" },
+      ],
+      scheduledTime: this.getNextMonthlySchedule(1, 9, 480),
+      duration: 480,
+      settlementDelay: 72,
+      minimumStake: 1000 as PmpAmount,
+      maximumStake: 60000 as PmpAmount,
+      maxParticipants: 2500,
+      creatorId: systemUserId,
+      category: "technology",
+      importance: "high",
+      recurrence: "monthly",
+      isActive: true,
+      sourceType: "kosis",
+      sourceConfig: {
+        subCategory: "retail",
+        indicatorCode: "ONLINE_SHOPPING_GROWTH_RANK1",
+      },
+    });
+
+    // 8-5. [스포츠] 월간 글로벌·국내 스포츠 리그 화제성 1위 (RANKING 4지선다)
+    this.templates.push({
+      id: "ranking-sports-league-monthly",
+      title: "[스포츠 랭킹] 이번 달 국내외 팬덤 참여·화제성 1위 스포츠 리그는?",
+      description:
+        "이번 달 PosMul 스포츠 팬덤 참여와 주요 경기 이슈를 주도할 최고 인기 리그 1위를 예측하세요.\n📅 마감: 월말 20:00 | 🏆 정산: 월간 결산 집계",
+      predictionType: PredictionType.RANKING,
+      options: [
+        { id: "epl", label: "프리미어리그 (EPL)", description: "유럽 축구 최고 인기 리그" },
+        { id: "kbo_kl", label: "KBO·K리그 국내 프로", description: "국내 프로야구 및 K리그" },
+        { id: "lck", label: "LCK e스포츠", description: "글로벌 LoL 챔피언스 리그" },
+        { id: "nba_mlb", label: "NBA · MLB 북미리그", description: "북미 4대 메이저 스포츠" },
+      ],
+      scheduledTime: this.getNextMonthlySchedule(1, 10, 480),
+      duration: 480,
+      settlementDelay: 24,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 3000,
+      creatorId: systemUserId,
+      category: "sports",
+      importance: "high",
+      recurrence: "monthly",
+      isActive: true,
+      sourceType: "manual",
+    });
+  }
+
+  /** KST 기준 현재 연·월·일·요일·시 추출 (UTC/로컬 타임존 무관) */
+  private getKstNowParts() {
+    const kstNow = new Date(Date.now() + KST_OFFSET_MINUTES * 60 * 1000);
+    return {
+      year: kstNow.getUTCFullYear(),
+      month: kstNow.getUTCMonth(),
+      day: kstNow.getUTCDate(),
+      dayOfWeek: kstNow.getUTCDay(),
+      hour: kstNow.getUTCHours(),
+    };
+  }
+
+  /** KST 벽시계(year, month, day, hour)를 정확한 UTC Date 객체로 변환 */
+  private kstWallTimeToUtc(
+    year: number,
+    month: number,
+    day: number,
+    hour: number
+  ): Date {
+    return new Date(Date.UTC(year, month, day, hour - 9, 0, 0));
+  }
+
+  private getNextDailyUSMarketOpen(): Date {
+    const now = Date.now();
+    const { year, month, day } = this.getKstNowParts();
+    const todayOpen = this.kstWallTimeToUtc(year, month, day, 20);
+    // US 정규장 개장 1시간 전(21:30 KST)까지 최소 1시간 여유가 있으면 오늘 회차 사용
+    const todayCloseMs = todayOpen.getTime() + 1.5 * 60 * 60 * 1000;
+    if (todayCloseMs > now + 60 * 60 * 1000) {
+      return todayOpen;
     }
-    return result;
+    return this.kstWallTimeToUtc(year, month, day + 1, 20);
+  }
+
+  /**
+   * 현재 진행 중인 주간 회차(아직 마감 2시간 초과 남음) 또는 차기 주간 회차 반환
+   */
+  private getNextWeeklySchedule(
+    dayOfWeek: number,
+    hour: number,
+    durationHours: number = 120
+  ): Date {
+    const nowMs = Date.now();
+    const minBufferMs = 2 * 60 * 60 * 1000;
+    const durationMs = durationHours * 60 * 60 * 1000;
+    const { year, month, day, dayOfWeek: currentDow } = this.getKstNowParts();
+
+    const candidate = this.kstWallTimeToUtc(
+      year,
+      month,
+      day + (dayOfWeek - currentDow),
+      hour
+    );
+
+    if (candidate.getTime() > nowMs) {
+      const prevWeek = new Date(candidate.getTime() - 7 * 24 * 60 * 60 * 1000);
+      if (prevWeek.getTime() + durationMs > nowMs + minBufferMs) {
+        return prevWeek;
+      }
+      return candidate;
+    }
+
+    if (candidate.getTime() + durationMs > nowMs + minBufferMs) {
+      return candidate;
+    }
+    return new Date(candidate.getTime() + 7 * 24 * 60 * 60 * 1000);
+  }
+
+  /**
+   * 현재 진행 중인 월간 회차(아직 마감 2시간 초과 남음) 또는 차기 월간 회차 반환
+   */
+  private getNextMonthlySchedule(
+    dayOfMonth: number,
+    hour: number,
+    durationHours: number = 240
+  ): Date {
+    const nowMs = Date.now();
+    const minBufferMs = 2 * 60 * 60 * 1000;
+    const durationMs = durationHours * 60 * 60 * 1000;
+    const { year, month } = this.getKstNowParts();
+
+    const candidate = this.kstWallTimeToUtc(year, month, dayOfMonth, hour);
+    if (candidate.getTime() > nowMs) {
+      const prevMonth = this.kstWallTimeToUtc(year, month - 1, dayOfMonth, hour);
+      if (prevMonth.getTime() + durationMs > nowMs + minBufferMs) {
+        return prevMonth;
+      }
+      return candidate;
+    }
+
+    if (candidate.getTime() + durationMs > nowMs + minBufferMs) {
+      return candidate;
+    }
+    return this.kstWallTimeToUtc(year, month + 1, dayOfMonth, hour);
   }
 
   private getNextQuarterlySchedule(dayOfMonth: number, hour: number): Date {
-    const now = new Date();
-    const currentMonth = now.getMonth();
+    const { year, month } = this.getKstNowParts();
     const quarterStartMonths = [0, 3, 6, 9];
 
-    let nextQuarterMonth = quarterStartMonths.find((m) => m > currentMonth);
+    let nextQuarterMonth = quarterStartMonths.find((m) => m > month);
     if (nextQuarterMonth === undefined) {
       nextQuarterMonth = 0;
     }
 
-    const year =
-      nextQuarterMonth === 0 && currentMonth >= 9
-        ? now.getFullYear() + 1
-        : now.getFullYear();
+    const targetYear =
+      nextQuarterMonth === 0 && month >= 9 ? year + 1 : year;
 
-    return new Date(year, nextQuarterMonth, dayOfMonth, hour, 0, 0);
+    return this.kstWallTimeToUtc(targetYear, nextQuarterMonth, dayOfMonth, hour);
   }
 
   async startScheduling(): Promise<void> {
@@ -775,11 +1128,8 @@ export class GameSchedulingService {
       const now = new Date();
       const HOUR_MS = 60 * 60 * 1000;
 
-      // 템플릿 시각은 '한국시간(KST) 벽시계' 기준으로 계산되므로,
-      // 서버 타임존(Vercel=UTC)과의 차이만큼 보정하여 실제 시각으로 변환
-      const kstCorrectionMs =
-        (KST_OFFSET_MINUTES + now.getTimezoneOffset()) * 60 * 1000;
-      const openAt = new Date(template.scheduledTime.getTime() - kstCorrectionMs);
+      // scheduledTime은 이미 정확한 UTC epoch 타임스탬프(KST 벽시계 기준 변환 완료)
+      const openAt = template.scheduledTime;
       const endTime = new Date(openAt.getTime() + template.duration * HOUR_MS);
       const settlementTime = new Date(
         endTime.getTime() + template.settlementDelay * HOUR_MS
@@ -790,24 +1140,37 @@ export class GameSchedulingService {
         return null;
       }
 
-      // 회차별 고유 slug (템플릿 ID + 마감일 KST) → 같은 회차 중복 생성 방지 (멱등성)
+      // 회차별 고유 slug (템플릿 ID + 마감일 KST) → 과거 CLOSED/CANCELLED와 충돌 시 시간 suffix 부여
+      const kstNowForSlug = new Date(now.getTime() + KST_OFFSET_MINUTES * 60 * 1000);
       const closeDateKst = new Date(endTime.getTime() + KST_OFFSET_MINUTES * 60 * 1000)
         .toISOString()
         .slice(0, 10)
         .replace(/-/g, "");
-      const slug = `${template.id}-${closeDateKst}`;
+      const baseSlug = `${template.id}-${closeDateKst}`;
 
-      // 동일 slug 또는 동일 external_id(템플릿 ID)가 이미 ACTIVE 상태로 존재하면 중복 생성 원천 차단
-      const { data: existing } = await supabaseAdmin
+      // 1. 동일 템플릿(external_id)이 이미 ACTIVE 상태면 중복 생성 원천 차단 (멱등성)
+      const { data: activeExisting } = await supabaseAdmin
         .schema("prediction")
         .from("prediction_games")
         .select("game_id")
-        .or(`slug.eq.${slug},and(external_id.eq.${template.id},status.eq.ACTIVE)`)
+        .eq("external_id", template.id)
+        .eq("status", "ACTIVE")
         .limit(1)
         .maybeSingle();
-      if (existing) {
+      if (activeExisting) {
         return null;
       }
+
+      // 2. 과거 CLOSED/CANCELLED 이력이 같은 baseSlug를 점유 중이면 고유 suffix 부여
+      const { data: slugExisting } = await supabaseAdmin
+        .schema("prediction")
+        .from("prediction_games")
+        .select("game_id")
+        .eq("slug", baseSlug)
+        .limit(1)
+        .maybeSingle();
+      const timeTag = kstNowForSlug.toISOString().slice(11, 16).replace(":", "");
+      const slug = slugExisting ? `${baseSlug}-r${timeTag}` : baseSlug;
 
       const hasOracleAdapter =
         !!template.sourceType && template.sourceType !== "manual";
@@ -866,6 +1229,15 @@ export class GameSchedulingService {
           scheduledAt: settlementTime,
           externalId: template.id,
         });
+      }
+
+      // MoneyWave 시간당 게임별 상금풀 즉시 재분배 연동
+      try {
+        await supabaseAdmin
+          .schema("economy")
+          .rpc("compute_prediction_hourly_game_pools");
+      } catch {
+        // RPC 미노출/일시 오류 시 다음 정시 크론에서 자동 계산되므로 게임 생성 성공 유지
       }
 
       return createdGameId;

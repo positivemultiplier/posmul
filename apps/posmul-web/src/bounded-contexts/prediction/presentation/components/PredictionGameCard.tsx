@@ -343,6 +343,42 @@ function shortenOptionLabel(text: string, fallback: string): string {
   return cleaned || text || fallback;
 }
 
+/**
+ * 양자택일(BINARY) 게이지 중앙의 맥락형 우세 라벨 결정
+ */
+function resolveBinaryArcLabel(pct: number, opt1Text: string, opt2Text: string): string {
+  const targetText = pct >= 50 ? opt1Text : opt2Text;
+  const cleaned = shortenOptionLabel(targetText, pct >= 50 ? "찬성" : "반대");
+  if (/상승|돌파|초과|이상|호조|달성/.test(cleaned)) return "상승 우세";
+  if (/하락|붕괴|이하|미만|둔화|실패/.test(cleaned)) return "하락 우세";
+  if (/동결|유지|수성/.test(cleaned)) return "유지 우세";
+  if (/인상/.test(cleaned)) return "인상 우세";
+  if (/인하/.test(cleaned)) return "인하 우세";
+  if (/찬성|통과|예|가결/.test(cleaned)) return "찬성 우세";
+  if (/반대|무산|아니오|부결/.test(cleaned)) return "반대 우세";
+  const firstToken = cleaned.split(/\s+/)[0] || (pct >= 50 ? "예측" : "반대");
+  return `${firstToken.slice(0, 4)} 우세`;
+}
+
+/**
+ * 승무패(WIN_DRAW_LOSE) 3지선다 게이지 라벨 결정
+ */
+function resolveWdlArcLabel(
+  maxIdx: number,
+  labels: [string, string, string]
+): { label: string; colorClass: string } {
+  const isClassicWdl = /무|draw/i.test(labels[1] || "");
+  if (isClassicWdl) {
+    if (maxIdx === 0) return { label: "승 우세", colorClass: "text-emerald-400" };
+    if (maxIdx === 1) return { label: "무승부", colorClass: "text-amber-400" };
+    return { label: "패 우세", colorClass: "text-rose-400" };
+  }
+  const colorClass =
+    maxIdx === 0 ? "text-emerald-400" : maxIdx === 1 ? "text-amber-400" : "text-rose-400";
+  const short = shortenOptionLabel(labels[maxIdx] || "", `선택${maxIdx + 1}`).split(/\s+/)[0];
+  return { label: `${short.slice(0, 4)} 우세`, colorClass };
+}
+
 export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
   game,
   myPrediction,
@@ -357,6 +393,11 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
   const secondOption = game.options[1] ?? { id: "no", text: "아니오 (No)", currentOdds: 0.42 };
   const leadPct = Math.round((firstOption.currentOdds || 0.5) * 100);
   const secondPct = Math.max(1, 100 - leadPct);
+  const rankingSortedOptions =
+    game.predictionType === PredictionType.RANKING || game.options.length >= 4
+      ? [...game.options].sort((a, b) => (b.currentOdds || 0) - (a.currentOdds || 0))
+      : game.options;
+  const rankingTopPct = Math.round((rankingSortedOptions[0]?.currentOdds || 0.25) * 100);
 
   // 남은 기간 포맷 (간결하게 D-day 또는 시간 표시)
   const getCompactTimeRemaining = () => {
@@ -375,12 +416,13 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
     Math.min(2.5, Number((0.9 + (game.gameImportanceScore || 2.5) * 0.3).toFixed(1)))
   );
 
-  // 1. 양자택일용 반원형 아크 게이지 (3번째 사진 스타일: 45% 하락 우세 / 67% 상승 우세)
+  // 1. 양자택일용 반원형 아크 게이지 (맥락 기반 우세 라벨)
   const renderArcGauge = (percentage: number) => {
     const radius = 24;
     const circumference = Math.PI * radius;
     const strokeDashoffset = circumference - (percentage / 100) * circumference;
     const isUp = percentage >= 50;
+    const arcLabel = resolveBinaryArcLabel(percentage, firstOption.text, secondOption.text);
 
     return (
       <div className="relative flex flex-col items-center justify-center shrink-0 w-[72px] h-[44px]">
@@ -408,33 +450,41 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
             {percentage}%
           </span>
           <span className={`text-[8.5px] font-bold ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
-            {isUp ? "상승 우세" : "하락 우세"}
+            {arcLabel}
           </span>
         </div>
       </div>
     );
   };
 
-  // 2. 승무패(3지선다) 전용 3색 도넛 세그먼트 아크 게이지 (승: 에메랄드 / 무: 슬레이트 / 패: 로즈)
-  const renderWdlGauge = (p1: number, p2: number, p3: number) => {
+  // 2. 승무패(3지선다) 전용 3색 도넛 세그먼트 게이지 (에메랄드 / 앰버 / 로즈 통일)
+  const renderWdlGauge = (
+    p1: number,
+    p2: number,
+    p3: number,
+    labels: [string, string, string]
+  ) => {
+    const total = Math.max(1, p1 + p2 + p3);
+    const n1 = (p1 / total) * 100;
+    const n2 = (p2 / total) * 100;
     const maxVal = Math.max(p1, p2, p3);
-    const maxLabel = maxVal === p1 ? "승 우세" : maxVal === p3 ? "패 우세" : "무승부";
-    const maxColor = maxVal === p1 ? "text-emerald-400" : maxVal === p3 ? "text-rose-400" : "text-amber-300";
+    const maxIdx = maxVal === p1 ? 0 : maxVal === p2 ? 1 : 2;
+    const { label: maxLabel, colorClass: maxColor } = resolveWdlArcLabel(maxIdx, labels);
 
     const radius = 16;
     const circ = 2 * Math.PI * radius;
-    const offset1 = circ - (p1 / 100) * circ;
-    const offset2 = circ - ((p1 + p2) / 100) * circ;
+    const offset1 = circ - (n1 / 100) * circ;
+    const offset2 = circ - ((n1 + n2) / 100) * circ;
 
     return (
       <div className="relative flex flex-col items-center justify-center shrink-0 w-[72px] h-[44px]">
         <svg className="w-[40px] h-[40px] -rotate-90 overflow-visible" viewBox="0 0 44 44">
           <circle cx="22" cy="22" r={radius} fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="4.5" />
-          {/* 패(원정) */}
+          {/* 3번(패/하방) - 로즈 */}
           <circle cx="22" cy="22" r={radius} fill="none" stroke="#f43f5e" strokeWidth="4.5" strokeDasharray={circ} strokeDashoffset={0} />
-          {/* 무승부 */}
-          <circle cx="22" cy="22" r={radius} fill="none" stroke="#94a3b8" strokeWidth="4.5" strokeDasharray={circ} strokeDashoffset={offset2} />
-          {/* 승(홈) */}
+          {/* 2번(무승부/중립) - 앰버 */}
+          <circle cx="22" cy="22" r={radius} fill="none" stroke="#f59e0b" strokeWidth="4.5" strokeDasharray={circ} strokeDashoffset={offset2} />
+          {/* 1번(승/상방) - 에메랄드 */}
           <circle cx="22" cy="22" r={radius} fill="none" stroke="#10b981" strokeWidth="4.5" strokeDasharray={circ} strokeDashoffset={offset1} />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
@@ -445,11 +495,12 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
     );
   };
 
-  // 3. 다자선택(Ranking/Multi) 전용 1위 독주 링 게이지
-  const renderMultiGauge = (topPct: number) => {
+  // 3. 랭킹(Ranking/Multi) 전용 1위 선두 링 게이지
+  const renderMultiGauge = (topPct: number, optionCount: number) => {
     const radius = 16;
     const circ = 2 * Math.PI * radius;
     const offset = circ - (topPct / 100) * circ;
+    const subText = topPct >= 45 ? "1위 독주" : `TOP ${optionCount}`;
 
     return (
       <div className="relative flex flex-col items-center justify-center shrink-0 w-[72px] h-[44px]">
@@ -469,7 +520,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center leading-none">
           <span className="text-[12px] font-black text-white">{topPct}%</span>
-          <span className="text-[8px] font-extrabold text-sky-400 mt-0.5">1위 독주</span>
+          <span className="text-[8px] font-extrabold text-sky-400 mt-0.5">{subText}</span>
         </div>
       </div>
     );
@@ -533,26 +584,31 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
             renderWdlGauge(
               Math.round((game.options[0]?.currentOdds || 0.45) * 100),
               Math.round((game.options[1]?.currentOdds || 0.25) * 100),
-              Math.round((game.options[2]?.currentOdds || 0.3) * 100)
+              Math.round((game.options[2]?.currentOdds || 0.3) * 100),
+              [
+                game.options[0]?.text || "승",
+                game.options[1]?.text || "무승부",
+                game.options[2]?.text || "패",
+              ]
             )
           ) : (
-            renderMultiGauge(leadPct)
+            renderMultiGauge(rankingTopPct, rankingSortedOptions.length)
           )}
         </div>
       </div>
 
       {/* 🌟 2행 제목: 카드 가로 전체폭(Full Width)을 쓰는 시원한 2줄 제목 (10글자 잘림 해결) */}
-      <div className="my-1 min-h-[42px] flex items-center">
+      <div className="my-1 min-h-[40px] flex items-center">
         <h3 className="text-[14px] font-bold text-slate-100 group-hover:text-white leading-snug line-clamp-2">
           {prefixEmoji && <span className="mr-1">{prefixEmoji}</span>}
           {cleanTitle}
         </h3>
       </div>
 
-      {/* 🌟 3행 캡슐 버튼: 3번째 사진의 둥근 타원형 캡슐 버튼 (선택지 텍스트 넉넉히 노출) */}
+      {/* 🌟 3행 캡슐 버튼: 분류별 특화 UI (Binary 2캡슐 / WDL 3색 캡슐 / Ranking 순위+점유율 바) */}
       <div className="my-1">
         {game.predictionType === PredictionType.BINARY ? (
-          /* 양자택일: 녹색 캡슐 vs 자주/자색 캡슐 */
+          /* 양자택일: 녹색 캡슐 vs 로즈 캡슐 */
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
@@ -591,7 +647,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
             </button>
           </div>
         ) : game.predictionType === PredictionType.WIN_DRAW_LOSE ? (
-          /* 승무패: 3분할 둥근 캡슐 (승 | 무 | 패) */
+          /* 승무패(3지선다): 에메랄드 | 앰버 | 로즈 3분할 캡슐 */
           <div className="grid grid-cols-3 gap-1.5">
             {game.options.slice(0, 3).map((opt, idx) => {
               const pct = Math.round((opt.currentOdds || 0.33) * 100);
@@ -599,7 +655,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
                 idx === 0
                   ? "border-emerald-500/35 bg-emerald-950/30 text-emerald-300 hover:border-emerald-400"
                   : idx === 1
-                  ? "border-slate-500/35 bg-slate-900/40 text-slate-300 hover:border-slate-400"
+                  ? "border-amber-500/35 bg-amber-950/30 text-amber-300 hover:border-amber-400"
                   : "border-rose-500/35 bg-rose-950/30 text-rose-300 hover:border-rose-400";
               return (
                 <button
@@ -622,29 +678,68 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
             })}
           </div>
         ) : (
-          /* 다자선택 (Top 2개 캡슐 버튼) */
-          <div className="grid grid-cols-2 gap-2">
-            {game.options.slice(0, 2).map((opt, idx) => {
-              const pct = Math.round((opt.currentOdds || 0.25) * 100);
-              return (
-                <button
-                  key={opt.id || idx}
-                  type="button"
-                  onClick={(e) => {
-                    if (onParticipate) {
-                      e.stopPropagation();
-                      onParticipate(game.id);
-                    }
-                  }}
-                  className="flex items-center justify-between px-3 py-2 rounded-full border border-sky-500/35 bg-sky-950/30 hover:bg-sky-900/50 hover:border-sky-400 transition-all duration-150 text-left min-w-0"
-                >
-                  <span className="text-[11px] font-extrabold text-sky-300 truncate mr-1">
-                    {shortenOptionLabel(opt.text, `선택 ${idx + 1}`)}
+          /* 순위/랭킹(RANKING): 확률 내림차순 Top 2 순위 배지 + 미니 점유율 바 + +N명 */
+          <div className="space-y-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
+              {rankingSortedOptions.slice(0, 2).map((opt, idx) => {
+                const pct = Math.round((opt.currentOdds || 0.25) * 100);
+                const isFirst = idx === 0;
+                return (
+                  <button
+                    key={opt.id || idx}
+                    type="button"
+                    onClick={(e) => {
+                      if (onParticipate) {
+                        e.stopPropagation();
+                        onParticipate(game.id);
+                      }
+                    }}
+                    className={`relative overflow-hidden flex flex-col justify-center px-2.5 py-1.5 rounded-xl border text-left transition-all duration-150 min-w-0 ${
+                      isFirst
+                        ? "border-amber-400/40 bg-amber-950/25 hover:border-amber-300"
+                        : "border-sky-500/35 bg-sky-950/25 hover:border-sky-400"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1 w-full">
+                      <span className="flex items-center gap-1 min-w-0">
+                        <span
+                          className={`text-[9px] font-black px-1 py-0.2 rounded shrink-0 ${
+                            isFirst
+                              ? "bg-amber-400/20 text-amber-300"
+                              : "bg-sky-400/20 text-sky-300"
+                          }`}
+                        >
+                          {idx + 1}위
+                        </span>
+                        <span className="text-[11px] font-bold text-slate-100 truncate">
+                          {shortenOptionLabel(opt.text, `후보 ${idx + 1}`)}
+                        </span>
+                      </span>
+                      <span className="text-[11px] font-black text-white shrink-0">{pct}%</span>
+                    </div>
+                    <div className="w-full h-1 bg-white/[0.06] rounded-full mt-1 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${isFirst ? "bg-amber-400" : "bg-sky-400"}`}
+                        style={{ width: `${Math.min(100, Math.max(8, pct))}%` }}
+                      />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {rankingSortedOptions.length > 2 && (
+              <div className="flex items-center justify-between px-1 text-[10px] text-slate-400">
+                <span className="truncate">
+                  3위 {shortenOptionLabel(rankingSortedOptions[2].text, "기타")} (
+                  {Math.round((rankingSortedOptions[2].currentOdds || 0.15) * 100)}%)
+                </span>
+                {rankingSortedOptions.length > 3 && (
+                  <span className="shrink-0 font-bold text-sky-400 ml-2">
+                    +{rankingSortedOptions.length - 2}명 경쟁
                   </span>
-                  <span className="text-[11px] font-black text-white shrink-0">{pct}%</span>
-                </button>
-              );
-            })}
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
