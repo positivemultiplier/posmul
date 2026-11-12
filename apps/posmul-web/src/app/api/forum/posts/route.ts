@@ -12,23 +12,14 @@ import {
   checkIsIpBanned,
   banIp,
 } from "../../../../shared/lib/security/ip-ban";
+import {
+  FORUM_POST_DAILY_LIMITS,
+  FORUM_POST_PMP_REWARDS,
+} from "../../../forum/forum-pmp-policy";
+import { grantForumPmpWithDailyCap } from "../../../forum/forum-pmp-ledger";
 
-// PMP 보상 규칙
-const PMP_REWARDS = {
-  discussion: 50, // 일반 토론
-  question: 30, // 질문
-  debate: 100, // 토론 주제
-  brainstorming: 150, // 브레인스토밍 아이디어
-  announcement: 0, // 공지사항 (보상 없음)
-};
-
-// 일일 한도
-const DAILY_LIMITS = {
-  debate: 3,
-  brainstorming: 2,
-  discussion: 5,
-  question: 10,
-};
+const PMP_REWARDS = FORUM_POST_PMP_REWARDS;
+const DAILY_LIMITS = FORUM_POST_DAILY_LIMITS;
 
 type CreateForumPostBodyParsed = {
   categoryId: string;
@@ -138,46 +129,19 @@ async function awardPmpForPost(params: {
   postType: string;
   tags: string[];
   pmpEarned: number;
-}) {
+}): Promise<number> {
   const { supabase, userId, postId, title, postType, tags, pmpEarned } = params;
-
-  await supabase.schema("forum").from("forum_activity_logs").insert({
-    user_id: userId,
-    activity_type: "post_created",
-    post_id: postId,
+  const { awardedPmp } = await grantForumPmpWithDailyCap({
+    supabase,
+    userId,
+    activityType: "post_created",
+    requestedPmp: pmpEarned,
     description: `${postType} 게시글 작성: ${title}`,
-    pmp_earned: pmpEarned,
+    ledgerDescription: `Forum ${postType} 작성: ${title}`,
+    postId,
     metadata: { postType, tags },
   });
-
-  const { data: account } = await supabase
-    .schema("economy")
-    .from("pmp_pmc_accounts")
-    .select("pmp_balance")
-    .eq("user_id", userId)
-    .single();
-
-  const accountData = Array.isArray(account) ? account[0] : account;
-  const currentBalance = Number(accountData?.pmp_balance) || 0;
-
-  await supabase
-    .schema("economy")
-    .from("pmp_pmc_accounts")
-    .update({ pmp_balance: currentBalance + pmpEarned })
-    .eq("user_id", userId);
-
-  await supabase.schema("economy").from("pmp_pmc_transactions").insert({
-    user_id: userId,
-    transaction_type: "PMP_EARN",
-    pmp_amount: pmpEarned,
-    description: `Forum ${postType} 작성: ${title}`,
-    timestamp: new Date().toISOString(),
-    metadata: {
-      source: "forum",
-      post_id: postId,
-      post_type: postType,
-    },
-  });
+  return awardedPmp;
 }
 
 /**
@@ -298,18 +262,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const pmpEarned = getPmpReward(postType);
+    const requestedPmp = getPmpReward(postType);
+    let pmpEarned = 0;
 
-    // PMP 지급
-    if (pmpEarned > 0) {
-      await awardPmpForPost({
+    // PMP 지급 (일일 총 상한 적용)
+    if (requestedPmp > 0) {
+      pmpEarned = await awardPmpForPost({
         supabase,
         userId: user.id,
         postId: postData.id,
         title,
         postType,
         tags,
-        pmpEarned,
+        pmpEarned: requestedPmp,
       });
     }
 

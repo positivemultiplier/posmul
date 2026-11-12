@@ -12,10 +12,14 @@ import {
   checkIsIpBanned,
   banIp,
 } from "../../../../../../shared/lib/security/ip-ban";
+import {
+  FORUM_COMMENT_DAILY_LIMIT,
+  FORUM_COMMENT_PMP_REWARD,
+} from "../../../../../forum/forum-pmp-policy";
+import { grantForumPmpWithDailyCap } from "../../../../../forum/forum-pmp-ledger";
 
-// 댓글 PMP 보상
-const COMMENT_PMP_REWARD = 20;
-const DAILY_COMMENT_LIMIT = 10;
+const COMMENT_PMP_REWARD = FORUM_COMMENT_PMP_REWARD;
+const DAILY_COMMENT_LIMIT = FORUM_COMMENT_DAILY_LIMIT;
 
 class HttpError extends Error {
   constructor(
@@ -229,47 +233,18 @@ async function rewardForComment(params: {
   postId: string;
   commentId: string;
   content: string;
-}): Promise<void> {
-  // 1. 활동 로그 기록
-  await params.supabase.schema("forum").from("forum_activity_logs").insert({
-    user_id: params.userId,
-    activity_type: "comment_created",
-    post_id: params.postId,
-    comment_id: params.commentId,
+}): Promise<number> {
+  const { awardedPmp } = await grantForumPmpWithDailyCap({
+    supabase: params.supabase,
+    userId: params.userId,
+    activityType: "comment_created",
+    requestedPmp: COMMENT_PMP_REWARD,
     description: `댓글 작성: ${params.content.substring(0, 50)}...`,
-    pmp_earned: COMMENT_PMP_REWARD,
+    ledgerDescription: "Forum 댓글 작성",
+    postId: params.postId,
+    commentId: params.commentId,
   });
-
-  // 2. PMP 잔액 증가
-  const { data: account } = await params.supabase
-    .schema("economy")
-    .from("pmp_pmc_accounts")
-    .select("pmp_balance")
-    .eq("user_id", params.userId)
-    .single();
-
-  const accountData = Array.isArray(account) ? account[0] : account;
-  const currentBalance = Number(accountData?.pmp_balance) || 0;
-
-  await params.supabase
-    .schema("economy")
-    .from("pmp_pmc_accounts")
-    .update({ pmp_balance: currentBalance + COMMENT_PMP_REWARD })
-    .eq("user_id", params.userId);
-
-  // 3. 거래 내역 기록
-  await params.supabase.schema("economy").from("pmp_pmc_transactions").insert({
-    user_id: params.userId,
-    transaction_type: "PMP_EARN",
-    pmp_amount: COMMENT_PMP_REWARD,
-    description: `Forum 댓글 작성`,
-    timestamp: new Date().toISOString(),
-    metadata: {
-      source: "forum",
-      post_id: params.postId,
-      comment_id: params.commentId,
-    },
-  });
+  return awardedPmp;
 }
 
 /**
@@ -326,7 +301,7 @@ export async function POST(
       currentCommentCount: postData.comment_count,
     });
 
-    await rewardForComment({
+    const awardedPmp = await rewardForComment({
       supabase,
       userId,
       postId,
@@ -339,7 +314,7 @@ export async function POST(
       data: {
         commentId: commentData.id,
         content: commentData.content,
-        pmpEarned: COMMENT_PMP_REWARD,
+        pmpEarned: awardedPmp,
         dailyRemaining: DAILY_COMMENT_LIMIT - todayCount - 1,
         createdAt: commentData.created_at,
       },

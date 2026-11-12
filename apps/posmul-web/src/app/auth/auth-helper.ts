@@ -1,11 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import type { User } from "@supabase/supabase-js";
 
-// 신규 가입 환영 보너스 및 개발 보너스 금액
+// 신규 가입 환영 보너스 및 개발 보너스 금액 (v3.0: PMC는 예측 성공으로만 획득하므로 초기값 0)
 export const WELCOME_BONUS_PMP = 10000;
-export const WELCOME_BONUS_PMC = 1000;
+export const WELCOME_BONUS_PMC = 0;
 export const DEV_BONUS_PMP = 10000;
-export const DEV_BONUS_PMC = 10000;
+export const DEV_BONUS_PMC = 0;
 
 export function createAdminSupabaseClient() {
   return createClient(
@@ -134,7 +134,7 @@ export async function ensureEconomyAccount(
     return;
   }
 
-  // 최초 로그인 시 환영 스타터 자산(10,000 PMP + 1,000 PMC) 지급
+  // 최초 로그인 시 환영 스타터 자산(10,000 PMP, 0 PMC) 지급
   const { error: insertError } = await adminSupabase
     .schema("economy")
     .from("pmp_pmc_accounts")

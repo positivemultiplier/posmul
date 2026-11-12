@@ -4,36 +4,45 @@ import { EconomyKernelError } from "./economy-kernel.service";
 export interface DailyPrizePoolResult {
   totalDailyPool: number;
   ebitBased: number;
+  eatBased?: number;
   redistributedPmc: number; // MoneyWave2
   enterprisePmc: number; // MoneyWave3
   calculatedAt: Date;
 }
 
 export class MoneyWaveCalculatorService {
-  private static readonly EBIT_DAILY_RATIO = 1 / 365; // 연간 EBIT의 1/365
-  private static readonly TAX_RATE = 0.25; // 법인세율 25%
-  private static readonly INTEREST_RATE = 0.03; // 이자율 3%
+  private static readonly DAILY_RATIO = 1 / 365; // 연간 재원의 1/365
+  private static readonly EBIT_DAILY_RATIO = MoneyWaveCalculatorService.DAILY_RATIO;
+  private static readonly TAX_RATE = 0.25; // 법인세율 25% (EBIT 입력 시에만 차감)
+  private static readonly INTEREST_RATE = 0.03; // 이자율 3% (EBIT 입력 시에만 차감)
+
+  private static getDefaultAnnualPool(): number {
+    const envEat = Number(process.env.POSMUL_ANNUAL_EAT_POOL);
+    return Number.isFinite(envEat) && envEat > 0 ? envEat : 36500000;
+  }
 
   constructor(
-    private readonly expectedAnnualEbit: number = 36500000 // 기본값: 일일 100,000 PMC 기준 (연간 3,650만원)
+    private readonly expectedAnnualEbit: number = MoneyWaveCalculatorService.getDefaultAnnualPool(),
+    private readonly isAfterTaxEat: boolean = Boolean(process.env.POSMUL_ANNUAL_EAT_POOL)
   ) {}
 
   /**
-   * MoneyWave1: 일일 상금 풀 계산
+   * MoneyWave1: 일일 상금 풀 계산 (v3.0: 세후 순이익 EAT 기준 우선)
    * 매일 자정(00:00)에 호출됨
    */
   async calculateDailyPrizePool(): Promise<
     Result<DailyPrizePoolResult, EconomyKernelError>
   > {
     try {
-      // EBIT 기반 계산: (예상 EBIT - Tax - Interest) / 365
-      const netEbit =
-        this.expectedAnnualEbit *
-        (1 -
-          MoneyWaveCalculatorService.TAX_RATE -
-          MoneyWaveCalculatorService.INTEREST_RATE);
-      const ebitBasedPool =
-        netEbit * MoneyWaveCalculatorService.EBIT_DAILY_RATIO;
+      // isAfterTaxEat=true면 이미 세후 순이익(모두의창업 상금 + 광고 EAT)이므로 추가 세율 차감 없이 / 365
+      const netAnnualEat = this.isAfterTaxEat
+        ? this.expectedAnnualEbit
+        : this.expectedAnnualEbit *
+          (1 -
+            MoneyWaveCalculatorService.TAX_RATE -
+            MoneyWaveCalculatorService.INTEREST_RATE);
+      const eatBasedPool =
+        netAnnualEat * MoneyWaveCalculatorService.DAILY_RATIO;
 
       // MoneyWave2: 미소비 PmcAmount 재분배 (실제로는 DB에서 조회)
       const redistributedPmc = await this.calculateRedistributedPmc();
@@ -41,13 +50,14 @@ export class MoneyWaveCalculatorService {
       // MoneyWave3: 기업가 제공 PmcAmount (실제로는 DB에서 조회)
       const enterprisePmc = await this.calculateEnterprisePmc();
 
-      const totalDailyPool = ebitBasedPool + redistributedPmc + enterprisePmc;
+      const totalDailyPool = eatBasedPool + redistributedPmc + enterprisePmc;
 
       return {
         success: true,
         data: {
           totalDailyPool,
-          ebitBased: ebitBasedPool,
+          ebitBased: eatBasedPool,
+          eatBased: eatBasedPool,
           redistributedPmc,
           enterprisePmc,
           calculatedAt: new Date(),

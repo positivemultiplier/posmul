@@ -74,6 +74,17 @@ export async function POST(request: NextRequest) {
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     if (authError || !user) return jsonError(401, '로그인이 필요합니다.');
 
+    // v3.0 원칙: 크라우드펀딩 및 Consume 직접 PMC 지급은 Phase 3 예정으로 비활성화
+    if (process.env.ENABLE_PHASE3_CONSUME_PMC !== 'true') {
+      return NextResponse.json(
+        {
+          error: '크라우드펀딩 및 PMC 직접 적립 기능은 Phase 3 오픈 예정입니다.',
+          code: 'PHASE_3_LOCKED',
+        },
+        { status: 403 }
+      );
+    }
+
     const body: unknown = await request.json();
     const parsedBody = parseContributionBody(body);
     if (parsedBody.ok === false) return parsedBody.response;

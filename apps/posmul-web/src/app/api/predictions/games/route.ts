@@ -143,8 +143,9 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_PROJECT_ID!
     );
     
-    // MoneyWaveCalculatorService 초기화 (연간 EBIT 1조 7,520억원 - 시간별 2억 MoneyWave 목표)
-    const moneyWaveCalculator = new MoneyWaveCalculatorService(1752000000000);
+    // MoneyWaveCalculatorService 초기화 (v3.0: 초기 모두의창업 상금/광고 EAT 기반 풀)
+    const annualEatPool = Number(process.env.POSMUL_ANNUAL_EAT_POOL) || 36500000;
+    const moneyWaveCalculator = new MoneyWaveCalculatorService(annualEatPool, true);
 
     // UseCase 초기화
     const useCase = new CreatePredictionGameUseCase(repository, moneyWaveCalculator);

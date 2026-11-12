@@ -1,46 +1,96 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabaseAdmin } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import {
+  deductPmcForDonation,
+  recordDonationTransaction,
+  rollbackPmcForDonation,
+} from "@/bounded-contexts/donation/infrastructure/pmc-donation-ledger";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const { organizationId, organizationName, amount, userId } = body;
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-    if (!amount || amount <= 0) {
-      return NextResponse.json({ success: false, error: "Valid donation amount required" }, { status: 400 });
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: "로그인이 필요합니다." },
+        { status: 401 }
+      );
     }
 
-    const targetUserId = userId || "00000000-0000-0000-0000-000000000001";
-    const pmpAmount = Number(amount);
+    const body = await req.json();
+    const { organizationId, organizationName, amount } = body;
+    const pmcAmount = Number(amount);
 
-    // Supabase donation 혹은 economy 기록 등록
-    const { data: record, error } = await supabaseAdmin
+    if (!Number.isFinite(pmcAmount) || pmcAmount <= 0) {
+      return NextResponse.json(
+        { success: false, error: "유효한 기부 금액(PMC)이 필요합니다." },
+        { status: 400 }
+      );
+    }
+
+    const deductResult = await deductPmcForDonation(supabase, user.id, pmcAmount);
+    if (deductResult.ok === false) {
+      return NextResponse.json(
+        { success: false, error: deductResult.error },
+        { status: deductResult.status }
+      );
+    }
+
+    const targetTitle = organizationName || "공익 재단";
+    const { data: record, error: donationError } = await supabase
       .schema("donation")
       .from("donations")
       .insert({
-        donor_id: targetUserId,
-        recipient_id: organizationId || "org-environmental-fund",
-        recipient_name: organizationName || "환경 재단",
-        amount_pmc: pmpAmount,
-        status: "COMPLETED",
-        created_at: new Date().toISOString(),
+        donor_id: user.id,
+        donation_type: "direct",
+        amount: pmcAmount,
+        pmc_amount: pmcAmount,
+        title: `${targetTitle} 기부`,
+        description: `${targetTitle}에 즉시 기부`,
+        category: "general",
+        status: "completed",
+        institute_id: organizationId || null,
+        is_anonymous: false,
+        completed_at: new Date().toISOString(),
       })
-      .select();
+      .select("id")
+      .single();
 
-    if (error) {
-      // 데모 모드 처리
-      return NextResponse.json({
-        success: true,
-        message: `Successfully donated ${pmpAmount} PMC to ${organizationName || "공익 재단"} (Demo Mode)`,
-      });
+    if (donationError || !record) {
+      await rollbackPmcForDonation(supabase, user.id, deductResult.previousBalance);
+      return NextResponse.json(
+        { success: false, error: donationError?.message || "기부 기록 생성에 실패했습니다." },
+        { status: 500 }
+      );
     }
+
+    await recordDonationTransaction({
+      supabase,
+      userId: user.id,
+      pmcAmount,
+      description: `${targetTitle}에 기부`,
+      metadata: {
+        source: "DIRECT_DONATION_MODAL",
+        donation_id: record.id,
+        organization_name: targetTitle,
+      },
+    });
 
     return NextResponse.json({
       success: true,
-      message: `Successfully donated ${pmpAmount} PMC to ${organizationName || "공익 재단"}`,
-      data: record,
+      message: `${pmcAmount.toLocaleString()} PMC를 ${targetTitle}에 기부했습니다.`,
+      data: {
+        donationId: record.id,
+        amount: pmcAmount,
+        newBalance: deductResult.newBalance,
+      },
     });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "서버 오류가 발생했습니다.";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

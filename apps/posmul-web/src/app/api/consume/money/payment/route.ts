@@ -22,6 +22,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // v3.0 원칙: 소상공인 결제 및 Consume 직접 PMC 지급은 Phase 3 예정으로 비활성화
+    if (process.env.ENABLE_PHASE3_CONSUME_PMC !== 'true') {
+      return NextResponse.json(
+        {
+          error: '소상공인 결제 및 PMC 직접 적립 기능은 Phase 3 오픈 예정입니다.',
+          code: 'PHASE_3_LOCKED',
+        },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { storeId, amount, paymentMethod = 'QR' } = body;
 

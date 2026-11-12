@@ -59,7 +59,7 @@ export function CompactWidget({ domain = 'prediction', category = 'all' }: Compa
                                 </div>
                                 <div>
                                     <h2 className="text-2xl font-bold">Money Wave</h2>
-                                    <p className="text-sm text-gray-400">EBITDA 기반 시간당 분배</p>
+                                    <p className="text-sm text-gray-400">세후 순이익(EAT) 기반 시간당 분배</p>
                                 </div>
                             </div>
                         </div>
@@ -106,7 +106,7 @@ export function CompactWidget({ domain = 'prediction', category = 'all' }: Compa
                         <div className="p-4 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-xl border border-blue-500/30 mb-6">
                             <h3 className="font-bold mb-3">💡 Money Wave 작동 원리</h3>
                             <div className="space-y-2 text-sm text-gray-300">
-                                <p>• 예상 EBITDA를 365일로 나눔</p>
+                                <p>• 세후 순이익(EAT) 기준 연간 재원을 365일로 나눔</p>
                                 <p>• 24시간으로 나눔 → <span className="text-green-400 font-semibold">1시간마다 Wave 발생</span></p>
                                 <p>• 각 예측 카드의 가중치에 따라 분배됨</p>
                                 <p>• 현재 카테고리: <span className="text-blue-400 font-semibold">{category === 'all' ? '전체' : category}</span></p>

@@ -179,29 +179,40 @@ async function tryAddPmpToAccount(
   userId: string,
   pmpEarned: number
 ) {
-  const { error: pmpError } = await supabase
+  if (pmpEarned <= 0) return;
+
+  const { data: existingAccount } = await supabase
     .schema('economy')
     .from('pmp_pmc_accounts')
-    .update({
-      pmp_balance: supabase.rpc('increment_pmp', { amount: pmpEarned }),
-      last_updated: new Date().toISOString(),
-    })
-    .eq('user_id', userId);
+    .select('pmp_balance')
+    .eq('user_id', userId)
+    .maybeSingle();
 
-  if (!pmpError) return;
+  if (existingAccount) {
+    const currentBalance = Number(existingAccount.pmp_balance) || 0;
+    await supabase
+      .schema('economy')
+      .from('pmp_pmc_accounts')
+      .update({
+        pmp_balance: currentBalance + pmpEarned,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', userId);
+    return;
+  }
 
-  const { error: upsertError } = await supabase
+  const { error: insertError } = await supabase
     .schema('economy')
     .from('pmp_pmc_accounts')
-    .upsert({
+    .insert({
       user_id: userId,
       pmp_balance: pmpEarned,
       pmc_balance: 0,
-      last_updated: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     });
 
-  if (upsertError) {
-    void upsertError;
+  if (insertError) {
+    void insertError;
   }
 }
 

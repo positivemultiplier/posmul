@@ -4,17 +4,13 @@
  */
 import { NextResponse } from "next/server";
 import { createClient } from "../../../../lib/supabase/server";
+import {
+  FORUM_ACTIVITY_LIMIT_CONFIG,
+  FORUM_DAILY_MAX_PMP,
+} from "../../../forum/forum-pmp-policy";
 
-// 일일 한도 정의
-const DAILY_LIMITS = {
-  debate: { limit: 3, pmp: 100 },
-  brainstorming: { limit: 2, pmp: 150 },
-  discussion: { limit: 5, pmp: 50 },
-  question: { limit: 10, pmp: 30 },
-  comment: { limit: 10, pmp: 20 },
-};
-
-const DAILY_MAX_PMP = 1350;
+const DAILY_LIMITS = FORUM_ACTIVITY_LIMIT_CONFIG;
+const DAILY_MAX_PMP = FORUM_DAILY_MAX_PMP;
 
 /**
  * GET /api/forum/activity
@@ -67,7 +63,10 @@ export async function GET() {
     const commentList = Array.isArray(todayComments) ? todayComments : [];
 
     // 활동별 집계
-    const activities = {
+    const activities: Record<
+      "debate" | "brainstorming" | "discussion" | "question" | "comment",
+      { count: number; pmpEarned: number; remaining: number }
+    > = {
       debate: { count: 0, pmpEarned: 0, remaining: DAILY_LIMITS.debate.limit },
       brainstorming: { count: 0, pmpEarned: 0, remaining: DAILY_LIMITS.brainstorming.limit },
       discussion: { count: 0, pmpEarned: 0, remaining: DAILY_LIMITS.discussion.limit },
@@ -99,11 +98,31 @@ export async function GET() {
       DAILY_LIMITS.comment.limit - activities.comment.count
     );
 
-    // 총 PMP 계산
-    const totalPmpEarned =
-      Object.values(activities).reduce((sum, a) => sum + a.pmpEarned, 0);
+    // 최근 활동 로그 및 오늘 추천 수령 집계
+    const { data: todayLogs } = await supabase
+      .schema("forum")
+      .from("forum_activity_logs")
+      .select("activity_type, pmp_earned")
+      .eq("user_id", user.id)
+      .gte("created_at", todayStart.toISOString());
 
-    // 최근 활동 로그
+    const todayLikeLogs = Array.isArray(todayLogs)
+      ? todayLogs.filter(
+          (l: { activity_type: string }) =>
+            l.activity_type === "post_like_received" ||
+            l.activity_type === "concept_post_bonus"
+        )
+      : [];
+
+    const likeReceivedCount = todayLikeLogs.filter(
+      (l: { activity_type: string }) => l.activity_type === "post_like_received"
+    ).length;
+    const likeReceivedPmp = todayLikeLogs.reduce(
+      (sum: number, l: { pmp_earned: number | null }) =>
+        sum + (Number(l.pmp_earned) || 0),
+      0
+    );
+
     const { data: recentLogs } = await supabase
       .schema("forum")
       .from("forum_activity_logs")
@@ -114,11 +133,23 @@ export async function GET() {
 
     const logList = Array.isArray(recentLogs) ? recentLogs : [];
 
+    // 총 PMP 계산 (글 + 댓글 + 추천 수령/개념글 보너스)
+    const totalPmpEarned =
+      Object.values(activities).reduce((sum, a) => sum + a.pmpEarned, 0) +
+      likeReceivedPmp;
+
     return NextResponse.json({
       success: true,
       data: {
         today: {
-          activities,
+          activities: {
+            ...activities,
+            likeReceived: {
+              count: likeReceivedCount,
+              pmpEarned: likeReceivedPmp,
+              remaining: Math.max(0, DAILY_LIMITS.likeReceived.limit - likeReceivedCount),
+            },
+          },
           totalPmpEarned,
           dailyMaxRemaining: Math.max(0, DAILY_MAX_PMP - totalPmpEarned),
           dailyMaxPmp: DAILY_MAX_PMP,

@@ -119,43 +119,47 @@ export function DirectDonationDetailClient({
 
     setIsSubmitting(true);
 
-    // 서버 DB에 기부액 누적 시도
-    donateToWishlist(selectedRecipient.id, donateAmount).catch((err) =>
-      console.warn("Server update warning:", err)
+    // 서버 DB에서 PMC 차감 및 위시리스트 누적액 실제 반영
+    const result = await donateToWishlist(selectedRecipient.id, donateAmount);
+    if (!result?.success) {
+      setIsSubmitting(false);
+      alert(result?.error || "기부 처리 중 오류가 발생했습니다.");
+      return;
+    }
+
+    setMyBalance((prev) =>
+      typeof result.newBalance === "number"
+        ? result.newBalance
+        : Math.max(0, prev - donateAmount)
     );
 
-    setTimeout(() => {
-      setMyBalance((prev) => Math.max(0, prev - donateAmount));
-
-      let isFullyFunded = false;
-      setRecipientList((prevList) =>
-        prevList.map((rec) => {
-          if (rec.id === selectedRecipient.id) {
-            const nextAmount = rec.currentAmount + donateAmount;
-            if (nextAmount >= rec.targetAmount) {
-              isFullyFunded = true;
-            }
-            return {
-              ...rec,
-              currentAmount: nextAmount,
-              currentQuantity:
-                nextAmount >= rec.targetAmount
-                  ? rec.targetQuantity
-                  : rec.currentQuantity,
-            };
+    let isFullyFunded = false;
+    setRecipientList((prevList) =>
+      prevList.map((rec) => {
+        if (rec.id === selectedRecipient.id) {
+          const nextAmount = rec.currentAmount + donateAmount;
+          if (nextAmount >= rec.targetAmount) {
+            isFullyFunded = true;
           }
-          return rec;
-        })
-      );
+          return {
+            ...rec,
+            currentAmount: nextAmount,
+            currentQuantity:
+              nextAmount >= rec.targetAmount
+                ? rec.targetQuantity
+                : rec.currentQuantity,
+          };
+        }
+        return rec;
+      })
+    );
 
-      setSuccessInfo({
-        recipientName: selectedRecipient.name,
-        donatedAmount: donateAmount,
-        isFullyFunded,
-      });
-
-      setIsSubmitting(false);
-    }, 400);
+    setSuccessInfo({
+      recipientName: selectedRecipient.name,
+      donatedAmount: donateAmount,
+      isFullyFunded,
+    });
+    setIsSubmitting(false);
   };
 
   const categoryIcon = CATEGORY_ICON_MAP[project.category] || "📦";

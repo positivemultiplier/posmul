@@ -2,6 +2,11 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import {
+  deductPmcForDonation,
+  recordDonationTransaction,
+  rollbackPmcForDonation,
+} from "@/bounded-contexts/donation/infrastructure/pmc-donation-ledger";
 
 export interface WishlistSubmissionData {
   projectId: string;
@@ -129,22 +134,42 @@ export async function getWishlistRequests(status?: "pending" | "approved" | "rej
 }
 
 /**
- * 4. 위시리스트 후원 PMC 누적
+ * 4. 위시리스트 후원 PMC 차감 및 누적
  */
 export async function donateToWishlist(requestId: string, amount: number) {
   try {
-    const supabase = await createClient();
+    const pmcAmount = Number(amount);
+    if (!Number.isFinite(pmcAmount) || pmcAmount <= 0) {
+      return { success: false, error: "유효한 기부 금액이 필요합니다." };
+    }
 
-    // 현재 금액 조회
-    const { data: current } = await supabase
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: "로그인이 필요합니다." };
+    }
+
+    const { data: current, error: reqError } = await supabase
       .schema("donation")
       .from("funding_wishlist_requests")
-      .select("current_funded_amount")
+      .select("current_funded_amount, facility_name")
       .eq("id", requestId)
       .single();
 
-    const newAmount = (current?.current_funded_amount || 0) + amount;
+    if (reqError || !current) {
+      return { success: false, error: "후원 대상 위시리스트를 찾을 수 없습니다." };
+    }
 
+    const deductResult = await deductPmcForDonation(supabase, user.id, pmcAmount);
+    if (deductResult.ok === false) {
+      return { success: false, error: deductResult.error };
+    }
+
+    const newAmount = (Number(current.current_funded_amount) || 0) + pmcAmount;
     const { data: updated, error } = await supabase
       .schema("donation")
       .from("funding_wishlist_requests")
@@ -157,13 +182,29 @@ export async function donateToWishlist(requestId: string, amount: number) {
       .single();
 
     if (error) {
+      await rollbackPmcForDonation(supabase, user.id, deductResult.previousBalance);
       return { success: false, error: error.message };
     }
 
+    await recordDonationTransaction({
+      supabase,
+      userId: user.id,
+      pmcAmount,
+      description: `K-물품 위시리스트 후원: ${current.facility_name || "복지시설"}`,
+      metadata: {
+        source: "WISHLIST_DONATION",
+        wishlist_request_id: requestId,
+        facility_name: current.facility_name,
+      },
+    });
+
     revalidatePath("/donation/direct");
-    return { success: true, data: updated };
-  } catch (err: any) {
-    return { success: false, error: err.message };
+    return { success: true, data: updated, newBalance: deductResult.newBalance };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "기부 처리 중 오류가 발생했습니다.",
+    };
   }
 }
 

@@ -35,7 +35,7 @@ export default async function EconomyPage() {
                             </div>
                             <div>
                                 <h2 className="text-2xl font-bold">Money Wave</h2>
-                                <p className="text-sm text-gray-400">EBIT 기반 PMC 분배 시스템</p>
+                                <p className="text-sm text-gray-400">세후 순이익(EAT) 기반 PMC 분배 시스템</p>
                             </div>
                         </div>
 

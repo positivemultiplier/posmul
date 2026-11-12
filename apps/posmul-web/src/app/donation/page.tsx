@@ -54,17 +54,18 @@ const PILLARS = [
   },
   {
     key: "leader",
-    title: "🌟 의인 포상 & 꿈의 사다리 (Leader)",
-    subtitle: "비과세 공익 포상금 · Pay-it-Forward",
+    title: "🌟 팔로잉 · 미래꿈 기부 (Phase 2 예정)",
+    subtitle: "오피니언 리더 위임 · 콩도르세/보르다 꿈 배분 투표",
     description:
-      "청년 스카우터가 발굴한 숨은 의인에게 소득세법 제18조에 따른 비과세 포상금을 지급하고, 자립준비청년의 꿈에 무이자 펀딩하여 성공 시 후배를 위해 자발적으로 상환하는 사다리를 잇습니다.",
+      "신뢰하는 오피니언 리더에게 기부를 위임하거나, 정답이 없는 여러 사람의 꿈에 콩도르세·보르다 투표로 공익 자원을 배분하는 기능은 Phase 2에서 오픈됩니다.",
     href: "/donation/opinion-leader",
     color: "from-amber-200 to-amber-400",
     bgColor: "from-amber-950/80 via-slate-900/70 to-slate-950",
-    stats: { count: 128, label: "명 의인 & 꿈 펀딩" },
-    rewardBadge: "비과세 포상금 · 상환율 96%",
+    stats: { count: 128, label: "명 준비 중" },
+    rewardBadge: "Phase 2 오픈 예정",
     icon: <Award className="w-8 h-8 text-amber-400" />,
     image: "/images/cards/donation_leader.png",
+    comingSoon: true,
   },
 ];
 
@@ -153,6 +154,21 @@ export default function DonationPage() {
     setSuccessMessage(null);
 
     try {
+      const response = await fetch("/api/donation/donate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          organizationName: targetName,
+          amount,
+        }),
+      });
+      const result = await response.json();
+
+      if (!response.ok || !result?.success) {
+        alert(result?.error || "기부 처리에 실패했습니다.");
+        return;
+      }
+
       setTotalDonation((prev) => prev + amount);
       setTotalDonors((prev) => prev + 1);
       setTodayCount((prev) => prev + 1);
@@ -219,49 +235,68 @@ export default function DonationPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {PILLARS.map((pillar) => (
-              <Link
-                key={pillar.key}
-                href={pillar.href}
-                className="group relative flex flex-col justify-between p-6 sm:p-7 rounded-3xl bg-slate-900/60 border border-slate-800 hover:border-purple-500/50 hover:bg-slate-900/90 transition-all shadow-xl hover:shadow-purple-500/10 overflow-hidden"
-              >
-                {/* 상단 뱃지 & 아이콘 */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 group-hover:scale-110 transition-transform">
-                      {pillar.icon}
+            {PILLARS.map((pillar) => {
+              const isLocked = "comingSoon" in pillar && Boolean(pillar.comingSoon);
+              const cardContent = (
+                <div
+                  className={`group relative flex flex-col justify-between p-6 sm:p-7 rounded-3xl bg-slate-900/60 border border-slate-800 transition-all shadow-xl overflow-hidden h-full ${
+                    isLocked
+                      ? "opacity-60 cursor-not-allowed"
+                      : "hover:border-purple-500/50 hover:bg-slate-900/90 hover:shadow-purple-500/10"
+                  }`}
+                >
+                  {/* 상단 뱃지 & 아이콘 */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="p-3 rounded-2xl bg-slate-950 border border-slate-800 group-hover:scale-110 transition-transform">
+                        {pillar.icon}
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-purple-950/80 text-purple-300 border border-purple-800/60">
+                        {pillar.rewardBadge}
+                      </span>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-purple-950/80 text-purple-300 border border-purple-800/60">
-                      {pillar.rewardBadge}
-                    </span>
-                  </div>
 
-                  <div>
-                    <h3 className="text-lg font-black text-white group-hover:text-purple-300 transition-colors">
-                      {pillar.title}
-                    </h3>
-                    <p className="text-xs font-bold text-slate-400 pt-0.5">
-                      {pillar.subtitle}
+                    <div>
+                      <h3 className="text-lg font-black text-white group-hover:text-purple-300 transition-colors">
+                        {pillar.title}
+                      </h3>
+                      <p className="text-xs font-bold text-slate-400 pt-0.5">
+                        {pillar.subtitle}
+                      </p>
+                    </div>
+
+                    <p className="text-xs text-slate-300 leading-relaxed line-clamp-3">
+                      {pillar.description}
                     </p>
                   </div>
 
-                  <p className="text-xs text-slate-300 leading-relaxed line-clamp-3">
-                    {pillar.description}
-                  </p>
+                  {/* 하단 화살표 & 통계 */}
+                  <div className="pt-6 border-t border-slate-800/80 flex items-center justify-between text-xs mt-4">
+                    <span className="text-slate-400 font-semibold font-mono">
+                      {pillar.stats.count} {pillar.stats.label}
+                    </span>
+                    <span className="flex items-center gap-1 font-bold text-purple-400 group-hover:translate-x-1.5 transition-transform">
+                      {isLocked ? (
+                        <span>Phase 2 오픈 예정</span>
+                      ) : (
+                        <>
+                          <span>목록 및 상세보기</span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </>
+                      )}
+                    </span>
+                  </div>
                 </div>
+              );
 
-                {/* 하단 화살표 & 통계 */}
-                <div className="pt-6 border-t border-slate-800/80 flex items-center justify-between text-xs mt-4">
-                  <span className="text-slate-400 font-semibold font-mono">
-                    {pillar.stats.count} {pillar.stats.label}
-                  </span>
-                  <span className="flex items-center gap-1 font-bold text-purple-400 group-hover:translate-x-1.5 transition-transform">
-                    <span>목록 및 상세보기</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
-                </div>
-              </Link>
-            ))}
+              return isLocked ? (
+                <div key={pillar.key}>{cardContent}</div>
+              ) : (
+                <Link key={pillar.key} href={pillar.href} className="block">
+                  {cardContent}
+                </Link>
+              );
+            })}
           </div>
         </section>
 

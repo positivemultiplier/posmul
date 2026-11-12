@@ -6,6 +6,22 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { checkIsIpBanned, banIp } from "@/shared/lib/security/ip-ban";
 import { checkTextForBannedWords } from "@/shared/lib/security/banned-words";
+import {
+  FORUM_COMMENT_DAILY_LIMIT,
+  FORUM_COMMENT_PMP_REWARD,
+  FORUM_CONCEPT_BONUS_PMP,
+  FORUM_CONCEPT_THRESHOLD,
+  FORUM_LIKE_RECEIVED_DAILY_LIMIT,
+  FORUM_LIKE_RECEIVED_PMP,
+  FORUM_POST_DAILY_LIMITS,
+  FORUM_POST_PMP_REWARDS,
+} from "../forum-pmp-policy";
+import {
+  grantForumPmpWithDailyCap,
+  startOfSeoulOrLocalToday,
+} from "../forum-pmp-ledger";
+
+const DEMO_FALLBACK_USER_ID = "00000000-0000-0000-0000-000000000001";
 
 async function getClientIpFromHeaders(): Promise<string> {
   try {
@@ -402,6 +418,29 @@ export async function createGalleryPostAction(params: {
       } catch {}
     }
 
+    // 글 작성 기본 PMP 지급 (일일 작성 횟수 및 일일 총 상한 내)
+    if (user?.id) {
+      const todayStart = startOfSeoulOrLocalToday();
+      const { count: todayPostCount } = await supabaseAdmin
+        .schema("forum")
+        .from("forum_posts")
+        .select("id", { count: "exact", head: true })
+        .eq("author_id", user.id)
+        .gte("created_at", todayStart.toISOString());
+
+      if ((todayPostCount || 0) <= FORUM_POST_DAILY_LIMITS.debate) {
+        await grantForumPmpWithDailyCap({
+          supabase: supabaseAdmin,
+          userId: user.id,
+          activityType: "post_created",
+          requestedPmp: FORUM_POST_PMP_REWARDS.debate,
+          description: `갤러리 게시글 작성: ${newPost.title}`,
+          ledgerDescription: `Forum 글 작성: ${newPost.title}`,
+          postId: newPost.id,
+        });
+      }
+    }
+
     revalidatePath("/forum");
     if (params.gameId) revalidatePath(`/prediction/${params.gameId}`);
 
@@ -433,22 +472,105 @@ export async function createGalleryPostAction(params: {
   }
 }
 
+async function rewardAuthorForGalleryLike(params: {
+  authorId: string;
+  postId: string;
+  postTitle: string;
+  newLikeCount: number;
+}): Promise<void> {
+  const { authorId, postId, postTitle, newLikeCount } = params;
+  if (!authorId || authorId === DEMO_FALLBACK_USER_ID) return;
+
+  const todayStart = startOfSeoulOrLocalToday();
+  const { count: todayLikeCount } = await supabaseAdmin
+    .schema("forum")
+    .from("forum_activity_logs")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", authorId)
+    .eq("activity_type", "post_like_received")
+    .gte("created_at", todayStart.toISOString());
+
+  if ((todayLikeCount || 0) < FORUM_LIKE_RECEIVED_DAILY_LIMIT) {
+    await grantForumPmpWithDailyCap({
+      supabase: supabaseAdmin,
+      userId: authorId,
+      activityType: "post_like_received",
+      requestedPmp: FORUM_LIKE_RECEIVED_PMP,
+      description: `게시글 추천 수령: ${postTitle}`,
+      ledgerDescription: `Forum 추천 수령 보너스 (+${FORUM_LIKE_RECEIVED_PMP} PMP)`,
+      postId,
+    });
+  }
+
+  if (newLikeCount === FORUM_CONCEPT_THRESHOLD) {
+    const { data: existingBonus } = await supabaseAdmin
+      .schema("forum")
+      .from("forum_activity_logs")
+      .select("id")
+      .eq("user_id", authorId)
+      .eq("post_id", postId)
+      .eq("activity_type", "concept_post_bonus")
+      .maybeSingle();
+
+    if (!existingBonus) {
+      await grantForumPmpWithDailyCap({
+        supabase: supabaseAdmin,
+        userId: authorId,
+        activityType: "concept_post_bonus",
+        requestedPmp: FORUM_CONCEPT_BONUS_PMP,
+        description: `개념글(포텐) 달성 보너스: ${postTitle}`,
+        ledgerDescription: `Forum 개념글(추천 ${FORUM_CONCEPT_THRESHOLD}+) 달성 보너스`,
+        postId,
+      });
+    }
+  }
+}
+
+async function hasUserAlreadyVoted(userId: string, postId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .schema("forum")
+    .from("forum_activity_logs")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("post_id", postId)
+    .in("activity_type", ["post_like_given", "post_dislike_given"])
+    .maybeSingle();
+
+  return Boolean(data);
+}
+
 /**
- * 게시글 추천 (개념글 가기) / 비추천
+ * 게시글 추천 (개념글 가기 + 작성자 PMP 보상) / 비추천
  */
 export async function voteGalleryPostAction(
   postId: string,
   type: "up" | "down"
 ): Promise<{ success: boolean; likeCount?: number; dislikeCount?: number; error?: string }> {
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user?.id) {
+      return { success: false, error: "추천/비추천은 로그인 후 이용할 수 있습니다." };
+    }
+
     const { data: post } = await supabaseAdmin
       .schema("forum")
       .from("forum_posts")
-      .select("like_count, dislike_count")
+      .select("author_id, title, like_count, dislike_count")
       .eq("id", postId)
       .single();
 
     if (!post) return { success: false, error: "게시글이 존재하지 않습니다." };
+    if (post.author_id === user.id) {
+      return { success: false, error: "본인의 게시글에는 추천/비추천할 수 없습니다." };
+    }
+
+    if (await hasUserAlreadyVoted(user.id, postId)) {
+      return { success: false, error: "이미 추천 또는 비추천한 게시글입니다." };
+    }
 
     const newLike = type === "up" ? (post.like_count || 0) + 1 : post.like_count || 0;
     const newDislike = type === "down" ? (post.dislike_count || 0) + 1 : post.dislike_count || 0;
@@ -458,6 +580,23 @@ export async function voteGalleryPostAction(
       .from("forum_posts")
       .update({ like_count: newLike, dislike_count: newDislike })
       .eq("id", postId);
+
+    await supabaseAdmin.schema("forum").from("forum_activity_logs").insert({
+      user_id: user.id,
+      activity_type: type === "up" ? "post_like_given" : "post_dislike_given",
+      post_id: postId,
+      description: `게시글 ${type === "up" ? "추천" : "비추천"}`,
+      pmp_earned: 0,
+    });
+
+    if (type === "up") {
+      await rewardAuthorForGalleryLike({
+        authorId: post.author_id,
+        postId,
+        postTitle: post.title || "게시글",
+        newLikeCount: newLike,
+      });
+    }
 
     revalidatePath("/forum");
     return { success: true, likeCount: newLike, dislikeCount: newDislike };
@@ -580,22 +719,37 @@ export async function addGalleryCommentAction(params: {
         .eq("id", params.postId);
     }
 
-    // PMP 포인트 적립 (유저 지갑)
+    // PMP 포인트 적립 (유저 지갑, 일일 댓글 한도 및 일일 총 상한 적용)
+    let awardedPmp = 0;
     if (user?.id) {
-      try {
-        await supabaseAdmin.rpc("reward_pmp_to_user", {
-          p_user_id: user.id,
-          p_amount: 10,
-          p_reason: "FORUM_COMMENT_REWARD",
+      const todayStart = startOfSeoulOrLocalToday();
+      const { count: todayCommentCount } = await supabaseAdmin
+        .schema("forum")
+        .from("forum_comments")
+        .select("id", { count: "exact", head: true })
+        .eq("author_id", user.id)
+        .gte("created_at", todayStart.toISOString());
+
+      if ((todayCommentCount || 0) <= FORUM_COMMENT_DAILY_LIMIT) {
+        const grantRes = await grantForumPmpWithDailyCap({
+          supabase: supabaseAdmin,
+          userId: user.id,
+          activityType: "comment_created",
+          requestedPmp: FORUM_COMMENT_PMP_REWARD,
+          description: `댓글 작성: ${params.content.trim().slice(0, 50)}`,
+          ledgerDescription: "Forum 댓글 작성",
+          postId: params.postId,
+          commentId: comment.id,
         });
-      } catch {}
+        awardedPmp = grantRes.awardedPmp;
+      }
     }
 
     revalidatePath("/forum");
 
     return {
       success: true,
-      earnedPmp: 10,
+      earnedPmp: awardedPmp,
       comment: {
         id: comment.id,
         postId: comment.post_id,
@@ -604,7 +758,7 @@ export async function addGalleryCommentAction(params: {
         authorBadge: betOptionLabel ? `${betOptionLabel} 베팅` : undefined,
         content: comment.content,
         likeCount: 0,
-        pmpEarned: 10,
+        pmpEarned: awardedPmp,
         createdAt: comment.created_at || new Date().toISOString(),
       },
     };
