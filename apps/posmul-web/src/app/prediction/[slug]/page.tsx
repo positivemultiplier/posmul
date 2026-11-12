@@ -94,6 +94,8 @@ export default async function PredictionDetailPage({
         userBalance={dbDetailData.userBalance}
         userBets={dbDetailData.userBets}
         initialChartData={dbDetailData.initialChartData}
+        userLearningProfile={dbDetailData.userLearningProfile}
+        tailChallenges={dbDetailData.tailChallenges}
         slug={dbDetailData.slug}
       />
     );

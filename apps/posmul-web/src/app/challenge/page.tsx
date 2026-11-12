@@ -38,8 +38,8 @@ export default async function ChallengeLobbyPage() {
               <span>친구와 맞짱 내기 챌린지 🥊</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-              사다리타기는 이제 그만! 30초 만에 내기를 만들고 카카오톡 단톡방이나 트위터에 도전장을 던지세요.
-              친구들을 이기면 PMP를 뺏어오고, 10명 이상 모으면 호스트 수수료(3%)까지 챙깁니다!
+              사다리타기는 이제 그만! 10초 만에 단독 또는 공식 경기 꼬리 내기를 만들어 카카오톡·SNS에 도전장을 던지세요.
+              친구들을 이기면 PMP를 뺏어오고, 오픈 내기는 판돈의 3% 호스트 수수료까지 챙깁니다!
             </p>
 
             <div className="pt-2 flex flex-wrap gap-3">
@@ -86,7 +86,7 @@ export default async function ChallengeLobbyPage() {
               <Flame className="w-5 h-5 text-orange-400" />
               <span>실시간 오픈 챌린지 피드</span>
             </h2>
-            <span className="text-xs text-slate-500">10명 이상 모인 시민 매치</span>
+            <span className="text-xs text-slate-500">오픈 내기 & 5명 돌파 자동 승격 매치</span>
           </div>
 
           {challenges.length === 0 ? (
@@ -111,10 +111,17 @@ export default async function ChallengeLobbyPage() {
                     className="p-5 rounded-3xl bg-[#111520] hover:bg-[#151a28] border border-white/[0.08] hover:border-amber-500/40 transition space-y-4 group block"
                   >
                     <div className="flex items-center justify-between text-xs">
-                      <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-white/[0.08] text-slate-400 font-bold">
-                        방장: {c.hostName}
-                      </span>
-                      <span className="text-amber-400 font-black font-mono">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-white/[0.08] text-slate-400 font-bold shrink-0">
+                          방장: {c.hostName}
+                        </span>
+                        {c.linkedGameTitle && (
+                          <span className="px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300 font-bold text-[10px] truncate max-w-[140px]">
+                            🔗 꼬리내기
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-amber-400 font-black font-mono shrink-0">
                         💰 {c.totalPoolPmp.toLocaleString()} PMP
                       </span>
                     </div>

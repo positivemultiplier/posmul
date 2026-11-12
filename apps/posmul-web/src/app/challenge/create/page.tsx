@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -10,34 +10,49 @@ import {
   Clock,
   Lock,
   Globe,
-  Share2,
   Copy,
   Check,
-  Send,
   Flame,
-  Award,
+  Link2,
 } from "lucide-react";
 import { CHALLENGE_PRESETS, ChallengePreset } from "../types";
 import { createChallengeAction } from "../actions/challenge.actions";
 
-export default function CreateChallengePage() {
+function CreateChallengeFormContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
 
-  // 폼 상태
-  const [selectedPresetId, setSelectedPresetId] = useState<string>("coffee");
-  const [title, setTitle] = useState(CHALLENGE_PRESETS[0].title);
-  const [category, setCategory] = useState<any>(CHALLENGE_PRESETS[0].category);
-  const [options, setOptions] = useState<string[]>(CHALLENGE_PRESETS[0].options);
-  const [durationHours, setDurationHours] = useState<number>(CHALLENGE_PRESETS[0].defaultDurationHours);
+  const linkedGameId = searchParams.get("linkedGameId") || undefined;
+  const linkedSlug = searchParams.get("linkedSlug") || undefined;
+  const linkedTitle = searchParams.get("linkedTitle") || undefined;
+  const isTailMode = Boolean(linkedGameId || linkedTitle);
+
+  const [selectedPresetId, setSelectedPresetId] = useState<string>(
+    isTailMode ? "" : "coffee"
+  );
+  const [title, setTitle] = useState(
+    isTailMode ? "" : CHALLENGE_PRESETS[0].title
+  );
+  const [category, setCategory] = useState<
+    "CASUAL" | "SPORTS" | "FANDOM" | "COMPANY" | "COUPLE" | "STUDY"
+  >(isTailMode ? "SPORTS" : CHALLENGE_PRESETS[0].category);
+  const [options, setOptions] = useState<string[]>(
+    isTailMode ? ["그렇다 (Yes)", "아니다 (No)"] : CHALLENGE_PRESETS[0].options
+  );
+  const [durationHours, setDurationHours] = useState<number>(
+    isTailMode ? 3 : CHALLENGE_PRESETS[0].defaultDurationHours
+  );
   const [hostOptionIndex, setHostOptionIndex] = useState<number>(0);
   const [hostBetAmount, setHostBetAmount] = useState<number>(300);
-  const [visibility, setVisibility] = useState<"PRIVATE" | "PUBLIC">("PRIVATE");
+  // 적극적 참여 유도: 기본값 PUBLIC (단톡방 공유 + 오픈 피드 동시 노출)
+  const [visibility, setVisibility] = useState<"PRIVATE" | "PUBLIC">("PUBLIC");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [createdChallengeId, setCreatedChallengeId] = useState<string | null>(null);
+  const [createdChallengeId, setCreatedChallengeId] = useState<string | null>(
+    null
+  );
   const [copied, setCopied] = useState(false);
 
-  // 프리셋 선택 핸들러
   const handleSelectPreset = (preset: ChallengePreset) => {
     setSelectedPresetId(preset.id);
     setTitle(preset.title);
@@ -47,21 +62,18 @@ export default function CreateChallengePage() {
     setHostOptionIndex(0);
   };
 
-  // 선택지 변경
   const handleOptionChange = (idx: number, val: string) => {
     const updated = [...options];
     updated[idx] = val;
     setOptions(updated);
   };
 
-  // 선택지 추가
   const handleAddOption = () => {
     if (options.length < 4) {
       setOptions([...options, `선택지 ${options.length + 1}`]);
     }
   };
 
-  // 챌린지 생성 제출
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) {
@@ -79,25 +91,32 @@ export default function CreateChallengePage() {
         durationHours,
         hostOptionIndex,
         hostBetAmount,
+        linkedGameId,
+        linkedGameSlug: linkedSlug,
+        linkedGameTitle: linkedTitle,
       });
 
       if (res.success && res.challengeId) {
         setCreatedChallengeId(res.challengeId);
-      } else if ((res as any).requireLogin) {
-        if (confirm("내기 룸을 개설하려면 로그인이 필요합니다. 로그인 페이지로 이동할까요?")) {
+      } else if (res.requireLogin) {
+        if (
+          confirm(
+            "내기 룸을 개설하려면 로그인이 필요합니다. 로그인 페이지로 이동할까요?"
+          )
+        ) {
           router.push(`/auth/login?redirectTo=/challenge/create`);
         }
       } else {
         alert(res.error || "챌린지 생성에 실패했습니다.");
       }
-    } catch (err: any) {
-      alert(err?.message || "오류가 발생했습니다.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "오류가 발생했습니다.";
+      alert(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // 링크 복사
   const handleCopyLink = () => {
     if (!createdChallengeId) return;
     const url = `${window.location.origin}/challenge/${createdChallengeId}`;
@@ -106,13 +125,15 @@ export default function CreateChallengePage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // 트위터(X) 공유
   const handleShareTwitter = () => {
     if (!createdChallengeId) return;
     const url = `${window.location.origin}/challenge/${createdChallengeId}`;
     const hostChoice = options[hostOptionIndex] || "내 선택";
     const tweetText = `🥊 [PosMul 맞짱 챌린지]\n"${title}"\n\n나는 [${hostChoice}]에 ${hostBetAmount} PMP 걸었다! 반대하는 사람 들어와라 ㅋㅋㅋ\n👉 ${url}`;
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, "_blank");
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`,
+      "_blank"
+    );
   };
 
   return (
@@ -121,29 +142,49 @@ export default function CreateChallengePage() {
         {/* 상단 네비게이션 헤더 */}
         <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
           <Link
-            href="/challenge"
+            href={linkedSlug ? `/prediction/${linkedSlug}` : "/challenge"}
             className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>챌린지 로비로</span>
+            <span>{linkedSlug ? "공식 게임으로 돌아가기" : "챌린지 로비로"}</span>
           </Link>
           <div className="flex items-center gap-1 text-xs text-amber-400 font-bold">
             <Sparkles className="w-3.5 h-3.5" />
-            <span>개설비: 100 PMP 소모</span>
+            <span>내 첫 판돈 {hostBetAmount.toLocaleString()} PMP 에스크로 차감</span>
           </div>
         </div>
+
+        {/* 꼬리 내기 연결 배너 */}
+        {isTailMode && (
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-slate-900 border border-amber-500/40 flex items-start gap-2.5 text-xs">
+            <Link2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="space-y-0.5">
+              <div className="font-black text-amber-300">
+                🔗 공식 예측 꼬리 내기 연결 모드
+              </div>
+              <div className="text-slate-300 line-clamp-1">
+                원본 마켓: <strong className="text-white">{linkedTitle}</strong>
+              </div>
+              <p className="text-[11px] text-slate-400">
+                여기서 만든 내기는 친구 링크 공유뿐 아니라 원본 마켓 페이지에도 함께 노출됩니다!
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* 타이틀 배너 */}
         <div className="space-y-1">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[11px] font-black">
             <Zap className="w-3.5 h-3.5 text-amber-400" />
-            <span>30초 초간편 모바일 내기</span>
+            <span>{isTailMode ? "공식 이슈 꼬리 내기" : "단독 & 꼬리 자율 내기"}</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            친구와 맞짱 내기 만들기 🥊
+            {isTailMode
+              ? "이 이슈로 꼬리 내기 붙이기 🥊"
+              : "10초 만에 내기·예측 만들기 🥊"}
           </h1>
           <p className="text-xs text-slate-400">
-            친구 단톡방에 링크를 던져 내기를 걸어보세요. 이기면 친구들의 PMP를 뺏어옵니다!
+            카톡·SNS로 친구를 끌어들여 이기면 상대 PMP를 뺏어오고, 방장은 전체 판돈의 3% 수수료를 챙깁니다!
           </p>
         </div>
 
@@ -175,18 +216,27 @@ export default function CreateChallengePage() {
         </div>
 
         {/* 2. 폼 입력창 */}
-        <form onSubmit={handleSubmit} className="space-y-5 bg-[#111520] border border-white/[0.08] p-5 sm:p-6 rounded-3xl shadow-xl">
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-5 bg-[#111520] border border-white/[0.08] p-5 sm:p-6 rounded-3xl shadow-xl"
+        >
           {/* 질문 제목 */}
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
               <span>내기 질문</span>
-              <span className="text-[10px] text-slate-500 font-normal">명확한 승패 기준</span>
+              <span className="text-[10px] text-slate-500 font-normal">
+                참여자 합의 가능 기준 권장
+              </span>
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="예: 오늘 북런던 더비 손흥민 골 넣을까?"
+              placeholder={
+                isTailMode
+                  ? "예: 전반전 추가시간 4분 넘을까? / 손흥민 전반에 넘어진다?"
+                  : "예: 오늘 북런던 더비 손흥민 골 넣을까?"
+              }
               required
               className="w-full bg-[#0c0f17] border border-white/[0.08] rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-amber-400 font-medium"
             />
@@ -246,7 +296,9 @@ export default function CreateChallengePage() {
           <div className="space-y-2 pt-2 border-t border-white/[0.06]">
             <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
               <span>내 베팅 판돈 (PMP)</span>
-              <span className="text-amber-400 text-xs font-black">{hostBetAmount.toLocaleString()} PMP</span>
+              <span className="text-amber-400 text-xs font-black">
+                {hostBetAmount.toLocaleString()} PMP
+              </span>
             </label>
             <div className="grid grid-cols-4 gap-2">
               {[100, 300, 500, 1000].map((amt) => (
@@ -266,7 +318,7 @@ export default function CreateChallengePage() {
             </div>
           </div>
 
-          {/* 마감 시간 설정 (이중 시간) */}
+          {/* 마감 시간 설정 */}
           <div className="space-y-2 pt-2 border-t border-white/[0.06]">
             <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-amber-400" />
@@ -276,8 +328,8 @@ export default function CreateChallengePage() {
               {[
                 { label: "1시간 뒤", hours: 1 },
                 { label: "3시간 뒤", hours: 3 },
-                { label: "오늘 밤 24시", hours: 6 },
-                { label: "내일 이맘때", hours: 24 },
+                { label: "6시간 뒤", hours: 6 },
+                { label: "24시간 뒤", hours: 24 },
               ].map((d) => (
                 <button
                   key={d.hours}
@@ -293,35 +345,14 @@ export default function CreateChallengePage() {
                 </button>
               ))}
             </div>
-            <p className="text-[10px] text-slate-500">
-              * 마감 시간이 도래하면 자동으로 베팅이 잠기며 후행 베팅이 차단됩니다.
-            </p>
           </div>
 
-          {/* 공개 범위 토글 (프라이버시 안전) */}
+          {/* 공개 범위 토글 */}
           <div className="space-y-2 pt-2 border-t border-white/[0.06]">
-            <label className="text-xs font-bold text-slate-300">공개 범위 설정</label>
+            <label className="text-xs font-bold text-slate-300">
+              공개 범위 설정
+            </label>
             <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setVisibility("PRIVATE")}
-                className={`p-3 rounded-2xl text-left border transition flex items-start gap-2.5 ${
-                  visibility === "PRIVATE"
-                    ? "bg-slate-900 border-amber-400/80 shadow-md"
-                    : "bg-slate-950/50 border-white/[0.06] text-slate-500"
-                }`}
-              >
-                <Lock className={`w-4 h-4 shrink-0 mt-0.5 ${visibility === "PRIVATE" ? "text-amber-400" : "text-slate-500"}`} />
-                <div className="space-y-0.5">
-                  <div className={`text-xs font-bold ${visibility === "PRIVATE" ? "text-white" : "text-slate-400"}`}>
-                    🔒 완전 비공개 (프라이빗)
-                  </div>
-                  <div className="text-[10px] text-slate-500">
-                    링크를 가진 친구들끼리만 내기. 메인 노출 안 됨!
-                  </div>
-                </div>
-              </button>
-
               <button
                 type="button"
                 onClick={() => setVisibility("PUBLIC")}
@@ -331,27 +362,64 @@ export default function CreateChallengePage() {
                     : "bg-slate-950/50 border-white/[0.06] text-slate-500"
                 }`}
               >
-                <Globe className={`w-4 h-4 shrink-0 mt-0.5 ${visibility === "PUBLIC" ? "text-sky-400" : "text-slate-500"}`} />
+                <Globe
+                  className={`w-4 h-4 shrink-0 mt-0.5 ${
+                    visibility === "PUBLIC" ? "text-sky-400" : "text-slate-500"
+                  }`}
+                />
                 <div className="space-y-0.5">
-                  <div className={`text-xs font-bold ${visibility === "PUBLIC" ? "text-white" : "text-slate-400"}`}>
-                    🌐 오픈 챌린지 (퍼블릭)
+                  <div
+                    className={`text-xs font-bold ${
+                      visibility === "PUBLIC" ? "text-white" : "text-slate-400"
+                    }`}
+                  >
+                    🌐 오픈 챌린지 (추천)
                   </div>
                   <div className="text-[10px] text-slate-500">
-                    10명 이상 모이면 메인 승격 + 호스트 수수료 3% 획득!
+                    링크 공유 + 공개 피드 노출로 많은 도전자 모집 & 3% 수수료!
+                  </div>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setVisibility("PRIVATE")}
+                className={`p-3 rounded-2xl text-left border transition flex items-start gap-2.5 ${
+                  visibility === "PRIVATE"
+                    ? "bg-slate-900 border-amber-400/80 shadow-md"
+                    : "bg-slate-950/50 border-white/[0.06] text-slate-500"
+                }`}
+              >
+                <Lock
+                  className={`w-4 h-4 shrink-0 mt-0.5 ${
+                    visibility === "PRIVATE"
+                      ? "text-amber-400"
+                      : "text-slate-500"
+                  }`}
+                />
+                <div className="space-y-0.5">
+                  <div
+                    className={`text-xs font-bold ${
+                      visibility === "PRIVATE" ? "text-white" : "text-slate-400"
+                    }`}
+                  >
+                    🔒 단톡방 비공개 (프라이빗)
+                  </div>
+                  <div className="text-[10px] text-slate-500">
+                    링크 아는 친구끼리 시작 (5명 이상 모이면 자동 오픈 승격)
                   </div>
                 </div>
               </button>
             </div>
           </div>
 
-          {/* 생성 제출 버튼 */}
           <button
             type="submit"
             disabled={isSubmitting}
             className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 hover:from-amber-400 hover:to-red-400 text-slate-950 font-black text-sm shadow-xl shadow-amber-500/20 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
           >
             {isSubmitting ? (
-              <span>내기 룸 개설 중...</span>
+              <span>PMP 에스크로 차감 및 룸 개설 중...</span>
             ) : (
               <>
                 <Flame className="w-4 h-4" />
@@ -361,7 +429,7 @@ export default function CreateChallengePage() {
           </button>
         </form>
 
-        {/* 🌟 3. 개설 완료 팝업 모달 */}
+        {/* 개설 완료 팝업 모달 */}
         {createdChallengeId && (
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-[#111520] border border-amber-500/40 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl text-center">
@@ -377,7 +445,6 @@ export default function CreateChallengePage() {
                 </p>
               </div>
 
-              {/* 공유 버튼 그룹 */}
               <div className="space-y-2.5 pt-2">
                 <button
                   type="button"
@@ -385,7 +452,7 @@ export default function CreateChallengePage() {
                   className="w-full py-3 rounded-xl bg-black hover:bg-slate-900 border border-white/20 text-white font-extrabold text-xs flex items-center justify-center gap-2 transition"
                 >
                   <span className="font-mono text-sm font-black">𝕏</span>
-                  <span>트위터(X)에 대형 포스터 카드로 자랑하기</span>
+                  <span>트위터(X)에 도발장 올리기</span>
                 </button>
 
                 <button
@@ -393,8 +460,16 @@ export default function CreateChallengePage() {
                   onClick={handleCopyLink}
                   className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition"
                 >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                  <span>{copied ? "초대 링크 복사 완료!" : "카카오톡/단톡방 초대 링크 복사하기"}</span>
+                  {copied ? (
+                    <Check className="w-4 h-4" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                  <span>
+                    {copied
+                      ? "초대 링크 복사 완료!"
+                      : "카카오톡/단톡방 초대 링크 복사하기"}
+                  </span>
                 </button>
 
                 <Link
@@ -412,3 +487,16 @@ export default function CreateChallengePage() {
   );
 }
 
+export default function CreateChallengePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#07090e] text-slate-400 flex items-center justify-center text-xs">
+          내기 생성 화면을 불러오는 중...
+        </div>
+      }
+    >
+      <CreateChallengeFormContent />
+    </Suspense>
+  );
+}

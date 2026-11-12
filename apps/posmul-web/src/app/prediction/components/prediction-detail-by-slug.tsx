@@ -28,6 +28,8 @@ import {
   resolveCanonicalOptionId,
 } from "../../../bounded-contexts/prediction/application/services/prediction-learning-stats.service";
 import { analyzePredictionCapmAndEconomy } from "../../../bounded-contexts/prediction/domain/services/prediction-economic-model";
+import { getTailChallengesForGameAction } from "../../challenge/actions/challenge.actions";
+import type { UserChallengeDTO } from "../../challenge/types";
 
 function mapDifficultyToImportance(raw: unknown, optionCount: number): number {
   if (typeof raw === "number" && Number.isFinite(raw)) {
@@ -67,6 +69,7 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
   }>;
   initialChartData: Array<{ time: string; [key: string]: string | number }>;
   userLearningProfile?: UserLearningProfileSummary;
+  tailChallenges: UserChallengeDTO[];
   slug: string;
 } | null> {
   const decodedSlug = decodeURIComponent(slug);
@@ -303,10 +306,13 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     | "ranking";
 
   // 차트 초기 데이터 조회 (SSR)
-  const initialChartData = await getGameHistory(
-    dbGame.game_id,
-    parsedOptions.map((opt) => ({ id: opt.id }))
-  );
+  const [initialChartData, tailChallenges] = await Promise.all([
+    getGameHistory(
+      dbGame.game_id,
+      parsedOptions.map((opt) => ({ id: opt.id }))
+    ),
+    getTailChallengesForGameAction(dbGame.game_id, dbGame.slug || decodedSlug),
+  ]);
 
   // 모든 DB 예측 게임은 동일 slug/game_id 기반의 LIVE 응원톡 방과 1:1 연동됩니다.
   const liveRoomId = dbGame.slug || dbGame.game_id;
@@ -392,6 +398,7 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     userBets,
     initialChartData,
     userLearningProfile,
+    tailChallenges,
     slug: decodedSlug,
   };
 }
@@ -407,6 +414,7 @@ export async function renderPredictionDetailBySlug(slug: string) {
       userBets={data.userBets}
       initialChartData={data.initialChartData}
       userLearningProfile={data.userLearningProfile}
+      tailChallenges={data.tailChallenges}
       slug={data.slug}
     />
   );

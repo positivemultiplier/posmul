@@ -98,12 +98,20 @@ export default async function PredictionUserSuggestionsPage() {
                   </span>
                 ))}
               </div>
-              <Link
-                href="/prediction/create"
-                className="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition shadow-sm"
-              >
-                + 새 예측 의제 제안하기
-              </Link>
+              <div className="flex flex-wrap items-center gap-2">
+                <Link
+                  href="/challenge/create"
+                  className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs font-black transition shadow-sm"
+                >
+                  🥊 단톡방 맞짱 · 꼬리내기 열기
+                </Link>
+                <Link
+                  href="/prediction/create"
+                  className="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition shadow-sm"
+                >
+                  + 공식 의제 제안하기
+                </Link>
+              </div>
             </div>
           </DomainContextHeader>
 

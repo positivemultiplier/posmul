@@ -305,10 +305,33 @@ export async function createLiveQuickChallengeAction(params: {
         };
       });
 
-    const totalPool = params.hostBetAmount;
+    const totalPool = Math.max(50, Math.round(Number(params.hostBetAmount) || 0));
     const hostFee = Math.floor(totalPool * 0.03);
 
-    // 1. 챌린지 생성 (metadata.roomId에 방 ID 기록해 방별 격리)
+    // 연결된 공식 게임 조회 (LIVE 채팅방 번개 예측 <-> 상세페이지 꼬리 내기 양방향 연동)
+    let linkedGame: { game_id: string; slug: string | null; title: string } | null = null;
+    const decodedRoomId = decodeURIComponent(params.roomId || "");
+    if (decodedRoomId) {
+      const bySlug = await supabaseAdmin
+        .schema("prediction")
+        .from("prediction_games")
+        .select("game_id, slug, title")
+        .eq("slug", decodedRoomId)
+        .maybeSingle();
+      if (bySlug.data) {
+        linkedGame = bySlug.data;
+      } else if (UUID_REGEX.test(decodedRoomId)) {
+        const byId = await supabaseAdmin
+          .schema("prediction")
+          .from("prediction_games")
+          .select("game_id, slug, title")
+          .eq("game_id", decodedRoomId)
+          .maybeSingle();
+        if (byId.data) linkedGame = byId.data;
+      }
+    }
+
+    // 1. 챌린지 생성 (metadata.roomId + linked_game_id 기록)
     const { data: challenge, error: challengeError } = await supabaseAdmin
       .schema("prediction")
       .from("user_challenges")
@@ -324,6 +347,9 @@ export async function createLiveQuickChallengeAction(params: {
         status: "OPEN",
         total_pool_pmp: totalPool,
         host_fee_pmp: hostFee,
+        linked_game_id: linkedGame?.game_id ?? null,
+        linked_game_slug: linkedGame?.slug ?? null,
+        linked_game_title: linkedGame?.title ?? null,
         metadata: { roomId: params.roomId },
       })
       .select("*")
@@ -337,6 +363,31 @@ export async function createLiveQuickChallengeAction(params: {
       };
     }
 
+    // 1-1. 호스트 PMP 에스크로 차감 (잔고 부족 시 생성 취소)
+    const { error: deductError } = await supabaseAdmin.rpc(
+      "deduct_challenge_pmp",
+      {
+        p_user_id: hostId,
+        p_challenge_id: challenge.id,
+        p_amount: totalPool,
+        p_reason: "live_quick_challenge_create",
+      }
+    );
+
+    if (deductError) {
+      await supabaseAdmin
+        .schema("prediction")
+        .from("user_challenges")
+        .delete()
+        .eq("id", challenge.id);
+      const errMsg = String(deductError.message || "").includes(
+        "INSUFFICIENT_PMP_BALANCE"
+      )
+        ? "PMP 잔고가 부족합니다! 포럼 활동이나 출석으로 PMP를 모아 주세요."
+        : deductError.message || "PMP 차감 실패";
+      return { success: false, error: errMsg };
+    }
+
     // 2. 호스트 첫 베팅 기록
     const hostOptionId = optionIds[params.hostPickIndex];
     await supabaseAdmin
@@ -347,7 +398,7 @@ export async function createLiveQuickChallengeAction(params: {
         user_id: hostId,
         user_name: hostName,
         option_id: hostOptionId,
-        amount_pmp: params.hostBetAmount,
+        amount_pmp: totalPool,
       });
 
     const challengeDTO: UserChallengeDTO = {
@@ -448,6 +499,28 @@ export async function quickVoteLiveChallengeAction(params: {
       return { success: false, error: "이미 이 예측에 참여하셨습니다!" };
     }
 
+    const betAmount = Math.max(50, Math.round(Number(params.amountPmp) || 0));
+
+    // 실제 PMP 에스크로 차감
+    const { error: deductError } = await supabaseAdmin.rpc(
+      "deduct_challenge_pmp",
+      {
+        p_user_id: userId,
+        p_challenge_id: params.challengeId,
+        p_amount: betAmount,
+        p_reason: "live_quick_challenge_vote",
+      }
+    );
+
+    if (deductError) {
+      const errMsg = String(deductError.message || "").includes(
+        "INSUFFICIENT_PMP_BALANCE"
+      )
+        ? "PMP 잔고가 부족합니다!"
+        : deductError.message || "PMP 차감 실패";
+      return { success: false, error: errMsg };
+    }
+
     // 베팅 레코드 저장
     await supabaseAdmin
       .schema("prediction")
@@ -457,7 +530,7 @@ export async function quickVoteLiveChallengeAction(params: {
         user_id: userId,
         user_name: userName,
         option_id: params.optionId,
-        amount_pmp: params.amountPmp,
+        amount_pmp: betAmount,
       });
 
     // 옵션 통계 재계산
@@ -467,7 +540,7 @@ export async function quickVoteLiveChallengeAction(params: {
         return {
           ...opt,
           votes: (opt.votes || 0) + 1,
-          pmp: (opt.pmp || 0) + params.amountPmp,
+          pmp: (opt.pmp || 0) + betAmount,
         };
       }
       return opt;

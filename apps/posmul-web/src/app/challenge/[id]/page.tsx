@@ -28,6 +28,8 @@ import {
   getChallengeCommentsAction,
   postChallengeCommentAction,
   settleChallengeAction,
+  acceptChallengeResultAction,
+  disputeChallengeResultAction,
   getRivalRecordAction,
 } from "../actions/challenge.actions";
 
@@ -170,19 +172,63 @@ export default function ChallengeDetailPage() {
     }
   };
 
-  // 5. 정산 처리 (호스트 전용)
+  // 5. 정산 제안 처리 (호스트 전용)
   const handleSettle = async (optId: string, optLabel: string) => {
-    if (!confirm(`'${optLabel}' 옵션을 승리로 확정하고 정산하시겠습니까?`)) return;
+    if (
+      !confirm(
+        `'${optLabel}' 옵션을 승리로 확정 제안하시겠습니까?\n(대결 성사 시 10분 이의제기 대기 후 또는 상대 인정(GG) 시 즉시 PMP가 분배됩니다)`
+      )
+    ) {
+      return;
+    }
 
     const res = await settleChallengeAction({
       challengeId,
       winningOptionId: optId,
     });
     if (res.success) {
-      alert("정산이 완료되었습니다!");
+      if (res.resultStatus === "VOID") {
+        alert("반대편 참여자가 없어 참여자 전원에게 원금 100% PMP가 환불되었습니다.");
+      } else {
+        alert("결과 확정 제안이 등록되었습니다! (10분 이내 이의가 없거나 패자가 GG 인정 시 즉시 정산됩니다)");
+      }
       loadData();
     } else {
       alert(res.error || "정산 실패");
+    }
+  };
+
+  // 5-1. 패자 1초 결과 인정 (GG) 즉시 정산
+  const handleAcceptResult = async () => {
+    if (!confirm("호스트 판정을 인정(GG)하고 즉시 승자에게 PMP를 정산할까요?")) return;
+    const res = await acceptChallengeResultAction({ challengeId });
+    if (res.success) {
+      alert("GG 인정 완료! 승자 PMP 및 호스트 수수료가 즉시 지급되었습니다.");
+      loadData();
+    } else {
+      alert(res.error || "처리 실패");
+    }
+  };
+
+  // 5-2. 판정 이의 제기
+  const handleDisputeResult = async () => {
+    if (
+      !confirm(
+        "호스트 판정에 이의를 제기하시겠습니까?\n(참여자 30% 이상 동의 시 즉시 무효 처리되어 전원 원금 100% PMP가 환불됩니다)"
+      )
+    ) {
+      return;
+    }
+    const res = await disputeChallengeResultAction({ challengeId });
+    if (res.success) {
+      if (res.voided) {
+        alert("이의제기 기준을 충족하여 무효 처리 및 전액 PMP 환불이 완료되었습니다.");
+      } else {
+        alert("판정 이의가 접수되었습니다.");
+      }
+      loadData();
+    } else {
+      alert(res.error || "이의제기 실패");
     }
   };
 
@@ -223,11 +269,24 @@ export default function ChallengeDetailPage() {
     );
   }
 
-  const isClosedOrLocked = challenge.status === "LOCKED" || challenge.status === "SETTLED" || challenge.status === "VOID";
   const isSettled = challenge.status === "SETTLED";
+  const isVoid = challenge.status === "VOID";
+  const isPendingSettlement = challenge.status === "PENDING_SETTLEMENT";
+  const isClosedOrLocked =
+    challenge.status === "LOCKED" || isPendingSettlement || isSettled || isVoid;
   const optionA = challenge.options[0];
   const optionB = challenge.options[1];
-  const isWinner = challenge.myBet && challenge.winningOptionId && challenge.myBet.optionId === challenge.winningOptionId;
+  const isWinner =
+    challenge.myBet &&
+    challenge.winningOptionId &&
+    challenge.myBet.optionId === challenge.winningOptionId;
+  const isPendingLoser =
+    Boolean(
+      isPendingSettlement &&
+        challenge.myBet &&
+        challenge.pendingWinningOptionId &&
+        challenge.myBet.optionId !== challenge.pendingWinningOptionId
+    );
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 py-6 px-4 sm:px-6">
@@ -286,27 +345,109 @@ export default function ChallengeDetailPage() {
           </div>
         )}
 
-        {/* 1. 상태 배너 (정산/마감 알림 & 승리 인증서 버튼) */}
+        {/* 꼬리 내기 원본 마켓 연결 배지 */}
+        {challenge.linkedGameTitle && (
+          <Link
+            href={
+              challenge.linkedGameSlug
+                ? `/prediction/${challenge.linkedGameSlug}`
+                : "/prediction"
+            }
+            className="p-3 rounded-2xl bg-sky-950/40 border border-sky-500/30 hover:border-sky-400/60 text-xs flex items-center justify-between gap-2 transition group"
+          >
+            <span className="text-sky-300 font-bold truncate">
+              🔗 공식 예측 꼬리 내기: <strong className="text-white">{challenge.linkedGameTitle}</strong>
+            </span>
+            <span className="text-[11px] font-black text-sky-400 shrink-0 group-hover:underline">
+              원본 마켓 보기 →
+            </span>
+          </Link>
+        )}
+
+        {/* 1. 상태 배너 (정산 완료 / 환불 / 이의제기 골든타임 / 마감 알림) */}
         {isSettled ? (
-          <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-amber-400 shrink-0" />
-              <span>
-                <strong>🏆 정산 완료!</strong> 최종 승리 옵션:{" "}
-                <span className="text-white font-black underline underline-offset-2">
-                  {challenge.winningOptionLabel || "승리 확정"}
+          <div className="p-4 rounded-2xl bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs space-y-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-400 shrink-0" />
+                <span>
+                  <strong>🏆 정산 완료!</strong> 최종 승리 옵션:{" "}
+                  <span className="text-white font-black underline underline-offset-2">
+                    {challenge.winningOptionLabel || "승리 확정"}
+                  </span>
                 </span>
+              </div>
+              {isWinner && (
+                <button
+                  type="button"
+                  onClick={() => setShowCertModal(true)}
+                  className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shrink-0 flex items-center gap-1 shadow-md transition"
+                >
+                  <Trophy className="w-3.5 h-3.5" />
+                  <span>승리 인증서 자랑하기 👑</span>
+                </button>
+              )}
+            </div>
+            {challenge.payoutDetails && (
+              <div className="text-[11px] text-emerald-200/80 font-mono pt-1 border-t border-emerald-500/20 flex flex-wrap gap-3">
+                <span>총 풀 {Number(challenge.payoutDetails.total_pool_pmp || 0).toLocaleString()} PMP</span>
+                <span>· 호스트 수수료 +{Number(challenge.payoutDetails.host_fee_pmp || 0).toLocaleString()} PMP</span>
+                <span>· 소각 {Number(challenge.payoutDetails.burn_pmp || 0).toLocaleString()} PMP</span>
+              </div>
+            )}
+          </div>
+        ) : isVoid ? (
+          <div className="p-4 rounded-2xl bg-slate-900 border border-slate-600/50 text-slate-300 text-xs flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-sky-400 shrink-0" />
+              <span>
+                <strong>↩️ 무효 처리 · 원금 100% 환불 완료</strong> (참여자 이의제기 또는 반대편 미참여)
               </span>
             </div>
-            {isWinner && (
-              <button
-                type="button"
-                onClick={() => setShowCertModal(true)}
-                className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shrink-0 flex items-center gap-1 shadow-md transition"
-              >
-                <Trophy className="w-3.5 h-3.5" />
-                <span>승리 인증서 자랑하기 👑</span>
-              </button>
+          </div>
+        ) : isPendingSettlement ? (
+          <div className="p-4 rounded-2xl bg-indigo-950/70 border border-indigo-400/50 text-indigo-200 text-xs space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                <span>
+                  <strong>⚖️ 공정 합의 대기 중 (10분 골든타임)</strong> — 방장 판정:{" "}
+                  <strong className="text-white underline">
+                    {challenge.pendingWinningOptionLabel || challenge.pendingWinningOptionId}
+                  </strong>
+                </span>
+              </div>
+              <span className="text-[11px] font-mono text-amber-300">
+                이의제기 {challenge.disputeCount}명
+              </span>
+            </div>
+
+            {challenge.myBet && (
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                {isPendingLoser && (
+                  <button
+                    type="button"
+                    onClick={handleAcceptResult}
+                    className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md"
+                  >
+                    🤝 결과 인정 (GG) · 1초 만에 정산 완료
+                  </button>
+                )}
+                <button
+                  type="button"
+                  disabled={Boolean(challenge.hasDisputed)}
+                  onClick={handleDisputeResult}
+                  className={`px-3.5 py-2 rounded-xl font-black text-xs border transition ${
+                    challenge.hasDisputed
+                      ? "bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed"
+                      : "bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border-rose-500/40"
+                  }`}
+                >
+                  {challenge.hasDisputed
+                    ? "이의 제기 완료됨"
+                    : "🚨 판정 이의 제기 (30% 이상 시 전액 환불)"}
+                </button>
+              </div>
             )}
           </div>
         ) : isClosedOrLocked ? (
@@ -498,15 +639,15 @@ export default function ChallengeDetailPage() {
           )}
         </div>
 
-        {/* 4. 호스트 정산 컨트롤러 (결과 대기 중일 때 호스트에게만 노출) */}
-        {!isSettled && (
+        {/* 4. 호스트 정산 컨트롤러 (결과 대기 중일 때 실제 호스트에게만 노출) */}
+        {!isSettled && !isVoid && !isPendingSettlement && challenge.isHost && (
           <div className="p-4 rounded-3xl bg-[#0e121c] border border-amber-500/30 space-y-3">
             <div className="flex items-center justify-between text-xs">
               <span className="font-bold text-amber-400 flex items-center gap-1.5">
                 <ShieldCheck className="w-4 h-4" />
-                <span>호스트 결과 확정 (정산)</span>
+                <span>방장 결과 확정 (정산)</span>
               </span>
-              <span className="text-[11px] text-slate-500">결과 발생 시 승자 선택</span>
+              <span className="text-[11px] text-slate-500">결과 발생 시 승자 선택 (이의제기 없으면 10분 후 지급)</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {challenge.options.map((opt) => (

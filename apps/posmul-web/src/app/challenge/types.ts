@@ -17,12 +17,30 @@ export interface UserChallengeDTO {
   eventStartAt: string; // 베팅 마감 시각 (ISO)
   settlementAt: string; // 결과 발표 예정 시각 (ISO)
   settledAt?: string | null;
-  status: "OPEN" | "LOCKED" | "SETTLED" | "VOID";
+  status: "OPEN" | "LOCKED" | "PENDING_SETTLEMENT" | "SETTLED" | "VOID";
   winningOptionId?: string | null;
   winningOptionLabel?: string | null;
+  pendingWinningOptionId?: string | null;
+  pendingWinningOptionLabel?: string | null;
+  settlementProposedAt?: string | null;
+  linkedGameId?: string | null;
+  linkedGameSlug?: string | null;
+  linkedGameTitle?: string | null;
   totalPoolPmp: number;
   hostFeePmp: number;
   disputeCount: number;
+  hasDisputed?: boolean;
+  isHost?: boolean;
+  payoutDetails?: {
+    mode?: string;
+    total_pool_pmp?: number;
+    winner_pool_pmp?: number;
+    loser_pool_pmp?: number;
+    host_fee_pmp?: number;
+    burn_pmp?: number;
+    distributable_loser_pmp?: number;
+    winners_count?: number;
+  } | null;
   createdAt: string;
   myBet?: {
     optionId: string;

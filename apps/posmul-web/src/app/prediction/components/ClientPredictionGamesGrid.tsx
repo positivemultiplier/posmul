@@ -836,6 +836,14 @@ export function ClientPredictionGamesGrid({
                 </button>
               </div>
             )}
+
+            <Link
+              href="/challenge/create"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition-all whitespace-nowrap shrink-0"
+            >
+              <span>🥊</span>
+              <span>내기·예측 만들기</span>
+            </Link>
           </div>
         </div>
 
