@@ -10,6 +10,7 @@ import {
 
 import { NextRequest, NextResponse } from "next/server";
 
+import { createClient } from "@/lib/supabase/server";
 import { ParticipatePredictionUseCase } from "../../../../../../bounded-contexts/prediction/application/use-cases/participate-prediction.use-case";
 import { PredictionEconomicService } from "../../../../../../bounded-contexts/prediction/domain/services/prediction-economic.service";
 import { SupabasePredictionGameRepository } from "../../../../../../bounded-contexts/prediction/infrastructure/repositories/supabase-prediction-game.repository";
@@ -80,8 +81,41 @@ export async function POST(
   { params }: { params: Promise<{ gameId: string }> }
 ) {
   try {
+    // 인증된 세션 확인 (body.userId 스푸핑 방지)
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "UNAUTHORIZED",
+            message: "Authentication required",
+          },
+        },
+        { status: 401 }
+      );
+    }
+
     const { gameId } = await params;
     const body = await request.json();
+
+    if (body.userId && body.userId !== user.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "FORBIDDEN",
+            message: "Cannot participate on behalf of another user",
+          },
+        },
+        { status: 403 }
+      );
+    }
 
     if (!gameId) {
       return NextResponse.json(
@@ -98,7 +132,6 @@ export async function POST(
 
     // 기본 검증
     if (
-      !body.userId ||
       !body.selectedOptionId ||
       !body.stakeAmount ||
       !body.confidence
@@ -109,7 +142,7 @@ export async function POST(
           error: {
             code: "MISSING_REQUIRED_FIELDS",
             message:
-              "userId, selectedOptionId, stakeAmount, and confidence are required",
+              "selectedOptionId, stakeAmount, and confidence are required",
           },
         },
         { status: 400 }
@@ -135,9 +168,9 @@ export async function POST(
       economicService
     );
 
-    // 요청 DTO 생성
+    // 요청 DTO 생성 (세션 user.id 사용)
     const participationRequest = {
-      userId: body.userId as UserId,
+      userId: user.id as UserId,
       gameId: gameId as PredictionGameId,
       selectedOptionId: body.selectedOptionId,
       stakeAmount: body.stakeAmount,

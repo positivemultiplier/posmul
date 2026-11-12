@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { participateInGame, getUserEconomicBalance } from "../../../../lib/supabase/direct-client";
 
 /**
@@ -7,24 +8,71 @@ import { participateInGame, getUserEconomicBalance } from "../../../../lib/supab
  */
 export async function POST(request: NextRequest) {
   try {
+    // 인증된 세션 확인 (body.userId 스푸핑 방지)
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "UNAUTHORIZED",
+            message: "Authentication required",
+          },
+        },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
+    if (body.userId && body.userId !== user.id) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "FORBIDDEN",
+            message: "Cannot participate on behalf of another user",
+          },
+        },
+        { status: 403 }
+      );
+    }
+
     // 기본 검증
-    if (!body.userId || !body.gameId || !body.selectedOptionId || !body.stakeAmount) {
+    if (!body.gameId || !body.selectedOptionId || !body.stakeAmount) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: 'VALIDATION_ERROR',
-            message: 'Missing required fields: userId, gameId, selectedOptionId, stakeAmount'
+            message: 'Missing required fields: gameId, selectedOptionId, stakeAmount'
           }
         },
         { status: 400 }
       );
     }
 
-    // 사용자 잔액 확인
-    const balance = await getUserEconomicBalance(body.userId);
+    const stakeAmount = Number(body.stakeAmount);
+    if (!Number.isFinite(stakeAmount) || stakeAmount <= 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: "VALIDATION_ERROR",
+            message: "stakeAmount must be a positive number",
+          },
+        },
+        { status: 400 }
+      );
+    }
+
+    // 사용자 잔액 확인 (세션 user.id 기준)
+    const balance = await getUserEconomicBalance(user.id);
     if (balance.error) {
       return NextResponse.json(
         {
@@ -38,13 +86,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (balance.pmpBalance < body.stakeAmount) {
+    if (balance.pmpBalance < stakeAmount) {
       return NextResponse.json(
         {
           success: false,
           error: {
             code: 'INSUFFICIENT_BALANCE',
-            message: `Insufficient PMP balance. Required: ${body.stakeAmount}, Available: ${balance.pmpBalance}`
+            message: `Insufficient PMP balance. Required: ${stakeAmount}, Available: ${balance.pmpBalance}`
           }
         },
         { status: 400 }
@@ -53,10 +101,10 @@ export async function POST(request: NextRequest) {
 
     // 예측 참여
     const { data, error } = await participateInGame({
-      userId: body.userId,
+      userId: user.id,
       gameId: body.gameId,
       selectedOptionId: body.selectedOptionId,
-      stakeAmount: body.stakeAmount,
+      stakeAmount,
       confidence: body.confidence || 0.5
     });
 

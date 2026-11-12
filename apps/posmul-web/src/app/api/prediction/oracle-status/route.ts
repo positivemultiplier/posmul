@@ -85,7 +85,10 @@ export async function GET() {
           sourceType: "alpha-vantage",
           name: "Alpha Vantage US/KR 증시 종가 오라클",
           category: "ECONOMY (stocks)",
-          configured: Boolean(process.env.ALPHA_VANTAGE_API_KEY),
+          configured: Boolean(
+            process.env.ALPHA_VANTAGE_API_KEY ||
+              process.env.ALPHAVANTAGE_API_KEY
+          ),
           status: "CONNECTED",
         },
         {

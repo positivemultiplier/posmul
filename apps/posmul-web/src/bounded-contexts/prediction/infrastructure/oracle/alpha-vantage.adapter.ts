@@ -31,9 +31,13 @@ export class AlphaVantageOracleAdapter implements IOracleProvider {
     }
 
     async fetchResult(source: SettlementSource): Promise<OracleResult | null> {
-        const apiKey = process.env.ALPHA_VANTAGE_API_KEY;
+        const apiKey =
+            process.env.ALPHA_VANTAGE_API_KEY ||
+            process.env.ALPHAVANTAGE_API_KEY;
         if (!apiKey) {
-            console.error("[AlphaVantage] ALPHA_VANTAGE_API_KEY not set");
+            console.error(
+                "[AlphaVantage] ALPHA_VANTAGE_API_KEY / ALPHAVANTAGE_API_KEY not set"
+            );
             return null;
         }
 
