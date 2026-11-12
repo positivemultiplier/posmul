@@ -2,7 +2,12 @@
 
 > **본 문서는 PosMul v2.0의 현재 프로덕션(`https://posmul.com`) 구현 완성도를 냉철하게 진단하고, 다음 개발자(또는 에이전트)가 우선순위에 따라 흔들림 없이 개발을 이어갈 수 있도록 설계된 공식 백로그(Backlog) 문서입니다.**
 >
-> 📅 **기준 일자**: 2026년 11월 7일 (Version 2.0 선언 기준)
+> 📅 **기준 일자**: 2026년 11월 7일 (Version 2.0 선언 기준) · **2026-11-12 v3.0 정본 동기화 반영**
+>
+> ⚠️ **v3.0 우선순위 조정 ([POSMUL_WHITEPAPER.md](file:///c:/G/posmul/docs/POSMUL_WHITEPAPER.md) 기준)**:
+> - **Phase 1**: `모두의창업 상금` + `CPC/CPV` 광고 → `Forum`(일일 한도 `PMP`) · `Consume`(광고 `PMP`) → `Prediction`(승자독식 `PMP` 소멸, 유일한 `PMC` 보상) → `Donation`(`기관기부`, `K-물품기부`)
+> - **Phase 2**: 기업 직접 광고(`Social/IFRS S1` 지표), `오피니언 리더 팔로잉 기부`, `미래꿈기부`(콩도르세·보르다 투표)
+> - **Phase 3**: `블록체인 & 삼식부기`, `소상공인(Local League)` 지역 소비-기부 연계
 
 ---
 
@@ -11,10 +16,10 @@
 | 도메인 | 라이브 경로 | UI / UX 표준화 | DB 조회 연동 | 쓰기 / 트랜잭션 | 현재 상태 및 비고 |
 | :--- | :--- | :---: | :---: | :---: | :--- |
 | **전역 네비게이션** | `ThreeRowNavbar` | ✅ **100%** | ✅ 완료 | - | 1·2·3row 시민 선순환 플라이휠 & 도메인 Tone-on-Tone 완성 |
-| **STEP 1 · 포럼** | [`/forum`](https://posmul.com/forum) | ✅ **90%** | ✅ 완료 | 🟡 부분 | 뉴스·예산·아고라 갤러리 구축 완료 (`+10 PMP` 원장 직결 고도화 필요) |
-| **STEP 2 · 소비** | [`/consume`](https://posmul.com/consume) | ✅ **90%** | ✅ 완료 | 🟡 부분 | `Major`/`Minor`/`Cloud` 3대 리그 UI 및 캠페인 조회 완료 |
+| **STEP 1 · 포럼** | [`/forum`](https://posmul.com/forum) | ✅ **90%** | ✅ 완료 | 🟡 부분 | 일일 한도 `PMP` 지급 구현 완료 (추천/공감 기반 보상 수치 조율 필요) |
+| **STEP 2 · 소비** | [`/consume`](https://posmul.com/consume) | ✅ **90%** | ✅ 완료 | 🟡 부분 | Phase 1: `Major`(광고 시청 `PMP`)만 활성 / `Minor`·`Cloud` Phase 3 보류 잠금 |
 | **STEP 3 · 예측** | [`/prediction`](https://posmul.com/prediction) | ✅ **100%** | ✅ 완료 | ✅ 완료 | **전체 마켓 및 6대 중분류(2row)·소분류(3row) 레이아웃 100% 통일 완료**<br>(`economy`, `entertainment` 실데이터 가동 중 / 타 카테고리 시딩 확대 필요) |
-| **STEP 4 · 기부** | [`/donation`](https://posmul.com/donation) | ✅ **95%** | ✅ 완료 | ✅ 완료 | **Pillar 1 (`K-물품 직접기부` & `K-위시리스트 포털`) 100% 구축 완료**<br>(Pillar 2 NGO 에스크로, Pillar 3·4 의인/꿈의 사다리 상세 기능 확장 예정) |
+| **STEP 4 · 기부** | [`/donation`](https://posmul.com/donation) | ✅ **95%** | ✅ 완료 | ✅ 완료 | Phase 1: `K-물품 직접기부` · `기관기부` 활성 + `pmc_balance` 차감 연동 완료<br>(`팔로잉` · `미래꿈기부` 콩도르세/보르다 투표는 Phase 2 예정) |
 | **STEP 5 · 랭킹** | [`/ranking`](https://posmul.com/ranking) | ✅ **95%** | ✅ 완료 | - | 도메인별(`expect`, `overall`, `forum`, `consume`, `donation`) & 시도별 필터 완료 |
 | **투명회계·기타** | [`/other`](https://posmul.com/other) | ✅ **85%** | 🟡 모의 | 🟡 모의 | `Gift Aid` 세액공제 계산기 및 세무·회계 UI 구축 완료 |
 | **관리자 백오피스** | [`/admin`](https://posmul.com/admin) | ✅ **85%** | ✅ 완료 | ✅ 완료 | 예측 게임 생성/정산, 피드 수집, 경제 지표 관리 데스크 |

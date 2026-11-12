@@ -5,6 +5,8 @@
 > 📅 **기준 버전**: PosMul Version 2.0 (2026. 11)  
 > 🌐 **프로덕션 도메인**: [https://posmul.com](https://posmul.com)  
 > 📦 **원격 저장소**: `https://github.com/positivemultiplier/posmul.git` (기본 작업 브랜치: `develop`)
+>
+> ⚠️ **v3.0 경제·도메인 규칙 동기화 (2026-11-12)**: 최신 기획 정본([POSMUL_WHITEPAPER.md](file:///c:/G/posmul/docs/POSMUL_WHITEPAPER.md))에 따라 ① 가입/포럼/소비에서 `PMC` 직접 지급 중단(`WELCOME_BONUS_PMC = 0`, `consume/money`·`consume/cloud` POST 비활성화), ② `PMC`는 `Prediction` 정산으로만 획득, ③ `EAT` 기반 MoneyWave, ④ `Donation`은 Phase 1(`기관`·`K-물품`) 우선 오픈 규칙이 적용됩니다. 세부 코어 갭은 [DOMAIN_FLOW_AND_DECISIONS.md](file:///c:/G/posmul/docs/DOMAIN_FLOW_AND_DECISIONS.md)를 참고하세요.
 
 ---
 

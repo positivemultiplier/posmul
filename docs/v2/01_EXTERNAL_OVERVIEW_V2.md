@@ -4,6 +4,8 @@
 >
 > 🔗 **공식 라이브 서비스**: [https://posmul.com](https://posmul.com)  
 > 📅 **문서 버전**: Version 2.0 (2026. 11)
+>
+> ⚠️ **v3.0 정본 동기화 안내 (2026-11-12)**: 최신 기획 정본은 [POSMUL_WHITEPAPER.md](file:///c:/G/posmul/docs/POSMUL_WHITEPAPER.md) (v3.0) 및 [DOMAIN_FLOW_AND_DECISIONS.md](file:///c:/G/posmul/docs/DOMAIN_FLOW_AND_DECISIONS.md) 입니다. v3.0에서는 ① **`Consume`/`Forum` 직접 `PMC` 지급 폐기(오직 `PMP`만 지급)**, ② **`PMC`는 `Prediction` 예측 성공 시에만 유일하게 획득**, ③ **소상공인(`Minor League`)·`팔로잉 기부`·`미래꿈기부`는 Phase 2~3 순차 오픈**, ④ **`EBIT`가 아닌 세후 순이익(`EAT`) 기반 `MoneyWave`** 원칙이 확정되었습니다.
 
 ---
 
@@ -15,11 +17,11 @@
 
 ```mermaid
 flowchart LR
-    S1["STEP 1 · 포럼 (공론)\n뉴스 학습 · 예산 감시\n[+PMP · PMG 획득]"]
-    S2["STEP 2 · 소비 (참여)\n광고시청 · 지역상점 · 펀딩\n[+PMP · +PMC 획득]"]
-    S3["STEP 3 · 예측 (학습)\n집단지성 미래 이슈 예측\n[PMP ➔ PMC 가치 전환]"]
-    S4["STEP 4 · 기부 (집행)\nK-물품 직배송 · NGO 에스크로\n[PMC 직접 공익 집행]"]
-    S5["STEP 5 · 랭킹 & 투명회계\n읍·면·동 풀뿌리 위상 증명\n[Gift Aid 세액공제]"]
+    S1["STEP 1 · 포럼 (광장 · 트래픽)\n커뮤니티 체류 · 소통\n[+PMP만 획득]"]
+    S2["STEP 2 · 소비 (광고 2트랙)\n일반 광고 · 기업 직접 광고\n[+PMP만 획득 / Phase 3: 소상공인]"]
+    S3["STEP 3 · 예측 (1단계 훈련)\nEAT MoneyWave · 승자독식\n[유일한 PMC 획득처]"]
+    S4["STEP 4 · 기부 (2단계 훈련)\nPhase 1: 기관 · K-물품\nPhase 2: 팔로잉 · 미래꿈(투표)"]
+    S5["STEP 5 · 랭킹 & Social 지표\nIFRS S1 지향 임팩트\n[Phase 3: 블록체인·삼식부기]"]
 
     S1 --> S2 --> S3 --> S4 --> S5
     S5 -. "시민 주권 효능감 재투입" .-> S1
