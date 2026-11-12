@@ -34,6 +34,7 @@
 2. **`미래꿈기부` + 콩도르세·보르다 투표**: 정답이 없는 개인들의 꿈에 공익 재원을 배분할 때만 투표제를 적용하는 가치 판단 훈련 (Phase 2).
 3. **`블록체인` & `삼식부기(Triple Entity Accounting)`**: 내부 자금·물품 전달 기록의 위변조 방지 인프라 (Phase 3).
 4. **`소상공인(Local League)`**: 지역 소비와 지역 기부를 엮는 로컬 생태계 (Phase 3).
+5. **`매몰비용 환급형 게임 허브 (game.posmul.com)`**: 본진 안정화 후 장기 `EAT` 확장 트랙(Phase 3+). 결제 즉시 수익과 환급 계약부채로 분리 기록하고, 타 게임 소비·`PMP` 전환(현금 결제분 1회 한정, `PMC` 직접 지급 금지) 시 부채를 수익으로 확정 인식하는 구조.
 
 ### ❓ `[미해결 / 오픈 이슈 & 세부 조율]` — 결정·연구가 남은 숙제
 | 번호 | 이슈 | 현재 상태 및 기획 메모 |
@@ -54,7 +55,7 @@
 | 영역 | v3.0 문서 원칙 | 현재 소스코드 상태 | 판정 |
 | :--- | :--- | :--- | :---: |
 | **`Prediction`** | 승자독식(`PMP` 소멸), 성공 시 유일하게 `PMC` 보상, 유저 게임 생성, 양쪽 균형 근거 | 참여 시 트리거(`process_prediction_payment`)로 `PMP` 차감([participate-prediction.use-case.ts](file:///c:/G/posmul/apps/posmul-web/src/bounded-contexts/prediction/application/use-cases/participate-prediction.use-case.ts#L195-L198)), 정산 시 승자만 보상([20261111_fix_security_advisor_and_settlement_rpc.sql](file:///c:/G/posmul/supabase/migrations/20261111_fix_security_advisor_and_settlement_rpc.sql#L46-L60)), 유저 제안 API([user-proposed/route.ts](file:///c:/G/posmul/apps/posmul-web/src/app/api/prediction/user-proposed/route.ts#L85-L115)), 양쪽 브리핑([client.tsx](file:///c:/G/posmul/apps/posmul-web/src/app/prediction/%5Bslug%5D/client.tsx#L1463)) 구현됨 | **✅ 높음** |
-| **`Forum`** | `PMP`만 지급, 일일 한도(Cap), 글·추천 포인트 수치 조율 필요 | `DAILY_MAX_PMP = 1350` 및 글/댓글별 일일 한도·고정 보상 존재([activity/route.ts](file:///c:/G/posmul/apps/posmul-web/src/app/api/forum/activity/route.ts#L9-L17), [posts/route.ts](file:///c:/G/posmul/apps/posmul-web/src/app/api/forum/posts/route.ts#L17-L31)). 단 **추천/공감 시 `PMP` 보상 로직은 아직 없음**([vote/route.ts](file:///c:/G/posmul/apps/posmul-web/src/app/api/forum/vote/route.ts#L8-L46)는 `PMG` 표결용) | **🟡 부분 일치** |
+| **`Forum`** | `PMP`만 지급, 일일 한도(Cap), 글·추천 포인트 수치 조율 필요 | `DAILY_MAX_PMP = 1350` 및 글/댓글별 일일 한도·고정 보상 존재([activity/route.ts](file:///c:/G/posmul/apps/posmul-web/src/app/api/forum/activity/route.ts#L9-L17), [posts/route.ts](file:///c:/G/posmul/apps/posmul-web/src/app/api/forum/posts/route.ts#L17-L31)). 단 **추천/공감 시 `PMP` 보상 로직은 아직 없음**([vote/route.ts](file:///c:/G/posmul/apps/posmul-web/src/app/api/forum/vote/route.ts#L8-L46)는 아고라 찬반 표결용) | **🟡 부분 일치** |
 | **가입 & `PMC` 단일 생성** | **예측 성공 시에만** 유일하게 `PMC` 획득 | 가입 시 `WELCOME_BONUS_PMC = 1000` (개발 모드 `10000`)을 바로 지급 중([auth-helper.ts](file:///c:/G/posmul/apps/posmul-web/src/app/auth/auth-helper.ts#L5-L8)) | **🔴 충돌** |
 | **`Consume`** | 초기: 광고 시청 `PMP`만 지급 / 소상공인 Phase 3 보류 / 직접 광고만 `Social(IFRS S1)` | 광고 시청은 `PMP`만 지급([time/view/[id]/route.ts](file:///c:/G/posmul/apps/posmul-web/src/app/api/consume/time/view/%5Bid%5D/route.ts#L132-L206), 단 L186 `supabase.rpc('increment_pmp')` 오용 버그 존재). **소상공인 결제(`money/payment`)와 크라우드펀딩(`cloud/contribute`)에서 `PMC` 직접 지급 코드가 살아있음**. 기업 직접 광고 `Social` 리포트 기능은 **미구현** | **🔴 충돌** |
 | **`MoneyWave`** | `모두의창업` + 광고 수익의 **`EAT`(세후 순이익)** 연동 | 실제 광고 수익과 미연동이며 `expectedAnnualEbit = 36500000` 하드코딩([money-wave-calculator.service.ts](file:///c:/G/posmul/apps/posmul-web/src/shared/economy-kernel/services/money-wave-calculator.service.ts#L18-L36)) 또는 DB `annual_ebitda` 설정값 사용([moneywave-daily-snapshot/index.ts](file:///c:/G/posmul/supabase/functions/moneywave-daily-snapshot/index.ts#L133-L146)). UI도 `"EBIT 기반"` 표기([economy/page.tsx](file:///c:/G/posmul/apps/posmul-web/src/app/economy/page.tsx#L38)) | **🔴 충돌** |

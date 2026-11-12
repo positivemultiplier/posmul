@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PosMul 프로젝트 마스터 지도 (A4 가로 출력용 v3.0)</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 8mm 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: "Pretendard", "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+      color: #0f172a;
+      background: #f1f5f9;
+      line-height: 1.4;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    .toolbar {
+      max-width: 297mm;
+      margin: 12px auto 0;
+      padding: 10px 18px;
+      background: #0f172a;
+      color: #f8fafc;
+      border-radius: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    .toolbar button {
+      background: #f59e0b;
+      color: #0f172a;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 6px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 13px;
+    }
+
+    .page {
+      width: 297mm;
+      height: 204mm;
+      margin: 12px auto;
+      padding: 9mm 11mm;
+      background: #ffffff;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.08);
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+    }
+
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    .header {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 5px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      flex-shrink: 0;
+    }
+
+    .header h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .header .badge {
+      font-size: 11px;
+      font-weight: 700;
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #f59e0b;
+      padding: 2px 9px;
+      border-radius: 999px;
+    }
+
+    .philosophy {
+      background: #f8fafc;
+      border-left: 4px solid #2563eb;
+      padding: 6px 12px;
+      margin-bottom: 6px;
+      font-size: 11.5px;
+      border-radius: 0 6px 6px 0;
+      flex-shrink: 0;
+    }
+
+    h2 {
+      font-size: 13px;
+      margin: 4px 0 4px;
+      color: #1e293b;
+      flex-shrink: 0;
+    }
+
+    .mermaid-box {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .page-1 .mermaid-box {
+      flex: 1;
+      min-height: 0;
+    }
+
+    .page-1 .mermaid {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .page-1 .mermaid svg {
+      max-width: 100%;
+      max-height: 146mm;
+      width: auto;
+      height: auto;
+    }
+
+    .page-2 .mermaid-box {
+      flex-shrink: 0;
+      padding: 4px 8px;
+    }
+
+    .page-2 .mermaid {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    .page-2 .mermaid svg {
+      max-width: 100%;
+      max-height: 54mm;
+      width: auto;
+      height: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 10.5px;
+      margin-top: 2px;
+      flex-shrink: 0;
+    }
+
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 4px 7px;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      background: #f1f5f9;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .tag-p1 {
+      display: inline-block;
+      background: #dcfce7;
+      color: #166534;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 9.5px;
+    }
+
+    .tag-p2 {
+      display: inline-block;
+      background: #fef3c7;
+      color: #92400e;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 9.5px;
+    }
+
+    .tag-p3 {
+      display: inline-block;
+      background: #e2e8f0;
+      color: #334155;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 9.5px;
+    }
+
+    .footer-note {
+      margin-top: 4px;
+      padding: 6px 10px;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      border-radius: 6px;
+      font-size: 10.5px;
+      color: #78350f;
+      flex-shrink: 0;
+    }
+
+    @media print {
+      body {
+        background: #ffffff;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .page {
+        width: 100%;
+        height: 190mm;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar no-print">
+    <span><strong>PosMul A4 가로(Landscape) 출력용 치트시트 (v3.0)</strong> — 인쇄 설정에서 용지 방향이 자동으로 <strong>가로</strong>로 맞춰집니다.</span>
+    <button onclick="window.print()">A4 가로 인쇄 / PDF 저장 (Ctrl+P)</button>
+  </div>
+
+  <!-- PAGE 1 -->
+  <section class="page page-1">
+    <div class="header">
+      <h1>PosMul 전체 가치 순환 &amp; 6대 도메인 지도 (1/2 · 가로형)</h1>
+      <span class="badge">v3.0 정본 · 2026-11-12</span>
+    </div>
+
+    <div class="philosophy">
+      <strong>핵심 철학:</strong>
+      시간과 참여를 소비해 <strong>PMP</strong>를 얻고, 양쪽 근거 기반 예측 훈련(<strong>Prediction</strong>)을 통해 유일하게 <strong>PMC</strong>로 전환하며, 이를 투명하고 즐거운 기부(<strong>Donation</strong>)와 명예(<strong>Ranking</strong>)로 연결해 측정 가능한 사회적 가치(<strong>Social · IFRS S1</strong>)를 만든다.
+    </div>
+
+    <div class="mermaid-box">
+      <pre class="mermaid">
+flowchart LR
+    U(["시민 · 유저\n유입"])
+
+    subgraph IN["입구 · 트래픽 & 재원 (오직 PMP만 지급)"]
+        direction TB
+        F["1. Forum (광장)\n체류시간 · 트래픽 확보\n일일 한도 1,000 PMP\n추천(+20) · 개념글(+100) 우대"]
+        CA["2-A. Consume 일반광고\nCPC · CPV · CPA\nPMP 지급 + 현금 연료(EAT)"]
+        CB["2-B. Consume 직접의뢰 (P2)\n기업 ESG · 신제품 미션\nSocial(IFRS S1) 지표 생성"]
+    end
+
+    MW["3. Economy\nPMP/PMC 원장 + MoneyWave\n시드: 모두의창업 상금\n+ 광고 세후 순이익(EAT)\n(EBIT 금지 · 총량 제어)"]
+
+    subgraph CORE["1단계 훈련 · 플랫폼의 심장"]
+        direction TB
+        P["4. Prediction (사실 · 확률 판단)\nPMP 참여 + 양쪽 균형 근거\n+ 공인 오라클 · 유저 게임 제안"]
+        WIN{"예측 결과\n(승자독식)"}
+        BURN["실패: 참여 PMP 소멸\n-> 포럼·광고로 재충전"]
+        PMC["성공: 유일하게 PMC 획득!\n(MoneyWave 풀 배분)"]
+    end
+
+    subgraph OUT["2단계 훈련 · 결실 & 명예 순환"]
+        direction TB
+        D1["5-A. Donation (Phase 1 오픈)\n기관기부 · K-물품기부\n실원장 PMC 차감 + 전달·수혜 인증"]
+        D2["5-B. Donation (Phase 2 확장)\n팔로잉 기부(위임)\n미래꿈기부(콩도르세·보르다 투표)"]
+        R["6. Ranking (명예의 전당)\n읍면동 풀뿌리 · 직업군별 랭킹\nBrier Score 실력 + 기부 평판"]
+        L["Phase 3 추후 확장\n소상공인(Local) · 블록체인 · 삼식부기"]
+    end
+
+    U --> F
+    U --> CA
+    F -->|"트래픽 · 광고"| CA
+    CA -->|"세후 순이익(EAT)"| MW
+    CB -->|"EAT + Social 지표"| MW
+    F -->|"PMP"| P
+    CA -->|"PMP"| P
+    MW -->|"일일·시간별 PMC 풀"| P
+    P --> WIN
+    WIN -->|"오답"| BURN
+    BURN -.->|"재도전 동력"| F
+    WIN -->|"정답 (유일 경로)"| PMC
+    PMC --> D1
+    PMC -.->|"Phase 2"| D2
+    F -->|"활동 점수"| R
+    PMC -->|"적중 · Brier"| R
+    D1 -->|"기부 평판"| R
+    R -.->|"명예 · 재참여 동기"| U
+    D1 -.-> L
+      </pre>
+    </div>
+  </section>
+
+  <!-- PAGE 2 -->
+  <section class="page page-2 page-break">
+    <div class="header">
+      <h1>PosMul 도메인 헌법 · 경계 · 컨펌 작업 루프 (2/2 · 가로형)</h1>
+      <span class="badge">책상 옆 체크리스트</span>
+    </div>
+
+    <div>
+      <h2>1. 절대 경계 · Prediction 생애주기 · 컨펌 개발 루프</h2>
+      <div class="mermaid-box">
+        <pre class="mermaid">
+flowchart LR
+    subgraph RULE["절대 경계 (헷갈릴 때 이것만 확인)"]
+        direction TB
+        R1["PMP 얻는 곳: Forum · Consume 광고만"]
+        R2["PMC 얻는 곳: 오직 Prediction 성공만!"]
+        R3["상금 풀 기준: EBIT 금지 -> 세후 순이익(EAT)"]
+        R4["투표제 쓰는 곳: Prediction(X) -> 미래꿈기부(O)"]
+    end
+
+    subgraph STATE["Prediction 생애주기 (오라클 정산)"]
+        direction LR
+        S1["DRAFT\n준비"] --> S2["ACTIVE\nPMP 참여"] --> S3["CLOSED\n마감"] --> S4["SETTLING\n오라클 판정"] --> S5["SETTLED\n승자 PMC / 패자 소멸"]
+    end
+
+    subgraph COUNCIL["Swarm 없는 컨펌 개발 루프"]
+        direction LR
+        C1["1. 요청"] --> C2["2. 도메인 참모 상의\n(철학·금지선 검사)"] --> C3["3. 대표님 컨펌\n(A안 vs B안)"] --> C4["4. 구현 + 기억 동기화\n(SKILL·백서 갱신)"]
+    end
+        </pre>
+      </div>
+    </div>
+
+    <div>
+      <h2>2. 6대 도메인 참모 헌법 요약표</h2>
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 13%;">도메인</th>
+            <th style="width: 25%;">한 줄 철학 (존재 이유)</th>
+            <th style="width: 46%;">절대 원칙 &amp; 금지선</th>
+            <th style="width: 16%;">오픈 단계</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Forum</strong> (광장)</td>
+            <td>트래픽·체류시간을 만들고 재도전 PMP를 공급</td>
+            <td>오직 <strong>PMP</strong>만 지급 · 일일 상한 <strong>1,000 PMP</strong> · 추천(+20)·개념글(+100) 우대 · 자추/중복 금지</td>
+            <td><span class="tag-p1">Phase 1</span></td>
+          </tr>
+          <tr>
+            <td><strong>Consume</strong> (광고)</td>
+            <td>현금 연료(EAT)와 기업 Social(IFRS S1) 생성</td>
+            <td>유저는 <strong>PMP</strong>만 획득 · 일반광고(EAT) vs 직접의뢰(Social 지표) 분리 · 소상공인 잠금</td>
+            <td><span class="tag-p1">트랙A: P1</span> <span class="tag-p2">트랙B: P2</span> <span class="tag-p3">로컬: P3</span></td>
+          </tr>
+          <tr>
+            <td><strong>Economy</strong> (원장)</td>
+            <td>적자 방지용 이중 화폐 원장과 총량 분배기</td>
+            <td><strong>PMC는 예측 성공으로만 생성</strong> · EBIT 금지, 세후 <strong>EAT</strong> 기준 · 원장 차감/롤백 원자성</td>
+            <td><span class="tag-p1">Phase 1</span></td>
+          </tr>
+          <tr>
+            <td><strong>Prediction</strong> (심장)</td>
+            <td>도박이 아닌 1단계 사실·확률 판단 훈련장</td>
+            <td><strong>승자독식(실패 시 PMP 소멸)</strong> · 양쪽 균형 근거 · 공인 오라클 정산 · 도박 용어 금지</td>
+            <td><span class="tag-p1">Phase 1</span></td>
+          </tr>
+          <tr>
+            <td><strong>Donation</strong> (결실)</td>
+            <td>즐거운 기부와 2단계 가치 배분 훈련</td>
+            <td>실원장 <strong>pmc_balance</strong> 차감 · 물품요청·전달·수혜 인증 · 미래꿈에만 콩도르세·보르다 투표</td>
+            <td><span class="tag-p1">기관·물품: P1</span> <span class="tag-p2">팔로잉·꿈: P2</span></td>
+          </tr>
+          <tr>
+            <td><strong>Ranking</strong> (명예)</td>
+            <td>돈이 아닌 예측 실력과 선한 영향력 평판</td>
+            <td>읍면동 풀뿌리 · 직업군별 명예의 전당 · <strong>Brier Score</strong> 실력 평판 (Consume 점수 v3 정렬)</td>
+            <td><span class="tag-p1">Phase 1</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="footer-note">
+      <strong>단계별 로드맵 &amp; 오픈 이슈:</strong>
+      <strong>Phase 1</strong>(모두의창업 상금 + CPC/CPV/CPA → Forum·Consume → Prediction → 기관·K-물품) |
+      <strong>Phase 2</strong>(직접광고 Social IFRS S1 + 팔로잉·미래꿈 투표) |
+      <strong>Phase 3</strong>(블록체인·삼식부기 + 소상공인) &nbsp;—&nbsp;
+      <strong>미해결 숙제</strong>: 외부 타 기관 중복 수령 방지(어금니 아빠 리스크) · Forum 세부 포인트 비율 · 창업상금 월별 기준 · IFRS S1 표준 지표
+    </div>
+  </section>
+
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        fontFamily: "\"Pretendard\", \"Malgun Gothic\", sans-serif",
+        fontSize: "12px",
+        primaryColor: "#f8fafc",
+        primaryBorderColor: "#334155",
+        lineColor: "#475569"
+      },
+      securityLevel: "loose",
+      flowchart: {
+        useMaxWidth: true,
+        htmlLabels: true,
+        curve: "basis",
+        nodeSpacing: 22,
+        rankSpacing: 34
+      }
+    });
+  </script>
+</body>
+</html>

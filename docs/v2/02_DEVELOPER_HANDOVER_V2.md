@@ -129,7 +129,7 @@ PosMul v2.0에서 가장 중요한 프론트엔드 아키텍처는 **전역 3단
 
 ### 4.2 도메인 Tone-on-Tone 컬러 토큰 (`src/shared/ui/tokens/domain-tones.ts`)
 각 도메인은 시민 선순환 단계에 맞춘 고유 컬러 톤을 가집니다:
-- `forum` (STEP 1 · 공론): **Emerald / Teal** (`+PMP · PMG`)
+- `forum` (STEP 1 · 공론): **Emerald / Teal** (`+PMP`)
 - `consume` (STEP 2 · 참여): **Indigo / Violet** (`+PMP · +PMC`)
 - `prediction` (STEP 3 · 학습): **Sky / Blue** (`PMP ➔ PMC`)
 - `donation` (STEP 4 · 집행): **Purple / Fuchsia** (`PMC 직접집행`)

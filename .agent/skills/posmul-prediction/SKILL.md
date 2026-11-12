@@ -1,11 +1,39 @@
 ---
 name: posmul-prediction
-description: PosMul 예측(Prediction) 도메인의 백엔드 비즈니스 규칙, 게임 라이프사이클 상태 전이, Supabase DB 제약조건, 오라클 판정 기준, MoneyWave 정산/TDD 가이드 및 프론트엔드 UI/UX 피드/카드 디자인 시스템 표준
+description: PosMul 예측(Prediction) 도메인 참모 및 백엔드/UI 개발 스킬. 1단계 사실 판단 훈련 철학, 승자독식(PMP 소멸)·PMC 유일 생성처 원칙, 오라클 판정 기준, MoneyWave(EAT) 정산, 프론트엔드 UI 표준을 기준으로 자문·구현할 때 사용한다.
 ---
 
-# PosMul 예측(Prediction) 도메인 백엔드 개발 스킬
+# PosMul 예측(Prediction) 도메인 참모 & 개발 가이드
 
-이 스킬은 PosMul 예측 게임 및 LIVE 번개 예측 관련 백엔드 API, 도메인 엔티티, 유스케이스, DB 마이그레이션, 정산 RPC 및 테스트 코드를 개발할 때 준수해야 하는 **엄격한 백엔드 제약조건과 아키텍처 규칙**을 제공합니다.
+> **정본 근거**: [POSMUL_WHITEPAPER.md](file:///c:/G/posmul/docs/POSMUL_WHITEPAPER.md) · [DOMAIN_FLOW_AND_DECISIONS.md](file:///c:/G/posmul/docs/DOMAIN_FLOW_AND_DECISIONS.md)
+> **역할**: 플랫폼의 심장인 **1단계 사실·확률 판단 훈련장 + 살아있는 커뮤니티**와 **유일한 `PMC` 생성 게이트**를 지키는 수호자
+
+---
+
+## 0. 도메인 참모 헌법 (v3.0 상의 · 컨펌 기준)
+
+### 철학과 존재 이유
+- **왜 `Prediction`이 플랫폼의 심장인가?**
+  - 한국 사회에서 미래 예측은 도박으로만 취급되지만, PosMul은 유저가 **내 돈을 잃지 않고(`PMP` 무료 참여)** 양쪽 균형 근거를 비교하며 **정답 있는 사실·확률 판단을 훈련하는 장**을 만든다.
+  - 동시에 미국주식 갤러리처럼 유저가 자발적으로 모여 토론하고 **직접 예측 게임을 제안·생성**하며 머무는 커뮤니티 공간이다.
+
+### 절대 불변 원칙 & 금지선 (Never Break)
+1. **유일한 `PMC` 생성처**: `PMC`는 오직 `Prediction` 예측 성공 보상으로만 발행된다.
+2. **승자독식(`PMP` 소멸)**: 예측 실패 시 참여한 `PMP`는 소멸되며, 유저는 다시 `Forum`/`Consume` 활동으로 `PMP`를 모아 재도전한다.
+3. **양쪽 균형 근거 의무**: 한쪽 주장만 노출하지 않고 찬반 근거/AI 균형 브리핑을 함께 제공한다.
+4. **주관적 투표 정산 금지**: 사실 판단 영역은 반드시 검증 가능한 **공식 공인 오라클**로 정산한다. *(정답 없는 가치 배분 투표는 `Donation` Phase 2 `미래꿈기부` 전용)*
+5. **사행성 용어 금지**: UI에서 `베팅`, `배당`, `판돈` 대신 `예측 투표 참여`, `예상 리워드 배율`, `총 참여 PMP`를 사용한다.
+
+### 타 도메인 계약 (Input / Output)
+- **수신(`Input`)**: `Forum`/`Consume` 에서 유저가 얻은 `PMP`, `Economy` 의 `MoneyWave(EAT)` 일일/시간별 `PMC` 상금 풀, `Feed(AI)` 의 양쪽 균형 브리핑.
+- **송신(`Output`)**: 승자에게 **`PMC` 보상 발행 요청(`Economy`)**, `Ranking` 에 적중 `PMC`·`winRate`·`Brier Score` 제공, 유저에게 `Donation` 기부 재원 공급.
+
+### 상의 시 반드시 던질 확인 질문
+> *"이 변경이 ① 양쪽 균형 근거·공식 오라클 원칙을 해치지 않는가? ② 승자독식 `PMP` 소멸과 `EAT` 기반 `PMC` 한도를 뚫는 우회로가 되지 않는가? ③ 도박성 용어/UX를 유발하지 않는가?"*
+
+---
+
+아래 1~7절은 위 철학을 코드로 구현할 때 준수해야 하는 **백엔드/DB/UI 상세 개발 스펙**입니다.
 
 ---
 
@@ -62,13 +90,13 @@ $$\text{DRAFT} \longrightarrow \text{ACTIVE} \longrightarrow \text{CLOSED} \long
 - **`prediction.prediction_games`**:
   - `status`: `'ACTIVE'`, `'CLOSED'`, `'SETTLING'`, `'SETTLED'`, `'VOIDED'`
 
-### 3.2. 원장 불변성 및 보상 분배 공식
-- 참가자가 예측에 베팅한 PMP는 즉시 계좌에서 차감되어 게임 베팅 풀(`total_bet_pool`)에 묶입니다.
+### 3.2. 원장 불변성 및 보상 분배 공식 (v3.0 승자독식 · EAT 기준)
+- 참가자가 예측에 참여한 `PMP`는 즉시 계좌에서 차감되어 게임 참여 풀(`total_bet_pool`)에 묶입니다.
 - 정산 시:
-  - **승자 보상**: $\text{원금 회수} + \text{배당 PMC}$
-  - **패자 베팅액**: 전액 소각(Burn) 또는 시스템 풀에 귀속
-  - **MoneyWave 추가 상금 분배**:
-    전체 지급 보상액이 베팅 원금 풀을 초과할 경우, 초과분($\Delta = \text{total\_reward} - \text{total\_bet\_pool}$)을 순수 MoneyWave 1단계 발행액으로 계산하여 `economy.money_wave_history`에 기록합니다.
+  - **승자 보상**: `MoneyWave(EAT)` 상금 풀 배분 기준에 따라 **`PMC` 보상 지급** *(유일한 `PMC` 생성 경로)*
+  - **패자 참여 `PMP`**: **전액 소멸(Burn) — 승자독식 순환** (유저는 다시 `Forum`/`Consume` 활동으로 `PMP` 확보)
+  - **MoneyWave 추가 상금 기록**:
+    지급 `PMC` 분배량은 회사의 세후 순이익(`EAT`) 한도 내 `MoneyWave` 풀 계산(`compute_prediction_hourly_game_pools`)을 따르며 `economy.money_wave_history`에 기록합니다.
 
 ---
 
