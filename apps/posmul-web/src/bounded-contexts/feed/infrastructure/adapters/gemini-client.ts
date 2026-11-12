@@ -1,6 +1,7 @@
 import { ExaoneClient, extractJsonFromText } from "./exaone-client";
+import type { OpenRouterClient } from "./openrouter-client";
 
-export type LlmProvider = "exaone" | "gemini";
+export type LlmProvider = "exaone" | "gemini" | "openrouter";
 
 export const DEFAULT_GEMINI_MODELS = [
   "gemini-3.5-flash",
@@ -145,13 +146,66 @@ export class GeminiClient {
   }
 }
 
+export interface LlmProviderClients {
+  exaone: ExaoneClient;
+  gemini: GeminiClient;
+  openrouter?: OpenRouterClient;
+}
+
+export interface LlmInvokeOptions {
+  temperature?: number;
+  exaoneMaxTokens?: number;
+  openrouterMaxTokens?: number;
+  timeoutMs?: number;
+}
+
 /**
- * 콘텐츠 언어·도메인에 따라 EXAONE / Gemini 호출 우선순위 결정
+ * 프로바이더별 JSON 생성 호출을 공통 인터페이스로 실행
+ */
+export async function invokeLlmProviderJson<T>(
+  provider: LlmProvider,
+  clients: LlmProviderClients,
+  systemPrompt: string,
+  userPrompt: string,
+  options?: LlmInvokeOptions
+): Promise<T> {
+  const temperature = options?.temperature ?? 0.25;
+
+  if (provider === "exaone") {
+    return clients.exaone.generateJson<T>(systemPrompt, userPrompt, {
+      temperature,
+      maxTokens: options?.exaoneMaxTokens ?? 1800,
+      timeoutMs: options?.timeoutMs ?? 25000,
+    });
+  }
+
+  if (provider === "openrouter") {
+    if (!clients.openrouter) {
+      throw new Error("OpenRouterClient is not provided");
+    }
+    return clients.openrouter.generateJson<T>(systemPrompt, userPrompt, {
+      temperature,
+      maxTokens: options?.openrouterMaxTokens ?? 3200,
+      timeoutMs: Math.min(options?.timeoutMs ?? 15000, 18000),
+    });
+  }
+
+  return clients.gemini.generateJson<T>(
+    systemPrompt,
+    userPrompt,
+    options?.timeoutMs ?? 22000,
+    temperature
+  );
+}
+
+/**
+ * 콘텐츠 언어·도메인에 따라 EXAONE / Gemini / OpenRouter(3순위 무료 백업) 호출 우선순위 결정
  */
 export function resolveLlmOrder(
   content: string,
   exaone: ExaoneClient,
-  gemini: GeminiClient
+  gemini: GeminiClient,
+  openrouter?: OpenRouterClient
 ): LlmProvider[] {
   const cleanText = content
     .replace(/\[POSMUL_BLUEPRINT\][\s\S]*?\[\/POSMUL_BLUEPRINT\]/g, "")
@@ -166,11 +220,13 @@ export function resolveLlmOrder(
     );
 
   const preferred: LlmProvider[] = isKoreanContext
-    ? ["exaone", "gemini"]
-    : ["gemini", "exaone"];
+    ? ["exaone", "gemini", "openrouter"]
+    : ["gemini", "exaone", "openrouter"];
 
-  return preferred.filter((provider) =>
-    provider === "exaone" ? exaone.isConfigured() : gemini.isConfigured()
-  );
+  return preferred.filter((provider) => {
+    if (provider === "exaone") return exaone.isConfigured();
+    if (provider === "gemini") return gemini.isConfigured();
+    return Boolean(openrouter?.isConfigured());
+  });
 }
 

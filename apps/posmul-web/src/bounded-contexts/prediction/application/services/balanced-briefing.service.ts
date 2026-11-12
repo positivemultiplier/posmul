@@ -3,9 +3,11 @@ import {
 } from "@/bounded-contexts/feed/infrastructure/adapters/exaone-client";
 import {
   GeminiClient,
+  invokeLlmProviderJson,
   LlmProvider,
   resolveLlmOrder,
 } from "@/bounded-contexts/feed/infrastructure/adapters/gemini-client";
+import { OpenRouterClient } from "@/bounded-contexts/feed/infrastructure/adapters/openrouter-client";
 import type {
   BalancedBriefingDTO,
   BriefingMode,
@@ -71,6 +73,7 @@ interface RawBriefingResponse {
 export interface BalancedBriefingDeps {
   exaoneClient?: ExaoneClient;
   geminiClient?: GeminiClient;
+  openrouterClient?: OpenRouterClient;
 }
 
 const DATA_SOURCE_LABELS: Record<string, string> = {
@@ -472,10 +475,12 @@ export function buildDeterministicFallbackBriefing(
 export class BalancedBriefingService {
   private readonly exaone: ExaoneClient;
   private readonly gemini: GeminiClient;
+  private readonly openrouter: OpenRouterClient;
 
   constructor(deps?: BalancedBriefingDeps) {
     this.exaone = deps?.exaoneClient ?? new ExaoneClient();
     this.gemini = deps?.geminiClient ?? new GeminiClient();
+    this.openrouter = deps?.openrouterClient ?? new OpenRouterClient();
   }
 
   private async invokeProvider(
@@ -484,22 +489,21 @@ export class BalancedBriefingService {
     userPrompt: string,
     timeoutMs: number
   ): Promise<RawBriefingResponse> {
-    if (provider === "exaone") {
-      return this.exaone.generateJson<RawBriefingResponse>(
-        systemPrompt,
-        userPrompt,
-        {
-          temperature: 0.25,
-          maxTokens: 1800,
-          timeoutMs,
-        }
-      );
-    }
-    return this.gemini.generateJson<RawBriefingResponse>(
+    return invokeLlmProviderJson<RawBriefingResponse>(
+      provider,
+      {
+        exaone: this.exaone,
+        gemini: this.gemini,
+        openrouter: this.openrouter,
+      },
       systemPrompt,
       userPrompt,
-      timeoutMs,
-      0.25
+      {
+        temperature: 0.25,
+        exaoneMaxTokens: 1800,
+        openrouterMaxTokens: 3200,
+        timeoutMs,
+      }
     );
   }
 
@@ -519,7 +523,12 @@ export class BalancedBriefingService {
     }
 
     const combinedText = `${input.title}\n${input.description ?? ""}`;
-    const providers = resolveLlmOrder(combinedText, this.exaone, this.gemini);
+    const providers = resolveLlmOrder(
+      combinedText,
+      this.exaone,
+      this.gemini,
+      this.openrouter
+    );
     if (providers.length === 0) {
       return {
         briefing: buildDeterministicFallbackBriefing(input, mode),
@@ -542,6 +551,8 @@ export class BalancedBriefingService {
         const providerBadge =
           provider === "exaone"
             ? `LG EXAONE (${this.exaone.getModelName()}) 분석`
+            : provider === "openrouter"
+            ? `OpenRouter ERNIE (${this.openrouter.getModelName()}) 분석`
             : `Google Gemini (${this.gemini.getPrimaryModelName()}) 분석`;
 
         const normalized = normalizeAndValidateBriefing(

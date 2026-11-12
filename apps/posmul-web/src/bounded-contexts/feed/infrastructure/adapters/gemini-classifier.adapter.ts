@@ -11,9 +11,14 @@ import { ExaoneClient } from "./exaone-client";
 import {
   CustomGeminiCaller,
   GeminiClient,
+  invokeLlmProviderJson,
   LlmProvider,
   resolveLlmOrder,
 } from "./gemini-client";
+import {
+  CustomOpenRouterCaller,
+  OpenRouterClient,
+} from "./openrouter-client";
 
 export type { LlmProvider };
 
@@ -117,6 +122,10 @@ export interface MultiLlmDeps {
   geminiApiKey?: string;
   geminiModels?: string[];
   geminiCaller?: CustomGeminiCaller;
+  openrouterClient?: OpenRouterClient;
+  openrouterApiKey?: string;
+  openrouterModel?: string;
+  openrouterCaller?: CustomOpenRouterCaller;
 }
 
 const ALLOWED_CATEGORIES = new Set([
@@ -129,14 +138,15 @@ const ALLOWED_CATEGORIES = new Set([
 ]);
 
 /**
- * LG AI EXAONE + Google Gemini 멀티-LLM 예측 게임 생성 및 분류 어댑터
- * - 국내/한국어 콘텐츠: LG EXAONE 우선 -> Gemini 자동 폴백
- * - 글로벌/영문 콘텐츠: Gemini 우선 -> LG EXAONE 자동 폴백
+ * LG AI EXAONE + Google Gemini + OpenRouter(ERNIE 5.5 Flash) 멀티-LLM 예측 게임 생성 및 분류 어댑터
+ * - 국내/한국어 콘텐츠: LG EXAONE -> Gemini -> OpenRouter(ERNIE 5.5 Flash) 3순위 무료 자동 폴백
+ * - 글로벌/영문 콘텐츠: Gemini -> LG EXAONE -> OpenRouter(ERNIE 5.5 Flash) 3순위 무료 자동 폴백
  * - 랜덤 하드코딩 짬뽕 폴백 완전 제거, 품질 게이트 통과 초안만 채택
  */
 export class GeminiClassifierAdapter implements ILlmClassifierService {
   private readonly exaone: ExaoneClient;
   private readonly gemini: GeminiClient;
+  private readonly openrouter: OpenRouterClient;
 
   constructor(deps?: MultiLlmDeps) {
     this.exaone = deps?.exaoneClient ?? new ExaoneClient();
@@ -145,13 +155,20 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
       models: deps?.geminiModels,
       customCaller: deps?.geminiCaller,
     });
+    this.openrouter =
+      deps?.openrouterClient ??
+      new OpenRouterClient({
+        apiKey: deps?.openrouterApiKey,
+        model: deps?.openrouterModel,
+        customCaller: deps?.openrouterCaller,
+      });
   }
 
   /**
-   * 콘텐츠 언어·도메인에 따라 1순위/2순위 LLM 순서 결정
+   * 콘텐츠 언어·도메인에 따라 1순위/2순위/3순위 LLM 순서 결정
    */
   public resolveProviderOrder(content: string): LlmProvider[] {
-    return resolveLlmOrder(content, this.exaone, this.gemini);
+    return resolveLlmOrder(content, this.exaone, this.gemini, this.openrouter);
   }
 
   private async invokeProviderJson<T>(
@@ -159,14 +176,22 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
     systemPrompt: string,
     userPrompt: string
   ): Promise<T> {
-    if (provider === "exaone") {
-      return this.exaone.generateJson<T>(systemPrompt, userPrompt, {
+    return invokeLlmProviderJson<T>(
+      provider,
+      {
+        exaone: this.exaone,
+        gemini: this.gemini,
+        openrouter: this.openrouter,
+      },
+      systemPrompt,
+      userPrompt,
+      {
         temperature: 0.25,
-        maxTokens: 1800,
+        exaoneMaxTokens: 1800,
+        openrouterMaxTokens: 3200,
         timeoutMs: 25000,
-      });
-    }
-    return this.gemini.generateJson<T>(systemPrompt, userPrompt, 22000, 0.25);
+      }
+    );
   }
 
   public async classify(content: string): Promise<Result<ClassificationResult>> {
@@ -181,7 +206,9 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
     const providers = this.resolveProviderOrder(content);
     if (providers.length === 0) {
       return failure(
-        new Error("No LLM provider configured (EXAONE_API_KEY / GOOGLE_GEMINI_API_KEY)")
+        new Error(
+          "No LLM provider configured (EXAONE_API_KEY / GOOGLE_GEMINI_API_KEY / OPENROUTER_API_KEY)"
+        )
       );
     }
 
@@ -216,6 +243,8 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
         const providerTag =
           provider === "exaone"
             ? `LG EXAONE (${this.exaone.getModelName()})`
+            : provider === "openrouter"
+            ? `OpenRouter ERNIE (${this.openrouter.getModelName()})`
             : "Google Gemini";
 
         return success({
@@ -257,7 +286,9 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
     const providers = this.resolveProviderOrder(content);
     if (providers.length === 0) {
       return failure(
-        new Error("No LLM provider configured (EXAONE_API_KEY / GOOGLE_GEMINI_API_KEY)")
+        new Error(
+          "No LLM provider configured (EXAONE_API_KEY / GOOGLE_GEMINI_API_KEY / OPENROUTER_API_KEY)"
+        )
       );
     }
 

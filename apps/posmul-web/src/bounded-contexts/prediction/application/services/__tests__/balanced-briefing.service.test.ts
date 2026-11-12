@@ -4,6 +4,7 @@ jest.mock("@/lib/supabase/admin", () => ({
 
 import { ExaoneClient } from "@/bounded-contexts/feed/infrastructure/adapters/exaone-client";
 import { GeminiClient } from "@/bounded-contexts/feed/infrastructure/adapters/gemini-client";
+import { OpenRouterClient } from "@/bounded-contexts/feed/infrastructure/adapters/openrouter-client";
 
 import {
   BalancedBriefingService,
@@ -27,6 +28,17 @@ function createMockGemini(overrides?: Partial<GeminiClient>): GeminiClient {
     generateJson: jest.fn(),
     ...overrides,
   } as unknown as GeminiClient;
+}
+
+function createMockOpenRouter(
+  overrides?: Partial<OpenRouterClient>
+): OpenRouterClient {
+  return {
+    isConfigured: jest.fn(() => true),
+    getModelName: jest.fn(() => "baidu/ernie-5.5-flash-preview:free"),
+    generateJson: jest.fn(),
+    ...overrides,
+  } as unknown as OpenRouterClient;
 }
 
 describe("BalancedBriefingService (유형별 다형성 AI 균형 의사결정 브리핑)", () => {
@@ -277,17 +289,88 @@ describe("BalancedBriefingService (유형별 다형성 AI 균형 의사결정 �
     expect(mockGemini.generateJson).toHaveBeenCalledTimes(1);
   });
 
-  it("양쪽 LLM 모두 실패해도 실업률 3.0% 같은 타 도메인 예제 없이 해당 게임 기반 안전 폴백을 반환한다", async () => {
+  it("EXAONE과 Gemini가 모두 실패하면 3순위 OpenRouter(ERNIE 5.5 Flash)로 폴백해 균형 브리핑을 생성한다", async () => {
+    const mockExaone = createMockExaone({
+      generateJson: jest.fn().mockRejectedValue(new Error("EXAONE 503")),
+    });
+    const mockGemini = createMockGemini({
+      generateJson: jest.fn().mockRejectedValue(new Error("Gemini 429")),
+    });
+    const mockOpenRouter = createMockOpenRouter({
+      generateJson: jest.fn().mockResolvedValue({
+        neutralFacts: {
+          title: "[금통위] 한국은행 기준금리 결정",
+          description: "한국은행 금융통화위원회 통화정책방향 의결문 기준",
+          currentValue: "현재 기준금리 연 2.75%",
+          historicalContext: "직전 2차례 회의 연속 동결",
+          officialSchedule: "금통위 본회의 직후 오전 10:00 발표",
+          source: "한국은행 경제통계시스템(ECOS)",
+        },
+        scenarios: [
+          {
+            optionId: "hold",
+            optionLabel: "기준금리 동결",
+            stanceTag: "동결 논거",
+            tone: "neutral",
+            coreThesis: "환율 변동성과 가계부채 리스크로 신중한 유지가 유력합니다.",
+            arguments: [{ point: "외환·금융안정", detail: "원/달러 상방 압력 경계" }],
+          },
+          {
+            optionId: "cut",
+            optionLabel: "기준금리 25bp 인하",
+            stanceTag: "인하 논거",
+            tone: "bull",
+            coreThesis: "내수·수출 둔화에 선제 대응할 필요가 커지고 있습니다.",
+            arguments: [{ point: "경기 하방 방어", detail: "소비·투자 회복 지원" }],
+          },
+        ],
+        aiInsight:
+          "환율 안정 여부와 내수 경기 둔화 강도 중 금통위가 어디에 무게를 둘지 주목하세요.",
+      }),
+    });
+
+    const service = new BalancedBriefingService({
+      exaoneClient: mockExaone,
+      geminiClient: mockGemini,
+      openrouterClient: mockOpenRouter,
+    });
+
+    const result = await service.generateForGame({
+      gameId: "game-or-fallback-1",
+      title: "한국은행 이번 금융통화위원회 기준금리 동결할까?",
+      category: "ECONOMY",
+      predictionType: "BINARY",
+      dataSource: "ecos",
+      options: [
+        { id: "hold", label: "기준금리 동결" },
+        { id: "cut", label: "기준금리 25bp 인하" },
+      ],
+    });
+
+    expect(result.llmGenerated).toBe(true);
+    expect(result.briefing.providerBadge).toContain("OpenRouter ERNIE");
+    expect(result.briefing.providerBadge).toContain("ernie-5.5-flash");
+    expect(result.briefing.scenarios).toHaveLength(2);
+    expect(mockExaone.generateJson).toHaveBeenCalledTimes(1);
+    expect(mockGemini.generateJson).toHaveBeenCalledTimes(1);
+    expect(mockOpenRouter.generateJson).toHaveBeenCalledTimes(1);
+  });
+
+  it("모든 LLM(EXAONE/Gemini/OpenRouter)이 실패해도 실업률 3.0% 같은 타 도메인 예제 없이 해당 게임 기반 안전 폴백을 반환한다", async () => {
     const mockExaone = createMockExaone({
       generateJson: jest.fn().mockRejectedValue(new Error("503")),
     });
     const mockGemini = createMockGemini({
       generateJson: jest.fn().mockRejectedValue(new Error("429")),
     });
+    const mockOpenRouter = createMockOpenRouter({
+      generateJson: jest.fn().mockRejectedValue(new Error("429")),
+    });
 
     const service = new BalancedBriefingService({
       exaoneClient: mockExaone,
       geminiClient: mockGemini,
+      openrouterClient: mockOpenRouter,
     });
 
     const result = await service.generateForGame({

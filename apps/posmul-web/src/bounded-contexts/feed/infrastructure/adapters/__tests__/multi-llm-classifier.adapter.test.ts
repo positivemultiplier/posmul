@@ -54,8 +54,8 @@ describe("extractJsonFromText & validateGeneratedDraft", () => {
   });
 });
 
-describe("GeminiClassifierAdapter (LG EXAONE + Gemini 듀얼 오케스트레이터)", () => {
-  it("한국어 콘텐츠는 EXAONE 우선, 영문 글로벌 콘텐츠는 Gemini 우선으로 라우팅한다", () => {
+describe("GeminiClassifierAdapter (LG EXAONE + Gemini + OpenRouter 3중 오케스트레이터)", () => {
+  it("한국어 콘텐츠는 EXAONE -> Gemini -> OpenRouter 순, 영문 글로벌 콘텐츠는 Gemini -> EXAONE -> OpenRouter 순으로 라우팅한다", () => {
     const mockExaone = {
       isConfigured: () => true,
       getModelName: () => "k-exaone_v2.5",
@@ -65,17 +65,18 @@ describe("GeminiClassifierAdapter (LG EXAONE + Gemini 듀얼 오케스트레이�
     const adapter = new GeminiClassifierAdapter({
       exaoneClient: mockExaone,
       geminiApiKey: "test-gemini-key",
+      openrouterApiKey: "test-openrouter-key",
     });
 
     expect(
       adapter.resolveProviderOrder("삼성전자 4분기 영업이익 10조 돌파 전망")
-    ).toEqual(["exaone", "gemini"]);
+    ).toEqual(["exaone", "gemini", "openrouter"]);
 
     expect(
       adapter.resolveProviderOrder(
         "Manchester City faces Fulham in Saturday Premier League clash"
       )
-    ).toEqual(["gemini", "exaone"]);
+    ).toEqual(["gemini", "exaone", "openrouter"]);
   });
 
   it("EXAONE 실패 또는 품질 게이트 탈락 시 Gemini로 자동 폴백해 고품질 드래프트를 생성한다", async () => {
@@ -112,6 +113,7 @@ describe("GeminiClassifierAdapter (LG EXAONE + Gemini 듀얼 오케스트레이�
     const adapter = new GeminiClassifierAdapter({
       exaoneClient: mockExaone,
       geminiCaller,
+      openrouterApiKey: "",
     });
 
     const res = await adapter.generateDraft(
@@ -131,6 +133,68 @@ describe("GeminiClassifierAdapter (LG EXAONE + Gemini 듀얼 오케스트레이�
     }
   });
 
+  it("EXAONE과 Gemini가 모두 실패하면 3순위 OpenRouter(ERNIE 5.5 Flash)로 자동 폴백해 분류·초안을 생성한다", async () => {
+    const mockExaone = {
+      isConfigured: () => true,
+      getModelName: () => "k-exaone_v2.5",
+      generateJson: jest.fn().mockRejectedValue(new Error("EXAONE 503")),
+    } as unknown as ExaoneClient;
+
+    const geminiCaller = jest.fn().mockRejectedValue(new Error("Gemini 429"));
+    const openrouterCaller = jest
+      .fn()
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          classification: "PREDICTION",
+          reasoning: "한국은행 기준금리 결정은 공식 정산이 가능한 이슈입니다.",
+          confidence: 0.91,
+        })
+      )
+      .mockResolvedValueOnce(
+        JSON.stringify({
+          title: "[금통위] 한국은행 이번 금융통화위원회 기준금리 동결할까?",
+          summary:
+            "🎯 기준선: 현재 한국은행 기준금리는 연 2.75%입니다.\n📈 상승·찬성 측 논거: 환율 변동성과 가계부채 리스크가 동결 요인입니다.\n📉 하락·반대 측 논거: 내수 둔화와 경기 하방 압력이 인하 요인입니다.\n⚖️ 판정 기준: 한국은행 금융통화위원회 공식 의결 발표 기준.",
+          keywords: ["한국은행", "기준금리", "금통위"],
+          predictionType: "BINARY",
+          options: ["기준금리 동결", "기준금리 25bp 인하"],
+          resolutionCriteria: "한국은행 금융통화위원회 공식 보도자료 기준",
+          category: "ECONOMY",
+          closingHoursFromNow: 72,
+        })
+      );
+
+    const adapter = new GeminiClassifierAdapter({
+      exaoneClient: mockExaone,
+      geminiCaller,
+      openrouterCaller,
+      openrouterModel: "baidu/ernie-5.5-flash-preview:free",
+    });
+
+    const cls = await adapter.classify(
+      "한국은행 금융통화위원회 이번 주 기준금리 동결 vs 인하 전망"
+    );
+    expect(isSuccess(cls)).toBe(true);
+    if (isSuccess(cls)) {
+      expect(cls.data.classification).toBe(ContentClassification.PREDICTION);
+      expect(cls.data.reasoning).toContain("OpenRouter ERNIE");
+    }
+
+    const draftRes = await adapter.generateDraft(
+      "한국은행 금융통화위원회 이번 주 기준금리 동결 vs 인하 전망",
+      ContentClassification.PREDICTION
+    );
+    expect(isSuccess(draftRes)).toBe(true);
+    if (isSuccess(draftRes)) {
+      expect(draftRes.data.title).toContain("한국은행");
+      expect(draftRes.data.predictionDraft?.options).toEqual([
+        "기준금리 동결",
+        "기준금리 25bp 인하",
+      ]);
+    }
+    expect(openrouterCaller).toHaveBeenCalledTimes(2);
+  });
+
   it("모든 LLM이 실패하면 가짜 랜덤 샘플 대신 failure Result를 반환한다", async () => {
     const mockExaone = {
       isConfigured: () => true,
@@ -141,6 +205,7 @@ describe("GeminiClassifierAdapter (LG EXAONE + Gemini 듀얼 오케스트레이�
     const adapter = new GeminiClassifierAdapter({
       exaoneClient: mockExaone,
       geminiCaller: jest.fn().mockRejectedValue(new Error("Gemini 429")),
+      openrouterCaller: jest.fn().mockRejectedValue(new Error("OpenRouter 429")),
     });
 
     const res = await adapter.generateDraft(
@@ -160,6 +225,7 @@ describe("GeminiClassifierAdapter (LG EXAONE + Gemini 듀얼 오케스트레이�
     const adapter = new GeminiClassifierAdapter({
       exaoneClient: mockExaone,
       geminiApiKey: "",
+      openrouterApiKey: "",
     });
 
     const blueprint = serializeBlueprint({
