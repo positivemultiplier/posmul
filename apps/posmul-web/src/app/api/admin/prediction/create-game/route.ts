@@ -67,14 +67,34 @@ export async function POST(req: NextRequest) {
       autoGenerateBriefing = true,
     } = body;
 
-    if (!title?.trim() || !options || options.length < 2) {
+    const cleanTitle = (title || "").trim();
+    if (!cleanTitle || cleanTitle.length < 10 || cleanTitle.length > 200) {
       return NextResponse.json(
         {
           success: false,
-          error: "제목과 최소 2개의 선택지가 필요합니다.",
+          error: "제목은 10자 이상 200자 이하로 입력해 주세요.",
         },
         { status: 400 }
       );
+    }
+
+    if (!options || options.length < 2) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "최소 2개의 선택지가 필요합니다.",
+        },
+        { status: 400 }
+      );
+    }
+
+    let safeDescription = (description || "").trim();
+    if (safeDescription.length < 20) {
+      const base = safeDescription || cleanTitle;
+      safeDescription = `${base} — 공식 데이터 오라클 및 PosMul 운영 원칙에 따라 최종 승부 결과가 정산됩니다.`;
+    }
+    if (safeDescription.length > 2000) {
+      safeDescription = safeDescription.slice(0, 2000);
     }
 
     const structuredOptions = buildStructuredOptions(options);
@@ -94,6 +114,16 @@ export async function POST(req: NextRequest) {
       settlementDate ||
       new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString();
 
+    if (new Date(settleIso).getTime() <= new Date(regEndIso).getTime()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "정산 예정일은 예측 참여 마감일 이후로 설정해야 합니다.",
+        },
+        { status: 400 }
+      );
+    }
+
     const hasOracle = sourceType !== "manual";
     const settlementType =
       sourceType === "manual"
@@ -108,8 +138,8 @@ export async function POST(req: NextRequest) {
       .schema("prediction")
       .from("prediction_games")
       .insert({
-        title: title.trim(),
-        description: (description || title).trim(),
+        title: cleanTitle,
+        description: safeDescription,
         status: "ACTIVE",
         category: category || "POLITICS",
         subcategory: subcategory?.trim() || null,

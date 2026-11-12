@@ -313,8 +313,13 @@ export default function CreatePredictionGamePage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || options.some((opt) => !opt.trim())) {
-      alert("게임 제목과 모든 선택지를 입력해 주세요.");
+    const trimmedTitle = title.trim();
+    if (trimmedTitle.length < 10) {
+      alert("예측 게임 제목은 최소 10자 이상 입력해 주세요.");
+      return;
+    }
+    if (options.some((opt) => !opt.trim())) {
+      alert("모든 선택지를 입력해 주세요.");
       return;
     }
 
@@ -389,9 +394,14 @@ export default function CreatePredictionGamePage() {
         >
           {/* 제목 */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-200">
-              예측 게임 제목 <span className="text-rose-400">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-200">
+                예측 게임 제목 <span className="text-rose-400">*</span> (최소 10자)
+              </label>
+              <span className={`text-[11px] font-mono ${title.trim().length < 10 ? "text-amber-400" : "text-emerald-400"}`}>
+                {title.trim().length} / 200자
+              </span>
+            </div>
             <input
               type="text"
               value={title}
@@ -458,14 +468,19 @@ export default function CreatePredictionGamePage() {
 
           {/* 상세 배경 설명 */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-200">
-              상세 배경 설명 및 정산 기준
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-bold text-slate-200">
+                상세 배경 설명 및 정산 기준 (비워도 자동 보강, 20자 이상 권장)
+              </label>
+              <span className="text-[11px] font-mono text-slate-400">
+                {description.trim().length} / 2000자
+              </span>
+            </div>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              placeholder="정산 판정의 객관적 기준을 적으면 RSS AI 오라클과 균형 브리핑 품질이 크게 올라갑니다."
+              placeholder="정산 판정의 객관적 기준을 20자 이상 적으면 RSS AI 오라클과 균형 브리핑 품질이 크게 올라갑니다."
               className="w-full bg-slate-950 border border-slate-800 rounded-xl p-3 text-xs text-slate-100 focus:outline-none focus:border-indigo-500 transition"
             />
           </div>
