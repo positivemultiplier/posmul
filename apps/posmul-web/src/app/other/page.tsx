@@ -122,7 +122,7 @@ export default function OtherServicesPage() {
       status: 'coming-soon',
       features: [
         '1:1 시민 문의',
-        'PMP · PMC · PMG 경제 시스템 FAQ',
+        'PMP · PMC 경제 시스템 FAQ',
         '직접민주주의 참여 가이드 문서',
         '플랫폼 개선 피드백 제출',
       ],

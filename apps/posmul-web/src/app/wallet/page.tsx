@@ -10,7 +10,6 @@ import {
   RefreshCw,
   Clock,
   Filter,
-  ShieldCheck,
   CreditCard,
   History,
   Sparkles,
@@ -24,13 +23,13 @@ interface Transaction {
   type: "prediction" | "donation" | "consume" | "reward";
   title: string;
   amount: number;
-  currency: "PMP" | "PMC" | "PMG";
+  currency: "PMP" | "PMC";
   status: "completed" | "pending" | "failed";
   createdAt: string;
 }
 
 export default function WalletPage() {
-  const [assets, setAssets] = useState({ pmp: 0, pmc: 0, pmg: 0 });
+  const [assets, setAssets] = useState({ pmp: 0, pmc: 0 });
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>("all");
@@ -88,7 +87,7 @@ export default function WalletPage() {
 
       <main className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         {/* Assets Cards Grid */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* PMP Card */}
           <motion.div
             initial={{ opacity: 0, y: 15 }}
@@ -149,39 +148,6 @@ export default function WalletPage() {
                   <span>기부 & 지역 소비 환원</span>
                   <Link href="/donation" className="text-purple-400 hover:underline flex items-center gap-1 font-medium">
                     기부하기 <ArrowUpRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* PMG Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 15 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-          >
-            <Card className="bg-gradient-to-br from-indigo-950/30 to-slate-900 border-indigo-800/40 relative overflow-hidden group hover:border-indigo-600/60 transition-all">
-              <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                <ShieldCheck className="w-24 h-24 text-indigo-400" />
-              </div>
-              <CardContent className="p-6 space-y-4 relative z-10">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                    거버넌스 의결권
-                  </span>
-                  <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400">PMG Power</p>
-                  <p className="text-3xl font-black text-indigo-300 mt-1">
-                    {assets.pmg.toLocaleString()} <span className="text-sm font-normal text-indigo-400/80">PMG</span>
-                  </p>
-                </div>
-                <div className="pt-2 flex items-center justify-between text-xs text-slate-400 border-t border-slate-800/80">
-                  <span>아고라 의안 표결권</span>
-                  <Link href="/forum/agora" className="text-indigo-400 hover:underline flex items-center gap-1 font-medium">
-                    투표 참여 <ArrowUpRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
               </CardContent>

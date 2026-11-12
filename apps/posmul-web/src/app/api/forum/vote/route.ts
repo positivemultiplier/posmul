@@ -5,7 +5,7 @@ export async function POST(request: Request) {
   try {
     const supabase = await createClient();
     const body = await request.json();
-    const { topicId, voteType, pmgWeight } = body; // voteType: 'AGREE' | 'DISAGREE' | 'ABSTAIN'
+    const { topicId, voteType } = body; // voteType: 'AGREE' | 'DISAGREE' | 'ABSTAIN'
 
     if (!topicId || !voteType) {
       return NextResponse.json({ success: false, error: "Missing topicId or voteType" }, { status: 400 });
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
 
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id || "00000000-0000-0000-0000-000000000001";
-    const weight = pmgWeight || 100; // PMG 거버넌스 가중치
+    const weight = 1; // 1인 1표 기본 표결 가중치
 
     // 1. Supabase forum.votes 또는 forum.topics 업데이트 (없을 경우 덤 데이터 fallback)
     const { data: topic } = await supabase
@@ -42,8 +42,9 @@ export async function POST(request: Request) {
       success: true,
       topicId,
       voteType,
+      userId,
       appliedWeight: weight,
-      message: `성공적으로 '${voteType}' 표결이 반영되었습니다. (의결권: ${weight} PMG)`,
+      message: `성공적으로 '${voteType}' 표결이 반영되었습니다.`,
     });
   } catch (error: any) {
     console.error("Agora vote error:", error);

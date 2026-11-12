@@ -22,7 +22,6 @@ export async function GET() {
     let assets = {
       pmp: 15000,
       pmc: 3500,
-      pmg: 320,
     };
 
     const { data: dbAccount } = await admin
@@ -36,7 +35,6 @@ export async function GET() {
       assets = {
         pmp: Number(dbAccount.pmp_balance ?? assets.pmp),
         pmc: Number(dbAccount.pmc_balance ?? assets.pmc),
-        pmg: 320,
       };
     }
 

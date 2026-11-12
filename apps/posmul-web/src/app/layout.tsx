@@ -29,7 +29,6 @@ export const metadata: Metadata = {
     "지역경제",
     "PMC",
     "PMP",
-    "PMG",
     "소셜임팩트",
   ],
   authors: [{ name: "PosMul Team" }],

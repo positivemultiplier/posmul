@@ -2,7 +2,7 @@
  * PosMul Domain Tone-on-Tone & Citizen Philosophy Design System
  *
  * 철의 삼각(관료-정치인-공급자) 카르텔을 극복하는 시민 직접민주주의 선순환:
- * 1. Forum (공론·숙의) & Consume (시간·지역소비) ➔ 무위험 자산 PMP 및 의결권 PMG 획득
+ * 1. Forum (공론·숙의) & Consume (시간·광고참여) ➔ 무위험 활동 포인트 PMP 획득
  * 2. Prediction (집단지성 예측) ➔ 사회적 학습장 & MoneyWave 기반 위험자산 PMC 전환
  * 3. Donation (직접 예산 집행) ➔ 시민이 직접 PMC로 공익 프로젝트에 예산 집행
  * 4. Ranking (명예의 전당) ➔ 동(읍·면·동) 단위 풀뿌리 주권자의 "내가 그랬제!" 증명
@@ -57,10 +57,10 @@ export const DOMAIN_PHILOSOPHY_MAP: Record<PosMulDomainKey, DomainPhilosophyMeta
     englishTitle: "Forum · Public Agora",
     href: "/forum",
     stepBadge: "STEP 1 · 공론",
-    assetBadge: "+PMP · PMG",
+    assetBadge: "+PMP",
     assetType: "PMP",
     philosophySlogan: "공공 지식 학습 · 예산 감시 · 숙의 민주주의",
-    philosophyMicroCopy: "뉴스 학습과 예산 감시, 아고라 숙의로 무위험 시민 자본(PMP)과 의결권(PMG)을 획득합니다.",
+    philosophyMicroCopy: "뉴스 학습과 커뮤니티 소통, 아고라 숙의로 무위험 활동 포인트(PMP)를 획득합니다.",
     tones: {
       row1Active:
         "bg-gradient-to-r from-emerald-600/90 to-teal-600/90 text-white border border-emerald-400/50 shadow-[0_0_18px_rgba(16,185,129,0.28)]",

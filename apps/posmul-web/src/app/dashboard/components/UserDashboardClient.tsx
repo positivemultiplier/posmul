@@ -106,7 +106,7 @@ export interface DashboardTransactionItem {
   type: "prediction" | "donation" | "consume" | "reward";
   title: string;
   amount: number;
-  currency: "PMP" | "PMC" | "PMG";
+  currency: "PMP" | "PMC";
   status: "completed" | "pending" | "cancelled";
   createdAt: string;
 }
@@ -128,7 +128,6 @@ export interface UserDashboardProps {
     balances: {
       pmp: number;
       pmc: number;
-      pmg: number;
     };
     ranking: {
       overallRank: number;

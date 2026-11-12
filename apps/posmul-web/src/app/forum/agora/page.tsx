@@ -142,7 +142,6 @@ function ForumAgoraContent() {
 
   const [selectedCategory, setSelectedCategory] = useState(queryType);
   const [searchQuery, setSearchQuery] = useState("");
-  const [userPmgPower] = useState(320);
   const [realTopics, setRealTopics] = useState<AgoraTopic[]>([]);
 
   const [isDelegateModalOpen, setIsDelegateModalOpen] = useState(false);
@@ -215,7 +214,6 @@ function ForumAgoraContent() {
         body: JSON.stringify({
           topicId,
           voteType,
-          pmgWeight: userPmgPower,
         }),
       });
 
@@ -224,7 +222,7 @@ function ForumAgoraContent() {
         alert(
           `🗳️ 표결 완료! (${
             voteType === "AGREE" ? "찬성" : "반대"
-          } 표결, 의결권 ${userPmgPower} PMG 반영 완료)`
+          } 표결이 반영되었습니다)`
         );
       } else {
         alert(`투표 실패: ${data.error}`);
@@ -244,7 +242,6 @@ function ForumAgoraContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           delegateToName: delegateTarget,
-          pmgAmount: userPmgPower,
         }),
       });
 
@@ -281,7 +278,6 @@ function ForumAgoraContent() {
           domain="forum"
           title="💬 Agora · 직접민주주의 공론장"
           subtitle="시민 정책 숙의 · 찬반 표결 · Liquid Democracy 의결권 위임"
-          metrics={[{ label: "내 PMG 의결권", value: userPmgPower, unit: "PMG" }]}
           actionSlot={
             <button
               onClick={() => setIsDelegateModalOpen(true)}
@@ -465,10 +461,8 @@ function ForumAgoraContent() {
 
               <form onSubmit={handleDelegateSubmit} className="space-y-4">
                 <p className="text-xs text-slate-300">
-                  보유하신{" "}
-                  <strong className="text-emerald-400">{userPmgPower} PMG</strong>{" "}
-                  의결권을 신뢰하는 정책 전문가나 대표 리더에게 일임하여 안건 표결
-                  시 대리권을 부여합니다. (언제든지 철회 가능)
+                  아고라 의안 표결 시 나의 의결권을 신뢰하는 정책 전문가나 대표
+                  리더에게 위임하여 대리 표결을 맡깁니다. (언제든지 철회 가능)
                 </p>
 
                 <div>

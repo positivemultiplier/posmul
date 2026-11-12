@@ -369,7 +369,6 @@ export default async function DashboardPage() {
     balances: {
       pmp: Number(account?.pmp_balance ?? 15000),
       pmc: Number(account?.pmc_balance ?? 3500),
-      pmg: 320,
     },
     ranking: {
       overallRank: Number(score?.overall_rank ?? 12),
