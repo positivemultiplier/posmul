@@ -2,7 +2,15 @@
 
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { LIVE_ROOMS, LiveEventRoom, getLiveRoomEffectiveStatus } from "../live-rooms.data";
+import {
+  attachHourlyGamePoolsToRows,
+  type PredictionGameRow,
+} from "@/app/prediction/components/prediction-game-mapper";
+import {
+  type LiveDbGameInput,
+  type LiveEventRoom,
+  mapPredictionGameToLiveRoom,
+} from "../live-rooms.data";
 import { ChallengeOption, UserChallengeDTO } from "@/app/challenge/types";
 
 export interface LiveMessageDTO {
@@ -15,86 +23,152 @@ export interface LiveMessageDTO {
   isReaction?: boolean;
 }
 
+const LIVE_GAME_SELECT =
+  "game_id, slug, title, description, category, subcategory, league, status, data_source, prediction_type, game_options, registration_start, registration_end, settlement_date, settled_at, winning_option_id, difficulty, min_bet_amount, max_bet_amount, max_participants, created_at";
+
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+type LiveGameQueryRow = PredictionGameRow & {
+  settled_at?: string | null;
+  winning_option_id?: string | null;
+};
+
 /**
- * DB 예측 게임 상태를 반영한 라이브 룸 목록 전체 조회 (마감/정산 자동 판정)
+ * DB 예측 게임 목록을 기반으로 LIVE 응원톡 룸 목록을 동적으로 구성합니다.
+ * - 진행 중(ACTIVE & 마감 전) 게임을 마감 임박순으로 우선 배치하고,
+ *   최근 마감·정산 완료(CLOSED/SETTLED) 게임도 최대 6개 함께 노출합니다.
  */
 export async function getLiveRoomsWithStatusAction(): Promise<{
   success: boolean;
   rooms: LiveEventRoom[];
 }> {
   try {
-    const gameIds = LIVE_ROOMS.map((r) => r.predictionGame?.id).filter(Boolean) as string[];
-
-    const dbGameMap = new Map<string, any>();
-    if (gameIds.length > 0) {
-      const { data: dbGames } = await supabaseAdmin
+    const [activeRes, endedRes] = await Promise.all([
+      supabaseAdmin
         .schema("prediction")
         .from("prediction_games")
-        .select("game_id, status, registration_end, settlement_date, settled_at, winning_option_id, game_options")
-        .in("game_id", gameIds);
+        .select(LIVE_GAME_SELECT)
+        .eq("status", "ACTIVE")
+        .order("registration_end", { ascending: true, nullsFirst: false })
+        .limit(24),
+      supabaseAdmin
+        .schema("prediction")
+        .from("prediction_games")
+        .select(LIVE_GAME_SELECT)
+        .in("status", ["CLOSED", "SETTLED"])
+        .order("settled_at", { ascending: false, nullsFirst: false })
+        .order("registration_end", { ascending: false, nullsFirst: false })
+        .limit(6),
+    ]);
 
-      (dbGames || []).forEach((g: any) => {
-        dbGameMap.set(g.game_id, g);
-      });
+    const combinedRows = [
+      ...((activeRes.data || []) as LiveGameQueryRow[]),
+      ...((endedRes.data || []) as LiveGameQueryRow[]),
+    ];
+
+    if (combinedRows.length === 0) {
+      return { success: true, rooms: [] };
     }
 
-    const mergedRooms = LIVE_ROOMS.map((room) => {
-      const g = room.predictionGame?.id ? dbGameMap.get(room.predictionGame.id) : null;
-      const effectiveRoom: LiveEventRoom = { ...room };
+    const enrichedRows = (await attachHourlyGamePoolsToRows(
+      supabaseAdmin,
+      combinedRows
+    )) as LiveGameQueryRow[];
 
-      if (g) {
-        effectiveRoom.registrationEnd = g.registration_end || effectiveRoom.registrationEnd;
-        effectiveRoom.settlementDate = g.settlement_date || effectiveRoom.settlementDate;
-        effectiveRoom.settledAt = g.settled_at || null;
-        effectiveRoom.winningOptionId = g.winning_option_id || null;
+    const roomIds = enrichedRows.map((g) => g.slug || g.game_id);
+    const msgCountByRoom = await fetchRecentRoomMessageCounts(roomIds);
 
-        // DB에 winning_option_id가 있으면 라벨 찾기
-        if (g.winning_option_id && room.predictionGame) {
-          if (room.predictionGame.optionA.id === g.winning_option_id) {
-            effectiveRoom.winningOptionLabel = room.predictionGame.optionA.label;
-          } else if (room.predictionGame.optionB.id === g.winning_option_id) {
-            effectiveRoom.winningOptionLabel = room.predictionGame.optionB.label;
-          }
-        }
+    const rooms = enrichedRows.map((row) =>
+      mapPredictionGameToLiveRoom(row as LiveDbGameInput, {
+        recentMessagesCount: msgCountByRoom.get(row.slug || row.game_id) ?? 0,
+      })
+    );
 
-        // DB 상태가 직접 CLOSED이거나 SETTLED인 경우 우선 반영
-        if (g.status === "SETTLED" || g.settled_at) {
-          effectiveRoom.status = "ENDED";
-        } else if (g.status === "CLOSED") {
-          effectiveRoom.status = "CLOSED";
-        }
-      }
+    // LIVE 진행중 -> CLOSED -> ENDED 순으로 정렬 (같은 상태 내에서는 기존 순서 유지)
+    const statusOrder: Record<LiveEventRoom["status"], number> = {
+      LIVE: 0,
+      UPCOMING: 1,
+      CLOSED: 2,
+      ENDED: 3,
+    };
+    rooms.sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
 
-      // 최종 실효 상태 계산 (시간 초과 시 CLOSED)
-      effectiveRoom.status = getLiveRoomEffectiveStatus(effectiveRoom);
-      return effectiveRoom;
-    });
-
-    return { success: true, rooms: mergedRooms };
+    return { success: true, rooms };
   } catch (err) {
     console.error("getLiveRoomsWithStatusAction exception:", err);
-    // fallback: 기본 정적 데이터 기반 판정
-    const fallbackRooms = LIVE_ROOMS.map((r) => ({
-      ...r,
-      status: getLiveRoomEffectiveStatus(r),
-    }));
-    return { success: true, rooms: fallbackRooms };
+    return { success: false, rooms: [] };
   }
 }
 
+async function fetchRecentRoomMessageCounts(
+  roomIds: string[]
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (roomIds.length === 0) return counts;
+
+  const { data } = await supabaseAdmin
+    .schema("forum")
+    .from("live_room_messages")
+    .select("room_id")
+    .in("room_id", roomIds)
+    .order("created_at", { ascending: false })
+    .limit(300);
+
+  if (data) {
+    for (const row of data as Array<{ room_id: string }>) {
+      counts.set(row.room_id, (counts.get(row.room_id) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
 /**
- * 단일 라이브 룸 최신 상태 조회
+ * 단일 라이브 룸 최신 상태 조회 (slug 또는 game_id 기반 직접 DB 조회)
  */
 export async function getLiveRoomDetailAction(roomId: string): Promise<{
   success: boolean;
   room?: LiveEventRoom;
 }> {
   try {
-    const listRes = await getLiveRoomsWithStatusAction();
-    const room = listRes.rooms.find((r) => r.id === roomId);
-    if (!room) {
+    const decoded = decodeURIComponent(roomId);
+    let gameRow: LiveGameQueryRow | null = null;
+
+    const bySlug = await supabaseAdmin
+      .schema("prediction")
+      .from("prediction_games")
+      .select(LIVE_GAME_SELECT)
+      .eq("slug", decoded)
+      .maybeSingle();
+
+    if (bySlug.data) {
+      gameRow = bySlug.data as LiveGameQueryRow;
+    } else if (UUID_REGEX.test(decoded)) {
+      const byId = await supabaseAdmin
+        .schema("prediction")
+        .from("prediction_games")
+        .select(LIVE_GAME_SELECT)
+        .eq("game_id", decoded)
+        .maybeSingle();
+      if (byId.data) {
+        gameRow = byId.data as LiveGameQueryRow;
+      }
+    }
+
+    if (!gameRow) {
       return { success: false };
     }
+
+    const [enriched] = (await attachHourlyGamePoolsToRows(supabaseAdmin, [
+      gameRow,
+    ])) as LiveGameQueryRow[];
+    const msgCounts = await fetchRecentRoomMessageCounts([
+      enriched.slug || enriched.game_id,
+    ]);
+    const room = mapPredictionGameToLiveRoom(enriched as LiveDbGameInput, {
+      recentMessagesCount: msgCounts.get(enriched.slug || enriched.game_id) ?? 0,
+    });
+
     return { success: true, room };
   } catch (err) {
     console.error("getLiveRoomDetailAction exception:", err);
@@ -128,7 +202,10 @@ export async function getRecentLiveMessagesAction(roomId: string): Promise<{
       teamTag: m.team_tag || undefined,
       teamColor: m.team_color || undefined,
       message: m.message,
-      time: new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      time: new Date(m.created_at).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
       isReaction: m.is_reaction || false,
     }));
 
@@ -209,25 +286,29 @@ export async function createLiveQuickChallengeAction(params: {
     }
 
     const now = new Date();
-    const eventStartAt = new Date(now.getTime() + params.durationMinutes * 60 * 1000);
+    const eventStartAt = new Date(
+      now.getTime() + params.durationMinutes * 60 * 1000
+    );
     const settlementAt = new Date(eventStartAt.getTime() + 10 * 60 * 1000); // 마감 후 10분 뒤 정산
 
     const optionIds = ["A", "B"];
-    const initialOptions: ChallengeOption[] = params.options.slice(0, 2).map((label, idx) => {
-      const isHostPick = idx === params.hostPickIndex;
-      return {
-        id: optionIds[idx],
-        label: label.trim(),
-        votes: isHostPick ? 1 : 0,
-        pmp: isHostPick ? params.hostBetAmount : 0,
-        ratio: isHostPick ? 100 : 0,
-      };
-    });
+    const initialOptions: ChallengeOption[] = params.options
+      .slice(0, 2)
+      .map((label, idx) => {
+        const isHostPick = idx === params.hostPickIndex;
+        return {
+          id: optionIds[idx],
+          label: label.trim(),
+          votes: isHostPick ? 1 : 0,
+          pmp: isHostPick ? params.hostBetAmount : 0,
+          ratio: isHostPick ? 100 : 0,
+        };
+      });
 
     const totalPool = params.hostBetAmount;
     const hostFee = Math.floor(totalPool * 0.03);
 
-    // 1. 챌린지 생성
+    // 1. 챌린지 생성 (metadata.roomId에 방 ID 기록해 방별 격리)
     const { data: challenge, error: challengeError } = await supabaseAdmin
       .schema("prediction")
       .from("user_challenges")
@@ -243,13 +324,17 @@ export async function createLiveQuickChallengeAction(params: {
         status: "OPEN",
         total_pool_pmp: totalPool,
         host_fee_pmp: hostFee,
+        metadata: { roomId: params.roomId },
       })
       .select("*")
       .single();
 
     if (challengeError || !challenge) {
       console.error("createLiveQuickChallengeAction error:", challengeError);
-      return { success: false, error: challengeError?.message || "번개 예측 생성 실패" };
+      return {
+        success: false,
+        error: challengeError?.message || "번개 예측 생성 실패",
+      };
     }
 
     // 2. 호스트 첫 베팅 기록
@@ -287,9 +372,13 @@ export async function createLiveQuickChallengeAction(params: {
     };
 
     return { success: true, challenge: challengeDTO };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("createLiveQuickChallengeAction exception:", err);
-    return { success: false, error: err?.message || "번개 예측 생성 중 오류가 발생했습니다." };
+    const msg =
+      err instanceof Error
+        ? err.message
+        : "번개 예측 생성 중 오류가 발생했습니다.";
+    return { success: false, error: msg };
   }
 }
 
@@ -339,7 +428,10 @@ export async function quickVoteLiveChallengeAction(params: {
       return { success: false, error: "해당 번개 예측을 찾을 수 없습니다." };
     }
 
-    if (Date.now() >= new Date(challenge.event_start_at).getTime() || challenge.status !== "OPEN") {
+    if (
+      Date.now() >= new Date(challenge.event_start_at).getTime() ||
+      challenge.status !== "OPEN"
+    ) {
       return { success: false, error: "이미 마감된 번개 예측입니다." };
     }
 
@@ -381,10 +473,14 @@ export async function quickVoteLiveChallengeAction(params: {
       return opt;
     });
 
-    const newTotalPmp = updatedOptions.reduce((acc, cur) => acc + (cur.pmp || 0), 0);
+    const newTotalPmp = updatedOptions.reduce(
+      (acc, cur) => acc + (cur.pmp || 0),
+      0
+    );
     const finalOptions = updatedOptions.map((opt) => ({
       ...opt,
-      ratio: newTotalPmp > 0 ? Math.round(((opt.pmp || 0) / newTotalPmp) * 100) : 0,
+      ratio:
+        newTotalPmp > 0 ? Math.round(((opt.pmp || 0) / newTotalPmp) * 100) : 0,
     }));
 
     await supabaseAdmin
@@ -402,40 +498,48 @@ export async function quickVoteLiveChallengeAction(params: {
       options: finalOptions,
       totalPool: newTotalPmp,
     };
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error("quickVoteLiveChallengeAction exception:", err);
-    return { success: false, error: err?.message || "투표 처리 중 오류가 발생했습니다." };
+    const msg =
+      err instanceof Error ? err.message : "투표 처리 중 오류가 발생했습니다.";
+    return { success: false, error: msg };
   }
 }
 
 /**
- * [LIVE] 최근 생성된 진행 중인 시청자 챌린지 목록 조회
+ * [LIVE] 특정 라이브 방의 진행 중인 시청자 번개 챌린지 목록 조회
  */
-export async function getLiveActiveChallengesAction(): Promise<{
+export async function getLiveActiveChallengesAction(roomId?: string): Promise<{
   success: boolean;
   challenges: UserChallengeDTO[];
 }> {
   try {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .schema("prediction")
       .from("user_challenges")
       .select("*")
       .gte("created_at", twoHoursAgo)
       .like("title", "[LIVE]%")
       .order("created_at", { ascending: false })
-      .limit(5);
+      .limit(20);
+
+    if (roomId) {
+      query = query.contains("metadata", { roomId });
+    }
+
+    const { data, error } = await query;
 
     if (error || !data) {
       return { success: false, challenges: [] };
     }
 
-    const dtos: UserChallengeDTO[] = data.map((d: any) => ({
+    const dtos: UserChallengeDTO[] = data.slice(0, 5).map((d) => ({
       id: d.id,
       hostId: d.host_id,
       hostName: d.host_name,
-      title: d.title.replace(/^\[LIVE\]\s*/, ""),
+      title: String(d.title || "").replace(/^\[LIVE\]\s*/, ""),
       options: d.options || [],
       category: d.category,
       visibility: d.visibility,
@@ -454,5 +558,3 @@ export async function getLiveActiveChallengesAction(): Promise<{
     return { success: false, challenges: [] };
   }
 }
-
-

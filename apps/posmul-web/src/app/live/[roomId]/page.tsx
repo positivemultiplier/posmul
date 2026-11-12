@@ -19,7 +19,7 @@ import {
   Flame,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { LIVE_ROOMS, LiveEventRoom, getLiveRoomEffectiveStatus } from "../live-rooms.data";
+import { LiveEventRoom, getLiveRoomEffectiveStatus } from "../live-rooms.data";
 import {
   getRecentLiveMessagesAction,
   saveLiveMessageBufferAction,
@@ -46,12 +46,26 @@ interface ChatMessage {
   challengeData?: LiveChallengePayload;
 }
 
+function createPlaceholderRoom(roomId: string): LiveEventRoom {
+  return {
+    id: roomId,
+    category: "ECONOMY",
+    categoryLabel: "📡 PosMul LIVE",
+    title: "라이브 응원톡 연결 중...",
+    subtitle: "실시간 예측 마켓 데이터를 불러오고 있습니다.",
+    status: "LIVE",
+    viewerCount: 0,
+  };
+}
+
 export default function LiveRoomPage() {
   const params = useParams();
-  const roomId = params.roomId as string;
-  const initialRoom = LIVE_ROOMS.find((r) => r.id === roomId) || LIVE_ROOMS[0];
+  const roomId = decodeURIComponent(String(params.roomId || ""));
+  const initialRoom = createPlaceholderRoom(roomId);
 
   const [roomData, setRoomData] = useState<LiveEventRoom>(initialRoom);
+  const [isRoomLoading, setIsRoomLoading] = useState<boolean>(true);
+  const [roomNotFound, setRoomNotFound] = useState<boolean>(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [myTeam, setMyTeam] = useState<"A" | "B">("A");
@@ -68,10 +82,10 @@ export default function LiveRoomPage() {
   const [userVotes, setUserVotes] = useState<Record<string, "A" | "B">>({});
 
   const [voteStats, setVoteStats] = useState({
-    ratioA: initialRoom.predictionGame?.optionA.ratio || 60,
-    ratioB: initialRoom.predictionGame?.optionB.ratio || 40,
-    countA: initialRoom.predictionGame?.optionA.count || 890,
-    countB: initialRoom.predictionGame?.optionB.count || 580,
+    ratioA: 50,
+    ratioB: 50,
+    countA: 0,
+    countB: 0,
   });
 
   const chatScrollRef = useRef<HTMLDivElement>(null);
@@ -79,9 +93,14 @@ export default function LiveRoomPage() {
 
   // 1. 방 최신 상태 DB 동기화 및 실시간 시청자 번개 예측 로드
   useEffect(() => {
+    setIsRoomLoading(true);
+    setRoomNotFound(false);
+
     getLiveRoomDetailAction(roomId).then((res) => {
+      setIsRoomLoading(false);
       if (res.success && res.room) {
         setRoomData(res.room);
+        setOnlineCount(res.room.viewerCount);
         setEffectiveStatus(getLiveRoomEffectiveStatus(res.room));
         if (res.room.predictionGame) {
           setVoteStats({
@@ -91,11 +110,13 @@ export default function LiveRoomPage() {
             countB: res.room.predictionGame.optionB.count,
           });
         }
+      } else {
+        setRoomNotFound(true);
       }
     });
 
-    // 최근 진행 중인 시청자 번개 예측 로드
-    getLiveActiveChallengesAction().then((res) => {
+    // 해당 라이브 방의 최근 진행 중인 시청자 번개 예측 로드
+    getLiveActiveChallengesAction(roomId).then((res) => {
       if (res.success && res.challenges) {
         const mapped: LiveChallengePayload[] = res.challenges.map((c) => ({
           id: c.id,
@@ -508,6 +529,26 @@ export default function LiveRoomPage() {
         minute: "2-digit",
       })
     : null;
+
+  if (!isRoomLoading && roomNotFound) {
+    return (
+      <div className="min-h-screen bg-[#07090e] text-slate-100 flex items-center justify-center p-6">
+        <div className="max-w-md w-full bg-[#111520] border border-white/10 rounded-3xl p-8 text-center space-y-4">
+          <p className="text-lg font-black text-white">라이브 방을 찾을 수 없습니다</p>
+          <p className="text-xs text-slate-400">
+            종료되었거나 존재하지 않는 라이브 응원톡 방입니다. 로비에서 진행 중인 라이브 방을 선택해 주세요.
+          </p>
+          <Link
+            href="/live"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            LIVE 로비로 돌아가기
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 flex flex-col">

@@ -2,7 +2,7 @@ import React from "react";
 import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireAdminSession } from "@/shared/lib/security/admin-auth";
-import { LIVE_ROOMS } from "@/app/live/live-rooms.data";
+import { getLiveRoomsWithStatusAction } from "@/app/live/actions/live.actions";
 import { parseGameOptions } from "@/bounded-contexts/prediction/infrastructure/repositories/prediction-query.repository";
 import {
   AdminOverviewClient,
@@ -32,6 +32,7 @@ export default async function AdminMainPage() {
     forumCountRes,
     liveMsgCountRes,
     settlementSourcesRes,
+    liveRoomsRes,
   ] = await Promise.all([
     supabaseAdmin
       .schema("prediction")
@@ -73,6 +74,7 @@ export default async function AdminMainPage() {
       .from("settlement_sources")
       .select("id, game_id, source_type, source_config, external_id, scheduled_at")
       .order("scheduled_at", { ascending: true }),
+    getLiveRoomsWithStatusAction(),
   ]);
 
   const rawGames = gamesRes.data || [];
@@ -166,17 +168,21 @@ export default async function AdminMainPage() {
     count: activeGames.filter((g) => g.category === m.category).length,
   }));
 
-  const liveRoomsSummary: AdminLiveRoomSummary[] = LIVE_ROOMS.map((r) => ({
-    id: r.id,
-    categoryLabel: r.categoryLabel,
-    title: r.title,
-    viewerCount: r.viewerCount,
-    statusText: r.matchScore?.statusText || "LIVE",
-    linkedGameSlug: r.predictionGame?.slug || r.predictionGame?.id || "",
-    linkedGameQuestion: r.predictionGame?.question || "",
-    oracleLabel: r.predictionGame?.oracleLabel || "공인 오라클",
-    totalPoolPmc: r.predictionGame?.totalPoolPmc || 20000,
-  }));
+  const liveRoomsSummary: AdminLiveRoomSummary[] = (liveRoomsRes.rooms || [])
+    .slice(0, 8)
+    .map((r) => ({
+      id: r.id,
+      categoryLabel: r.categoryLabel,
+      title: r.title,
+      viewerCount: r.viewerCount,
+      statusText:
+        r.matchScore?.statusText ||
+        (r.status === "ENDED" ? "정산완료" : r.status === "CLOSED" ? "마감" : "LIVE"),
+      linkedGameSlug: r.predictionGame?.slug || r.predictionGame?.id || "",
+      linkedGameQuestion: r.predictionGame?.question || "",
+      oracleLabel: r.predictionGame?.oracleLabel || "공인 오라클",
+      totalPoolPmc: r.predictionGame?.totalPoolPmc || 2500,
+    }));
 
   return (
     <AdminOverviewClient

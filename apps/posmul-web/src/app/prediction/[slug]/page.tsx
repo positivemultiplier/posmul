@@ -4,10 +4,6 @@
  * 공통 데이터 빌더(fetchPredictionDetailDataBySlug)와 통합하여 모든 카테고리와 단일 소스 유지
  */
 
-import {
-  findLiveRoomByGame,
-  findLiveRoomByKeyword,
-} from "@/app/live/live-rooms.data";
 import { fetchPredictionDetailDataBySlug } from "../components/prediction-detail-by-slug";
 import {
   UniversalPredictionDetailClient,
@@ -118,24 +114,8 @@ export default async function PredictionDetailPage({
 
   if (SAMPLE_GAMES_MAP[decodedSlug]) {
     gameForView = { ...SAMPLE_GAMES_MAP[decodedSlug] };
-    const fallbackLive =
-      findLiveRoomByGame(gameForView.id) ||
-      findLiveRoomByGame(decodedSlug) ||
-      findLiveRoomByKeyword(gameForView.title) ||
-      findLiveRoomByKeyword(decodedSlug);
-    if (fallbackLive) {
-      gameForView.liveRoom = {
-        id: fallbackLive.id,
-        title: fallbackLive.title,
-        viewerCount: fallbackLive.viewerCount,
-        statusText: fallbackLive.matchScore?.statusText || "LIVE 진행 중",
-      };
-    }
     userBets = await getUserBets(gameForView.id);
   } else {
-    const fallbackLive =
-      findLiveRoomByGame(decodedSlug) ||
-      findLiveRoomByKeyword(decodedSlug);
     gameForView = {
       id: `game-fallback-${decodedSlug}`,
       title: decodedSlug.replace(/-/g, " ").toUpperCase(),
@@ -156,14 +136,6 @@ export default async function PredictionDetailPage({
       category: "이슈 예측",
       dataSource: "manual",
       settlementType: "auto",
-      liveRoom: fallbackLive
-        ? {
-            id: fallbackLive.id,
-            title: fallbackLive.title,
-            viewerCount: fallbackLive.viewerCount,
-            statusText: fallbackLive.matchScore?.statusText || "LIVE 진행 중",
-          }
-        : undefined,
       creator: { name: "PosMul 오라클", reputation: 4.9, avatar: "🔮" },
       prizePool: 35000,
     };

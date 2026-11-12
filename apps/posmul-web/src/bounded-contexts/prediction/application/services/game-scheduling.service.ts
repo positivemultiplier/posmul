@@ -296,8 +296,10 @@ export class GameSchedulingService {
         indicatorCode: "CPI_RATE",
         orgId: "101",
         tblId: "DT_1J22003",
-        itmId: "T03",
+        itmId: "T",
+        objL1: "T10",
         prdSe: "M",
+        calculationType: "yoy_pct",
         comparisonType: "greater",
         threshold: 2.5,
         optionMapping: { above: "above", below: "below" },
@@ -332,7 +334,9 @@ export class GameSchedulingService {
         orgId: "101",
         tblId: "DT_1DA7004S",
         itmId: "T80",
+        objL1: "00",
         prdSe: "M",
+        calculationType: "raw",
         comparisonType: "greater",
         threshold: 3.0,
         optionMapping: { above: "above", below: "below" },
@@ -838,8 +842,15 @@ export class GameSchedulingService {
       isActive: true,
       sourceType: "alpha-vantage",
       sourceConfig: {
-        symbols: ["QQQ", "GLD", "TLT"],
+        symbols: ["QQQ", "GLD", "TLT", "EWY"],
         market: "multi_asset_weekly_rank1",
+        assets: [
+          { optionId: "qqq", provider: "alpha-vantage", symbol: "QQQ" },
+          { optionId: "btc", provider: "coingecko", symbol: "bitcoin" },
+          { optionId: "kospi", provider: "alpha-vantage", symbol: "EWY" },
+          { optionId: "gold", provider: "alpha-vantage", symbol: "GLD" },
+          { optionId: "bond", provider: "alpha-vantage", symbol: "TLT" },
+        ],
       },
     });
 

@@ -13,10 +13,6 @@ import {
   type PredictionGameRow,
 } from "./prediction-game-mapper";
 import {
-  findLiveRoomByGame,
-  findLiveRoomByKeyword,
-} from "../../live/live-rooms.data";
-import {
   UniversalPredictionDetailClient,
   type PredictionGameDetail,
 } from "../[slug]/client";
@@ -312,13 +308,20 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     parsedOptions.map((opt) => ({ id: opt.id }))
   );
 
-  // 라이브 응원톡 룸 유연 매칭
-  const matchedLiveRoom =
-    findLiveRoomByGame(dbGame.game_id) ||
-    findLiveRoomByGame(dbGame.slug) ||
-    findLiveRoomByKeyword(dbGame.title) ||
-    findLiveRoomByKeyword(dbGame.slug) ||
-    findLiveRoomByKeyword(dbGame.category);
+  // 모든 DB 예측 게임은 동일 slug/game_id 기반의 LIVE 응원톡 방과 1:1 연동됩니다.
+  const liveRoomId = dbGame.slug || dbGame.game_id;
+  const liveStatusText =
+    dbGame.status === "ACTIVE"
+      ? "LIVE 응원톡 참여 중"
+      : dbGame.status === "SETTLED"
+      ? "정산 완료 · LIVE 토론 기록"
+      : "마감 · LIVE 토론 기록";
+  const matchedLiveRoom = {
+    id: liveRoomId,
+    title: dbGame.title || "LIVE 응원톡",
+    viewerCount: Math.max(12, participantCount * 3),
+    statusText: liveStatusText,
+  };
 
   const gameForView: PredictionGameDetail = {
     id: dbGame.game_id,
@@ -372,14 +375,7 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     dataSource: dbGame.data_source || "kosis",
     externalId: dbGame.external_id || undefined,
     settlementType: dbGame.settlement_type || "auto",
-    liveRoom: matchedLiveRoom
-      ? {
-          id: matchedLiveRoom.id,
-          title: matchedLiveRoom.title,
-          viewerCount: matchedLiveRoom.viewerCount,
-          statusText: matchedLiveRoom.matchScore?.statusText || "LIVE 진행 중",
-        }
-      : undefined,
+    liveRoom: matchedLiveRoom,
     creator: {
       name: "PosMul 공인 오라클",
       reputation: 4.9,

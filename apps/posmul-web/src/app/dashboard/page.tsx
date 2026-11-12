@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { createClient } from "../../lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { LIVE_ROOMS } from "../live/live-rooms.data";
+import { getLiveRoomsWithStatusAction } from "../live/actions/live.actions";
 import {
   DEFAULT_PERSONALIZATION,
   type UserPersonalizationSettings,
@@ -65,6 +65,7 @@ export default async function DashboardPage() {
     activeGamesRes,
     sourcesRes,
     myPredsRes,
+    liveRoomsRes,
   ] = await Promise.all([
     admin
       .schema("user")
@@ -106,6 +107,7 @@ export default async function DashboardPage() {
       .eq("user_id", targetUserId)
       .order("created_at", { ascending: false })
       .limit(30),
+    getLiveRoomsWithStatusAction(),
   ]);
 
   const profile = profileRes.data;
@@ -236,37 +238,39 @@ export default async function DashboardPage() {
     };
   });
 
-  // LIVE 응원톡 매핑
-  const liveRooms: DashboardLiveRoomItem[] = LIVE_ROOMS.map((r) => {
-    const catLower =
-      r.category === "SPORTS"
-        ? "sports"
-        : r.category === "ENTERTAINMENT"
-        ? "entertainment"
-        : "economy";
-    return {
-      id: r.id,
-      title: r.title,
-      subtitle: r.subtitle,
-      category: catLower,
-      categoryLabel: r.categoryLabel,
-      status: r.status === "LIVE" ? "LIVE" : "UPCOMING",
-      viewerCount: r.viewerCount,
-      broadcaster: r.predictionGame?.oracleLabel || "PosMul Live",
-      linkedPredictionSlug: r.predictionGame?.slug || "/prediction",
-      linkedPredictionTitle: r.predictionGame?.question || r.title,
-      oracleLabel: r.predictionGame?.oracleLabel,
-      scoreBoard: r.matchScore
-        ? {
-            leftTeam: r.matchScore.teamA,
-            leftScore: r.matchScore.scoreA,
-            rightTeam: r.matchScore.teamB,
-            rightScore: r.matchScore.scoreB,
-            statusText: r.matchScore.statusText,
-          }
-        : undefined,
-    };
-  });
+  // LIVE 응원톡 매핑 (DB 기반 동적 조회)
+  const liveRooms: DashboardLiveRoomItem[] = (liveRoomsRes.rooms || [])
+    .slice(0, 6)
+    .map((r) => {
+      const catLower =
+        r.category === "SPORTS"
+          ? "sports"
+          : r.category === "ENTERTAINMENT"
+          ? "entertainment"
+          : "economy";
+      return {
+        id: r.id,
+        title: r.title,
+        subtitle: r.subtitle,
+        category: catLower,
+        categoryLabel: r.categoryLabel,
+        status: r.status === "LIVE" ? "LIVE" : "UPCOMING",
+        viewerCount: r.viewerCount,
+        broadcaster: r.predictionGame?.oracleLabel || "PosMul Live",
+        linkedPredictionSlug: r.predictionGame?.slug || "/prediction",
+        linkedPredictionTitle: r.predictionGame?.question || r.title,
+        oracleLabel: r.predictionGame?.oracleLabel,
+        scoreBoard: r.matchScore
+          ? {
+              leftTeam: r.matchScore.teamA,
+              leftScore: r.matchScore.scoreA,
+              rightTeam: r.matchScore.teamB,
+              rightScore: r.matchScore.scoreB,
+              statusText: r.matchScore.statusText,
+            }
+          : undefined,
+      };
+    });
 
   // 통합 지갑 트랜잭션 구성
   const rawTransactions: DashboardTransactionItem[] = [
