@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Award, CheckCircle2, Clock, RefreshCw, Trophy, Users, Coins } from "lucide-react";
+import { ArrowLeft, Award, CheckCircle2, Clock, RefreshCw, Trophy, Sparkles } from "lucide-react";
 
 interface NormalizedOption {
   id: string;
@@ -16,10 +16,22 @@ interface GameSettlementItem {
   title: string;
   category: string;
   status: string;
+  data_source?: string | null;
+  settlement_type?: string | null;
   game_options?: any;
   options?: any;
   created_at: string;
   actual_result?: { winningOption?: string };
+}
+
+interface SettlementSuggestion {
+  sourceType: string;
+  usedFallbackRss: boolean;
+  resolved: boolean;
+  winningOptionId: string | null;
+  confidence: number;
+  rationale?: string;
+  evidenceArticles: Array<{ title?: string; link?: string; publishedAt?: string | null }>;
 }
 
 function parseGameOptions(raw: any): NormalizedOption[] {
@@ -52,6 +64,8 @@ export default function PredictionSettlementDashboardPage() {
   const [games, setGames] = useState<GameSettlementItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [settlingGameId, setSettlingGameId] = useState<string | null>(null);
+  const [suggestingGameId, setSuggestingGameId] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<Record<string, SettlementSuggestion>>({});
 
   // 게임 목록 조회
   const fetchGames = async () => {
@@ -74,6 +88,41 @@ export default function PredictionSettlementDashboardPage() {
   useEffect(() => {
     fetchGames();
   }, []);
+
+  const handleSuggestSettlement = async (gameId: string) => {
+    setSuggestingGameId(gameId);
+    try {
+      const res = await fetch("/api/admin/prediction/oracle-assist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "suggest-settlement", gameId }),
+      });
+      const data = await res.json();
+      if (data.success && data.preview) {
+        const evidenceArticles = Array.isArray(data.preview.sourceData?.evidenceArticles)
+          ? data.preview.sourceData.evidenceArticles
+          : [];
+        setSuggestions((prev) => ({
+          ...prev,
+          [gameId]: {
+            sourceType: String(data.sourceType || "rss_ai"),
+            usedFallbackRss: Boolean(data.usedFallbackRss),
+            resolved: Boolean(data.preview.resolved),
+            winningOptionId: data.preview.winningOptionId ?? null,
+            confidence: Number(data.preview.confidence ?? 0),
+            rationale: data.preview.rationale,
+            evidenceArticles,
+          },
+        }));
+      } else {
+        alert(`추천 조회 실패: ${data.error}`);
+      }
+    } catch (e: any) {
+      alert(`추천 조회 오류: ${e.message}`);
+    } finally {
+      setSuggestingGameId(null);
+    }
+  };
 
   // 정산 처리
   const handleSettle = async (gameId: string, winningOption: string) => {
@@ -210,6 +259,7 @@ export default function PredictionSettlementDashboardPage() {
               const options = parseGameOptions(game.game_options || game.options);
               const isSettled = game.status === "SETTLED";
               const winningOption = game.actual_result?.winningOption;
+              const suggestion = suggestions[gId];
 
               return (
                 <div
@@ -220,9 +270,12 @@ export default function PredictionSettlementDashboardPage() {
                 >
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-slate-800/80 pb-4 mb-4">
                     <div>
-                      <div className="flex items-center gap-2 mb-2">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         <span className="px-2.5 py-1 bg-indigo-950 text-indigo-400 border border-indigo-800/60 rounded-lg text-xs font-semibold">
                           {game.category || "GENERAL"}
+                        </span>
+                        <span className="px-2.5 py-1 bg-sky-950/70 text-sky-300 border border-sky-800/60 rounded-lg text-xs font-mono">
+                          오라클: {game.data_source || "manual"} ({game.settlement_type || "manual"})
                         </span>
                         {isSettled ? (
                           <span className="px-2.5 py-1 bg-amber-950 text-amber-400 border border-amber-800/60 rounded-lg text-xs font-semibold flex items-center gap-1">
@@ -237,10 +290,64 @@ export default function PredictionSettlementDashboardPage() {
                       <h3 className="text-lg font-bold text-slate-100">{game.title}</h3>
                     </div>
 
-                    <div className="text-xs text-slate-500 font-mono">
-                      생성일: {new Date(game.created_at).toLocaleString("ko-KR")}
+                    <div className="flex flex-col items-end gap-2">
+                      <div className="text-xs text-slate-500 font-mono">
+                        생성일: {new Date(game.created_at).toLocaleString("ko-KR")}
+                      </div>
+                      {!isSettled && (
+                        <button
+                          type="button"
+                          onClick={() => handleSuggestSettlement(gId)}
+                          disabled={suggestingGameId === gId}
+                          className="px-3 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/40 text-xs font-bold flex items-center gap-1.5 transition"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          {suggestingGameId === gId ? "근거 조회 중..." : "🔍 오라클·RSS AI 판정 추천"}
+                        </button>
+                      )}
                     </div>
                   </div>
+
+                  {suggestion && (
+                    <div className="mb-4 p-4 rounded-xl bg-sky-950/30 border border-sky-500/40 text-xs space-y-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="font-bold text-sky-300">
+                          🤖 {suggestion.sourceType.toUpperCase()} 판정 추천
+                          {suggestion.usedFallbackRss ? " (미등록 게임 → RSS 기사 보조 분석)" : ""}
+                        </span>
+                        <span
+                          className={`font-mono font-bold ${
+                            suggestion.resolved ? "text-emerald-400" : "text-amber-300"
+                          }`}
+                        >
+                          {suggestion.resolved
+                            ? `추천 옵션: ${suggestion.winningOptionId} (신뢰도 ${Math.round(suggestion.confidence * 100)}%)`
+                            : "아직 명확히 확정되지 않음"}
+                        </span>
+                      </div>
+                      {suggestion.rationale && (
+                        <p className="text-slate-200 leading-relaxed">{suggestion.rationale}</p>
+                      )}
+                      {suggestion.evidenceArticles.length > 0 && (
+                        <div className="pt-2 border-t border-sky-500/20 space-y-1">
+                          <div className="text-[11px] font-semibold text-sky-300">
+                            참고 RSS 근거 기사 ({suggestion.evidenceArticles.length}건):
+                          </div>
+                          {suggestion.evidenceArticles.slice(0, 4).map((art, aIdx) => (
+                            <a
+                              key={aIdx}
+                              href={art.link || "#"}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="block text-[11px] text-slate-300 hover:text-sky-300 truncate hover:underline"
+                            >
+                              • {art.title}
+                            </a>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Options Settlement Execution Panel */}
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-950/80 p-4 rounded-xl border border-slate-800">
@@ -251,6 +358,10 @@ export default function PredictionSettlementDashboardPage() {
                     <div className="flex flex-wrap gap-2">
                       {options.map((opt, optIdx) => {
                         const isWinOpt = isSettled && (winningOption === opt.id || winningOption === opt.label);
+                        const isAiSuggested =
+                          !isSettled &&
+                          suggestion?.resolved &&
+                          (suggestion.winningOptionId === opt.id || suggestion.winningOptionId === opt.label);
 
                         return (
                           <button
@@ -262,10 +373,16 @@ export default function PredictionSettlementDashboardPage() {
                                 ? isWinOpt
                                   ? "bg-amber-500 text-slate-950 border-amber-400"
                                   : "bg-slate-900 border-slate-800 text-slate-600 cursor-not-allowed"
-                                : "bg-amber-950 hover:bg-amber-900 border-amber-800 text-amber-300"
+                                : isAiSuggested
+                                  ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 border-emerald-400"
+                                  : "bg-amber-950 hover:bg-amber-900 border-amber-800 text-amber-300"
                             }`}
                           >
-                            {isWinOpt ? `🏆 [승리: ${opt.label}]` : `[${opt.label}] 승리로 정산`}
+                            {isWinOpt
+                              ? `🏆 [승리: ${opt.label}]`
+                              : isAiSuggested
+                                ? `⭐ AI 추천 [${opt.label}] 승인 정산`
+                                : `[${opt.label}] 승리로 정산`}
                           </button>
                         );
                       })}

@@ -28,6 +28,7 @@ import { FootballDataOracleAdapter } from "../../infrastructure/oracle/football-
 import { KContentOracleAdapter } from "../../infrastructure/oracle/kcontent.adapter";
 import { KobisOracleAdapter } from "../../infrastructure/oracle/kobis.adapter";
 import { KosisOracleAdapter } from "../../infrastructure/oracle/kosis.adapter";
+import { RssAiOracleAdapter } from "../../infrastructure/oracle/rss-ai.adapter";
 
 const SYSTEM_SETTLEMENT_ADMIN_ID =
   "00000000-0000-0000-0000-000000000001" as UserId;
@@ -60,6 +61,7 @@ export class SettlementOrchestratorService {
       new FootballDataOracleAdapter(),
       new AlphaVantageOracleAdapter(),
       new FmpOracleAdapter(),
+      new RssAiOracleAdapter(),
     ];
   }
 
@@ -129,6 +131,79 @@ export class SettlementOrchestratorService {
       sourceData: result.sourceData,
       confidence: result.confidence,
       fetchedAt: result.fetchedAt,
+    };
+  }
+
+  /**
+   * 오라클 단건 Dry-Run 테스트 / AI 반자동 판정 제안 조회 (정산 집행 없음)
+   */
+  async previewOracleResult(source: SettlementSource): Promise<{
+    supported: boolean;
+    resolved: boolean;
+    winningOptionId: string | null;
+    confidence: number;
+    rationale?: string;
+    sourceData: Record<string, unknown>;
+  }> {
+    if (source.sourceType === "manual") {
+      return {
+        supported: false,
+        resolved: false,
+        winningOptionId: null,
+        confidence: 0,
+        rationale: "수동 정산(manual) 게임입니다.",
+        sourceData: {},
+      };
+    }
+
+    const adapter = this.adapters.find((a) => a.supports(source.sourceType));
+    if (!adapter) {
+      return {
+        supported: false,
+        resolved: false,
+        winningOptionId: null,
+        confidence: 0,
+        rationale: `지원되지 않는 오라클 타입(${source.sourceType})입니다.`,
+        sourceData: {},
+      };
+    }
+
+    if (adapter instanceof RssAiOracleAdapter) {
+      const evalRes = await adapter.evaluateEvidence(source);
+      return {
+        supported: true,
+        resolved: evalRes.resolved,
+        winningOptionId: evalRes.winningOptionId,
+        confidence: evalRes.confidence,
+        rationale: evalRes.rationale,
+        sourceData: {
+          provider: evalRes.provider,
+          keywordsUsed: evalRes.keywordsUsed,
+          evidenceArticles: evalRes.evidenceArticles,
+          checkedAt: evalRes.checkedAt,
+        },
+      };
+    }
+
+    const result = await adapter.fetchResult(source);
+    if (!result) {
+      return {
+        supported: true,
+        resolved: false,
+        winningOptionId: null,
+        confidence: 0,
+        rationale: "외부 오라클에서 아직 확정 결과를 반환하지 않았습니다.",
+        sourceData: {},
+      };
+    }
+
+    return {
+      supported: true,
+      resolved: true,
+      winningOptionId: result.winningOptionId,
+      confidence: result.confidence,
+      rationale: "공식 오라클에서 승리 옵션이 확인되었습니다.",
+      sourceData: result.sourceData,
     };
   }
 
@@ -254,6 +329,39 @@ export class SettlementOrchestratorService {
           game.status !== "SETTLING")
       ) {
         skippedCount++;
+        continue;
+      }
+
+      // rss_ai는 기본 반자동(allowAutoSettle=true일 때만 무인 정산). 그 외에는 추천 근거만 기록하고 관리자 승인 대기
+      if (
+        source.sourceType === "rss_ai" &&
+        source.sourceConfig?.allowAutoSettle !== true
+      ) {
+        const preview = await this.previewOracleResult(source);
+        await supabaseAdmin
+          .schema("prediction")
+          .from("settlement_sources")
+          .update({
+            source_config: {
+              ...source.sourceConfig,
+              lastSuggestedResult: {
+                resolved: preview.resolved,
+                winningOptionId: preview.winningOptionId,
+                confidence: preview.confidence,
+                rationale: preview.rationale,
+                evidenceArticles:
+                  (preview.sourceData.evidenceArticles as unknown[]) ?? [],
+                checkedAt: new Date().toISOString(),
+              },
+            },
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", source.id);
+
+        skippedCount++;
+        logs.push(
+          `📝 [Oracle:rss_ai] Game ${source.gameId} 반자동 추천 업데이트 (resolved=${preview.resolved}, option=${preview.winningOptionId ?? "none"})`
+        );
         continue;
       }
 

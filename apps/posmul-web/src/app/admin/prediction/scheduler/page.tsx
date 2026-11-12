@@ -58,6 +58,14 @@ export default function SchedulerPage() {
   const [oracleData, setOracleData] = useState<OracleStatusPayload | null>(null);
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [pingData, setPingData] = useState<{
+    coinGeckoOk: boolean;
+    recentRssItems7d: number;
+    overdueSourcesCount: number;
+    overduePendingGames: number;
+    llmConfigured: boolean;
+  } | null>(null);
+  const [isPinging, setIsPinging] = useState(false);
 
   const loadOracleAndScheduler = async () => {
     try {
@@ -71,8 +79,30 @@ export default function SchedulerPage() {
     }
   };
 
+  const handlePingAdapters = async () => {
+    setIsPinging(true);
+    try {
+      const res = await fetch("/api/admin/prediction/oracle-assist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "ping-adapters" }),
+      });
+      const data = await res.json();
+      if (data.success && data.checks) {
+        setPingData(data.checks);
+      } else {
+        alert(`헬스체크 실패: ${data.error}`);
+      }
+    } catch (e: any) {
+      alert(`헬스체크 오류: ${e.message}`);
+    } finally {
+      setIsPinging(false);
+    }
+  };
+
   useEffect(() => {
     loadOracleAndScheduler();
+    handlePingAdapters();
   }, []);
 
   const handleTriggerSync = async () => {
@@ -107,22 +137,50 @@ export default function SchedulerPage() {
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight flex items-center gap-2">
             <CalendarClock className="w-6 h-6 text-sky-400" />
-            <span>마스터 스케줄러 & 9대 오라클 동기화 센터</span>
+            <span>마스터 스케줄러 & 10대 오라클 동기화 센터</span>
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
-            정기 예측 템플릿 자동 발행 및 9대 공인 데이터 오라클(KOBIS, 닐슨/K-Content, CoinGecko, DART, KOSIS, ECOS 등) 실시간 상태를 관리합니다.
+            정기 예측 템플릿 자동 발행 및 10대 오라클(KOBIS, K-Content, CoinGecko, DART, KOSIS, ECOS, RSS AI 등) 실시간 상태를 관리합니다.
           </p>
         </div>
 
-        <AdminButton
-          variant="default"
-          onClick={handleTriggerSync}
-          disabled={isSyncing}
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-          <span>{isSyncing ? "동기화 실행 중..." : "지금 마스터 동기화 실행"}</span>
-        </AdminButton>
+        <div className="flex items-center gap-2">
+          <AdminButton
+            variant="outline"
+            onClick={handlePingAdapters}
+            disabled={isPinging}
+          >
+            <Zap className={`w-3.5 h-3.5 text-amber-400 ${isPinging ? "animate-pulse" : ""}`} />
+            <span>{isPinging ? "점검 중..." : "오라클 헬스체크"}</span>
+          </AdminButton>
+          <AdminButton
+            variant="default"
+            onClick={handleTriggerSync}
+            disabled={isSyncing}
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+            <span>{isSyncing ? "동기화 실행 중..." : "지금 마스터 동기화 실행"}</span>
+          </AdminButton>
+        </div>
       </div>
+
+      {pingData && (
+        <div className="p-4 rounded-xl bg-emerald-950/20 border border-emerald-500/30 text-xs flex flex-wrap items-center gap-4 text-emerald-200">
+          <span className="font-bold flex items-center gap-1.5">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            실시간 헬스체크:
+          </span>
+          <span>CoinGecko Ping: {pingData.coinGeckoOk ? "정상(OK)" : "지연"}</span>
+          <span>· 최근 7일 RSS 수집: {pingData.recentRssItems7d}건</span>
+          <span>· 판정 LLM: {pingData.llmConfigured ? "연결됨" : "키 미설정"}</span>
+          <span>
+            · 예정일 경과 대기 게임:{" "}
+            <strong className={pingData.overduePendingGames > 0 ? "text-amber-300" : "text-emerald-300"}>
+              {pingData.overduePendingGames}건
+            </strong>
+          </span>
+        </div>
+      )}
 
       {syncMessage && (
         <div className="p-4 rounded-xl bg-sky-950/30 border border-sky-500/40 text-xs font-bold text-sky-200">
@@ -199,15 +257,15 @@ export default function SchedulerPage() {
         </div>
       )}
 
-      {/* 9대 공인 데이터 오라클 어댑터 테이블 */}
+      {/* 10대 공인 데이터 · RSS AI 오라클 어댑터 테이블 */}
       <AdminCard>
         <AdminCardHeader>
           <AdminCardTitle className="flex items-center gap-2">
             <Database className="w-4 h-4 text-emerald-400" />
-            <span>9대 공인 데이터 오라클 어댑터 명세</span>
+            <span>10대 공인 데이터 · RSS AI 오라클 어댑터 명세</span>
           </AdminCardTitle>
           <AdminCardDescription>
-            SettlementOrchestratorService에 등록된 외부 검증 데이터 파이프라인 목록
+            SettlementOrchestratorService에 등록된 외부 검증 데이터 및 RSS AI 판정 추천 파이프라인 목록
           </AdminCardDescription>
         </AdminCardHeader>
         <AdminCardContent>
@@ -233,9 +291,9 @@ export default function SchedulerPage() {
                     {ad.category}
                   </AdminTableCell>
                   <AdminTableCell className="text-right">
-                    <AdminBadge variant="success">
+                    <AdminBadge variant={ad.configured ? "success" : "warning"}>
                       <CheckCircle2 className="w-3 h-3" />
-                      <span>{ad.status}</span>
+                      <span>{ad.configured ? ad.status : "API 키 미설정"}</span>
                     </AdminBadge>
                   </AdminTableCell>
                 </AdminTableRow>

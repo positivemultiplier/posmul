@@ -130,6 +130,17 @@ export async function GET() {
           configured: true,
           status: "CONNECTED",
         },
+        {
+          sourceType: "rss_ai",
+          name: "RSS 뉴스 피드 + AI 반자동 판정 추천 오라클",
+          category: "ALL (semi-auto news oracle)",
+          configured: Boolean(
+            process.env.GOOGLE_GEMINI_API_KEY ||
+              process.env.GEMINI_API_KEY ||
+              process.env.EXAONE_API_KEY
+          ),
+          status: "CONNECTED",
+        },
       ],
       summary: {
         activeGamesCount: activeGames.length,

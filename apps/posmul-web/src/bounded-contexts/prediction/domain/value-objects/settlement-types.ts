@@ -13,7 +13,8 @@ export type SettlementSourceType =
   | "ecos"
   | "kobis"
   | "kcontent"
-  | "coingecko";
+  | "coingecko"
+  | "rss_ai";
 
 export type SettlementMethod = "auto" | "semi_auto" | "manual";
 

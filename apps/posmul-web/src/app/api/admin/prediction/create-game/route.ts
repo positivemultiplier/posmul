@@ -1,64 +1,199 @@
 import { NextRequest, NextResponse } from "next/server";
+
+import { balancedBriefingService } from "@/bounded-contexts/prediction/application/services/balanced-briefing.service";
+import { settlementOrchestrator } from "@/bounded-contexts/prediction/application/services/settlement-orchestrator.service";
+import type { SettlementSourceType } from "@/bounded-contexts/prediction/domain/value-objects/settlement-types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireAdminApi } from "@/shared/lib/security/admin-auth";
+
+interface CreateGameBody {
+  title?: string;
+  description?: string;
+  category?: string;
+  subcategory?: string;
+  options?: Array<string | { id?: string; label?: string }>;
+  minBetAmount?: number;
+  maxBetAmount?: number;
+  registrationEnd?: string;
+  settlementDate?: string;
+  sourceType?: SettlementSourceType;
+  sourceConfig?: Record<string, unknown>;
+  externalId?: string;
+  autoGenerateBriefing?: boolean;
+}
+
+function buildStructuredOptions(
+  rawOptions: Array<string | { id?: string; label?: string }>
+): Array<{ id: string; label: string }> {
+  return rawOptions.map((opt, idx) => {
+    if (typeof opt === "string") {
+      const label = opt.trim();
+      const id =
+        rawOptions.length === 2
+          ? idx === 0
+            ? "yes"
+            : "no"
+          : `opt_${idx}`;
+      return { id, label };
+    }
+    const label = String(opt.label || opt.id || `옵션 ${idx + 1}`).trim();
+    const id = String(
+      opt.id ||
+        (rawOptions.length === 2 ? (idx === 0 ? "yes" : "no") : `opt_${idx}`)
+    );
+    return { id, label };
+  });
+}
 
 export async function POST(req: NextRequest) {
   const auth = await requireAdminApi(req);
   if (!auth.ok) return auth.response;
 
   try {
-    const body = await req.json();
+    const body = (await req.json()) as CreateGameBody;
     const {
       title,
       description,
       category,
+      subcategory,
       options,
       minBetAmount,
       maxBetAmount,
       registrationEnd,
       settlementDate,
+      sourceType = "manual",
+      sourceConfig = {},
+      externalId,
+      autoGenerateBriefing = true,
     } = body;
 
-    if (!title || !options || options.length < 2) {
-      return NextResponse.json({ success: false, error: "Title and at least 2 options are required." }, { status: 400 });
+    if (!title?.trim() || !options || options.length < 2) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "제목과 최소 2개의 선택지가 필요합니다.",
+        },
+        { status: 400 }
+      );
     }
 
-    const slug = `${title.substring(0, 20).replace(/\s+/g, "-").toLowerCase()}-${Date.now()}`;
+    const structuredOptions = buildStructuredOptions(options);
+    const predictionType =
+      structuredOptions.length === 2 ? "BINARY" : "MULTIPLE_CHOICE";
+
+    const slug = `pred-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
     const creatorId =
       auth.authType === "admin"
         ? auth.user.id
         : "00000000-0000-0000-0000-000000000001";
 
+    const regEndIso =
+      registrationEnd ||
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const settleIso =
+      settlementDate ||
+      new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString();
+
+    const hasOracle = sourceType !== "manual";
+    const settlementType =
+      sourceType === "manual"
+        ? "manual"
+        : sourceType === "rss_ai" || sourceType === "kcontent"
+          ? "semi_auto"
+          : "auto";
+
+    const nowIso = new Date().toISOString();
+
     const { data: newGame, error } = await supabaseAdmin
       .schema("prediction")
       .from("prediction_games")
       .insert({
-        title,
-        description: description || title,
+        title: title.trim(),
+        description: (description || title).trim(),
         status: "ACTIVE",
         category: category || "POLITICS",
+        subcategory: subcategory?.trim() || null,
         creator_id: creatorId,
-        prediction_type: "BINARY",
-        game_options: { options },
-        registration_start: new Date().toISOString(),
-        registration_end: registrationEnd || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        settlement_date: settlementDate || new Date(Date.now() + 8 * 24 * 60 * 60 * 1000).toISOString(),
-        min_bet_amount: minBetAmount || 100,
-        max_bet_amount: maxBetAmount || 10000,
+        prediction_type: predictionType,
+        game_options: { options: structuredOptions },
+        registration_start: nowIso,
+        registration_end: regEndIso,
+        settlement_date: settleIso,
+        min_bet_amount: Number(minBetAmount) || 100,
+        max_bet_amount: Number(maxBetAmount) || 10000,
         difficulty: 1.0,
+        settlement_type: settlementType,
+        data_source: hasOracle ? sourceType : null,
+        external_id: externalId?.trim() || null,
+        is_official: hasOracle,
         slug,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created_at: nowIso,
+        updated_at: nowIso,
       })
       .select()
       .single();
 
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    if (error || !newGame) {
+      return NextResponse.json(
+        { success: false, error: error?.message || "게임 생성 실패" },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true, game: newGame });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err.message }, { status: 500 });
+    const createdGameId = String(newGame.game_id);
+    let oracleRegistered = false;
+    let briefingGenerated = false;
+
+    if (hasOracle) {
+      const mergedConfig: Record<string, unknown> = {
+        ...sourceConfig,
+        title: title.trim(),
+        resolutionCriteria: (description || title).trim(),
+        options: structuredOptions,
+        optionMapping:
+          (sourceConfig.optionMapping as Record<string, string> | undefined) ?? {
+            above: structuredOptions[0].id,
+            below: structuredOptions[1].id,
+            up: structuredOptions[0].id,
+            down: structuredOptions[1].id,
+            yes: structuredOptions[0].id,
+            no: structuredOptions[1].id,
+          },
+      };
+
+      oracleRegistered = await settlementOrchestrator.registerSettlementSource({
+        gameId: createdGameId,
+        sourceType,
+        sourceConfig: mergedConfig,
+        scheduledAt: new Date(settleIso),
+        externalId: externalId?.trim() || undefined,
+      });
+    }
+
+    if (autoGenerateBriefing) {
+      try {
+        await balancedBriefingService.getOrCreateForGameId(createdGameId, {
+          timeoutMs: 12000,
+        });
+        briefingGenerated = true;
+      } catch {
+        briefingGenerated = false;
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      game: newGame,
+      oracleRegistered,
+      briefingGenerated,
+    });
+  } catch (err: unknown) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: err instanceof Error ? err.message : "Unknown error",
+      },
+      { status: 500 }
+    );
   }
 }
