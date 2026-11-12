@@ -15,11 +15,9 @@ import {
   Send,
   Users,
   ShieldCheck,
-  AlertCircle,
   Sparkles,
   Swords,
   LogIn,
-  Download,
 } from "lucide-react";
 import { UserChallengeDTO, ChallengeCommentDTO } from "../types";
 import {
@@ -232,9 +230,32 @@ export default function ChallengeDetailPage() {
     }
   };
 
-  // 링크 복사
+  // 단톡방 초대 문구 + 링크 복사 (바이럴용)
   const handleCopyLink = () => {
     const url = window.location.href;
+    const inviteText = challenge
+      ? `🥊 [PosMul ${challenge.linkedGameTitle ? "꼬리 내기" : "맞짱 도전장"}]\n"${challenge.title}"\n💰 총 판돈 ${challenge.totalPoolPmp.toLocaleString()} PMP · 지금 들어와서 한판 붙자!\n👉 ${url}`
+      : url;
+    navigator.clipboard.writeText(inviteText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // 모바일 OS 공유 시트 (카톡/메신저 앱 선택) 또는 URL 복사 폴백
+  const handleNativeShare = async () => {
+    const url = window.location.href;
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function" && challenge) {
+      try {
+        await navigator.share({
+          title: `🥊 [${challenge.hostName}] ${challenge.title}`,
+          text: `총 판돈 ${challenge.totalPoolPmp.toLocaleString()} PMP 맞짱! 내 편에 서거나 맞불을 놓으세요.`,
+          url,
+        });
+        return;
+      } catch (err) {
+        if ((err as Error)?.name === "AbortError") return;
+      }
+    }
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -303,6 +324,7 @@ export default function ChallengeDetailPage() {
 
           <div className="flex items-center gap-2">
             <button
+              type="button"
               onClick={handleShareTwitter}
               className="px-2.5 py-1.5 rounded-xl bg-black hover:bg-slate-900 border border-white/20 text-white text-xs font-mono font-bold flex items-center gap-1.5 transition"
             >
@@ -310,11 +332,21 @@ export default function ChallengeDetailPage() {
               <span className="hidden sm:inline">트위터</span>
             </button>
             <button
+              type="button"
+              onClick={handleNativeShare}
+              className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-white/15 text-slate-100 text-xs font-bold flex items-center gap-1.5 transition"
+              title="메신저/앱으로 공유"
+            >
+              <Share2 className="w-3.5 h-3.5 text-sky-400" />
+              <span className="hidden sm:inline">공유</span>
+            </button>
+            <button
+              type="button"
               onClick={handleCopyLink}
               className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black flex items-center gap-1.5 transition shadow-md"
             >
               {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-              <span>{copied ? "복사됨!" : "카톡 초대"}</span>
+              <span>{copied ? "초대장 복사됨!" : "카톡 초대"}</span>
             </button>
           </div>
         </div>

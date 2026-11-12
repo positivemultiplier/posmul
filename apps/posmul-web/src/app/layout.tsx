@@ -20,6 +20,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL || "https://posmul.com"
+  ),
   title: "PosMul - AI 시대 직접민주주의 & 소셜 임팩트 플랫폼",
   description:
     "AI 뉴스 예측 게임, 아고라 찬반 투표·의결권 위임, 기부 및 지역 소비 선순환 서비스",

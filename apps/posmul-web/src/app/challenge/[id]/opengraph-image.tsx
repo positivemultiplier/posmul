@@ -15,6 +15,7 @@ export default async function Image({
 
   let title = "친구와의 불꽃 튀는 한판 승부!";
   let hostName = "호스트";
+  let isTailChallenge = false;
   let optionA = { label: "선택 A", ratio: 50 };
   let optionB = { label: "선택 B", ratio: 50 };
   let totalPmp = 1000;
@@ -23,24 +24,28 @@ export default async function Image({
     const { data } = await supabaseAdmin
       .schema("prediction")
       .from("user_challenges")
-      .select("title, host_name, options, total_pool_pmp")
+      .select("title, host_name, options, total_pool_pmp, linked_game_title")
       .eq("id", id)
       .single();
 
     if (data) {
       title = data.title || title;
       hostName = data.host_name || hostName;
+      isTailChallenge = Boolean(data.linked_game_title);
       totalPmp = data.total_pool_pmp || totalPmp;
-      const opts = (data.options as any[]) || [];
+      const opts = (data.options as Array<{ label?: string; totalAmount?: number; pmp?: number }>) || [];
       if (opts.length >= 2) {
-        const sum = opts.reduce((acc, c) => acc + (c.pmp || 0), 0) || 1;
+        const amtA = Number(opts[0]?.totalAmount ?? opts[0]?.pmp ?? 0);
+        const amtB = Number(opts[1]?.totalAmount ?? opts[1]?.pmp ?? 0);
+        const sum = amtA + amtB;
+        const ratioA = sum > 0 ? Math.round((amtA / sum) * 100) : 50;
         optionA = {
           label: opts[0].label || "선택 A",
-          ratio: Math.round(((opts[0].pmp || 0) / sum) * 100) || 50,
+          ratio: ratioA,
         };
         optionB = {
           label: opts[1].label || "선택 B",
-          ratio: 100 - optionA.ratio,
+          ratio: 100 - ratioA,
         };
       }
     }
@@ -82,7 +87,7 @@ export default async function Image({
                 letterSpacing: "-0.5px",
               }}
             >
-              ⚡ PosMul 맞짱 챌린지
+              ⚡ PosMul {isTailChallenge ? "꼬리 내기" : "맞짱 챌린지"}
             </span>
           </div>
           <div

@@ -74,6 +74,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // 4. 유저 자율 예측 / 맞짱 챌린지 자동 확정(10분 경과) 및 호스트 잠적(24시간 경과) 자동 환불
+    let challengeSummary: Record<string, unknown> = {};
+    try {
+      const { data: challengeBatch, error: challengeErr } = await supabaseAdmin.rpc(
+        "process_expired_user_challenges"
+      );
+      if (challengeErr) {
+        logs.push(`UserChallenge AutoCron Error: ${challengeErr.message}`);
+      } else if (challengeBatch) {
+        challengeSummary = challengeBatch as Record<string, unknown>;
+        logs.push(
+          `UserChallenges AutoProcessed: finalized=${challengeSummary.finalized_count ?? 0}, refunded=${challengeSummary.refunded_count ?? 0}, failed=${challengeSummary.failed_count ?? 0}`
+        );
+      }
+    } catch (chErr: unknown) {
+      logs.push(
+        `UserChallenge AutoCron Exception: ${chErr instanceof Error ? chErr.message : String(chErr)}`
+      );
+    }
+
     const durationMs = Date.now() - startTime;
     logs.push(`Cron Completed in ${durationMs}ms`);
 
@@ -85,6 +105,7 @@ export async function GET(request: NextRequest) {
         settledGamesCount: settledCount,
         totalDistributedPMC,
         pendingExpiredCount,
+        userChallenges: challengeSummary,
       },
       details,
       logs,
