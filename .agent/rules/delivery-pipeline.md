@@ -15,8 +15,9 @@ description: PosMul 개발 및 배포 완료 필수 검증 게이트 (Definition
 ### Gate 1: 타입 및 프로덕션 빌드 완전 검증
 단순 `tsc --noEmit`이나 `type-check`만으로는 부족합니다. Next.js App Router는 빌드 타임에 라우트 유효성 검사, SSG/ISR 정적 페이지 생성, 청크 최적화를 수행하므로 반드시 프로덕션 빌드를 완주해야 합니다.
 ```powershell
-Set-Location -Path .\posmul
-pnpm --filter posmul-web build
+Set-Location -Path c:\G\posmul
+pnpm --filter @posmul/posmul-web build
+pnpm --filter @posmul/housing-pro build
 ```
 - ⚠️ `Exit code: 0` 및 모든 라우트(Static/Dynamic) 생성 성공을 확인하기 전에는 절대 완료 보고를 하지 않는다.
 
