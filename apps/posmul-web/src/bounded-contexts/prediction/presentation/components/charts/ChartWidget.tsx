@@ -126,7 +126,7 @@ export function ChartWidget(props) {
   const generateTimelineData = () => {
     const events = [
       { time: '09:00', event: '게임 시작', type: 'start', value: 100 },
-      { time: '10:30', event: '첫 베팅 급증', type: 'surge', value: 280 },
+      { time: '10:30', event: '첫 참여 급증', type: 'surge', value: 280 },
       { time: '12:00', event: '점심시간 침체', type: 'low', value: 150 },
       { time: '14:00', event: '오후 활성화', type: 'surge', value: 320 },
       { time: '16:30', event: '마감 전 러시', type: 'peak', value: 450 },
@@ -232,8 +232,8 @@ export function ChartWidget(props) {
               </Pie>
               <Tooltip
                 formatter={(value) => [
-                  `${Number(value).toLocaleString()}원`,
-                  '베팅 금액'
+                  `${Number(value).toLocaleString()} PMP`,
+                  '참여 PMP'
                 ]}
                 contentStyle={{
                   backgroundColor: '#fff',
@@ -339,7 +339,7 @@ export function ChartWidget(props) {
         const totalAmount = chartData.reduce((sum, item) => sum + item.amount, 0);
         const totalParticipants = chartData.reduce((sum, item) => sum + item.participants, 0);
         return [
-          { label: '총 베팅액', value: `${totalAmount.toLocaleString()}원` },
+          { label: '총 참여 PMP', value: `${totalAmount.toLocaleString()} PMP` },
           { label: '참여자 수', value: `${totalParticipants}명` }
         ];
 

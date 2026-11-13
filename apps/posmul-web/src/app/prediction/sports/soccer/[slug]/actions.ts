@@ -92,7 +92,7 @@ export async function placeBet(request: PlaceBetRequest): Promise<PlaceBetRespon
 
     return {
       success: true,
-      message: `${request.stakeAmount.toLocaleString()} PMP로 베팅이 완료되었습니다!`,
+      message: `${request.stakeAmount.toLocaleString()} PMP로 예측 투표 참여가 완료되었습니다!`,
       predictionId: result.data.predictionId,
       newBalance: account?.pmp_balance ?? 0,
     };
@@ -115,13 +115,13 @@ export async function placeBet(request: PlaceBetRequest): Promise<PlaceBetRespon
  */
 function getKoreanErrorMessage(errorMessage: string): string {
   const errorMap: Record<string, string> = {
-    "GAME_NOT_ACTIVE": "현재 베팅이 마감되었거나 정산 진행 중인 게임입니다.",
-    "game_not_active": "현재 베팅이 마감되었거나 정산 진행 중인 게임입니다.",
+    "GAME_NOT_ACTIVE": "현재 참여가 마감되었거나 정산 진행 중인 게임입니다.",
+    "game_not_active": "현재 참여가 마감되었거나 정산 진행 중인 게임입니다.",
     "registration_closed": "게임 참여 마감 시각이 지났습니다.",
-    "STAKE_BELOW_MINIMUM": "최소 베팅 금액 이상이어야 합니다.",
-    "STAKE_ABOVE_MAXIMUM": "최대 베팅 금액을 초과할 수 없습니다.",
-    "bet_amount_out_of_range": "베팅 금액이 허용 범위를 벗어났습니다.",
-    "invalid_bet_amount": "유효하지 않은 베팅 금액입니다.",
+    "STAKE_BELOW_MINIMUM": "최소 참여 PMP 이상이어야 합니다.",
+    "STAKE_ABOVE_MAXIMUM": "최대 참여 PMP를 초과할 수 없습니다.",
+    "bet_amount_out_of_range": "참여 PMP가 허용 범위를 벗어났습니다.",
+    "invalid_bet_amount": "유효하지 않은 참여 PMP입니다.",
     "INVALID_OPTION": "유효하지 않은 선택지입니다.",
     "MAX_PARTICIPANTS": "게임 참여 정원이 마감되었습니다.",
     "Insufficient PmpAmount balance": "PMP 잔액이 부족합니다.",

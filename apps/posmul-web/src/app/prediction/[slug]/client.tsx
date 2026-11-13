@@ -130,7 +130,7 @@ interface UniversalPredictionDetailClientProps {
   tailChallenges?: UserChallengeDTO[];
 }
 
-type ChartTabType = "trend" | "distribution" | "participants" | "my_bets" | "economics";
+type ChartTabType = "trend" | "distribution" | "participants" | "my_bets";
 
 interface OptionColorTheme {
   hex: string;
@@ -183,7 +183,7 @@ const WDL_THEMES: OptionColorTheme[] = [
   BINARY_THEMES[1], // 3안 (패/세번째): 로즈
 ];
 
-const RANKING_THEMES: OptionColorTheme[] = [
+export const RANKING_THEMES: OptionColorTheme[] = [
   {
     hex: "#38BDF8",
     activeCard:
@@ -233,7 +233,7 @@ const RANKING_THEMES: OptionColorTheme[] = [
   },
 ];
 
-function getOracleSpecInfo(dataSource?: string, title?: string) {
+export function getOracleSpecInfo(dataSource?: string, title?: string) {
   const ds = (dataSource || "").toLowerCase();
   const t = (title || "").toUpperCase();
 
@@ -343,7 +343,10 @@ export function UniversalPredictionDetailClient({
   tailChallenges = [],
 }: UniversalPredictionDetailClientProps) {
   const tailCreateHref = `/challenge/create?linkedGameId=${encodeURIComponent(game.id)}&linkedSlug=${encodeURIComponent(slug || game.id)}&linkedTitle=${encodeURIComponent(game.title)}`;
+  const analysisHref = `/prediction/${encodeURIComponent(slug || game.id)}/analysis`;
   const [chartTab, setChartTab] = useState<ChartTabType>("trend");
+  const [isAnalystMode, setIsAnalystMode] = useState<boolean>(false);
+  const [isDescExpanded, setIsDescExpanded] = useState<boolean>(false);
   const [isPending, startTransition] = useTransition();
   const [balance, setBalance] = useState(userBalance);
   const [bets, setBets] = useState(userBets);
@@ -973,44 +976,38 @@ export function UniversalPredictionDetailClient({
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* 🔴 연동된 실시간 라이브 응원톡 전면 배너 */}
+        {/* 🔴 연동된 실시간 라이브 응원톡 콤팩트 배너 */}
         {game.liveRoom ? (
           <Link
             href={`/live/${game.liveRoom.id}`}
-            className="block rounded-2xl bg-gradient-to-r from-red-950/70 via-rose-900/40 to-slate-900 border border-red-500/40 hover:border-red-400 p-4 shadow-xl transition group"
+            className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-950/60 via-rose-900/30 to-slate-900 border border-red-500/35 hover:border-red-400 transition group text-xs"
           >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600 text-white text-[11px] font-black shrink-0 shadow-md">
-                  <Radio className="w-3.5 h-3.5 animate-pulse" />
-                  <span>LIVE 시민 응원톡</span>
-                </span>
-                <div>
-                  <div className="text-sm font-black text-white group-hover:text-red-300 transition">
-                    {game.liveRoom.title} ({game.liveRoom.viewerCount.toLocaleString()}명 실시간 접속 중)
-                  </div>
-                  <div className="text-xs text-slate-300">
-                    현재 상태: <span className="text-red-300 font-bold">{game.liveRoom.statusText}</span> · 실시간 토론 및 번개 예측에 참여해보세요!
-                  </div>
-                </div>
-              </div>
-              <span className="px-4 py-2 rounded-xl bg-red-600 group-hover:bg-red-500 text-white font-black text-xs shrink-0 flex items-center gap-1 self-end sm:self-center shadow-md">
-                <span>라이브 응원톡 입장</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-red-600 text-white text-[10.5px] font-black shrink-0">
+                <Radio className="w-3 h-3 animate-pulse" />
+                <span>LIVE 응원톡</span>
+              </span>
+              <span className="text-slate-200 font-bold truncate">
+                {game.liveRoom.viewerCount.toLocaleString()}명 실시간 참여 중 ·{" "}
+                <span className="text-red-300">{game.liveRoom.statusText}</span>
               </span>
             </div>
+            <span className="text-red-300 group-hover:text-white font-black shrink-0 flex items-center gap-1 transition">
+              <span>입장하기</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </span>
           </Link>
         ) : (
-          <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-900/60 border border-white/[0.06] text-xs">
+          <div className="flex items-center justify-between px-4 py-2 rounded-xl bg-slate-900/60 border border-white/[0.06] text-xs">
             <div className="flex items-center gap-2 text-slate-400">
               <Radio className="w-3.5 h-3.5 text-rose-500/70" />
-              <span>실시간 LIVE 응원톡 라운지가 열려있는 의제들을 확인해보세요.</span>
+              <span>실시간 LIVE 응원톡 라운지</span>
             </div>
             <Link
               href="/live"
               className="text-rose-400 hover:text-rose-300 font-bold flex items-center gap-1 transition"
             >
-              <span>전체 LIVE 라운지 보기</span>
+              <span>전체 라운지 보기</span>
               <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -1126,18 +1123,14 @@ export function UniversalPredictionDetailClient({
                   >
                     <span>💜 내 참여 ({bets.length})</span>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setChartTab("economics")}
-                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                      chartTab === "economics"
-                        ? "bg-indigo-600 text-white shadow-md font-extrabold"
-                        : "text-slate-400 hover:text-white"
-                    }`}
+                  <Link
+                    href={analysisHref}
+                    className="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-indigo-950/60 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white"
                   >
                     <Brain className="w-3.5 h-3.5" />
-                    <span>CAPM · 경제학 모델</span>
-                  </button>
+                    <span>심층 분석실</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
                 </div>
               </div>
 
@@ -1271,197 +1264,6 @@ export function UniversalPredictionDetailClient({
                 </div>
               )}
 
-              {/* 탭 5: CAPM · Agency Theory · Prospect Theory · 베이지안 & Brier 지속학습 */}
-              {chartTab === "economics" && (
-                <div className="space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-1">
-                    <span className="text-xs text-slate-300 font-bold flex items-center gap-1.5">
-                      <Scale className="w-3.5 h-3.5 text-indigo-400" />
-                      <span>CAPM 위험-수익 · Agency · Prospect · 베이지안 사후확률</span>
-                    </span>
-                    <span className="text-[10.5px] font-bold text-indigo-300 bg-indigo-950/70 px-2.5 py-0.5 rounded-full border border-indigo-500/30">
-                      엔트로피 불확실성{" "}
-                      {Math.round((game.collectiveIntelligence?.normalizedEntropy ?? 0.6) * 100)}% ·{" "}
-                      {game.collectiveIntelligence?.isLowSampleStabilized
-                        ? "Prior 안정화 활성"
-                        : "증거 기반 수렴"}
-                    </span>
-                  </div>
-
-                  {/* 4대 PosMul 핵심 경제학 요약 KPI */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                    <div className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06]">
-                      <div className="text-[10px] text-slate-400 font-bold">시장 CAPM 베타 (β)</div>
-                      <div className="text-sm font-black text-sky-300 mt-1">
-                        {marketEconomy.marketBeta.toFixed(2)}
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
-                        요구수익률 E[R] +{(marketEconomy.averageRequiredReturn * 100).toFixed(1)}%
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06]">
-                      <div className="text-[10px] text-slate-400 font-bold">Agency 비대칭 해소</div>
-                      <div className="text-sm font-black text-emerald-300 mt-1">
-                        {marketEconomy.agencyCostReductionPct}%
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
-                        Jensen-Meckling 정렬 지수
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06]">
-                      <div className="text-[10px] text-slate-400 font-bold">Prospect 손실회피</div>
-                      <div className="text-sm font-black text-amber-300 mt-1">
-                        λ 2.25 → 1.0
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
-                        무위험 PMP 자본 보호
-                      </div>
-                    </div>
-                    <div className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06]">
-                      <div className="text-[10px] text-slate-400 font-bold">내 포트폴리오 리스크</div>
-                      <div
-                        className={`text-sm font-black mt-1 ${
-                          participationEconomy.portfolioRisk.riskLevel === "HIGH"
-                            ? "text-rose-400"
-                            : participationEconomy.portfolioRisk.riskLevel === "MEDIUM"
-                            ? "text-amber-300"
-                            : "text-emerald-300"
-                        }`}
-                      >
-                        {participationEconomy.portfolioRisk.riskLevel} (
-                        {Math.round(participationEconomy.portfolioRisk.riskRatio * 100)}%)
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">
-                        보유 PMP 대비 비중
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 1) 옵션별 CAPM 베타 · Jensen's Alpha · 베이지안 사후확률 비교 */}
-                  <div className="space-y-2">
-                    <div className="text-[11px] font-bold text-slate-400 px-1">
-                      옵션별 CAPM (E[R] = Rf + β(Rm - Rf)) · Jensen&apos;s Alpha · 베이지안 사후확률
-                    </div>
-                    <div className="space-y-2">
-                      {game.options.map((opt, idx) => {
-                        const hex = optionThemeMap[opt.id]?.hex || RANKING_THEMES[idx % RANKING_THEMES.length].hex;
-                        const bayesPct = Math.round(opt.probability * 100);
-                        const rawPct = Math.round((opt.rawVolumeProbability ?? opt.probability) * 100);
-                        const ci = opt.credibleInterval;
-                        const econOpt = marketEconomy.options.find((o) => o.optionId === opt.id);
-                        const beta = econOpt?.capmBeta ?? opt.capmBeta ?? 1.0;
-                        const alphaPct = Math.round((econOpt?.jensenAlpha ?? opt.jensenAlpha ?? 0) * 100);
-                        const reqReturnPct = ((econOpt?.capmRequiredReturn ?? opt.capmRequiredReturn ?? 0.09) * 100).toFixed(1);
-                        const agencyBonusPct = ((econOpt?.agencyExclusivityBonus ?? opt.agencyExclusivityBonus ?? 0) * 100).toFixed(1);
-
-                        return (
-                          <div
-                            key={`econ-${opt.id}`}
-                            className="p-3 rounded-xl bg-slate-950/80 border border-white/[0.06] space-y-1.5"
-                          >
-                            <div className="flex items-center justify-between gap-2 text-xs">
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span
-                                  className="w-2.5 h-2.5 rounded-full shrink-0"
-                                  style={{ backgroundColor: hex }}
-                                />
-                                <span className="font-extrabold text-white truncate">
-                                  {opt.label}
-                                </span>
-                                <span className="px-2 py-0.5 rounded-full text-[9.5px] font-bold bg-slate-900 text-slate-300 border border-white/[0.08] shrink-0">
-                                  β {beta.toFixed(2)}
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-3 shrink-0 text-[11px]">
-                                <span className="text-slate-400">
-                                  단순볼륨 {rawPct}%
-                                </span>
-                                <span className="font-black text-sky-300">
-                                  베이지안 {bayesPct}%
-                                </span>
-                              </div>
-                            </div>
-                            <div className="flex flex-wrap items-center justify-between gap-2 text-[10.5px] text-slate-400">
-                              <span>
-                                95% 신뢰구간:{" "}
-                                {ci
-                                  ? `${Math.round(ci[0] * 100)}% ~ ${Math.round(ci[1] * 100)}%`
-                                  : `${Math.max(1, bayesPct - 8)}% ~ ${Math.min(99, bayesPct + 8)}%`}
-                              </span>
-                              <div className="flex flex-wrap items-center gap-3">
-                                <span>
-                                  CAPM E[R] <strong className="text-slate-200">+{reqReturnPct}%</strong>
-                                </span>
-                                <span>
-                                  Alpha{" "}
-                                  <strong className={alphaPct >= 0 ? "text-emerald-300" : "text-rose-300"}>
-                                    {alphaPct >= 0 ? `+${alphaPct}%` : `${alphaPct}%`}
-                                  </strong>
-                                </span>
-                                <span>
-                                  Agency 독점가치 <strong className="text-amber-300">+{agencyBonusPct}%</strong>
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* 2) 나의 Brier Score · 경험 편향 교정(Calibration) 지속 학습 현황 */}
-                  <div className="p-3.5 rounded-xl bg-gradient-to-r from-indigo-950/40 via-slate-950 to-slate-950 border border-indigo-500/25 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-extrabold text-indigo-300 flex items-center gap-1.5">
-                        <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>나의 지속적 확률 학습 & Brier 교정 프로필</span>
-                      </span>
-                      <span className="text-[10.5px] font-bold text-emerald-300">
-                        베이지안 스킬 가중치{" "}
-                        {(userLearningProfile?.skillWeight ?? 1.0).toFixed(2)}x
-                      </span>
-                    </div>
-                    {userLearningProfile && userLearningProfile.settledCount > 0 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-                        <div className="p-2 rounded-lg bg-slate-900/80 border border-white/[0.05]">
-                          <div className="text-[10px] text-slate-400">정산 완료</div>
-                          <div className="text-xs font-black text-white mt-0.5">
-                            {userLearningProfile.settledCount}건
-                          </div>
-                        </div>
-                        <div className="p-2 rounded-lg bg-slate-900/80 border border-white/[0.05]">
-                          <div className="text-[10px] text-slate-400">Brier 오차</div>
-                          <div className="text-xs font-black text-sky-300 mt-0.5">
-                            {userLearningProfile.averageBrierScore.toFixed(3)}
-                          </div>
-                        </div>
-                        <div className="p-2 rounded-lg bg-slate-900/80 border border-white/[0.05]">
-                          <div className="text-[10px] text-slate-400">실제 적중률</div>
-                          <div className="text-xs font-black text-emerald-300 mt-0.5">
-                            {Math.round(userLearningProfile.winRate * 100)}%
-                          </div>
-                        </div>
-                        <div className="p-2 rounded-lg bg-slate-900/80 border border-white/[0.05]">
-                          <div className="text-[10px] text-slate-400">편향 진단</div>
-                          <div className="text-xs font-black text-amber-300 mt-0.5">
-                            {userLearningProfile.calibrationStatus === "OVERCONFIDENT"
-                              ? "과신 주의"
-                              : userLearningProfile.calibrationStatus === "UNDERCONFIDENT"
-                              ? "과소 신뢰"
-                              : userLearningProfile.calibrationStatus === "WELL_CALIBRATED"
-                              ? "균형 교정"
-                              : "표본 축적"}
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-[11px] text-slate-400 leading-relaxed">
-                        첫 정산 결과가 쌓이면 Brier Score(확률 예측 정밀도)와 확신도 편향(과신·과소신뢰)을 자동 측정해, 다음 마켓의 집단지성 베이지안 반영 가중치가 성장합니다.
-                      </p>
-                    )}
-                  </div>
-                </div>
-              )}
             </Card>
 
             {/* 2️⃣ ⚖️ AI 균형 의사결정 브리핑 */}
@@ -1483,9 +1285,24 @@ export function UniversalPredictionDetailClient({
               </div>
 
               {game.description && (
-                <p className="text-xs text-slate-300 leading-relaxed bg-slate-950/50 p-3 rounded-xl border border-white/[0.04] whitespace-pre-line">
-                  {game.description}
-                </p>
+                <div className="bg-slate-950/50 p-3 rounded-xl border border-white/[0.04] space-y-1.5">
+                  <p
+                    className={`text-xs text-slate-300 leading-relaxed whitespace-pre-line ${
+                      isDescExpanded ? "" : "line-clamp-3"
+                    }`}
+                  >
+                    {game.description}
+                  </p>
+                  {game.description.length > 110 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsDescExpanded((prev) => !prev)}
+                      className="text-[11px] font-bold text-sky-400 hover:text-sky-300 transition-colors"
+                    >
+                      {isDescExpanded ? "접기 ▲" : "설명 전체 보기 ▼"}
+                    </button>
+                  )}
+                </div>
               )}
 
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-slate-950/80 border border-white/[0.06] text-xs">
@@ -1616,120 +1433,175 @@ export function UniversalPredictionDetailClient({
             <MoneyWaveWaterfallCard totalPrizePool={Math.round(game.prizePool || 22817)} />
 
             {/* 🎯 시민 예측 참여 패널 (Binary / WDL / Ranking 맞춤형 렌더링) */}
-            <Card className="p-5 bg-gradient-to-b from-[#131b2e] via-[#0f172a] to-[#090b12] border-white/[0.1] space-y-5 shadow-2xl">
-              <div className="flex justify-between items-center pb-3 border-b border-white/[0.08]">
+            <Card className="p-5 bg-gradient-to-b from-[#131b2e] via-[#0f172a] to-[#090b12] border-white/[0.1] space-y-4 shadow-2xl">
+              <div className="flex justify-between items-center pb-3 border-b border-white/[0.08] gap-2">
                 <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-amber-400" />
-                  <span>시민 예측 참여 패널</span>
+                  <span>시민 예측 참여</span>
                 </span>
-                <span className="text-xs font-bold text-amber-300">
-                  💎 상금풀: {Math.round(game.prizePool || 0).toLocaleString()} PMC
-                </span>
+                {/* 방법 C: 심플 / 분석가 모드 전환 토글 */}
+                <div className="flex items-center gap-1 bg-slate-950/90 p-0.5 rounded-lg border border-white/[0.08] text-[10.5px] font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setIsAnalystMode(false)}
+                    className={`px-2.5 py-1 rounded-md transition-all ${
+                      !isAnalystMode
+                        ? "bg-sky-500 text-white shadow"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    심플
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAnalystMode(true)}
+                    className={`px-2.5 py-1 rounded-md transition-all ${
+                      isAnalystMode
+                        ? "bg-indigo-600 text-white shadow"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    분석가
+                  </button>
+                </div>
               </div>
 
               {/* 3대 분류 맞춤형 옵션 선택기 */}
               {renderParticipationOptions()}
 
-              {/* 확률적 판단: 내 확신도(Confidence - Agency 정보품질 · Prospect 보정) */}
-              <div className="p-3.5 rounded-2xl bg-slate-950/75 border border-white/[0.07] space-y-2.5">
-                <div className="flex items-center justify-between text-xs font-bold">
-                  <span className="text-slate-300 flex items-center gap-1.5">
-                    <SlidersHorizontal className="w-3.5 h-3.5 text-sky-400" />
-                    <span>내 예측 확신도 (Agency · Prospect)</span>
-                  </span>
-                  <span className="text-sky-300 font-black">{confidencePct}%</span>
-                </div>
-                <input
-                  type="range"
-                  min={50}
-                  max={95}
-                  step={5}
-                  value={confidencePct}
-                  onChange={(e) => setConfidencePct(Number(e.target.value))}
-                  className="w-full accent-sky-400 cursor-pointer"
-                />
-                <div className="flex justify-between text-[10px] text-slate-500">
-                  <span>50% (탐색적 참여)</span>
-                  <span>75% (데이터 기반 확신)</span>
-                  <span>95% (고신뢰 정보)</span>
-                </div>
-              </div>
-
-              {/* 실시간 CAPM · Agency · MoneyWave 위험/보상 시뮬레이터 */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-950 via-[#0d1526] to-indigo-950/30 border border-indigo-500/25 space-y-2 text-[11px]">
-                <div className="flex items-center justify-between font-extrabold">
-                  <span className="text-indigo-300 flex items-center gap-1.5">
-                    <Scale className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>CAPM · MoneyWave 예상 리워드</span>
-                  </span>
-                  <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                      participationEconomy.portfolioRisk.riskLevel === "HIGH"
-                        ? "bg-rose-950/70 text-rose-300 border-rose-500/40"
-                        : participationEconomy.portfolioRisk.riskLevel === "MEDIUM"
-                        ? "bg-amber-950/70 text-amber-300 border-amber-500/40"
-                        : "bg-emerald-950/70 text-emerald-300 border-emerald-500/40"
-                    }`}
-                  >
-                    포트폴리오 {participationEconomy.portfolioRisk.riskLevel} (
-                    {Math.round(participationEconomy.portfolioRisk.riskRatio * 100)}%)
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-0.5">
-                  <div className="p-2 rounded-xl bg-black/30 border border-white/[0.05]">
-                    <div className="text-[10px] text-slate-400">기본 예상 수령 PMC</div>
-                    <div className="text-sm font-black text-emerald-300 mt-0.5">
+              {/* 심플 모드: 핵심 예상 리워드 1줄 요약 바 */}
+              {!isAnalystMode && (
+                <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/[0.07] text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-400 font-semibold">예상 수령</span>
+                    <span className="font-black text-emerald-300">
                       ~{participationEconomy.baseEstimatedPmc.toLocaleString()} PMC
-                    </div>
-                    <div className="text-[9.5px] text-slate-500">
-                      적정확신·Agency 최대 ~{participationEconomy.maxPotentialPmc.toLocaleString()}
-                    </div>
+                    </span>
                   </div>
-                  <div className="p-2 rounded-xl bg-black/30 border border-white/[0.05]">
-                    <div className="text-[10px] text-slate-400">옵션 CAPM β / Alpha</div>
-                    <div className="text-sm font-black text-sky-300 mt-0.5">
-                      β {participationEconomy.optionMetrics.capmBeta.toFixed(2)} · α{" "}
-                      {participationEconomy.optionMetrics.jensenAlpha >= 0
-                        ? `+${Math.round(participationEconomy.optionMetrics.jensenAlpha * 100)}%`
-                        : `${Math.round(participationEconomy.optionMetrics.jensenAlpha * 100)}%`}
-                    </div>
-                    <div className="text-[9.5px] text-slate-500">
-                      적중 Calibration 보너스 +
-                      {Math.round(participationEconomy.prospectAdjustment.confidenceBonus * 100)}%
-                    </div>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAnalystMode(true)}
+                    className="text-[11px] font-bold text-indigo-300 hover:text-indigo-200 transition-colors"
+                  >
+                    확신도 · 편향 분석 ▾
+                  </button>
                 </div>
-                <p className="text-[10px] text-slate-400 leading-relaxed">
-                  {participationEconomy.portfolioRisk.recommendation}
-                </p>
-              </div>
+              )}
 
-              {/* 실시간 경험 편향(Experience Bias) 디바이어싱 코치 */}
-              {biasReport && (
-                <div
-                  className={`p-3 rounded-2xl border text-[11px] space-y-1 ${
-                    biasReport.riskLevel === "HIGH"
-                      ? "bg-amber-950/45 border-amber-500/40 text-amber-200"
-                      : biasReport.riskLevel === "MEDIUM"
-                      ? "bg-sky-950/35 border-sky-500/30 text-sky-200"
-                      : "bg-emerald-950/30 border-emerald-500/25 text-emerald-200"
-                  }`}
-                >
-                  <div className="flex items-center justify-between font-extrabold">
-                    <span className="flex items-center gap-1.5">
-                      <Brain className="w-3.5 h-3.5" />
-                      <span>경험 편향 & 과신 진단</span>
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/30">
-                      {biasReport.riskLevel === "HIGH"
-                        ? "⚠️ 편향 주의"
-                        : biasReport.riskLevel === "MEDIUM"
-                        ? "🔎 교정 권장"
-                        : "✅ 균형 판단"}
-                    </span>
+              {/* 분석가 모드: 확신도 슬라이더 + CAPM/MoneyWave 시뮬레이터 + 경험 편향 코치 */}
+              {isAnalystMode && (
+                <div className="space-y-3.5">
+                  {/* 확률적 판단: 내 확신도(Confidence - Agency 정보품질 · Prospect 보정) */}
+                  <div className="p-3.5 rounded-2xl bg-slate-950/75 border border-white/[0.07] space-y-2.5">
+                    <div className="flex items-center justify-between text-xs font-bold">
+                      <span className="text-slate-300 flex items-center gap-1.5">
+                        <SlidersHorizontal className="w-3.5 h-3.5 text-sky-400" />
+                        <span>내 예측 확신도 (Agency · Prospect)</span>
+                      </span>
+                      <span className="text-sky-300 font-black">{confidencePct}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={50}
+                      max={95}
+                      step={5}
+                      value={confidencePct}
+                      onChange={(e) => setConfidencePct(Number(e.target.value))}
+                      className="w-full accent-sky-400 cursor-pointer"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500">
+                      <span>50% (탐색적)</span>
+                      <span>75% (데이터 확신)</span>
+                      <span>95% (고신뢰)</span>
+                    </div>
                   </div>
-                  <p className="leading-relaxed opacity-90">{biasReport.nudges[0]}</p>
+
+                  {/* 실시간 CAPM · Agency · MoneyWave 위험/보상 시뮬레이터 */}
+                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-950 via-[#0d1526] to-indigo-950/30 border border-indigo-500/25 space-y-2 text-[11px]">
+                    <div className="flex items-center justify-between font-extrabold">
+                      <span className="text-indigo-300 flex items-center gap-1.5">
+                        <Scale className="w-3.5 h-3.5 text-indigo-400" />
+                        <span>CAPM · MoneyWave 예상 리워드</span>
+                      </span>
+                      <span
+                        className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                          participationEconomy.portfolioRisk.riskLevel === "HIGH"
+                            ? "bg-rose-950/70 text-rose-300 border-rose-500/40"
+                            : participationEconomy.portfolioRisk.riskLevel === "MEDIUM"
+                            ? "bg-amber-950/70 text-amber-300 border-amber-500/40"
+                            : "bg-emerald-950/70 text-emerald-300 border-emerald-500/40"
+                        }`}
+                      >
+                        포트폴리오 {participationEconomy.portfolioRisk.riskLevel} (
+                        {Math.round(participationEconomy.portfolioRisk.riskRatio * 100)}%)
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-0.5">
+                      <div className="p-2 rounded-xl bg-black/30 border border-white/[0.05]">
+                        <div className="text-[10px] text-slate-400">기본 예상 수령 PMC</div>
+                        <div className="text-sm font-black text-emerald-300 mt-0.5">
+                          ~{participationEconomy.baseEstimatedPmc.toLocaleString()} PMC
+                        </div>
+                        <div className="text-[9.5px] text-slate-500">
+                          최대 ~{participationEconomy.maxPotentialPmc.toLocaleString()} PMC
+                        </div>
+                      </div>
+                      <div className="p-2 rounded-xl bg-black/30 border border-white/[0.05]">
+                        <div className="text-[10px] text-slate-400">옵션 CAPM β / Alpha</div>
+                        <div className="text-sm font-black text-sky-300 mt-0.5">
+                          β {participationEconomy.optionMetrics.capmBeta.toFixed(2)} · α{" "}
+                          {participationEconomy.optionMetrics.jensenAlpha >= 0
+                            ? `+${Math.round(participationEconomy.optionMetrics.jensenAlpha * 100)}%`
+                            : `${Math.round(participationEconomy.optionMetrics.jensenAlpha * 100)}%`}
+                        </div>
+                        <div className="text-[9.5px] text-slate-500">
+                          적중 보너스 +
+                          {Math.round(participationEconomy.prospectAdjustment.confidenceBonus * 100)}%
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-[10px] text-slate-400 leading-relaxed">
+                      {participationEconomy.portfolioRisk.recommendation}
+                    </p>
+                  </div>
+
+                  {/* 실시간 경험 편향(Experience Bias) 디바이어싱 코치 */}
+                  {biasReport && (
+                    <div
+                      className={`p-3 rounded-2xl border text-[11px] space-y-1 ${
+                        biasReport.riskLevel === "HIGH"
+                          ? "bg-amber-950/45 border-amber-500/40 text-amber-200"
+                          : biasReport.riskLevel === "MEDIUM"
+                          ? "bg-sky-950/35 border-sky-500/30 text-sky-200"
+                          : "bg-emerald-950/30 border-emerald-500/25 text-emerald-200"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between font-extrabold">
+                        <span className="flex items-center gap-1.5">
+                          <Brain className="w-3.5 h-3.5" />
+                          <span>경험 편향 & 과신 진단</span>
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/30">
+                          {biasReport.riskLevel === "HIGH"
+                            ? "⚠️ 편향 주의"
+                            : biasReport.riskLevel === "MEDIUM"
+                            ? "🔎 교정 권장"
+                            : "✅ 균형 판단"}
+                        </span>
+                      </div>
+                      <p className="leading-relaxed opacity-90">{biasReport.nudges[0]}</p>
+                    </div>
+                  )}
+
+                  {/* 방법 A: 2차 심층 분석 페이지 직결 링크 */}
+                  <Link
+                    href={analysisHref}
+                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-indigo-950/50 border border-indigo-500/30 text-[11px] font-bold text-indigo-300 hover:bg-indigo-600 hover:text-white transition"
+                  >
+                    <span>📊 심층 경제학 · Brier Score 분석실 전체 보기</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
               )}
 

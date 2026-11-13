@@ -408,7 +408,7 @@ export function PredictionDetailTabsClient({ game, userBalance, userBets, initia
                     <Card className="p-6 border-white/5 bg-slate-900/50">
                       <div className="flex items-center space-x-2 mb-6">
                         <PieChart className="w-5 h-5 text-green-400" />
-                        <h3 className="text-lg font-bold text-white">베팅 분포</h3>
+                        <h3 className="text-lg font-bold text-white">예측 참여 분포</h3>
                       </div>
                       <BettingDistributionChart data={bettingData} isDarkMode={true} />
                     </Card>
@@ -433,11 +433,11 @@ export function PredictionDetailTabsClient({ game, userBalance, userBets, initia
                       <div className="font-semibold text-lg">{new Date(game.settlementTime).toLocaleString()}</div>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-slate-900/40 p-5">
-                      <div className="text-slate-400 text-xs mb-1">최소 베팅</div>
+                      <div className="text-slate-400 text-xs mb-1">최소 참여 PMP</div>
                       <div className="font-semibold text-lg">{game.minimumStake.toLocaleString()} PMP</div>
                     </div>
                     <div className="rounded-xl border border-white/10 bg-slate-900/40 p-5">
-                      <div className="text-slate-400 text-xs mb-1">최대 베팅</div>
+                      <div className="text-slate-400 text-xs mb-1">최대 참여 PMP</div>
                       <div className="font-semibold text-lg">{game.maximumStake.toLocaleString()} PMP</div>
                     </div>
                   </div>
@@ -508,9 +508,9 @@ export function PredictionDetailTabsClient({ game, userBalance, userBets, initia
       >
         <DialogContent className="sm:max-w-sm bg-[#1e1e2e] border-white/10 text-white">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-white">예측 확정</DialogTitle>
+            <DialogTitle className="text-xl font-bold text-white">예측 참여 확정</DialogTitle>
             <DialogDescription className="text-slate-400">
-              베팅 내용을 확인해주세요.
+              참여 내용을 확인해주세요.
             </DialogDescription>
           </DialogHeader>
           <p className="text-slate-400 text-sm mb-6">
@@ -520,7 +520,7 @@ export function PredictionDetailTabsClient({ game, userBalance, userBets, initia
             <span className="text-white font-bold">
               {pendingBet?.amount.toLocaleString()} PMP
             </span>
-            를 베팅하시겠습니까?
+            로 예측에 참여하시겠습니까?
           </p>
 
           <div className="flex gap-3">

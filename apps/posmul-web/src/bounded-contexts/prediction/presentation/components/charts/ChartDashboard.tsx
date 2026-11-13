@@ -17,8 +17,8 @@ export function ChartDashboard(props) {
     },
     {
       id: 'betting',
-      title: '💰 베팅 분포',
-      description: '옵션별 베팅 금액 및 비율'
+      title: '💰 예측 참여 분포',
+      description: '옵션별 참여 PMP 및 비율'
     },
     {
       id: 'participants',
@@ -75,7 +75,7 @@ export function ChartDashboard(props) {
           )}
           {selectedCharts.includes('betting') && (
             <div key="betting" className="space-y-2">
-              <ChartWidget gameId={gameId} type="betting" title="💰 베팅 분포" height={320} />
+              <ChartWidget gameId={gameId} type="betting" title="💰 예측 참여 분포" height={320} />
             </div>
           )}
           {selectedCharts.includes('participants') && (

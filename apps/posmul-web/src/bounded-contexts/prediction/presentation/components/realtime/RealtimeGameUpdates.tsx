@@ -29,7 +29,7 @@ export default function RealtimeGameUpdates({ gameId, className = '' }) {
       const newActivity = recentBets.slice(0, 5).map((bet, index) => ({
         id: `${bet.userId}-${bet.timestamp}-${index}`,
         type: 'NEW_BET',
-        message: `새로운 베팅: ${bet.option}에 ${bet.amount} PMP`,
+        message: `새로운 참여: ${bet.option}에 ${bet.amount} PMP`,
         timestamp: bet.timestamp,
         data: bet,
       }));
@@ -74,7 +74,7 @@ export default function RealtimeGameUpdates({ gameId, className = '' }) {
           >
             <div className="flex items-center justify-center mb-1">
               <CurrencyDollarIcon className="w-4 h-4 text-green-600 mr-1" />
-              <span className="text-xs text-gray-600">총 베팅</span>
+              <span className="text-xs text-gray-600">총 참여 PMP</span>
             </div>
             <motion.p
               key={totalStaked}

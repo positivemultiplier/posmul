@@ -30,8 +30,8 @@ description: PosMul 경제(Economy) 도메인 참모. PMP·PMC 이중 화폐의 
 
 ## 4. 타 도메인 계약 (Input / Output)
 - **수신(`Input`)**:
-  - `Forum` · `Consume`: 유저 활동에 따른 **`PMP` 적립 요청** (일일 한도 적용).
-  - `Consume`(광고 수익) · 초기 시드(`모두의창업 상금`): **`EAT` 상금 재원**.
+  - `Forum` · `Consume` · `Vertical Apps(Housing-Pro)`: 유저 활동(소통, 광고, 종이책 AI 스캔 마찰 보상 & 복습 완수)에 따른 **`PMP` 적립 요청** (코어 SDK 일일 한도 적용).
+  - `Consume`(광고 수익) · `Vertical`(교재 판매 마진, B2B 광고) · 초기 시드(`모두의창업 상금`): **`EAT` 상금 재원**.
 - **송신(`Output`)**:
   - `Prediction`: 예측 참여 시 `PMP` 차감(실패 시 소멸), 성공 시 **`MoneyWave` 한도 내 `PMC` 발행**.
   - `Donation`: 기부 시 `PMC` 차감 원장 제공.

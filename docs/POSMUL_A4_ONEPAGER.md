@@ -16,6 +16,7 @@ flowchart TD
         F["1. Forum (광장)\n체류시간 · 트래픽 확보\n일일 한도 1,000 PMP\n글보다 추천(+20)·개념글(+100) 우대"]
         C_A["2-A. Consume 일반광고\nCPC · CPV · CPA\nPMP 지급 + 현금 연료(EAT)"]
         C_B["2-B. Consume 직접의뢰 (Phase 2)\n기업 ESG · 신제품 미션\nSocial(IFRS S1) 지표 생성"]
+        V["2-C. Vertical 버티컬 (Housing-Pro)\n종이책 AI 스캔 마찰보상(+30~50)\n선지 O/X 복습 · 일일 300 PMP 캡\n교재/B2B 마진(EAT 기여)"]
     end
 
     subgraph SEED["재원 총량 엔진"]
@@ -40,11 +41,14 @@ flowchart TD
 
     U --> F
     U --> C_A
+    U --> V
     F -->|"PMP 적립 & 트래픽 광고"| C_A
     C_A -->|"세후 순이익(EAT)"| MW
     C_B -->|"EAT + Social(IFRS S1) 데이터"| MW
+    V -->|"교재/B2B 마진 EAT 기여"| MW
     F -->|"PMP"| P
     C_A -->|"PMP"| P
+    V -->|"PMP"| P
     MW -->|"일일·시간별 PMC 상금 풀"| P
     P --> WIN
     WIN -->|"오답"| BURN
@@ -66,7 +70,7 @@ flowchart TD
 ```mermaid
 flowchart LR
     subgraph RULE["절대 경계 (헷갈릴 때 이것만 확인)"]
-        R1["PMP 얻는 곳\nForum · Consume 광고만"]
+        R1["PMP 얻는 곳\nForum · Consume · 버티컬(AI스캔/복습)"]
         R2["PMC 얻는 곳\n오직 Prediction 성공만!"]
         R3["상금 풀 기준\nEBIT 금지 -> 세후 EAT"]
         R4["투표제 쓰는 곳\nPrediction(X) 오직 미래꿈기부(O)"]

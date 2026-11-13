@@ -126,7 +126,7 @@ export const PredictionChartView = ({
         <Card className="p-6 hover:shadow-lg transition-shadow duration-200">
           <div className="flex items-center space-x-2 mb-4">
             <PieChart className="w-5 h-5 text-green-600" />
-            <h3 className="text-lg font-semibold text-gray-900">💰 베팅 분포</h3>
+            <h3 className="text-lg font-semibold text-gray-900">💰 예측 참여 분포</h3>
           </div>
           <BettingDistributionChart data={currentBettingData} />
           <div className="mt-4 space-y-2">

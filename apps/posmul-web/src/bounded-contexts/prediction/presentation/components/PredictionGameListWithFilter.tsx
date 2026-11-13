@@ -160,7 +160,7 @@ export const PredictionGameListWithFilter = ({ userId }) => {
             {[
               { id: 'latest', label: '최신순' },
               { id: 'popularity', label: '인기순' },
-              { id: 'stake', label: '베팅액순' },
+              { id: 'stake', label: '참여 PMP순' },
               { id: 'ending', label: '마감임박순' }
             ].map(option => (
               <button

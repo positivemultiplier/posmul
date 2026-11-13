@@ -118,7 +118,7 @@ export const MobileBettingSheet = ({
 
               {/* Quick Bet Amounts */}
               <div className="mb-6">
-                <h3 className="font-semibold text-gray-900 mb-3">베팅 금액</h3>
+                <h3 className="font-semibold text-gray-900 mb-3">참여 PMP</h3>
                 <div className="grid grid-cols-3 gap-3">
                   {[1000, 5000, 10000].map((amount) => (
                     <motion.button
@@ -167,7 +167,7 @@ export const MobileBettingSheet = ({
                 }}
                 className="w-full py-4 bg-blue-500 text-white rounded-xl font-semibold text-lg hover:bg-blue-600 transition-colors"
               >
-                베팅하기
+                예측 참여하기
               </motion.button>
 
               {/* Safe area padding for newer phones */}

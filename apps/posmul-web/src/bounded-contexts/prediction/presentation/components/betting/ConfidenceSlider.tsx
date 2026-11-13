@@ -107,9 +107,9 @@ export const ConfidenceSlider = ({
           <span className="text-sm font-medium text-gray-700">신뢰도가 미치는 영향</span>
         </div>
         <ul className="text-xs text-gray-600 space-y-1">
-          <li>• 높은 신뢰도: 더 많은 베팅, 더 높은 수익 가능성</li>
-          <li>• 낮은 신뢰도: 적은 베팅, 안정적인 수익</li>
-          <li>• 신뢰도에 따라 최종 베팅 금액이 자동 조정됩니다</li>
+          <li>• 높은 신뢰도: 더 많은 PMP 참여, 더 높은 리워드 가능성</li>
+          <li>• 낮은 신뢰도: 적은 PMP 참여, 안정적인 리스크 관리</li>
+          <li>• 신뢰도에 따라 최종 참여 PMP가 자동 조정됩니다</li>
         </ul>
       </div>
     </div>

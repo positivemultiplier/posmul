@@ -1,0 +1,52 @@
+[
+  {
+    "examYear": 2024,
+    "examRound": 27,
+    "subject": "RELATION_LAW",
+    "questionNumber": 14,
+    "questionText": "공동주택관리법령상 관리비등의 사업계획서 및 예산서에 관한 설명으로 옳지 않은 것은?",
+    "correctOptionNumber": 2,
+    "options": [
+      {
+        "optionNumber": 1,
+        "optionText": "관리주체는 다음 회계연도에 관한 사업계획서 및 예산서를 작성하여야 한다.",
+        "isCorrect": true,
+        "masteryTier": 1,
+        "trapSummary": "관리주체의 사업계획서 수립은 가장 기초적인 의무 원칙입니다.",
+        "legalCitation": "공동주택관리법 시행령 제26조 제1항"
+      },
+      {
+        "optionNumber": 2,
+        "optionText": "관리주체는 사업계획서 및 예산서를 회계연도 개시 30일 전까지 입주자대표회의에 제출하여 승인을 받아야 한다.",
+        "isCorrect": false,
+        "masteryTier": 2,
+        "trapSummary": "30일 전이 아닌 '회계연도 개시 1개월 전까지' 제출해야 합니다.",
+        "legalCitation": "공동주택관리법 시행령 제26조 제1항"
+      },
+      {
+        "optionNumber": 3,
+        "optionText": "승인받은 사업계획 및 예산을 변경하려면 입주자대표회의의 승인을 다시 받아야 한다.",
+        "isCorrect": true,
+        "masteryTier": 2,
+        "trapSummary": "예산 변경 시에도 입대의 재승인이 필수입니다.",
+        "legalCitation": "공동주택관리법 시행령 제26조 제2항"
+      },
+      {
+        "optionNumber": 4,
+        "optionText": "관리주체는 매 분기말 다음 달 말일까지 관리비등의 집행을 위한 세부 사업계획서를 작성하여 입주자대표회의에 보고할 수 있다.",
+        "isCorrect": true,
+        "masteryTier": 3,
+        "trapSummary": "분기별 집행 현황 보고 규정(보고할 수 있다)에 부합합니다.",
+        "legalCitation": "공동주택관리법 시행규칙 제7조"
+      },
+      {
+        "optionNumber": 5,
+        "optionText": "관리주체는 회계연도마다 사업실적서 및 결산서를 작성하여 회계연도 종료 후 2개월 이내에 입주자대표회의에 제출하여야 한다.",
+        "isCorrect": true,
+        "masteryTier": 2,
+        "trapSummary": "결산서는 회계연도 종료 후 '2개월 이내' 제출이 맞습니다.",
+        "legalCitation": "공동주택관리법 시행령 제26조 제3항"
+      }
+    ]
+  }
+]

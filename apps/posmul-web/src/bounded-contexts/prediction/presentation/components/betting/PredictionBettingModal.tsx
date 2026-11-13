@@ -82,7 +82,7 @@ export const PredictionBettingModal = ({
                 </div>
                 <span className={`ml-2 text-sm ${step >= stepNum ? 'text-blue-600' : 'text-gray-500'}`}>
                   {stepNum === 1 && '옵션 선택'}
-                  {stepNum === 2 && '베팅 설정'}
+                  {stepNum === 2 && '참여 설정'}
                   {stepNum === 3 && '확인'}
                 </span>
                 {stepNum < 3 && <div className="ml-4 w-8 h-px bg-gray-300" />}
@@ -110,10 +110,10 @@ export const PredictionBettingModal = ({
             </div>
           )}
 
-          {/* Step 2: 베팅 설정 */}
+          {/* Step 2: 참여 설정 */}
           {step === 2 && (
             <div className="space-y-6">
-              <h3 className="text-lg font-semibold mb-4">베팅 금액과 신뢰도를 설정하세요</h3>
+              <h3 className="text-lg font-semibold mb-4">참여 PMP와 신뢰도를 설정하세요</h3>
 
               {/* 선택된 옵션 요약 */}
               {selectedOptionData && (

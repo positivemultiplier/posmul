@@ -117,7 +117,7 @@ export function SoccerPredictionDetailClient({
   };
 
   const handleWithdraw = async (betId: string) => {
-    if (!confirm("정말로 이 베팅을 철회하시겠습니까? 베팅 금액은 전액 환불됩니다.")) return;
+    if (!confirm("정말로 이 예측 참여를 철회하시겠습니까? 참여 PMP는 전액 반환됩니다.")) return;
     setWithdrawingBetId(betId);
     const result = await withdrawBet(betId, slug);
     if (result.success) {
@@ -317,7 +317,7 @@ export function SoccerPredictionDetailClient({
                       <Card className="p-6 border-white/5 bg-slate-900/50">
                         <div className="flex items-center space-x-2 mb-4">
                           <PieChart className="w-5 h-5 text-green-400" />
-                          <h3 className="text-lg font-bold text-white">베팅 분포</h3>
+                          <h3 className="text-lg font-bold text-white">예측 참여 분포</h3>
                         </div>
                         <BettingDistributionChart data={bettingData} isDarkMode={true} />
                       </Card>
@@ -370,7 +370,7 @@ export function SoccerPredictionDetailClient({
                   <div className="bg-slate-900/50 rounded-2xl border border-white/5 p-6">
                     <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
                       <Activity className="w-5 h-5 text-blue-400" />
-                      내 베팅 내역
+                      내 예측 참여 내역
                     </h3>
 
                     {bets.length > 0 ? (

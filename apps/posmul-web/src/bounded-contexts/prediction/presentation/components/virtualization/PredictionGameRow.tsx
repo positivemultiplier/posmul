@@ -186,7 +186,7 @@ export const PredictionGameRow = ({
             }}
           >
             <Play className="w-4 h-4" />
-            <span>베팅</span>
+            <span>예측 참여</span>
           </motion.button>
 
           {game.gameImportanceScore && (

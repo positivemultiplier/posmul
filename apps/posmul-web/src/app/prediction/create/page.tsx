@@ -92,7 +92,7 @@ export default function CreatePredictionPage() {
               </div>
               <div>
                 <h4 className="font-semibold text-blue-800 mb-2">
-                  💰 베팅 금액 설정
+                  💰 참여 PMP 범위 설정
                 </h4>
                 <ul className="text-sm text-blue-700 space-y-1">
                   <li>• 최소 100 PmpAmount ~ 최대 10,000 PmpAmount</li>

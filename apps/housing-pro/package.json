@@ -1,0 +1,39 @@
+{
+  "name": "@posmul/housing-pro",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3001",
+    "build": "next build",
+    "start": "next start --port 3001",
+    "lint": "eslint src",
+    "type-check": "tsc --noEmit",
+    "parse:exam": "tsx scripts/parse-exam-to-options.ts"
+  },
+  "dependencies": {
+    "@posmul/auth-economy-sdk": "workspace:*",
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.89.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.23.26",
+    "lucide-react": "^0.562.0",
+    "next": "^15.3.6",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tailwind-merge": "^3.0.2",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.24",
+    "@types/pdf-parse": "^1.1.5",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "autoprefixer": "^10.6.2",
+    "pdf-parse": "^2.4.5",
+    "postcss": "^8.5.3",
+    "tailwindcss": "^3.4.17",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
+}

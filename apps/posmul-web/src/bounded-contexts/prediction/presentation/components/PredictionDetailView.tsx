@@ -291,7 +291,7 @@ export const PredictionDetailView = forwardRef<PredictionDetailViewHandle, Predi
                 </Button>
 
                 <p className="text-center text-xs text-slate-500">
-                  결과는 정산 시점의 배당률에 따라 달라질 수 있습니다.
+                  결과는 정산 시점의 예상 리워드 배율에 따라 달라질 수 있습니다.
                 </p>
               </div>
             )}

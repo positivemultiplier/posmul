@@ -264,7 +264,7 @@ export function CompactMoneyWaveCard({
                     +{waveBreakdown.crowdBoost.toLocaleString()} PMC
                   </div>
                   <p className="text-[11px] text-slate-400 mt-1">
-                    시민 투표·베팅(PMP)이 몰릴수록 상금풀이 실시간으로 함께 상승합니다.
+                    시민 예측 투표(PMP)가 몰릴수록 상금풀이 실시간으로 함께 상승합니다.
                   </p>
                 </div>
 

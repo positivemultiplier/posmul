@@ -47,7 +47,7 @@ export const StakeAmountInput = ({
       <Card className="p-4">
         <div className="flex items-center space-x-2 mb-3">
           <DollarSign className="w-5 h-5 text-gray-600" />
-          <span className="font-medium text-gray-900">베팅 금액</span>
+          <span className="font-medium text-gray-900">참여 PMP</span>
         </div>
 
         {/* 입력 필드와 조정 버튼 */}
@@ -136,7 +136,7 @@ export const StakeAmountInput = ({
           disabled={disabled || currentBalance > maxAmount}
           className="w-full py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg font-medium hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          전체 금액 베팅 ({formatCurrency(Math.min(currentBalance, maxAmount))} PMP)
+          전체 PMP 참여 ({formatCurrency(Math.min(currentBalance, maxAmount))} PMP)
         </motion.button>
 
         {/* 경고 메시지 */}
@@ -146,8 +146,8 @@ export const StakeAmountInput = ({
             animate={{ opacity: 1, height: 'auto' }}
             className="mt-2 text-xs text-red-600 bg-red-50 rounded p-2"
           >
-            {value < minAmount && `최소 베팅 금액은 ${formatCurrency(minAmount)} PMP입니다.`}
-            {value > maxAmount && `최대 베팅 금액은 ${formatCurrency(maxAmount)} PMP입니다.`}
+            {value < minAmount && `최소 참여 PMP는 ${formatCurrency(minAmount)} PMP입니다.`}
+            {value > maxAmount && `최대 참여 PMP는 ${formatCurrency(maxAmount)} PMP입니다.`}
             {value > currentBalance && '잔고가 부족합니다.'}
           </motion.div>
         )}

@@ -94,7 +94,7 @@ export function UserPositionCard({ userBets, gameOptions, onAddBetAction }: User
                                 onClick={() => onAddBetAction(optionId)}
                                 className="flex-1 bg-blue-600 hover:bg-blue-500 text-white border-none h-10"
                             >
-                                <Plus className="w-4 h-4 mr-1.5" /> 추가 베팅
+                                <Plus className="w-4 h-4 mr-1.5" /> 추가 참여
                             </Button>
                             <Button
                                 variant="outline"

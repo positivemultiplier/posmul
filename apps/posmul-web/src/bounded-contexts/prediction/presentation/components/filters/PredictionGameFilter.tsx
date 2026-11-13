@@ -181,7 +181,7 @@ export const PredictionGameFilter = ({ onFilterChange, totalCount, filteredCount
           <div>
             <h4 className="text-sm font-medium text-gray-700 mb-3">
               <DollarSign className="w-4 h-4 inline mr-1" />
-              베팅 금액 범위
+              참여 PMP 범위
             </h4>
             <div className="grid grid-cols-2 gap-4">
               <div>

@@ -146,7 +146,7 @@ export const PredictionGameListWithVirtualization = () => {
             </p>
             <div className="flex space-x-2 mt-3">
               <button className="px-4 py-2 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">
-                베팅하기
+                예측 참여하기
               </button>
               <button className="px-4 py-2 border border-blue-600 text-blue-600 text-sm rounded hover:bg-blue-50">
                 상세 보기

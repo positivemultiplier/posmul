@@ -162,7 +162,7 @@ export const MobilePredictionCard = ({
           className="flex-1 py-3 px-4 bg-blue-500 text-white hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium flex items-center justify-center space-x-1"
         >
           <Play className="w-4 h-4" />
-          <span>베팅하기</span>
+          <span>예측 참여하기</span>
         </motion.button>
       </div>
     </motion.div>

@@ -80,7 +80,7 @@ export const PredictionOptionCard = ({
           <div className="flex items-center space-x-2">
             <DollarSign className="w-4 h-4" />
             <div>
-              <span className="text-xs text-gray-500 block">총 베팅액</span>
+              <span className="text-xs text-gray-500 block">총 참여 PMP</span>
               <span className="font-medium text-gray-900">
                 {formatCurrency(option.totalBets)}
               </span>
