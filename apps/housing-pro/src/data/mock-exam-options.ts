@@ -28,11 +28,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 1,
     "optionNumber": 1,
     "statement": "도로 및 상하수도시설을 설치해야 하는 경우 설치의무자는 국가이다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
-    "trapHighlight": "주체 및 승인권자",
-    "trapCorrection": "법령상 지정된 적법한 주체/승인권자입니다.",
-    "citation": "공동주택관리법령 제3조",
+    "trapHighlight": "주체·관할권자",
+    "trapCorrection": "의무자(국가 vs 지자체장 vs 사업주체 vs 관리주체) 함정에 주의하세요!",
+    "citation": "주택법·공동주택관리법령 (제1문 해설)",
     "streakCount": 0
   },
   {
@@ -46,8 +46,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "50호 이상",
-    "trapCorrection": "기한 '50호 이상' 규정의 함정에 주의하세요! (법정 요건 불일치)",
-    "citation": "공동주택관리법령 제3조",
+    "trapCorrection": "수치·기한 '50호 이상' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제1문 해설)",
     "streakCount": 0
   },
   {
@@ -58,11 +58,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 1,
     "optionNumber": 3,
     "statement": "간선시설이란 도로ㆍ상하수도ㆍ주차장ㆍ가스시설ㆍ통신시설ㆍ지역난방시설을 말한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제3조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제1문 해설)",
     "streakCount": 0
   },
   {
@@ -76,8 +76,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "50세대 이상",
-    "trapCorrection": "기한 '50세대 이상' 규정의 함정에 주의하세요! (법정 요건 불일치)",
-    "citation": "공동주택관리법령 제3조",
+    "trapCorrection": "수치·기한 '50세대 이상' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제1문 해설)",
     "streakCount": 0
   },
   {
@@ -90,9 +90,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "간선시설 설치의무자가 ｢주택법｣이 정한 기간까지 간선시설의 설치를 완료하지 못할 특별한 사유가 있는 경우 사업주체가 그 간선시설을 자기부담으로 설치하고 간선시설 설치의무자에게 그 비용의 상환을 요구할 수 있다.",
     "isCorrectStatement": true,
     "masteryTier": 2,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제3조",
+    "trapHighlight": "주체·관할권자",
+    "trapCorrection": "법령상 지정된 적법한 의무자·관할 행정주체입니다.",
+    "citation": "주택법·공동주택관리법령 (제1문 해설)",
     "streakCount": 0
   },
   {
@@ -106,8 +106,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제5조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제2문 해설)",
     "streakCount": 0
   },
   {
@@ -118,11 +118,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 2,
     "optionNumber": 2,
     "statement": "ㄴ, ㄹ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제5조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제2문 해설)",
     "streakCount": 0
   },
   {
@@ -133,11 +133,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 2,
     "optionNumber": 3,
     "statement": "ㄱ, ㄴ, ㄷ",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제5조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제2문 해설)",
     "streakCount": 0
   },
   {
@@ -148,11 +148,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 2,
     "optionNumber": 4,
     "statement": "ㄴ, ㄷ, ㄹ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제5조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제2문 해설)",
     "streakCount": 0
   },
   {
@@ -166,8 +166,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제5조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제2문 해설)",
     "streakCount": 0
   },
   {
@@ -181,8 +181,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제7조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제3문 해설)",
     "streakCount": 0
   },
   {
@@ -193,11 +193,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 3,
     "optionNumber": 2,
     "statement": "업무대행자가 선정된 경우 대행 수수료에 관한 사항",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제7조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제3문 해설)",
     "streakCount": 0
   },
   {
@@ -211,8 +211,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제7조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제3문 해설)",
     "streakCount": 0
   },
   {
@@ -223,11 +223,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 3,
     "optionNumber": 4,
     "statement": "조합원 탈퇴 및 환급의 방법, 시기 및 절차",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제7조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제3문 해설)",
     "streakCount": 0
   },
   {
@@ -238,11 +238,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 3,
     "optionNumber": 5,
     "statement": "사업비가 증액될 경우 조합원이 추가 분담금을 납부할 수 있다는 사항",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제7조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제3문 해설)",
     "streakCount": 0
   },
   {
@@ -253,11 +253,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 4,
     "optionNumber": 1,
     "statement": "감리자는 감리업무 수행을 위하여 필요한 경우에는 주택건설공사의 수급인(하수급인 포함)에게 수급인의 건설기술인 배치에 관한 자료의 제공을 요청할 수 있다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제4문 해설)",
     "streakCount": 0
   },
   {
@@ -268,11 +268,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 4,
     "optionNumber": 2,
     "statement": "감리자는 업무를 수행하면서 위반 사항을 발견하였을 때에는 7일 이내에 시공자 및 사업주체에게 위반 사항을 시정할 것을 통지하여야 한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "7일 이내",
-    "trapCorrection": "법정 기한 '7일 이내' 규정에 정확히 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapCorrection": "수치·기한 '7일 이내' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제4문 해설)",
     "streakCount": 0
   },
   {
@@ -286,8 +286,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제4문 해설)",
     "streakCount": 0
   },
   {
@@ -298,11 +298,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 4,
     "optionNumber": 4,
     "statement": "감리자는 다른 법률에 따른 감리자에게 공정 보고 및 시정을 요구할 수 없다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제4문 해설)",
     "streakCount": 0
   },
   {
@@ -315,9 +315,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "사업주체는 감리자를 대상으로 실태점검을 실시해야 하고, 그 결과에 따라 감리업무의 소홀이 확인된 경우에는 감리자 교체를 하여야 한다.",
     "isCorrectStatement": false,
     "masteryTier": 5,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapHighlight": "주체·관할권자",
+    "trapCorrection": "의무자(국가 vs 지자체장 vs 사업주체 vs 관리주체) 함정에 주의하세요!",
+    "citation": "주택법·공동주택관리법령 (제4문 해설)",
     "streakCount": 0
   },
   {
@@ -328,11 +328,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 5,
     "optionNumber": 1,
     "statement": "도시형 생활주택",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제11조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제5문 해설)",
     "streakCount": 0
   },
   {
@@ -345,9 +345,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "｢관광진흥법｣ 제70조제1항 또는 제2항에 따라 지정된 관광특구에서 건설ㆍ공급하는 공동주택으로서 해당 건축물의 층수가 30층이면서 높이가 100미터인 경우",
     "isCorrectStatement": false,
     "masteryTier": 3,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제11조",
+    "trapHighlight": "30층",
+    "trapCorrection": "수치·기한 '30층' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제5문 해설)",
     "streakCount": 0
   },
   {
@@ -358,11 +358,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 5,
     "optionNumber": 3,
     "statement": "｢도시 및 주거환경정비법｣ 제2조제2호가목에 따른 주거환경개선사업에서 건설ㆍ공급 하는 주택",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제11조",
+    "trapHighlight": "2호",
+    "trapCorrection": "수치·기한 '2호' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제5문 해설)",
     "streakCount": 0
   },
   {
@@ -376,8 +376,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제11조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제5문 해설)",
     "streakCount": 0
   },
   {
@@ -390,9 +390,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "｢공공주택 특별법｣ 제2조제3호마목에 따른 도심 공공주택 복합사업에서 건설ㆍ공급하는 주택",
     "isCorrectStatement": true,
     "masteryTier": 1,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제11조",
+    "trapHighlight": "3호",
+    "trapCorrection": "법정 수치·기한 '3호' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제5문 해설)",
     "streakCount": 0
   },
   {
@@ -406,8 +406,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제13조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제6문 해설)",
     "streakCount": 0
   },
   {
@@ -421,8 +421,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제13조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제6문 해설)",
     "streakCount": 0
   },
   {
@@ -436,8 +436,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제13조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제6문 해설)",
     "streakCount": 0
   },
   {
@@ -448,11 +448,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 6,
     "optionNumber": 4,
     "statement": "입주자대표회의 운영경비",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
-    "trapHighlight": "주체 및 승인권자",
-    "trapCorrection": "법령상 지정된 적법한 주체/승인권자입니다.",
-    "citation": "공동주택관리법령 제13조",
+    "trapHighlight": "주체·관할권자",
+    "trapCorrection": "의무자(국가 vs 지자체장 vs 사업주체 vs 관리주체) 함정에 주의하세요!",
+    "citation": "주택법·공동주택관리법령 (제6문 해설)",
     "streakCount": 0
   },
   {
@@ -466,8 +466,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제13조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제6문 해설)",
     "streakCount": 0
   },
   {
@@ -478,11 +478,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 7,
     "optionNumber": 1,
     "statement": "하자분쟁조정위원회는 위원장 1명을 포함한 50명 이내의 위원으로 구성하며, 위원장은 상임으로 한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제15조",
+    "trapHighlight": "1명",
+    "trapCorrection": "수치·기한 '1명' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제7문 해설)",
     "streakCount": 0
   },
   {
@@ -495,9 +495,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "하자 여부 판정 또는 분쟁조정을 다루는 분과위원회는 하자분쟁조정위원회의 위원장이 지명하는 9명 이상 15명 이하의 위원으로 구성한다.",
     "isCorrectStatement": false,
     "masteryTier": 5,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제15조",
+    "trapHighlight": "9명 이상",
+    "trapCorrection": "수치·기한 '9명 이상' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제7문 해설)",
     "streakCount": 0
   },
   {
@@ -508,11 +508,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 7,
     "optionNumber": 3,
     "statement": "위원장 및 분과위원회의 위원장은 시ㆍ도지사가 임명한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제15조",
+    "trapHighlight": "주체·관할권자",
+    "trapCorrection": "의무자(국가 vs 지자체장 vs 사업주체 vs 관리주체) 함정에 주의하세요!",
+    "citation": "주택법·공동주택관리법령 (제7문 해설)",
     "streakCount": 0
   },
   {
@@ -523,11 +523,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 7,
     "optionNumber": 4,
     "statement": "위원장은 분과위원회별로 사건의 심리 등을 위하여 전문분야 등을 고려하여 5명 이상 9명 이하의 위원으로 소위원회를 구성할 수 있다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 2,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제15조",
+    "trapHighlight": "5명 이상",
+    "trapCorrection": "법정 수치·기한 '5명 이상' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제7문 해설)",
     "streakCount": 0
   },
   {
@@ -538,11 +538,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 7,
     "optionNumber": 5,
     "statement": "위원장과 공무원이 아닌 위원의 임기는 2년으로 하되 연임할 수 없으며, 보궐위원의 임기는 전임자의 남은 임기로 한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제15조",
+    "trapHighlight": "2년",
+    "trapCorrection": "수치·기한 '2년' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제7문 해설)",
     "streakCount": 0
   },
   {
@@ -553,11 +553,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 8,
     "optionNumber": 1,
     "statement": "주택관리업을 하려는 자는 시장ㆍ군수ㆍ구청장에게 등록하여야 하며, 등록 사항이 변경 되는 경우에는 변경신고를 하여야 한다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 5,
-    "trapHighlight": "주체 및 승인권자",
-    "trapCorrection": "행정주체(국가 vs 지자체장 vs 입대의) 권한 배분을 정확히 구분해야 합니다.",
-    "citation": "공동주택관리법령 제17조",
+    "trapHighlight": "주체·관할권자",
+    "trapCorrection": "법령상 지정된 적법한 의무자·관할 행정주체입니다.",
+    "citation": "주택법·공동주택관리법령 (제8문 해설)",
     "streakCount": 0
   },
   {
@@ -571,8 +571,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "15일 이내",
-    "trapCorrection": "법정 기한 '15일 이내' 규정에 정확히 부합합니다.",
-    "citation": "공동주택관리법령 제17조",
+    "trapCorrection": "법정 수치·기한 '15일 이내' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제8문 해설)",
     "streakCount": 0
   },
   {
@@ -585,9 +585,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "시장ㆍ군수ㆍ구청장은 주택관리업자가 관리비ㆍ사용료와 장기수선충당금을 ｢공동주택 관리법｣에 따른 용도 외의 목적으로 사용한 경우에는 그 등록을 말소하여야 한다.",
     "isCorrectStatement": false,
     "masteryTier": 2,
-    "trapHighlight": "주체 및 승인권자",
-    "trapCorrection": "행정주체(국가 vs 지자체장 vs 입대의) 권한 배분을 정확히 구분해야 합니다.",
-    "citation": "공동주택관리법령 제17조",
+    "trapHighlight": "주체·관할권자",
+    "trapCorrection": "의무자(국가 vs 지자체장 vs 사업주체 vs 관리주체) 함정에 주의하세요!",
+    "citation": "주택법·공동주택관리법령 (제8문 해설)",
     "streakCount": 0
   },
   {
@@ -600,9 +600,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "등록을 한 주택관리업자는 그 등록이 말소된 후 2년이 지나지 아니한 때에는 다시 등록 할 수 없다.",
     "isCorrectStatement": true,
     "masteryTier": 3,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제17조",
+    "trapHighlight": "2년",
+    "trapCorrection": "법정 수치·기한 '2년' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제8문 해설)",
     "streakCount": 0
   },
   {
@@ -613,11 +613,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 8,
     "optionNumber": 5,
     "statement": "주택관리업을 등록하려는 자는 자본금(법인이 아닌 경우 자산평가액을 말한다)이 2억원 이상이어야 한다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 4,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제17조",
+    "trapHighlight": "2억원 이상",
+    "trapCorrection": "법정 수치·기한 '2억원 이상' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제8문 해설)",
     "streakCount": 0
   },
   {
@@ -631,8 +631,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제19조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제9문 해설)",
     "streakCount": 0
   },
   {
@@ -643,11 +643,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 9,
     "optionNumber": 2,
     "statement": "중앙분쟁조정위원회는 조정을 효율적으로 하기 위하여 필요하다고 인정하면 해당 사 건들을 분리하거나 병합할 수 있다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제19조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제9문 해설)",
     "streakCount": 0
   },
   {
@@ -658,11 +658,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 9,
     "optionNumber": 3,
     "statement": "공동주택의 리모델링에 관한 사항은 중앙분쟁조정위원회의 심의ㆍ조정 사항이 아니다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제19조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제9문 해설)",
     "streakCount": 0
   },
   {
@@ -673,11 +673,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 9,
     "optionNumber": 4,
     "statement": "중앙분쟁조정위원회는 시ㆍ군ㆍ구에 지방 공동주택관리 분쟁조정위원회가 설치되지 아니한 경우 해당 시ㆍ군ㆍ구 관할 분쟁을 심의ㆍ조정한다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제19조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제9문 해설)",
     "streakCount": 0
   },
   {
@@ -690,9 +690,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "중앙분쟁조정위원회는 위원장 1명을 포함한 15명 이내의 위원으로 구성한다.",
     "isCorrectStatement": true,
     "masteryTier": 5,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제19조",
+    "trapHighlight": "1명",
+    "trapCorrection": "법정 수치·기한 '1명' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제9문 해설)",
     "streakCount": 0
   },
   {
@@ -705,9 +705,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "높이 5미터의 굴뚝",
     "isCorrectStatement": false,
     "masteryTier": 2,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제21조",
+    "trapHighlight": "5미터",
+    "trapCorrection": "수치·기한 '5미터' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제10문 해설)",
     "streakCount": 0
   },
   {
@@ -718,11 +718,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 10,
     "optionNumber": 2,
     "statement": "높이 3미터의 장식탑",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제21조",
+    "trapHighlight": "3미터",
+    "trapCorrection": "수치·기한 '3미터' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제10문 해설)",
     "streakCount": 0
   },
   {
@@ -733,11 +733,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 10,
     "optionNumber": 3,
     "statement": "높이 7미터의 고가수조",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 4,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제21조",
+    "trapHighlight": "7미터",
+    "trapCorrection": "법정 수치·기한 '7미터' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제10문 해설)",
     "streakCount": 0
   },
   {
@@ -748,11 +748,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 10,
     "optionNumber": 4,
     "statement": "높이 3미터의 담장",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 5,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제21조",
+    "trapHighlight": "3미터",
+    "trapCorrection": "수치·기한 '3미터' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제10문 해설)",
     "streakCount": 0
   },
   {
@@ -765,9 +765,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "높이 5미터의 골프연습장 등의 운동시설을 위한 철탑",
     "isCorrectStatement": false,
     "masteryTier": 1,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제21조",
+    "trapHighlight": "5미터",
+    "trapCorrection": "수치·기한 '5미터' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제10문 해설)",
     "streakCount": 0
   },
   {
@@ -781,8 +781,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제23조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제11문 해설)",
     "streakCount": 0
   },
   {
@@ -796,8 +796,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제23조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제11문 해설)",
     "streakCount": 0
   },
   {
@@ -811,8 +811,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제23조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제11문 해설)",
     "streakCount": 0
   },
   {
@@ -823,11 +823,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 11,
     "optionNumber": 4,
     "statement": "전기통신시설군 - 발전시설",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제23조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제11문 해설)",
     "streakCount": 0
   },
   {
@@ -841,8 +841,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제23조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제11문 해설)",
     "streakCount": 0
   },
   {
@@ -853,11 +853,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 12,
     "optionNumber": 1,
     "statement": "｢농지법｣ 제34조에 따른 농지전용허가",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제25조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제12문 해설)",
     "streakCount": 0
   },
   {
@@ -871,8 +871,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제25조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제12문 해설)",
     "streakCount": 0
   },
   {
@@ -883,11 +883,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 12,
     "optionNumber": 3,
     "statement": "｢소음ㆍ진동관리법｣ 제8조에 따른 소음ㆍ진동 배출시설 설치의 허가",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제25조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제12문 해설)",
     "streakCount": 0
   },
   {
@@ -898,11 +898,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 12,
     "optionNumber": 4,
     "statement": "｢가축분뇨의 관리 및 이용에 관한 법률｣ 제11조에 따른 배출시설 설치허가",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제25조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제12문 해설)",
     "streakCount": 0
   },
   {
@@ -913,11 +913,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 12,
     "optionNumber": 5,
     "statement": "｢도시공원 및 녹지 등에 관한 법률｣ 제19조에 따른 도시공원의 설치허가",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제25조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제12문 해설)",
     "streakCount": 0
   },
   {
@@ -931,8 +931,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제27조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제13문 해설)",
     "streakCount": 0
   },
   {
@@ -946,8 +946,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제27조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제13문 해설)",
     "streakCount": 0
   },
   {
@@ -958,11 +958,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 13,
     "optionNumber": 3,
     "statement": "특별피난계단을 해체하는 것",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제27조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제13문 해설)",
     "streakCount": 0
   },
   {
@@ -976,8 +976,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제27조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제13문 해설)",
     "streakCount": 0
   },
   {
@@ -988,11 +988,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 13,
     "optionNumber": 5,
     "statement": "다가구주택의 가구 간 경계벽을 증설하는 것",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제27조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제13문 해설)",
     "streakCount": 0
   },
   {
@@ -1006,8 +1006,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "2년 이내",
-    "trapCorrection": "기한 '2년 이내' 규정의 함정에 주의하세요! (법정 요건 불일치)",
-    "citation": "공동주택관리법령 제29조",
+    "trapCorrection": "수치·기한 '2년 이내' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제14문 해설)",
     "streakCount": 0
   },
   {
@@ -1021,8 +1021,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제29조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제14문 해설)",
     "streakCount": 0
   },
   {
@@ -1036,8 +1036,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제29조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제14문 해설)",
     "streakCount": 0
   },
   {
@@ -1048,11 +1048,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 14,
     "optionNumber": 4,
     "statement": "최근 2년간 ｢시설물의 안전 및 유지관리에 관한 특별법｣ 제35조(시정명령)에 따른 시정 명령을 두 차례 받고 새로 시정명령에 해당하는 사유가 발생한 경우",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제29조",
+    "trapHighlight": "2년",
+    "trapCorrection": "수치·기한 '2년' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제14문 해설)",
     "streakCount": 0
   },
   {
@@ -1066,8 +1066,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제29조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제14문 해설)",
     "streakCount": 0
   },
   {
@@ -1078,11 +1078,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 15,
     "optionNumber": 1,
     "statement": "구역전기사업",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제31조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제15문 해설)",
     "streakCount": 0
   },
   {
@@ -1096,8 +1096,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제31조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제15문 해설)",
     "streakCount": 0
   },
   {
@@ -1108,11 +1108,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 15,
     "optionNumber": 3,
     "statement": "재생에너지전기공급사업",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제31조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제15문 해설)",
     "streakCount": 0
   },
   {
@@ -1123,11 +1123,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 15,
     "optionNumber": 4,
     "statement": "통합발전소사업",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제31조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제15문 해설)",
     "streakCount": 0
   },
   {
@@ -1138,11 +1138,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 15,
     "optionNumber": 5,
     "statement": "송전제약발생지역전기공급사업",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제31조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제15문 해설)",
     "streakCount": 0
   },
   {
@@ -1156,8 +1156,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "7일 이내",
-    "trapCorrection": "기한 '7일 이내' 규정의 함정에 주의하세요! (법정 요건 불일치)",
-    "citation": "공동주택관리법령 제33조",
+    "trapCorrection": "수치·기한 '7일 이내' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제16문 해설)",
     "streakCount": 0
   },
   {
@@ -1168,11 +1168,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 16,
     "optionNumber": 2,
     "statement": "책임보험은 그 만료일부터 10일 이내에 재가입해야 한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "10일 이내",
-    "trapCorrection": "법정 기한 '10일 이내' 규정에 정확히 부합합니다.",
-    "citation": "공동주택관리법령 제33조",
+    "trapCorrection": "수치·기한 '10일 이내' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제16문 해설)",
     "streakCount": 0
   },
   {
@@ -1186,8 +1186,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제33조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제16문 해설)",
     "streakCount": 0
   },
   {
@@ -1198,11 +1198,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 16,
     "optionNumber": 4,
     "statement": "부상자가 치료 중에 그 부상이 원인이 되어 사망한 경우 보상한도액은 1인당 5천만원이다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제33조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제16문 해설)",
     "streakCount": 0
   },
   {
@@ -1213,11 +1213,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 16,
     "optionNumber": 5,
     "statement": "사망에 따른 실손해액이 3천만원 미만인 경우 지급보험금액은 1인당 3천만원으로 한다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제33조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제16문 해설)",
     "streakCount": 0
   },
   {
@@ -1230,9 +1230,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "50층(지하층 제외)인 아파트등",
     "isCorrectStatement": true,
     "masteryTier": 4,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제35조",
+    "trapHighlight": "50층",
+    "trapCorrection": "법정 수치·기한 '50층' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제17문 해설)",
     "streakCount": 0
   },
   {
@@ -1243,11 +1243,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 17,
     "optionNumber": 2,
     "statement": "30층(지하층 포함)인 특정소방대상물(아파트등은 제외)",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 5,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제35조",
+    "trapHighlight": "30층",
+    "trapCorrection": "법정 수치·기한 '30층' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제17문 해설)",
     "streakCount": 0
   },
   {
@@ -1258,11 +1258,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 17,
     "optionNumber": 3,
     "statement": "지상으로부터 높이가 120미터인 특정소방대상물(아파트등은 제외)",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제35조",
+    "trapHighlight": "120미터",
+    "trapCorrection": "수치·기한 '120미터' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제17문 해설)",
     "streakCount": 0
   },
   {
@@ -1273,11 +1273,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 17,
     "optionNumber": 4,
     "statement": "하나의 건축물에 ｢영화 및 비디오물의 진흥에 관한 법률｣ 제2조제10호에 따른 영화 상영관이 5개인 특정소방대상물",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 2,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제35조",
+    "trapHighlight": "10호",
+    "trapCorrection": "법정 수치·기한 '10호' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제17문 해설)",
     "streakCount": 0
   },
   {
@@ -1290,9 +1290,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "｢초고층 및 지하연계 복합건축물 재난관리에 관한 특별법｣ 제2조제2호에 따른 지하연계 복합건축물에 해당하는 특정소방대상물",
     "isCorrectStatement": true,
     "masteryTier": 3,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제35조",
+    "trapHighlight": "2호",
+    "trapCorrection": "법정 수치·기한 '2호' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제17문 해설)",
     "streakCount": 0
   },
   {
@@ -1306,8 +1306,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제37조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제18문 해설)",
     "streakCount": 0
   },
   {
@@ -1321,8 +1321,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제37조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제18문 해설)",
     "streakCount": 0
   },
   {
@@ -1336,8 +1336,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제37조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제18문 해설)",
     "streakCount": 0
   },
   {
@@ -1348,11 +1348,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 18,
     "optionNumber": 4,
     "statement": "ㄴ, ㄷ, ㄹ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제37조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제18문 해설)",
     "streakCount": 0
   },
   {
@@ -1366,8 +1366,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제37조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제18문 해설)",
     "streakCount": 0
   },
   {
@@ -1378,11 +1378,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 19,
     "optionNumber": 1,
     "statement": "손실보상을 청구할 수 있는 권리는 손실이 발생한 날부터 3년간 행사하지 아니하면 시효의 완성으로 소멸한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제39조",
+    "trapHighlight": "3년",
+    "trapCorrection": "수치·기한 '3년' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제19문 해설)",
     "streakCount": 0
   },
   {
@@ -1396,8 +1396,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제39조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제19문 해설)",
     "streakCount": 0
   },
   {
@@ -1408,11 +1408,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 19,
     "optionNumber": 3,
     "statement": "보상금을 지급받을 자가 체신관서 또는 은행이 없는 지역에 거주하는 경우에는 그 보상금을 지급받을 자의 신청에 따라 보상금을 현금으로 지급할 수 있다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제39조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제19문 해설)",
     "streakCount": 0
   },
   {
@@ -1423,11 +1423,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 19,
     "optionNumber": 4,
     "statement": "손실을 입은 물건을 수리할 수 없는 때에는 손실보상청구 당시의 해당 물건의 교환 가액으로 보상한다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제39조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제19문 해설)",
     "streakCount": 0
   },
   {
@@ -1438,11 +1438,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 19,
     "optionNumber": 5,
     "statement": "예산 부족 등의 사유로 일시불로 지급할 수 없는 특별한 사정이 있는 경우에는 청구인의 동의가 없더라도 보상금을 분할하여 지급할 수 있다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제39조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제19문 해설)",
     "streakCount": 0
   },
   {
@@ -1453,11 +1453,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 20,
     "optionNumber": 1,
     "statement": "ㄱ",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제41조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제20문 해설)",
     "streakCount": 0
   },
   {
@@ -1468,11 +1468,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 20,
     "optionNumber": 2,
     "statement": "ㄱ, ㄴ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제41조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제20문 해설)",
     "streakCount": 0
   },
   {
@@ -1486,8 +1486,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제41조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제20문 해설)",
     "streakCount": 0
   },
   {
@@ -1498,11 +1498,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 20,
     "optionNumber": 4,
     "statement": "ㄴ, ㄷ, ㄹ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제41조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제20문 해설)",
     "streakCount": 0
   },
   {
@@ -1516,8 +1516,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제41조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제20문 해설)",
     "streakCount": 0
   },
   {
@@ -1528,11 +1528,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 21,
     "optionNumber": 1,
     "statement": "공작물의 설치",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제43조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제21문 해설)",
     "streakCount": 0
   },
   {
@@ -1546,8 +1546,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제43조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제21문 해설)",
     "streakCount": 0
   },
   {
@@ -1558,11 +1558,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 21,
     "optionNumber": 3,
     "statement": "토지의 분할",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제43조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제21문 해설)",
     "streakCount": 0
   },
   {
@@ -1576,8 +1576,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제43조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제21문 해설)",
     "streakCount": 0
   },
   {
@@ -1591,8 +1591,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제43조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제21문 해설)",
     "streakCount": 0
   },
   {
@@ -1603,11 +1603,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 22,
     "optionNumber": 1,
     "statement": "공용부분의 보존행위는 규약으로 달리 정하지 않는 한 각 공유자가 할 수 있다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제45조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제22문 해설)",
     "streakCount": 0
   },
   {
@@ -1621,8 +1621,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제45조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제22문 해설)",
     "streakCount": 0
   },
   {
@@ -1636,8 +1636,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제45조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제22문 해설)",
     "streakCount": 0
   },
   {
@@ -1651,8 +1651,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제45조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제22문 해설)",
     "streakCount": 0
   },
   {
@@ -1663,11 +1663,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 22,
     "optionNumber": 5,
     "statement": "공유자가 공용부분에 관하여 다른 공유자에 대하여 가지는 채권은 그 특별승계인에 대하여도 행사할 수 있다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제45조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제22문 해설)",
     "streakCount": 0
   },
   {
@@ -1681,8 +1681,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제47조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제23문 해설)",
     "streakCount": 0
   },
   {
@@ -1696,8 +1696,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "2년 이내",
-    "trapCorrection": "기한 '2년 이내' 규정의 함정에 주의하세요! (법정 요건 불일치)",
-    "citation": "공동주택관리법령 제47조",
+    "trapCorrection": "수치·기한 '2년 이내' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제23문 해설)",
     "streakCount": 0
   },
   {
@@ -1711,8 +1711,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제47조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제23문 해설)",
     "streakCount": 0
   },
   {
@@ -1723,11 +1723,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 23,
     "optionNumber": 4,
     "statement": "임차인은 임대료 증액 비율을 초과하여 증액된 임대료를 지급한 경우 초과 지급한 임대료 상당금액의 반환을 청구할 수 있다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제47조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제23문 해설)",
     "streakCount": 0
   },
   {
@@ -1741,8 +1741,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제47조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제23문 해설)",
     "streakCount": 0
   },
   {
@@ -1753,11 +1753,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 24,
     "optionNumber": 1,
     "statement": "｢개발이익환수에 관한 법률｣ 제5조에 따른 개발부담금",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제49조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제24문 해설)",
     "streakCount": 0
   },
   {
@@ -1771,8 +1771,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제49조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제24문 해설)",
     "streakCount": 0
   },
   {
@@ -1783,11 +1783,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 24,
     "optionNumber": 3,
     "statement": "｢대도시권 광역교통관리에 관한 특별법｣ 제11조에 따른 광역교통시설부담금",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제49조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제24문 해설)",
     "streakCount": 0
   },
   {
@@ -1798,11 +1798,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 24,
     "optionNumber": 4,
     "statement": "｢개발제한구역의 지정 및 관리에 관한 특별조치법｣ 제21조제1항에 따른 보전부담금",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제49조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제24문 해설)",
     "streakCount": 0
   },
   {
@@ -1813,11 +1813,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 24,
     "optionNumber": 5,
     "statement": "｢산지관리법｣ 제19조에 따른 대체산림자원조성비 공동주택관리실무(객관식)",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제49조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제24문 해설)",
     "streakCount": 0
   },
   {
@@ -1830,9 +1830,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "450세대로 구성된 공동주택",
     "isCorrectStatement": true,
     "masteryTier": 2,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제1조",
+    "trapHighlight": "450세대",
+    "trapCorrection": "법정 수치·기한 '450세대' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제25문 해설)",
     "streakCount": 0
   },
   {
@@ -1845,9 +1845,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "150세대로 구성된 승강기가 설치된 공동주택",
     "isCorrectStatement": false,
     "masteryTier": 3,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제1조",
+    "trapHighlight": "150세대",
+    "trapCorrection": "수치·기한 '150세대' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제25문 해설)",
     "streakCount": 0
   },
   {
@@ -1858,11 +1858,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 25,
     "optionNumber": 3,
     "statement": "200세대로 구성된 중앙집중식 난방방식의 공동주택",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제1조",
+    "trapHighlight": "200세대",
+    "trapCorrection": "수치·기한 '200세대' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제25문 해설)",
     "streakCount": 0
   },
   {
@@ -1875,9 +1875,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "100세대로 구성된 주택에서 전체 입주자등의 과반수가 동의하여 관리방법을 정하는 공동주택",
     "isCorrectStatement": false,
     "masteryTier": 5,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제1조",
+    "trapHighlight": "100세대",
+    "trapCorrection": "수치·기한 '100세대' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제25문 해설)",
     "streakCount": 0
   },
   {
@@ -1888,11 +1888,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 25,
     "optionNumber": 5,
     "statement": "｢건축법｣ 제11조에 따른 건축허가를 받아 주택 외의 시설과 주택을 동일 건축물로 건축한 건축물로서 주택이 200세대인 건축물",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제1조",
+    "trapHighlight": "200세대",
+    "trapCorrection": "수치·기한 '200세대' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제25문 해설)",
     "streakCount": 0
   },
   {
@@ -1906,8 +1906,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제3조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제26문 해설)",
     "streakCount": 0
   },
   {
@@ -1918,11 +1918,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 26,
     "optionNumber": 2,
     "statement": "촬영된 자료는 컴퓨터보안시스템을 설치하여 보관하되 30일 이상 보관할 수 없다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "30일 이상",
-    "trapCorrection": "법정 기한 '30일 이상' 규정에 정확히 부합합니다.",
-    "citation": "공동주택관리법령 제3조",
+    "trapCorrection": "수치·기한 '30일 이상' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제26문 해설)",
     "streakCount": 0
   },
   {
@@ -1936,8 +1936,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제3조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제26문 해설)",
     "streakCount": 0
   },
   {
@@ -1951,8 +1951,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제3조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제26문 해설)",
     "streakCount": 0
   },
   {
@@ -1966,8 +1966,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제3조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제26문 해설)",
     "streakCount": 0
   },
   {
@@ -1978,11 +1978,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 27,
     "optionNumber": 1,
     "statement": "가스설비공사",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제5조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제27문 해설)",
     "streakCount": 0
   },
   {
@@ -1993,11 +1993,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 27,
     "optionNumber": 2,
     "statement": "급수설비공사",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제5조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제27문 해설)",
     "streakCount": 0
   },
   {
@@ -2008,11 +2008,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 27,
     "optionNumber": 3,
     "statement": "조적공사 중 블록공사",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제5조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제27문 해설)",
     "streakCount": 0
   },
   {
@@ -2026,8 +2026,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제5조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제27문 해설)",
     "streakCount": 0
   },
   {
@@ -2038,11 +2038,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 27,
     "optionNumber": 5,
     "statement": "조경공사 중 조형물공사",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제5조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제27문 해설)",
     "streakCount": 0
   },
   {
@@ -2053,11 +2053,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 28,
     "optionNumber": 1,
     "statement": "공동주택의 관리방법에 관한 결정의 요구",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제7조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제28문 해설)",
     "streakCount": 0
   },
   {
@@ -2071,8 +2071,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제7조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제28문 해설)",
     "streakCount": 0
   },
   {
@@ -2083,11 +2083,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 28,
     "optionNumber": 3,
     "statement": "사업주체가 법인인 경우 법인의 명칭 및 소재지",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 2,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제7조",
+    "trapHighlight": "주체·관할권자",
+    "trapCorrection": "법령상 지정된 적법한 의무자·관할 행정주체입니다.",
+    "citation": "주택법·공동주택관리법령 (제28문 해설)",
     "streakCount": 0
   },
   {
@@ -2101,8 +2101,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제7조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제28문 해설)",
     "streakCount": 0
   },
   {
@@ -2116,8 +2116,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제7조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제28문 해설)",
     "streakCount": 0
   },
   {
@@ -2128,11 +2128,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 29,
     "optionNumber": 1,
     "statement": "甲이 공동주택의 관리사무소장으로 10년간 근무한 경우 하자심사ㆍ분쟁조정위원회의 위원으로 위촉될 수 있다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapHighlight": "10년",
+    "trapCorrection": "수치·기한 '10년' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제29문 해설)",
     "streakCount": 0
   },
   {
@@ -2145,9 +2145,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "400세대의 공동주택을 관리하는 주택관리업자는 甲을 해당 공동주택의 관리사무소장으로 배치할 수 있다.",
     "isCorrectStatement": false,
     "masteryTier": 2,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapHighlight": "400세대",
+    "trapCorrection": "수치·기한 '400세대' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제29문 해설)",
     "streakCount": 0
   },
   {
@@ -2161,8 +2161,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "1년 이내",
-    "trapCorrection": "법정 기한 '1년 이내' 규정에 정확히 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapCorrection": "법정 수치·기한 '1년 이내' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제29문 해설)",
     "streakCount": 0
   },
   {
@@ -2176,8 +2176,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제29문 해설)",
     "streakCount": 0
   },
   {
@@ -2188,11 +2188,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 29,
     "optionNumber": 5,
     "statement": "甲이 관리사무소장의 보조자로 배치받아 근무 중인 경우 甲은 매 3년마다 공동주택관 리에 관한 교육과 윤리교육을 받아야 한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 5,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapHighlight": "3년",
+    "trapCorrection": "수치·기한 '3년' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제29문 해설)",
     "streakCount": 0
   },
   {
@@ -2203,11 +2203,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 30,
     "optionNumber": 1,
     "statement": "공동으로 사용하는 수도료",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제11조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제30문 해설)",
     "streakCount": 0
   },
   {
@@ -2218,11 +2218,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 30,
     "optionNumber": 2,
     "statement": "개별 세대가 사용하는 전기료",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제11조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제30문 해설)",
     "streakCount": 0
   },
   {
@@ -2236,8 +2236,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제11조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제30문 해설)",
     "streakCount": 0
   },
   {
@@ -2248,11 +2248,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 30,
     "optionNumber": 4,
     "statement": "개별 세대를 대상으로 하는 보험료",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제11조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제30문 해설)",
     "streakCount": 0
   },
   {
@@ -2266,8 +2266,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제11조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제30문 해설)",
     "streakCount": 0
   },
   {
@@ -2278,11 +2278,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 31,
     "optionNumber": 1,
     "statement": "ㄱ, ㅁ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제13조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제31문 해설)",
     "streakCount": 0
   },
   {
@@ -2296,8 +2296,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제13조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제31문 해설)",
     "streakCount": 0
   },
   {
@@ -2308,11 +2308,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 31,
     "optionNumber": 3,
     "statement": "ㄱ, ㄷ, ㄹ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제13조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제31문 해설)",
     "streakCount": 0
   },
   {
@@ -2323,11 +2323,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 31,
     "optionNumber": 4,
     "statement": "ㄴ, ㄷ, ㅁ",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제13조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제31문 해설)",
     "streakCount": 0
   },
   {
@@ -2338,11 +2338,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 31,
     "optionNumber": 5,
     "statement": "ㄴ, ㄹ, ㅁ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제13조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제31문 해설)",
     "streakCount": 0
   },
   {
@@ -2355,9 +2355,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "임대사업자가 승강기가 설치된 150세대의 민간임대주택을 공급하는 공동주택단지에 입주하는 임차인은 임차인대표회의를 구성하여야 한다.",
     "isCorrectStatement": false,
     "masteryTier": 4,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제15조",
+    "trapHighlight": "150세대",
+    "trapCorrection": "수치·기한 '150세대' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제32문 해설)",
     "streakCount": 0
   },
   {
@@ -2371,8 +2371,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "60일 이내",
-    "trapCorrection": "법정 기한 '60일 이내' 규정에 정확히 부합합니다.",
-    "citation": "공동주택관리법령 제15조",
+    "trapCorrection": "법정 수치·기한 '60일 이내' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제32문 해설)",
     "streakCount": 0
   },
   {
@@ -2386,8 +2386,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제15조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제32문 해설)",
     "streakCount": 0
   },
   {
@@ -2398,11 +2398,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 32,
     "optionNumber": 4,
     "statement": "임차인대표회의를 구성하는 동별 대표자가 될 수 있는 사람은 해당 민간임대주택단지 에서 1년 이상 계속 거주하고 있는 임차인으로 한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "1년 이상",
-    "trapCorrection": "법정 기한 '1년 이상' 규정에 정확히 부합합니다.",
-    "citation": "공동주택관리법령 제15조",
+    "trapCorrection": "수치·기한 '1년 이상' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제32문 해설)",
     "streakCount": 0
   },
   {
@@ -2416,8 +2416,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제15조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제32문 해설)",
     "streakCount": 0
   },
   {
@@ -2428,11 +2428,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 33,
     "optionNumber": 1,
     "statement": "사용자는 근로계약 불이행에 대한 손해배상액을 예정하는 계약을 체결할 수 있다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제17조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제33문 해설)",
     "streakCount": 0
   },
   {
@@ -2445,9 +2445,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "사용자는 근로자 명부와 대통령령으로 정하는 근로계약에 관한 중요한 서류를 5년간 보존하여야 한다.",
     "isCorrectStatement": false,
     "masteryTier": 1,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제17조",
+    "trapHighlight": "5년",
+    "trapCorrection": "수치·기한 '5년' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제33문 해설)",
     "streakCount": 0
   },
   {
@@ -2458,11 +2458,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 33,
     "optionNumber": 3,
     "statement": "사용자의 부당해고에 대한 근로자의 구제신청은 부당해고가 있었던 날부터 3개월 이내 에 하여야 한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제17조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제33문 해설)",
     "streakCount": 0
   },
   {
@@ -2476,8 +2476,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "30일",
-    "trapCorrection": "기한 '30일' 규정의 함정에 주의하세요! (법정 요건 불일치)",
-    "citation": "공동주택관리법령 제17조",
+    "trapCorrection": "수치·기한 '30일' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제33문 해설)",
     "streakCount": 0
   },
   {
@@ -2491,8 +2491,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제17조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제33문 해설)",
     "streakCount": 0
   },
   {
@@ -2503,11 +2503,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 34,
     "optionNumber": 1,
     "statement": "훈련연장급여의 지급 기간은 2년을 한도로 한다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제19조",
+    "trapHighlight": "2년",
+    "trapCorrection": "법정 수치·기한 '2년' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제34문 해설)",
     "streakCount": 0
   },
   {
@@ -2521,8 +2521,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제19조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제34문 해설)",
     "streakCount": 0
   },
   {
@@ -2536,8 +2536,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제19조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제34문 해설)",
     "streakCount": 0
   },
   {
@@ -2551,8 +2551,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제19조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제34문 해설)",
     "streakCount": 0
   },
   {
@@ -2563,11 +2563,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 34,
     "optionNumber": 5,
     "statement": "특별연장급여를 지급받고 있는 수급자격자가 훈련연장급여를 지급받게 되면 특별연장 급여를 지급하지 아니한다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제19조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제34문 해설)",
     "streakCount": 0
   },
   {
@@ -2581,8 +2581,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제21조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제35문 해설)",
     "streakCount": 0
   },
   {
@@ -2596,8 +2596,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제21조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제35문 해설)",
     "streakCount": 0
   },
   {
@@ -2608,11 +2608,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 35,
     "optionNumber": 3,
     "statement": "ㄴ, ㄹ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제21조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제35문 해설)",
     "streakCount": 0
   },
   {
@@ -2626,8 +2626,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제21조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제35문 해설)",
     "streakCount": 0
   },
   {
@@ -2638,11 +2638,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 35,
     "optionNumber": 5,
     "statement": "ㄴ, ㄷ, ㄹ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제21조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제35문 해설)",
     "streakCount": 0
   },
   {
@@ -2656,8 +2656,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제23조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제36문 해설)",
     "streakCount": 0
   },
   {
@@ -2668,11 +2668,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 36,
     "optionNumber": 2,
     "statement": "직업재활급여",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제23조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제36문 해설)",
     "streakCount": 0
   },
   {
@@ -2686,8 +2686,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제23조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제36문 해설)",
     "streakCount": 0
   },
   {
@@ -2701,8 +2701,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제23조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제36문 해설)",
     "streakCount": 0
   },
   {
@@ -2716,8 +2716,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제23조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제36문 해설)",
     "streakCount": 0
   },
   {
@@ -2731,8 +2731,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제25조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제37문 해설)",
     "streakCount": 0
   },
   {
@@ -2746,8 +2746,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제25조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제37문 해설)",
     "streakCount": 0
   },
   {
@@ -2761,8 +2761,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제25조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제37문 해설)",
     "streakCount": 0
   },
   {
@@ -2773,11 +2773,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 37,
     "optionNumber": 4,
     "statement": "공동주택은 인동간격을 넓게 하여 저층부의 태양열 취득을 최대한 증대시킨다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제25조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제37문 해설)",
     "streakCount": 0
   },
   {
@@ -2791,8 +2791,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제25조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제37문 해설)",
     "streakCount": 0
   },
   {
@@ -2806,8 +2806,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제27조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제38문 해설)",
     "streakCount": 0
   },
   {
@@ -2818,11 +2818,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 38,
     "optionNumber": 2,
     "statement": "ㄱ, ㄹ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제27조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제38문 해설)",
     "streakCount": 0
   },
   {
@@ -2836,8 +2836,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제27조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제38문 해설)",
     "streakCount": 0
   },
   {
@@ -2848,11 +2848,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 38,
     "optionNumber": 4,
     "statement": "ㄱ, ㄴ, ㄷ",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제27조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제38문 해설)",
     "streakCount": 0
   },
   {
@@ -2863,11 +2863,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 38,
     "optionNumber": 5,
     "statement": "ㄴ, ㄷ, ㄹ",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제27조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제38문 해설)",
     "streakCount": 0
   },
   {
@@ -2880,9 +2880,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "급수펌프: 10년",
     "isCorrectStatement": true,
     "masteryTier": 1,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제29조",
+    "trapHighlight": "10년",
+    "trapCorrection": "법정 수치·기한 '10년' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제39문 해설)",
     "streakCount": 0
   },
   {
@@ -2893,11 +2893,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 39,
     "optionNumber": 2,
     "statement": "보일러: 15년",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 2,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제29조",
+    "trapHighlight": "15년",
+    "trapCorrection": "법정 수치·기한 '15년' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제39문 해설)",
     "streakCount": 0
   },
   {
@@ -2908,11 +2908,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 39,
     "optionNumber": 3,
     "statement": "소화펌프: 20년",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제29조",
+    "trapHighlight": "20년",
+    "trapCorrection": "수치·기한 '20년' 부분의 함정에 주의하세요! (법령 기준 불일치)",
+    "citation": "주택법·공동주택관리법령 (제39문 해설)",
     "streakCount": 0
   },
   {
@@ -2923,11 +2923,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 39,
     "optionNumber": 4,
     "statement": "급탕탱크: 25년",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 4,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제29조",
+    "trapHighlight": "25년",
+    "trapCorrection": "법정 수치·기한 '25년' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제39문 해설)",
     "streakCount": 0
   },
   {
@@ -2940,9 +2940,9 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "statement": "발전기: 30년",
     "isCorrectStatement": true,
     "masteryTier": 5,
-    "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제29조",
+    "trapHighlight": "30년",
+    "trapCorrection": "법정 수치·기한 '30년' 규정에 정확히 부합합니다.",
+    "citation": "주택법·공동주택관리법령 (제39문 해설)",
     "streakCount": 0
   },
   {
@@ -2956,8 +2956,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제31조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제40문 해설)",
     "streakCount": 0
   },
   {
@@ -2971,8 +2971,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제31조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제40문 해설)",
     "streakCount": 0
   },
   {
@@ -2983,11 +2983,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 40,
     "optionNumber": 3,
     "statement": "청정한 실내환경 확보를 위한 마감공사의 시공관리에 관한 사항",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제31조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제40문 해설)",
     "streakCount": 0
   },
   {
@@ -3001,8 +3001,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제31조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제40문 해설)",
     "streakCount": 0
   },
   {
@@ -3013,536 +3013,536 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 40,
     "optionNumber": 5,
     "statement": "환기설비 등을 이용하여 신선한 바깥의 공기를 실내에 공급하는 환기의 시행에 관한 사항",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제31조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제40문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q41-opt1",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 41,
     "optionNumber": 1,
     "statement": "1.95",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제33조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제41문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q41-opt2",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 41,
     "optionNumber": 2,
     "statement": "2.25",
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제33조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제41문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q41-opt3",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 41,
     "optionNumber": 3,
     "statement": "2.55",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제33조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제41문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q41-opt4",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 41,
     "optionNumber": 4,
     "statement": "2.85",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제33조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제41문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q41-opt5",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 41,
     "optionNumber": 5,
     "statement": "3.15",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제33조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제41문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q42-opt1",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 42,
     "optionNumber": 1,
     "statement": "중앙집중식 난방시설",
     "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제35조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제42문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q42-opt2",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 42,
     "optionNumber": 2,
     "statement": "지능형 홈네트워크 설비",
     "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제35조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제42문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q42-opt3",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 42,
     "optionNumber": 3,
     "statement": "소방시설 및 피난ㆍ방화시설",
     "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제35조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제42문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q42-opt4",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 42,
     "optionNumber": 4,
     "statement": "저수시설",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제35조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제42문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q42-opt5",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 42,
     "optionNumber": 5,
     "statement": "도시가스시설",
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제35조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제42문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q43-opt1",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 43,
     "optionNumber": 1,
     "statement": "증기난방은 잠열을 이용하므로 온수난방에 비하여 열의 운반능력이 크다.",
     "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제37조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제43문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q43-opt2",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 43,
     "optionNumber": 2,
     "statement": "증기난방에 사용되는 트랩으로 열동트랩, 버켓(bucket)트랩 등이 있다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제37조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제43문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q43-opt3",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 43,
     "optionNumber": 3,
     "statement": "방열기 밸브는 온수 또는 증기의 유량을 조절하는 것을 목적으로 한다.",
     "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제37조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제43문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q43-opt4",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 43,
     "optionNumber": 4,
     "statement": "증기트랩은 증기배관 내의 응축수를 보일러에 환수시키는 역할을 한다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제37조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제43문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q43-opt5",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 43,
     "optionNumber": 5,
     "statement": "증기난방 시 방열기의 표준방열량은 0.523 kW/m2이다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제37조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제43문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q44-opt1",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 44,
     "optionNumber": 1,
     "statement": "관 내 유속의 제곱에 비례한다.",
     "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제39조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제44문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q44-opt2",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 44,
     "optionNumber": 2,
     "statement": "관 내면의 마찰계수의 제곱에 비례한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제39조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제44문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q44-opt3",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 44,
     "optionNumber": 3,
     "statement": "관의 직경에 비례한다.",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제39조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제44문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q44-opt4",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 44,
     "optionNumber": 4,
     "statement": "관 내의 수압이 클수록 감소한다.",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제39조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제44문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q44-opt5",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 44,
     "optionNumber": 5,
     "statement": "관의 길이에 반비례한다.",
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제39조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제44문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q45-opt1",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 45,
     "optionNumber": 1,
     "statement": "납은 0.01 mg/L를 넘지 아니할 것",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제41조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제45문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q45-opt2",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 45,
     "optionNumber": 2,
     "statement": "수은은 0.001 mg/L를 넘지 아니할 것",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제41조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제45문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q45-opt3",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 45,
     "optionNumber": 3,
     "statement": "질산성 질소는 20 mg/L를 넘지 아니할 것",
     "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제41조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제45문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q45-opt4",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 45,
     "optionNumber": 4,
     "statement": "크롬은 0.05 mg/L를 넘지 아니할 것",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제41조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제45문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q45-opt5",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 45,
     "optionNumber": 5,
     "statement": "카드뮴은 0.005 mg/L를 넘지 아니할 것",
     "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제41조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제45문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q46-opt1",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 46,
     "optionNumber": 1,
     "statement": "종합운동장",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제43조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제46문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q46-opt2",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 46,
     "optionNumber": 2,
     "statement": "공동주택",
     "isCorrectStatement": true,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제43조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제46문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q46-opt3",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 46,
     "optionNumber": 3,
     "statement": "학교",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제43조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제46문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q46-opt4",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 46,
     "optionNumber": 4,
     "statement": "공공청사",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제43조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제46문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q46-opt5",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 46,
     "optionNumber": 5,
     "statement": "박물관",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제43조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제46문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q47-opt1",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 47,
     "optionNumber": 1,
     "statement": "ㄱ: A, ㄴ: B, ㄷ: C",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제45조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제47문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q47-opt2",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 47,
     "optionNumber": 2,
     "statement": "ㄱ: B, ㄴ: C, ㄷ: A",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제45조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "공동주택관리실무 기준 (제47문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q47-opt3",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 47,
     "optionNumber": 3,
     "statement": "ㄱ: B, ㄴ: C, ㄷ: K",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제45조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제47문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q47-opt4",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 47,
     "optionNumber": 4,
     "statement": "ㄱ: B, ㄴ: D, ㄷ: C",
     "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제45조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제47문 해설)",
     "streakCount": 0
   },
   {
     "id": "ox-2026-q47-opt5",
     "examYear": 2026,
     "examRound": 29,
-    "subject": "주택관리관계법규",
+    "subject": "공동주택관리실무",
     "questionNumber": 47,
     "optionNumber": 5,
     "statement": "ㄱ: C, ㄴ: B, ㄷ: K",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제45조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "공동주택관리실무 기준 (제47문 해설)",
     "streakCount": 0
   },
   {
@@ -3553,11 +3553,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 4,
     "optionNumber": 1,
     "statement": "ㄱ: 60, ㄴ: 2",
-    "isCorrectStatement": false,
+    "isCorrectStatement": true,
     "masteryTier": 1,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapCorrection": "현행 공동주택관리법령 및 주택법령 규정에 부합하는 옳은 설명입니다.",
+    "citation": "주택법·공동주택관리법령 (제4문 해설)",
     "streakCount": 0
   },
   {
@@ -3568,11 +3568,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 4,
     "optionNumber": 2,
     "statement": "ㄱ: 60, ㄴ: 4",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 2,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제4문 해설)",
     "streakCount": 0
   },
   {
@@ -3586,8 +3586,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 3,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제4문 해설)",
     "streakCount": 0
   },
   {
@@ -3598,11 +3598,11 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "questionNumber": 4,
     "optionNumber": 4,
     "statement": "ㄱ: 65, ㄴ: 4",
-    "isCorrectStatement": true,
+    "isCorrectStatement": false,
     "masteryTier": 4,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제4문 해설)",
     "streakCount": 0
   },
   {
@@ -3616,8 +3616,8 @@ export const REAL_2026_EXAM_OX_CARDS: OxCardItem[] = [
     "isCorrectStatement": false,
     "masteryTier": 5,
     "trapHighlight": "법정 요건",
-    "trapCorrection": "공동주택관리법령의 원칙 규정에 부합합니다.",
-    "citation": "공동주택관리법령 제9조",
+    "trapCorrection": "법정 요건·주체 또는 기한 기준과 일치하지 않는 함정 선지입니다.",
+    "citation": "주택법·공동주택관리법령 (제4문 해설)",
     "streakCount": 0
   }
 ];

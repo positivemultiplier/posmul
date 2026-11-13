@@ -7,12 +7,12 @@ import {
   X,
   Sparkles,
   ArrowRight,
-  Flame,
   Trophy,
-  Filter,
   Lock,
   KeyRound,
   Zap,
+  Camera,
+  Star,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { REAL_2026_EXAM_OX_CARDS } from "@/data/mock-exam-options";
@@ -22,6 +22,10 @@ import { getUserSerialStatusAction } from "@/app/actions/serial.actions";
 
 export default function OxSwipeStudyPage() {
   const [selectedTier, setSelectedTier] = useState<number>(1); // 기본 1회독(20% 뼈대 선지)
+  const [isScanWeakMode, setIsScanWeakMode] = useState(false); // 카메라 스캔 ★/X 약점 전용 모드
+  const [scannedWeakIds, setScannedWeakIds] = useState<string[]>([]);
+  const [scannedMarkMap, setScannedMarkMap] = useState<Record<string, "O" | "STAR" | "X">>({});
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answered, setAnswered] = useState<boolean | null>(null);
   const [userSelected, setUserSelected] = useState<boolean | null>(null);
@@ -44,6 +48,23 @@ export default function OxSwipeStudyPage() {
           console.error(e);
         }
       }
+
+      // 카메라 스캔에서 넘어온 ★/X 약점 선지 세션 확인
+      const scanSession = localStorage.getItem("housing_pro_scanned_ox_session");
+      if (scanSession) {
+        try {
+          const parsedSession = JSON.parse(scanSession);
+          if (Array.isArray(parsedSession.weakCardIds) && parsedSession.weakCardIds.length > 0) {
+            setScannedWeakIds(parsedSession.weakCardIds);
+            setScannedMarkMap(parsedSession.markMap || {});
+            if (window.location.search.includes("mode=scan")) {
+              setIsScanWeakMode(true);
+            }
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
     }
 
     getUserSerialStatusAction("user-demo-housing-1").then((res) => {
@@ -54,10 +75,13 @@ export default function OxSwipeStudyPage() {
   }, []);
 
   const activeCards = useMemo(() => {
+    if (isScanWeakMode && scannedWeakIds.length > 0) {
+      return REAL_2026_EXAM_OX_CARDS.filter((c) => scannedWeakIds.includes(c.id));
+    }
     return REAL_2026_EXAM_OX_CARDS.filter((c) => c.masteryTier <= selectedTier);
-  }, [selectedTier]);
+  }, [isScanWeakMode, scannedWeakIds, selectedTier]);
 
-  const isTierLocked = selectedTier > 1 && !isSerialVerified;
+  const isTierLocked = !isScanWeakMode && selectedTier > 1 && !isSerialVerified;
   const currentCard = activeCards[currentIndex];
   const isFinished = currentIndex >= activeCards.length;
 
@@ -69,6 +93,13 @@ export default function OxSwipeStudyPage() {
 
     if (isRight) {
       setEarnedPmpTotal((prev) => prev + 10);
+      // 스캔 약점 모드에서 맞힌 경우 ★/X -> O 승격 표시 업데이트
+      if (currentCard && scannedMarkMap[currentCard.id]) {
+        setScannedMarkMap((prev) => ({
+          ...prev,
+          [currentCard.id]: "O",
+        }));
+      }
     }
   };
 
@@ -79,11 +110,14 @@ export default function OxSwipeStudyPage() {
   };
 
   const handleTierChange = (tier: number) => {
+    setIsScanWeakMode(false);
     setSelectedTier(tier);
     setCurrentIndex(0);
     setAnswered(null);
     setUserSelected(null);
   };
+
+  const currentCardScanMark = currentCard ? scannedMarkMap[currentCard.id] : undefined;
 
   return (
     <MobileAppShell>
@@ -119,6 +153,29 @@ export default function OxSwipeStudyPage() {
           </div>
         </div>
 
+        {/* 카메라 스캔 ★/X 약점 선지가 존재할 때 전용 필터 배너 */}
+        {scannedWeakIds.length > 0 && (
+          <div className="flex items-center justify-between gap-2 bg-[#0E0E12] p-1.5 rounded-xl border border-[#FF5A36]/30">
+            <button
+              type="button"
+              onClick={() => {
+                setIsScanWeakMode(true);
+                setCurrentIndex(0);
+                setAnswered(null);
+                setUserSelected(null);
+              }}
+              className={`flex-1 py-1.5 px-2.5 rounded-lg text-[11px] font-black flex items-center justify-center gap-1.5 transition ${
+                isScanWeakMode
+                  ? "bg-gradient-to-r from-[#FF5A36] to-[#FF8008] text-white shadow"
+                  : "text-[#FF7A59] hover:text-white"
+              }`}
+            >
+              <Camera className="w-3.5 h-3.5" />
+              <span>📸 방금 스캔한 ★/X 약점 선지 ({scannedWeakIds.length}개)</span>
+            </button>
+          </div>
+        )}
+
         {/* 1~5회독 해금 필터 바 */}
         <div className="grid grid-cols-5 gap-1 pb-0.5">
           {[1, 2, 3, 4, 5].map((tier) => {
@@ -129,7 +186,7 @@ export default function OxSwipeStudyPage() {
                 type="button"
                 onClick={() => handleTierChange(tier)}
                 className={`py-1.5 rounded-xl text-[10.5px] font-black transition flex items-center justify-center gap-0.5 ${
-                  selectedTier === tier
+                  !isScanWeakMode && selectedTier === tier
                     ? "bg-[#FF5A36] text-white shadow-md"
                     : "bg-[#0E0E12] text-slate-400 hover:text-white border border-white/[0.05]"
                 }`}
@@ -203,12 +260,28 @@ export default function OxSwipeStudyPage() {
 
             {/* 화면 중앙 대형 플래시카드 */}
             <div className="flex-1 flex flex-col justify-center p-6 rounded-3xl bg-gradient-to-b from-[#1D1D24] to-[#16161C] border border-white/[0.08] shadow-2xl space-y-5 min-h-[260px]">
-              <div className="flex items-center justify-between">
-                <span className="px-2.5 py-0.5 rounded-full bg-[#FF5A36]/15 text-[#FF7A59] border border-[#FF5A36]/30 text-[10px] font-black">
-                  {currentCard.masteryTier}회독 ({currentCard.masteryTier * 20}%) · 선지 {currentCard.optionNumber}번
-                </span>
+              <div className="flex items-center justify-between flex-wrap gap-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#FF5A36]/15 text-[#FF7A59] border border-[#FF5A36]/30 text-[10px] font-black">
+                    {currentCard.masteryTier}회독 ({currentCard.masteryTier * 20}%) · 선지 {currentCard.optionNumber}번
+                  </span>
+
+                  {currentCardScanMark === "STAR" && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black flex items-center gap-0.5">
+                      <Star className="w-2.5 h-2.5 fill-amber-300" />
+                      <span>스캔 ★헷갈림</span>
+                    </span>
+                  )}
+
+                  {currentCardScanMark === "X" && (
+                    <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-black">
+                      스캔 X오답선지
+                    </span>
+                  )}
+                </div>
+
                 <span className="text-[10.5px] font-bold text-amber-300">
-                  정답 시 +10 PMP
+                  정답 시 O 승격 (+10 PMP)
                 </span>
               </div>
 
@@ -226,10 +299,12 @@ export default function OxSwipeStudyPage() {
                 >
                   <div className="flex items-center justify-between text-xs font-black">
                     <span>
-                      {answered ? "✅ 정답! (+10 PMP)" : "❌ 오답! 오답덱 자동 등록"}
+                      {answered
+                        ? "✅ 정답! ★/X ➔ O 완전 정복 (+10 PMP)"
+                        : "❌ 오답! X 약점덱 집중 복습 유지"}
                     </span>
                     <span className="font-mono">
-                      정답: {currentCard.isCorrectStatement ? "O" : "X"}
+                      실제 정답: {currentCard.isCorrectStatement ? "옳음(O)" : "틀림(X)"}
                     </span>
                   </div>
                   {currentCard.trapCorrection && (
@@ -287,7 +362,7 @@ export default function OxSwipeStudyPage() {
             </div>
             <div className="space-y-1">
               <h3 className="text-lg font-black text-white">
-                {selectedTier}회독 복습 완료!
+                {isScanWeakMode ? "스캔 ★/X 약점 선지 정복 완료!" : `${selectedTier}회독 복습 완료!`}
               </h3>
               <p className="text-xs text-slate-400">
                 총 {activeCards.length}개 선지 점검 · +{earnedPmpTotal} PMP 획득
@@ -306,10 +381,10 @@ export default function OxSwipeStudyPage() {
                 다시 풀기
               </button>
               <Link
-                href="/"
+                href="/scan"
                 className="py-3 rounded-xl bg-[#FF5A36] text-white font-black text-xs flex items-center justify-center"
               >
-                타이머 홈으로
+                카메라 스캐너로
               </Link>
             </div>
           </div>
