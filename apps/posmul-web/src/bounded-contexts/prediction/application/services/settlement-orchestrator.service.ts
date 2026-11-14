@@ -29,6 +29,7 @@ import { FootballDataOracleAdapter } from "../../infrastructure/oracle/football-
 import { KContentOracleAdapter } from "../../infrastructure/oracle/kcontent.adapter";
 import { KobisOracleAdapter } from "../../infrastructure/oracle/kobis.adapter";
 import { KosisOracleAdapter } from "../../infrastructure/oracle/kosis.adapter";
+import { KrPublicDataOracleAdapter } from "../../infrastructure/oracle/kr-public-data.adapter";
 import { RssAiOracleAdapter } from "../../infrastructure/oracle/rss-ai.adapter";
 
 const SYSTEM_SETTLEMENT_ADMIN_ID =
@@ -63,6 +64,7 @@ export class SettlementOrchestratorService {
       new AlphaVantageOracleAdapter(),
       new FmpOracleAdapter(),
       new RssAiOracleAdapter(),
+      new KrPublicDataOracleAdapter(),
     ];
   }
 

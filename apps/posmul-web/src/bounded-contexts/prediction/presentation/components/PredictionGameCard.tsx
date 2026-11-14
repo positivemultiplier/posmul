@@ -24,6 +24,8 @@ export interface PredictionGameCardProps {
     category?: string;
     subcategory?: string;
     dataSource?: string;
+    regionLevel?: "NATION" | "REGION" | "LOCAL" | "DONG";
+    regionName?: string;
     predictionType: PredictionType;
     options: Array<{
       id: string;
@@ -286,6 +288,62 @@ export function resolveGameVisualMeta(
       sourceLabel: isMovie ? "KOBIS 영화진흥위" : isMusic ? "써클·멜론차트" : "닐슨코리아 시청률",
       visualMode: "list",
       accentHex: "#d946ef",
+    };
+  }
+
+  if (t.includes("우리동네")) {
+    return {
+      symbol: "LOCAL",
+      subLabel: "동네",
+      bgClass: "bg-gradient-to-br from-emerald-500 to-teal-700",
+      textClass: "text-white font-black text-[10px]",
+      borderClass: "border-emerald-400/40",
+      categoryLabel: "우리동네 날씨",
+      sourceLabel: "기상청 동네예보",
+      visualMode: "gauge",
+      accentHex: "#10b981",
+    };
+  }
+
+  if (t.includes("우리구")) {
+    return {
+      symbol: "GU",
+      subLabel: "우리구",
+      bgClass: "bg-gradient-to-br from-sky-500 to-indigo-700",
+      textClass: "text-white font-black text-xs",
+      borderClass: "border-sky-400/40",
+      categoryLabel: "우리구 활력",
+      sourceLabel: "SGIS · 지자체",
+      visualMode: "list",
+      accentHex: "#38bdf8",
+    };
+  }
+
+  if (t.includes("우리시") || t.includes("맑은하늘")) {
+    return {
+      symbol: "SKY",
+      subLabel: "대기질",
+      bgClass: "bg-gradient-to-br from-cyan-500 to-sky-700",
+      textClass: "text-white font-black text-[11px]",
+      borderClass: "border-cyan-400/40",
+      categoryLabel: "우리시 맑은하늘",
+      sourceLabel: "에어코리아",
+      visualMode: "gauge",
+      accentHex: "#06b6d4",
+    };
+  }
+
+  if (t.includes("생활물가") || t.includes("장바구니")) {
+    return {
+      symbol: "PRICE",
+      subLabel: "안정",
+      bgClass: "bg-gradient-to-br from-amber-500 to-orange-600",
+      textClass: "text-white font-black text-[9.5px]",
+      borderClass: "border-amber-400/40",
+      categoryLabel: "전국 생활물가",
+      sourceLabel: "오피넷 · 참가격",
+      visualMode: "sparkline",
+      accentHex: "#f59e0b",
     };
   }
 
@@ -565,9 +623,20 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
 
           {/* 카테고리 & 출처 & 기간 (세로 깨짐 방지: 가로 폭 넉넉히 확보) */}
           <div className="flex flex-col min-w-0">
-            <span className="text-[12px] font-black text-sky-400 truncate leading-tight">
-              {prefixTag || meta.categoryLabel}
-            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[12px] font-black text-sky-400 truncate leading-tight">
+                {prefixTag || meta.categoryLabel}
+              </span>
+              {game.regionLevel && game.regionLevel !== "NATION" && (
+                <span className="shrink-0 px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/30 text-[9px] font-extrabold text-emerald-300 leading-none">
+                  {game.regionLevel === "DONG"
+                    ? "🏡 우리동네"
+                    : game.regionLevel === "LOCAL"
+                      ? `📍 ${game.regionName || "우리구"}`
+                      : `🏙️ ${game.regionName || "시·도"}`}
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-1 text-[10.5px] text-slate-400 mt-0.5 whitespace-nowrap">
               <span className="truncate max-w-[95px] text-slate-400">{meta.sourceLabel}</span>
               <span className="text-slate-600">·</span>

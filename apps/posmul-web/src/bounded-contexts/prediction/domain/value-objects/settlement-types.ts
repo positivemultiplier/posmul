@@ -14,7 +14,8 @@ export type SettlementSourceType =
   | "kobis"
   | "kcontent"
   | "coingecko"
-  | "rss_ai";
+  | "rss_ai"
+  | "kr_public";
 
 export type SettlementMethod = "auto" | "semi_auto" | "manual";
 

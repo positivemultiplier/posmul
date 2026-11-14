@@ -39,6 +39,29 @@ const BANNED_VAGUE_TITLE_PHRASES = [
   "시청률 1위 방송사는?",
 ];
 
+/**
+ * 지역 낙인·인구소멸 공포 등 특정 지역에 부정적 감정을 유발하는 표현 차단 목록
+ * (Positive Multiplier Regional Guardrail)
+ */
+const BANNED_REGIONAL_STIGMA_PHRASES = [
+  "인구소멸",
+  "소멸위험",
+  "소멸 고위험",
+  "인구 유출 1위",
+  "인구감소 1위",
+  "폐업률 1위",
+  "폐업 속출",
+  "유령도시",
+  "슬럼화",
+  "미세먼지 최악",
+  "범죄율 1위",
+];
+
+function findRegionalStigmaPhrase(text: string): string | undefined {
+  const normalized = text.replace(/\s+/g, " ");
+  return BANNED_REGIONAL_STIGMA_PHRASES.find((phrase) => normalized.includes(phrase));
+}
+
 const DOMAIN_CROSSCHECK_RULES: Array<{
   name: string;
   sourceRegex: RegExp;
@@ -111,6 +134,13 @@ function validateTitleAndSummary(title: string, summary: string): QualityGateRes
   if (vagueMatch) {
     return { ok: false, reason: `Vague template phrase in title: ${vagueMatch}` };
   }
+  const stigmaMatch = findRegionalStigmaPhrase(`${title} ${summary}`);
+  if (stigmaMatch) {
+    return {
+      ok: false,
+      reason: `Regional stigma/fear phrase rejected (Positive Multiplier guardrail): ${stigmaMatch}`,
+    };
+  }
   if (summary.length < 30) {
     return { ok: false, reason: `Summary too short (${summary.length} chars)` };
   }
@@ -144,6 +174,13 @@ function validatePredictionOptions(
     );
     if (banned) {
       return { ok: false, reason: `Abstract placeholder option rejected: ${opt}` };
+    }
+    const optStigma = findRegionalStigmaPhrase(opt);
+    if (optStigma) {
+      return {
+        ok: false,
+        reason: `Regional stigma/fear phrase rejected (Positive Multiplier guardrail): ${optStigma}`,
+      };
     }
   }
   if ((resolutionCriteria ?? "").trim().length < 8) {

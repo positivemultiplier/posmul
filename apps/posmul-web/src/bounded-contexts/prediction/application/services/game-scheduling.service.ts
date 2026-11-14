@@ -67,6 +67,8 @@ function resolveTemplateSubcategory(template: ScheduledGameTemplate): string | n
       if (sub.startsWith("music")) return "music";
       return null;
     }
+    case "kr_public":
+      return String(template.sourceConfig?.subCategory ?? "local");
     default: {
       if (template.category === "sports") {
         if (template.id.includes("kbo") || template.id.includes("baseball")) return "baseball";
@@ -107,6 +109,12 @@ export interface ScheduledGameTemplate {
   sourceType?: SettlementSourceType;
   /** 오라클 판정 설정 */
   sourceConfig?: Record<string, unknown>;
+  /** 4단계 공간 계층 (나라 NATION / 시·도 REGION / 구·군 LOCAL / 우리동네 DONG) */
+  regionLevel?: "NATION" | "REGION" | "LOCAL" | "DONG";
+  /** 법정동/행정동 표준코드 */
+  regionCode?: string;
+  /** 사용자 표시용 지역명 */
+  regionName?: string;
 }
 
 export interface GameSchedulingConfig {
@@ -193,6 +201,7 @@ export class GameSchedulingService {
     this.registerSportsTemplates(systemUserId);
     this.registerPoliticsAndInvestTemplates(systemUserId);
     this.registerRankingTemplates(systemUserId);
+    this.registerRegionalVitalityTemplates(systemUserId);
   }
 
   /**
@@ -1009,6 +1018,163 @@ export class GameSchedulingService {
     });
   }
 
+  /**
+   * 9. 동네·구·시·나라 4단계 공간 계층 기반 긍정 상생(Positive Multiplier) 공공데이터 템플릿
+   */
+  private registerRegionalVitalityTemplates(systemUserId: UserId): void {
+    // 9-1. [우리동네 DONG] 주말 나들이 쾌청 날씨 달성 예측
+    this.templates.push({
+      id: "local-dong-weekend-weather",
+      title: "[우리동네 날씨] 이번 주말 우리 동네(첨단·성수) 나들이 쾌청 기온(12~26℃·무강수) 달성할까?",
+      description:
+        "이번 주말 우리 동네 야외 나들이와 지역 상권 나들이에 쾌적한 기온(12~26℃) 및 강수량 5mm 미만 쾌청 날씨가 달성될지 예측해보세요.\n📅 마감: 금요일 21:00 | 🌤️ 정산: 기상청 동네예보(KMA) 공식 관측치",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "yes", label: "쾌청 나들이 달성 (Yes)", description: "낮 최고 12~26℃ · 강수 5mm 미만" },
+        { id: "no", label: "선선·우산 준비 (No)", description: "기준 기온 외 또는 비 소식" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(2, 10, 83),
+      duration: 83,
+      settlementDelay: 36,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 30000 as PmpAmount,
+      maxParticipants: 3000,
+      creatorId: systemUserId,
+      category: "weather",
+      importance: "high",
+      recurrence: "weekly",
+      isActive: true,
+      regionLevel: "DONG",
+      regionCode: "29200635",
+      regionName: "우리동네 (첨단·성수)",
+      sourceType: "kr_public",
+      sourceConfig: {
+        subType: "kma_village_weather",
+        subCategory: "local-weather",
+        regionLevel: "DONG",
+        regionCode: "29200635",
+        regionName: "우리동네 (첨단·성수)",
+        lat: 35.216,
+        lon: 126.845,
+        minTemp: 12,
+        maxTemp: 27,
+        maxPrecipitationMm: 5,
+      },
+    });
+
+    // 9-2. [우리구 LOCAL] 광주 5개 자치구 활력 상승률 1위 응원 랭킹
+    this.templates.push({
+      id: "local-gu-vitality-gwangju-ranking",
+      title: "[우리구 활력 응원] 이번 달 광주 5개 자치구 중 문화·창업·생활인구 활력 지수 상승률 1위 구는?",
+      description:
+        "광주 5개 자치구의 문화행사 방문, 청년 창업, 생활인구 유입 등 긍정 활력 지표가 가장 크게 도약할 자치구를 응원하며 예측해보세요.\n📅 마감: 월말 18:00 | 📊 정산: 통계청 SGIS·KOSIS 및 지자체 공식 활력 지표",
+      predictionType: PredictionType.RANKING,
+      options: [
+        { id: "29110", label: "동구 (충장·문화예술 활력)", description: "ACC·충장로 도심 문화 상권 반등" },
+        { id: "29140", label: "서구 (상무·비즈니스 활력)", description: "상무지구 비즈니스·생활인구 성장" },
+        { id: "29155", label: "남구 (양림·교육문화 활력)", description: "양림동 역사문화·교육 커뮤니티" },
+        { id: "29170", label: "북구 (전대·청년창업 활력)", description: "대학가·AI 창업 밸리 청년 활력" },
+        { id: "29200", label: "광산구 (첨단·미래산단 활력)", description: "첨단산단·수완 젊은 생활인구 증가" },
+      ],
+      scheduledTime: this.getNextMonthlySchedule(1, 9, 480),
+      duration: 480,
+      settlementDelay: 48,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 4000,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "high",
+      recurrence: "monthly",
+      isActive: true,
+      regionLevel: "LOCAL",
+      regionCode: "29000",
+      regionName: "광주 5개 구",
+      sourceType: "kr_public",
+      sourceConfig: {
+        subType: "local_vitality_ranking",
+        subCategory: "local-vitality",
+        regionLevel: "LOCAL",
+        regionCode: "29000",
+        regionName: "광주 5개 구",
+      },
+    });
+
+    // 9-3. [우리시 REGION] 주간 맑은하늘 쾌적 대기질 달성 예측
+    this.templates.push({
+      id: "local-city-clean-air-week",
+      title: "[우리시 맑은하늘] 이번 주 우리 시 초미세먼지(PM2.5) '좋음·보통' 쾌적 대기질 기준(35㎍/㎥ 이하) 달성할까?",
+      description:
+        "대기환경공단 에어코리아 기준으로 이번 주 우리 시 초미세먼지(PM2.5)가 쾌적 기준(35㎍/㎥ 이하)을 유지해 맑은 하늘 주간을 달성할지 예측하세요.\n📅 마감: 금요일 18:00 | 🌿 정산: 에어코리아·대기질 공식 측정치",
+      predictionType: PredictionType.BINARY,
+      options: [
+        { id: "yes", label: "맑은하늘 쾌적 달성 (Yes)", description: "PM2.5 35㎍/㎥ 이하 유지" },
+        { id: "no", label: "대기정체·관리 필요 (No)", description: "일시적 35㎍/㎥ 초과 발생" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(1, 9, 105),
+      duration: 105,
+      settlementDelay: 24,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 30000 as PmpAmount,
+      maxParticipants: 3000,
+      creatorId: systemUserId,
+      category: "weather",
+      importance: "medium",
+      recurrence: "weekly",
+      isActive: true,
+      regionLevel: "REGION",
+      regionCode: "29000",
+      regionName: "광역시·도",
+      sourceType: "kr_public",
+      sourceConfig: {
+        subType: "airkorea_clean_air",
+        subCategory: "clean-air",
+        regionLevel: "REGION",
+        regionCode: "29000",
+        regionName: "광역시·도",
+        lat: 35.1595,
+        lon: 126.8526,
+        pm25GoodThreshold: 35,
+      },
+    });
+
+    // 9-4. [전국 NATION] 주간 생활물가·유가 안정세 달성 예측
+    this.templates.push({
+      id: "national-living-price-stability",
+      title: "[전국 생활물가] 이번 주 전국 알뜰주유·장바구니 체감 물가 안정세(인하·보합) 달성할까?",
+      description:
+        "한국석유공사 오피넷 전국 평균 유가 및 소비자원 생필품(참가격)·농산물 유통지표가 이번 주 서민 물가 안정세(전주 대비 하락 또는 ±0.5% 이내 보합)를 기록할지 예측하세요.\n📅 마감: 금요일 17:00 | 🛒 정산: 오피넷·소비자원·KAMIS 공식 집계",
+      predictionType: PredictionType.WIN_DRAW_LOSE,
+      options: [
+        { id: "down", label: "인하 안정 (소비자 혜택)", description: "전주 대비 -0.1% 이상 하락" },
+        { id: "flat", label: "보합 유지 (±0.5% 이내)", description: "안정적 가격 변동 범위 유지" },
+        { id: "up", label: "일시 상승 (할인지원 필요)", description: "+0.5% 초과 상승" },
+      ],
+      scheduledTime: this.getNextWeeklySchedule(1, 10, 103),
+      duration: 103,
+      settlementDelay: 24,
+      minimumStake: 500 as PmpAmount,
+      maximumStake: 50000 as PmpAmount,
+      maxParticipants: 3500,
+      creatorId: systemUserId,
+      category: "economy",
+      importance: "high",
+      recurrence: "weekly",
+      isActive: true,
+      regionLevel: "NATION",
+      regionCode: "KR",
+      regionName: "대한민국",
+      sourceType: "kr_public",
+      sourceConfig: {
+        subType: "living_price_stability",
+        subCategory: "living-price",
+        regionLevel: "NATION",
+        regionCode: "KR",
+        regionName: "대한민국",
+      },
+    });
+  }
+
   /** KST 기준 현재 연·월·일·요일·시 추출 (UTC/로컬 타임존 무관) */
   private getKstNowParts() {
     const kstNow = new Date(Date.now() + KST_OFFSET_MINUTES * 60 * 1000);
@@ -1352,6 +1518,9 @@ export class GameSchedulingService {
             maxParticipants: template.maxParticipants,
             recurrence: template.recurrence ?? "once",
             importance: template.importance,
+            regionLevel: template.regionLevel ?? "NATION",
+            regionCode: template.regionCode ?? "KR",
+            regionName: template.regionName ?? "대한민국",
           },
         })
         .select("game_id")

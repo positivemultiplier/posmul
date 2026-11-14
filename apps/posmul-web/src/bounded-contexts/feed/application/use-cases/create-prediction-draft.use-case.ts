@@ -67,6 +67,7 @@ const VALID_ORACLE_TYPES = new Set<SettlementSourceType>([
   "fmp",
   "alpha-vantage",
   "football_data",
+  "kr_public",
   "manual",
 ]);
 

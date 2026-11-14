@@ -35,6 +35,8 @@ export interface PredictionGame {
   category?: string;
   subcategory?: string;
   dataSource?: string;
+  regionLevel?: "NATION" | "REGION" | "LOCAL" | "DONG";
+  regionName?: string;
   options: Array<{
     id: string;
     text: string;
@@ -92,6 +94,14 @@ const CATEGORY_CHIPS: CategoryChipItem[] = [
   { id: "POLITICS", label: "정치 · 입법", aliases: ["POLITICS"] },
   { id: "SPORTS", label: "스포츠", aliases: ["SPORTS"] },
   { id: "INVEST", label: "소비 · 트렌드", aliases: ["INVEST", "CONSUME"] },
+];
+
+const REGION_LEVEL_CHIPS: Array<{ id: string; label: string }> = [
+  { id: "ALL", label: "🌐 전체 스케일" },
+  { id: "NATION", label: "🇰🇷 나라 (전국)" },
+  { id: "REGION", label: "🏙️ 시·도 (광역)" },
+  { id: "LOCAL", label: "📍 구·군 (우리구)" },
+  { id: "DONG", label: "🏡 동·읍·면 (우리동네)" },
 ];
 
 const matchesCategory = (gameCategory: string | undefined, chipId: string): boolean => {
@@ -173,6 +183,7 @@ export function ClientPredictionGamesGrid({
   extraFilters,
 }: ClientPredictionGamesGridProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
+  const [selectedRegionLevel, setSelectedRegionLevel] = useState<string>("ALL");
   const [sortBy, setSortBy] = useState<SortOption>(initialSort);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [spotlightIndex, setSpotlightIndex] = useState<number>(0);
@@ -187,20 +198,25 @@ export function ClientPredictionGamesGrid({
     return userPredictions.find((p) => p.game_id === gameId && p.is_active);
   };
 
-  // 1단계: 카테고리 + 검색어 필터링
+  // 1단계: 카테고리 + 공간 계층 + 검색어 필터링
   const filteredGames = useMemo(() => {
     return games.filter((game) => {
       const catMatch = !showCategoryFilter || matchesCategory(game.category, selectedCategory);
       if (!catMatch) return false;
+      const regionMatch =
+        selectedRegionLevel === "ALL" ||
+        (game.regionLevel || "NATION") === selectedRegionLevel;
+      if (!regionMatch) return false;
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
         game.title.toLowerCase().includes(q) ||
         game.description.toLowerCase().includes(q) ||
-        (game.subcategory || "").toLowerCase().includes(q)
+        (game.subcategory || "").toLowerCase().includes(q) ||
+        (game.regionName || "").toLowerCase().includes(q)
       );
     });
-  }, [games, showCategoryFilter, selectedCategory, searchQuery]);
+  }, [games, showCategoryFilter, selectedCategory, selectedRegionLevel, searchQuery]);
 
   // 2단계: 정렬 적용
   const sortedGames = useMemo(() => {
@@ -875,6 +891,42 @@ export function ClientPredictionGamesGrid({
               <span>예측 만들기</span>
             </Link>
           </div>
+        </div>
+
+        {/* 4단계 공간 스케일 필터 바 (나라 · 시·도 · 우리구 · 우리동네) */}
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
+          {REGION_LEVEL_CHIPS.map((chip) => {
+            const count =
+              chip.id === "ALL"
+                ? games.length
+                : games.filter((g) => (g.regionLevel || "NATION") === chip.id).length;
+            const isSelected = selectedRegionLevel === chip.id;
+
+            return (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={() => {
+                  setSelectedRegionLevel(chip.id);
+                  setSpotlightIndex(0);
+                }}
+                className={`px-3 py-1 rounded-full text-[11.5px] font-bold whitespace-nowrap transition-all duration-150 flex items-center gap-1.5 shrink-0 ${
+                  isSelected
+                    ? "bg-sky-500/20 text-sky-300 border border-sky-400/50 shadow-sm"
+                    : "bg-[#121621] text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-white/[0.07]"
+                }`}
+              >
+                <span>{chip.label}</span>
+                <span
+                  className={`text-[10px] font-extrabold ${
+                    isSelected ? "text-sky-200" : "text-slate-500"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         {/* 카테고리 칩 바 (All markets 필터 표시 시) */}

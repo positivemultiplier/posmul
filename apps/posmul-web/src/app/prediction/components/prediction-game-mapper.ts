@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { GameStatus, PredictionType } from "../../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 import { getKstHourStartIso } from "../../../shared/utils/time/getKstHourStartIso";
 
+export type RegionHierarchyLevel = "NATION" | "REGION" | "LOCAL" | "DONG";
+
 export type PredictionGameCardModel = {
   id: string;
   slug: string;
@@ -11,6 +13,8 @@ export type PredictionGameCardModel = {
   category?: string;
   subcategory?: string;
   dataSource?: string;
+  regionLevel?: RegionHierarchyLevel;
+  regionName?: string;
   predictionType: PredictionType;
   options: Array<{
     id: string;
@@ -52,6 +56,7 @@ export type PredictionGameRow = {
   status: unknown;
   difficulty: unknown;
   created_at: string;
+  metadata?: unknown;
   allocated_prize_pool?: unknown;
   total_participants_count?: unknown;
   total_stake_amount?: unknown;
@@ -385,6 +390,61 @@ export const mapGameOptions = (
   ];
 };
 
+const VALID_REGION_LEVELS = new Set<RegionHierarchyLevel>([
+  "NATION",
+  "REGION",
+  "LOCAL",
+  "DONG",
+]);
+
+function resolveRegionMetadata(row: PredictionGameRow): {
+  regionLevel: RegionHierarchyLevel;
+  regionName: string;
+} {
+  let metaObj = row.metadata;
+  if (typeof metaObj === "string") {
+    try {
+      metaObj = JSON.parse(metaObj);
+    } catch {
+      metaObj = null;
+    }
+  }
+  if (isRecord(metaObj)) {
+    const rawLevel =
+      typeof metaObj.regionLevel === "string"
+        ? metaObj.regionLevel.trim().toUpperCase()
+        : "";
+    if (VALID_REGION_LEVELS.has(rawLevel as RegionHierarchyLevel)) {
+      const regionName =
+        typeof metaObj.regionName === "string" && metaObj.regionName.trim()
+          ? metaObj.regionName.trim()
+          : rawLevel === "DONG"
+            ? "우리동네"
+            : rawLevel === "LOCAL"
+              ? "우리구"
+              : rawLevel === "REGION"
+                ? "시·도"
+                : "대한민국";
+      return {
+        regionLevel: rawLevel as RegionHierarchyLevel,
+        regionName,
+      };
+    }
+  }
+
+  const title = row.title || "";
+  if (title.includes("[우리동네")) {
+    return { regionLevel: "DONG", regionName: "우리동네" };
+  }
+  if (title.includes("[우리구")) {
+    return { regionLevel: "LOCAL", regionName: "우리구" };
+  }
+  if (title.includes("[우리시")) {
+    return { regionLevel: "REGION", regionName: "시·도" };
+  }
+  return { regionLevel: "NATION", regionName: "대한민국" };
+}
+
 export const mapPredictionGameRowToCardModel = (
   row: PredictionGameRow
 ): PredictionGameCardModel => {
@@ -412,6 +472,7 @@ export const mapPredictionGameRowToCardModel = (
   const fallbackPool = Math.round(450 * importance + (hashGameId(row.game_id) % 500));
 
   const options = mapGameOptions(row.game_options, row.game_id);
+  const { regionLevel, regionName } = resolveRegionMetadata(row);
 
   return {
     id: row.game_id,
@@ -422,6 +483,8 @@ export const mapPredictionGameRowToCardModel = (
     category: typeof row.category === "string" ? row.category : undefined,
     subcategory: typeof row.subcategory === "string" ? row.subcategory : undefined,
     dataSource: typeof row.data_source === "string" ? row.data_source : undefined,
+    regionLevel,
+    regionName,
     predictionType: mapDbPredictionType(row.prediction_type, options.length),
     options,
     startTime: row.registration_start ?? defaultStart,

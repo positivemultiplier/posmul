@@ -429,6 +429,8 @@ export async function POST(request: NextRequest) {
         Array.isArray(body.templateIds) && body.templateIds.length > 0
           ? body.templateIds
           : [
+              "local-dong-weekend-weather",
+              "local-gu-vitality-gwangju-ranking",
               "us-nasdaq-daily",
               "ranking-global-asset-weekly",
               "ecos-bok-base-rate",
