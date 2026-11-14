@@ -15,6 +15,7 @@ import {
   ContentClassification,
   ProcessStatus,
 } from "../../domain/value-objects/feed-types";
+import { schedulerConfigService } from "@/bounded-contexts/prediction/application/services/scheduler-config.service";
 
 const MAX_ITEMS_PER_SOURCE = 12;
 const SOURCE_BATCH_SIZE = 4;
@@ -66,7 +67,11 @@ export class FetchRssItemsUseCase {
         }'`
       );
 
+      const schedulerConfig = await schedulerConfigService.getSchedulerConfig();
+      const pendingTtlHours = Math.max(12, schedulerConfig.feed_pending_ttl_hours || 48);
+      const staleCutoffMs = Date.now() - pendingTtlHours * 60 * 60 * 1000;
       let totalFetched = 0;
+      let skippedStaleCount = 0;
 
       for (let i = 0; i < sources.length; i += SOURCE_BATCH_SIZE) {
         const batch = sources.slice(i, i + SOURCE_BATCH_SIZE);
@@ -100,6 +105,14 @@ export class FetchRssItemsUseCase {
 
               let savedForSource = 0;
               for (const item of recentItems) {
+                const rawPubDate = item.isoDate || item.pubDate;
+                if (rawPubDate) {
+                  const pubMs = new Date(String(rawPubDate)).getTime();
+                  if (!Number.isNaN(pubMs) && pubMs < staleCutoffMs) {
+                    skippedStaleCount++;
+                    continue;
+                  }
+                }
                 const link = String(item.link);
                 if (existingLinks.has(link)) continue;
                 existingLinks.add(link);

@@ -6,6 +6,7 @@ import {
   getFetchRssItemsUseCase,
 } from "@/bounded-contexts/feed/di-container";
 import { getMasterScheduler } from "@/bounded-contexts/prediction/application/services/master-game-scheduler.service";
+import { feedLifecycleService } from "@/bounded-contexts/feed/application/services/feed-lifecycle.service";
 import {
   schedulerConfigService,
   type PredictionSchedulerConfig,
@@ -48,6 +49,7 @@ interface SchedulerConfigPostBody {
   forceWithBets?: boolean;
   templateIds?: string[];
   rssDraftCount?: number;
+  cleanupMode?: "lifecycle" | "pending" | "ignored" | "drafted" | "all-stale";
 }
 
 /**
@@ -491,6 +493,34 @@ export async function POST(request: NextRequest) {
         success: true,
         createdTemplateGameIds: createdGameIds,
         logs,
+      });
+    }
+
+    if (action === "cleanup-feed") {
+      const cleanupMode = body.cleanupMode ?? "lifecycle";
+      if (cleanupMode === "lifecycle") {
+        const summary = await feedLifecycleService.maintainLifecycle({ force: true });
+        await schedulerConfigService.recordSchedulerRun(
+          "manual-feed-lifecycle",
+          summary as unknown as Record<string, unknown>,
+          true
+        );
+        return NextResponse.json({
+          success: true,
+          summary,
+          message: `피드 라이프사이클 정리 완료 (만료 PENDING ${summary.expiredPendingCount}건, 상한초과 ${summary.trimmedPendingCount}건, 만료 CLASSIFIED ${summary.expiredClassifiedCount}건, 폐기삭제 ${summary.deletedIgnoredCount}건, 오래된초안 삭제 ${summary.deletedDraftCount}건)`,
+        });
+      }
+
+      const purgeRes = await feedLifecycleService.purgeQueue(cleanupMode);
+      await schedulerConfigService.recordSchedulerRun(
+        `manual-feed-purge:${cleanupMode}`,
+        purgeRes,
+        true
+      );
+      return NextResponse.json({
+        success: true,
+        ...purgeRes,
       });
     }
 

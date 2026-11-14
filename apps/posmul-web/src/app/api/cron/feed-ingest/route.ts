@@ -6,6 +6,8 @@ import {
   getFetchBillsUseCase,
 } from "@/bounded-contexts/feed/di-container";
 import { requireAdminApi } from "@/shared/lib/security/admin-auth";
+import { schedulerConfigService } from "@/bounded-contexts/prediction/application/services/scheduler-config.service";
+import { feedLifecycleService } from "@/bounded-contexts/feed/application/services/feed-lifecycle.service";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -95,6 +97,17 @@ export async function GET(request: NextRequest) {
         : { error: (draftRes as any).error?.message || "Failed to create drafts" };
     } catch (draftErr: any) {
       results.autoCreatedGames = { error: draftErr?.message || "Auto creation skipped" };
+    }
+
+    try {
+      const config = await schedulerConfigService.getSchedulerConfig();
+      if (config.auto_feed_cleanup_enabled) {
+        results.feedLifecycle = await feedLifecycleService.maintainLifecycle();
+      } else {
+        results.feedLifecycle = { skipped: true, reason: "auto_feed_cleanup_enabled=false" };
+      }
+    } catch (cleanupErr: any) {
+      results.feedLifecycle = { error: cleanupErr?.message || "Feed cleanup skipped" };
     }
 
     return NextResponse.json({

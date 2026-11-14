@@ -53,6 +53,11 @@ export interface PredictionSchedulerConfig {
   rss_ai_min_confidence: number;
   duplicate_check_strictness: DuplicateCheckStrictness;
   stale_void_days: number;
+  // RSS 피드 큐 수명주기(TTL) 옵션
+  auto_feed_cleanup_enabled: boolean;
+  feed_pending_ttl_hours: number;
+  feed_ignored_retention_days: number;
+  feed_draft_retention_days: number;
   template_overrides: Record<string, TemplateOverrideConfig>;
   // 실행 이력
   last_manual_run_at: string | null;
@@ -106,6 +111,10 @@ export const DEFAULT_SCHEDULER_CONFIG: PredictionSchedulerConfig = {
   rss_ai_min_confidence: 0.85,
   duplicate_check_strictness: "normal",
   stale_void_days: 7,
+  auto_feed_cleanup_enabled: true,
+  feed_pending_ttl_hours: 48,
+  feed_ignored_retention_days: 7,
+  feed_draft_retention_days: 14,
   template_overrides: {},
   last_manual_run_at: null,
   last_cron_run_at: null,
@@ -193,6 +202,10 @@ function mapDbRowToConfig(row: Record<string, unknown> | null): PredictionSchedu
     rss_ai_min_confidence: clampFloat(row.rss_ai_min_confidence, 0.5, 0.99, DEFAULT_SCHEDULER_CONFIG.rss_ai_min_confidence),
     duplicate_check_strictness: normalizeStrictness(row.duplicate_check_strictness, DEFAULT_SCHEDULER_CONFIG.duplicate_check_strictness),
     stale_void_days: clampInt(row.stale_void_days, 1, 30, DEFAULT_SCHEDULER_CONFIG.stale_void_days),
+    auto_feed_cleanup_enabled: Boolean(row.auto_feed_cleanup_enabled ?? DEFAULT_SCHEDULER_CONFIG.auto_feed_cleanup_enabled),
+    feed_pending_ttl_hours: clampInt(row.feed_pending_ttl_hours, 1, 336, DEFAULT_SCHEDULER_CONFIG.feed_pending_ttl_hours),
+    feed_ignored_retention_days: clampInt(row.feed_ignored_retention_days, 1, 90, DEFAULT_SCHEDULER_CONFIG.feed_ignored_retention_days),
+    feed_draft_retention_days: clampInt(row.feed_draft_retention_days, 1, 180, DEFAULT_SCHEDULER_CONFIG.feed_draft_retention_days),
     template_overrides:
       row.template_overrides && typeof row.template_overrides === "object" && !Array.isArray(row.template_overrides)
         ? (row.template_overrides as Record<string, TemplateOverrideConfig>)
@@ -318,6 +331,13 @@ export class SchedulerConfigService {
         current.duplicate_check_strictness
       ),
       stale_void_days: clampInt(patch.stale_void_days, 1, 30, current.stale_void_days),
+      auto_feed_cleanup_enabled:
+        typeof patch.auto_feed_cleanup_enabled === "boolean"
+          ? patch.auto_feed_cleanup_enabled
+          : current.auto_feed_cleanup_enabled,
+      feed_pending_ttl_hours: clampInt(patch.feed_pending_ttl_hours, 1, 336, current.feed_pending_ttl_hours),
+      feed_ignored_retention_days: clampInt(patch.feed_ignored_retention_days, 1, 90, current.feed_ignored_retention_days),
+      feed_draft_retention_days: clampInt(patch.feed_draft_retention_days, 1, 180, current.feed_draft_retention_days),
       template_overrides:
         patch.template_overrides && typeof patch.template_overrides === "object"
           ? patch.template_overrides

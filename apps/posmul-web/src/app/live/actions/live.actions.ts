@@ -24,7 +24,7 @@ export interface LiveMessageDTO {
 }
 
 const LIVE_GAME_SELECT =
-  "game_id, slug, title, description, category, subcategory, league, status, data_source, prediction_type, game_options, registration_start, registration_end, settlement_date, settled_at, winning_option_id, difficulty, min_bet_amount, max_bet_amount, max_participants, created_at";
+  "game_id, slug, title, description, category, subcategory, league, status, data_source, prediction_type, game_options, registration_start, registration_end, settlement_date, settled_at, winning_option_id, difficulty, min_bet_amount, max_bet_amount, metadata, created_at";
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -32,26 +32,67 @@ const UUID_REGEX =
 type LiveGameQueryRow = PredictionGameRow & {
   settled_at?: string | null;
   winning_option_id?: string | null;
+  metadata?: Record<string, unknown> | null;
 };
 
+function isRowLiveOpened(
+  row: LiveGameQueryRow,
+  msgCountByRoom: Map<string, number>,
+  challengeRoomKeys: Set<string>
+): boolean {
+  if (row.metadata && row.metadata.live_room_open === true) {
+    return true;
+  }
+  const slugKey = row.slug || row.game_id;
+  if ((msgCountByRoom.get(slugKey) ?? 0) > 0 || (msgCountByRoom.get(row.game_id) ?? 0) > 0) {
+    return true;
+  }
+  if (challengeRoomKeys.has(slugKey) || challengeRoomKeys.has(row.game_id)) {
+    return true;
+  }
+  return false;
+}
+
+async function fetchLiveChallengeRoomKeys(): Promise<Set<string>> {
+  const keys = new Set<string>();
+  const { data } = await supabaseAdmin
+    .schema("prediction")
+    .from("user_challenges")
+    .select("linked_game_id, metadata")
+    .like("title", "[LIVE]%")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (data) {
+    for (const row of data as Array<{
+      linked_game_id?: string | null;
+      metadata?: Record<string, unknown> | null;
+    }>) {
+      if (row.linked_game_id) keys.add(String(row.linked_game_id));
+      if (row.metadata?.roomId) keys.add(String(row.metadata.roomId));
+    }
+  }
+  return keys;
+}
+
 /**
- * DB 예측 게임 목록을 기반으로 LIVE 응원톡 룸 목록을 동적으로 구성합니다.
- * - 진행 중(ACTIVE & 마감 전) 게임을 마감 임박순으로 우선 배치하고,
- *   최근 마감·정산 완료(CLOSED/SETTLED) 게임도 최대 6개 함께 노출합니다.
+ * 실제 LIVE 응원톡이 개설된 예측 게임만 로비 룸 목록으로 구성합니다.
+ * - 진행 중(ACTIVE & 마감 전) 중 개설된 방을 우선 배치하고,
+ *   개설 이력이 있던 최근 마감·정산 완료(CLOSED/SETTLED) 방도 함께 노출합니다.
  */
 export async function getLiveRoomsWithStatusAction(): Promise<{
   success: boolean;
   rooms: LiveEventRoom[];
 }> {
   try {
-    const [activeRes, endedRes] = await Promise.all([
+    const [activeRes, endedRes, challengeRoomKeys] = await Promise.all([
       supabaseAdmin
         .schema("prediction")
         .from("prediction_games")
         .select(LIVE_GAME_SELECT)
         .eq("status", "ACTIVE")
         .order("registration_end", { ascending: true, nullsFirst: false })
-        .limit(24),
+        .limit(30),
       supabaseAdmin
         .schema("prediction")
         .from("prediction_games")
@@ -59,7 +100,8 @@ export async function getLiveRoomsWithStatusAction(): Promise<{
         .in("status", ["CLOSED", "SETTLED"])
         .order("settled_at", { ascending: false, nullsFirst: false })
         .order("registration_end", { ascending: false, nullsFirst: false })
-        .limit(6),
+        .limit(12),
+      fetchLiveChallengeRoomKeys(),
     ]);
 
     const combinedRows = [
@@ -71,21 +113,40 @@ export async function getLiveRoomsWithStatusAction(): Promise<{
       return { success: true, rooms: [] };
     }
 
-    const enrichedRows = (await attachHourlyGamePoolsToRows(
-      supabaseAdmin,
-      combinedRows
-    )) as LiveGameQueryRow[];
+    const roomKeys = Array.from(
+      new Set(
+        combinedRows.flatMap((g) =>
+          g.slug ? [g.slug, g.game_id] : [g.game_id]
+        )
+      )
+    );
+    const msgCountByRoom = await fetchRecentRoomMessageCounts(roomKeys);
 
-    const roomIds = enrichedRows.map((g) => g.slug || g.game_id);
-    const msgCountByRoom = await fetchRecentRoomMessageCounts(roomIds);
-
-    const rooms = enrichedRows.map((row) =>
-      mapPredictionGameToLiveRoom(row as LiveDbGameInput, {
-        recentMessagesCount: msgCountByRoom.get(row.slug || row.game_id) ?? 0,
-      })
+    // 실제로 LIVE 응원톡 방이 개설된 마켓만 필터링
+    const openedRows = combinedRows.filter((row) =>
+      isRowLiveOpened(row, msgCountByRoom, challengeRoomKeys)
     );
 
-    // LIVE 진행중 -> CLOSED -> ENDED 순으로 정렬 (같은 상태 내에서는 기존 순서 유지)
+    if (openedRows.length === 0) {
+      return { success: true, rooms: [] };
+    }
+
+    const enrichedRows = (await attachHourlyGamePoolsToRows(
+      supabaseAdmin,
+      openedRows
+    )) as LiveGameQueryRow[];
+
+    const rooms = enrichedRows.map((row) => {
+      const slugKey = row.slug || row.game_id;
+      const msgCount =
+        (msgCountByRoom.get(slugKey) ?? 0) +
+        (row.slug ? msgCountByRoom.get(row.game_id) ?? 0 : 0);
+      return mapPredictionGameToLiveRoom(row as LiveDbGameInput, {
+        recentMessagesCount: msgCount,
+      });
+    });
+
+    // LIVE 진행중 -> CLOSED -> ENDED 순으로 정렬
     const statusOrder: Record<LiveEventRoom["status"], number> = {
       LIVE: 0,
       UPCOMING: 1,
@@ -125,10 +186,15 @@ async function fetchRecentRoomMessageCounts(
 
 /**
  * 단일 라이브 룸 최신 상태 조회 (slug 또는 game_id 기반 직접 DB 조회)
+ * - 아직 개설되지 않은 ACTIVE 게임이면 notOpened 메타데이터를 함께 반환
  */
 export async function getLiveRoomDetailAction(roomId: string): Promise<{
   success: boolean;
   room?: LiveEventRoom;
+  notOpened?: boolean;
+  canOpen?: boolean;
+  gameId?: string;
+  gameTitle?: string;
 }> {
   try {
     const decoded = decodeURIComponent(roomId);
@@ -159,20 +225,135 @@ export async function getLiveRoomDetailAction(roomId: string): Promise<{
       return { success: false };
     }
 
+    const roomKeys = gameRow.slug
+      ? [gameRow.slug, gameRow.game_id]
+      : [gameRow.game_id];
+    const [msgCounts, challengeRoomKeys] = await Promise.all([
+      fetchRecentRoomMessageCounts(roomKeys),
+      fetchLiveChallengeRoomKeys(),
+    ]);
+
+    const opened = isRowLiveOpened(gameRow, msgCounts, challengeRoomKeys);
+    if (!opened) {
+      const isBeforeEnd =
+        !gameRow.registration_end ||
+        new Date(gameRow.registration_end).getTime() > Date.now();
+      return {
+        success: false,
+        notOpened: true,
+        canOpen: gameRow.status === "ACTIVE" && isBeforeEnd,
+        gameId: gameRow.game_id,
+        gameTitle: gameRow.title,
+      };
+    }
+
     const [enriched] = (await attachHourlyGamePoolsToRows(supabaseAdmin, [
       gameRow,
     ])) as LiveGameQueryRow[];
-    const msgCounts = await fetchRecentRoomMessageCounts([
-      enriched.slug || enriched.game_id,
-    ]);
+    const totalMsgCount =
+      (msgCounts.get(enriched.slug || enriched.game_id) ?? 0) +
+      (enriched.slug ? msgCounts.get(enriched.game_id) ?? 0 : 0);
+
     const room = mapPredictionGameToLiveRoom(enriched as LiveDbGameInput, {
-      recentMessagesCount: msgCounts.get(enriched.slug || enriched.game_id) ?? 0,
+      recentMessagesCount: totalMsgCount,
     });
 
     return { success: true, room };
   } catch (err) {
     console.error("getLiveRoomDetailAction exception:", err);
     return { success: false };
+  }
+}
+
+/**
+ * 진행 중(ACTIVE) 예측 게임에 LIVE 응원톡 방을 정식 개설합니다.
+ */
+export async function openLiveRoomForGameAction(gameIdOrSlug: string): Promise<{
+  success: boolean;
+  roomId?: string;
+  requireLogin?: boolean;
+  error?: string;
+}> {
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return {
+        success: false,
+        requireLogin: true,
+        error: "LIVE 응원톡 방을 개설하려면 로그인이 필요합니다.",
+      };
+    }
+
+    const decoded = decodeURIComponent(gameIdOrSlug);
+    const col = UUID_REGEX.test(decoded) ? "game_id" : "slug";
+    const { data: gameRow, error: findErr } = await supabaseAdmin
+      .schema("prediction")
+      .from("prediction_games")
+      .select("game_id, slug, title, status, registration_end, metadata")
+      .eq(col, decoded)
+      .maybeSingle();
+
+    if (findErr || !gameRow) {
+      return { success: false, error: "예측 게임을 찾을 수 없습니다." };
+    }
+
+    if (
+      gameRow.status !== "ACTIVE" ||
+      (gameRow.registration_end &&
+        new Date(gameRow.registration_end).getTime() <= Date.now())
+    ) {
+      return {
+        success: false,
+        error: "마감되었거나 정산된 게임에는 새 LIVE 방을 개설할 수 없습니다.",
+      };
+    }
+
+    const roomId = String(gameRow.slug || gameRow.game_id);
+    const nextMetadata = {
+      ...((gameRow.metadata as Record<string, unknown> | null) ?? {}),
+      live_room_open: true,
+      live_opened_by: user.id,
+      live_opened_at: new Date().toISOString(),
+    };
+
+    const { error: updateErr } = await supabaseAdmin
+      .schema("prediction")
+      .from("prediction_games")
+      .update({ metadata: nextMetadata })
+      .eq("game_id", gameRow.game_id);
+
+    if (updateErr) {
+      return { success: false, error: updateErr.message };
+    }
+
+    const openerName =
+      user.user_metadata?.name ||
+      user.user_metadata?.full_name ||
+      user.email?.split("@")[0] ||
+      "시민개설자";
+
+    await supabaseAdmin
+      .schema("forum")
+      .from("live_room_messages")
+      .insert({
+        room_id: roomId,
+        sender: openerName,
+        team_tag: "HOST",
+        team_color: "bg-red-500/20 text-red-300 border-red-400/40",
+        message: `"${gameRow.title}" LIVE 응원톡 방이 개설되었습니다! 자유롭게 실시간 예측과 의견을 나눠보세요.`,
+        is_reaction: false,
+      });
+
+    return { success: true, roomId };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
   }
 }
 

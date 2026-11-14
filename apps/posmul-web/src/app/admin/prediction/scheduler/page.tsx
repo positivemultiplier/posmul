@@ -89,6 +89,10 @@ interface PredictionSchedulerConfig {
   rss_ai_min_confidence: number;
   duplicate_check_strictness: DuplicateCheckStrictness;
   stale_void_days: number;
+  auto_feed_cleanup_enabled: boolean;
+  feed_pending_ttl_hours: number;
+  feed_ignored_retention_days: number;
+  feed_draft_retention_days: number;
   template_overrides: Record<string, TemplateOverrideConfig>;
   last_manual_run_at: string | null;
   last_cron_run_at: string | null;
@@ -126,7 +130,12 @@ type ManualStepName =
   | "template-sync"
   | "close-expired"
   | "oracle-settle"
-  | "full-cycle";
+  | "full-cycle"
+  | "cleanup-lifecycle"
+  | "cleanup-pending"
+  | "cleanup-ignored"
+  | "cleanup-drafted"
+  | "cleanup-all-stale";
 
 const CATEGORY_OPTIONS = [
   { key: "ECONOMY", label: "경제/거시 (ECONOMY)", desc: "금리, 물가, GDP, 환율" },
@@ -312,6 +321,10 @@ export default function AdminPredictionSchedulerPage() {
   const handleSaveAll = async () => {
     if (!draftConfig) return;
     await saveConfigPatch({
+      auto_feed_cleanup_enabled: draftConfig.auto_feed_cleanup_enabled,
+      feed_pending_ttl_hours: draftConfig.feed_pending_ttl_hours,
+      feed_ignored_retention_days: draftConfig.feed_ignored_retention_days,
+      feed_draft_retention_days: draftConfig.feed_draft_retention_days,
       master_auto_enabled: draftConfig.master_auto_enabled,
       auto_template_sync_enabled: draftConfig.auto_template_sync_enabled,
       auto_rss_draft_enabled: draftConfig.auto_rss_draft_enabled,
@@ -468,6 +481,46 @@ export default function AdminPredictionSchedulerPage() {
       setBannerMsg({ type: "error", text: message });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleCleanupFeed = async (
+    cleanupMode: "lifecycle" | "pending" | "ignored" | "drafted" | "all-stale",
+    label: string
+  ) => {
+    if (
+      cleanupMode === "pending" &&
+      !window.confirm(
+        "현재 PENDING 상태의 미분류 기사들을 모두 IGNORED로 정리하시겠습니까? (신규 수집은 정상 유지됩니다)"
+      )
+    ) {
+      return;
+    }
+    setRunningStep(`cleanup-${cleanupMode}`);
+    setBannerMsg(null);
+    try {
+      const res = await fetch("/api/admin/scheduler/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cleanup-feed", cleanupMode }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || `${label} 실패`);
+      }
+      const msg =
+        data.message || `${label} 완료 (${data.affectedCount ?? 0}건 처리)`;
+      setLogs((prev) => [
+        `🧹 [${new Date().toLocaleTimeString("ko-KR")}] ${msg}`,
+        ...prev.slice(0, 60),
+      ]);
+      setBannerMsg({ type: "success", text: msg });
+      await fetchAll();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setBannerMsg({ type: "error", text: message });
+    } finally {
+      setRunningStep(null);
     }
   };
 
@@ -828,6 +881,18 @@ export default function AdminPredictionSchedulerPage() {
             >
               <Sparkles className="w-3.5 h-3.5 text-sky-400" />
               테스트용 소수(5개)만 발행
+            </AdminButton>
+            <AdminButton
+              variant="secondary"
+              onClick={() => void handleCleanupFeed("lifecycle", "RSS TTL 라이프사이클 정리")}
+              disabled={runningStep !== null || saving}
+            >
+              <RefreshCw
+                className={`w-3.5 h-3.5 text-emerald-400 ${runningStep === "cleanup-lifecycle" ? "animate-spin" : ""}`}
+              />
+              {runningStep === "cleanup-lifecycle"
+                ? "피드 큐 정리 중..."
+                : "RSS 큐 TTL 정리"}
             </AdminButton>
             <AdminButton
               variant="danger"
@@ -1416,6 +1481,137 @@ export default function AdminPredictionSchedulerPage() {
             </AdminCardContent>
           </AdminCard>
         </div>
+      )}
+
+      {/* 7.5 RSS 피드 큐 슬라이딩 TTL 라이프사이클 정책 */}
+      {draftConfig && (
+        <AdminCard>
+          <AdminCardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <AdminCardTitle className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-sky-400" />
+                RSS 피드 큐 슬라이딩 TTL 라이프사이클 관리
+              </AdminCardTitle>
+              <AdminCardDescription>
+                미분류(PENDING)·폐기(IGNORED)·초안(DRAFT_CREATED) 레코드가 무한정 누적되지 않도록 신선도 TTL과 상한(최대 120건)을 자동 유지합니다.
+              </AdminCardDescription>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setDraftConfig({
+                  ...draftConfig,
+                  auto_feed_cleanup_enabled: !draftConfig.auto_feed_cleanup_enabled,
+                })
+              }
+              className={`shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-extrabold border transition cursor-pointer ${
+                draftConfig.auto_feed_cleanup_enabled
+                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40"
+                  : "bg-zinc-800 text-zinc-400 border-zinc-700"
+              }`}
+            >
+              {draftConfig.auto_feed_cleanup_enabled
+                ? "자동 TTL 정리 ON"
+                : "자동 정리 OFF"}
+            </button>
+          </AdminCardHeader>
+          <AdminCardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <label className="space-y-1">
+                <span className="text-[11px] font-semibold text-zinc-400">
+                  PENDING 신선도 TTL (시간, 12~168)
+                </span>
+                <input
+                  type="number"
+                  min={12}
+                  max={168}
+                  value={draftConfig.feed_pending_ttl_hours}
+                  onChange={(e) =>
+                    setDraftConfig({
+                      ...draftConfig,
+                      feed_pending_ttl_hours: Number(e.target.value) || 48,
+                    })
+                  }
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-white"
+                />
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-[11px] font-semibold text-zinc-400">
+                  IGNORED 중복방지 보존 (일, 1~30)
+                </span>
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={draftConfig.feed_ignored_retention_days}
+                  onChange={(e) =>
+                    setDraftConfig({
+                      ...draftConfig,
+                      feed_ignored_retention_days: Number(e.target.value) || 7,
+                    })
+                  }
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-white"
+                />
+              </label>
+
+              <label className="space-y-1">
+                <span className="text-[11px] font-semibold text-zinc-400">
+                  DRAFT_CREATED 이력 보존 (일, 3~90)
+                </span>
+                <input
+                  type="number"
+                  min={3}
+                  max={90}
+                  value={draftConfig.feed_draft_retention_days}
+                  onChange={(e) =>
+                    setDraftConfig({
+                      ...draftConfig,
+                      feed_draft_retention_days: Number(e.target.value) || 14,
+                    })
+                  }
+                  className="w-full rounded-lg border border-zinc-700 bg-zinc-950 px-3 py-2 text-xs text-white"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <AdminButton
+                variant="primary"
+                size="sm"
+                onClick={() =>
+                  void handleCleanupFeed("lifecycle", "TTL 라이프사이클 정리")
+                }
+                disabled={runningStep !== null}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                TTL 라이프사이클 지금 정리
+              </AdminButton>
+              <AdminButton
+                variant="outline"
+                size="sm"
+                onClick={() =>
+                  void handleCleanupFeed("pending", "PENDING 대기열 비우기")
+                }
+                disabled={runningStep !== null}
+              >
+                <Trash2 className="w-3.5 h-3.5 text-amber-400" />
+                PENDING 대기열 비우기
+              </AdminButton>
+              <AdminButton
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  void handleCleanupFeed("all-stale", "오래된 초안·폐기 기록 삭제")
+                }
+                disabled={runningStep !== null}
+              >
+                <Trash2 className="w-3.5 h-3.5 text-zinc-400" />
+                초안/폐기 기록 정리
+              </AdminButton>
+            </div>
+          </AdminCardContent>
+        </AdminCard>
       )}
 
       {/* 8. 오라클 어댑터 & 실시간 시세 모니터링 */}

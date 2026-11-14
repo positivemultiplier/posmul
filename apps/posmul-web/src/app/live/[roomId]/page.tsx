@@ -24,6 +24,7 @@ import {
   getRecentLiveMessagesAction,
   saveLiveMessageBufferAction,
   getLiveRoomDetailAction,
+  openLiveRoomForGameAction,
   quickVoteLiveChallengeAction,
   getLiveActiveChallengesAction,
 } from "../actions/live.actions";
@@ -66,6 +67,13 @@ export default function LiveRoomPage() {
   const [roomData, setRoomData] = useState<LiveEventRoom>(initialRoom);
   const [isRoomLoading, setIsRoomLoading] = useState<boolean>(true);
   const [roomNotFound, setRoomNotFound] = useState<boolean>(false);
+  const [notOpenedInfo, setNotOpenedInfo] = useState<{
+    canOpen: boolean;
+    gameId?: string;
+    gameTitle?: string;
+  } | null>(null);
+  const [isOpeningRoom, setIsOpeningRoom] = useState<boolean>(false);
+  const [openRoomMsg, setOpenRoomMsg] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputMessage, setInputMessage] = useState("");
   const [myTeam, setMyTeam] = useState<"A" | "B">("A");
@@ -95,6 +103,7 @@ export default function LiveRoomPage() {
   useEffect(() => {
     setIsRoomLoading(true);
     setRoomNotFound(false);
+    setNotOpenedInfo(null);
 
     getLiveRoomDetailAction(roomId).then((res) => {
       setIsRoomLoading(false);
@@ -112,6 +121,13 @@ export default function LiveRoomPage() {
         }
       } else {
         setRoomNotFound(true);
+        if (res.notOpened) {
+          setNotOpenedInfo({
+            canOpen: Boolean(res.canOpen),
+            gameId: res.gameId,
+            gameTitle: res.gameTitle,
+          });
+        }
       }
     });
 
@@ -534,17 +550,48 @@ export default function LiveRoomPage() {
     return (
       <div className="min-h-screen bg-[#07090e] text-slate-100 flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-[#111520] border border-white/10 rounded-3xl p-8 text-center space-y-4">
-          <p className="text-lg font-black text-white">라이브 방을 찾을 수 없습니다</p>
-          <p className="text-xs text-slate-400">
-            종료되었거나 존재하지 않는 라이브 응원톡 방입니다. 로비에서 진행 중인 라이브 방을 선택해 주세요.
+          <p className="text-lg font-black text-white">
+            {notOpenedInfo
+              ? "아직 개설되지 않은 LIVE 방입니다"
+              : "라이브 방을 찾을 수 없습니다"}
           </p>
-          <Link
-            href="/live"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            LIVE 로비로 돌아가기
-          </Link>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            {notOpenedInfo
+              ? `"${notOpenedInfo.gameTitle || "해당 예측 게임"}" 마켓에 아직 LIVE 응원톡이 열리지 않았습니다.${notOpenedInfo.canOpen ? " 지금 바로 방을 개설해 대화를 시작할 수 있습니다." : " 마감되었거나 정산 완료된 마켓입니다."}`
+              : "종료되었거나 존재하지 않는 라이브 응원톡 방입니다. 로비에서 진행 중인 라이브 방을 선택해 주세요."}
+          </p>
+          {openRoomMsg && (
+            <p className="text-xs text-amber-300 font-semibold">{openRoomMsg}</p>
+          )}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {notOpenedInfo?.canOpen && notOpenedInfo.gameId && (
+              <button
+                type="button"
+                disabled={isOpeningRoom}
+                onClick={async () => {
+                  setIsOpeningRoom(true);
+                  setOpenRoomMsg(null);
+                  const openRes = await openLiveRoomForGameAction(notOpenedInfo.gameId!);
+                  setIsOpeningRoom(false);
+                  if (openRes.success) {
+                    window.location.reload();
+                  } else {
+                    setOpenRoomMsg(openRes.error || "개설에 실패했습니다.");
+                  }
+                }}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition cursor-pointer disabled:opacity-50"
+              >
+                {isOpeningRoom ? "개설 중..." : "LIVE 방 개설하고 입장하기"}
+              </button>
+            )}
+            <Link
+              href="/live"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500 hover:bg-red-600 text-white text-xs font-bold transition"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              LIVE 로비로 돌아가기
+            </Link>
+          </div>
         </div>
       </div>
     );

@@ -7,6 +7,7 @@ import {
   getFetchRssItemsUseCase,
 } from "@/bounded-contexts/feed/di-container";
 import { schedulerConfigService } from "@/bounded-contexts/prediction/application/services/scheduler-config.service";
+import { feedLifecycleService } from "@/bounded-contexts/feed/application/services/feed-lifecycle.service";
 import { settlementOrchestrator } from "@/bounded-contexts/prediction/application/services/settlement-orchestrator.service";
 import { getAutoSettleByBillUseCase } from "@/bounded-contexts/prediction/di-container";
 import { supabaseAdmin } from "@/lib/supabase/admin";
@@ -44,6 +45,14 @@ export async function GET(request: Request) {
     } else {
       logs.push(
         `RSS fetched: ${rssRes.data.fetchedCount} items from ${rssRes.data.sourceCount} sources`
+      );
+    }
+
+    // 1.5 피드 큐 라이프사이클 슬라이딩 TTL 정리 (오래된 기사 AI 분류 전 차단/폐기)
+    if (config.auto_feed_cleanup_enabled) {
+      const cleanupSummary = await feedLifecycleService.maintainLifecycle();
+      logs.push(
+        `Feed lifecycle cleanup: expiredPending=${cleanupSummary.expiredPendingCount}, trimmedPending=${cleanupSummary.trimmedPendingCount}, expiredClassified=${cleanupSummary.expiredClassifiedCount}, deletedIgnored=${cleanupSummary.deletedIgnoredCount}, deletedDraft=${cleanupSummary.deletedDraftCount}`
       );
     }
 

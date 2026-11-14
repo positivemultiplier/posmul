@@ -305,29 +305,57 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     | "wdl"
     | "ranking";
 
-  // 차트 초기 데이터 조회 (SSR)
-  const [initialChartData, tailChallenges] = await Promise.all([
-    getGameHistory(
-      dbGame.game_id,
-      parsedOptions.map((opt) => ({ id: opt.id }))
-    ),
-    getTailChallengesForGameAction(dbGame.game_id, dbGame.slug || decodedSlug),
-  ]);
+  const roomLookupKeys = Array.from(
+    new Set([dbGame.slug, dbGame.game_id].filter((v): v is string => Boolean(v)))
+  );
 
-  // 모든 DB 예측 게임은 동일 slug/game_id 기반의 LIVE 응원톡 방과 1:1 연동됩니다.
-  const liveRoomId = dbGame.slug || dbGame.game_id;
-  const liveStatusText =
-    dbGame.status === "ACTIVE"
-      ? "LIVE 응원톡 참여 중"
-      : dbGame.status === "SETTLED"
-      ? "정산 완료 · LIVE 토론 기록"
-      : "마감 · LIVE 토론 기록";
-  const matchedLiveRoom = {
-    id: liveRoomId,
-    title: dbGame.title || "LIVE 응원톡",
-    viewerCount: Math.max(12, participantCount * 3),
-    statusText: liveStatusText,
-  };
+  // 차트 초기 데이터, 꼬리 예측, 실제 개설된 LIVE 응원톡 활동 여부 병렬 조회
+  const [initialChartData, tailChallenges, liveMsgRes, liveChallengeRes] =
+    await Promise.all([
+      getGameHistory(
+        dbGame.game_id,
+        parsedOptions.map((opt) => ({ id: opt.id }))
+      ),
+      getTailChallengesForGameAction(dbGame.game_id, dbGame.slug || decodedSlug),
+      supabase
+        .schema("forum")
+        .from("live_room_messages")
+        .select("id", { count: "exact", head: true })
+        .in("room_id", roomLookupKeys),
+      supabase
+        .schema("prediction")
+        .from("user_challenges")
+        .select("id", { count: "exact", head: true })
+        .eq("linked_game_id", dbGame.game_id)
+        .like("title", "[LIVE]%"),
+    ]);
+
+  const liveMsgCount = liveMsgRes.count ?? 0;
+  const liveChallengeCount = liveChallengeRes.count ?? 0;
+  const gameMetadata = (
+    dbGame as { metadata?: Record<string, unknown> | null }
+  ).metadata;
+  const isBeforeRegistrationEnd =
+    !dbGame.registration_end ||
+    new Date(dbGame.registration_end).getTime() > Date.now();
+  const isLiveRoomOpened =
+    Boolean(gameMetadata && gameMetadata.live_room_open === true) ||
+    liveMsgCount > 0 ||
+    liveChallengeCount > 0;
+
+  // 실제로 LIVE 방이 개설된 진행 중(ACTIVE & 마감 전) 마켓에만 LIVE 응원톡 배너 연결
+  const matchedLiveRoom =
+    dbGame.status === "ACTIVE" && isBeforeRegistrationEnd && isLiveRoomOpened
+      ? {
+          id: dbGame.slug || dbGame.game_id,
+          title: dbGame.title || "LIVE 응원톡",
+          viewerCount: Math.max(1, participantCount + liveMsgCount),
+          statusText:
+            liveMsgCount > 0
+              ? `LIVE 응원톡 개설됨 · 대화 ${liveMsgCount}건`
+              : "LIVE 응원톡 실시간 참여 가능",
+        }
+      : undefined;
 
   const gameForView: PredictionGameDetail = {
     id: dbGame.game_id,
