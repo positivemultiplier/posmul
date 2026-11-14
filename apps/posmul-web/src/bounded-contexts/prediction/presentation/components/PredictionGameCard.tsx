@@ -630,7 +630,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
               {game.regionLevel && game.regionLevel !== "NATION" && (
                 <span className="shrink-0 px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/30 text-[9px] font-extrabold text-emerald-300 leading-none">
                   {game.regionLevel === "DONG"
-                    ? "🏡 우리동네"
+                    ? `🏡 ${game.regionName || "우리동네"}`
                     : game.regionLevel === "LOCAL"
                       ? `📍 ${game.regionName || "우리구"}`
                       : `🏙️ ${game.regionName || "시·도"}`}

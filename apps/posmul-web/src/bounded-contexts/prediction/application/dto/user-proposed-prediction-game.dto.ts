@@ -41,6 +41,10 @@ export const userProposedPredictionGameRequestSchema = z
     settlementType: settlementTypeSchema.default("manual"),
     settlementSourceType: settlementSourceTypeSchema.default("manual"),
     settlementSourceConfig: settlementSourceConfigSchema,
+    // 4단계 공간 계층(지역 태깅)
+    regionLevel: z.enum(["NATION", "REGION", "LOCAL", "DONG"]).optional(),
+    regionCode: z.string().max(32).optional(),
+    regionName: z.string().max(60).optional(),
   })
   .refine((data) => data.maximumStake >= data.minimumStake, {
     message: "최대 참여 금액은 최소 참여 금액 이상이어야 합니다.",

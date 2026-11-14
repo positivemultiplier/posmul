@@ -13,11 +13,18 @@ import {
   Radar,
   CheckCircle2,
   AlertTriangle,
+  MapPin,
 } from "lucide-react";
+import {
+  DEFAULT_REGION_PRESETS,
+  REGION_LEVEL_OPTIONS,
+  type RegionHierarchyLevel,
+} from "@/bounded-contexts/prediction/domain/value-objects/region-hierarchy";
 
 type OracleSourceType =
   | "manual"
   | "rss_ai"
+  | "kr_public"
   | "coingecko"
   | "alpha-vantage"
   | "fmp"
@@ -212,6 +219,9 @@ export default function CreatePredictionGamePage() {
   const [minBet, setMinBet] = useState(100);
   const [maxBet, setMaxBet] = useState(10000);
   const [autoGenerateBriefing, setAutoGenerateBriefing] = useState(true);
+  const [regionLevel, setRegionLevel] = useState<RegionHierarchyLevel>("NATION");
+  const [regionCode, setRegionCode] = useState("KR");
+  const [regionName, setRegionName] = useState("대한민국");
 
   // 오라클 설정
   const [sourceType, setSourceType] = useState<OracleSourceType>("rss_ai");
@@ -246,6 +256,15 @@ export default function CreatePredictionGamePage() {
     setCategory(nextCategory);
     const firstSub = SUBCATEGORY_BY_CATEGORY[nextCategory]?.[0]?.value ?? "";
     setSubcategory(firstSub);
+  };
+
+  const handleRegionLevelChange = (nextLevel: RegionHierarchyLevel) => {
+    setRegionLevel(nextLevel);
+    const firstPreset = DEFAULT_REGION_PRESETS.find((p) => p.level === nextLevel);
+    if (firstPreset) {
+      setRegionCode(firstPreset.code);
+      setRegionName(firstPreset.name);
+    }
   };
 
   const handleAddOption = () => {
@@ -342,6 +361,9 @@ export default function CreatePredictionGamePage() {
           sourceConfig: getCurrentOracleConfig(),
           externalId: externalId.trim() || undefined,
           autoGenerateBriefing,
+          regionLevel,
+          regionCode: regionCode.trim() || undefined,
+          regionName: regionName.trim() || undefined,
         }),
       });
 
@@ -466,6 +488,63 @@ export default function CreatePredictionGamePage() {
             </div>
           </div>
 
+          {/* 4단계 공간 계층 (지역 태깅) */}
+          <div className="space-y-3 p-4 rounded-2xl bg-slate-950/70 border border-emerald-500/25">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <h2 className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+                <MapPin className="w-4 h-4" /> 지역 스케일 태깅 (초기 진입: 구·군까지 주력 / 동은 확장형 유지)
+              </h2>
+              <span className="text-[11px] text-slate-400">
+                필터 · 카드 배지 · 향후 지역 행사/커뮤니티 연동 기준
+              </span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-slate-300">공간 단계</label>
+                <select
+                  value={regionLevel}
+                  onChange={(e) => handleRegionLevelChange(e.target.value as RegionHierarchyLevel)}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100"
+                >
+                  {REGION_LEVEL_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-slate-300">표준 지역 프리셋</label>
+                <select
+                  value={regionCode}
+                  onChange={(e) => {
+                    const nextCode = e.target.value;
+                    setRegionCode(nextCode);
+                    const found = DEFAULT_REGION_PRESETS.find((p) => p.code === nextCode);
+                    if (found) setRegionName(found.name);
+                  }}
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100"
+                >
+                  {DEFAULT_REGION_PRESETS.filter((p) => p.level === regionLevel).map((preset) => (
+                    <option key={preset.code} value={preset.code}>
+                      {preset.name} ({preset.code})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-slate-300">표시 지역명 (직접 수정 가능)</label>
+                <input
+                  type="text"
+                  value={regionName}
+                  onChange={(e) => setRegionName(e.target.value)}
+                  placeholder="예: 광주 광산구, 서울 성동구"
+                  className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100"
+                />
+              </div>
+            </div>
+          </div>
+
           {/* 상세 배경 설명 */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
@@ -518,6 +597,7 @@ export default function CreatePredictionGamePage() {
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100"
                 >
                   <option value="rss_ai">🔍 RSS 뉴스 AI 반자동 추천 (rss_ai)</option>
+                  <option value="kr_public">🗺️ 한국 공공데이터 오라클 (kr_public)</option>
                   <option value="coingecko">₿ CoinGecko 실시간 암호화폐 (자동)</option>
                   <option value="alpha-vantage">📈 AlphaVantage 미국·글로벌 주식 (자동)</option>
                   <option value="fmp">📊 FMP 글로벌 실적·주가 (자동)</option>

@@ -6,6 +6,7 @@ import {
   ILlmClassifierService,
 } from "../../domain/services/llm-classifier.service";
 import { ContentClassification } from "../../domain/value-objects/feed-types";
+import { resolveNormalizedRegion } from "../../../prediction/domain/value-objects/region-hierarchy";
 import { validateGeneratedDraft } from "./draft-quality-gate";
 import { ExaoneClient } from "./exaone-client";
 import {
@@ -36,6 +37,9 @@ export interface StructuredBlueprint {
   oracleType?: string;
   oracleConfig?: Record<string, unknown>;
   baselineFact?: string;
+  regionLevel?: string;
+  regionCode?: string;
+  regionName?: string;
 }
 
 export const BLUEPRINT_START_TAG = "[POSMUL_BLUEPRINT]";
@@ -83,6 +87,9 @@ export function extractBlueprint(content: string): StructuredBlueprint | null {
         oracleType: parsed.oracleType,
         oracleConfig: parsed.oracleConfig,
         baselineFact: parsed.baselineFact,
+        regionLevel: parsed.regionLevel,
+        regionCode: parsed.regionCode,
+        regionName: parsed.regionName,
       };
     }
   } catch {
@@ -108,6 +115,9 @@ interface RawPredictionDraftJson {
   resolutionCriteria?: string;
   closingHoursFromNow?: number;
   settlementDelayHours?: number;
+  regionLevel?: string;
+  regionCode?: string;
+  regionName?: string;
 }
 
 interface RawForumDraftJson {
@@ -324,7 +334,9 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
       '  "options": ["구체적 선택지1", "구체적 선택지2"],',
       '  "resolutionCriteria": "정산 시점 및 공식 확인 출처",',
       '  "closingHoursFromNow": 24~336 사이 정수,',
-      '  "settlementDelayHours": 6~48 사이 정수',
+      '  "settlementDelayHours": 6~48 사이 정수,',
+      '  "regionLevel": "NATION" | "REGION" | "LOCAL" | "DONG" (일반 전국/글로벌 이슈는 "NATION", 광역시·도는 "REGION", 구·군/구청/지역행사는 "LOCAL"),',
+      '  "regionName": "대한민국 또는 해당 시·도 / 구·군 명칭 (예: 서울 성동구, 광주 광산구, 광주광역시)"',
       "}",
     ].join("\n");
 
@@ -414,6 +426,14 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
       .replace(/\[POSMUL_BLUEPRINT\][\s\S]*?\[\/POSMUL_BLUEPRINT\]/g, "")
       .trim();
 
+    const blueprintRegion = resolveNormalizedRegion({
+      regionLevel: blueprint.regionLevel,
+      regionCode: blueprint.regionCode,
+      regionName: blueprint.regionName,
+      title: blueprint.title,
+      summary: blueprint.summary,
+    });
+
     const baseDraft: DraftResult = {
       title: blueprint.title,
       summary: blueprint.summary,
@@ -431,6 +451,9 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
         settlementDelayHours: blueprint.settlementDelayHours ?? 12,
         oracleType: blueprint.oracleType ?? "manual",
         oracleConfig: blueprint.oracleConfig,
+        regionLevel: blueprintRegion.regionLevel,
+        regionCode: blueprintRegion.regionCode,
+        regionName: blueprintRegion.regionName,
       },
     };
 
@@ -519,9 +542,19 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
         ? Math.round(rawDelay)
         : 12;
 
+    const title = String(raw.title ?? "").trim();
+    const summary = String(raw.summary ?? "").trim();
+    const resolvedRegion = resolveNormalizedRegion({
+      regionLevel: raw.regionLevel,
+      regionCode: raw.regionCode,
+      regionName: raw.regionName,
+      title,
+      summary,
+    });
+
     return {
-      title: String(raw.title ?? "").trim(),
-      summary: String(raw.summary ?? "").trim(),
+      title,
+      summary,
       keywords: Array.isArray(raw.keywords)
         ? raw.keywords.map((k) => String(k).trim()).filter(Boolean)
         : [],
@@ -534,6 +567,9 @@ export class GeminiClassifierAdapter implements ILlmClassifierService {
         closingHoursFromNow,
         settlementDelayHours,
         oracleType: "manual",
+        regionLevel: resolvedRegion.regionLevel,
+        regionCode: resolvedRegion.regionCode,
+        regionName: resolvedRegion.regionName,
       },
     };
   }

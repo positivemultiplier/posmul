@@ -7,6 +7,7 @@ import {
   userProposedPredictionGameRequestSchema,
   type UserProposedPredictionGameRequest,
 } from "../../../../bounded-contexts/prediction/application/dto/user-proposed-prediction-game.dto";
+import { resolveNormalizedRegion } from "../../../../bounded-contexts/prediction/domain/value-objects/region-hierarchy";
 
 
 const normalizeSlug = (value: string): string => {
@@ -76,6 +77,13 @@ export async function POST(request: Request): Promise<NextResponse> {
 
     const baseSlug = normalizeSlug(body.title);
     const now = new Date();
+    const normalizedRegion = resolveNormalizedRegion({
+      regionLevel: body.regionLevel,
+      regionCode: body.regionCode,
+      regionName: body.regionName,
+      title: body.title,
+      summary: body.description,
+    });
 
     // slug unique constraint 대응: 충돌 시 suffix 재시도
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -110,7 +118,13 @@ export async function POST(request: Request): Promise<NextResponse> {
           subcategory: "user-proposals",
           league: "all",
           tags: ["community"],
-          metadata: { source: "user", route: "user-suggestions" },
+          metadata: {
+            source: "user",
+            route: "user-suggestions",
+            regionLevel: normalizedRegion.regionLevel,
+            regionCode: normalizedRegion.regionCode,
+            regionName: normalizedRegion.regionName,
+          },
         })
         .select("slug, subcategory, league")
         .single();

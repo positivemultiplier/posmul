@@ -24,10 +24,16 @@ export interface DraftResult {
     closingHoursFromNow?: number;
     /** 베팅 마감 후 공식 결과 정산까지 소요 시간(시간 단위, 기본 12~24) */
     settlementDelayHours?: number;
-    /** 연동 오라클 소스 타입 ('ecos' | 'kosis' | 'dart' | 'kobis' | 'kcontent' | 'fmp' | 'alpha-vantage' | 'football_data' | 'manual') */
+    /** 연동 오라클 소스 타입 ('ecos' | 'kosis' | 'dart' | 'kobis' | 'kcontent' | 'fmp' | 'alpha-vantage' | 'football_data' | 'kr_public' | 'manual') */
     oracleType?: string;
     /** 오라클 자동 정산용 메타 설정 */
     oracleConfig?: Record<string, unknown>;
+    /** 4단계 공간 계층(NATION | REGION | LOCAL | DONG) */
+    regionLevel?: "NATION" | "REGION" | "LOCAL" | "DONG";
+    /** 행정구역 표준 코드 (예: KR, 29200, 11200) */
+    regionCode?: string;
+    /** 지역 표시명 (예: 대한민국, 광주 광산구, 서울 성동구) */
+    regionName?: string;
   };
   forumDraft?: {
     discussionPoints: string[];

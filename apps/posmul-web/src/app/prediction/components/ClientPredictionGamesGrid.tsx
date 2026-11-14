@@ -970,9 +970,15 @@ export function ClientPredictionGamesGrid({
         {/* 카드 그리드 (3열 Polymarket 넉넉한 와이드 스타일) */}
         {sortedGames.length === 0 ? (
           <div className="text-center py-16 text-slate-400 bg-[#121621] rounded-2xl border border-white/[0.06]">
-            <p className="text-sm font-semibold">조건에 맞는 예측 마켓이 없습니다.</p>
+            <p className="text-sm font-semibold">
+              {selectedRegionLevel === "DONG"
+                ? "우리동네(동·읍·면) 마켓은 커뮤니티 성장에 맞춰 확장 중입니다."
+                : "조건에 맞는 예측 마켓이 없습니다."}
+            </p>
             <p className="text-xs text-slate-500 mt-1">
-              다른 카테고리를 선택하거나 검색어를 초기화해 보세요.
+              {selectedRegionLevel === "DONG"
+                ? "초기 단계에서는 구·군(우리구)과 시·도 단위를 중심으로 운영되며, 동네 행사·주민센터 소식은 곧 확장됩니다."
+                : "다른 카테고리·공간 스케일을 선택하거나 검색어를 초기화해 보세요."}
             </p>
           </div>
         ) : (

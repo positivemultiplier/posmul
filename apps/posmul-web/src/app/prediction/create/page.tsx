@@ -30,6 +30,9 @@ export default function CreatePredictionPage() {
           settlementTime: data.settlementTime,
           minimumStake: data.minimumStake,
           maximumStake: data.maximumStake,
+          regionLevel: data.regionLevel,
+          regionCode: data.regionCode,
+          regionName: data.regionName,
         }),
       });
 

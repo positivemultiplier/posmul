@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { balancedBriefingService } from "@/bounded-contexts/prediction/application/services/balanced-briefing.service";
 import { settlementOrchestrator } from "@/bounded-contexts/prediction/application/services/settlement-orchestrator.service";
+import { resolveNormalizedRegion } from "@/bounded-contexts/prediction/domain/value-objects/region-hierarchy";
 import type { SettlementSourceType } from "@/bounded-contexts/prediction/domain/value-objects/settlement-types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireAdminApi } from "@/shared/lib/security/admin-auth";
@@ -20,6 +21,9 @@ interface CreateGameBody {
   sourceConfig?: Record<string, unknown>;
   externalId?: string;
   autoGenerateBriefing?: boolean;
+  regionLevel?: string;
+  regionCode?: string;
+  regionName?: string;
 }
 
 function buildStructuredOptions(
@@ -65,6 +69,9 @@ export async function POST(req: NextRequest) {
       sourceConfig = {},
       externalId,
       autoGenerateBriefing = true,
+      regionLevel,
+      regionCode,
+      regionName,
     } = body;
 
     const cleanTitle = (title || "").trim();
@@ -133,6 +140,13 @@ export async function POST(req: NextRequest) {
           : "auto";
 
     const nowIso = new Date().toISOString();
+    const normalizedRegion = resolveNormalizedRegion({
+      regionLevel,
+      regionCode,
+      regionName,
+      title: cleanTitle,
+      summary: safeDescription,
+    });
 
     const { data: newGame, error } = await supabaseAdmin
       .schema("prediction")
@@ -157,6 +171,12 @@ export async function POST(req: NextRequest) {
         external_id: externalId?.trim() || null,
         is_official: hasOracle,
         slug,
+        metadata: {
+          source: "admin",
+          regionLevel: normalizedRegion.regionLevel,
+          regionCode: normalizedRegion.regionCode,
+          regionName: normalizedRegion.regionName,
+        },
         created_at: nowIso,
         updated_at: nowIso,
       })

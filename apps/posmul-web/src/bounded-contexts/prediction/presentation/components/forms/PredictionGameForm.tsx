@@ -8,6 +8,7 @@ import {
   userProposedPredictionGameRequestSchema,
   type UserProposedPredictionGameRequest,
 } from "../../../application/dto/user-proposed-prediction-game.dto";
+import { REGION_LEVEL_OPTIONS } from "../../../domain/value-objects/region-hierarchy";
 
 interface PredictionGameFormProps {
   onSubmit: (data: UserProposedPredictionGameRequest) => Promise<void>;
@@ -30,6 +31,8 @@ export default function PredictionGameForm({
       options: ["예", "아니오"],
       minimumStake: 1,
       maximumStake: 1,
+      regionLevel: "NATION",
+      regionName: "대한민국",
     },
   });
 
@@ -97,6 +100,50 @@ export default function PredictionGameForm({
           {errors.description && (
             <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
           )}
+        </div>
+
+        {/* 지역 범위 선택 (4단계 공간 계층) */}
+        <div className="bg-blue-50/60 p-4 rounded-lg border border-blue-100 space-y-3">
+          <h3 className="text-sm font-semibold text-gray-800">
+            📍 지역 범위 설정 (선택)
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="regionLevel"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                공간 스케일
+              </label>
+              <select
+                {...register("regionLevel")}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {REGION_LEVEL_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label
+                htmlFor="regionName"
+                className="block text-sm font-medium text-gray-700 mb-1"
+              >
+                대상 지역명 (예: 광주 광산구, 서울 성동구)
+              </label>
+              <input
+                {...register("regionName")}
+                type="text"
+                placeholder="비워두면 제목에서 자동 인식하거나 대한민국으로 설정됩니다"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-gray-500">
+            💡 초기에는 구·군 단위 중심이며, 동네·주민센터 행사 예측은 &apos;우리동네&apos;로 직접 제안할 수 있습니다.
+          </p>
         </div>
 
         {/* 예측 타입 */}

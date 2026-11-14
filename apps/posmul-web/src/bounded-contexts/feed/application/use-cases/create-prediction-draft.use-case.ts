@@ -11,6 +11,7 @@ import {
   schedulerConfigService,
 } from "@/bounded-contexts/prediction/application/services/scheduler-config.service";
 import type { SettlementSourceType } from "@/bounded-contexts/prediction/domain/value-objects/settlement-types";
+import { resolveNormalizedRegion } from "@/bounded-contexts/prediction/domain/value-objects/region-hierarchy";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { balancedBriefingService } from "../../../prediction/application/services/balanced-briefing.service";
 
@@ -254,6 +255,13 @@ async function insertPredictionGameFromDraft(
     dbPredictionType === "RANKING" ? 3.5 : dbPredictionType === "WIN_DRAW_LOSE" ? 2.5 : 1.8;
 
   const slug = `pred-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+  const normalizedRegion = resolveNormalizedRegion({
+    regionLevel: predDraft.regionLevel,
+    regionCode: predDraft.regionCode,
+    regionName: predDraft.regionName,
+    title: safeTitle,
+    summary: draft.summary,
+  });
 
   const { data: inserted, error } = await supabaseAdmin
     .schema("prediction")
@@ -277,6 +285,12 @@ async function insertPredictionGameFromDraft(
       data_source: hasAutoOracle ? oracleType : null,
       is_official: hasAutoOracle,
       slug,
+      metadata: {
+        source: "rss_draft",
+        regionLevel: normalizedRegion.regionLevel,
+        regionCode: normalizedRegion.regionCode,
+        regionName: normalizedRegion.regionName,
+      },
       updated_at: nowIso(),
     } as any)
     .select("game_id")
