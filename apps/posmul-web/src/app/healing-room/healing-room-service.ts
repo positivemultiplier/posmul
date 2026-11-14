@@ -13,6 +13,7 @@ import {
   ROOM_THEMES,
   computeHonorTrophies,
   findHealingItemById,
+  type BgmTrackOption,
   type HonorTrophyItem,
 } from "./healing-room-catalog";
 
@@ -122,6 +123,65 @@ export interface HealingRoomPageData {
   recentPredictions: PredictionShowcaseItem[];
   guestbooks: GuestbookEntryItem[];
   neighbors: HealingNeighborSummary[];
+  bgmTracks: BgmTrackOption[];
+}
+
+interface RawBgmTrackRow {
+  id: string;
+  label: string;
+  artist: string | null;
+  mood_desc: string | null;
+  audio_url: string | null;
+  frequencies: unknown;
+  waveform: string | null;
+}
+
+const VALID_WAVEFORMS: ReadonlySet<OscillatorType> = new Set([
+  "sine",
+  "triangle",
+  "square",
+  "sawtooth",
+]);
+
+function normalizeFrequencies(raw: unknown): number[] {
+  if (Array.isArray(raw)) {
+    const parsed = raw
+      .map((item) => Number(item))
+      .filter((num) => Number.isFinite(num) && num > 0);
+    if (parsed.length > 0) return parsed;
+  }
+  return [220, 261.63, 329.63, 392.0];
+}
+
+export async function listActiveHealingRoomBgms(): Promise<BgmTrackOption[]> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .schema("user")
+      .from("healing_room_bgm_tracks")
+      .select("id, label, artist, mood_desc, audio_url, frequencies, waveform")
+      .eq("is_active", true)
+      .order("sort_order", { ascending: true })
+      .order("created_at", { ascending: false });
+
+    if (error || !Array.isArray(data) || data.length === 0) {
+      return [...BGM_TRACKS];
+    }
+
+    return (data as RawBgmTrackRow[]).map((row) => {
+      const waveformCandidate = (row.waveform ?? "sine") as OscillatorType;
+      return {
+        id: row.id,
+        label: row.label,
+        artist: row.artist?.trim() || "PosMul Studio",
+        moodDesc: row.mood_desc?.trim() || "",
+        audioUrl: row.audio_url?.trim() || undefined,
+        frequencies: normalizeFrequencies(row.frequencies),
+        waveform: VALID_WAVEFORMS.has(waveformCandidate) ? waveformCandidate : "sine",
+      };
+    });
+  } catch {
+    return [...BGM_TRACKS];
+  }
 }
 
 export interface LoadHealingRoomOptions {
@@ -512,6 +572,7 @@ export async function loadHealingRoomData(
     { data: createdGameRowsRaw, count: createdGamesExactCount },
     { data: predictionRowsRaw, count: predictionExactCount },
     { data: guestbookRowsRaw },
+    bgmTracks,
   ] = await Promise.all([
     fetchAccountBalances(room.userId),
     viewerUserId && viewerUserId !== room.userId
@@ -559,6 +620,7 @@ export async function loadHealingRoomData(
       .eq("room_user_id", room.userId)
       .order("created_at", { ascending: false })
       .limit(30),
+    listActiveHealingRoomBgms(),
   ]);
 
   const userScore = scoreRaw as RawUserScoreRow | null;
@@ -709,6 +771,7 @@ export async function loadHealingRoomData(
     recentPredictions,
     guestbooks,
     neighbors: refreshedNeighbors,
+    bgmTracks,
   };
 }
 
@@ -754,7 +817,10 @@ export async function updateHealingRoom(
     patch.mood_tag = assertValidTextLength(input.moodTag, "오늘의 기분", 1, 20);
   }
   if (typeof input.bgmTrack === "string") {
-    const validBgm = BGM_TRACKS.some((track) => track.id === input.bgmTrack);
+    const activeBgms = await listActiveHealingRoomBgms();
+    const validBgm =
+      activeBgms.some((track) => track.id === input.bgmTrack) ||
+      BGM_TRACKS.some((track) => track.id === input.bgmTrack);
     if (!validBgm) {
       throw new HealingRoomError("지원하지 않는 BGM 트랙입니다.", 400);
     }

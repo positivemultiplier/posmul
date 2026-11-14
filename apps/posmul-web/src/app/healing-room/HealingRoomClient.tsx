@@ -207,9 +207,14 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     [room.minimiStyle]
   );
 
+  const bgmTracks = useMemo(
+    () => (data.bgmTracks && data.bgmTracks.length > 0 ? data.bgmTracks : BGM_TRACKS),
+    [data.bgmTracks]
+  );
+
   const activeBgm = useMemo(
-    () => BGM_TRACKS.find((track) => track.id === previewBgmId) ?? BGM_TRACKS[0],
-    [previewBgmId]
+    () => bgmTracks.find((track) => track.id === previewBgmId) ?? bgmTracks[0],
+    [bgmTracks, previewBgmId]
   );
 
   const unlockedTrophies = useMemo(
@@ -543,8 +548,8 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
   }
 
   async function handleNextBgm() {
-    const idx = BGM_TRACKS.findIndex((t) => t.id === previewBgmId);
-    const nextTrack = BGM_TRACKS[(idx + 1) % BGM_TRACKS.length];
+    const idx = bgmTracks.findIndex((t) => t.id === previewBgmId);
+    const nextTrack = bgmTracks[(idx + 1) % bgmTracks.length];
     setPreviewBgmId(nextTrack.id);
     if (isOwner) {
       await postAction(
@@ -1335,7 +1340,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 }}
                                 className="w-full rounded border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
                               >
-                                {BGM_TRACKS.map((track) => (
+                                {bgmTracks.map((track) => (
                                   <option key={track.id} value={track.id}>
                                     🎵 {track.label} ({track.moodDesc})
                                   </option>
@@ -2000,7 +2005,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                 onChange={(e) => setPreviewBgmId(e.target.value)}
                 className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-200"
               >
-                {BGM_TRACKS.map((t) => (
+                {bgmTracks.map((t) => (
                   <option key={t.id} value={t.id}>
                     ♪ {t.label}
                   </option>

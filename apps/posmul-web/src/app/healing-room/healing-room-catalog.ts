@@ -50,8 +50,9 @@ export type AnyHealingItem = RoomThemeItem | MinimiStyleItem | RoomPropItem;
 export interface BgmTrackOption {
   id: string;
   label: string;
+  artist?: string;
   moodDesc: string;
-  /** 정적 MP3 음원 경로 (없을 경우 Web Audio API 화음으로 재생) */
+  /** 정적/스토리지 MP3 음원 경로 (없을 경우 Web Audio API 화음으로 재생) */
   audioUrl?: string;
   /** Web Audio API 앰비언트 화음 주파수 */
   frequencies: number[];

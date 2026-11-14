@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   ChevronRight,
   Sparkles,
+  Music,
 } from "lucide-react";
 import { cn } from "@/shared/ui/utils/cn";
 import { AdminBadge } from "./shadcn-admin-ui";
@@ -111,6 +112,12 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
         label: "경제 & MoneyWave",
         icon: Coins,
         badge: "PMC",
+      },
+      {
+        href: "/admin/healing-room",
+        label: "힐링룸 & BGM 관리",
+        icon: Music,
+        badge: "BGM",
       },
     ],
   },
