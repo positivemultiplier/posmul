@@ -177,9 +177,10 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     initialData.isAuthenticated ? "PosMul 일촌" : "동네 이웃"
   );
 
-  // Web Audio API BGM 플레이어 상태
+  // BGM 플레이어 상태 (MP3 오리지널 음원 + Web Audio API 로파이 겸용)
   const [isBgmPlaying, setIsBgmPlaying] = useState(false);
   const [previewBgmId, setPreviewBgmId] = useState(initialData.room.bgmTrack);
+  const htmlAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const bgmTimerRef = useRef<number | null>(null);
   const noteStepRef = useRef(0);
@@ -246,9 +247,14 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     room.bgmTrack,
   ]);
 
-  // Web Audio API BGM 재생/정지
+  // MP3 오리지널 음원 & Web Audio API BGM 재생/정지
   useEffect(() => {
     const stopBgmAudio = () => {
+      if (htmlAudioRef.current) {
+        htmlAudioRef.current.pause();
+        htmlAudioRef.current.currentTime = 0;
+        htmlAudioRef.current = null;
+      }
       if (bgmTimerRef.current !== null) {
         window.clearInterval(bgmTimerRef.current);
         bgmTimerRef.current = null;
@@ -262,6 +268,21 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     if (!isBgmPlaying) {
       stopBgmAudio();
       return;
+    }
+
+    if (activeBgm.audioUrl) {
+      const audio = new Audio(activeBgm.audioUrl);
+      audio.loop = true;
+      audio.volume = 0.55;
+      htmlAudioRef.current = audio;
+      void audio.play().catch(() => {
+        setIsBgmPlaying(false);
+        setNotice({
+          type: "info",
+          message: "브라우저 자동 재생이 차단되었습니다. 'BGM 재생' 버튼을 다시 눌러주세요.",
+        });
+      });
+      return stopBgmAudio;
     }
 
     const AudioCtx =
@@ -1925,7 +1946,11 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
               <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-slate-400">
                 <span>💿 POSMUL JUKEBOX</span>
                 <span className={isBgmPlaying ? "text-amber-300 animate-pulse" : "text-slate-500"}>
-                  {isBgmPlaying ? "● ON AIR" : "LO-FI"}
+                  {isBgmPlaying
+                    ? "● ON AIR"
+                    : activeBgm.audioUrl
+                      ? "MP3 ORIGINAL"
+                      : "LO-FI"}
                 </span>
               </div>
 

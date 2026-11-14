@@ -51,6 +51,8 @@ export interface BgmTrackOption {
   id: string;
   label: string;
   moodDesc: string;
+  /** 정적 MP3 음원 경로 (없을 경우 Web Audio API 화음으로 재생) */
+  audioUrl?: string;
   /** Web Audio API 앰비언트 화음 주파수 */
   frequencies: number[];
   waveform: OscillatorType;
@@ -289,6 +291,22 @@ export function findHealingItemById(itemId: string): AnyHealingItem | undefined 
 }
 
 export const BGM_TRACKS: ReadonlyArray<BgmTrackOption> = [
+  {
+    id: "frozen-warmth",
+    label: "얼어붙은 온기 (Original)",
+    moodDesc: "겨울 감성과 잔잔한 여운이 어우러진 PosMul 오리지널 BGM",
+    audioUrl: "/audio/healing-room/frozen-warmth.mp3",
+    frequencies: [220, 261.63, 329.63, 392.0],
+    waveform: "sine",
+  },
+  {
+    id: "snowflakes-stayed",
+    label: "눈꽃이 머문 자리 (Original)",
+    moodDesc: "눈꽃처럼 포근하게 마음을 감싸는 힐링 멜로디",
+    audioUrl: "/audio/healing-room/where-snowflakes-stayed.mp3",
+    frequencies: [246.94, 293.66, 369.99, 440.0],
+    waveform: "sine",
+  },
   {
     id: "lofi-rain",
     label: "빗소리 Lo-Fi 다락방",
