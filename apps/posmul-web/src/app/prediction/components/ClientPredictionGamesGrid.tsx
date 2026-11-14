@@ -24,6 +24,7 @@ import {
   Pause,
   Play,
 } from "lucide-react";
+import { PosMulCharacterCompanion } from "../../../shared/characters/PosMulCharacterCompanion";
 
 export interface PredictionGame {
   id: string;
@@ -802,6 +803,9 @@ export function ClientPredictionGamesGrid({
           </div>
         </div>
       )}
+
+      {/* 포스멀 프렌즈 올리(Ollie) 예측 마켓 탐정 가이드 */}
+      <PosMulCharacterCompanion domain="prediction" variant="compact" />
 
       {/* =====================================================================
           하단 All Markets 헤더 + 검색창 + 카테고리/정렬 필터 툴바

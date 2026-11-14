@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { getPublicChallengesAction } from "./actions/challenge.actions";
 import { CHALLENGE_PRESETS } from "./types";
+import { PosMulCharacterCompanion } from "@/shared/characters/PosMulCharacterCompanion";
 
 export const metadata = {
   title: "친구와의 맞짱 챌린지 | PosMul",
@@ -53,6 +54,9 @@ export default async function ChallengeLobbyPage() {
             </div>
           </div>
         </div>
+
+        {/* 포스멀 프렌즈 범이(Beomi) 챌린지 응원 */}
+        <PosMulCharacterCompanion domain="challenge" variant="compact" />
 
         {/* 2. 6대 일상 프리셋 바로가기 칩 */}
         <div className="space-y-3">

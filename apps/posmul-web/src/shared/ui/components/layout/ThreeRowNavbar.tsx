@@ -666,6 +666,15 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                 <span>🥊</span>
                 <span>맞짱</span>
               </Link>
+
+              {/* 🐾 포스멀 프렌즈 도감 */}
+              <Link
+                href="/characters"
+                className="ml-1 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-violet-500/15 hover:bg-violet-500/25 text-violet-200 text-xs font-bold border border-violet-400/35 hover:scale-105 transition-all"
+              >
+                <span>🐾</span>
+                <span>프렌즈</span>
+              </Link>
             </nav>
           </div>
 

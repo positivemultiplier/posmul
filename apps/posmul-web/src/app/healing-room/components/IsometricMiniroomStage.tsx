@@ -1,12 +1,16 @@
 "use client";
 
 import React, { useMemo, useRef, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, RotateCw, Smile } from "lucide-react";
 import {
   MINIMI_STYLES,
   ROOM_PROPS,
   type HonorTrophyItem,
 } from "../healing-room-catalog";
+import {
+  getFriendFromMinimiStyle,
+  type PosMulCharacterViewKey,
+} from "@/shared/characters/posmul-friends";
 
 interface IsometricMiniroomStageProps {
   roomTheme: string;
@@ -214,10 +218,14 @@ export function IsometricMiniroomStage({
   const [minimiPos, setMinimiPos] = useState<{ x: number; y: number }>({ x: 318, y: 274 });
   const [selectedPropId, setSelectedPropId] = useState<string | null>(null);
   const [tempChat, setTempChat] = useState<string | null>(null);
+  const [viewKey, setViewKey] = useState<PosMulCharacterViewKey>("front");
+  const [flippedX, setFlippedX] = useState<boolean>(false);
+  const [exprIdx, setExprIdx] = useState<number | null>(null);
 
   const palette = THEME_PALETTES[roomTheme] ?? THEME_PALETTES["sunset-attic"];
   const minimiVisual = MINIMI_VISUALS[minimiStyle] ?? MINIMI_VISUALS["warm-knit"];
   const minimiMeta = MINIMI_STYLES.find((m) => m.id === minimiStyle) ?? MINIMI_STYLES[0];
+  const activeFriend = useMemo(() => getFriendFromMinimiStyle(minimiStyle), [minimiStyle]);
   const unlockedTrophies = useMemo(() => trophies.filter((t) => t.unlocked).slice(0, 4), [trophies]);
   const ownedSet = useMemo(() => new Set(ownedItems), [ownedItems]);
   const placedSet = useMemo(() => new Set(placedItems), [placedItems]);
@@ -235,12 +243,51 @@ export function IsometricMiniroomStage({
     const svgX = ((event.clientX - rect.left) / rect.width) * 640;
     const svgY = ((event.clientY - rect.top) / rect.height) * 360;
     const clamped = clampToIsometricFloor(svgX, svgY);
+
+    // 이동 방향에 따라 PosMul Friends 미니미 시점 자동 전환
+    const dx = clamped.x - minimiPos.x;
+    const dy = clamped.y - minimiPos.y;
+    if (Math.hypot(dx, dy) > 8) {
+      setExprIdx(null);
+      if (dy < -18 && Math.abs(dy) > Math.abs(dx) * 0.65) {
+        setViewKey("back");
+      } else if (dy > 18 && Math.abs(dy) > Math.abs(dx) * 0.85) {
+        setViewKey("front");
+      } else if (Math.abs(dx) > 20 && Math.abs(dy) < 16) {
+        setViewKey("side");
+      } else {
+        setViewKey("three-quarter");
+      }
+      if (Math.abs(dx) > 10) {
+        setFlippedX(dx < 0);
+      }
+    }
+
     setMinimiPos(clamped);
     setSelectedPropId(null);
   }
 
+  function handleCycleView(event: React.MouseEvent) {
+    event.stopPropagation();
+    setExprIdx(null);
+    const order: PosMulCharacterViewKey[] = ["front", "three-quarter", "side", "back"];
+    const next = order[(order.indexOf(viewKey) + 1) % order.length];
+    setViewKey(next);
+  }
+
   function handleMinimiClick(event: React.MouseEvent) {
     event.stopPropagation();
+    if (activeFriend) {
+      const nextExpr = ((exprIdx ?? -1) + 1) % activeFriend.expressions.length;
+      const expr = activeFriend.expressions[nextExpr];
+      setExprIdx(nextExpr);
+      setTempChat(expr.caption);
+      window.setTimeout(() => {
+        setTempChat((prev) => (prev === expr.caption ? null : prev));
+        setExprIdx((prev) => (prev === nextExpr ? null : prev));
+      }, 3400);
+      return;
+    }
     const randomLine = HEALING_CHATS[Math.floor(Math.random() * HEALING_CHATS.length)];
     setTempChat(randomLine);
     window.setTimeout(() => {
@@ -703,70 +750,89 @@ export function IsometricMiniroomStage({
             onClick={handleMinimiClick}
           >
             {/* 바닥 그림자 */}
-            <ellipse cx="0" cy="14" rx="18" ry="7" fill="#000000" opacity="0.18" />
+            <ellipse cx="0" cy="14" rx={activeFriend ? 24 : 18} ry="7.5" fill="#000000" opacity="0.2" />
 
-            {/* 천사 날개 */}
-            {minimiVisual.hatOrEar === "halo" && (
-              <g>
-                <ellipse cx="-16" cy="-16" rx="10" ry="6" fill="#ffffff" stroke="#f9a8d4" strokeWidth="1.2" transform="rotate(-20 -16 -16)" />
-                <ellipse cx="16" cy="-16" rx="10" ry="6" fill="#ffffff" stroke="#f9a8d4" strokeWidth="1.2" transform="rotate(20 16 -16)" />
+            {activeFriend ? (
+              <g transform={flippedX && exprIdx === null ? "scale(-1, 1)" : undefined}>
+                <image
+                  href={
+                    exprIdx !== null
+                      ? activeFriend.expressions[exprIdx]?.image ?? activeFriend.views.front
+                      : activeFriend.views[viewKey]
+                  }
+                  x="-42"
+                  y="-66"
+                  width="84"
+                  height="84"
+                  preserveAspectRatio="xMidYMax meet"
+                />
               </g>
-            )}
+            ) : (
+              <>
+                {/* 천사 날개 */}
+                {minimiVisual.hatOrEar === "halo" && (
+                  <g>
+                    <ellipse cx="-16" cy="-16" rx="10" ry="6" fill="#ffffff" stroke="#f9a8d4" strokeWidth="1.2" transform="rotate(-20 -16 -16)" />
+                    <ellipse cx="16" cy="-16" rx="10" ry="6" fill="#ffffff" stroke="#f9a8d4" strokeWidth="1.2" transform="rotate(20 16 -16)" />
+                  </g>
+                )}
 
-            {/* 다리 & 신발 */}
-            <rect x="-8" y="-4" width="6" height="16" rx="3" fill="#475569" />
-            <rect x="2" y="-4" width="6" height="16" rx="3" fill="#475569" />
-            <ellipse cx="-6" cy="12" rx="5" ry="3" fill="#1e293b" />
-            <ellipse cx="6" cy="12" rx="5" ry="3" fill="#1e293b" />
+                {/* 다리 & 신발 */}
+                <rect x="-8" y="-4" width="6" height="16" rx="3" fill="#475569" />
+                <rect x="2" y="-4" width="6" height="16" rx="3" fill="#475569" />
+                <ellipse cx="-6" cy="12" rx="5" ry="3" fill="#1e293b" />
+                <ellipse cx="6" cy="12" rx="5" ry="3" fill="#1e293b" />
 
-            {/* 상의 (2등신 몸통) */}
-            <path
-              d="M-13 -20 Q0 -25 13 -20 L15 -1 L-15 -1 Z"
-              fill={minimiVisual.outfitMain}
-              stroke="#ffffff"
-              strokeWidth="1.5"
-            />
-            <circle cx="0" cy="-14" r="4" fill={minimiVisual.outfitSub} />
+                {/* 상의 (2등신 몸통) */}
+                <path
+                  d="M-13 -20 Q0 -25 13 -20 L15 -1 L-15 -1 Z"
+                  fill={minimiVisual.outfitMain}
+                  stroke="#ffffff"
+                  strokeWidth="1.5"
+                />
+                <circle cx="0" cy="-14" r="4" fill={minimiVisual.outfitSub} />
 
-            {/* 양팔 + 소품 */}
-            <circle cx="-15" cy="-11" r="4" fill={minimiVisual.skinColor} />
-            <circle cx="15" cy="-11" r="4" fill={minimiVisual.skinColor} />
-            <text x="19" y="-8" fontSize="12">
-              {minimiVisual.propEmoji}
-            </text>
+                {/* 양팔 + 소품 */}
+                <circle cx="-15" cy="-11" r="4" fill={minimiVisual.skinColor} />
+                <circle cx="15" cy="-11" r="4" fill={minimiVisual.skinColor} />
+                <text x="19" y="-8" fontSize="12">
+                  {minimiVisual.propEmoji}
+                </text>
 
-            {/* 머리 (싸이월드 2등신 감성) */}
-            <circle cx="0" cy="-37" r="18" fill={minimiVisual.skinColor} stroke="#e2a898" strokeWidth="1" />
-            {/* 머리카락 */}
-            <path
-              d="M-18 -38 C-18 -56 18 -56 18 -38 C14 -45 6 -47 0 -45 C-6 -47 -14 -45 -18 -38 Z"
-              fill={minimiVisual.hairColor}
-            />
-            {/* 눈, 볼터치, 미소 */}
-            <circle cx="-6" cy="-35" r="2" fill="#1e293b" />
-            <circle cx="6" cy="-35" r="2" fill="#1e293b" />
-            <ellipse cx="-10" cy="-31" rx="3.2" ry="1.8" fill={minimiVisual.cheekColor} opacity="0.7" />
-            <ellipse cx="10" cy="-31" rx="3.2" ry="1.8" fill={minimiVisual.cheekColor} opacity="0.7" />
-            <path d="M-3 -30 Q0 -27 3 -30" fill="none" stroke="#be123c" strokeWidth="1.5" strokeLinecap="round" />
+                {/* 머리 (싸이월드 2등신 감성) */}
+                <circle cx="0" cy="-37" r="18" fill={minimiVisual.skinColor} stroke="#e2a898" strokeWidth="1" />
+                {/* 머리카락 */}
+                <path
+                  d="M-18 -38 C-18 -56 18 -56 18 -38 C14 -45 6 -47 0 -45 C-6 -47 -14 -45 -18 -38 Z"
+                  fill={minimiVisual.hairColor}
+                />
+                {/* 눈, 볼터치, 미소 */}
+                <circle cx="-6" cy="-35" r="2" fill="#1e293b" />
+                <circle cx="6" cy="-35" r="2" fill="#1e293b" />
+                <ellipse cx="-10" cy="-31" rx="3.2" ry="1.8" fill={minimiVisual.cheekColor} opacity="0.7" />
+                <ellipse cx="10" cy="-31" rx="3.2" ry="1.8" fill={minimiVisual.cheekColor} opacity="0.7" />
+                <path d="M-3 -30 Q0 -27 3 -30" fill="none" stroke="#be123c" strokeWidth="1.5" strokeLinecap="round" />
 
-            {/* 모자 / 헤일로 / 귀 장식 */}
-            {minimiVisual.hatOrEar === "owl" && (
-              <g>
-                <polygon points="-14,-51 -8,-61 -2,-53" fill="#0ea5e9" />
-                <polygon points="14,-51 8,-61 2,-53" fill="#0ea5e9" />
-              </g>
-            )}
-            {minimiVisual.hatOrEar === "cap" && (
-              <path d="M-16 -46 Q0 -62 16 -46 L22 -44 L-16 -44 Z" fill="#059669" />
-            )}
-            {minimiVisual.hatOrEar === "halo" && (
-              <ellipse cx="0" cy="-60" rx="12" ry="3.5" fill="none" stroke="#facc15" strokeWidth="2.5" />
-            )}
-            {minimiVisual.hatOrEar === "wizard" && (
-              <g>
-                <polygon points="-14,-49 0,-69 14,-49" fill="#4f46e5" stroke="#fde047" strokeWidth="1.2" />
-                <ellipse cx="0" cy="-49" rx="18" ry="3.5" fill="#4338ca" />
-              </g>
+                {/* 모자 / 헤일로 / 귀 장식 */}
+                {minimiVisual.hatOrEar === "owl" && (
+                  <g>
+                    <polygon points="-14,-51 -8,-61 -2,-53" fill="#0ea5e9" />
+                    <polygon points="14,-51 8,-61 2,-53" fill="#0ea5e9" />
+                  </g>
+                )}
+                {minimiVisual.hatOrEar === "cap" && (
+                  <path d="M-16 -46 Q0 -62 16 -46 L22 -44 L-16 -44 Z" fill="#059669" />
+                )}
+                {minimiVisual.hatOrEar === "halo" && (
+                  <ellipse cx="0" cy="-60" rx="12" ry="3.5" fill="none" stroke="#facc15" strokeWidth="2.5" />
+                )}
+                {minimiVisual.hatOrEar === "wizard" && (
+                  <g>
+                    <polygon points="-14,-49 0,-69 14,-49" fill="#4f46e5" stroke="#fde047" strokeWidth="1.2" />
+                    <ellipse cx="0" cy="-49" rx="18" ry="3.5" fill="#4338ca" />
+                  </g>
+                )}
+              </>
             )}
 
             {/* 미니미 닉네임 & 스타일 배지 */}
@@ -776,11 +842,11 @@ export function IsometricMiniroomStage({
             </text>
 
             {/* 머리 위 말풍선 */}
-            <g transform="translate(0, -84)">
+            <g transform={activeFriend ? "translate(0, -80)" : "translate(0, -84)"}>
               <rect
-                x="-95"
+                x="-105"
                 y="-14"
-                width="190"
+                width="210"
                 height="24"
                 rx="10"
                 fill="#ffffff"
@@ -788,16 +854,38 @@ export function IsometricMiniroomStage({
                 strokeWidth="1.5"
               />
               <polygon points="-5,10 5,10 0,16" fill="#ffffff" stroke="#60a5fa" strokeWidth="1" />
-              <text x="0" y="2" textAnchor="middle" fontSize="10" fontWeight="600" fill="#1e293b">
-                {(tempChat ?? minimiQuote).slice(0, 26)}
+              <text x="0" y="2" textAnchor="middle" fontSize="9.5" fontWeight="600" fill="#1e293b">
+                {(tempChat ?? (activeFriend ? activeFriend.catchphrase : minimiQuote)).slice(0, 26)}
               </text>
             </g>
           </g>
         </svg>
 
-        {/* 좌측 상단/하단 안내 오버레이 */}
-        <div className="pointer-events-none absolute bottom-2 left-2.5 rounded bg-white/85 px-2 py-0.5 text-[10px] font-medium text-slate-600 shadow-sm border border-slate-200">
-          💡 바닥을 클릭하면 <strong className="text-sky-700">{minimiMeta.name}</strong> 미니미가 걸어다녀요
+        {/* 좌측 하단 안내 오버레이 & 프렌즈 미니미 회전/표정 컨트롤 */}
+        <div className="absolute bottom-2 left-2.5 right-2.5 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
+          <div className="rounded bg-white/85 px-2 py-0.5 text-[10px] font-medium text-slate-600 shadow-sm border border-slate-200">
+            💡 바닥을 클릭하면 <strong className="text-sky-700">{minimiMeta.name}</strong> 미니미가 걸어다녀요
+          </div>
+          {activeFriend && (
+            <div className="pointer-events-auto flex items-center gap-1">
+              <button
+                type="button"
+                onClick={handleCycleView}
+                className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-white/95 px-2 py-0.5 text-[10px] font-bold text-indigo-800 shadow-sm hover:bg-indigo-50"
+              >
+                <RotateCw className="h-3 w-3" />
+                <span>방향 ({viewKey.toUpperCase()})</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleMinimiClick}
+                className="inline-flex items-center gap-1 rounded-md border border-amber-200 bg-white/95 px-2 py-0.5 text-[10px] font-bold text-amber-800 shadow-sm hover:bg-amber-50"
+              >
+                <Smile className="h-3 w-3" />
+                <span>표정 바꾸기</span>
+              </button>
+            </div>
+          )}
         </div>
 
         {/* 소품 선택 툴팁 */}

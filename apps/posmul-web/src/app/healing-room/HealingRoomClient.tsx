@@ -32,6 +32,14 @@ import {
   type HealingItemCategory,
 } from "./healing-room-catalog";
 import type { HealingRoomPageData } from "./healing-room-service";
+import {
+  POSMUL_FRIENDS,
+  POSMUL_STICKER_MAP,
+  POSMUL_STICKERS,
+  encodeGuestbookStickerMessage,
+  parseGuestbookStickerMessage,
+  type PosMulFriendId,
+} from "@/shared/characters/posmul-friends";
 import { IsometricMiniroomStage } from "./components/IsometricMiniroomStage";
 
 interface HealingRoomClientProps {
@@ -170,12 +178,15 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
   const [editMood, setEditMood] = useState(initialData.room.moodTag);
   const [editBgm, setEditBgm] = useState(initialData.room.bgmTrack);
 
-  // 방명록 작성 상태
+  // 방명록 작성 & 카카오풍 프렌즈 스티커 상태
   const [guestContent, setGuestContent] = useState("");
   const [guestName, setGuestName] = useState("");
   const [guestRelation, setGuestRelation] = useState<string>(
     initialData.isAuthenticated ? "PosMul 일촌" : "동네 이웃"
   );
+  const [selectedStickerId, setSelectedStickerId] = useState<string | null>(null);
+  const [showStickerPicker, setShowStickerPicker] = useState(false);
+  const [stickerFriendFilter, setStickerFriendFilter] = useState<"all" | PosMulFriendId>("all");
 
   // BGM 플레이어 상태 (MP3 오리지널 음원 + Web Audio API 로파이 겸용)
   const [isBgmPlaying, setIsBgmPlaying] = useState(false);
@@ -528,15 +539,16 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
 
   async function handleWriteGuestbook(event: React.FormEvent) {
     event.preventDefault();
-    if (guestContent.trim().length < 2) {
-      showNotice("error", "일촌평을 2자 이상 입력해주세요.");
+    if (!selectedStickerId && guestContent.trim().length < 2) {
+      showNotice("error", "일촌평을 2자 이상 입력하거나 스티커를 선택해주세요.");
       return;
     }
+    const payloadContent = encodeGuestbookStickerMessage(guestContent, selectedStickerId);
     const ok = await postAction(
       {
         action: "write_guestbook",
         roomUserId: room.userId,
-        content: guestContent,
+        content: payloadContent,
         guestName: !isAuthenticated ? guestName : undefined,
         relationLabel: guestRelation,
       },
@@ -544,7 +556,87 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     );
     if (ok) {
       setGuestContent("");
+      setSelectedStickerId(null);
+      setShowStickerPicker(false);
     }
+  }
+
+  const pickedSticker = selectedStickerId ? POSMUL_STICKER_MAP[selectedStickerId] ?? null : null;
+  const visibleStickers = useMemo(
+    () =>
+      stickerFriendFilter === "all"
+        ? POSMUL_STICKERS
+        : POSMUL_STICKERS.filter((s) => s.friendId === stickerFriendFilter),
+    [stickerFriendFilter]
+  );
+
+  function renderStickerPickerPanel() {
+    if (!showStickerPicker) return null;
+    return (
+      <div className="mt-2 rounded-xl border border-indigo-200 bg-white p-2.5 shadow-md">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-1.5 border-b border-slate-100 pb-2">
+          <div className="flex flex-wrap gap-1">
+            <button
+              type="button"
+              onClick={() => setStickerFriendFilter("all")}
+              className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition ${
+                stickerFriendFilter === "all"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+              }`}
+            >
+              전체 28종
+            </button>
+            {POSMUL_FRIENDS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setStickerFriendFilter(f.id)}
+                className={`rounded-full px-2 py-0.5 text-[10px] font-bold transition ${
+                  stickerFriendFilter === f.id
+                    ? "bg-indigo-600 text-white"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
+              >
+                {f.nameKo}
+              </button>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowStickerPicker(false)}
+            className="text-[10px] font-bold text-slate-400 hover:text-slate-700"
+          >
+            닫기 ✕
+          </button>
+        </div>
+
+        <div className="grid max-h-44 grid-cols-4 gap-1.5 overflow-y-auto sm:grid-cols-7">
+          {visibleStickers.map((st) => {
+            const active = selectedStickerId === st.id;
+            return (
+              <button
+                key={st.id}
+                type="button"
+                onClick={() => {
+                  setSelectedStickerId((prev) => (prev === st.id ? null : st.id));
+                  setShowStickerPicker(false);
+                }}
+                title={`${st.friendName}: ${st.label}`}
+                className={`flex flex-col items-center rounded-lg border p-1 text-center transition hover:bg-indigo-50 ${
+                  active ? "border-indigo-500 bg-indigo-50 ring-1 ring-indigo-400" : "border-slate-200 bg-white"
+                }`}
+              >
+                <img src={st.image} alt={st.label} className="h-11 w-11 object-contain" />
+                <span className="mt-0.5 w-full truncate text-[9px] font-bold text-slate-700">
+                  {st.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
   }
 
   async function handleNextBgm() {
@@ -703,6 +795,15 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
               </Link>
             )}
 
+            <a
+              href="/characters"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-lg border border-violet-400/45 bg-violet-500/20 px-2.5 py-1 text-[11px] font-bold text-violet-200 transition hover:bg-violet-500/30"
+            >
+              <span>🐾 프렌즈 도감</span>
+            </a>
+
             <button
               type="button"
               disabled={isBusy}
@@ -846,8 +947,16 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                       <div
                         className={`relative flex h-40 flex-col items-center justify-center overflow-hidden rounded-md border border-indigo-200 bg-gradient-to-b ${activeTheme.windowBgClass} p-3 text-center shadow-inner`}
                       >
-                        <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-amber-200 bg-white/90 text-4xl shadow-md">
-                          <span>{activeMinimi.avatarEmoji}</span>
+                        <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-full border-2 border-amber-200 bg-white/95 p-1 text-4xl shadow-md">
+                          {activeMinimi.previewImage ? (
+                            <img
+                              src={activeMinimi.previewImage}
+                              alt={activeMinimi.name}
+                              className="h-full w-full object-contain"
+                            />
+                          ) : (
+                            <span>{activeMinimi.avatarEmoji}</span>
+                          )}
                         </div>
                         <span className="mt-2 rounded-full border border-indigo-200 bg-white/95 px-2.5 py-0.5 text-[11px] font-extrabold text-slate-800 shadow-sm">
                           {activeMinimi.accessoryEmoji} {activeMinimi.name}
@@ -1186,57 +1295,99 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
 
                         <form
                           onSubmit={(e) => void handleWriteGuestbook(e)}
-                          className="mb-2.5 flex flex-col gap-1.5 rounded-lg border border-indigo-200/80 bg-indigo-50/50 p-2 sm:flex-row sm:items-center"
+                          className="mb-2.5 rounded-lg border border-indigo-200/80 bg-indigo-50/50 p-2"
                         >
-                          <span className="shrink-0 text-[11px] font-extrabold text-indigo-900">
-                            일촌평
-                          </span>
-                          {!isAuthenticated && (
+                          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
+                            <span className="shrink-0 text-[11px] font-extrabold text-indigo-900">
+                              일촌평
+                            </span>
+                            {!isAuthenticated && (
+                              <input
+                                type="text"
+                                maxLength={20}
+                                placeholder="닉네임"
+                                value={guestName}
+                                onChange={(e) => setGuestName(e.target.value)}
+                                className="w-full sm:w-28 rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:border-indigo-500 focus:outline-none"
+                              />
+                            )}
                             <input
                               type="text"
-                              maxLength={20}
-                              placeholder="닉네임"
-                              value={guestName}
-                              onChange={(e) => setGuestName(e.target.value)}
-                              className="w-full sm:w-28 rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:border-indigo-500 focus:outline-none"
+                              maxLength={170}
+                              placeholder="따뜻한 일촌평이나 스티커를 남겨주세요..."
+                              value={guestContent}
+                              onChange={(e) => setGuestContent(e.target.value)}
+                              className="flex-1 rounded border border-slate-300 bg-white px-2.5 py-1 text-xs focus:border-indigo-500 focus:outline-none"
                             />
+                            <div className="flex shrink-0 items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setShowStickerPicker((prev) => !prev)}
+                                className={`rounded border px-2 py-1 text-[11px] font-bold transition ${
+                                  pickedSticker
+                                    ? "border-amber-400 bg-amber-100 text-amber-900"
+                                    : "border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-100"
+                                }`}
+                              >
+                                {pickedSticker ? `🐾 ${pickedSticker.friendName}` : "🐾 스티커"}
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={isBusy}
+                                className="rounded bg-indigo-600 px-3 py-1 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
+                              >
+                                확인
+                              </button>
+                            </div>
+                          </div>
+                          {pickedSticker && (
+                            <div className="mt-1.5 flex items-center gap-2 rounded-md border border-indigo-200 bg-white px-2 py-1 text-[11px]">
+                              <img src={pickedSticker.image} alt={pickedSticker.label} className="h-7 w-7 object-contain" />
+                              <span className="font-bold text-slate-700">
+                                {pickedSticker.friendName} · {pickedSticker.label}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedStickerId(null)}
+                                className="ml-auto text-[10px] text-slate-400 hover:text-rose-600"
+                              >
+                                선택 해제
+                              </button>
+                            </div>
                           )}
-                          <input
-                            type="text"
-                            maxLength={200}
-                            placeholder="따뜻한 일촌평을 남겨주세요..."
-                            value={guestContent}
-                            onChange={(e) => setGuestContent(e.target.value)}
-                            className="flex-1 rounded border border-slate-300 bg-white px-2.5 py-1 text-xs focus:border-indigo-500 focus:outline-none"
-                          />
-                          <button
-                            type="submit"
-                            disabled={isBusy}
-                            className="shrink-0 rounded bg-indigo-600 px-3 py-1 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
-                          >
-                            확인
-                          </button>
+                          {renderStickerPickerPanel()}
                         </form>
 
                         <ul className="divide-y divide-dotted divide-slate-200 text-xs">
                           {data.guestbooks.length > 0 ? (
-                            data.guestbooks.slice(0, 5).map((entry) => (
-                              <li
-                                key={entry.id}
-                                className="flex flex-wrap items-baseline justify-between gap-2 py-1.5"
-                              >
-                                <div className="flex flex-wrap items-baseline gap-1.5">
-                                  <span className="text-slate-700">{entry.content}</span>
-                                  <span className="text-[11px] font-semibold text-indigo-600">
-                                    ({entry.relationLabel}{" "}
-                                    <strong className="text-slate-900">{entry.authorName}</strong>)
+                            data.guestbooks.slice(0, 5).map((entry) => {
+                              const parsed = parseGuestbookStickerMessage(entry.content);
+                              return (
+                                <li
+                                  key={entry.id}
+                                  className="flex flex-wrap items-center justify-between gap-2 py-1.5"
+                                >
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {parsed.sticker && (
+                                      <img
+                                        src={parsed.sticker.image}
+                                        alt={parsed.sticker.label}
+                                        title={`${parsed.sticker.friendName}: ${parsed.sticker.label}`}
+                                        className="h-9 w-9 shrink-0 rounded-md border border-slate-100 bg-slate-50 object-contain p-0.5"
+                                      />
+                                    )}
+                                    {parsed.text && <span className="text-slate-700">{parsed.text}</span>}
+                                    <span className="text-[11px] font-semibold text-indigo-600">
+                                      ({entry.relationLabel}{" "}
+                                      <strong className="text-slate-900">{entry.authorName}</strong>)
+                                    </span>
+                                  </div>
+                                  <span className="text-[10px] text-slate-400">
+                                    {formatShortDate(entry.createdAt)}
                                   </span>
-                                </div>
-                                <span className="text-[10px] text-slate-400">
-                                  {formatShortDate(entry.createdAt)}
-                                </span>
-                              </li>
-                            ))
+                                </li>
+                              );
+                            })
                           ) : (
                             <li className="py-3 text-center text-xs text-slate-400">
                               아직 등록된 일촌평이 없습니다. 첫 인사를 남겨보세요!
@@ -1648,8 +1799,16 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                               <div>
                                 <div className="flex items-start justify-between gap-2">
                                   <div className="flex items-center gap-2">
-                                    <span className="flex h-10 w-10 items-center justify-center rounded border border-slate-200 bg-slate-50 text-xl">
-                                      {previewIcon}
+                                    <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded border border-slate-200 bg-slate-50 text-xl">
+                                      {item.category === "minimi" && item.previewImage ? (
+                                        <img
+                                          src={item.previewImage}
+                                          alt={item.name}
+                                          className="h-full w-full object-contain p-0.5"
+                                        />
+                                      ) : (
+                                        previewIcon
+                                      )}
                                     </span>
                                     <div>
                                       <h4 className="text-xs font-extrabold text-slate-800">
@@ -1768,12 +1927,23 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                         <div className="flex gap-2">
                           <input
                             type="text"
-                            maxLength={200}
-                            placeholder="미니룸 잘 구경하고 갑니다! 응원 한마디를 남겨보세요."
+                            maxLength={170}
+                            placeholder="미니룸 잘 구경하고 갑니다! 스티커나 응원 한마디를 남겨보세요."
                             value={guestContent}
                             onChange={(e) => setGuestContent(e.target.value)}
                             className="flex-1 rounded border border-slate-300 bg-white px-3 py-1.5 text-xs focus:border-rose-500 focus:outline-none"
                           />
+                          <button
+                            type="button"
+                            onClick={() => setShowStickerPicker((prev) => !prev)}
+                            className={`rounded border px-3 py-1.5 text-xs font-bold transition ${
+                              pickedSticker
+                                ? "border-amber-400 bg-amber-100 text-amber-900"
+                                : "border-rose-200 bg-white text-rose-700 hover:bg-rose-50"
+                            }`}
+                          >
+                            {pickedSticker ? `🐾 ${pickedSticker.friendName}` : "🐾 스티커"}
+                          </button>
                           <button
                             type="submit"
                             disabled={isBusy}
@@ -1782,6 +1952,23 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             등록
                           </button>
                         </div>
+
+                        {pickedSticker && (
+                          <div className="flex items-center gap-2 rounded-md border border-rose-200 bg-white px-2.5 py-1.5 text-xs">
+                            <img src={pickedSticker.image} alt={pickedSticker.label} className="h-8 w-8 object-contain" />
+                            <span className="font-bold text-slate-700">
+                              선택한 스티커: {pickedSticker.friendName} ({pickedSticker.label})
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setSelectedStickerId(null)}
+                              className="ml-auto text-[11px] font-semibold text-slate-400 hover:text-rose-600"
+                            >
+                              제거
+                            </button>
+                          </div>
+                        )}
+                        {renderStickerPickerPanel()}
                       </form>
 
                       <div className="space-y-2.5">
@@ -1790,6 +1977,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             const aMinimi =
                               MINIMI_STYLES.find((m) => m.id === entry.authorMinimi) ??
                               MINIMI_STYLES[0];
+                            const parsed = parseGuestbookStickerMessage(entry.content);
                             return (
                               <div
                                 key={entry.id}
@@ -1797,7 +1985,15 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                               >
                                 <div className="flex items-center justify-between border-b border-dotted border-slate-200 pb-1.5">
                                   <div className="flex items-center gap-2">
-                                    <span className="text-base">{aMinimi.avatarEmoji}</span>
+                                    {aMinimi.previewImage ? (
+                                      <img
+                                        src={aMinimi.previewImage}
+                                        alt={aMinimi.name}
+                                        className="h-6 w-6 rounded-full border border-slate-200 bg-slate-50 object-contain"
+                                      />
+                                    ) : (
+                                      <span className="text-base">{aMinimi.avatarEmoji}</span>
+                                    )}
                                     <span className="text-xs font-extrabold text-slate-900">
                                       {entry.authorName}
                                     </span>
@@ -1809,9 +2005,25 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                     {formatShortDate(entry.createdAt)}
                                   </span>
                                 </div>
-                                <p className="mt-2 text-xs leading-relaxed text-slate-700">
-                                  {entry.content}
-                                </p>
+                                <div className="mt-2 flex items-center gap-3">
+                                  {parsed.sticker && (
+                                    <div className="flex flex-col items-center rounded-xl border border-slate-100 bg-slate-50 p-1.5">
+                                      <img
+                                        src={parsed.sticker.image}
+                                        alt={parsed.sticker.label}
+                                        className="h-16 w-16 object-contain"
+                                      />
+                                      <span className="mt-0.5 text-[9px] font-bold text-slate-500">
+                                        {parsed.sticker.label}
+                                      </span>
+                                    </div>
+                                  )}
+                                  {parsed.text && (
+                                    <p className="text-xs leading-relaxed text-slate-700">
+                                      {parsed.text}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
                             );
                           })

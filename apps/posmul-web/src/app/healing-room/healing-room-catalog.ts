@@ -3,6 +3,7 @@
  * - 경제 불변식: 모든 상점 아이템은 무위험 활동 재화 PMP로만 구매하며 PMC는 소비하지 않습니다.
  * - 명예 트로피(Honor Shelf)는 구매 불가하며 실제 기부·예측·게임 개설 실적으로만 해금됩니다.
  */
+import type { PosMulFriendId } from "@/shared/characters/posmul-friends";
 
 export type HealingItemCategory = "theme" | "minimi" | "prop";
 
@@ -30,6 +31,9 @@ export interface MinimiStyleItem {
   accessoryEmoji: string;
   auraClass: string;
   badgeLabel: string;
+  /** PosMul Friends 일러스트 미니미 연동 시 캐릭터 ID & 대표 이미지 */
+  friendId?: PosMulFriendId;
+  previewImage?: string;
 }
 
 export interface RoomPropItem {
@@ -187,6 +191,98 @@ export const MINIMI_STYLES: ReadonlyArray<MinimiStyleItem> = [
     accessoryEmoji: "✨",
     auraClass: "from-yellow-400/35 to-amber-500/30 border-yellow-300/60",
     badgeLabel: "프리미엄",
+  },
+  // === PosMul Friends 오리지널 360° 멀티뷰 일러스트 미니미 7종 ===
+  {
+    id: "friend-roomie",
+    category: "minimi",
+    name: "루미 (Roomie · 나무늘보)",
+    description: "레트로 헤드셋을 쓰고 다락방 BGM을 들려주는 힐링룸 호스트 (4방향 회전 지원)",
+    pricePmp: 0,
+    avatarEmoji: "🦥",
+    accessoryEmoji: "🎧",
+    auraClass: "from-violet-400/30 to-purple-500/25 border-violet-300/50",
+    badgeLabel: "PosMul 프렌즈 · 기본",
+    friendId: "roomie",
+    previewImage: "/images/characters/sprites/roomie/front.png",
+  },
+  {
+    id: "friend-wavy",
+    category: "minimi",
+    name: "웨이비 (Wavy · 수달)",
+    description: "황금 모래시계 펜던트를 차고 MoneyWave를 지휘하는 파동 리더 (4방향 회전 지원)",
+    pricePmp: 0,
+    avatarEmoji: "🦦",
+    accessoryEmoji: "⏳",
+    auraClass: "from-amber-400/30 to-orange-500/25 border-amber-300/50",
+    badgeLabel: "PosMul 프렌즈 · 기본",
+    friendId: "wavy",
+    previewImage: "/images/characters/sprites/wavy/front.png",
+  },
+  {
+    id: "friend-ollie",
+    category: "minimi",
+    name: "올리 (Ollie · 올빼미)",
+    description: "돋보기와 탐정 모자를 쓰고 내일의 확률을 추리하는 예측 탐정 (4방향 회전 지원)",
+    pricePmp: 150,
+    avatarEmoji: "🦉",
+    accessoryEmoji: "🔎",
+    auraClass: "from-sky-400/30 to-blue-500/25 border-sky-300/50",
+    badgeLabel: "PosMul 프렌즈",
+    friendId: "ollie",
+    previewImage: "/images/characters/sprites/ollie/front.png",
+  },
+  {
+    id: "friend-ongi",
+    category: "minimi",
+    name: "온기 (Ongi · 사모예드)",
+    description: "노란 하트 우체부 가방으로 따뜻한 나눔을 배달하는 천사 강아지 (4방향 회전 지원)",
+    pricePmp: 150,
+    avatarEmoji: "🐶",
+    accessoryEmoji: "💌",
+    auraClass: "from-rose-400/30 to-pink-500/25 border-rose-300/50",
+    badgeLabel: "PosMul 프렌즈",
+    friendId: "ongi",
+    previewImage: "/images/characters/sprites/ongi/front.png",
+  },
+  {
+    id: "friend-moa",
+    category: "minimi",
+    name: "모아 (Moa · 쿼카)",
+    description: "볼 한가득 가치 소비 PMP를 모으는 미소 천사 쿼카 (4방향 회전 지원)",
+    pricePmp: 200,
+    avatarEmoji: "🐹",
+    accessoryEmoji: "⏱️",
+    auraClass: "from-emerald-400/30 to-teal-500/25 border-emerald-300/50",
+    badgeLabel: "PosMul 프렌즈",
+    friendId: "moa",
+    previewImage: "/images/characters/sprites/moa/front.png",
+  },
+  {
+    id: "friend-ago",
+    category: "minimi",
+    name: "아고 (Ago · 아기 펭귄)",
+    description: "헤드셋 마이크와 메모 수첩을 들고 집단지성을 이끄는 아고라 사회자 (4방향 회전 지원)",
+    pricePmp: 200,
+    avatarEmoji: "🐧",
+    accessoryEmoji: "🎙️",
+    auraClass: "from-blue-400/30 to-indigo-500/25 border-blue-300/50",
+    badgeLabel: "PosMul 프렌즈",
+    friendId: "ago",
+    previewImage: "/images/characters/sprites/ago/front.png",
+  },
+  {
+    id: "friend-beomi",
+    category: "minimi",
+    name: "범이 (Beomi · 아기 호랑이)",
+    description: "번개 헤어밴드와 트로피를 향한 불꽃 열정의 맞짱 챔피언 (4방향 회전 지원)",
+    pricePmp: 250,
+    avatarEmoji: "🐯",
+    accessoryEmoji: "🏆",
+    auraClass: "from-orange-400/35 to-amber-500/25 border-orange-300/55",
+    badgeLabel: "PosMul 프렌즈",
+    friendId: "beomi",
+    previewImage: "/images/characters/sprites/beomi/front.png",
   },
 ];
 
