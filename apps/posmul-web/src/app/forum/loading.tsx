@@ -1,4 +1,4 @@
-import { BaseSkeleton } from "../../shared/ui";
+import { BaseSkeleton } from "../../shared/ui/components/feedback/BaseSkeleton";
 
 export default function ForumLoading() {
   return (

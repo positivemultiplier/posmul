@@ -1,6 +1,6 @@
 "use client";
 
-import { Button } from "../../shared/ui";
+import Button from "../../shared/ui/components/base/Button";
 
 export default function DashboardError({
     error: _error,

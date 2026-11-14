@@ -7,7 +7,7 @@ import { AuthEconomyError } from "@posmul/auth-economy-sdk";
 import { ChevronDown, Home, RotateCw } from "lucide-react";
 
 import { BaseError } from "../../../types/base-error";
-import { Button } from "../base";
+import Button from "../base/Button";
 
 interface CustomAction {
   label: string;

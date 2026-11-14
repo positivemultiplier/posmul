@@ -1,6 +1,6 @@
 "use client";
 
-import { BaseErrorUI } from "../../shared/ui";
+import { BaseErrorUI } from "../../shared/ui/components/feedback/BaseErrorUI";
 
 interface ForumErrorProps {
   error: Error & { digest?: string };

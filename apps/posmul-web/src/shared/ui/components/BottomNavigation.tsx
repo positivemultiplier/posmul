@@ -4,7 +4,6 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MessageSquare, Tv, TrendingUp, Heart, Trophy } from "lucide-react";
-import { motion } from "framer-motion";
 import { DOMAIN_PHILOSOPHY_MAP, type PosMulDomainKey } from "../tokens/domain-tones";
 
 const NAV_ITEMS: Array<{
@@ -45,10 +44,8 @@ export function BottomNavigation() {
               className="relative flex flex-col items-center justify-center py-1.5 px-3 rounded-xl transition-all group"
             >
               {isActive && (
-                <motion.div
-                  layoutId="activeBottomTab"
-                  className={`absolute inset-0 rounded-xl ${meta.tones.row2Active}`}
-                  transition={{ type: "spring", stiffness: 350, damping: 25 }}
+                <div
+                  className={`absolute inset-0 rounded-xl transition-all duration-200 ${meta.tones.row2Active}`}
                 />
               )}
 

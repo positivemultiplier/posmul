@@ -36,7 +36,16 @@ const nextConfig = {
   },
   // Windows 환경에서 .nft.json 파일 접근 오류 회피
   experimental: {
-    // outputFileTracing: false, // Next.js 15에서 제거됨
+    optimizePackageImports: [
+      "lucide-react",
+      "@heroicons/react",
+      "recharts",
+      "date-fns",
+      "framer-motion",
+      "@radix-ui/react-dialog",
+      "@radix-ui/react-portal",
+      "@radix-ui/react-slot",
+    ],
   },
 };
 

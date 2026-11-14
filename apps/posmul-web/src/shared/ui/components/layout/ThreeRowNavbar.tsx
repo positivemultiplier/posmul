@@ -527,6 +527,7 @@ function checkSubcategoryActive(
 
 function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
   const [user, setUser] = useState<User | null>(null);
+  const [authResolved, setAuthResolved] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -544,22 +545,27 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
 
   useEffect(() => {
     const getUser = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        setUser(session?.user ?? null);
+      } finally {
+        setAuthResolved(true);
+      }
     };
 
-    getUser();
+    void getUser();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
+      setAuthResolved(true);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -665,7 +671,11 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
 
           {/* Desktop: Balance Widget + Auth */}
           <div className="hidden md:flex items-center gap-2.5">
-            <CompactBalanceWidget activeAssetType={currentDomainMeta.assetType} />
+            <CompactBalanceWidget
+              activeAssetType={currentDomainMeta.assetType}
+              user={user}
+              authResolved={authResolved}
+            />
 
             {user ? (
               <>

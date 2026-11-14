@@ -5,11 +5,48 @@
 "use client";
 
 import { useState, useTransition, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import { openLiveRoomForGameAction } from "@/app/live/actions/live.actions";
-import { ProbabilityLineChart } from "@/bounded-contexts/prediction/presentation/components/charts/ProbabilityLineChart";
-import { BettingDistributionChart } from "@/bounded-contexts/prediction/presentation/components/charts/BettingDistributionChart";
-import { ParticipantTimelineChart } from "@/bounded-contexts/prediction/presentation/components/charts/ParticipantTimelineChart";
+
+const ProbabilityLineChart = dynamic(
+  () =>
+    import(
+      "@/bounded-contexts/prediction/presentation/components/charts/ProbabilityLineChart"
+    ).then((m) => m.ProbabilityLineChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[240px] w-full animate-pulse rounded-xl bg-slate-900/60" />
+    ),
+  }
+);
+
+const BettingDistributionChart = dynamic(
+  () =>
+    import(
+      "@/bounded-contexts/prediction/presentation/components/charts/BettingDistributionChart"
+    ).then((m) => m.BettingDistributionChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[240px] w-full animate-pulse rounded-xl bg-slate-900/60" />
+    ),
+  }
+);
+
+const ParticipantTimelineChart = dynamic(
+  () =>
+    import(
+      "@/bounded-contexts/prediction/presentation/components/charts/ParticipantTimelineChart"
+    ).then((m) => m.ParticipantTimelineChart),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[220px] w-full animate-pulse rounded-xl bg-slate-900/60" />
+    ),
+  }
+);
 import { MoneyWaveWaterfallCard } from "@/bounded-contexts/prediction/presentation/components/MoneyWaveWaterfallCard";
 import {
   resolveGameVisualMeta,

@@ -42,7 +42,9 @@ export default async function PredictionPage({ searchParams }: PageProps) {
     supabase
       .schema("prediction")
       .from("prediction_games")
-      .select("*")
+      .select(
+        "game_id, slug, category, subcategory, league, data_source, title, description, prediction_type, game_options, registration_start, registration_end, settlement_date, min_bet_amount, max_bet_amount, max_participants, status, difficulty, created_at, metadata, allocated_prize_pool, total_participants_count, total_stake_amount, game_importance_score"
+      )
       .eq("status", "ACTIVE")
       .order("created_at", { ascending: false })
       .limit(50),

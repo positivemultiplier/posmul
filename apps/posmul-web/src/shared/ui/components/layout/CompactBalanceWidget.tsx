@@ -9,6 +9,10 @@ import { CoreAssetType } from "../../tokens/domain-tones";
 interface CompactBalanceWidgetProps {
   className?: string;
   activeAssetType?: CoreAssetType;
+  /** 상위 레이아웃/네비게이션에서 이미 인증 확인된 사용자 (중복 getSession 방지) */
+  user?: User | null;
+  /** 상위 컴포넌트가 인증 상태 조회를 완료했는지 여부 */
+  authResolved?: boolean;
 }
 
 /**
@@ -21,24 +25,23 @@ interface CompactBalanceWidgetProps {
 export function CompactBalanceWidget({
   className = "",
   activeAssetType = "PMP_TO_PMC",
+  user: propUser,
+  authResolved = false,
 }: CompactBalanceWidgetProps) {
-  const [user, setUser] = useState<User | null>(null);
+  const [internalUser, setInternalUser] = useState<User | null>(null);
   const [pmpBalance, setPmpBalance] = useState<number>(0);
   const [pmcBalance, setPmcBalance] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   const supabase = createClient();
+  const resolvedUser = authResolved ? (propUser ?? null) : internalUser;
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchAccountBalance = async (targetUser: User | null) => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        const currentUser = session?.user ?? null;
-        setUser(currentUser);
-
-        if (!currentUser) {
+        if (!targetUser) {
+          setPmpBalance(0);
+          setPmcBalance(0);
           setLoading(false);
           return;
         }
@@ -48,7 +51,7 @@ export function CompactBalanceWidget({
           .schema("economy")
           .from("pmp_pmc_accounts")
           .select("pmp_balance, pmc_balance")
-          .eq("user_id", currentUser.id)
+          .eq("user_id", targetUser.id)
           .single();
 
         setPmpBalance(
@@ -64,10 +67,35 @@ export function CompactBalanceWidget({
       }
     };
 
-    fetchData();
+    if (authResolved) {
+      void fetchAccountBalance(propUser ?? null);
+      const handleBalanceUpdate = () => {
+        void fetchAccountBalance(propUser ?? null);
+      };
+      window.addEventListener("balanceUpdate", handleBalanceUpdate);
+      return () => {
+        window.removeEventListener("balanceUpdate", handleBalanceUpdate);
+      };
+    }
+
+    const fetchSessionAndBalance = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const currentUser = session?.user ?? null;
+        setInternalUser(currentUser);
+        await fetchAccountBalance(currentUser);
+      } catch (error) {
+        console.error("CompactBalanceWidget: Failed to fetch balance", error);
+        setLoading(false);
+      }
+    };
+
+    void fetchSessionAndBalance();
 
     const handleBalanceUpdate = () => {
-      fetchData();
+      void fetchSessionAndBalance();
     };
 
     window.addEventListener("balanceUpdate", handleBalanceUpdate);
@@ -75,22 +103,18 @@ export function CompactBalanceWidget({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (!session?.user) {
-        setPmpBalance(0);
-        setPmcBalance(0);
-      } else {
-        fetchData();
-      }
+      const nextUser = session?.user ?? null;
+      setInternalUser(nextUser);
+      void fetchAccountBalance(nextUser);
     });
 
     return () => {
       subscription.unsubscribe();
       window.removeEventListener("balanceUpdate", handleBalanceUpdate);
     };
-  }, []);
+  }, [authResolved, propUser?.id, supabase]);
 
-  if (loading || !user) {
+  if (loading || !resolvedUser) {
     return null;
   }
 

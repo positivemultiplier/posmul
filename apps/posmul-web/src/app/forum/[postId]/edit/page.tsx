@@ -1,11 +1,20 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, PenSquare, Sparkles, Save } from "lucide-react";
 import { getGalleryPostDetailAction, updateGalleryPostAction } from "../../actions/gallery.actions";
-import { TiptapForumEditor } from "../../components/TiptapForumEditor";
+const TiptapForumEditor = dynamic(
+  () => import("../../components/TiptapForumEditor").then((m) => m.TiptapForumEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-64 w-full animate-pulse rounded-xl bg-slate-900/60 border border-slate-800" />
+    ),
+  }
+);
 
 export default function ForumPostEditPage() {
   const params = useParams();

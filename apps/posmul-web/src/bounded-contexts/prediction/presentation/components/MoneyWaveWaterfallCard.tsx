@@ -57,11 +57,13 @@ export function MoneyWaveWaterfallCard({
     setPoolAmount(Math.round(totalPrizePool));
   }, [totalPrizePool]);
 
-  // 1. 실제 KST 정각 기준 카운트다운 동기화
+  // 1. 실제 KST 정각 기준 카운트다운 + 실시간 유입 펄스 통합 타이머 (단일 인터벌로 경량화)
   useEffect(() => {
     setSecondsLeft(getKstHourSecondsLeft());
+    let tickCount = 0;
 
     const timer = setInterval(() => {
+      tickCount += 1;
       const next = getKstHourSecondsLeft();
       setSecondsLeft((prev) => {
         if (next > prev + 3000) {
@@ -71,20 +73,15 @@ export function MoneyWaveWaterfallCard({
         }
         return next;
       });
+
+      if (tickCount % 2 === 0) {
+        const delta = Math.floor(Math.random() * 6 + 3);
+        setPoolAmount((prev) => prev + delta);
+        setLastTickDelta(delta);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
-
-  // 2. 실시간 유입 펄스 (+PMC 플로팅 피드백 & 목 광채 펄스)
-  useEffect(() => {
-    const sparkInterval = setInterval(() => {
-      const delta = Math.floor(Math.random() * 6 + 3);
-      setPoolAmount((prev) => prev + delta);
-      setLastTickDelta(delta);
-    }, 1500);
-
-    return () => clearInterval(sparkInterval);
   }, []);
 
   const elapsedRatio = Math.max(0, Math.min(1, (3600 - secondsLeft) / 3600));
