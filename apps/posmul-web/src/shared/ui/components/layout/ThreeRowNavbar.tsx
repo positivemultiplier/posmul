@@ -656,6 +656,12 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
             {user ? (
               <>
                 <Link
+                  href="/healing-room"
+                  className="px-3 py-1.5 bg-gradient-to-r from-amber-500/20 to-emerald-500/20 hover:from-amber-500/30 hover:to-emerald-500/30 text-amber-200 rounded-xl transition-all duration-200 border border-amber-400/40 text-xs font-semibold flex items-center gap-1"
+                >
+                  <span>🏡 힐링룸</span>
+                </Link>
+                <Link
                   href="/dashboard"
                   className="px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-xl transition-all duration-200 border border-slate-700/60 text-xs font-semibold flex items-center gap-1"
                 >
@@ -677,6 +683,12 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
               </>
             ) : (
               <>
+                <Link
+                  href="/healing-room"
+                  className="px-2.5 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 rounded-xl border border-amber-400/35 transition-colors text-xs font-semibold"
+                >
+                  🏡 힐링룸
+                </Link>
                 <Link
                   href="/dashboard"
                   className="px-2.5 py-1.5 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-800 transition-colors text-xs font-semibold"
@@ -821,6 +833,13 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
 
             {/* Mobile: Auth */}
             <div className="pt-2 border-t border-slate-800 space-y-2">
+              <Link
+                href="/healing-room"
+                onClick={() => setMobileOpen(false)}
+                className="mb-2 block w-full px-4 py-2 bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border border-amber-400/40 text-amber-200 rounded-xl text-center text-xs font-bold"
+              >
+                🏡 PosMul 힐링룸 미니홈피
+              </Link>
               {user ? (
                 <div className="grid grid-cols-2 gap-2">
                   <Link
