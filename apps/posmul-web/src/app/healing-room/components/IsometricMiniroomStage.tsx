@@ -257,8 +257,8 @@ export function IsometricMiniroomStage({
 
   return (
     <div className="w-full space-y-2">
-      {/* 싸이월드 정통 아이소메트릭 미니룸 캔버스 */}
-      <div className="relative overflow-hidden rounded border border-[#b8ccd4] bg-[#eef5f8] shadow-inner">
+      {/* PosMul 2.5D 아이소메트릭 미니룸 캔버스 */}
+      <div className="relative overflow-hidden rounded-lg border border-indigo-200 bg-[#eef5f8] shadow-inner">
         <svg
           ref={svgRef}
           viewBox="0 0 640 360"
@@ -346,6 +346,23 @@ export function IsometricMiniroomStage({
             fill={palette.rugInner}
             className="pointer-events-none"
           />
+          {/* PosMul 나침반 별빛 포인트 */}
+          <g className="pointer-events-none" opacity="0.45">
+            <ellipse
+              cx="320"
+              cy="272"
+              rx="42"
+              ry="12"
+              fill="none"
+              stroke={palette.accentColor}
+              strokeWidth="1"
+              strokeDasharray="3 3"
+            />
+            <polygon
+              points="320,261 323,270 335,272 323,274 320,283 317,274 305,272 317,270"
+              fill={palette.accentColor}
+            />
+          </g>
 
           {/* === 좌측 벽: 대형 발코니 통창 === */}
           <g>
@@ -411,11 +428,58 @@ export function IsometricMiniroomStage({
             <line x1="234" y1="63" x2="234" y2="175" stroke="#ffffff" strokeWidth="3.5" />
           </g>
 
-          {/* === 좌측 벽 장식 액자 === */}
-          <g transform="translate(88, 108) skewY(-14)">
-            <rect x="0" y="0" width="38" height="46" rx="4" fill="#fffdf9" stroke={palette.accentColor} strokeWidth="2.5" />
-            <rect x="5" y="5" width="28" height="36" rx="2" fill="#ffe4e6" />
-            <text x="19" y="29" textAnchor="middle" fontSize="16">🌸</text>
+          {/* === 좌측 벽 장식 액자 (PosMul 황금 엠블럼 액자) === */}
+          <g transform="translate(86, 106) skewY(-14)">
+            <rect
+              x="0"
+              y="0"
+              width="42"
+              height="50"
+              rx="5"
+              fill="#0f172a"
+              stroke="#eab308"
+              strokeWidth="2.2"
+            />
+            <rect
+              x="4"
+              y="4"
+              width="34"
+              height="42"
+              rx="3"
+              fill="#1e1b4b"
+              stroke="#38bdf8"
+              strokeWidth="0.8"
+            />
+            {/* 시민 선순환 골드 링 */}
+            <circle
+              cx="21"
+              cy="22"
+              r="11"
+              fill="none"
+              stroke="#fbbf24"
+              strokeWidth="1.4"
+              strokeDasharray="4 2"
+            />
+            <text
+              x="21"
+              y="25.5"
+              textAnchor="middle"
+              fontSize="10"
+              fontWeight="bold"
+              fill="#fef08a"
+            >
+              PM
+            </text>
+            <text
+              x="21"
+              y="40"
+              textAnchor="middle"
+              fontSize="5.5"
+              fontWeight="bold"
+              fill="#7dd3fc"
+            >
+              POSMUL
+            </text>
           </g>
 
           {/* === 우측 벽: 아치형 방문 + 레이스 커튼 === */}
@@ -438,6 +502,29 @@ export function IsometricMiniroomStage({
 
           {/* === 우측 벽: 영광의 선반 (해금된 명예 트로피 진열) === */}
           <g>
+            {/* POSMUL HONOR 골드 명패 플레이트 */}
+            <g transform="translate(494, 86) skewY(14)">
+              <rect
+                x="0"
+                y="0"
+                width="68"
+                height="15"
+                rx="3"
+                fill="#1e293b"
+                stroke="#f59e0b"
+                strokeWidth="1.2"
+              />
+              <text
+                x="34"
+                y="10.5"
+                textAnchor="middle"
+                fontSize="6.5"
+                fontWeight="bold"
+                fill="#fde047"
+              >
+                POSMUL HONOR
+              </text>
+            </g>
             <polygon points="482,118 574,142 574,151 482,127" fill="#ffffff" stroke={palette.moldingFill} strokeWidth="2" />
             <polygon points="482,158 574,182 574,191 482,167" fill="#ffffff" stroke={palette.moldingFill} strokeWidth="2" />
             {unlockedTrophies.length > 0 ? (
@@ -733,10 +820,10 @@ export function IsometricMiniroomStage({
         )}
       </div>
 
-      {/* 내 방일 때 보유 가구 빠른 ON/OFF 배치 바 */}
+      {/* 내 방일 때 보유 가구 빠른 ON/OFF 배치 바 (PosMul 인디고·앰버 톤온톤) */}
       {isOwner && onToggleProp && (
-        <div className="flex flex-wrap items-center gap-1.5 rounded border border-[#d6e5ea] bg-[#f4fafc] px-2.5 py-2">
-          <span className="mr-1 text-[11px] font-bold text-[#2b6b7c]">🪑 미니룸 가구 배치:</span>
+        <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-indigo-200/90 bg-gradient-to-r from-indigo-50/90 via-sky-50/75 to-amber-50/60 px-3 py-2 shadow-sm">
+          <span className="mr-1 text-[11px] font-extrabold text-indigo-900">🪑 미니룸 가구 배치:</span>
           {ROOM_PROPS.filter((prop) => ownedSet.has(prop.id) || prop.pricePmp === 0).map((prop) => {
             const active = placedSet.has(prop.id);
             return (
@@ -745,15 +832,15 @@ export function IsometricMiniroomStage({
                 type="button"
                 disabled={isBusy}
                 onClick={() => onToggleProp(prop.id)}
-                className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[11px] font-medium transition ${
+                className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-[11px] font-semibold transition ${
                   active
-                    ? "border-[#2b879e] bg-[#e0f3f7] text-[#175463] font-bold"
-                    : "border-slate-300 bg-white text-slate-500 hover:bg-slate-50"
+                    ? "border-indigo-500/70 bg-gradient-to-r from-indigo-600 to-sky-600 text-white shadow-sm"
+                    : "border-slate-300 bg-white text-slate-600 hover:border-amber-400 hover:text-indigo-900"
                 }`}
               >
                 <span>{prop.emoji}</span>
                 <span>{prop.name}</span>
-                {active && <Check className="h-3 w-3 text-[#2b879e]" />}
+                {active && <Check className="h-3 w-3 text-amber-300" />}
               </button>
             );
           })}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import {
   ArrowRight,
   Disc3,
+  ExternalLink,
   Heart,
   Home,
   Lock,
@@ -19,6 +20,7 @@ import {
   Square,
   Trophy,
   Waves,
+  X,
 } from "lucide-react";
 import {
   ALL_HEALING_ITEMS,
@@ -44,13 +46,95 @@ interface FeedbackNotice {
   message: string;
 }
 
-const CY_BOOKMARK_TABS: ReadonlyArray<{ key: CyTabKey; label: string }> = [
-  { key: "home", label: "홈" },
-  { key: "profile", label: "프로필" },
-  { key: "prediction", label: "예측장" },
-  { key: "donation", label: "기부첩" },
-  { key: "shop", label: "선물가게" },
-  { key: "guestbook", label: "방명록" },
+interface BinderSkinStyle {
+  coverGradient: string;
+  borderClass: string;
+  innerSurface: string;
+  titleColor: string;
+}
+
+const THEME_BINDER_SKINS: Record<string, BinderSkinStyle> = {
+  "sunset-attic": {
+    coverGradient: "from-[#1e3a8a] via-[#1d4ed8] to-[#0f766e]",
+    borderClass: "border-sky-400/50",
+    innerSurface: "bg-[#f4f7fc]",
+    titleColor: "text-[#1e3a8a]",
+  },
+  "seongsu-bookcafe": {
+    coverGradient: "from-[#065f46] via-[#047857] to-[#0f766e]",
+    borderClass: "border-emerald-400/50",
+    innerSurface: "bg-[#f3faf7]",
+    titleColor: "text-[#065f46]",
+  },
+  "hanok-teahouse": {
+    coverGradient: "from-[#78350f] via-[#b45309] to-[#92400e]",
+    borderClass: "border-amber-400/55",
+    innerSurface: "bg-[#fbf8f1]",
+    titleColor: "text-[#92400e]",
+  },
+  "starlight-rooftop": {
+    coverGradient: "from-[#312e81] via-[#4c1d95] to-[#1e1b4b]",
+    borderClass: "border-purple-400/55",
+    innerSurface: "bg-[#f5f3ff]",
+    titleColor: "text-[#4c1d95]",
+  },
+  "jeju-forest": {
+    coverGradient: "from-[#0f766e] via-[#0d9488] to-[#0369a1]",
+    borderClass: "border-teal-300/55",
+    innerSurface: "bg-[#f2fbf9]",
+    titleColor: "text-[#0f766e]",
+  },
+};
+
+const CY_BOOKMARK_TABS: ReadonlyArray<{
+  key: CyTabKey;
+  label: string;
+  icon: string;
+  inactiveClass: string;
+  activeAccent: string;
+}> = [
+  {
+    key: "home",
+    label: "홈",
+    icon: "🏠",
+    inactiveClass: "bg-indigo-700 border-indigo-400/60 hover:bg-indigo-600 text-indigo-50",
+    activeAccent: "text-indigo-900 border-l-indigo-500",
+  },
+  {
+    key: "profile",
+    label: "프로필",
+    icon: "👤",
+    inactiveClass: "bg-amber-600 border-amber-300/60 hover:bg-amber-500 text-amber-50",
+    activeAccent: "text-amber-900 border-l-amber-500",
+  },
+  {
+    key: "prediction",
+    label: "예측장",
+    icon: "🔮",
+    inactiveClass: "bg-sky-700 border-sky-400/60 hover:bg-sky-600 text-sky-50",
+    activeAccent: "text-sky-900 border-l-sky-500",
+  },
+  {
+    key: "donation",
+    label: "기부첩",
+    icon: "🕊️",
+    inactiveClass: "bg-purple-700 border-purple-400/60 hover:bg-purple-600 text-purple-50",
+    activeAccent: "text-purple-900 border-l-purple-500",
+  },
+  {
+    key: "shop",
+    label: "선물가게",
+    icon: "🎁",
+    inactiveClass: "bg-emerald-700 border-emerald-400/60 hover:bg-emerald-600 text-emerald-50",
+    activeAccent: "text-emerald-900 border-l-emerald-500",
+  },
+  {
+    key: "guestbook",
+    label: "방명록",
+    icon: "💌",
+    inactiveClass: "bg-rose-700 border-rose-400/60 hover:bg-rose-600 text-rose-50",
+    activeAccent: "text-rose-900 border-l-rose-500",
+  },
 ];
 
 const RELATION_PRESETS = ["PosMul 일촌", "동네 이웃", "예측 동지", "응원 손님"] as const;
@@ -76,7 +160,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
   const [isBusy, setIsBusy] = useState(false);
   const [notice, setNotice] = useState<FeedbackNotice | null>(null);
 
-  // 인라인 제목 편집 상태 (싸이월드 대문 제목 클릭 시)
+  // 인라인 제목 편집 상태
   const [isEditingHeadline, setIsEditingHeadline] = useState(false);
 
   // 프로필 편집 폼 상태
@@ -86,7 +170,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
   const [editMood, setEditMood] = useState(initialData.room.moodTag);
   const [editBgm, setEditBgm] = useState(initialData.room.bgmTrack);
 
-  // 방명록 작성 상태 (홈 일촌평 & 방명록 탭 공용)
+  // 방명록 작성 상태
   const [guestContent, setGuestContent] = useState("");
   const [guestName, setGuestName] = useState("");
   const [guestRelation, setGuestRelation] = useState<string>(
@@ -109,6 +193,11 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
 
   const activeTheme = useMemo(
     () => ROOM_THEMES.find((t) => t.id === room.roomTheme) ?? ROOM_THEMES[0],
+    [room.roomTheme]
+  );
+
+  const binderSkin = useMemo(
+    () => THEME_BINDER_SKINS[room.roomTheme] ?? THEME_BINDER_SKINS["sunset-attic"],
     [room.roomTheme]
   );
 
@@ -233,6 +322,16 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     setNotice({ type, message });
   };
 
+  function handleCloseWindow() {
+    window.close();
+    // 브라우저 보안 정책으로 window.close()가 무시되는 일반 탭에서는 홈으로 이동
+    window.setTimeout(() => {
+      if (!window.closed) {
+        window.location.href = "/";
+      }
+    }, 180);
+  }
+
   async function postAction(payload: Record<string, unknown>, successMessage: string) {
     setIsBusy(true);
     setNotice(null);
@@ -291,7 +390,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
       setActiveTab("home");
       showNotice(
         "info",
-        `🌊 ${json.data.room.ownerNickname}님의 미니홈피로 파도타기 했습니다!`
+        `🌊 ${json.data.room.ownerNickname}님의 PosMul 힐링룸으로 파도타기 했습니다!`
       );
     } catch {
       showNotice("error", "파도타기 중 통신 오류가 발생했습니다.");
@@ -311,7 +410,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
         moodTag: editMood,
         bgmTrack: editBgm,
       },
-      "✨ 미니홈피 프로필과 BGM 설정을 저장했습니다."
+      "✨ PosMul 힐링룸 프로필과 BGM 설정을 저장했습니다."
     );
   }
 
@@ -319,7 +418,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     event.preventDefault();
     const ok = await postAction(
       { action: "update_room", roomTitle: editTitle },
-      "✏️ 미니홈피 대문 제목을 변경했습니다."
+      "✏️ 힐링룸 대문 제목을 변경했습니다."
     );
     if (ok) {
       setIsEditingHeadline(false);
@@ -354,7 +453,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
 
   async function handleEquipOwnedItem(item: AnyHealingItem) {
     if (!isOwner) {
-      showNotice("info", "먼저 '내 미니홈피'로 돌아가서 꾸밀 수 있습니다.");
+      showNotice("info", "먼저 '내 힐링룸'으로 돌아가서 꾸밀 수 있습니다.");
       return;
     }
 
@@ -379,11 +478,14 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
 
   async function handleBuyItem(item: AnyHealingItem) {
     if (!isAuthenticated) {
-      showNotice("info", "로그인하면 보유 PMP로 미니룸·미니미 아이템을 선물가게에서 구매할 수 있습니다.");
+      showNotice(
+        "info",
+        "로그인하면 보유 PMP로 미니룸·미니미 아이템을 선물가게에서 구매할 수 있습니다."
+      );
       return;
     }
     if (!isOwner) {
-      showNotice("info", "먼저 '내 방으로' 이동한 뒤 구매해주세요.");
+      showNotice("info", "먼저 '내 힐링룸'으로 이동한 뒤 구매해주세요.");
       return;
     }
     await postAction(
@@ -426,42 +528,42 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     if (isOwner) {
       await postAction(
         { action: "update_room", bgmTrack: nextTrack.id },
-        `💿 싸이BGM을 '${nextTrack.label}'(으)로 변경했습니다.`
+        `💿 Lo-Fi BGM을 '${nextTrack.label}'(으)로 변경했습니다.`
       );
     }
   }
 
-  // Updated news 4줄 (기부 · 개설게임 · 예측참여 · 해금트로피)
+  // PosMul 시민 선순환 Activity News 4줄
   const updatedNewsLines = useMemo(() => {
-    const lines: Array<{ tag: string; tagColor: string; text: string; targetTab: CyTabKey }> = [];
+    const lines: Array<{ tag: string; tagClass: string; text: string; targetTab: CyTabKey }> = [];
 
     if (data.donations[0]) {
       lines.push({
         tag: "[기부]",
-        tagColor: "text-emerald-700",
+        tagClass: "bg-purple-100 text-purple-800 border-purple-200",
         text: `${data.donations[0].title} (${data.donations[0].pmcAmount.toLocaleString()} PMC 나눔)`,
         targetTab: "donation",
       });
     } else {
       lines.push({
         tag: "[기부]",
-        tagColor: "text-emerald-700",
-        text: "첫 PMC 공공 기부로 따뜻함을 나눠보세요",
+        tagClass: "bg-purple-100 text-purple-800 border-purple-200",
+        text: "첫 PMC 공공 기부로 따뜻한 선순환을 시작해보세요",
         targetTab: "donation",
       });
     }
 
     if (data.createdGames[0]) {
       lines.push({
-        tag: "[예측]",
-        tagColor: "text-sky-700",
-        text: `내가 연 게임: ${data.createdGames[0].title}`,
+        tag: "[개설]",
+        tagClass: "bg-amber-100 text-amber-800 border-amber-200",
+        text: `내가 연 예측게임: ${data.createdGames[0].title}`,
         targetTab: "prediction",
       });
     } else {
       lines.push({
-        tag: "[예측]",
-        tagColor: "text-sky-700",
+        tag: "[개설]",
+        tagClass: "bg-amber-100 text-amber-800 border-amber-200",
         text: "우리 동네·세상 이슈 예측게임을 직접 열어보세요",
         targetTab: "prediction",
       });
@@ -469,15 +571,15 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
 
     if (data.recentPredictions[0]) {
       lines.push({
-        tag: "[참여]",
-        tagColor: "text-indigo-700",
+        tag: "[예측]",
+        tagClass: "bg-sky-100 text-sky-800 border-sky-200",
         text: `${data.recentPredictions[0].gameTitle} (${data.recentPredictions[0].betAmount.toLocaleString()} PMP)`,
         targetTab: "prediction",
       });
     } else {
       lines.push({
-        tag: "[참여]",
-        tagColor: "text-indigo-700",
+        tag: "[예측]",
+        tagClass: "bg-sky-100 text-sky-800 border-sky-200",
         text: "집단지성 예측 참여 기록을 쌓아보세요",
         targetTab: "prediction",
       });
@@ -486,15 +588,15 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     if (unlockedTrophies[0]) {
       lines.push({
         tag: "[명예]",
-        tagColor: "text-amber-700",
-        text: `배지 해금: ${unlockedTrophies[0].icon} ${unlockedTrophies[0].title}`,
+        tagClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+        text: `트로피 해금: ${unlockedTrophies[0].icon} ${unlockedTrophies[0].title}`,
         targetTab: "profile",
       });
     } else {
       lines.push({
         tag: "[명예]",
-        tagColor: "text-amber-700",
-        text: "활동 시 영광의 선반 트로피가 자동 진열됩니다",
+        tagClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
+        text: "실제 활동 시 영광의 선반 트로피가 자동 진열됩니다",
         targetTab: "profile",
       });
     }
@@ -503,85 +605,128 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
   }, [data.donations, data.createdGames, data.recentPredictions, unlockedTrophies]);
 
   const healingPct = Math.min(100, 48 + room.placedItems.length * 6 + boostHealing);
-  const warmthPct = Math.min(100, 28 + Math.min(60, Math.round(ownerStats.totalDonatedPmc / 40)) + boostWarmth);
-  const insightPct = Math.min(100, 25 + Math.min(65, (ownerStats.createdGamesCount * 15) + ownerStats.predictionCount * 5) + boostInsight);
+  const warmthPct = Math.min(
+    100,
+    28 + Math.min(60, Math.round(ownerStats.totalDonatedPmc / 40)) + boostWarmth
+  );
+  const insightPct = Math.min(
+    100,
+    25 + Math.min(65, ownerStats.createdGamesCount * 15 + ownerStats.predictionCount * 5) + boostInsight
+  );
 
   return (
-    /* 정통 싸이월드 모눈종이 배경 프레임 */
+    /* PosMul 딥 네이비 별빛 모눈 배경 + Layout 상단 3단 네비 패딩 상쇄 */
     <div
-      className="min-h-screen bg-[#767a7e] text-[#333333] pb-12"
+      className="relative -mt-[60px] md:-mt-[142px] min-h-screen overflow-x-hidden bg-[#090d16] text-slate-900 pb-14"
       style={{
         backgroundImage:
-          "linear-gradient(to right, rgba(255,255,255,0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.14) 1px, transparent 1px)",
-        backgroundSize: "16px 16px",
+          "linear-gradient(to right, rgba(99,102,241,0.10) 1px, transparent 1px), linear-gradient(to bottom, rgba(99,102,241,0.10) 1px, transparent 1px)",
+        backgroundSize: "20px 20px",
       }}
     >
-      {/* 레트로 미니 브라우저 주소창 */}
-      <div className="border-b border-[#525659] bg-[#e9ecef] px-3 py-2 shadow-sm">
-        <div className="mx-auto flex max-w-[1220px] flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-1 items-center gap-2 min-w-[240px]">
-            <span className="hidden sm:inline-flex items-center gap-1 rounded border border-[#adb5bd] bg-[#dee2e6] px-2 py-0.5 text-[11px] font-bold text-[#495057]">
-              ◀ ▶ ↻
-            </span>
-            <div className="flex flex-1 items-center gap-2 rounded border border-[#adb5bd] bg-white px-3 py-1 text-xs text-[#495057] shadow-inner">
-              <span className="text-[#2b879e]">🏡</span>
-              <span className="truncate font-mono">
-                http://www.posmul.com/healing-room/{room.ownerNickname}
+      {/* PosMul 브랜드 앰비언트 오로라 글로우 */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden">
+        <div className="absolute -top-32 left-1/4 h-96 w-96 rounded-full bg-sky-500/15 blur-3xl" />
+        <div className="absolute top-1/3 right-1/4 h-96 w-96 rounded-full bg-purple-600/15 blur-3xl" />
+        <div className="absolute bottom-0 left-1/2 h-80 w-80 -translate-x-1/2 rounded-full bg-amber-500/10 blur-3xl" />
+      </div>
+
+      {/* === 독립 팝업 전용 PosMul 다크 글래스 상단 윈도우 바 === */}
+      <header className="sticky top-0 z-40 border-b border-indigo-500/30 bg-[#0b101d]/95 px-3 py-2.5 shadow-[0_8px_28px_rgba(0,0,0,0.55)] backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-2.5">
+          {/* 좌측: PosMul 로고 + HEALING ROOM 배지 + 미니 주소창 */}
+          <div className="flex flex-1 items-center gap-2.5 min-w-[240px]">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-lg font-black tracking-tight bg-gradient-to-r from-sky-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent">
+                PosMul
+              </span>
+              <span className="rounded-md border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[10px] font-extrabold tracking-wider text-amber-300">
+                HEALING ROOM
+              </span>
+            </div>
+
+            <div className="hidden sm:flex flex-1 items-center gap-2 rounded-lg border border-slate-700/80 bg-[#090d16]/90 px-3 py-1 text-xs text-slate-300 shadow-inner">
+              <span className="text-sky-400">🏡</span>
+              <span className="truncate font-mono text-[11px]">
+                posmul.com/healing-room/@{room.ownerNickname}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          {/* 우측: 전용 윈도우 액션 컨트롤 */}
+          <div className="flex flex-wrap items-center gap-1.5">
             {isAuthenticated && !isOwner && data.viewerUserId && (
               <button
                 type="button"
                 disabled={isBusy}
                 onClick={() => void visitRoom({ targetUserId: data.viewerUserId ?? undefined })}
-                className="inline-flex items-center gap-1 rounded border border-[#2b879e] bg-[#e6f5f8] px-2.5 py-1 text-[11px] font-bold text-[#175c6e] hover:bg-[#d2edf3]"
+                className="inline-flex items-center gap-1 rounded-lg border border-sky-400/50 bg-sky-500/20 px-2.5 py-1 text-[11px] font-bold text-sky-200 transition hover:bg-sky-500/30"
               >
                 <Home className="h-3 w-3" />
-                <span>내 미니홈피</span>
+                <span>내 힐링룸</span>
               </button>
             )}
+
             {!isAuthenticated && (
               <Link
                 href="/auth/login?next=/healing-room"
-                className="inline-flex items-center gap-1 rounded border border-orange-500 bg-[#ff7a00] px-2.5 py-1 text-[11px] font-bold text-white shadow-sm hover:bg-[#e56d00]"
+                className="inline-flex items-center gap-1 rounded-lg border border-amber-400/60 bg-gradient-to-r from-amber-500 to-orange-500 px-2.5 py-1 text-[11px] font-extrabold text-slate-950 shadow-sm hover:brightness-110"
               >
                 <LogIn className="h-3 w-3" />
                 <span>로그인하고 내 방 만들기</span>
               </Link>
             )}
+
             <button
               type="button"
               disabled={isBusy}
               onClick={() => void visitRoom({ targetUserId: room.userId })}
-              className="inline-flex items-center gap-1 rounded border border-[#ced4da] bg-white px-2 py-1 text-[11px] font-semibold text-[#495057] hover:bg-slate-50"
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800/80 px-2.5 py-1 text-[11px] font-semibold text-slate-200 hover:bg-slate-700"
             >
               <RefreshCw className="h-3 w-3" />
               <span>새로고침</span>
             </button>
+
+            <a
+              href="/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-lg border border-indigo-400/40 bg-indigo-500/15 px-2.5 py-1 text-[11px] font-semibold text-indigo-200 hover:bg-indigo-500/25"
+            >
+              <ExternalLink className="h-3 w-3" />
+              <span className="hidden sm:inline">PosMul 본창</span>
+            </a>
+
+            <button
+              type="button"
+              onClick={handleCloseWindow}
+              title="힐링룸 창 닫기"
+              className="inline-flex items-center gap-1 rounded-lg border border-rose-500/40 bg-rose-500/15 px-2.5 py-1 text-[11px] font-bold text-rose-200 hover:bg-rose-500/30"
+            >
+              <X className="h-3.5 w-3.5" />
+              <span>창 닫기</span>
+            </button>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* 알림 배너 */}
+      {/* 피드백 알림 배너 */}
       {notice && (
-        <div className="mx-auto mt-3 max-w-[1220px] px-3">
+        <div className="relative z-10 mx-auto mt-3 max-w-[1240px] px-3">
           <div
-            className={`flex items-center justify-between rounded-lg border px-3.5 py-2 text-xs font-semibold shadow-md ${
+            className={`flex items-center justify-between rounded-xl border px-4 py-2 text-xs font-semibold shadow-lg backdrop-blur-md ${
               notice.type === "error"
-                ? "border-rose-400 bg-rose-50 text-rose-800"
+                ? "border-rose-400/50 bg-rose-950/90 text-rose-100"
                 : notice.type === "success"
-                  ? "border-emerald-400 bg-emerald-50 text-emerald-800"
-                  : "border-sky-400 bg-sky-50 text-sky-900"
+                  ? "border-emerald-400/50 bg-emerald-950/90 text-emerald-100"
+                  : "border-sky-400/50 bg-slate-900/95 text-sky-100"
             }`}
           >
             <span>{notice.message}</span>
             <button
               type="button"
               onClick={() => setNotice(null)}
-              className="ml-3 text-[11px] underline opacity-75 hover:opacity-100"
+              className="ml-3 text-[11px] underline opacity-80 hover:opacity-100"
             >
               닫기
             </button>
@@ -589,91 +734,115 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
         </div>
       )}
 
-      {/* === 메인 싸이월드 2열 구조: 좌측 바인더 본체 + 우측 미니홈피 위젯 컬럼 === */}
-      <div className="mx-auto mt-4 flex max-w-[1220px] flex-col gap-4 px-2 sm:px-4 xl:flex-row xl:items-start">
-        {/* 1) 하늘색 하드커버 바인더 + 책갈피 탭 Wrapper */}
-        <div className="relative flex-1">
-          {/* 모바일 상단 가로 탭바 (xl 미만에서만 표시) */}
+      {/* === 메인 2컬럼 레이아웃: PosMul 테마 연동 바인더(좌) + PosMul Citizen Studio 위젯(우) === */}
+      <div className="relative z-10 mx-auto mt-4 flex max-w-[1240px] flex-col gap-4 px-2 sm:px-4 xl:flex-row xl:items-start">
+        {/* 1) PosMul 시그니처 하드커버 바인더 + 우측 돌출 책갈피 탭 */}
+        <div className="relative flex-1 min-w-0">
+          {/* 모바일 상단 가로 책갈피 탭 (xl 미만) */}
           <div className="mb-2 flex flex-wrap gap-1 xl:hidden">
-            {CY_BOOKMARK_TABS.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`rounded-t-lg border border-b-0 px-3 py-1.5 text-xs font-bold transition ${
-                  activeTab === tab.key
-                    ? "border-[#2b879e] bg-white text-[#236a7d]"
-                    : "border-[#237083] bg-[#2b879e] text-white"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+            {CY_BOOKMARK_TABS.map((tab) => {
+              const active = activeTab === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`inline-flex items-center gap-1 rounded-t-lg border border-b-0 px-3 py-1.5 text-xs font-bold transition ${
+                    active
+                      ? "border-amber-200 bg-white text-slate-900"
+                      : `${tab.inactiveClass}`
+                  }`}
+                >
+                  <span>{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          {/* 하늘색 바인더 외피 */}
-          <div className="relative rounded-2xl border-2 border-[#3f91a5] bg-[#5cb5ca] p-2.5 sm:p-3.5 shadow-[0_14px_34px_rgba(0,0,0,0.42)]">
-            {/* 바인더 안쪽 흰색 점선 스티치 */}
-            <div className="rounded-xl border-2 border-dashed border-white/85 p-1.5 sm:p-2">
+          {/* 테마 연동 PosMul 그라데이션 하드커버 */}
+          <div
+            className={`relative rounded-2xl border-2 bg-gradient-to-br ${binderSkin.coverGradient} ${binderSkin.borderClass} p-2.5 sm:p-3.5 shadow-[0_22px_55px_rgba(0,0,0,0.65)]`}
+          >
+            {/* 샴페인 골드 점선 스티치 */}
+            <div className="rounded-xl border-2 border-dashed border-amber-200/70 p-1.5 sm:p-2">
               <div className="relative grid grid-cols-1 gap-2 lg:grid-cols-12">
-                {/* === 중앙 스프링 바인더 링 4개 (데스크톱 lg 이상 표시) === */}
-                <div className="pointer-events-none hidden lg:flex absolute left-[28.2%] top-10 bottom-10 z-30 -translate-x-1/2 flex-col justify-between py-6">
+                {/* 중앙 골드-실버 메탈 스프링 바인더 링 4개 (데스크톱 lg 이상) */}
+                <div className="pointer-events-none hidden lg:flex absolute left-[25.5%] top-12 bottom-12 z-30 -translate-x-1/2 flex-col justify-between py-6">
                   {[0, 1, 2, 3].map((ringIdx) => (
                     <div
                       key={ringIdx}
-                      className="flex items-center justify-between w-8 h-3.5 rounded-full border border-[#8fa1a8] bg-gradient-to-b from-white via-[#dfe6e9] to-[#9fb1b8] shadow-sm"
+                      className="flex h-3.5 w-8 items-center justify-between rounded-full border border-amber-400/70 bg-gradient-to-b from-amber-50 via-slate-200 to-amber-300/90 shadow-md"
                     >
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#4b5c63] ml-0.5" />
-                      <span className="h-1.5 w-1.5 rounded-full bg-[#4b5c63] mr-0.5" />
+                      <span className="ml-0.5 h-1.5 w-1.5 rounded-full bg-slate-800" />
+                      <span className="mr-0.5 h-1.5 w-1.5 rounded-full bg-slate-800" />
                     </div>
                   ))}
                 </div>
 
-                {/* === 바인더 좌측 페이지: TODAY/TOTAL · 프로필 · 일촌 파도타기 === */}
-                <aside className="lg:col-span-3 min-w-0 flex flex-col rounded-xl border border-[#b6c8cf] bg-[#f8fbfc] p-3">
+                {/* === 바인더 좌측 페이지: TODAY/TOTAL · 자산 뱃지 · 프로필 · 일촌 파도타기 === */}
+                <aside
+                  className={`lg:col-span-3 min-w-0 flex flex-col rounded-xl border border-indigo-200/80 ${binderSkin.innerSurface} p-3`}
+                >
                   {/* TODAY | TOTAL */}
-                  <div className="mb-2 flex items-center justify-center gap-2 border-b border-dotted border-[#c4d5dc] pb-2 text-[11px] font-bold tracking-tight">
-                    <span className="text-[#5c6f78]">TODAY</span>
-                    <span className="font-mono text-xs font-extrabold text-[#e11d48]">
+                  <div className="mb-2 flex items-center justify-center gap-2 border-b border-dotted border-slate-300 pb-2 text-[11px] font-bold">
+                    <span className="text-slate-500">TODAY</span>
+                    <span className="font-mono text-xs font-extrabold text-rose-600">
                       {room.todayVisits.toLocaleString()}
                     </span>
-                    <span className="text-[#94a3b8]">|</span>
-                    <span className="text-[#5c6f78]">TOTAL</span>
-                    <span className="font-mono text-xs font-extrabold text-[#1e293b]">
+                    <span className="text-slate-300">|</span>
+                    <span className="text-slate-500">TOTAL</span>
+                    <span className="font-mono text-xs font-extrabold text-slate-800">
                       {room.totalVisits.toLocaleString()}
                     </span>
                   </div>
 
-                  {/* 좌측 내부 흰색 메인 카드 */}
-                  <div className="flex flex-1 flex-col justify-between rounded-lg border border-[#cfdce1] bg-white p-3">
+                  {/* PosMul PMP / PMC 미니 자산 배지 */}
+                  <div className="mb-2 grid grid-cols-2 gap-1.5 text-center text-[10px]">
+                    <div className="rounded border border-sky-200 bg-sky-50 px-1.5 py-1">
+                      <span className="block font-semibold text-sky-700">활동 PMP</span>
+                      <span className="font-mono font-extrabold text-sky-900">
+                        {ownerStats.pmpBalance.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="rounded border border-purple-200 bg-purple-50 px-1.5 py-1">
+                      <span className="block font-semibold text-purple-700">누적 나눔</span>
+                      <span className="font-mono font-extrabold text-purple-900">
+                        {ownerStats.totalDonatedPmc.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* 좌측 내부 화이트 프로필 카드 */}
+                  <div className="flex flex-1 flex-col justify-between rounded-lg border border-slate-200/90 bg-white p-3 shadow-sm">
                     <div className="space-y-3">
-                      {/* 대문 프로필 사진 프레임 (현재 미니미 + 테마 감성 일러스트) */}
+                      {/* 대문 프로필 미니미 프레임 */}
                       <div
-                        className={`relative flex h-40 flex-col items-center justify-center overflow-hidden rounded border border-[#d6e2e6] bg-gradient-to-b ${activeTheme.windowBgClass} p-3 text-center shadow-inner`}
+                        className={`relative flex h-40 flex-col items-center justify-center overflow-hidden rounded-md border border-indigo-200 bg-gradient-to-b ${activeTheme.windowBgClass} p-3 text-center shadow-inner`}
                       >
-                        <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-white bg-white/85 text-4xl shadow-md">
+                        <div className="flex h-20 w-20 items-center justify-center rounded-full border-2 border-amber-200 bg-white/90 text-4xl shadow-md">
                           <span>{activeMinimi.avatarEmoji}</span>
                         </div>
-                        <span className="mt-2 rounded-full bg-white/90 px-2.5 py-0.5 text-[11px] font-bold text-[#1e293b] shadow-sm">
+                        <span className="mt-2 rounded-full border border-indigo-200 bg-white/95 px-2.5 py-0.5 text-[11px] font-extrabold text-slate-800 shadow-sm">
                           {activeMinimi.accessoryEmoji} {activeMinimi.name}
                         </span>
-                        <span className="mt-1 inline-flex items-center gap-0.5 text-[10px] font-semibold text-white drop-shadow">
+                        <span className="mt-1 inline-flex items-center gap-0.5 text-[10px] font-bold text-white drop-shadow">
                           <MapPin className="h-3 w-3" />
                           {room.regionLabel}
                         </span>
                       </div>
 
                       {/* TODAY IS... 기분 박스 */}
-                      <div className="rounded border border-[#cbd9df] bg-[#f9fcfd] px-2.5 py-1.5">
+                      <div className="rounded-md border border-indigo-200 bg-indigo-50/50 px-2.5 py-1.5">
                         <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-extrabold text-[#2b879e]">TODAY IS..</span>
+                          <span className="font-extrabold text-indigo-800">TODAY IS..</span>
                           {isOwner ? (
                             <select
                               aria-label="오늘의 기분 선택"
                               value={room.moodTag}
                               disabled={isBusy}
                               onChange={(e) => void handleQuickMoodChange(e.target.value)}
-                              className="cursor-pointer rounded border border-[#d2e0e6] bg-white px-1.5 py-0.5 text-[11px] font-bold text-[#334155] focus:outline-none"
+                              className="cursor-pointer rounded border border-indigo-200 bg-white px-1.5 py-0.5 text-[11px] font-bold text-slate-700 focus:outline-none"
                             >
                               {MOOD_TAGS.map((tag) => (
                                 <option key={tag} value={tag}>
@@ -682,13 +851,13 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                               ))}
                             </select>
                           ) : (
-                            <span className="font-bold text-[#334155]">{room.moodTag}</span>
+                            <span className="font-bold text-slate-700">{room.moodTag}</span>
                           )}
                         </div>
                       </div>
 
-                      {/* 상태 메시지 (자기소개글) */}
-                      <div className="min-h-[68px] rounded border border-dashed border-[#dde6ea] bg-[#fcfefe] p-2.5 text-xs leading-relaxed text-[#475569]">
+                      {/* 상태 메시지 */}
+                      <div className="min-h-[68px] rounded-md border border-dashed border-slate-200 bg-slate-50/70 p-2.5 text-xs leading-relaxed text-slate-600">
                         {room.statusMessage}
                       </div>
 
@@ -696,47 +865,47 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                         <button
                           type="button"
                           onClick={() => setActiveTab("profile")}
-                          className="text-[11px] font-bold text-[#2b879e] hover:underline"
+                          className="text-[11px] font-bold text-indigo-700 hover:underline"
                         >
                           ✎ 프로필 / 인사말 편집하기
                         </button>
                       )}
                     </div>
 
-                    {/* 하단 HISTORY + 닉네임 + 일촌 파도타기 셀렉트 */}
-                    <div className="mt-4 space-y-2 border-t border-dotted border-[#cbd5e1] pt-3">
-                      <div className="flex items-center justify-between text-[10px] font-bold text-[#64748b]">
-                        <span>▶ HISTORY</span>
+                    {/* 하단 HISTORY + 시민 랭킹 + 일촌 파도타기 */}
+                    <div className="mt-4 space-y-2 border-t border-dotted border-slate-300 pt-3">
+                      <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
+                        <span>▶ POSMUL HISTORY</span>
                         <span>▲ ▼</span>
                       </div>
 
                       <div>
-                        <p className="text-sm font-extrabold text-[#1e3a5f]">
+                        <p className="text-sm font-extrabold text-slate-900">
                           {room.ownerNickname}{" "}
-                          <span className="text-[10px] font-normal text-[#64748b]">
-                            ({isOwner ? "나" : "이웃"})
+                          <span className="text-[10px] font-semibold text-indigo-600">
+                            ({isOwner ? "My Room" : "Neighbor"})
                           </span>
                         </p>
                         {ownerStats.overallRank !== null && (
-                          <p className="text-[11px] font-semibold text-[#e67e22]">
-                            시민 랭킹 #{ownerStats.overallRank.toLocaleString()} ·{" "}
+                          <p className="text-[11px] font-bold text-amber-600">
+                            시민 랭킹 #{ownerStats.overallRank.toLocaleString()} · 기여{" "}
                             {ownerStats.contributionScore.toLocaleString()}점
                           </p>
                         )}
                       </div>
 
-                      {/* ★ 일촌 파도타기 셀렉트 + 랜덤 버튼 */}
-                      <div className="space-y-1.5 rounded border border-[#d0dee3] bg-[#f2f8fa] p-2">
+                      {/* 일촌 파도타기 */}
+                      <div className="space-y-1.5 rounded-md border border-sky-200 bg-gradient-to-r from-sky-50 to-indigo-50 p-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-[11px] font-bold text-[#2b6b7c]">일촌</span>
+                          <span className="text-[11px] font-extrabold text-sky-900">일촌 파도타기</span>
                           <button
                             type="button"
                             disabled={isBusy}
                             onClick={() => void visitRoom({ wave: true })}
-                            className="inline-flex items-center gap-0.5 text-[10px] font-bold text-[#0284c7] hover:underline"
+                            className="inline-flex items-center gap-0.5 text-[10px] font-bold text-indigo-700 hover:underline"
                           >
                             <Waves className="h-3 w-3" />
-                            <span>랜덤 파도타기</span>
+                            <span>랜덤 마실</span>
                           </button>
                         </div>
                         <select
@@ -744,7 +913,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                           value={room.userId}
                           disabled={isBusy}
                           onChange={(e) => void visitRoom({ targetUserId: e.target.value })}
-                          className="w-full rounded border border-[#9bb8c3] bg-white px-2 py-1 text-[11px] font-semibold text-[#1e293b] focus:border-[#2b879e] focus:outline-none"
+                          className="w-full rounded border border-sky-300 bg-white px-2 py-1 text-[11px] font-semibold text-slate-800 focus:border-indigo-500 focus:outline-none"
                         >
                           <option value={room.userId}>★ {room.ownerNickname} (현재 방)</option>
                           {data.neighbors
@@ -761,9 +930,9 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                 </aside>
 
                 {/* === 바인더 중앙/우측 메인 페이지 === */}
-                <main className="lg:col-span-9 min-w-0 flex flex-col rounded-xl border border-[#b6c8cf] bg-white p-3.5 sm:p-5">
-                  {/* 미니홈피 대문 타이틀 줄 */}
-                  <div className="mb-3 flex flex-col gap-1 border-b border-[#cbd5e1] pb-2.5 sm:flex-row sm:items-end sm:justify-between">
+                <main className="lg:col-span-9 min-w-0 flex flex-col rounded-xl border border-indigo-200/80 bg-white p-3.5 sm:p-5 shadow-sm">
+                  {/* 대문 타이틀 줄 */}
+                  <div className="mb-3 flex flex-col gap-1 border-b border-slate-200 pb-2.5 sm:flex-row sm:items-end sm:justify-between">
                     <div className="flex items-center gap-2">
                       {isOwner && isEditingHeadline ? (
                         <form
@@ -775,12 +944,12 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             maxLength={50}
                             value={editTitle}
                             onChange={(e) => setEditTitle(e.target.value)}
-                            className="rounded border border-[#2b879e] px-2 py-0.5 text-sm font-bold text-[#1e3a5f]"
+                            className="rounded border border-indigo-500 px-2 py-0.5 text-sm font-bold text-slate-900"
                           />
                           <button
                             type="submit"
                             disabled={isBusy}
-                            className="rounded bg-[#2b879e] px-2 py-0.5 text-xs font-bold text-white"
+                            className="rounded bg-indigo-600 px-2 py-0.5 text-xs font-bold text-white"
                           >
                             저장
                           </button>
@@ -797,7 +966,9 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                         </form>
                       ) : (
                         <>
-                          <h1 className="text-lg sm:text-xl font-extrabold tracking-tight text-[#2b6b7c]">
+                          <h1
+                            className={`text-lg sm:text-xl font-black tracking-tight ${binderSkin.titleColor}`}
+                          >
                             {room.roomTitle}
                           </h1>
                           {isOwner && (
@@ -813,45 +984,51 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 text-[11px] text-[#64748b]">
+                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
                       <span
-                        className={`rounded px-2 py-0.5 font-bold ${
+                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-extrabold border ${
                           isOwner
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                            : "bg-sky-50 text-sky-700 border border-sky-200"
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-sky-50 text-sky-700 border-sky-200"
                         }`}
                       >
-                        {isOwner ? "👑 내 힐링룸" : "🌊 이웃 마실중"}
+                        {isOwner ? "👑 내 PosMul 힐링룸" : "🌊 이웃 마실 모드"}
                       </span>
-                      <span className="hidden sm:inline font-mono text-[10px] text-[#94a3b8]">
-                        posmul.com/{room.ownerNickname}
+                      <span className="hidden sm:inline font-mono text-[10px] text-slate-400">
+                        @{room.ownerNickname}
                       </span>
                     </div>
                   </div>
 
                   {/* ========================================================== */}
-                  {/* TAB 1: 홈 (레퍼런스 이미지와 동일한 3단 미니홈피 대문 구조) */}
+                  {/* TAB 1: 홈 (PosMul Activity News + Miniroom + What friends say) */}
                   {/* ========================================================== */}
                   {activeTab === "home" && (
                     <div className="space-y-4">
-                      {/* 1단: Updated news (좌) + 2x3 활동 요약 바둑판 (우) */}
+                      {/* 1단: PosMul Activity News (좌) + 2x3 PosMul 도메인 컬러 바둑판 표 (우) */}
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-12">
-                        {/* Updated news */}
+                        {/* PosMul Activity News */}
                         <div className="md:col-span-7">
-                          <h2 className="mb-1.5 border-b-2 border-[#cbd5e1] pb-1 text-xs font-extrabold text-[#2b879e]">
-                            Updated news
-                          </h2>
-                          <ul className="space-y-1 text-xs">
+                          <div className="mb-1.5 flex items-center justify-between border-b-2 border-indigo-200 pb-1">
+                            <h2 className="text-xs font-extrabold text-indigo-900">
+                              PosMul Activity News
+                            </h2>
+                            <span className="text-[10px] font-semibold text-slate-400">
+                              시민 선순환 기록
+                            </span>
+                          </div>
+                          <ul className="space-y-1.5 text-xs">
                             {updatedNewsLines.map((line, index) => (
                               <li key={index} className="flex items-center gap-1.5 truncate">
-                                <span className="text-[#94a3b8]">•</span>
-                                <span className={`font-bold shrink-0 ${line.tagColor}`}>
+                                <span
+                                  className={`shrink-0 rounded border px-1.5 py-0.2 text-[10px] font-extrabold ${line.tagClass}`}
+                                >
                                   {line.tag}
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => setActiveTab(line.targetTab)}
-                                  className="truncate text-left text-[#334155] hover:text-[#2b879e] hover:underline"
+                                  className="truncate text-left text-slate-700 hover:text-indigo-700 hover:underline"
                                 >
                                   {line.text}
                                 </button>
@@ -860,71 +1037,71 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                           </ul>
                         </div>
 
-                        {/* 우측 2열 x 3행 싸이월드 스타일 요약 표 */}
+                        {/* 우측 2열 x 3행 도메인 컬러 요약 표 */}
                         <div className="md:col-span-5">
-                          <div className="overflow-hidden rounded border border-[#cbd5e1] text-[11px]">
-                            <div className="grid grid-cols-2 divide-x divide-[#e2e8f0] border-b border-[#e2e8f0]">
+                          <div className="overflow-hidden rounded-lg border border-indigo-200 text-[11px] shadow-xs">
+                            <div className="grid grid-cols-2 divide-x divide-slate-200 border-b border-slate-200">
                               <button
                                 type="button"
                                 onClick={() => setActiveTab("donation")}
-                                className="flex items-center justify-between bg-[#f8fafc] px-2.5 py-1.5 hover:bg-[#eef6f8]"
+                                className="flex items-center justify-between bg-purple-50/50 px-2.5 py-1.5 hover:bg-purple-50"
                               >
-                                <span className="font-semibold text-[#475569]">공공기부</span>
-                                <span className="font-bold text-[#059669]">
+                                <span className="font-bold text-purple-900">🕊️ 공공기부</span>
+                                <span className="font-extrabold text-purple-700">
                                   {ownerStats.donationCount}건
                                 </span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setActiveTab("prediction")}
-                                className="flex items-center justify-between bg-[#f8fafc] px-2.5 py-1.5 hover:bg-[#eef6f8]"
+                                className="flex items-center justify-between bg-amber-50/50 px-2.5 py-1.5 hover:bg-amber-50"
                               >
-                                <span className="font-semibold text-[#475569]">개설게임</span>
-                                <span className="font-bold text-[#d97706]">
+                                <span className="font-bold text-amber-900">🎯 개설게임</span>
+                                <span className="font-extrabold text-amber-700">
                                   {ownerStats.createdGamesCount}개
                                 </span>
                               </button>
                             </div>
-                            <div className="grid grid-cols-2 divide-x divide-[#e2e8f0] border-b border-[#e2e8f0]">
+                            <div className="grid grid-cols-2 divide-x divide-slate-200 border-b border-slate-200">
                               <button
                                 type="button"
                                 onClick={() => setActiveTab("prediction")}
-                                className="flex items-center justify-between px-2.5 py-1.5 hover:bg-[#eef6f8]"
+                                className="flex items-center justify-between bg-sky-50/40 px-2.5 py-1.5 hover:bg-sky-50"
                               >
-                                <span className="font-semibold text-[#475569]">예측참여</span>
-                                <span className="font-bold text-[#4f46e5]">
+                                <span className="font-bold text-sky-900">🔮 예측참여</span>
+                                <span className="font-extrabold text-sky-700">
                                   {ownerStats.predictionCount}회
                                 </span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setActiveTab("profile")}
-                                className="flex items-center justify-between px-2.5 py-1.5 hover:bg-[#eef6f8]"
+                                className="flex items-center justify-between bg-amber-50/30 px-2.5 py-1.5 hover:bg-amber-50"
                               >
-                                <span className="font-semibold text-[#475569]">명예배지</span>
-                                <span className="font-bold text-[#0284c7]">
+                                <span className="font-bold text-slate-700">🏅 명예배지</span>
+                                <span className="font-extrabold text-amber-600">
                                   {unlockedTrophies.length}/{data.trophies.length}
                                 </span>
                               </button>
                             </div>
-                            <div className="grid grid-cols-2 divide-x divide-[#e2e8f0]">
+                            <div className="grid grid-cols-2 divide-x divide-slate-200">
                               <button
                                 type="button"
                                 onClick={() => setActiveTab("shop")}
-                                className="flex items-center justify-between bg-[#f8fafc] px-2.5 py-1.5 hover:bg-[#eef6f8]"
+                                className="flex items-center justify-between bg-emerald-50/40 px-2.5 py-1.5 hover:bg-emerald-50"
                               >
-                                <span className="font-semibold text-[#475569]">보유 PMP</span>
-                                <span className="font-bold text-[#0369a1]">
+                                <span className="font-bold text-emerald-900">💎 보유PMP</span>
+                                <span className="font-extrabold text-emerald-700">
                                   {ownerStats.pmpBalance.toLocaleString()}
                                 </span>
                               </button>
                               <button
                                 type="button"
                                 onClick={() => setActiveTab("guestbook")}
-                                className="flex items-center justify-between bg-[#f8fafc] px-2.5 py-1.5 hover:bg-[#eef6f8]"
+                                className="flex items-center justify-between bg-rose-50/40 px-2.5 py-1.5 hover:bg-rose-50"
                               >
-                                <span className="font-semibold text-[#475569]">방명록</span>
-                                <span className="font-bold text-[#e11d48]">
+                                <span className="font-bold text-rose-900">💌 방명록</span>
+                                <span className="font-extrabold text-rose-600">
                                   {data.guestbooks.length}개
                                 </span>
                               </button>
@@ -935,16 +1112,16 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
 
                       {/* 2단: Miniroom 섹션 */}
                       <div>
-                        <div className="mb-1.5 flex items-end justify-between border-b border-[#cbd5e1] pb-1">
+                        <div className="mb-1.5 flex items-end justify-between border-b border-indigo-200 pb-1">
                           <div className="flex items-center gap-2">
-                            <span className="rounded-t border border-b-0 border-[#cbd5e1] bg-[#f8fafc] px-3 py-0.5 text-xs font-extrabold text-[#2b879e]">
-                              Miniroom
+                            <span className="rounded-t-md border border-b-0 border-indigo-200 bg-indigo-50 px-3 py-0.5 text-xs font-extrabold text-indigo-800">
+                              PosMul Miniroom
                             </span>
-                            <span className="text-[11px] font-semibold text-[#64748b]">
+                            <span className="text-[11px] font-semibold text-slate-500">
                               {activeTheme.icon} {activeTheme.name}
                             </span>
                           </div>
-                          <span className="truncate text-[11px] font-semibold text-[#2c7a9b]">
+                          <span className="truncate text-[11px] font-bold text-indigo-700">
                             ✨ {room.minimiQuote}
                           </span>
                         </div>
@@ -963,30 +1140,29 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                         />
                       </div>
 
-                      {/* 3단: What friends say (한줄 일촌평 바로 작성 & 목록) */}
+                      {/* 3단: What friends say */}
                       <div className="pt-1">
-                        <div className="mb-2 flex items-center justify-between border-b border-[#cbd5e1] pb-1">
-                          <h3 className="text-xs font-extrabold text-[#2b879e]">
+                        <div className="mb-2 flex items-center justify-between border-b border-slate-200 pb-1">
+                          <h3 className="text-xs font-extrabold text-indigo-900">
                             What friends say{" "}
-                            <span className="ml-1 font-normal text-[11px] text-[#64748b]">
-                              한마디로 표현해봐~
+                            <span className="ml-1 font-normal text-[11px] text-slate-500">
+                              서로의 예측과 나눔을 응원해주세요~
                             </span>
                           </h3>
                           <button
                             type="button"
                             onClick={() => setActiveTab("guestbook")}
-                            className="text-[11px] font-semibold text-[#64748b] hover:text-[#2b879e]"
+                            className="text-[11px] font-bold text-indigo-600 hover:underline"
                           >
                             방명록 전체보기 →
                           </button>
                         </div>
 
-                        {/* 일촌평 한줄 입력 폼 */}
                         <form
                           onSubmit={(e) => void handleWriteGuestbook(e)}
-                          className="mb-2.5 flex flex-col gap-1.5 rounded border border-[#dce6ea] bg-[#f1f6f8] p-2 sm:flex-row sm:items-center"
+                          className="mb-2.5 flex flex-col gap-1.5 rounded-lg border border-indigo-200/80 bg-indigo-50/50 p-2 sm:flex-row sm:items-center"
                         >
-                          <span className="shrink-0 text-[11px] font-extrabold text-[#2b6b7c]">
+                          <span className="shrink-0 text-[11px] font-extrabold text-indigo-900">
                             일촌평
                           </span>
                           {!isAuthenticated && (
@@ -996,7 +1172,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                               placeholder="닉네임"
                               value={guestName}
                               onChange={(e) => setGuestName(e.target.value)}
-                              className="w-full sm:w-28 rounded border border-[#cbd5e1] bg-white px-2 py-1 text-xs focus:border-[#2b879e] focus:outline-none"
+                              className="w-full sm:w-28 rounded border border-slate-300 bg-white px-2 py-1 text-xs focus:border-indigo-500 focus:outline-none"
                             />
                           )}
                           <input
@@ -1005,19 +1181,18 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             placeholder="따뜻한 일촌평을 남겨주세요..."
                             value={guestContent}
                             onChange={(e) => setGuestContent(e.target.value)}
-                            className="flex-1 rounded border border-[#cbd5e1] bg-white px-2.5 py-1 text-xs focus:border-[#2b879e] focus:outline-none"
+                            className="flex-1 rounded border border-slate-300 bg-white px-2.5 py-1 text-xs focus:border-indigo-500 focus:outline-none"
                           />
                           <button
                             type="submit"
                             disabled={isBusy}
-                            className="shrink-0 rounded border border-[#94a3b8] bg-white px-3 py-1 text-xs font-bold text-[#334155] hover:bg-[#e2e8f0] disabled:opacity-50"
+                            className="shrink-0 rounded bg-indigo-600 px-3 py-1 text-xs font-bold text-white hover:bg-indigo-700 disabled:opacity-50"
                           >
                             확인
                           </button>
                         </form>
 
-                        {/* 일촌평 리스트 (싸이월드 포맷) */}
-                        <ul className="divide-y divide-dotted divide-[#e2e8f0] text-xs">
+                        <ul className="divide-y divide-dotted divide-slate-200 text-xs">
                           {data.guestbooks.length > 0 ? (
                             data.guestbooks.slice(0, 5).map((entry) => (
                               <li
@@ -1025,13 +1200,13 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 className="flex flex-wrap items-baseline justify-between gap-2 py-1.5"
                               >
                                 <div className="flex flex-wrap items-baseline gap-1.5">
-                                  <span className="text-[#334155]">{entry.content}</span>
-                                  <span className="text-[11px] font-semibold text-[#2b879e]">
+                                  <span className="text-slate-700">{entry.content}</span>
+                                  <span className="text-[11px] font-semibold text-indigo-600">
                                     ({entry.relationLabel}{" "}
-                                    <strong className="text-[#1e3a5f]">{entry.authorName}</strong>)
+                                    <strong className="text-slate-900">{entry.authorName}</strong>)
                                   </span>
                                 </div>
-                                <span className="text-[10px] text-[#94a3b8]">
+                                <span className="text-[10px] text-slate-400">
                                   {formatShortDate(entry.createdAt)}
                                 </span>
                               </li>
@@ -1051,8 +1226,8 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                   {/* ========================================================== */}
                   {activeTab === "profile" && (
                     <div className="space-y-5">
-                      <div className="flex items-center justify-between border-b border-[#cbd5e1] pb-2">
-                        <h2 className="text-sm font-extrabold text-[#2b879e]">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <h2 className="text-sm font-extrabold text-indigo-900">
                           👤 미니홈피 프로필 설정 & 영광의 선반
                         </h2>
                         <span className="text-xs font-bold text-amber-600">
@@ -1063,11 +1238,11 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                       {isOwner ? (
                         <form
                           onSubmit={(e) => void handleSaveProfile(e)}
-                          className="space-y-3 rounded-lg border border-[#d6e4e8] bg-[#f7fbfc] p-4"
+                          className="space-y-3 rounded-xl border border-indigo-200 bg-indigo-50/40 p-4"
                         >
                           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div>
-                              <label className="mb-1 block text-xs font-bold text-[#334155]">
+                              <label className="mb-1 block text-xs font-bold text-slate-700">
                                 미니홈피 제목
                               </label>
                               <input
@@ -1075,11 +1250,11 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 maxLength={50}
                                 value={editTitle}
                                 onChange={(e) => setEditTitle(e.target.value)}
-                                className="w-full rounded border border-[#cbd5e1] bg-white px-3 py-1.5 text-xs focus:border-[#2b879e] focus:outline-none"
+                                className="w-full rounded border border-slate-300 bg-white px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
                               />
                             </div>
                             <div>
-                              <label className="mb-1 block text-xs font-bold text-[#334155]">
+                              <label className="mb-1 block text-xs font-bold text-slate-700">
                                 미니미 말풍선
                               </label>
                               <input
@@ -1087,13 +1262,13 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 maxLength={60}
                                 value={editQuote}
                                 onChange={(e) => setEditQuote(e.target.value)}
-                                className="w-full rounded border border-[#cbd5e1] bg-white px-3 py-1.5 text-xs focus:border-[#2b879e] focus:outline-none"
+                                className="w-full rounded border border-slate-300 bg-white px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
                               />
                             </div>
                           </div>
 
                           <div>
-                            <label className="mb-1 block text-xs font-bold text-[#334155]">
+                            <label className="mb-1 block text-xs font-bold text-slate-700">
                               상태 메시지 (인사말)
                             </label>
                             <textarea
@@ -1101,13 +1276,13 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                               maxLength={140}
                               value={editStatus}
                               onChange={(e) => setEditStatus(e.target.value)}
-                              className="w-full rounded border border-[#cbd5e1] bg-white px-3 py-1.5 text-xs focus:border-[#2b879e] focus:outline-none"
+                              className="w-full rounded border border-slate-300 bg-white px-3 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
                             />
                           </div>
 
                           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             <div>
-                              <label className="mb-1 block text-xs font-bold text-[#334155]">
+                              <label className="mb-1 block text-xs font-bold text-slate-700">
                                 TODAY IS... 기분 태그
                               </label>
                               <div className="flex flex-wrap gap-1.5">
@@ -1118,7 +1293,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                     onClick={() => setEditMood(tag)}
                                     className={`rounded border px-2 py-1 text-[11px] font-semibold ${
                                       editMood === tag
-                                        ? "border-[#2b879e] bg-[#e0f3f7] text-[#175463]"
+                                        ? "border-indigo-600 bg-indigo-100 text-indigo-900"
                                         : "border-slate-300 bg-white text-slate-600"
                                     }`}
                                   >
@@ -1128,7 +1303,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                               </div>
                             </div>
                             <div>
-                              <label className="mb-1 block text-xs font-bold text-[#334155]">
+                              <label className="mb-1 block text-xs font-bold text-slate-700">
                                 기본 BGM 선택
                               </label>
                               <select
@@ -1137,7 +1312,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                   setEditBgm(e.target.value);
                                   setPreviewBgmId(e.target.value);
                                 }}
-                                className="w-full rounded border border-[#cbd5e1] bg-white px-2.5 py-1.5 text-xs focus:border-[#2b879e] focus:outline-none"
+                                className="w-full rounded border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-indigo-500 focus:outline-none"
                               >
                                 {BGM_TRACKS.map((track) => (
                                   <option key={track.id} value={track.id}>
@@ -1151,20 +1326,20 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                           <button
                             type="submit"
                             disabled={isBusy}
-                            className="rounded bg-[#2b879e] px-4 py-2 text-xs font-bold text-white hover:bg-[#237185] disabled:opacity-50"
+                            className="rounded-lg bg-gradient-to-r from-indigo-600 to-sky-600 px-4 py-2 text-xs font-bold text-white shadow hover:brightness-110 disabled:opacity-50"
                           >
                             {isBusy ? "저장 중..." : "✨ 미니홈피 설정 저장"}
                           </button>
                         </form>
                       ) : (
-                        <div className="rounded border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
-                          현재 <strong>{room.ownerNickname}</strong>님의 미니홈피를 구경 중입니다. 내 프로필 편집은 본인 미니홈피에서 가능합니다.
+                        <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-xs text-sky-900">
+                          현재 <strong>{room.ownerNickname}</strong>님의 PosMul 힐링룸을 구경 중입니다. 내 프로필 편집은 본인 방에서 가능합니다.
                         </div>
                       )}
 
-                      {/* 영광의 선반 (실적 기반 해금 트로피 6종) */}
+                      {/* 영광의 선반 */}
                       <div>
-                        <h3 className="mb-2 flex items-center gap-1.5 text-xs font-extrabold text-[#1e3a5f]">
+                        <h3 className="mb-2 flex items-center gap-1.5 text-xs font-extrabold text-slate-900">
                           <Trophy className="h-4 w-4 text-amber-500" />
                           <span>영광의 선반 (실제 활동으로만 해금되는 명예 트로피)</span>
                         </h3>
@@ -1174,7 +1349,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                               key={trophy.id}
                               className={`flex items-start gap-3 rounded-lg border p-3 ${
                                 trophy.unlocked
-                                  ? "border-amber-300 bg-amber-50/70"
+                                  ? "border-amber-300 bg-amber-50/75"
                                   : "border-slate-200 bg-slate-50 opacity-70"
                               }`}
                             >
@@ -1187,7 +1362,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                               </div>
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-1">
-                                  <span className="text-xs font-extrabold text-[#1e293b]">
+                                  <span className="text-xs font-extrabold text-slate-900">
                                     {trophy.title}
                                   </span>
                                   {!trophy.unlocked && (
@@ -1213,17 +1388,19 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                   )}
 
                   {/* ========================================================== */}
-                  {/* TAB 3: 예측장 (내가 만든 예측게임 & 예측 참여 발자취)     */}
+                  {/* TAB 3: 예측장                                              */}
                   {/* ========================================================== */}
                   {activeTab === "prediction" && (
                     <div className="space-y-5">
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#cbd5e1] pb-2">
-                        <h2 className="text-sm font-extrabold text-[#2b879e]">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
+                        <h2 className="text-sm font-extrabold text-sky-800">
                           🔮 {room.ownerNickname}님의 예측 활동 다이어리
                         </h2>
                         <Link
                           href="/prediction"
-                          className="inline-flex items-center gap-1 rounded bg-[#2b879e] px-3 py-1 text-xs font-bold text-white hover:bg-[#237185]"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-blue-600 to-sky-600 px-3 py-1 text-xs font-bold text-white hover:brightness-110"
                         >
                           <span>예측게임 광장 가기</span>
                           <ArrowRight className="h-3.5 w-3.5" />
@@ -1231,9 +1408,8 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                       </div>
 
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        {/* 내가 개설한 예측게임 */}
-                        <div className="rounded-lg border border-slate-200 bg-[#fbfdfe] p-3.5">
-                          <h3 className="mb-2.5 text-xs font-extrabold text-amber-700">
+                        <div className="rounded-lg border border-amber-200 bg-amber-50/30 p-3.5">
+                          <h3 className="mb-2.5 text-xs font-extrabold text-amber-800">
                             🎯 직접 개설한 예측게임 ({ownerStats.createdGamesCount}개)
                           </h3>
                           {data.createdGames.length > 0 ? (
@@ -1242,7 +1418,9 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 <li key={game.gameId}>
                                   <Link
                                     href={`/prediction/${game.slug}`}
-                                    className="block rounded border border-slate-200 bg-white p-2.5 transition hover:border-[#2b879e]"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block rounded border border-slate-200 bg-white p-2.5 transition hover:border-amber-400"
                                   >
                                     <div className="flex items-center justify-between gap-2">
                                       <span className="truncate text-xs font-bold text-slate-800">
@@ -1268,9 +1446,8 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                           )}
                         </div>
 
-                        {/* 최근 예측 참여 */}
-                        <div className="rounded-lg border border-slate-200 bg-[#fbfdfe] p-3.5">
-                          <h3 className="mb-2.5 text-xs font-extrabold text-indigo-700">
+                        <div className="rounded-lg border border-sky-200 bg-sky-50/30 p-3.5">
+                          <h3 className="mb-2.5 text-xs font-extrabold text-sky-800">
                             ✨ 최근 예측 참여 ({ownerStats.predictionCount}회)
                           </h3>
                           {data.recentPredictions.length > 0 ? (
@@ -1279,7 +1456,9 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 <li key={pred.predictionId}>
                                   <Link
                                     href={`/prediction/${pred.gameSlug}`}
-                                    className="flex items-center justify-between rounded border border-slate-200 bg-white p-2.5 transition hover:border-indigo-400"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-between rounded border border-slate-200 bg-white p-2.5 transition hover:border-sky-400"
                                   >
                                     <div className="min-w-0 pr-2">
                                       <p className="truncate text-xs font-bold text-slate-800">
@@ -1289,7 +1468,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                         {formatShortDate(pred.createdAt)}
                                       </p>
                                     </div>
-                                    <span className="shrink-0 rounded bg-indigo-50 px-2 py-0.5 text-[11px] font-bold text-indigo-700">
+                                    <span className="shrink-0 rounded bg-sky-100 px-2 py-0.5 text-[11px] font-bold text-sky-800">
                                       {pred.betAmount.toLocaleString()} PMP
                                     </span>
                                   </Link>
@@ -1307,26 +1486,28 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                   )}
 
                   {/* ========================================================== */}
-                  {/* TAB 4: 기부첩 (내 공공 나눔 기록 & 자부심 아카이브)         */}
+                  {/* TAB 4: 기부첩                                              */}
                   {/* ========================================================== */}
                   {activeTab === "donation" && (
                     <div className="space-y-4">
-                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#cbd5e1] pb-2">
+                      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
                         <div>
-                          <h2 className="text-sm font-extrabold text-[#2b879e]">
+                          <h2 className="text-sm font-extrabold text-purple-900">
                             🕊️ {room.ownerNickname}님의 나눔 기록첩
                           </h2>
                           <p className="text-[11px] text-slate-500">
                             누적 {ownerStats.donationCount}회 · 총{" "}
-                            <strong className="text-emerald-700">
+                            <strong className="text-purple-700">
                               {ownerStats.totalDonatedPmc.toLocaleString()} PMC
                             </strong>{" "}
-                            나눔 실천
+                            공공 나눔 실천
                           </p>
                         </div>
                         <Link
                           href="/donation"
-                          className="inline-flex items-center gap-1 rounded bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-lg bg-gradient-to-r from-purple-600 to-fuchsia-600 px-3 py-1.5 text-xs font-bold text-white hover:brightness-110"
                         >
                           <Heart className="h-3.5 w-3.5" />
                           <span>따뜻한 기부하기</span>
@@ -1338,13 +1519,13 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                           {data.donations.map((donation) => (
                             <div
                               key={donation.id}
-                              className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3.5"
+                              className="rounded-lg border border-purple-200 bg-purple-50/40 p-3.5"
                             >
                               <div className="flex items-center justify-between gap-2">
                                 <span className="truncate text-xs font-extrabold text-slate-800">
                                   {donation.title}
                                 </span>
-                                <span className="shrink-0 rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-extrabold text-emerald-800">
+                                <span className="shrink-0 rounded bg-purple-100 px-2 py-0.5 text-[11px] font-extrabold text-purple-800">
                                   {donation.pmcAmount.toLocaleString()} PMC
                                 </span>
                               </div>
@@ -1364,24 +1545,24 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                   )}
 
                   {/* ========================================================== */}
-                  {/* TAB 5: 선물가게 (보유 PMP 전용 미니룸·미니미 상점)          */}
+                  {/* TAB 5: 선물가게 (PMP 전용 상점)                            */}
                   {/* ========================================================== */}
                   {activeTab === "shop" && (
                     <div className="space-y-4">
-                      <div className="flex flex-col justify-between gap-2 rounded-lg border border-amber-300 bg-[#fff9e6] p-3 sm:flex-row sm:items-center">
+                      <div className="flex flex-col justify-between gap-2 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-sky-50 to-indigo-50 p-3 sm:flex-row sm:items-center">
                         <div>
-                          <p className="text-xs font-extrabold text-amber-900">
-                            🎁 싸이 선물가게 (경제 불변식: 무위험 포인트 PMP 전용)
+                          <p className="text-xs font-extrabold text-emerald-950">
+                            🎁 PosMul 힐링 선물가게 (경제 불변식: 무위험 포인트 PMP 전용)
                           </p>
-                          <p className="mt-0.5 text-[11px] text-amber-800">
+                          <p className="mt-0.5 text-[11px] text-slate-600">
                             예측·포럼 활동으로 얻은 PMP로만 구매 가능하며, 소중한 PMC는 절대 차감되지 않습니다.
                           </p>
                         </div>
-                        <div className="shrink-0 rounded border border-amber-400 bg-white px-3 py-1.5 text-right">
+                        <div className="shrink-0 rounded-lg border border-sky-300 bg-white px-3 py-1.5 text-right shadow-xs">
                           <span className="block text-[10px] text-slate-500">
                             {isAuthenticated ? "내 사용 가능 PMP" : "체험 모드 (로그인 시 구매 가능)"}
                           </span>
-                          <span className="text-sm font-extrabold text-[#0284c7]">
+                          <span className="text-sm font-extrabold text-sky-700">
                             {(isAuthenticated
                               ? viewerPmpBalance
                               : ownerStats.pmpBalance
@@ -1404,9 +1585,9 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             key={cat.key}
                             type="button"
                             onClick={() => setShopFilter(cat.key)}
-                            className={`rounded border px-3 py-1 text-xs font-bold transition ${
+                            className={`rounded-md border px-3 py-1 text-xs font-bold transition ${
                               shopFilter === cat.key
-                                ? "border-[#2b879e] bg-[#e0f3f7] text-[#175463]"
+                                ? "border-indigo-600 bg-indigo-600 text-white"
                                 : "border-slate-300 bg-white text-slate-600 hover:bg-slate-50"
                             }`}
                           >
@@ -1434,7 +1615,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                               key={item.id}
                               className={`flex flex-col justify-between rounded-lg border p-3 ${
                                 isEquipped
-                                  ? "border-[#2b879e] bg-[#f0fafc]"
+                                  ? "border-indigo-400 bg-indigo-50/40"
                                   : "border-slate-200 bg-white"
                               }`}
                             >
@@ -1479,7 +1660,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                         ? item.category === "prop"
                                           ? "border border-emerald-400 bg-emerald-50 text-emerald-700 hover:bg-rose-50 hover:text-rose-700"
                                           : "bg-emerald-100 text-emerald-800 cursor-default"
-                                        : "border border-[#2b879e] bg-[#e0f3f7] text-[#175463] hover:bg-[#cdebf2]"
+                                        : "border border-indigo-400 bg-indigo-50 text-indigo-800 hover:bg-indigo-100"
                                     }`}
                                   >
                                     {isEquipped
@@ -1495,7 +1676,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                     type="button"
                                     disabled={isBusy}
                                     onClick={() => void handleBuyItem(item)}
-                                    className="w-full rounded bg-[#ff8800] py-1.5 text-xs font-extrabold text-white shadow-sm hover:bg-[#ea7d00] disabled:opacity-50"
+                                    className="w-full rounded bg-gradient-to-r from-amber-500 to-orange-500 py-1.5 text-xs font-extrabold text-slate-950 shadow-sm hover:brightness-110 disabled:opacity-50"
                                   >
                                     {isBusy
                                       ? "구매 중..."
@@ -1511,22 +1692,22 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                   )}
 
                   {/* ========================================================== */}
-                  {/* TAB 6: 방명록 (전체 일촌평 아카이브 & 작성 폼)             */}
+                  {/* TAB 6: 방명록                                              */}
                   {/* ========================================================== */}
                   {activeTab === "guestbook" && (
                     <div className="space-y-4">
-                      <div className="border-b border-[#cbd5e1] pb-2">
-                        <h2 className="text-sm font-extrabold text-[#2b879e]">
-                          📝 {room.ownerNickname}님의 방명록 ({data.guestbooks.length}건)
+                      <div className="border-b border-slate-200 pb-2">
+                        <h2 className="text-sm font-extrabold text-rose-700">
+                          💌 {room.ownerNickname}님의 방명록 ({data.guestbooks.length}건)
                         </h2>
                       </div>
 
                       <form
                         onSubmit={(e) => void handleWriteGuestbook(e)}
-                        className="space-y-2.5 rounded-lg border border-[#cfdce1] bg-[#f4f9fb] p-3.5"
+                        className="space-y-2.5 rounded-lg border border-rose-200 bg-rose-50/40 p-3.5"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="text-xs font-bold text-[#1e3a5f]">
+                          <span className="text-xs font-bold text-slate-800">
                             💌 일촌평 남기기
                           </span>
                           <div className="flex flex-wrap gap-1">
@@ -1537,7 +1718,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 onClick={() => setGuestRelation(preset)}
                                 className={`rounded border px-2 py-0.5 text-[10px] font-bold ${
                                   guestRelation === preset
-                                    ? "border-[#2b879e] bg-[#2b879e] text-white"
+                                    ? "border-rose-500 bg-rose-600 text-white"
                                     : "border-slate-300 bg-white text-slate-600"
                                 }`}
                               >
@@ -1554,7 +1735,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             placeholder="닉네임 (미입력 시 '지나가는 시민')"
                             value={guestName}
                             onChange={(e) => setGuestName(e.target.value)}
-                            className="w-full sm:w-56 rounded border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-[#2b879e] focus:outline-none"
+                            className="w-full sm:w-56 rounded border border-slate-300 bg-white px-2.5 py-1.5 text-xs focus:border-rose-500 focus:outline-none"
                           />
                         )}
 
@@ -1565,12 +1746,12 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             placeholder="미니룸 잘 구경하고 갑니다! 응원 한마디를 남겨보세요."
                             value={guestContent}
                             onChange={(e) => setGuestContent(e.target.value)}
-                            className="flex-1 rounded border border-slate-300 bg-white px-3 py-1.5 text-xs focus:border-[#2b879e] focus:outline-none"
+                            className="flex-1 rounded border border-slate-300 bg-white px-3 py-1.5 text-xs focus:border-rose-500 focus:outline-none"
                           />
                           <button
                             type="submit"
                             disabled={isBusy}
-                            className="rounded bg-[#2b879e] px-4 py-1.5 text-xs font-bold text-white hover:bg-[#237185] disabled:opacity-50"
+                            className="rounded bg-rose-600 px-4 py-1.5 text-xs font-bold text-white hover:bg-rose-700 disabled:opacity-50"
                           >
                             등록
                           </button>
@@ -1591,10 +1772,10 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 <div className="flex items-center justify-between border-b border-dotted border-slate-200 pb-1.5">
                                   <div className="flex items-center gap-2">
                                     <span className="text-base">{aMinimi.avatarEmoji}</span>
-                                    <span className="text-xs font-extrabold text-[#1e3a5f]">
+                                    <span className="text-xs font-extrabold text-slate-900">
                                       {entry.authorName}
                                     </span>
-                                    <span className="rounded bg-[#e6f5f8] px-1.5 py-0.5 text-[10px] font-bold text-[#2b879e]">
+                                    <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
                                       {entry.relationLabel}
                                     </span>
                                   </div>
@@ -1620,10 +1801,10 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
               </div>
             </div>
 
-            {/* === 다이어리 우측 돌출 책갈피 인덱스 탭 (xl 데스크톱 전용) === */}
+            {/* === 다이어리 우측 돌출 도메인 컬러 책갈피 인덱스 탭 (xl 데스크톱 전용) === */}
             <nav
               aria-label="미니홈피 메뉴 탭"
-              className="hidden xl:flex flex-col gap-1.5 absolute -right-[74px] top-12 z-20 w-[76px]"
+              className="hidden xl:flex flex-col gap-1.5 absolute -right-[84px] top-12 z-20 w-[86px]"
             >
               {CY_BOOKMARK_TABS.map((tab) => {
                 const active = activeTab === tab.key;
@@ -1632,13 +1813,14 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                     key={tab.key}
                     type="button"
                     onClick={() => setActiveTab(tab.key)}
-                    className={`rounded-r-lg border-2 border-l-0 px-2.5 py-2 text-left text-xs font-bold shadow transition-all ${
+                    className={`flex items-center gap-1 rounded-r-lg border-2 border-l-0 px-2 py-2 text-left text-xs font-extrabold shadow-md transition-all ${
                       active
-                        ? "-ml-1 border-[#3f91a5] bg-white text-[#1e3a5f] shadow-md"
-                        : "border-[#1d6477] bg-[#2b879e] text-white hover:bg-[#237387]"
+                        ? `-ml-1 border-amber-200 border-l-4 bg-white ${tab.activeAccent}`
+                        : `${tab.inactiveClass}`
                     }`}
                   >
-                    {tab.label}
+                    <span className="text-[11px]">{tab.icon}</span>
+                    <span>{tab.label}</span>
                   </button>
                 );
               })}
@@ -1646,57 +1828,63 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
           </div>
         </div>
 
-        {/* 2) 최우측 별도 미니홈피 위젯 컬럼 (레퍼런스 이미지 우측 사이드바 재현) */}
-        <aside className="w-full xl:w-[235px] xl:ml-[74px] shrink-0 space-y-2.5">
-          {/* 싸이월드 홈 감성 게이지 박스 */}
-          <div className="overflow-hidden rounded border border-[#495057] bg-[#f8f9fa] shadow-lg">
-            <div className="bg-[#5c646c] px-3 py-1.5 text-center text-xs font-bold text-white">
-              PosMul 미니홈피 홈
+        {/* 2) 최우측 PosMul Citizen Studio 다크 글래스 위젯 컬럼 */}
+        <aside className="w-full xl:w-[244px] xl:ml-[84px] shrink-0 space-y-3 text-slate-100">
+          {/* PosMul Citizen Studio 게이지 + 주크박스 카드 */}
+          <div className="overflow-hidden rounded-2xl border border-indigo-500/35 bg-[#111827]/95 shadow-2xl backdrop-blur-xl">
+            <div className="bg-gradient-to-r from-indigo-600/85 via-sky-600/85 to-purple-600/85 px-3 py-2 text-center text-xs font-black tracking-tight text-white">
+              PosMul Citizen Studio
             </div>
-            <div className="space-y-2.5 p-3 text-[11px]">
-              {/* 3색 상태 게이지 + [+] 버튼 */}
+
+            <div className="space-y-3 p-3.5 text-[11px]">
+              {/* 3색 게이지 바 */}
               {[
                 {
-                  label: "힐링지수",
+                  label: "🌿 힐링지수",
                   pct: healingPct,
-                  color: "bg-[#ff6b4a]",
+                  barClass: "bg-gradient-to-r from-emerald-500 to-teal-400",
                   onPlus: () => setBoostHealing((p) => (p + 10) % 40),
                 },
                 {
-                  label: "나눔온도",
+                  label: "🕊️ 나눔온도",
                   pct: warmthPct,
-                  color: "bg-[#82c91e]",
+                  barClass: "bg-gradient-to-r from-purple-500 to-fuchsia-400",
                   onPlus: () => setBoostWarmth((p) => (p + 10) % 40),
                 },
                 {
-                  label: "통찰력",
+                  label: "🔮 집단통찰",
                   pct: insightPct,
-                  color: "bg-[#22b8cf]",
+                  barClass: "bg-gradient-to-r from-sky-500 to-indigo-400",
                   onPlus: () => setBoostInsight((p) => (p + 10) % 40),
                 },
               ].map((stat) => (
-                <div key={stat.label} className="flex items-center gap-2">
-                  <span className="w-12 shrink-0 font-bold text-[#495057]">{stat.label}</span>
-                  <div className="h-2.5 flex-1 overflow-hidden rounded-sm border border-[#ced4da] bg-[#e9ecef]">
+                <div key={stat.label} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-slate-300">{stat.label}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-mono text-[10px] text-slate-400">{stat.pct}%</span>
+                      <button
+                        type="button"
+                        onClick={stat.onPlus}
+                        title={`${stat.label} 충전`}
+                        className="flex h-4 w-4 items-center justify-center rounded border border-slate-600 bg-slate-800 text-[10px] font-bold text-sky-300 hover:bg-slate-700"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
                     <div
-                      className={`h-full transition-all duration-300 ${stat.color}`}
+                      className={`h-full rounded-full transition-all duration-300 ${stat.barClass}`}
                       style={{ width: `${stat.pct}%` }}
                     />
                   </div>
-                  <button
-                    type="button"
-                    onClick={stat.onPlus}
-                    title={`${stat.label} 충전`}
-                    className="flex h-4 w-4 items-center justify-center rounded-sm border border-[#adb5bd] bg-white text-[10px] font-bold text-[#495057] hover:bg-slate-100"
-                  >
-                    +
-                  </button>
                 </div>
               ))}
 
               {/* 마이심볼 */}
-              <div className="flex items-center justify-between border-t border-[#e9ecef] pt-2">
-                <span className="font-bold text-[#495057]">마이심볼</span>
+              <div className="flex items-center justify-between border-t border-slate-800 pt-2.5">
+                <span className="font-bold text-slate-300">🏅 마이심볼</span>
                 <div className="flex items-center gap-1">
                   {unlockedTrophies.length > 0 ? (
                     unlockedTrophies.slice(0, 4).map((t) => (
@@ -1705,75 +1893,87 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                       </span>
                     ))
                   ) : (
-                    <span className="text-[11px] text-slate-400">🌱 🔮 ☕</span>
+                    <span className="text-[11px] text-slate-500">🌱 🔮 ☕</span>
                   )}
                 </div>
               </div>
 
               {/* 바로가기 링크 */}
-              <div className="flex items-center justify-center gap-2 border-t border-[#e9ecef] pt-2 text-[11px] font-bold text-[#2b6b7c]">
-                <Link href="/dashboard" className="hover:underline">
+              <div className="flex items-center justify-center gap-2 border-t border-slate-800 pt-2.5 text-[11px] font-bold text-sky-300">
+                <Link
+                  href="/dashboard"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-sky-200 hover:underline"
+                >
                   내 대시보드
                 </Link>
-                <span className="text-slate-300">|</span>
-                <Link href="/prediction" className="hover:underline">
+                <span className="text-slate-600">|</span>
+                <Link
+                  href="/prediction"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-amber-200 hover:underline"
+                >
                   예측 광장
                 </Link>
               </div>
             </div>
 
-            {/* 싸이월드 BGM 미니 오디오 플레이어 */}
-            <div className="border-t border-[#ced4da] bg-[#eef2f5] p-2.5">
-              <div className="mb-1.5 flex items-center gap-1.5 rounded border border-[#adb5bd] bg-white px-2 py-1 text-[11px]">
+            {/* PosMul Lo-Fi 주크박스 */}
+            <div className="border-t border-slate-800 bg-[#0b101d] p-3">
+              <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-slate-400">
+                <span>💿 POSMUL JUKEBOX</span>
+                <span className={isBgmPlaying ? "text-amber-300 animate-pulse" : "text-slate-500"}>
+                  {isBgmPlaying ? "● ON AIR" : "LO-FI"}
+                </span>
+              </div>
+
+              <div className="mb-2 flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/90 px-2.5 py-1.5 text-[11px]">
                 <Disc3
-                  className={`h-3.5 w-3.5 shrink-0 text-[#ff7a00] ${
+                  className={`h-4 w-4 shrink-0 text-amber-400 ${
                     isBgmPlaying ? "animate-spin" : ""
                   }`}
                 />
-                <span className="truncate font-bold text-[#343a40]">{activeBgm.label}</span>
+                <span className="truncate font-bold text-sky-100">{activeBgm.label}</span>
               </div>
 
-              <div className="flex items-center justify-between gap-1.5">
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setIsBgmPlaying((prev) => !prev)}
-                    className={`inline-flex items-center gap-1 rounded border px-2 py-0.5 text-[10px] font-bold ${
-                      isBgmPlaying
-                        ? "border-amber-500 bg-amber-100 text-amber-800"
-                        : "border-[#adb5bd] bg-white text-[#495057] hover:bg-slate-50"
-                    }`}
-                  >
-                    {isBgmPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-                    <span>{isBgmPlaying ? "일시정지" : "재생"}</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsBgmPlaying(false)}
-                    className="rounded border border-[#adb5bd] bg-white p-1 text-[#495057] hover:bg-slate-50"
-                    title="정지"
-                  >
-                    <Square className="h-2.5 w-2.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void handleNextBgm()}
-                    className="rounded border border-[#adb5bd] bg-white p-1 text-[#495057] hover:bg-slate-50"
-                    title="다음 BGM"
-                  >
-                    <SkipForward className="h-3 w-3" />
-                  </button>
-                </div>
-                <span className="text-[10px] font-mono text-[#6c757d]">
-                  {isBgmPlaying ? "ON AIR" : "LO-FI"}
-                </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setIsBgmPlaying((prev) => !prev)}
+                  className={`flex-1 inline-flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-[10px] font-bold transition ${
+                    isBgmPlaying
+                      ? "border-amber-400/60 bg-amber-500/20 text-amber-200"
+                      : "border-slate-700 bg-slate-800 text-slate-200 hover:bg-slate-700"
+                  }`}
+                >
+                  {isBgmPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+                  <span>{isBgmPlaying ? "일시정지" : "BGM 재생"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsBgmPlaying(false)}
+                  className="rounded-md border border-slate-700 bg-slate-800 p-1.5 text-slate-300 hover:bg-slate-700"
+                  title="정지"
+                >
+                  <Square className="h-2.5 w-2.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleNextBgm()}
+                  className="rounded-md border border-slate-700 bg-slate-800 p-1.5 text-slate-300 hover:bg-slate-700"
+                  title="다음 BGM"
+                >
+                  <SkipForward className="h-3 w-3" />
+                </button>
               </div>
 
               <select
                 aria-label="미니홈피 BGM 트랙 선택"
                 value={previewBgmId}
                 onChange={(e) => setPreviewBgmId(e.target.value)}
-                className="mt-1.5 w-full rounded border border-[#ced4da] bg-white px-1.5 py-1 text-[10px] text-[#495057]"
+                className="mt-2 w-full rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-[10px] text-slate-200"
               >
                 {BGM_TRACKS.map((t) => (
                   <option key={t.id} value={t.id}>
@@ -1784,13 +1984,13 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
             </div>
           </div>
 
-          {/* 선물가게 / 추천 아이템 박스 */}
-          <div className="overflow-hidden rounded border border-[#495057] bg-white shadow-lg">
-            <div className="flex items-center justify-between border-b border-[#dee2e6] bg-[#f8f9fa] px-3 py-1.5 text-[11px] font-extrabold text-[#343a40]">
-              <span>선물가게 / 추천 아이템</span>
-              <ShoppingBag className="h-3.5 w-3.5 text-[#ff7a00]" />
+          {/* PMP 선물가게 추천 아이템 카드 */}
+          <div className="overflow-hidden rounded-2xl border border-emerald-500/35 bg-[#111827]/95 shadow-2xl backdrop-blur-xl">
+            <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/90 px-3 py-2 text-[11px] font-extrabold text-emerald-200">
+              <span>🎁 PMP 선물가게 추천</span>
+              <ShoppingBag className="h-3.5 w-3.5 text-amber-400" />
             </div>
-            <div className="p-2.5 space-y-2">
+            <div className="p-3 space-y-2.5">
               <div className="grid grid-cols-2 gap-2">
                 {recommendedShopItems.map((item) => {
                   const icon =
@@ -1804,13 +2004,13 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                       key={item.id}
                       type="button"
                       onClick={() => setActiveTab("shop")}
-                      className="flex flex-col items-center rounded border border-[#dee2e6] bg-[#f8f9fa] p-2 text-center hover:border-[#2b879e]"
+                      className="flex flex-col items-center rounded-xl border border-slate-700/80 bg-slate-900/80 p-2 text-center transition hover:border-sky-400/60"
                     >
                       <span className="text-2xl">{icon}</span>
-                      <span className="mt-1 line-clamp-1 text-[10px] font-bold text-[#343a40]">
+                      <span className="mt-1 line-clamp-1 text-[10px] font-bold text-slate-200">
                         {item.name}
                       </span>
-                      <span className="text-[10px] font-bold text-[#0284c7]">
+                      <span className="text-[10px] font-bold text-sky-400">
                         {item.pricePmp} PMP
                       </span>
                     </button>
@@ -1818,37 +2018,37 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                 })}
               </div>
 
-              <div className="grid grid-cols-2 gap-1.5 pt-1">
+              <div className="grid grid-cols-2 gap-1.5">
                 <button
                   type="button"
                   onClick={() => {
                     setShopFilter("all");
                     setActiveTab("shop");
                   }}
-                  className="rounded border border-[#e6a100] bg-[#ffc107] py-1 text-[11px] font-extrabold text-[#212529] hover:bg-[#ffb300]"
+                  className="rounded-lg bg-gradient-to-r from-amber-500 to-yellow-500 py-1.5 text-[11px] font-extrabold text-slate-950 hover:brightness-110"
                 >
                   PMP 선물가게
                 </button>
                 <button
                   type="button"
                   onClick={() => setActiveTab("guestbook")}
-                  className="rounded border border-[#d96b00] bg-[#ff8800] py-1 text-[11px] font-extrabold text-white hover:bg-[#ea7d00]"
+                  className="rounded-lg bg-gradient-to-r from-rose-500 to-pink-600 py-1.5 text-[11px] font-extrabold text-white hover:brightness-110"
                 >
-                  일촌평 남기기
+                  일촌평 쓰기
                 </button>
               </div>
             </div>
           </div>
 
-          {/* 3초 힐링 안내 뱃지 */}
-          <div className="rounded border border-[#525659] bg-[#2f353b] p-2.5 text-[10px] leading-relaxed text-slate-200 shadow">
-            <p className="font-bold text-amber-300 flex items-center gap-1">
+          {/* PosMul 경제 불변식 안내 카드 */}
+          <div className="rounded-2xl border border-slate-700/80 bg-[#0b101d]/90 p-3 text-[10px] leading-relaxed text-slate-300 shadow-lg">
+            <p className="flex items-center gap-1 font-extrabold text-amber-300">
               <Sparkles className="h-3 w-3" />
-              PosMul 미니홈피 가이드
+              PosMul 힐링룸 약속
             </p>
-            <p className="mt-1 text-slate-300">
-              기부와 예측은 <strong className="text-white">자랑첩</strong>에 자동 기록되고, 미니룸 꾸미기는 무위험{" "}
-              <strong className="text-sky-300">PMP</strong>만 사용합니다.
+            <p className="mt-1 text-slate-400">
+              미니룸 꾸미기는 무위험 포인트 <strong className="text-sky-300">PMP</strong>만 사용하며, 소중한{" "}
+              <strong className="text-purple-300">PMC</strong>는 오직 기부와 공공선에만 쓰입니다.
             </p>
           </div>
         </aside>

@@ -23,7 +23,7 @@ const NAV_ITEMS: Array<{
 export function BottomNavigation() {
   const pathname = usePathname() || "/";
 
-  if (pathname.startsWith("/admin")) {
+  if (pathname.startsWith("/admin") || pathname.startsWith("/healing-room")) {
     return null;
   }
 

@@ -568,7 +568,21 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
     }
   };
 
-  if (hideNav) return null;
+  const handleOpenHealingRoom = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const popup = window.open(
+      "/healing-room",
+      "PosMulHealingRoom",
+      "width=1280,height=860,left=100,top=60,resizable=yes,scrollbars=yes"
+    );
+    if (!popup) {
+      window.open("/healing-room", "_blank", "noopener,noreferrer");
+    } else {
+      popup.focus();
+    }
+  };
+
+  if (hideNav || pathname.startsWith("/healing-room")) return null;
 
   const currentDomainMeta = DOMAIN_PHILOSOPHY_MAP[selectedDomain];
   const currentCategories = navigationData[selectedDomain].categories;
@@ -655,12 +669,15 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
 
             {user ? (
               <>
-                <Link
+                <a
                   href="/healing-room"
-                  className="px-3 py-1.5 bg-gradient-to-r from-amber-500/20 to-emerald-500/20 hover:from-amber-500/30 hover:to-emerald-500/30 text-amber-200 rounded-xl transition-all duration-200 border border-amber-400/40 text-xs font-semibold flex items-center gap-1"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleOpenHealingRoom}
+                  className="px-3 py-1.5 bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 hover:from-sky-500/30 hover:to-purple-500/30 text-sky-200 rounded-xl transition-all duration-200 border border-sky-400/40 text-xs font-semibold flex items-center gap-1"
                 >
                   <span>🏡 힐링룸</span>
-                </Link>
+                </a>
                 <Link
                   href="/dashboard"
                   className="px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-xl transition-all duration-200 border border-slate-700/60 text-xs font-semibold flex items-center gap-1"
@@ -683,12 +700,15 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
               </>
             ) : (
               <>
-                <Link
+                <a
                   href="/healing-room"
-                  className="px-2.5 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-200 rounded-xl border border-amber-400/35 transition-colors text-xs font-semibold"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={handleOpenHealingRoom}
+                  className="px-2.5 py-1.5 bg-gradient-to-r from-sky-500/15 to-indigo-500/20 hover:from-sky-500/25 hover:to-indigo-500/30 text-sky-200 rounded-xl border border-sky-400/35 transition-colors text-xs font-semibold"
                 >
                   🏡 힐링룸
-                </Link>
+                </a>
                 <Link
                   href="/dashboard"
                   className="px-2.5 py-1.5 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-800 transition-colors text-xs font-semibold"
@@ -833,13 +853,18 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
 
             {/* Mobile: Auth */}
             <div className="pt-2 border-t border-slate-800 space-y-2">
-              <Link
+              <a
                 href="/healing-room"
-                onClick={() => setMobileOpen(false)}
-                className="mb-2 block w-full px-4 py-2 bg-gradient-to-r from-amber-500/20 to-emerald-500/20 border border-amber-400/40 text-amber-200 rounded-xl text-center text-xs font-bold"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => {
+                  setMobileOpen(false);
+                  handleOpenHealingRoom(event);
+                }}
+                className="mb-2 block w-full px-4 py-2 bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 border border-sky-400/40 text-sky-200 rounded-xl text-center text-xs font-bold"
               >
-                🏡 PosMul 힐링룸 미니홈피
-              </Link>
+                🏡 PosMul 힐링룸 미니홈피 (새 창)
+              </a>
               {user ? (
                 <div className="grid grid-cols-2 gap-2">
                   <Link

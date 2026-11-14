@@ -595,13 +595,28 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
 
             {/* 우측: 퀵 액션 버튼 */}
             <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-              <Link
+              <a
                 href="/healing-room"
-                className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/45 bg-gradient-to-r from-amber-500/20 to-emerald-500/20 px-4 py-2 text-sm font-semibold text-amber-200 shadow-sm transition-all hover:from-amber-500/30 hover:to-emerald-500/30"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => {
+                  event.preventDefault();
+                  const popup = window.open(
+                    "/healing-room",
+                    "PosMulHealingRoom",
+                    "width=1280,height=860,left=100,top=60,resizable=yes,scrollbars=yes"
+                  );
+                  if (!popup) {
+                    window.open("/healing-room", "_blank", "noopener,noreferrer");
+                  } else {
+                    popup.focus();
+                  }
+                }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/45 bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 px-4 py-2 text-sm font-semibold text-sky-200 shadow-sm transition-all hover:from-sky-500/30 hover:to-purple-500/30"
               >
                 <span aria-hidden="true">🏡</span>
-                <span>내 힐링룸 꾸미기</span>
-              </Link>
+                <span>내 힐링룸 꾸미기 (새 창)</span>
+              </a>
 
               <AdminButton
                 variant="outline"
