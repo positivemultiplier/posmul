@@ -113,47 +113,47 @@ export function HeroLandingSection({ totalPool, totalUsers }: HeroLandingSection
           </Link>
         </div>
 
-        {/* 3단계 훈련 루프 카드 */}
+        {/* 3단계 핵심 루프 카드 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-8 text-left">
-          {/* STEP 1 */}
+          {/* 1. PMP 적립 */}
           <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800/80 hover:border-blue-500/40 transition-colors space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black text-blue-400 px-2 py-0.5 rounded bg-blue-950/80 border border-blue-800/50">
-                STEP 1. 학습
+                PMP 적립
               </span>
               <ShieldCheck className="w-4 h-4 text-blue-400" />
             </div>
-            <h3 className="text-sm font-black text-white">무위험 참여 자산 (PMP)</h3>
+            <h3 className="text-sm font-black text-white">무료 활동 포인트 (PMP)</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              돈을 쓰지 않고 뉴스를 읽고, 퀴즈를 풀고, 갤러리에서 토론하며 활동 자본(PMP)을 모읍니다.
+              돈을 쓰지 않고 뉴스를 읽고, 퀴즈를 풀고, 커뮤니티에서 소통하며 포인트를 모읍니다.
             </p>
           </div>
 
-          {/* STEP 2 */}
+          {/* 2. 실시간 예측 */}
           <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800/80 hover:border-indigo-500/40 transition-colors space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black text-indigo-400 px-2 py-0.5 rounded bg-indigo-950/80 border border-indigo-800/50">
-                STEP 2. 예측
+                실시간 예측
               </span>
               <TrendingUp className="w-4 h-4 text-indigo-400" />
             </div>
-            <h3 className="text-sm font-black text-white">사회 지표 집단지성 예측</h3>
+            <h3 className="text-sm font-black text-white">사회·경제 트렌드 예측</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              실업률, 금리, 경제 이슈, 문화 트렌드의 결과를 예측하며 소신 있는 의사결정을 훈련합니다.
+              금리, 주가, 스포츠, 문화 이슈 등 세상의 흐름을 예측하며 내 안목을 시험합니다.
             </p>
           </div>
 
-          {/* STEP 3 */}
+          {/* 3. PMC 리워드 & 기부 */}
           <div className="p-5 rounded-2xl bg-slate-950/60 border border-slate-800/80 hover:border-purple-500/40 transition-colors space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-black text-purple-400 px-2 py-0.5 rounded bg-purple-950/80 border border-purple-800/50">
-                STEP 3. 환류
+                PMC 리워드
               </span>
               <HeartHandshake className="w-4 h-4 text-purple-400" />
             </div>
-            <h3 className="text-sm font-black text-white">MoneyWave 가치 전환 (PMC)</h3>
+            <h3 className="text-sm font-black text-white">상금풀 보상 & 가치 후원</h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              예측 적중 시 위험 자산인 PMC를 획득하여, 공공 정책 제안과 사회적 기부에 직접 집행합니다.
+              예측 적중 시 상금풀에서 PMC를 획득하여, 원하는 공익 프로젝트와 지역사회에 후원합니다.
             </p>
           </div>
         </div>
@@ -167,11 +167,8 @@ export function HeroLandingSection({ totalPool, totalUsers }: HeroLandingSection
           </div>
           <div className="flex items-center gap-1.5">
             <Users className="w-3.5 h-3.5 text-blue-400" />
-            <span>훈련 참여 시민:</span>
+            <span>참여 시민:</span>
             <strong className="text-white font-bold">{totalUsers.toLocaleString()}명</strong>
-          </div>
-          <div className="text-slate-500">
-            정부와 관료의 독점을 넘어, 시민 스스로 예산을 연습하는 학습장
           </div>
         </div>
       </div>

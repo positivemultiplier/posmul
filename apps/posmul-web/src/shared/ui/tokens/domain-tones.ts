@@ -56,11 +56,11 @@ export const DOMAIN_PHILOSOPHY_MAP: Record<PosMulDomainKey, DomainPhilosophyMeta
     title: "포럼",
     englishTitle: "Forum · Public Agora",
     href: "/forum",
-    stepBadge: "STEP 1 · 공론",
+    stepBadge: "포럼",
     assetBadge: "+PMP",
     assetType: "PMP",
-    philosophySlogan: "공공 지식 학습 · 예산 감시 · 숙의 민주주의",
-    philosophyMicroCopy: "뉴스 학습과 커뮤니티 소통, 아고라 숙의로 무위험 활동 포인트(PMP)를 획득합니다.",
+    philosophySlogan: "뉴스 · 예산 · 토론",
+    philosophyMicroCopy: "뉴스를 읽고 의견을 나누며 PMP를 모읍니다.",
     tones: {
       row1Active:
         "bg-gradient-to-r from-emerald-600/90 to-teal-600/90 text-white border border-emerald-400/50 shadow-[0_0_18px_rgba(16,185,129,0.28)]",
@@ -88,11 +88,11 @@ export const DOMAIN_PHILOSOPHY_MAP: Record<PosMulDomainKey, DomainPhilosophyMeta
     title: "소비",
     englishTitle: "Consume · Value Exchange",
     href: "/consume",
-    stepBadge: "STEP 2 · 참여",
+    stepBadge: "소비",
     assetBadge: "+PMP · +PMC",
     assetType: "PMP",
-    philosophySlogan: "시간 가치화 · 지역 상생 소비 · 임팩트 펀딩",
-    philosophyMicroCopy: "광고 시청으로 PMP를 모으고, 동네 상점 소비와 크라우드 펀딩으로 지역경제 PMC를 창출합니다.",
+    philosophySlogan: "광고 · 상점 · 펀딩",
+    philosophyMicroCopy: "광고 참여로 PMP를 모으고 상점·펀딩에서 PMC 리워드를 받습니다.",
     tones: {
       row1Active:
         "bg-gradient-to-r from-indigo-600/90 to-violet-600/90 text-white border border-indigo-400/50 shadow-[0_0_18px_rgba(99,102,241,0.28)]",
@@ -118,13 +118,13 @@ export const DOMAIN_PHILOSOPHY_MAP: Record<PosMulDomainKey, DomainPhilosophyMeta
   prediction: {
     key: "prediction",
     title: "예측",
-    englishTitle: "Prediction · Collective Intelligence",
+    englishTitle: "Prediction · Live Markets",
     href: "/prediction",
-    stepBadge: "STEP 3 · 학습",
+    stepBadge: "예측",
     assetBadge: "PMP ➔ PMC",
     assetType: "PMP_TO_PMC",
-    philosophySlogan: "시민 집단지성 예측 · MoneyWave 가치 전환",
-    philosophyMicroCopy: "무위험 자산(PMP)으로 사회·경제 의제를 예측하고, 적중 시 MoneyWave 상금풀에서 PMC를 획득합니다.",
+    philosophySlogan: "실시간 마켓 · MoneyWave 상금풀",
+    philosophyMicroCopy: "PMP로 미래 이슈를 예측하고 적중 시 상금풀에서 PMC 보상을 받습니다.",
     tones: {
       row1Active:
         "bg-gradient-to-r from-blue-600/90 to-sky-600/90 text-white border border-sky-400/50 shadow-[0_0_18px_rgba(14,165,233,0.28)]",
@@ -150,13 +150,13 @@ export const DOMAIN_PHILOSOPHY_MAP: Record<PosMulDomainKey, DomainPhilosophyMeta
   donation: {
     key: "donation",
     title: "기부",
-    englishTitle: "Donation · Direct Democracy",
+    englishTitle: "Donation · Impact Sharing",
     href: "/donation",
-    stepBadge: "STEP 4 · 집행",
-    assetBadge: "PMC 직접집행",
+    stepBadge: "기부",
+    assetBadge: "PMC 나눔",
     assetType: "PMC",
-    philosophySlogan: "철의 삼각 극복 · 시민 직접 예산 집행",
-    philosophyMicroCopy: "관료·정치인을 거치지 않고 시민이 직접 PMC를 집행하여 사회 문제 해결과 연대를 실현합니다.",
+    philosophySlogan: "물품 · 기관 · 공익 프로젝트 후원",
+    philosophyMicroCopy: "보유한 PMC로 원하는 공익 프로젝트와 기관에 즉시 후원합니다.",
     tones: {
       row1Active:
         "bg-gradient-to-r from-purple-600/90 to-fuchsia-600/90 text-white border border-purple-400/50 shadow-[0_0_18px_rgba(168,85,247,0.28)]",
@@ -184,11 +184,11 @@ export const DOMAIN_PHILOSOPHY_MAP: Record<PosMulDomainKey, DomainPhilosophyMeta
     title: "랭킹",
     englishTitle: "Ranking · Hall of Fame",
     href: "/ranking",
-    stepBadge: "CROWN · 명예",
-    assetBadge: "풀뿌리 위상",
+    stepBadge: "랭킹",
+    assetBadge: "명예의 전당",
     assetType: "HONOR",
-    philosophySlogan: "읍·면·동 풀뿌리 주권자 & '내가 그랬제!' 명예의 전당",
-    philosophyMicroCopy: "우리 동네 긍정승수를 높인 시민들과 정확한 통찰로 미래를 적중시킨 예측 명사수들을 기립니다.",
+    philosophySlogan: "예측 명사수 · 지역별 랭킹",
+    philosophyMicroCopy: "우리 동네와 전국 예측 고수들의 적중 기록 및 기여 순위를 확인합니다.",
     tones: {
       row1Active:
         "bg-gradient-to-r from-amber-500/90 to-orange-500/90 text-slate-950 border border-amber-300/60 shadow-[0_0_18px_rgba(245,158,11,0.28)]",
@@ -216,11 +216,11 @@ export const DOMAIN_PHILOSOPHY_MAP: Record<PosMulDomainKey, DomainPhilosophyMeta
     title: "기타",
     englishTitle: "Services · Transparency & Tax",
     href: "/other",
-    stepBadge: "SUPPORT",
+    stepBadge: "서비스",
     assetBadge: "투명 회계",
     assetType: "INFRA",
-    philosophySlogan: "기부금 세액공제(Gift Aid) · 투명 회계 · 시민 지원",
-    philosophyMicroCopy: "기부 내역 영수증 발급과 포인트 거래 명세서를 투명하게 확인하고 계정 환경을 관리합니다.",
+    philosophySlogan: "세액공제 · 포인트 내역",
+    philosophyMicroCopy: "기부 영수증 발급과 포인트 거래 내역을 투명하게 확인합니다.",
     tones: {
       row1Active:
         "bg-gradient-to-r from-slate-600 to-slate-500 text-white border border-slate-400/50 shadow-[0_0_15px_rgba(148,163,184,0.2)]",

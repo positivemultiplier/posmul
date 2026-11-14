@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useState, useEffect } from "react";
-import { Menu, X, Sparkles, ArrowRight } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import { createClient } from "../../../../lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -710,14 +710,8 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
         </div>
 
         {/* ==================== Row 2: 도메인 중분류 카테고리 (Tone-on-Tone Mid Layer) ==================== */}
-        <div className="hidden md:flex items-center justify-between h-[44px] border-b border-white/[0.04]">
+        <div className="hidden md:flex items-center justify-between h-[42px] border-b border-white/[0.04]">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            <span
-              className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border mr-1.5 shrink-0 ${currentDomainMeta.tones.pillBadge}`}
-            >
-              {currentDomainMeta.stepBadge}
-            </span>
-
             {Object.entries(currentCategories).map(([categoryKey, category]) => {
               const isSelected = selectedCategory === categoryKey;
               return (
@@ -736,15 +730,10 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
               );
             })}
           </div>
-
-          <div className="hidden lg:flex items-center gap-1.5 text-[11px] text-slate-400 shrink-0 pl-4">
-            <Sparkles className={`w-3.5 h-3.5 ${currentDomainMeta.tones.accentText}`} />
-            <span className="font-medium">{currentDomainMeta.philosophySlogan}</span>
-          </div>
         </div>
 
-        {/* ==================== Row 3: 소분류 필터 칩 & 시민 철학 마이크로 가이드 (Tone-on-Tone Soft Layer) ==================== */}
-        <div className="hidden md:flex items-center justify-between h-[38px]">
+        {/* ==================== Row 3: 소분류 필터 칩 (Tone-on-Tone Soft Layer) ==================== */}
+        <div className="hidden md:flex items-center justify-between h-[36px]">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
             {currentSubcategories.map((subcategory, index) => {
               const active = checkSubcategoryActive(
@@ -776,10 +765,6 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
               );
             })}
           </div>
-
-          <div className="hidden xl:block text-[11px] text-slate-500 truncate max-w-md pl-4">
-            {currentDomainMeta.philosophyMicroCopy}
-          </div>
         </div>
       </div>
 
@@ -787,21 +772,6 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
       {mobileOpen && (
         <div className="md:hidden bg-[#090b12]/98 backdrop-blur-2xl border-t border-white/10">
           <div className="px-4 py-4 space-y-3">
-            {/* 현재 도메인 철학 요약 */}
-            <div className={`p-3 rounded-xl border ${currentDomainMeta.tones.headerSurface}`}>
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${currentDomainMeta.tones.pillBadge}`}>
-                  {currentDomainMeta.stepBadge}
-                </span>
-                <span className="text-[11px] font-semibold text-slate-300">
-                  {currentDomainMeta.assetBadge}
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 mt-1">
-                {currentDomainMeta.philosophyMicroCopy}
-              </p>
-            </div>
-
             {/* Mobile: Domains & Categories */}
             <div className="space-y-2">
               {ORDERED_DOMAIN_KEYS.map((domainKey) => {
@@ -822,7 +792,7 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                     >
                       <span>{data.title}</span>
                       <span className="text-[10px] font-medium text-slate-400">
-                        {meta.stepBadge} · {meta.assetBadge}
+                        {meta.assetBadge}
                       </span>
                     </Link>
 

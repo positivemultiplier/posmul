@@ -1,4 +1,5 @@
 import React from "react";
+import { Info } from "lucide-react";
 import {
   DOMAIN_PHILOSOPHY_MAP,
   type PosMulDomainKey,
@@ -23,7 +24,7 @@ export interface DomainContextHeaderProps {
  * DomainContextHeader
  *
  * 3-Row 네비게이션 하단에서 모든 도메인 페이지의 시작점을 통일하는
- * Tone-on-Tone 철학 & 컨텍스트 헤더입니다.
+ * 핵심 지표 중심 컨텍스트 헤더입니다 (부가 설명은 ⓘ 말풍선으로 최소화).
  */
 export function DomainContextHeader({
   domain,
@@ -34,6 +35,7 @@ export function DomainContextHeader({
   children,
 }: DomainContextHeaderProps) {
   const meta = DOMAIN_PHILOSOPHY_MAP[domain];
+  const tooltipText = subtitle || meta.philosophyMicroCopy;
 
   return (
     <div className="relative mb-6">
@@ -46,34 +48,32 @@ export function DomainContextHeader({
         className={`rounded-2xl border p-4 sm:p-5 backdrop-blur-xl shadow-lg ${meta.tones.headerSurface}`}
       >
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          {/* 좌측: 철학 배지 + 페이지 타이틀 + 설명 */}
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded border ${meta.tones.pillBadge}`}
-              >
-                {meta.stepBadge}
-              </span>
-              <span className="text-[11px] font-bold text-slate-300 px-2 py-0.5 rounded bg-white/[0.04] border border-white/[0.08]">
-                {meta.assetBadge}
-              </span>
-              <span className="text-xs text-slate-400 hidden sm:inline">
-                {meta.philosophySlogan}
-              </span>
-            </div>
+          {/* 좌측: 간결한 페이지 타이틀 + ⓘ 말풍선 안내 */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <h1
+              className={`text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r ${meta.tones.accentGradientText} bg-clip-text text-transparent`}
+            >
+              {title}
+            </h1>
 
-            <div className="flex flex-wrap items-baseline gap-2.5 pt-0.5">
-              <h1
-                className={`text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r ${meta.tones.accentGradientText} bg-clip-text text-transparent`}
-              >
-                {title}
-              </h1>
-              {subtitle && (
-                <p className="text-xs sm:text-sm text-slate-400 font-medium">
-                  {subtitle}
-                </p>
-              )}
-            </div>
+            <span className="text-[11px] font-bold text-slate-300 px-2 py-0.5 rounded-full bg-white/[0.04] border border-white/[0.08]">
+              {meta.assetBadge}
+            </span>
+
+            {tooltipText && (
+              <div className="relative group/info inline-flex items-center">
+                <button
+                  type="button"
+                  aria-label="페이지 안내 보기"
+                  className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-white/[0.08] transition-colors focus:outline-none"
+                >
+                  <Info className="w-4 h-4" />
+                </button>
+                <div className="pointer-events-none opacity-0 translate-y-1 group-hover/info:opacity-100 group-hover/info:translate-y-0 group-focus-within/info:opacity-100 group-focus-within/info:translate-y-0 transition-all duration-150 absolute left-0 top-full mt-2 z-40 w-64 sm:w-72 p-3 rounded-xl bg-slate-900/95 backdrop-blur-md border border-white/15 shadow-2xl text-xs text-slate-200 leading-relaxed">
+                  {tooltipText}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 우측: 도메인 핵심 지표 및 주요 액션 */}

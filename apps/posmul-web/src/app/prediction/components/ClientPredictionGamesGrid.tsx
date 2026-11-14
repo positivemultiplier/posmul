@@ -20,8 +20,7 @@ import {
   Bookmark,
   Share2,
   Search,
-  GraduationCap,
-  TrendingUp,
+  Info,
   Pause,
   Play,
 } from "lucide-react";
@@ -132,7 +131,7 @@ function buildSpotlightChartPaths(
       })
       .join(" ");
 
-  const xCoords = [0, 95, 140, 225, 290, 365, 430, 485];
+  const xCoords = [0, 70, 140, 210, 280, 350, 420, 485];
 
   const series = targetPcts.map((targetPct, sIdx) => {
     const localSeed = seed + sIdx * 29;
@@ -403,6 +402,28 @@ export function ClientPredictionGamesGrid({
                           <span>{prefixTag || meta.categoryLabel}</span>
                           <span className="text-slate-600">·</span>
                           <span className="text-slate-400 font-medium">{meta.sourceLabel}</span>
+                          {/* 의제 핵심 설명 호버 말풍선 */}
+                          <div className="relative group/desc inline-flex items-center">
+                            <span
+                              tabIndex={0}
+                              role="button"
+                              aria-label="의제 설명 보기"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                              }}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[10px] font-semibold text-slate-400 hover:text-sky-300 transition-colors"
+                            >
+                              <Info className="w-3 h-3" />
+                              <span className="hidden sm:inline">요약</span>
+                            </span>
+                            <div className="pointer-events-none opacity-0 translate-y-1 group-hover/desc:opacity-100 group-hover/desc:translate-y-0 group-focus-within/desc:opacity-100 group-focus-within/desc:translate-y-0 transition-all duration-150 absolute left-0 top-full mt-2 z-40 w-64 sm:w-80 p-3 rounded-xl bg-slate-900/95 backdrop-blur-md border border-sky-500/30 shadow-2xl text-xs font-normal text-slate-200 leading-relaxed">
+                              <div className="text-[10.5px] font-bold text-sky-400 mb-1">
+                                {meta.sourceLabel} 기준
+                              </div>
+                              {descFirstLine}
+                            </div>
+                          </div>
                         </div>
                         <h2 className="text-lg sm:text-xl font-extrabold text-white group-hover:text-sky-300 transition-colors leading-snug">
                           {cleanTitle}
@@ -456,11 +477,11 @@ export function ClientPredictionGamesGrid({
                     </div>
                   </div>
 
-                  {/* 스포트라이트 본문: 좌측(선택지 확률 + 학습 맥락) / 우측(실시간 다중 확률 차트) */}
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center my-auto">
-                    {/* 좌측 5 cols: 옵션 리스트 & 뉴스/데이터 학습 브리핑 */}
+                  {/* 스포트라이트 본문: 좌측(핵심 선택지 확률 바 + 상금/참여 CTA) / 우측(시간축 정렬 다중 확률 차트) */}
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-stretch my-auto">
+                    {/* 좌측 5 cols: 핵심 선택지 확률 바 & 참여 CTA (불필요 설명 박스 제거) */}
                     <div className="md:col-span-5 flex flex-col justify-between space-y-4">
-                      <div className="space-y-2.5">
+                      <div className="space-y-3">
                         {topOptions.map((opt, idx) => {
                           const pct = pcts[idx] ?? 0;
                           const colorDot = seriesColors[idx] || "#38bdf8";
@@ -468,65 +489,65 @@ export function ClientPredictionGamesGrid({
                             <Link
                               key={opt.id || idx}
                               href={targetHref}
-                              className="flex items-center justify-between py-1.5 border-b border-white/[0.06] hover:border-sky-400/40 transition-colors group/opt"
+                              className="block p-3 rounded-xl bg-slate-950/55 border border-white/[0.06] hover:border-sky-400/40 transition-all group/opt"
                             >
-                              <span className="flex items-center gap-2 text-sm font-medium text-slate-200 group-hover/opt:text-white truncate pr-2">
-                                <span
-                                  className="w-2 h-2 rounded-full shrink-0"
-                                  style={{ backgroundColor: colorDot }}
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <span className="flex items-center gap-2 text-sm font-bold text-slate-100 group-hover/opt:text-white truncate pr-2">
+                                  <span
+                                    className="w-2.5 h-2.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: colorDot }}
+                                  />
+                                  {isRanking && (
+                                    <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-white/[0.08] text-sky-300 shrink-0">
+                                      {idx + 1}위
+                                    </span>
+                                  )}
+                                  <span className="truncate">{opt.text}</span>
+                                </span>
+                                <span className="text-xl font-black text-white tracking-tight shrink-0 font-mono">
+                                  {pct}%
+                                </span>
+                              </div>
+                              <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-500"
+                                  style={{
+                                    width: `${Math.min(100, Math.max(4, pct))}%`,
+                                    backgroundColor: colorDot,
+                                  }}
                                 />
-                                {isRanking && (
-                                  <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-white/[0.06] text-sky-300 shrink-0">
-                                    {idx + 1}위
-                                  </span>
-                                )}
-                                <span className="truncate">{opt.text}</span>
-                              </span>
-                              <span className="text-xl font-black text-white tracking-tight shrink-0">
-                                {pct}%
-                              </span>
+                              </div>
                             </Link>
                           );
                         })}
                         {isRanking && orderedOptions.length > 3 && (
-                          <div className="text-[11px] font-semibold text-slate-400 text-right pt-0.5">
-                            외 +{orderedOptions.length - 3}개 후보 경쟁 중
+                          <div className="text-[11px] font-semibold text-slate-400 text-right pr-1">
+                            외 +{orderedOptions.length - 3}개 후보
                           </div>
                         )}
                       </div>
 
-                      {/* PosMul 학습 브리핑 박스 (레퍼런스의 Reuters 뉴스 맥락 영역) */}
-                      <div className="p-3 rounded-xl bg-slate-950/60 border border-white/[0.05] space-y-1">
-                        <div className="flex items-center gap-1.5 text-[11px] font-bold text-sky-400">
-                          <GraduationCap className="w-3.5 h-3.5" />
-                          <span>{meta.sourceLabel} · 학습 브리핑</span>
-                        </div>
-                        <p className="text-xs text-slate-300 leading-relaxed line-clamp-2">
-                          {descFirstLine}
-                        </p>
-                      </div>
-
                       {/* 하단 볼륨 & 즉시 참여 CTA */}
-                      <div className="flex items-center justify-between pt-1">
+                      <div className="flex items-center justify-between pt-3 border-t border-white/[0.06]">
                         <div>
-                          <div className="text-xs font-extrabold text-amber-300">
+                          <div className="text-sm font-extrabold text-amber-300">
                             💰 {Math.round(featuredGame.allocatedPrizePool || 1800).toLocaleString()} PMC Pool
                           </div>
-                          <div className="text-[11px] text-slate-400">
-                            참여자 {featuredGame.currentParticipants.toLocaleString()}명 · 최소{" "}
+                          <div className="text-[11px] text-slate-400 mt-0.5">
+                            {featuredGame.currentParticipants.toLocaleString()}명 참여 · 최소{" "}
                             {featuredGame.minimumStake.toLocaleString()} PMP
                           </div>
                         </div>
                         <Link
                           href={targetHref}
-                          className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs transition shadow-lg shadow-sky-500/20"
+                          className="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-black text-xs transition shadow-lg shadow-sky-500/20"
                         >
                           예측 참여 →
                         </Link>
                       </div>
                     </div>
 
-                    {/* 우측 7 cols: 실시간 컨센서스 확률 추이 라인 차트 */}
+                    {/* 우측 7 cols: 실시간 확률 추이 라인 차트 (시간의 흐름 X축 정확 정렬) */}
                     <div className="md:col-span-7 flex flex-col justify-between bg-[#0d1018] rounded-xl p-4 border border-white/[0.05]">
                       {/* 상단 차트 범례 */}
                       <div className="flex flex-wrap items-center gap-3 text-xs mb-2">
@@ -550,12 +571,26 @@ export function ClientPredictionGamesGrid({
                       </div>
 
                       {/* SVG 시계열 차트 */}
-                      <div className="relative h-[175px] w-full">
+                      <div className="relative h-[190px] w-full my-auto">
                         <svg
                           className="w-full h-full overflow-visible"
                           viewBox="0 0 530 180"
                           preserveAspectRatio="none"
                         >
+                          {/* 수직 시간축 기준선 (3일 전 ~ 오늘 LIVE 등간격 정렬) */}
+                          {[0, 162, 324, 485].map((vx) => (
+                            <line
+                              key={`vx-${vx}`}
+                              x1={vx}
+                              y1="20"
+                              x2={vx}
+                              y2="165"
+                              stroke={vx === 485 ? "rgba(56,189,248,0.18)" : "rgba(255,255,255,0.04)"}
+                              strokeDasharray={vx === 485 ? "2 2" : "3 3"}
+                              strokeWidth="1"
+                            />
+                          ))}
+
                           {/* 수평 그리드 점선 & 우측 Y축 퍼센트 라벨 */}
                           {[
                             { y: 20, label: "80%" },
@@ -619,17 +654,12 @@ export function ClientPredictionGamesGrid({
                         </svg>
                       </div>
 
-                      {/* 하단 X축 & 브랜드 표기 */}
-                      <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-white/[0.05]">
-                        <div className="flex items-center gap-6">
-                          <span>3일 전</span>
-                          <span>2일 전</span>
-                          <span>어제</span>
-                          <span className="text-sky-400 font-semibold">오늘 (LIVE)</span>
-                        </div>
-                        <span className="font-semibold text-slate-400">
-                          🌊 PosMul Collective Intelligence
-                        </span>
+                      {/* 하단 X축 시간 흐름 (SVG 데이터 영역 x=0~485 폭에 1:1 정렬, 불필요 문구 제거) */}
+                      <div className="w-full pr-[44px] flex items-center justify-between text-[11px] text-slate-400 pt-2 border-t border-white/[0.05]">
+                        <span>3일 전</span>
+                        <span>2일 전</span>
+                        <span>어제</span>
+                        <span className="text-sky-400 font-bold">오늘 (LIVE)</span>
                       </div>
                     </div>
                   </div>
@@ -841,8 +871,8 @@ export function ClientPredictionGamesGrid({
               href="/challenge/create"
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition-all whitespace-nowrap shrink-0"
             >
-              <span>🥊</span>
-              <span>내기·예측 만들기</span>
+              <span>✨</span>
+              <span>예측 만들기</span>
             </Link>
           </div>
         </div>

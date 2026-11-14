@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Bookmark, Flame, GraduationCap, Users, CheckCircle2 } from "lucide-react";
+import { Bookmark, Flame, Zap, Users, CheckCircle2 } from "lucide-react";
 import {
   PredictionType,
   GameStatus,
@@ -752,8 +752,11 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
             <span>💰</span>
             <span>{(game.allocatedPrizePool || game.totalStake || 3200).toLocaleString()} PMC</span>
           </span>
-          <span className="px-1.5 py-0.5 rounded-md bg-sky-500/10 text-sky-300 border border-sky-500/25 text-[10px] font-bold flex items-center gap-0.5">
-            <GraduationCap className="w-2.5 h-2.5" />
+          <span
+            title="상금 리워드 부스트 배수"
+            className="px-1.5 py-0.5 rounded-md bg-sky-500/10 text-sky-300 border border-sky-500/25 text-[10px] font-bold flex items-center gap-0.5"
+          >
+            <Zap className="w-2.5 h-2.5 fill-sky-400 text-sky-400" />
             <span>{learningMultiplier}x</span>
           </span>
           {game.gameImportanceScore >= 95 && (

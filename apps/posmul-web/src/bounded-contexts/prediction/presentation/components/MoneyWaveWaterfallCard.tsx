@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useState } from "react";
-import { Coins, Sparkles, Timer, Zap } from "lucide-react";
+import { Coins, Info, Timer, Zap } from "lucide-react";
 
 import {
   TOP_NECK_Y,
@@ -181,16 +181,29 @@ export function MoneyWaveWaterfallCard({
       <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* 상단 헤더 & 타이머 */}
-      <div className="flex items-center justify-between mb-3 z-10 relative">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-3 z-20 relative">
+        <div className="flex items-center gap-1.5">
           <span className="relative flex h-2.5 w-2.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
             <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500" />
           </span>
           <span className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-400 tracking-tight flex items-center gap-1.5">
             <Coins className="w-3.5 h-3.5 text-amber-400" />
-            <span>MoneyWave 황금 모래시계</span>
+            <span>MoneyWave 상금풀</span>
           </span>
+          {/* 설명 말풍선 트리거 */}
+          <div className="relative group/mw inline-flex items-center">
+            <button
+              type="button"
+              aria-label="상금풀 안내"
+              className="p-0.5 rounded-full text-slate-400 hover:text-amber-300 transition-colors"
+            >
+              <Info className="w-3.5 h-3.5" />
+            </button>
+            <div className="pointer-events-none opacity-0 translate-y-1 group-hover/mw:opacity-100 group-hover/mw:translate-y-0 group-focus-within/mw:opacity-100 group-focus-within/mw:translate-y-0 transition-all duration-150 absolute left-0 top-full mt-1.5 z-40 w-56 p-2.5 rounded-xl bg-slate-900/95 backdrop-blur-md border border-amber-500/30 shadow-2xl text-[11px] text-slate-200 leading-relaxed">
+              PMP로 예측에 참여하고 적중하면, 매시간 정각 황금 PMC 상금풀이 자동 분배됩니다.
+            </div>
+          </div>
         </div>
 
         <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-amber-500/40 shadow-inner">
@@ -510,18 +523,6 @@ export function MoneyWaveWaterfallCard({
         </div>
       </div>
 
-      {/* 하단 캡션 */}
-      <div className="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between text-[10.5px]">
-        <div className="flex items-center gap-1 text-slate-400">
-          <span className="text-sky-300 font-bold">PMP 참여</span>
-          <span>➔</span>
-          <span className="text-amber-300 font-bold flex items-center gap-0.5">
-            <Sparkles className="w-2.5 h-2.5 text-amber-400" />
-            황금 PMC 환전
-          </span>
-        </div>
-        <span className="text-[9.5px] text-slate-400 font-medium">1시간 주기 자동 분배</span>
-      </div>
     </div>
   );
 }
