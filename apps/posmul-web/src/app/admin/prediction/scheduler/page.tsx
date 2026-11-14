@@ -22,6 +22,7 @@ import {
   Sliders,
   Sparkles,
   Terminal,
+  Trash2,
   Zap,
 } from "lucide-react";
 import {
@@ -396,6 +397,80 @@ export default function AdminPredictionSchedulerPage() {
     }
   };
 
+  const handleResetGames = async () => {
+    if (
+      !window.confirm(
+        "현재 등록된 모든 예측게임(ACTIVE / CLOSED / SETTLED)과 정산 소스를 삭제하시겠습니까?\n(유저 베팅 내역이 존재할 경우 안전을 위해 차단됩니다)"
+      )
+    ) {
+      return;
+    }
+    setSaving(true);
+    setBannerMsg(null);
+    try {
+      const res = await fetch("/api/admin/scheduler/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "reset-games", includeSettled: true }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "예측게임 초기화 실패");
+      }
+      const returnedLogs: string[] = Array.isArray(data.logs) ? data.logs : [];
+      setLogs((prev) => [...returnedLogs, ...prev.slice(0, 60)]);
+      setBannerMsg({
+        type: "success",
+        text: `예측게임 ${data.deletedCount ?? 0}건이 모두 삭제되었습니다.`,
+      });
+      await fetchAll();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setBannerMsg({ type: "error", text: message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSamplePublish = async () => {
+    setSaving(true);
+    setBannerMsg(null);
+    setLogs((prev) => [
+      `▶ [${new Date().toLocaleTimeString("ko-KR")}] 테스트용 소수 샘플 발행(대표 템플릿 3종 + RSS AI 2건) 시작...`,
+      ...prev,
+    ]);
+    try {
+      const res = await fetch("/api/admin/scheduler/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "sample-publish",
+          rssDraftCount: 2,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "소수 샘플 발행 실패");
+      }
+      const returnedLogs: string[] = Array.isArray(data.logs) ? data.logs : [];
+      setLogs((prev) => [
+        `✅ [${new Date().toLocaleTimeString("ko-KR")}] 소수 샘플 발행 완료`,
+        ...returnedLogs,
+        ...prev.slice(0, 60),
+      ]);
+      setBannerMsg({
+        type: "success",
+        text: "소수 테스트 예측게임 발행이 완료되었습니다.",
+      });
+      await fetchAll();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      setBannerMsg({ type: "error", text: message });
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handlePingOracles = async () => {
     setPingingOracles(true);
     try {
@@ -745,6 +820,22 @@ export default function AdminPredictionSchedulerPage() {
               {runningStep === "oracle-settle"
                 ? "오라클 정산 중..."
                 : "오라클 즉시 정산 (SETTLED)"}
+            </AdminButton>
+            <AdminButton
+              variant="secondary"
+              onClick={() => void handleSamplePublish()}
+              disabled={runningStep !== null || saving}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-sky-400" />
+              테스트용 소수(5개)만 발행
+            </AdminButton>
+            <AdminButton
+              variant="danger"
+              onClick={() => void handleResetGames()}
+              disabled={runningStep !== null || saving}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              기존 예측게임 전체 초기화
             </AdminButton>
           </div>
 

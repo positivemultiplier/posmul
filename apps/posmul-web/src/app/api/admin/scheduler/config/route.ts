@@ -34,7 +34,9 @@ interface SchedulerConfigPostBody {
     | "update-config"
     | "update-template"
     | "publish-template"
-    | "run-manual-step";
+    | "run-manual-step"
+    | "reset-games"
+    | "sample-publish";
   patch?: Partial<PredictionSchedulerConfig>;
   templateId?: string;
   override?: TemplateOverrideConfig;
@@ -42,6 +44,10 @@ interface SchedulerConfigPostBody {
   step?: ManualStepName;
   materializeTemplates?: boolean;
   category?: string;
+  includeSettled?: boolean;
+  forceWithBets?: boolean;
+  templateIds?: string[];
+  rssDraftCount?: number;
 }
 
 /**
@@ -344,6 +350,147 @@ export async function POST(request: NextRequest) {
         step,
         logs,
         summary,
+      });
+    }
+
+    if (action === "reset-games") {
+      const includeSettled = body.includeSettled ?? true;
+      const forceWithBets = body.forceWithBets ?? false;
+
+      const { count: betCount, error: betErr } = await supabaseAdmin
+        .schema("prediction")
+        .from("predictions")
+        .select("*", { count: "exact", head: true });
+
+      if (betErr) {
+        return NextResponse.json(
+          { success: false, error: `베팅 조회 오류: ${betErr.message}` },
+          { status: 500 }
+        );
+      }
+
+      if ((betCount ?? 0) > 0 && !forceWithBets) {
+        return NextResponse.json(
+          {
+            success: false,
+            requiresForce: true,
+            betCount,
+            error: `실제 참여 베팅 내역(${betCount}건)이 있어 안전을 위해 차단되었습니다. forceWithBets=true 옵션으로만 삭제할 수 있습니다.`,
+          },
+          { status: 409 }
+        );
+      }
+
+      const countQuery = supabaseAdmin
+        .schema("prediction")
+        .from("prediction_games")
+        .select("*", { count: "exact", head: true });
+
+      const { count: beforeCount } = includeSettled
+        ? await countQuery
+        : await countQuery.neq("status", "SETTLED");
+
+      const deleteQuery = supabaseAdmin
+        .schema("prediction")
+        .from("prediction_games")
+        .delete();
+
+      const { error: delErr } = includeSettled
+        ? await deleteQuery.neq("game_id", "00000000-0000-0000-0000-000000000000")
+        : await deleteQuery.neq("status", "SETTLED");
+
+      if (delErr) {
+        return NextResponse.json(
+          { success: false, error: `예측게임 삭제 오류: ${delErr.message}` },
+          { status: 500 }
+        );
+      }
+
+      const deletedCount = beforeCount ?? 0;
+      await schedulerConfigService.recordSchedulerRun(
+        "manual-reset-games",
+        { deletedCount, includeSettled, betCount: betCount ?? 0 },
+        true
+      );
+
+      return NextResponse.json({
+        success: true,
+        deletedCount,
+        logs: [
+          `[초기화 완료] prediction.prediction_games ${deletedCount}건 삭제됨 (연관 정산소스·스냅샷 CASCADE 정리)`,
+        ],
+      });
+    }
+
+    if (action === "sample-publish") {
+      const targetTemplateIds =
+        Array.isArray(body.templateIds) && body.templateIds.length > 0
+          ? body.templateIds
+          : [
+              "us-nasdaq-daily",
+              "ranking-global-asset-weekly",
+              "ecos-bok-base-rate",
+            ];
+      const rssDraftCount = Math.max(0, Math.min(10, Number(body.rssDraftCount ?? 2)));
+      const logs: string[] = [];
+      const createdGameIds: string[] = [];
+
+      const scheduler = getMasterScheduler(getCreatePredictionGameUseCase());
+      for (const tid of targetTemplateIds) {
+        const res = await scheduler.triggerSync({
+          templateId: tid,
+          force: true,
+          ignoreCap: true,
+          materializeTemplates: true,
+        });
+        if (res.createdGameIds.length > 0) {
+          createdGameIds.push(...res.createdGameIds);
+          logs.push(`[템플릿 발행] ${tid} -> ${res.createdGameIds.join(", ")}`);
+        } else {
+          logs.push(`[템플릿 스킵] ${tid} -> 생성 없음`);
+        }
+      }
+
+      if (rssDraftCount > 0) {
+        const config = await schedulerConfigService.getSchedulerConfig();
+        const classifyRes = await getClassifyContentUseCase().execute(
+          Math.max(config.rss_classify_batch_size, 25)
+        );
+        if (isFailure(classifyRes)) {
+          logs.push(`[RSS AI 분류] 실패: ${classifyRes.error.message}`);
+        } else {
+          logs.push(
+            `[RSS AI 분류] 처리=${classifyRes.data.processed}, 예측=${classifyRes.data.predictions}, 포럼=${classifyRes.data.forums}`
+          );
+        }
+
+        const draftRes = await getCreatePredictionDraftUseCase().execute(
+          rssDraftCount,
+          { ignoreCap: true }
+        );
+        if (isFailure(draftRes)) {
+          logs.push(`[RSS AI 초안] 실패: ${draftRes.error.message}`);
+        } else {
+          logs.push(`[RSS AI 초안] ${draftRes.data.draftsCreated}건 생성`);
+          if (Array.isArray(draftRes.data.logs)) {
+            logs.push(...draftRes.data.logs);
+          }
+        }
+      }
+
+      await schedulerConfigService.recordSchedulerRun(
+        "manual-sample-publish",
+        {
+          templateCreatedCount: createdGameIds.length,
+          rssDraftCount,
+        },
+        true
+      );
+
+      return NextResponse.json({
+        success: true,
+        createdTemplateGameIds: createdGameIds,
+        logs,
       });
     }
 

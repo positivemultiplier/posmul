@@ -319,12 +319,30 @@ async function insertPredictionGameFromDraft(
 
 async function insertForumPostFromDraft(draft: DraftResult): Promise<void> {
   const discussionText = draft.forumDraft?.discussionPoints?.join("\n- ") || "";
+
+  // forum_posts.category_id NOT NULL 제약 대응: 기본 토론 카테고리 조회 후 폴백
+  let categoryId = "040567a7-dd38-4826-896b-08da1bfcd25d";
+  const { data: catRow } = await supabaseAdmin
+    .schema("forum")
+    .from("forum_categories")
+    .select("id")
+    .eq("is_active", true)
+    .gte("sort_order", 1)
+    .order("sort_order", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (catRow?.id) {
+    categoryId = String(catRow.id);
+  }
+
   const { error } = await supabaseAdmin
     .schema("forum")
     .from("forum_posts")
     .insert({
       title: draft.title,
       content: `${draft.summary}\n\n${discussionText}`,
+      category_id: categoryId,
       status: "published",
       author_id: SYSTEM_USER_ID,
       created_at: nowIso(),
