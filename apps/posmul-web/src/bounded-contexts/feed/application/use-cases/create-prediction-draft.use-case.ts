@@ -6,6 +6,10 @@ import {
 } from "@posmul/auth-economy-sdk";
 
 import { settlementOrchestrator } from "@/bounded-contexts/prediction/application/services/settlement-orchestrator.service";
+import {
+  type DuplicateCheckStrictness,
+  schedulerConfigService,
+} from "@/bounded-contexts/prediction/application/services/scheduler-config.service";
 import type { SettlementSourceType } from "@/bounded-contexts/prediction/domain/value-objects/settlement-types";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { balancedBriefingService } from "../../../prediction/application/services/balanced-briefing.service";
@@ -20,10 +24,25 @@ import {
   ProcessStatus,
 } from "../../domain/value-objects/feed-types";
 
+export interface CreatePredictionDraftOptions {
+  categoryFilter?: string[];
+  allowedTypes?: string[];
+  minBet?: number;
+  maxBet?: number;
+  closingHours?: number;
+  settlementDelayHours?: number;
+  autoBriefing?: boolean;
+  maxActiveCap?: number;
+  strictness?: DuplicateCheckStrictness;
+  ignoreCap?: boolean;
+}
+
 export type DraftResultStats = {
   processedCount: number;
   failedCount: number;
   draftsCreated: number;
+  skippedByCategory?: number;
+  skippedByCap?: boolean;
   logs: string[];
 };
 
@@ -101,23 +120,33 @@ function mapDraftCategoryToDb(rawCategory?: string): string {
 
 function resolveDraftPredictionType(
   rawType: string | undefined,
-  optionCount: number
+  optionCount: number,
+  allowedTypes?: string[]
 ): "BINARY" | "WIN_DRAW_LOSE" | "RANKING" {
   const upper = rawType?.toUpperCase();
+  let resolved: "BINARY" | "WIN_DRAW_LOSE" | "RANKING" = "BINARY";
   if (upper === "WIN_DRAW_LOSE" && optionCount === 3) {
-    return "WIN_DRAW_LOSE";
+    resolved = "WIN_DRAW_LOSE";
+  } else if (upper === "RANKING" || optionCount >= 4) {
+    resolved = "RANKING";
+  } else if (optionCount === 3) {
+    resolved = "WIN_DRAW_LOSE";
   }
-  if (upper === "RANKING" || optionCount >= 4) {
-    return "RANKING";
+
+  if (allowedTypes && allowedTypes.length > 0 && !allowedTypes.includes(resolved)) {
+    if (allowedTypes.includes("BINARY")) return "BINARY";
+    if (allowedTypes.includes("WIN_DRAW_LOSE") && optionCount >= 3) return "WIN_DRAW_LOSE";
+    if (allowedTypes.includes("RANKING") && optionCount >= 4) return "RANKING";
+    return allowedTypes[0] as "BINARY" | "WIN_DRAW_LOSE" | "RANKING";
   }
-  if (optionCount === 3) {
-    return "WIN_DRAW_LOSE";
-  }
-  return "BINARY";
+
+  return resolved;
 }
 
 function resolveSmartTimeline(
-  draft: NonNullable<DraftResult["predictionDraft"]>
+  draft: NonNullable<DraftResult["predictionDraft"]>,
+  defaultClosingHours = 48,
+  defaultSettlementDelayHours = 2
 ): {
   registrationStart: Date;
   registrationEnd: Date;
@@ -126,11 +155,11 @@ function resolveSmartTimeline(
   const now = new Date();
   const closingHours = Math.min(
     720,
-    Math.max(2, draft.closingHoursFromNow ?? 72)
+    Math.max(1, draft.closingHoursFromNow ?? defaultClosingHours)
   );
   const settlementDelayHours = Math.min(
     168,
-    Math.max(1, draft.settlementDelayHours ?? 12)
+    Math.max(0, draft.settlementDelayHours ?? defaultSettlementDelayHours)
   );
 
   const registrationEnd = new Date(
@@ -154,13 +183,27 @@ function normalizeOracleType(rawType?: string): SettlementSourceType {
   return "manual";
 }
 
+interface InsertPredictionFromDraftParams {
+  allowedTypes: string[];
+  minBet: number;
+  maxBet: number;
+  defaultClosingHours: number;
+  defaultSettlementDelayHours: number;
+  autoBriefing: boolean;
+}
+
 async function insertPredictionGameFromDraft(
-  draft: DraftResult
+  draft: DraftResult,
+  params: InsertPredictionFromDraftParams
 ): Promise<string> {
   const predDraft = draft.predictionDraft!;
   const targetCategory = mapDraftCategoryToDb(predDraft.category);
   const { registrationStart, registrationEnd, settlementDate } =
-    resolveSmartTimeline(predDraft);
+    resolveSmartTimeline(
+      predDraft,
+      params.defaultClosingHours,
+      params.defaultSettlementDelayHours
+    );
 
   const optionLabels =
     predDraft.options && predDraft.options.length >= 2
@@ -169,7 +212,8 @@ async function insertPredictionGameFromDraft(
 
   const dbPredictionType = resolveDraftPredictionType(
     predDraft.predictionType,
-    optionLabels.length
+    optionLabels.length,
+    params.allowedTypes
   );
 
   let structuredOptions: Array<{ id: string; label: string }>;
@@ -225,8 +269,8 @@ async function insertPredictionGameFromDraft(
       registration_start: registrationStart.toISOString(),
       registration_end: registrationEnd.toISOString(),
       settlement_date: settlementDate.toISOString(),
-      min_bet_amount: 500,
-      max_bet_amount: 50000,
+      min_bet_amount: params.minBet,
+      max_bet_amount: params.maxBet,
       difficulty,
       settlement_type: hasAutoOracle ? "auto" : "manual",
       data_source: hasAutoOracle ? oracleType : null,
@@ -256,8 +300,8 @@ async function insertPredictionGameFromDraft(
     });
   }
 
-  // AI 균형 의사결정 브리핑 사전 생성 (베스트에포트 — 실패 시 상세 페이지 조회 시 보강)
-  if (createdGameId) {
+  // AI 균형 의사결정 브리핑 사전 생성 (autoBriefing=true일 때만, 실패 시 상세 페이지 조회 시 보강)
+  if (createdGameId && params.autoBriefing) {
     try {
       await balancedBriefingService.getOrCreateForGameId(createdGameId, {
         timeoutMs: 14000,
@@ -347,7 +391,8 @@ const SINGLETON_TOPIC_PATTERNS: RegExp[] = [
 
 function findDuplicateActiveTitle(
   candidateTitle: string,
-  activeTitles: string[]
+  activeTitles: string[],
+  strictness: DuplicateCheckStrictness = "normal"
 ): string | null {
   const cleanCandidate = candidateTitle.trim().toLowerCase();
   const candidateTokens = extractTitleTokens(candidateTitle);
@@ -370,8 +415,18 @@ function findDuplicateActiveTitle(
         if (activeTokens.has(tok)) overlap++;
       }
       const overlapRatio = overlap / Math.min(candidateTokens.size, activeTokens.size);
-      if (overlap >= 3 || (overlap >= 2 && overlapRatio >= 0.6)) {
-        return activeTitle;
+      if (strictness === "strict") {
+        if (overlap >= 2 || (overlap >= 1 && overlapRatio >= 0.4)) {
+          return activeTitle;
+        }
+      } else if (strictness === "relaxed") {
+        if (overlap >= 4 && overlapRatio >= 0.8) {
+          return activeTitle;
+        }
+      } else {
+        if (overlap >= 3 || (overlap >= 2 && overlapRatio >= 0.6)) {
+          return activeTitle;
+        }
       }
     }
   }
@@ -385,22 +440,34 @@ export class CreatePredictionDraftUseCase {
     private llmClassifierService: ILlmClassifierService
   ) {}
 
-  async execute(limit: number = 5): Promise<Result<DraftResultStats>> {
-    const logs: string[] = [`Starting execute with limit ${limit}`];
-
-    const itemsResult = await this.feedItemRepository.findItemsByStatus(
-      ProcessStatus.CLASSIFIED,
-      limit
+  async execute(
+    limit?: number,
+    options?: CreatePredictionDraftOptions
+  ): Promise<Result<DraftResultStats>> {
+    const schedConfig = await schedulerConfigService.getSchedulerConfig();
+    const effectiveLimit = limit ?? schedConfig.max_drafts_per_run;
+    const effectiveCategories = new Set(
+      (options?.categoryFilter ?? schedConfig.enabled_categories).map((c) =>
+        c.toUpperCase()
+      )
     );
-    if (isFailure(itemsResult)) {
-      logs.push(`Repository error: ${itemsResult.error.message}`);
-      return failure(itemsResult.error);
-    }
+    const allowedTypes = options?.allowedTypes ?? schedConfig.enabled_prediction_types;
+    const minBet = options?.minBet ?? schedConfig.default_min_bet;
+    const maxBet = options?.maxBet ?? schedConfig.default_max_bet;
+    const defaultClosingHours =
+      options?.closingHours ?? schedConfig.default_closing_hours;
+    const defaultSettlementDelayHours =
+      options?.settlementDelayHours ?? schedConfig.default_settlement_delay_hours;
+    const autoBriefing = options?.autoBriefing ?? schedConfig.auto_briefing_enabled;
+    const maxActiveCap = options?.maxActiveCap ?? schedConfig.max_active_games_cap;
+    const strictness = options?.strictness ?? schedConfig.duplicate_check_strictness;
+    const ignoreCap = options?.ignoreCap ?? false;
 
-    const items = itemsResult.data;
-    logs.push(`Found ${items.length} CLASSIFIED items`);
+    const logs: string[] = [
+      `Starting CreatePredictionDraft with limit=${effectiveLimit}, cap=${maxActiveCap}, strictness=${strictness}`,
+    ];
 
-    // 현재 ACTIVE 게임 제목 목록 조회 (중복 게임 생성 차단)
+    // 현재 ACTIVE 게임 제목 목록 및 상한선 검사
     const { data: activeRows } = await supabaseAdmin
       .schema("prediction")
       .from("prediction_games")
@@ -410,11 +477,46 @@ export class CreatePredictionDraftUseCase {
       .map((r) => r.title ?? "")
       .filter(Boolean);
 
+    if (!ignoreCap && activeTitles.length >= maxActiveCap) {
+      logs.push(
+        `Active games cap reached (현재 ${activeTitles.length}개 / 상한 ${maxActiveCap}개) - 자동 생성을 보류합니다.`
+      );
+      return success({
+        processedCount: 0,
+        failedCount: 0,
+        draftsCreated: 0,
+        skippedByCap: true,
+        logs,
+      });
+    }
+
+    const fetchBatchLimit = Math.max(effectiveLimit * 2, effectiveLimit);
+    const itemsResult = await this.feedItemRepository.findItemsByStatus(
+      ProcessStatus.CLASSIFIED,
+      fetchBatchLimit
+    );
+    if (isFailure(itemsResult)) {
+      logs.push(`Repository error: ${itemsResult.error.message}`);
+      return failure(itemsResult.error);
+    }
+
+    const items = itemsResult.data;
+    logs.push(`Found ${items.length} CLASSIFIED items`);
+
     let processedCount = 0;
     let failedCount = 0;
     let draftsCreated = 0;
+    let skippedByCategory = 0;
 
     for (const item of items) {
+      if (draftsCreated >= effectiveLimit) break;
+      if (!ignoreCap && activeTitles.length >= maxActiveCap) {
+        logs.push(
+          `Active games cap reached mid-run (${activeTitles.length}/${maxActiveCap})`
+        );
+        break;
+      }
+
       if (
         item.aiClassification === ContentClassification.UNCLASSIFIED ||
         item.aiClassification === ContentClassification.DISCARD
@@ -426,7 +528,11 @@ export class CreatePredictionDraftUseCase {
 
       // 사전 제목 중복 검사 (LLM 호출 절감)
       if (item.aiClassification === ContentClassification.PREDICTION) {
-        const preDup = findDuplicateActiveTitle(item.title, activeTitles);
+        const preDup = findDuplicateActiveTitle(
+          item.title,
+          activeTitles,
+          strictness
+        );
         if (preDup) {
           item.markAsIgnored(ContentClassification.DISCARD);
           await this.feedItemRepository.update(item);
@@ -444,7 +550,6 @@ export class CreatePredictionDraftUseCase {
 
         if (isFailure(draftResult)) {
           failedCount++;
-          // 품질 게이트 탈락/생성 실패 아이템이 큐 상단을 계속 막지 않도록 IGNORED 전환
           item.markAsIgnored(ContentClassification.DISCARD);
           await this.feedItemRepository.update(item);
           logs.push(
@@ -455,7 +560,24 @@ export class CreatePredictionDraftUseCase {
 
         const draft = draftResult.data;
         if (item.aiClassification === ContentClassification.PREDICTION) {
-          const postDup = findDuplicateActiveTitle(draft.title, activeTitles);
+          if (draft.predictionDraft) {
+            const mappedCategory = mapDraftCategoryToDb(draft.predictionDraft.category);
+            if (!effectiveCategories.has(mappedCategory)) {
+              skippedByCategory++;
+              item.markAsIgnored(ContentClassification.DISCARD);
+              await this.feedItemRepository.update(item);
+              logs.push(
+                `[Skip Category] '${draft.title}' category=${mappedCategory} is disabled in scheduler config`
+              );
+              continue;
+            }
+          }
+
+          const postDup = findDuplicateActiveTitle(
+            draft.title,
+            activeTitles,
+            strictness
+          );
           if (postDup) {
             item.markAsIgnored(ContentClassification.DISCARD);
             await this.feedItemRepository.update(item);
@@ -467,7 +589,15 @@ export class CreatePredictionDraftUseCase {
         const created = await this.persistDraftByClassification(
           item.aiClassification,
           draft,
-          logs
+          logs,
+          {
+            allowedTypes,
+            minBet,
+            maxBet,
+            defaultClosingHours,
+            defaultSettlementDelayHours,
+            autoBriefing,
+          }
         );
         if (created) {
           draftsCreated++;
@@ -500,6 +630,7 @@ export class CreatePredictionDraftUseCase {
       processedCount,
       failedCount,
       draftsCreated,
+      skippedByCategory,
       logs,
     });
   }
@@ -507,13 +638,14 @@ export class CreatePredictionDraftUseCase {
   private async persistDraftByClassification(
     classification: ContentClassification,
     draft: DraftResult,
-    logs: string[]
+    logs: string[],
+    insertParams: InsertPredictionFromDraftParams
   ): Promise<boolean> {
     if (
       classification === ContentClassification.PREDICTION &&
       draft.predictionDraft
     ) {
-      await insertPredictionGameFromDraft(draft);
+      await insertPredictionGameFromDraft(draft, insertParams);
       logs.push(`[Draft->Prediction] Created prediction: ${draft.title}`);
       return true;
     }

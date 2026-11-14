@@ -12,6 +12,7 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 import { getSettlePredictionGameUseCase } from "../../di-container";
 import { predictionLearningStatsService } from "./prediction-learning-stats.service";
+import { schedulerConfigService } from "./scheduler-config.service";
 import { IOracleProvider } from "../../domain/services/oracle/oracle.interface";
 import {
   GameResult,
@@ -66,28 +67,63 @@ export class SettlementOrchestratorService {
   }
 
   /**
-   * 예정된 정산 소스 조회 (scheduled_at이 현재 시각 이전인 항목)
+   * 예정된 정산 소스 조회 (scheduled_at 도래 + 마감 완료된 CLOSED/만료 ACTIVE 게임 소스)
    */
-  async getScheduledSettlements(): Promise<SettlementSource[]> {
-    const { data, error } = await supabaseAdmin
+  async getScheduledSettlements(options?: {
+    settleImmediatelyOnClose?: boolean;
+  }): Promise<SettlementSource[]> {
+    const nowIso = new Date().toISOString();
+    const settleOnClose = options?.settleImmediatelyOnClose ?? true;
+
+    const { data: dueRows, error } = await supabaseAdmin
       .schema("prediction")
       .from("settlement_sources")
       .select("*")
-      .lte("scheduled_at", new Date().toISOString())
+      .lte("scheduled_at", nowIso)
       .order("scheduled_at", { ascending: true });
 
-    if (error || !data) {
-      return [];
+    const sourceMap = new Map<string, SettlementSource>();
+    const pushRow = (row: any) => {
+      const id = String(row.id);
+      if (sourceMap.has(id)) return;
+      sourceMap.set(id, {
+        id,
+        gameId: row.game_id,
+        sourceType: row.source_type as SettlementSourceType,
+        sourceConfig: (row.source_config as Record<string, unknown>) ?? {},
+        externalId: row.external_id ?? undefined,
+        scheduledAt: row.scheduled_at ? new Date(row.scheduled_at) : undefined,
+      });
+    };
+
+    if (!error && dueRows) {
+      for (const row of dueRows) pushRow(row);
     }
 
-    return data.map((row: any) => ({
-      id: row.id,
-      gameId: row.game_id,
-      sourceType: row.source_type as SettlementSourceType,
-      sourceConfig: (row.source_config as Record<string, unknown>) ?? {},
-      externalId: row.external_id ?? undefined,
-      scheduledAt: row.scheduled_at ? new Date(row.scheduled_at) : undefined,
-    }));
+    // 마감 완료(CLOSED) 또는 베팅 종료 시각이 도래한 ACTIVE 게임도 즉시 정산 대상에 포함
+    if (settleOnClose) {
+      const { data: closedOrExpiredGames } = await supabaseAdmin
+        .schema("prediction")
+        .from("prediction_games")
+        .select("game_id")
+        .or(`status.eq.CLOSED,and(status.eq.ACTIVE,registration_end.lte.${nowIso})`);
+
+      const candidateIds = (closedOrExpiredGames ?? []).map((g) => String(g.game_id));
+      if (candidateIds.length > 0) {
+        const { data: closedSourceRows } = await supabaseAdmin
+          .schema("prediction")
+          .from("settlement_sources")
+          .select("*")
+          .in("game_id", candidateIds)
+          .order("scheduled_at", { ascending: true });
+
+        for (const row of closedSourceRows ?? []) {
+          pushRow(row);
+        }
+      }
+    }
+
+    return Array.from(sourceMap.values());
   }
 
   /**
@@ -308,13 +344,16 @@ export class SettlementOrchestratorService {
     let skippedCount = 0;
     let totalRewardDistributed = 0;
 
-    const scheduledSources = await this.getScheduledSettlements();
+    const schedConfig = await schedulerConfigService.getSchedulerConfig();
+    const scheduledSources = await this.getScheduledSettlements({
+      settleImmediatelyOnClose: schedConfig.settle_immediately_on_close,
+    });
     logs.push(
-      `[OracleOrchestrator] Found ${scheduledSources.length} scheduled settlement sources.`
+      `[OracleOrchestrator] Found ${scheduledSources.length} scheduled settlement sources (settleImmediatelyOnClose=${schedConfig.settle_immediately_on_close}).`
     );
 
     for (const source of scheduledSources) {
-      // 해당 게임이 아직 ACTIVE인지 확인
+      // 해당 게임이 아직 ACTIVE/CLOSED/SETTLING인지 확인
       const { data: game } = await supabaseAdmin
         .schema("prediction")
         .from("prediction_games")
@@ -332,11 +371,12 @@ export class SettlementOrchestratorService {
         continue;
       }
 
-      // rss_ai는 기본 반자동(allowAutoSettle=true일 때만 무인 정산). 그 외에는 추천 근거만 기록하고 관리자 승인 대기
-      if (
-        source.sourceType === "rss_ai" &&
-        source.sourceConfig?.allowAutoSettle !== true
-      ) {
+      // rss_ai는 Admin 설정(auto_rss_ai_settle_enabled) 또는 개별 allowAutoSettle=true일 때만 무인 정산
+      const allowRssAiAuto =
+        schedConfig.auto_rss_ai_settle_enabled ||
+        source.sourceConfig?.allowAutoSettle === true;
+
+      if (source.sourceType === "rss_ai" && !allowRssAiAuto) {
         const preview = await this.previewOracleResult(source);
         await supabaseAdmin
           .schema("prediction")
@@ -365,7 +405,20 @@ export class SettlementOrchestratorService {
         continue;
       }
 
-      const execRes = await this.executeAutoSettlement(source);
+      const effectiveSource: SettlementSource =
+        source.sourceType === "rss_ai"
+          ? {
+              ...source,
+              sourceConfig: {
+                ...source.sourceConfig,
+                minConfidence:
+                  source.sourceConfig?.minConfidence ??
+                  schedConfig.rss_ai_min_confidence,
+              },
+            }
+          : source;
+
+      const execRes = await this.executeAutoSettlement(effectiveSource);
       if (execRes.success && execRes.result) {
         settledCount++;
         const reward = execRes.rewardDistributed ?? 0;

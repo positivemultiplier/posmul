@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isFailure } from "@posmul/auth-economy-sdk";
 import {
+  getClassifyContentUseCase,
   getCreatePredictionDraftUseCase,
   getFetchRssItemsUseCase,
 } from "@/bounded-contexts/feed/di-container";
+import { schedulerConfigService } from "@/bounded-contexts/prediction/application/services/scheduler-config.service";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 import { predictionLearningStatsService } from "@/bounded-contexts/prediction/application/services/prediction-learning-stats.service";
@@ -20,9 +22,10 @@ interface PipelineRequestBody {
 }
 
 /**
- * RSS 피드 수집 후 AI 예측 게임 초안/발행 파이프라인 실행
+ * RSS 피드 수집 ➔ AI 분류(PENDING→CLASSIFIED) ➔ 예측 게임 초안/발행 파이프라인 실행
  */
 async function handleIngestAndDraft(): Promise<NextResponse> {
+  const config = await schedulerConfigService.getSchedulerConfig();
   const fetchRss = getFetchRssItemsUseCase();
   const rssRes = await fetchRss.execute({ category: "ALL" });
   const logs: string[] = [];
@@ -35,8 +38,20 @@ async function handleIngestAndDraft(): Promise<NextResponse> {
     );
   }
 
+  const classifyUseCase = getClassifyContentUseCase();
+  const classifyRes = await classifyUseCase.execute(config.rss_classify_batch_size);
+  if (isFailure(classifyRes)) {
+    logs.push(`AI Classification failed: ${classifyRes.error.message}`);
+  } else {
+    logs.push(
+      `AI Classified: processed=${classifyRes.data.processed}, predictions=${classifyRes.data.predictions}, forums=${classifyRes.data.forums}`
+    );
+  }
+
   const draftUseCase = getCreatePredictionDraftUseCase();
-  const draftRes = await draftUseCase.execute(5);
+  const draftRes = await draftUseCase.execute(config.max_drafts_per_run, {
+    ignoreCap: true,
+  });
 
   if (isFailure(draftRes)) {
     return NextResponse.json(
@@ -44,6 +59,15 @@ async function handleIngestAndDraft(): Promise<NextResponse> {
       { status: 500 }
     );
   }
+
+  await schedulerConfigService.recordSchedulerRun(
+    "admin-ingest-and-draft",
+    {
+      draftsCreated: draftRes.data.draftsCreated,
+      processedCount: draftRes.data.processedCount,
+    },
+    true
+  );
 
   return NextResponse.json({
     success: true,
@@ -222,7 +246,7 @@ export async function GET(req: NextRequest) {
       .from("prediction_games")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(100);
 
     if (error) {
       return NextResponse.json(

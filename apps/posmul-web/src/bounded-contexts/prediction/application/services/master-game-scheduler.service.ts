@@ -16,8 +16,14 @@ import { EarningsCalendarSchedulerService } from "./earnings-calendar-scheduler.
 import { FootballMatchSchedulerService } from "./football-match-scheduler.service";
 import {
   GameSchedulingService,
+  PREDICTION_TYPE_TO_DB,
   ScheduledGameTemplate,
+  TEMPLATE_CATEGORY_TO_DB,
 } from "./game-scheduling.service";
+import {
+  type PredictionSchedulerConfig,
+  schedulerConfigService,
+} from "./scheduler-config.service";
 
 export interface MasterSchedulerConfig {
   enableFootball: boolean;
@@ -85,16 +91,24 @@ export class MasterGameSchedulerService {
   /**
    * 모든 외부 캘린더 소스(축구 경기 + 미국 실적 발표) 동기화
    */
-  async syncAllSources(): Promise<{
+  async syncAllSources(schedConfig?: PredictionSchedulerConfig): Promise<{
     footballAdded: number;
     earningsAdded: number;
     totalTemplates: number;
   }> {
+    const cfg = schedConfig ?? (await schedulerConfigService.getSchedulerConfig());
+    const enabledCategories = new Set(
+      (cfg.enabled_categories ?? []).map((c) => c.toUpperCase())
+    );
     let footballAdded = 0;
     let earningsAdded = 0;
     const newTemplates: ScheduledGameTemplate[] = [];
 
-    if (this.footballScheduler) {
+    if (
+      this.footballScheduler &&
+      cfg.enable_football_source &&
+      enabledCategories.has("SPORTS")
+    ) {
       try {
         const footballTemplates =
           await this.footballScheduler.generateWeeklyGameTemplates();
@@ -105,7 +119,11 @@ export class MasterGameSchedulerService {
       }
     }
 
-    if (this.earningsScheduler) {
+    if (
+      this.earningsScheduler &&
+      cfg.enable_earnings_source &&
+      enabledCategories.has("ECONOMY")
+    ) {
       try {
         const earningsTemplates =
           await this.earningsScheduler.generateWeeklyEarningsGames();
@@ -118,13 +136,15 @@ export class MasterGameSchedulerService {
 
     for (const template of newTemplates) {
       const existing = this.gameScheduler
-        .getActiveTemplates()
+        .getAllTemplates()
         .find((t) => t.id === template.id);
 
       if (!existing) {
         this.gameScheduler.addTemplate(template);
       }
     }
+
+    this.gameScheduler.applyConfigOverrides(cfg);
 
     return {
       footballAdded,
@@ -134,11 +154,14 @@ export class MasterGameSchedulerService {
   }
 
   /**
-   * 수동 동기화 트리거 및 지정 카테고리 템플릿 즉시 발행
+   * 수동 동기화 트리거 및 지정 카테고리/템플릿 즉시 발행
    */
   async triggerSync(options?: {
     materializeTemplates?: boolean;
     category?: string;
+    templateId?: string;
+    force?: boolean;
+    ignoreCap?: boolean;
     backfillMissingBriefings?: boolean;
   }): Promise<{
     footballAdded: number;
@@ -147,17 +170,42 @@ export class MasterGameSchedulerService {
     createdGameIds: string[];
     backfilledBriefings: number;
   }> {
-    const syncStats = await this.syncAllSources();
+    const cfg = await schedulerConfigService.getSchedulerConfig();
+    const syncStats = await this.syncAllSources(cfg);
     const createdGameIds: string[] = [];
 
-    if (options?.materializeTemplates) {
+    if (options?.templateId) {
+      const targetTemplate = this.gameScheduler
+        .getAllTemplates()
+        .find((t) => t.id === options.templateId);
+      if (targetTemplate) {
+        const createdId = await this.gameScheduler.createGameFromTemplate(
+          targetTemplate,
+          {
+            force: options.force ?? true,
+            defaultMinBet: cfg.default_min_bet,
+            defaultMaxBet: cfg.default_max_bet,
+          }
+        );
+        if (createdId) {
+          createdGameIds.push(createdId);
+        }
+      }
+    } else if (options?.materializeTemplates) {
       const targetTemplates = options.category
         ? this.getTemplatesByCategory(options.category)
         : this.getActiveTemplates();
 
       for (const template of targetTemplates) {
-        const createdId =
-          await this.gameScheduler.createGameFromTemplate(template);
+        const createdId = await this.gameScheduler.createGameFromTemplate(
+          template,
+          {
+            force: options.force ?? false,
+            defaultMinBet: cfg.default_min_bet,
+            defaultMaxBet: cfg.default_max_bet,
+            maxActiveCap: options.ignoreCap ? undefined : cfg.max_active_games_cap,
+          }
+        );
         if (createdId) {
           createdGameIds.push(createdId);
         }
@@ -168,7 +216,7 @@ export class MasterGameSchedulerService {
     const sleep = (ms: number) =>
       new Promise<void>((resolve) => setTimeout(resolve, ms));
 
-    if (createdGameIds.length > 0) {
+    if (createdGameIds.length > 0 && cfg.auto_briefing_enabled) {
       const batchSize = 2;
       for (let i = 0; i < createdGameIds.length; i += batchSize) {
         if (i > 0) {
@@ -188,8 +236,9 @@ export class MasterGameSchedulerService {
     // 일시적 LLM 오류로 브리핑이 비어있는 기존 ACTIVE 게임 자가치유 보강
     let backfilledBriefings = 0;
     if (
-      options?.backfillMissingBriefings === true ||
-      options?.materializeTemplates === true
+      cfg.auto_briefing_enabled &&
+      (options?.backfillMissingBriefings === true ||
+        options?.materializeTemplates === true)
     ) {
       const backfillRes =
         await balancedBriefingService.backfillMissingActiveBriefings({
@@ -231,10 +280,41 @@ export class MasterGameSchedulerService {
     return this.gameScheduler.getActiveTemplates();
   }
 
+  getAllTemplates(): ScheduledGameTemplate[] {
+    return this.gameScheduler.getAllTemplates();
+  }
+
+  async getAllTemplateViews() {
+    const cfg = await schedulerConfigService.getSchedulerConfig();
+    this.gameScheduler.applyConfigOverrides(cfg);
+    return this.gameScheduler.getAllTemplates().map((tpl) => ({
+      id: tpl.id,
+      title: tpl.title,
+      category: TEMPLATE_CATEGORY_TO_DB[tpl.category] ?? "ECONOMY",
+      rawCategory: tpl.category,
+      predictionType: PREDICTION_TYPE_TO_DB[tpl.predictionType] ?? "BINARY",
+      recurrence: tpl.recurrence ?? "once",
+      oracleType: tpl.sourceType ?? "manual",
+      durationHours: tpl.duration,
+      settlementDelayHours: tpl.settlementDelay,
+      minimumStake: Number(tpl.minimumStake),
+      maximumStake: Number(tpl.maximumStake),
+      importance: tpl.importance,
+      isActive: tpl.isActive,
+      scheduledAt: tpl.scheduledTime.toISOString(),
+      hasOverride: Boolean(cfg.template_overrides?.[tpl.id]),
+    }));
+  }
+
   getTemplatesByCategory(category: string): ScheduledGameTemplate[] {
+    const upper = category.toUpperCase();
     return this.gameScheduler
       .getActiveTemplates()
-      .filter((t) => t.category === category);
+      .filter(
+        (t) =>
+          t.category === category ||
+          (TEMPLATE_CATEGORY_TO_DB[t.category] ?? "") === upper
+      );
   }
 }
 

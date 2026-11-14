@@ -42,6 +42,7 @@ export default async function GamesListPage() {
 
   const allGames = games || [];
   const activeGames = allGames.filter((g) => g.status === "ACTIVE");
+  const closedGames = allGames.filter((g) => g.status === "CLOSED");
   const settledGames = allGames.filter((g) => g.status === "SETTLED");
 
   return (
@@ -59,11 +60,17 @@ export default async function GamesListPage() {
 
         <div className="flex items-center gap-2">
           <Link
+            href="/admin/prediction/scheduler"
+            className="px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-sky-300 text-xs font-bold flex items-center gap-1.5 transition"
+          >
+            <span>스케줄러 제어</span>
+          </Link>
+          <Link
             href="/admin/prediction/settlement"
             className="px-3.5 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-amber-300 text-xs font-bold flex items-center gap-1.5 transition"
           >
             <Scale className="w-3.5 h-3.5" />
-            <span>정산 센터</span>
+            <span>정산 센터 ({closedGames.length}건 대기)</span>
           </Link>
           <Link
             href="/admin/prediction/games/create"
@@ -74,6 +81,59 @@ export default async function GamesListPage() {
           </Link>
         </div>
       </div>
+
+      {/* 상태 요약 KPI */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="rounded-xl border border-zinc-800/80 bg-[#0c0d12] p-4">
+          <div className="text-xs text-zinc-400 font-semibold">진행 중 마켓 (ACTIVE)</div>
+          <div className="text-2xl font-black text-emerald-400 mt-1">{activeGames.length}개</div>
+        </div>
+        <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-4">
+          <div className="text-xs text-amber-300 font-semibold">베팅 마감 · 정산 대기 (CLOSED)</div>
+          <div className="text-2xl font-black text-amber-400 mt-1">{closedGames.length}개</div>
+        </div>
+        <div className="rounded-xl border border-zinc-800/80 bg-[#0c0d12] p-4">
+          <div className="text-xs text-zinc-400 font-semibold">정산 완료 마켓 (SETTLED)</div>
+          <div className="text-2xl font-black text-sky-400 mt-1">{settledGames.length}개</div>
+        </div>
+      </div>
+
+      {/* 마감 · 정산 대기 마켓 (CLOSED) 섹션 */}
+      {closedGames.length > 0 && (
+        <div className="rounded-xl border border-amber-500/40 bg-[#0c0d12] p-5 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-extrabold text-amber-300">
+                ⏳ 베팅 마감 · 정산 대기 마켓 ({closedGames.length}개)
+              </h2>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                베팅은 마감되었으나 아직 최종 결과 정산(SETTLED)이 완료되지 않은 게임입니다.
+              </p>
+            </div>
+            <Link
+              href="/admin/prediction/settlement"
+              className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-extrabold transition shrink-0"
+            >
+              정산 센터에서 정산하기
+            </Link>
+          </div>
+          <div className="divide-y divide-zinc-800/60 rounded-lg border border-zinc-800/80 bg-zinc-950/60">
+            {closedGames.map((g, idx) => (
+              <div
+                key={`closed-${idx}-${g.title ?? ""}`}
+                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-2.5 text-xs"
+              >
+                <span className="font-semibold text-zinc-100 truncate">
+                  {g.title || "제목 없음"}
+                </span>
+                <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[11px] font-bold shrink-0">
+                  CLOSED (정산 대기)
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 1. 진행 중인 활성 게임 테이블 */}
       <AdminCard>

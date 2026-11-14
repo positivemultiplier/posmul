@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 import { getMasterScheduler } from "@/bounded-contexts/prediction/application/services/master-game-scheduler.service";
+import { schedulerConfigService } from "@/bounded-contexts/prediction/application/services/scheduler-config.service";
 import { getCreatePredictionGameUseCase } from "@/bounded-contexts/prediction/di-container";
 import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 
@@ -17,10 +18,24 @@ export async function POST(request: NextRequest) {
   if (!auth.ok) return auth.response;
 
   try {
+    const config = await schedulerConfigService.getSchedulerConfig();
+    const isCron = auth.authType === "cron";
+
+    if (isCron && (!config.master_auto_enabled || !config.auto_template_sync_enabled)) {
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        reason: "scheduler template sync disabled in config",
+        syncedAt: new Date().toISOString(),
+      });
+    }
 
     let body: {
       materializeTemplates?: boolean;
       category?: string;
+      templateId?: string;
+      force?: boolean;
+      ignoreCap?: boolean;
       backfillMissingBriefings?: boolean;
     } = {};
     try {
@@ -34,8 +49,21 @@ export async function POST(request: NextRequest) {
     const syncResult = await scheduler.triggerSync({
       materializeTemplates: body.materializeTemplates ?? false,
       category: body.category,
+      templateId: body.templateId,
+      force: body.force,
+      ignoreCap: body.ignoreCap ?? !isCron,
       backfillMissingBriefings: body.backfillMissingBriefings,
     });
+
+    await schedulerConfigService.recordSchedulerRun(
+      "scheduler-sync",
+      {
+        createdGamesCount: syncResult.createdGameIds.length,
+        templateGames: syncResult.totalTemplates,
+        backfilledBriefings: syncResult.backfilledBriefings,
+      },
+      !isCron
+    );
 
     return NextResponse.json({
       success: true,
@@ -72,10 +100,12 @@ export async function GET(request: NextRequest) {
   try {
     const createGameUseCase = getCreatePredictionGameUseCase();
     const scheduler = getMasterScheduler(createGameUseCase);
+    const templates = await scheduler.getAllTemplateViews();
     const status = scheduler.getStatus();
 
     return NextResponse.json({
       ...status,
+      templates,
       lastSync: new Date().toISOString(),
       nextSync: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
     });

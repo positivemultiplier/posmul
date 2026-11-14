@@ -157,6 +157,7 @@ export default function PredictionSettlementDashboardPage() {
     }
   };
 
+  const closedGames = games.filter((g) => g.status === "CLOSED");
   const activeGames = games.filter((g) => g.status === "ACTIVE");
   const settledGames = games.filter((g) => g.status === "SETTLED");
 
@@ -183,11 +184,43 @@ export default function PredictionSettlementDashboardPage() {
               상세 승부 정산 및 배당금 집행 센터
             </h1>
             <p className="text-slate-400 text-sm mt-1">
-              마감된 예측 게임의 최종 승리 옵션을 판정하고, 적중 유저에게 배당금(PMC/PMP) 포인트를 집행합니다.
+              마감된 예측 게임(CLOSED)과 활성 게임의 최종 승리 옵션을 판정하고, 적중 유저에게 배당금(PMC/PMP) 포인트를 집행합니다.
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              onClick={async () => {
+                if (!confirm("마감된(CLOSED) 게임과 예정 오라클 소스를 일괄 자동 정산하시겠습니까?")) return;
+                setLoading(true);
+                try {
+                  const res = await fetch("/api/admin/scheduler/config", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      action: "run-manual-step",
+                      step: "oracle-settle",
+                    }),
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    alert(`✅ 오라클 일괄 정산 완료!\n정산: ${data.summary?.settledCount ?? 0}건\n배당: ${(data.summary?.totalRewardDistributed ?? 0).toLocaleString()} PMC`);
+                    fetchGames();
+                  } else {
+                    alert(`❌ 오라클 정산 실패: ${data.error}`);
+                  }
+                } catch (e: unknown) {
+                  alert(`오류 발생: ${e instanceof Error ? e.message : String(e)}`);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              disabled={loading}
+              className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1.5 shadow-md border border-emerald-500/30"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              오라클 자동 정산 일괄 실행 ({closedGames.length}건 대기)
+            </button>
             <button
               onClick={async () => {
                 if (!confirm("AI 크론 파이프라인(뉴스 수집 -> 초안 생성 -> 게임 발행 -> 자동 정산)을 실행하시겠습니까?")) return;
@@ -225,14 +258,24 @@ export default function PredictionSettlementDashboardPage() {
         </div>
 
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-2xl p-5 flex items-center gap-4">
             <div className="p-3 rounded-xl bg-amber-950/80 text-amber-400 border border-amber-800/60">
               <Clock className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-xs text-slate-400">정산 대기 중인 게임</div>
-              <div className="text-2xl font-black text-amber-400">{activeGames.length}개</div>
+              <div className="text-xs text-amber-300 font-semibold">마감 · 정산 대기 (CLOSED)</div>
+              <div className="text-2xl font-black text-amber-400">{closedGames.length}개</div>
+            </div>
+          </div>
+
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex items-center gap-4">
+            <div className="p-3 rounded-xl bg-sky-950/80 text-sky-400 border border-sky-800/60">
+              <Clock className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="text-xs text-slate-400">베팅 진행 중 (ACTIVE)</div>
+              <div className="text-2xl font-black text-sky-400">{activeGames.length}개</div>
             </div>
           </div>
 
@@ -241,7 +284,7 @@ export default function PredictionSettlementDashboardPage() {
               <CheckCircle2 className="w-6 h-6" />
             </div>
             <div>
-              <div className="text-xs text-slate-400">정산 완료된 게임</div>
+              <div className="text-xs text-slate-400">정산 완료된 게임 (SETTLED)</div>
               <div className="text-2xl font-black text-emerald-400">{settledGames.length}개</div>
             </div>
           </div>
@@ -283,7 +326,7 @@ export default function PredictionSettlementDashboardPage() {
                           </span>
                         ) : (
                           <span className="px-2.5 py-1 bg-emerald-950 text-emerald-400 border border-emerald-800/60 rounded-lg text-xs font-semibold flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" /> 진행 중 / 정산 가능
+                            <Clock className="w-3.5 h-3.5" /> 진행 중 · 마감 정산 대기
                           </span>
                         )}
                       </div>

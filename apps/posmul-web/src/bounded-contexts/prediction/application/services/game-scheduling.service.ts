@@ -6,13 +6,20 @@ import { PredictionType } from "../../domain/value-objects/prediction-types";
 import { SettlementSourceType } from "../../domain/value-objects/settlement-types";
 import { CreatePredictionGameUseCase } from "../use-cases/create-prediction-game.use-case";
 import { settlementOrchestrator } from "./settlement-orchestrator.service";
+import {
+  type PredictionSchedulerConfig,
+  schedulerConfigService,
+} from "./scheduler-config.service";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 /** 한국 표준시(KST) UTC 오프셋 (분) */
 const KST_OFFSET_MINUTES = 9 * 60;
 
 /** 템플릿 카테고리 → DB prediction_category enum */
-const TEMPLATE_CATEGORY_TO_DB: Record<ScheduledGameTemplate["category"], string> = {
+export const TEMPLATE_CATEGORY_TO_DB: Record<
+  ScheduledGameTemplate["category"],
+  string
+> = {
   sports: "SPORTS",
   politics: "POLITICS",
   economy: "ECONOMY",
@@ -22,7 +29,7 @@ const TEMPLATE_CATEGORY_TO_DB: Record<ScheduledGameTemplate["category"], string>
 };
 
 /** 도메인 PredictionType → DB prediction_type enum */
-const PREDICTION_TYPE_TO_DB: Record<PredictionType, string> = {
+export const PREDICTION_TYPE_TO_DB: Record<PredictionType, string> = {
   [PredictionType.BINARY]: "BINARY",
   [PredictionType.WIN_DRAW_LOSE]: "WIN_DRAW_LOSE",
   [PredictionType.RANKING]: "RANKING",
@@ -121,6 +128,17 @@ export interface GameSchedulingConfig {
  */
 export class GameSchedulingService {
   private templates: ScheduledGameTemplate[] = [];
+  private baseTemplateDefaults = new Map<
+    string,
+    {
+      isActive: boolean;
+      recurrence?: ScheduledGameTemplate["recurrence"];
+      duration: number;
+      settlementDelay: number;
+      minimumStake: PmpAmount;
+      maximumStake: PmpAmount;
+    }
+  >();
   private config: GameSchedulingConfig;
   private isRunning = false;
 
@@ -146,6 +164,22 @@ export class GameSchedulingService {
     };
 
     this.initializeDefaultTemplates();
+    this.snapshotBaseDefaults();
+  }
+
+  private snapshotBaseDefaults(): void {
+    for (const tpl of this.templates) {
+      if (!this.baseTemplateDefaults.has(tpl.id)) {
+        this.baseTemplateDefaults.set(tpl.id, {
+          isActive: tpl.isActive,
+          recurrence: tpl.recurrence,
+          duration: tpl.duration,
+          settlementDelay: tpl.settlementDelay,
+          minimumStake: tpl.minimumStake,
+          maximumStake: tpl.maximumStake,
+        });
+      }
+    }
   }
 
   private initializeDefaultTemplates(): void {
@@ -472,7 +506,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "high",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "kobis",
       sourceConfig: {
         mode: "audience_threshold",
@@ -503,7 +537,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "medium",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "kcontent",
       sourceConfig: {
         subCategory: "drama_rating",
@@ -535,7 +569,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "medium",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "kcontent",
       sourceConfig: {
         subCategory: "variety_rating_rank1",
@@ -564,7 +598,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "high",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "kcontent",
       sourceConfig: {
         subCategory: "music_chart_top10",
@@ -593,7 +627,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "high",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "kcontent",
       sourceConfig: {
         subCategory: "ott_top1",
@@ -656,7 +690,7 @@ export class GameSchedulingService {
       category: "economy",
       importance: "high",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "coingecko",
       sourceConfig: {
         coinId: "bitcoin",
@@ -694,7 +728,7 @@ export class GameSchedulingService {
       category: "sports",
       importance: "critical",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "football_data",
       sourceConfig: {
         competition: "PL",
@@ -725,7 +759,7 @@ export class GameSchedulingService {
       category: "sports",
       importance: "high",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "manual",
     });
 
@@ -750,7 +784,7 @@ export class GameSchedulingService {
       category: "sports",
       importance: "medium",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "manual",
     });
   }
@@ -780,7 +814,7 @@ export class GameSchedulingService {
       category: "politics",
       importance: "high",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "manual",
     });
 
@@ -806,7 +840,7 @@ export class GameSchedulingService {
       category: "politics",
       importance: "medium",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "manual",
     });
   }
@@ -877,7 +911,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "high",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "kcontent",
       sourceConfig: {
         subCategory: "music_chart_rank1",
@@ -908,7 +942,7 @@ export class GameSchedulingService {
       category: "entertainment",
       importance: "high",
       recurrence: "weekly",
-      isActive: false,
+      isActive: true,
       sourceType: "kobis",
       sourceConfig: {
         mode: "weekend_rank1_group",
@@ -939,7 +973,7 @@ export class GameSchedulingService {
       category: "technology",
       importance: "high",
       recurrence: "monthly",
-      isActive: false,
+      isActive: true,
       sourceType: "kosis",
       sourceConfig: {
         subCategory: "retail",
@@ -970,7 +1004,7 @@ export class GameSchedulingService {
       category: "sports",
       importance: "high",
       recurrence: "monthly",
-      isActive: false,
+      isActive: true,
       sourceType: "manual",
     });
   }
@@ -1130,25 +1164,118 @@ export class GameSchedulingService {
   }
 
   /**
+   * DB scheduler_config를 조회하여 템플릿 활성/주기/옵션 오버라이드를 적용
+   */
+  public async syncWithDbConfig(): Promise<PredictionSchedulerConfig> {
+    const cfg = await schedulerConfigService.getSchedulerConfig();
+    this.applyConfigOverrides(cfg);
+    return cfg;
+  }
+
+  /**
+   * DB scheduler_config의 카테고리/예측유형/개별 템플릿 오버라이드를 전체 템플릿에 적용
+   */
+  public applyConfigOverrides(schedulerConfig: PredictionSchedulerConfig): void {
+    this.snapshotBaseDefaults();
+    const enabledCats = new Set(
+      (schedulerConfig.enabled_categories ?? []).map((c) => c.toUpperCase())
+    );
+    const enabledTypes = new Set(
+      (schedulerConfig.enabled_prediction_types ?? []).map((t) =>
+        t.toUpperCase()
+      )
+    );
+    const overrides = schedulerConfig.template_overrides ?? {};
+
+    for (const tpl of this.templates) {
+      const base = this.baseTemplateDefaults.get(tpl.id);
+      if (base) {
+        tpl.isActive = base.isActive;
+        tpl.recurrence = base.recurrence;
+        tpl.duration = base.duration;
+        tpl.settlementDelay = base.settlementDelay;
+        tpl.minimumStake = base.minimumStake;
+        tpl.maximumStake = base.maximumStake;
+      }
+
+      const ov = overrides[tpl.id];
+      if (ov) {
+        if (typeof ov.isActive === "boolean") tpl.isActive = ov.isActive;
+        if (ov.recurrence) tpl.recurrence = ov.recurrence;
+        if (typeof ov.durationHours === "number" && ov.durationHours >= 1) {
+          tpl.duration = ov.durationHours;
+        }
+        if (
+          typeof ov.settlementDelayHours === "number" &&
+          ov.settlementDelayHours >= 0
+        ) {
+          tpl.settlementDelay = ov.settlementDelayHours;
+        }
+        if (typeof ov.minimumStake === "number" && ov.minimumStake >= 10) {
+          tpl.minimumStake = ov.minimumStake as PmpAmount;
+        }
+        if (typeof ov.maximumStake === "number" && ov.maximumStake >= 100) {
+          tpl.maximumStake = ov.maximumStake as PmpAmount;
+        }
+      }
+
+      const dbCat = TEMPLATE_CATEGORY_TO_DB[tpl.category] ?? "ECONOMY";
+      const dbType = PREDICTION_TYPE_TO_DB[tpl.predictionType] ?? "BINARY";
+
+      if (enabledCats.size > 0 && !enabledCats.has(dbCat)) {
+        tpl.isActive = false;
+      }
+      if (enabledTypes.size > 0 && !enabledTypes.has(dbType)) {
+        tpl.isActive = false;
+      }
+    }
+  }
+
+  /**
    * 템플릿으로부터 예측 게임을 생성하고, 동시에 settlement_sources에 오라클 스펙을 자동 등록
    */
   public async createGameFromTemplate(
-    template: ScheduledGameTemplate
+    template: ScheduledGameTemplate,
+    options?: {
+      force?: boolean;
+      defaultMinBet?: number;
+      defaultMaxBet?: number;
+      maxActiveCap?: number;
+    }
   ): Promise<string | null> {
     try {
       const now = new Date();
       const HOUR_MS = 60 * 60 * 1000;
+      const force = options?.force ?? false;
 
-      // scheduledTime은 이미 정확한 UTC epoch 타임스탬프(KST 벽시계 기준 변환 완료)
-      const openAt = template.scheduledTime;
-      const endTime = new Date(openAt.getTime() + template.duration * HOUR_MS);
+      // force=true인데 scheduledTime 기준으로 마감 시간이 지났다면 지금 시점 오픈으로 재계산
+      let openAt = template.scheduledTime;
+      let endTime = new Date(openAt.getTime() + template.duration * HOUR_MS);
+      if (force && endTime.getTime() <= now.getTime() + HOUR_MS) {
+        openAt = now;
+        endTime = new Date(now.getTime() + Math.max(2, template.duration) * HOUR_MS);
+      }
+
       const settlementTime = new Date(
         endTime.getTime() + template.settlementDelay * HOUR_MS
       );
 
       // 마감까지 1시간도 남지 않은 회차는 생성하지 않음 (다음 회차에서 생성)
-      if (endTime.getTime() <= now.getTime() + HOUR_MS) {
+      if (!force && endTime.getTime() <= now.getTime() + HOUR_MS) {
         return null;
+      }
+
+      // 동시 활성 게임 상한선 체크 (force=true일 때는 무시)
+      if (!force && typeof options?.maxActiveCap === "number") {
+        const { count: activeCount } = await supabaseAdmin
+          .schema("prediction")
+          .from("prediction_games")
+          .select("game_id", { count: "exact", head: true })
+          .eq("status", "ACTIVE");
+
+        if ((activeCount ?? 0) >= options.maxActiveCap) {
+          return null;
+        }
       }
 
       // 회차별 고유 slug (템플릿 ID + 마감일 KST) → 과거 CLOSED/CANCELLED와 충돌 시 시간 suffix 부여
@@ -1159,20 +1286,22 @@ export class GameSchedulingService {
         .replace(/-/g, "");
       const baseSlug = `${template.id}-${closeDateKst}`;
 
-      // 1. 동일 템플릿(external_id)이 이미 ACTIVE 상태면 중복 생성 원천 차단 (멱등성)
-      const { data: activeExisting } = await supabaseAdmin
-        .schema("prediction")
-        .from("prediction_games")
-        .select("game_id")
-        .eq("external_id", template.id)
-        .eq("status", "ACTIVE")
-        .limit(1)
-        .maybeSingle();
-      if (activeExisting) {
-        return null;
+      // 1. 동일 템플릿(external_id)이 이미 ACTIVE 상태면 중복 생성 원천 차단 (force=false일 때)
+      if (!force) {
+        const { data: activeExisting } = await supabaseAdmin
+          .schema("prediction")
+          .from("prediction_games")
+          .select("game_id")
+          .eq("external_id", template.id)
+          .eq("status", "ACTIVE")
+          .limit(1)
+          .maybeSingle();
+        if (activeExisting) {
+          return null;
+        }
       }
 
-      // 2. 과거 CLOSED/CANCELLED 이력이 같은 baseSlug를 점유 중이면 고유 suffix 부여
+      // 2. 과거 이력 또는 force 발행 시 고유 suffix 부여
       const { data: slugExisting } = await supabaseAdmin
         .schema("prediction")
         .from("prediction_games")
@@ -1181,10 +1310,17 @@ export class GameSchedulingService {
         .limit(1)
         .maybeSingle();
       const timeTag = kstNowForSlug.toISOString().slice(11, 16).replace(":", "");
-      const slug = slugExisting ? `${baseSlug}-r${timeTag}` : baseSlug;
+      const randTag = Math.random().toString(36).slice(2, 6);
+      const slug =
+        slugExisting || force ? `${baseSlug}-r${timeTag}-${randTag}` : baseSlug;
 
       const hasOracleAdapter =
         !!template.sourceType && template.sourceType !== "manual";
+
+      const resolvedMinBet =
+        Number(template.minimumStake) || options?.defaultMinBet || 500;
+      const resolvedMaxBet =
+        Number(template.maximumStake) || options?.defaultMaxBet || 50000;
 
       // 크론에는 로그인 사용자가 없으므로(RLS 차단) 서비스 롤로 직접 저장
       const { data: inserted, error } = await supabaseAdmin
@@ -1199,8 +1335,8 @@ export class GameSchedulingService {
           prediction_type: PREDICTION_TYPE_TO_DB[template.predictionType] ?? "BINARY",
           game_options: { options: template.options },
           difficulty: IMPORTANCE_TO_DIFFICULTY[template.importance] ?? 2.5,
-          min_bet_amount: Number(template.minimumStake),
-          max_bet_amount: Number(template.maximumStake),
+          min_bet_amount: resolvedMinBet,
+          max_bet_amount: resolvedMaxBet,
           registration_start: now.toISOString(),
           registration_end: endTime.toISOString(),
           settlement_date: settlementTime.toISOString(),
@@ -1354,8 +1490,13 @@ export class GameSchedulingService {
     return this.templates.filter((t) => t.isActive);
   }
 
+  getAllTemplates(): ScheduledGameTemplate[] {
+    return [...this.templates];
+  }
+
   addTemplate(template: ScheduledGameTemplate): void {
     this.templates.push(template);
+    this.snapshotBaseDefaults();
   }
 
   getSchedulingStats() {
