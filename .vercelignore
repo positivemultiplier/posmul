@@ -1,0 +1,16 @@
+node_modules
+**/node_modules
+.next
+**/.next
+.turbo
+**/.turbo
+dist
+**/dist
+.git
+.env
+.env.*
+*.pdf
+apps/housing-pro/scripts/data
+test-results
+playwright-report
+coverage
