@@ -38,6 +38,11 @@ import {
   serializeSubjectiveMap,
   gradeSubjectiveBySlots,
 } from "@/lib/subjective-answer";
+import {
+  extractBoxSubItems,
+  isBoxCombinationOptions,
+  inferBoxItemCorrectness,
+} from "@/lib/box-items";
 
 const OPTION_CIRCLES = ["①", "②", "③", "④", "⑤"] as const;
 
@@ -55,6 +60,7 @@ interface LocalDraftState {
   subjectiveInput: string;
   questionMark: MarkStatus | null;
   optionMarks: Record<string, MarkStatus>;
+  boxMarks: Record<string, MarkStatus>;
   checked: boolean;
   isCorrect: boolean | null;
 }
@@ -150,6 +156,7 @@ export default function InteractiveSolvePage() {
           subjectiveInput: q.savedSubjectiveInput ?? "",
           questionMark: q.savedQuestionMark,
           optionMarks: optMarks,
+          boxMarks: q.savedBoxMarks ?? {},
           checked: alreadySolved,
           isCorrect: q.savedIsCorrect,
         };
@@ -179,6 +186,58 @@ export default function InteractiveSolvePage() {
     return gradeSubjectiveBySlots(currentDraft.subjectiveInput, currentQ.subjectiveAnswer, currentSubjectiveSlots);
   }, [currentQ, currentDraft, currentSubjectiveSlots]);
 
+  const currentBoxItems = useMemo(() => {
+    if (!currentQ || currentQ.questionType !== "OBJECTIVE") return [];
+    return extractBoxSubItems(currentQ.boxContent);
+  }, [currentQ]);
+
+  const isBoxComboQuestion = useMemo(() => {
+    if (!currentQ || currentQ.questionType !== "OBJECTIVE") return false;
+    return currentBoxItems.length >= 2 && isBoxCombinationOptions(currentQ.options);
+  }, [currentQ, currentBoxItems]);
+
+  const currentBoxCorrectness = useMemo(() => {
+    if (!currentQ || !currentDraft?.checked || !isBoxComboQuestion) return null;
+    return inferBoxItemCorrectness(
+      currentQ.questionText,
+      currentBoxItems,
+      currentQ.options,
+      currentQ.correctOptions,
+      currentQ.isNegativeQuestion
+    );
+  }, [currentQ, currentDraft?.checked, isBoxComboQuestion, currentBoxItems]);
+
+  const suggestedComboOptionNumber = useMemo(() => {
+    if (!currentQ || !currentDraft || !isBoxComboQuestion) return null;
+    const isNegativeQ =
+      currentQ.isNegativeQuestion ||
+      /(옳지\s*않은|틀린\s*것|아닌\s*것|해당하지\s*않는|포함되지\s*않는|잘못\s*연결|바르지\s*않은)/.test(
+        currentQ.questionText
+      );
+    const targetMark: MarkStatus = isNegativeQ ? "X" : "O";
+    const markedCount = currentBoxItems.filter((item) => Boolean(currentDraft.boxMarks[item.label])).length;
+    if (markedCount === 0) return null;
+
+    const targetLabels = currentBoxItems
+      .filter((item) => currentDraft.boxMarks[item.label] === targetMark)
+      .map((item) => item.label);
+
+    if (targetLabels.length === 0 && markedCount < currentBoxItems.length) return null;
+
+    const matched = currentQ.options.find((opt) => {
+      const clean = opt.optionText.replace(/[\s,·ㆍ]/g, "");
+      if (targetLabels.length === 0) {
+        return clean === "없음";
+      }
+      const optLabels = Array.from(opt.optionText.matchAll(/[ㄱㄴㄷㄹㅁ]/g)).map((m) => m[0]);
+      return (
+        optLabels.length === targetLabels.length &&
+        targetLabels.every((lbl, idx) => optLabels[idx] === lbl)
+      );
+    });
+    return matched ? matched.optionNumber : null;
+  }, [currentQ, currentDraft, isBoxComboQuestion, currentBoxItems]);
+
   const evaluateQuestionCorrect = (q: SolveQuestionItem, d: LocalDraftState): boolean | null => {
     if (q.questionType === "OBJECTIVE") {
       if (d.selectedOption === null) return null;
@@ -194,12 +253,17 @@ export default function InteractiveSolvePage() {
       const computedCorrect = markChecked ? evaluateQuestionCorrect(q, d) : d.isCorrect;
 
       // 오답이거나 미확신일 때 별도 선지 마킹을 하나도 안 했으면 정답 선지와 오답 선택 선지를 자동으로 'STAR'로 저장해 약점 O/X에 연결
+      const isBoxCombo =
+        q.questionType === "OBJECTIVE" &&
+        extractBoxSubItems(q.boxContent).length >= 2 &&
+        isBoxCombinationOptions(q.options);
+
       const finalOptionMarks: Array<{ optionId: string; markStatus: MarkStatus }> = [];
       for (const opt of q.options) {
         const explicit = d.optionMarks[opt.id];
         if (explicit) {
           finalOptionMarks.push({ optionId: opt.id, markStatus: explicit });
-        } else if (computedCorrect === false) {
+        } else if (computedCorrect === false && !isBoxCombo) {
           const isChosen = d.selectedOption === opt.optionNumber;
           const isTargetAnswer = q.correctOptions.includes(opt.optionNumber);
           if (isChosen || isTargetAnswer) {
@@ -218,6 +282,7 @@ export default function InteractiveSolvePage() {
         isCorrect: computedCorrect,
         questionMark: d.questionMark ?? (computedCorrect === false ? "X" : computedCorrect === true ? "O" : null),
         optionMarks: finalOptionMarks,
+        boxMarks: d.boxMarks,
       });
       setSavingId(null);
     },
@@ -232,6 +297,7 @@ export default function InteractiveSolvePage() {
         subjectiveInput: "",
         questionMark: null,
         optionMarks: {},
+        boxMarks: {},
         checked: false,
         isCorrect: null,
       };
@@ -261,6 +327,31 @@ export default function InteractiveSolvePage() {
         }
       }
       return { ...prev, optionMarks: nextMarks };
+    });
+  };
+
+  const handleToggleBoxItemMark = (label: string, mark: MarkStatus) => {
+    updateCurrentDraft((prev) => {
+      const nextBoxMarks = { ...prev.boxMarks };
+      if (nextBoxMarks[label] === mark) {
+        delete nextBoxMarks[label];
+      } else {
+        nextBoxMarks[label] = mark;
+      }
+      return { ...prev, boxMarks: nextBoxMarks };
+    });
+  };
+
+  const handleMarkRemainingBoxAsO = () => {
+    if (currentBoxItems.length === 0) return;
+    updateCurrentDraft((prev) => {
+      const nextBoxMarks = { ...prev.boxMarks };
+      for (const item of currentBoxItems) {
+        if (!nextBoxMarks[item.label]) {
+          nextBoxMarks[item.label] = "O";
+        }
+      }
+      return { ...prev, boxMarks: nextBoxMarks };
     });
   };
 
@@ -314,6 +405,9 @@ export default function InteractiveSolvePage() {
       if (d.isCorrect === true) correctCnt++;
       if (d.isCorrect === false) wrongCnt++;
       for (const m of Object.values(d.optionMarks)) {
+        if (m === "STAR" || m === "X") starOrXOptionCnt++;
+      }
+      for (const m of Object.values(d.boxMarks)) {
         if (m === "STAR" || m === "X") starOrXOptionCnt++;
       }
     }
@@ -625,7 +719,7 @@ export default function InteractiveSolvePage() {
                 {!compactQuestionMode ? (
                   <>
                     <p className="text-[13.5px] font-bold text-white leading-relaxed">{currentQ.questionText}</p>
-                    {currentQ.boxContent && (
+                    {currentQ.boxContent && currentBoxItems.length < 2 && (
                       <div className="p-3 rounded-xl bg-[#101015] border border-white/[0.08] text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">
                         {currentQ.boxContent}
                       </div>
@@ -638,41 +732,129 @@ export default function InteractiveSolvePage() {
                 )}
               </div>
 
-              {/* 선지(지문) 리스트 또는 주관식 입력 */}
-              {currentQ.questionType === "OBJECTIVE" ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between px-1">
-                    <span className="text-[10.5px] font-bold text-slate-400">
-                      지문 터치 = 정답 선택 · 오른쪽 [O/★/X] = 이해도 체크
+              {/* <보기> ㄱ·ㄴ·ㄷ·ㄹ 개별 항목 O/★/X 이해도 체크 카드 (종이책 모드에서도 항상 표시) */}
+              {currentQ.questionType === "OBJECTIVE" && currentBoxItems.length >= 2 && (
+                <div className="p-3.5 rounded-2xl bg-[#16161D] border border-white/[0.09] space-y-2.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] font-black text-amber-300">
+                      &lt;보기&gt; 항목별 O / ★ / X 체크
                     </span>
                     <button
                       type="button"
-                      onClick={handleMarkRemainingAsO}
+                      onClick={handleMarkRemainingBoxAsO}
                       className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25"
                     >
                       ✓ 나머지 모두 O
                     </button>
                   </div>
 
-                  {currentQ.options.map((opt) => {
-                    const isSelected = currentDraft.selectedOption === opt.optionNumber;
-                    const isAnswer = currentQ.correctOptions.includes(opt.optionNumber);
-                    const optMark = currentDraft.optionMarks[opt.id];
-                    const showRepeat = expandedRepeatOptId === opt.id;
+                  <div className="space-y-1.5">
+                    {currentBoxItems.map((item) => {
+                      const bMark = currentDraft.boxMarks[item.label];
+                      const inferredTruth = currentBoxCorrectness ? currentBoxCorrectness[item.label] : undefined;
+                      return (
+                        <div
+                          key={item.label}
+                          className="rounded-xl bg-[#101015] border border-white/[0.07] p-2.5 space-y-1.5"
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start gap-2 min-w-0 flex-1">
+                              <span className="text-xs font-black text-amber-300 shrink-0 mt-0.5">
+                                {item.label}.
+                              </span>
+                              <span className="text-xs font-medium text-slate-100 leading-relaxed">
+                                {item.text}
+                              </span>
+                            </div>
 
-                    let cardBorder = "bg-[#1A1A21] border-white/[0.08]";
-                    if (currentDraft.checked) {
-                      if (isAnswer) cardBorder = "bg-emerald-950/35 border-emerald-500/50";
-                      else if (isSelected && !isAnswer) cardBorder = "bg-rose-950/35 border-rose-500/50";
-                    } else if (isSelected) {
-                      cardBorder = "bg-[#241B19] border-[#FF5A36]";
-                    }
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBoxItemMark(item.label, "O")}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
+                                  bMark === "O"
+                                    ? "bg-emerald-500 text-slate-950 border-emerald-400"
+                                    : "bg-[#1A1A21] text-slate-400 border-white/[0.08]"
+                                }`}
+                                title="확실히 옳거나 해당됨 (O)"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBoxItemMark(item.label, "STAR")}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
+                                  bMark === "STAR"
+                                    ? "bg-amber-400 text-slate-950 border-amber-300"
+                                    : "bg-[#1A1A21] text-slate-400 border-white/[0.08]"
+                                }`}
+                                title="헷갈리는 항목 (★)"
+                              >
+                                <Star className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleBoxItemMark(item.label, "X")}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
+                                  bMark === "X"
+                                    ? "bg-rose-500 text-white border-rose-400"
+                                    : "bg-[#1A1A21] text-slate-400 border-white/[0.08]"
+                                }`}
+                                title="틀렸거나 해당 안 됨 (X)"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
 
-                    return (
-                      <div key={opt.id} className={`rounded-2xl border p-3 space-y-2 transition ${cardBorder}`}>
-                        <div className="flex items-start justify-between gap-2.5">
-                          {/* 왼쪽: 정답 선택 클릭 영역 */}
+                          {currentDraft.checked && typeof inferredTruth === "boolean" && (
+                            <div className="pt-1 border-t border-white/[0.06] flex items-center justify-between text-[10px] font-bold">
+                              <span className={inferredTruth ? "text-emerald-300" : "text-rose-300"}>
+                                정답 판정: {inferredTruth ? "O (옳음/해당)" : "X (틀림/해당안함)"}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 선지(지문) 리스트 또는 주관식 입력 */}
+              {currentQ.questionType === "OBJECTIVE" ? (
+                isBoxComboQuestion ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10.5px] font-bold text-slate-400">
+                        조합 정답 선택 (위 &lt;보기&gt; 체크 기반)
+                      </span>
+                      {suggestedComboOptionNumber !== null && !currentDraft.checked && (
+                        <span className="text-[10px] font-black text-amber-300">
+                          체크 일치: {OPTION_CIRCLES[suggestedComboOptionNumber - 1] ?? `${suggestedComboOptionNumber}번`}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      {currentQ.options.map((opt) => {
+                        const isSelected = currentDraft.selectedOption === opt.optionNumber;
+                        const isAnswer = currentQ.correctOptions.includes(opt.optionNumber);
+                        const isSuggested = !currentDraft.checked && suggestedComboOptionNumber === opt.optionNumber;
+
+                        let comboStyle = "bg-[#1A1A21] border-white/[0.08]";
+                        if (currentDraft.checked) {
+                          if (isAnswer) comboStyle = "bg-emerald-950/40 border-emerald-500/60";
+                          else if (isSelected && !isAnswer) comboStyle = "bg-rose-950/40 border-rose-500/60";
+                        } else if (isSelected) {
+                          comboStyle = "bg-[#241B19] border-[#FF5A36]";
+                        } else if (isSuggested) {
+                          comboStyle = "bg-amber-950/25 border-amber-400/50";
+                        }
+
+                        return (
                           <button
+                            key={opt.id}
                             type="button"
                             onClick={() =>
                               updateCurrentDraft((prev) => ({
@@ -680,120 +862,192 @@ export default function InteractiveSolvePage() {
                                 selectedOption: opt.optionNumber,
                               }))
                             }
-                            className="flex-1 flex items-start gap-2 text-left"
+                            className={`rounded-xl border px-3 py-2.5 flex items-center justify-between gap-2 text-left transition ${comboStyle}`}
                           >
-                            <span
-                              className={`text-sm font-black shrink-0 mt-0.5 ${
-                                isSelected ? "text-[#FF5A36]" : "text-slate-300"
-                              }`}
-                            >
-                              {OPTION_CIRCLES[opt.optionNumber - 1] ?? `${opt.optionNumber}.`}
-                            </span>
-                            <span className="text-xs font-medium text-slate-100 leading-relaxed">
-                              {opt.optionText}
-                            </span>
-                          </button>
-
-                          {/* 오른쪽: 지문별 O / ★ / X 터치 */}
-                          <div className="flex items-center gap-1 shrink-0 pt-0.5">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleOptionMark(opt.id, "O")}
-                              className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
-                                optMark === "O"
-                                  ? "bg-emerald-500 text-slate-950 border-emerald-400"
-                                  : "bg-[#101015] text-slate-400 border-white/[0.08]"
-                              }`}
-                              title="확실히 아는 지문"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleOptionMark(opt.id, "STAR")}
-                              className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
-                                optMark === "STAR"
-                                  ? "bg-amber-400 text-slate-950 border-amber-300"
-                                  : "bg-[#101015] text-slate-400 border-white/[0.08]"
-                              }`}
-                              title="헷갈린 지문 (★)"
-                            >
-                              <Star className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleOptionMark(opt.id, "X")}
-                              className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
-                                optMark === "X"
-                                  ? "bg-rose-500 text-white border-rose-400"
-                                  : "bg-[#101015] text-slate-400 border-white/[0.08]"
-                              }`}
-                              title="모르는 지문 (X)"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* 채점 후: 지문 옳고 그름 + 반복 출제 연도 이력 토글 */}
-                        {currentDraft.checked && (
-                          <div className="pt-1.5 border-t border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
-                            <div className="flex items-center gap-1.5 text-[10px] font-bold">
-                              {isAnswer && (
-                                <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-                                  정답 선지
-                                </span>
-                              )}
-                              <span className={opt.isCorrect ? "text-emerald-300" : "text-rose-300"}>
-                                지문 판정: {opt.isCorrect ? "O (옳음)" : "X (틀림)"}
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span
+                                className={`text-sm font-black shrink-0 ${
+                                  isSelected ? "text-[#FF5A36]" : "text-slate-300"
+                                }`}
+                              >
+                                {OPTION_CIRCLES[opt.optionNumber - 1] ?? `${opt.optionNumber}.`}
+                              </span>
+                              <span className="text-xs font-bold text-slate-100 truncate">
+                                {opt.optionText}
                               </span>
                             </div>
 
+                            {currentDraft.checked && isAnswer && (
+                              <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 text-[9.5px] font-black shrink-0">
+                                정답
+                              </span>
+                            )}
+                            {isSuggested && !isSelected && (
+                              <span className="px-1.5 py-0.5 rounded bg-amber-400/20 text-amber-300 text-[9px] font-black shrink-0">
+                                일치
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-[10.5px] font-bold text-slate-400">
+                        지문 터치 = 정답 선택 · 오른쪽 [O/★/X] = 이해도 체크
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleMarkRemainingAsO}
+                        className="text-[10px] font-black px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-500/25"
+                      >
+                        ✓ 나머지 모두 O
+                      </button>
+                    </div>
+
+                    {currentQ.options.map((opt) => {
+                      const isSelected = currentDraft.selectedOption === opt.optionNumber;
+                      const isAnswer = currentQ.correctOptions.includes(opt.optionNumber);
+                      const optMark = currentDraft.optionMarks[opt.id];
+                      const showRepeat = expandedRepeatOptId === opt.id;
+
+                      let cardBorder = "bg-[#1A1A21] border-white/[0.08]";
+                      if (currentDraft.checked) {
+                        if (isAnswer) cardBorder = "bg-emerald-950/35 border-emerald-500/50";
+                        else if (isSelected && !isAnswer) cardBorder = "bg-rose-950/35 border-rose-500/50";
+                      } else if (isSelected) {
+                        cardBorder = "bg-[#241B19] border-[#FF5A36]";
+                      }
+
+                      return (
+                        <div key={opt.id} className={`rounded-2xl border p-3 space-y-2 transition ${cardBorder}`}>
+                          <div className="flex items-start justify-between gap-2.5">
+                            {/* 왼쪽: 정답 선택 클릭 영역 */}
                             <button
                               type="button"
-                              onClick={() => setExpandedRepeatOptId(showRepeat ? null : opt.id)}
-                              className={`px-2 py-0.5 rounded-full text-[9.5px] font-black border flex items-center gap-1 ${
-                                opt.repeatCount >= 2
-                                  ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
-                                  : "bg-white/[0.05] text-slate-400 border-white/[0.08]"
-                              }`}
+                              onClick={() =>
+                                updateCurrentDraft((prev) => ({
+                                  ...prev,
+                                  selectedOption: opt.optionNumber,
+                                }))
+                              }
+                              className="flex-1 flex items-start gap-2 text-left"
                             >
-                              {opt.repeatCount >= 2 ? (
-                                <>
-                                  <Flame className="w-2.5 h-2.5" />
-                                  <span>
-                                    {opt.repeatCount}회 출제 ({getDistinctYearsLabel(opt.appearedCitations)})
-                                  </span>
-                                </>
-                              ) : (
-                                <>
-                                  <History className="w-2.5 h-2.5" />
-                                  <span>{currentQ.examYear}년 단일</span>
-                                </>
-                              )}
-                              {showRepeat ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                              <span
+                                className={`text-sm font-black shrink-0 mt-0.5 ${
+                                  isSelected ? "text-[#FF5A36]" : "text-slate-300"
+                                }`}
+                              >
+                                {OPTION_CIRCLES[opt.optionNumber - 1] ?? `${opt.optionNumber}.`}
+                              </span>
+                              <span className="text-xs font-medium text-slate-100 leading-relaxed">
+                                {opt.optionText}
+                              </span>
                             </button>
-                          </div>
-                        )}
 
-                        {currentDraft.checked && showRepeat && opt.appearedCitations.length > 0 && (
-                          <div className="p-2 rounded-xl bg-[#0F0F14] border border-orange-500/25 space-y-1 text-[10px]">
-                            {opt.appearedCitations.map((c, ci) => (
-                              <div key={ci} className="text-slate-300 flex items-center justify-between gap-2">
-                                <span>
-                                  {c.year}년 {c.round}회 {c.stage} {c.questionNumber}번 ({c.optionNumber}번)
-                                </span>
-                                <span className={c.isCorrect ? "text-emerald-300 font-bold" : "text-rose-300 font-bold"}>
-                                  {c.isCorrect ? "O" : "X"}
+                            {/* 오른쪽: 지문별 O / ★ / X 터치 */}
+                            <div className="flex items-center gap-1 shrink-0 pt-0.5">
+                              <button
+                                type="button"
+                                onClick={() => handleToggleOptionMark(opt.id, "O")}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
+                                  optMark === "O"
+                                    ? "bg-emerald-500 text-slate-950 border-emerald-400"
+                                    : "bg-[#101015] text-slate-400 border-white/[0.08]"
+                                }`}
+                                title="확실히 아는 지문"
+                              >
+                                <Check className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleOptionMark(opt.id, "STAR")}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
+                                  optMark === "STAR"
+                                    ? "bg-amber-400 text-slate-950 border-amber-300"
+                                    : "bg-[#101015] text-slate-400 border-white/[0.08]"
+                                }`}
+                                title="헷갈린 지문 (★)"
+                              >
+                                <Star className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleOptionMark(opt.id, "X")}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
+                                  optMark === "X"
+                                    ? "bg-rose-500 text-white border-rose-400"
+                                    : "bg-[#101015] text-slate-400 border-white/[0.08]"
+                                }`}
+                                title="모르는 지문 (X)"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* 채점 후: 지문 옳고 그름 + 반복 출제 연도 이력 토글 */}
+                          {currentDraft.checked && (
+                            <div className="pt-1.5 border-t border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                                {isAnswer && (
+                                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                                    정답 선지
+                                  </span>
+                                )}
+                                <span className={opt.isCorrect ? "text-emerald-300" : "text-rose-300"}>
+                                  지문 판정: {opt.isCorrect ? "O (옳음)" : "X (틀림)"}
                                 </span>
                               </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+
+                              <button
+                                type="button"
+                                onClick={() => setExpandedRepeatOptId(showRepeat ? null : opt.id)}
+                                className={`px-2 py-0.5 rounded-full text-[9.5px] font-black border flex items-center gap-1 ${
+                                  opt.repeatCount >= 2
+                                    ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
+                                    : "bg-white/[0.05] text-slate-400 border-white/[0.08]"
+                                }`}
+                              >
+                                {opt.repeatCount >= 2 ? (
+                                  <>
+                                    <Flame className="w-2.5 h-2.5" />
+                                    <span>
+                                      {opt.repeatCount}회 출제 ({getDistinctYearsLabel(opt.appearedCitations)})
+                                    </span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <History className="w-2.5 h-2.5" />
+                                    <span>{currentQ.examYear}년 단일</span>
+                                  </>
+                                )}
+                                {showRepeat ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                              </button>
+                            </div>
+                          )}
+
+                          {currentDraft.checked && showRepeat && opt.appearedCitations.length > 0 && (
+                            <div className="p-2 rounded-xl bg-[#0F0F14] border border-orange-500/25 space-y-1 text-[10px]">
+                              {opt.appearedCitations.map((c, ci) => (
+                                <div key={ci} className="text-slate-300 flex items-center justify-between gap-2">
+                                  <span>
+                                    {c.year}년 {c.round}회 {c.stage} {c.questionNumber}번 ({c.optionNumber}번)
+                                  </span>
+                                  <span className={c.isCorrect ? "text-emerald-300 font-bold" : "text-rose-300 font-bold"}>
+                                    {c.isCorrect ? "O" : "X"}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )
               ) : (
                 /* 주관식(단답형) 다중 빈칸(ㄱ·ㄴ·ㄷ) 입력 및 자체 O/★/X 평가 */
                 <div className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-3">

@@ -342,6 +342,7 @@ export interface SolveQuestionItem {
   savedSubjectiveInput: string | null;
   savedIsCorrect: boolean | null;
   savedQuestionMark: MarkStatus | null;
+  savedBoxMarks: Record<string, MarkStatus>;
 }
 
 interface RawQuestionCatalogRow {
@@ -575,7 +576,7 @@ export async function fetchSolveSetQuestionsAction(
       supabaseAdmin
         .schema("vertical_housing")
         .from("study_question_logs")
-        .select("question_id, selected_option, subjective_input, is_correct, question_mark")
+        .select("question_id, selected_option, subjective_input, is_correct, question_mark, box_marks")
         .eq("client_key", clientKey)
         .in("question_id", qIds),
       supabaseAdmin
@@ -630,6 +631,7 @@ export async function fetchSolveSetQuestionsAction(
         subjective_input: string | null;
         is_correct: boolean | null;
         question_mark: MarkStatus | null;
+        box_marks: Record<string, MarkStatus> | null;
       }>).map((l) => [l.question_id, l])
     );
 
@@ -658,6 +660,7 @@ export async function fetchSolveSetQuestionsAction(
         savedSubjectiveInput: saved?.subjective_input ?? null,
         savedIsCorrect: saved?.is_correct ?? null,
         savedQuestionMark: saved?.question_mark ?? null,
+        savedBoxMarks: saved?.box_marks ?? {},
       };
     });
 
@@ -679,6 +682,7 @@ export interface SaveSingleQuestionSolveInput {
   subjectiveInput: string | null;
   isCorrect: boolean | null;
   questionMark: MarkStatus | null;
+  boxMarks?: Record<string, MarkStatus>;
   optionMarks: Array<{ optionId: string; markStatus: MarkStatus }>;
 }
 
@@ -702,6 +706,7 @@ export async function saveSingleQuestionSolveAction(
           subjective_input: input.subjectiveInput,
           is_correct: input.isCorrect,
           question_mark: input.questionMark,
+          box_marks: input.boxMarks ?? {},
           updated_at: nowIso,
         },
         { onConflict: "client_key,question_id" }
