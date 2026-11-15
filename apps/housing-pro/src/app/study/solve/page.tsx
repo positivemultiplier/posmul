@@ -32,6 +32,12 @@ import {
   type SolveQuestionItem,
   type MarkStatus,
 } from "@/app/actions/exam-study.actions";
+import {
+  extractSubjectiveSlots,
+  parseSubjectiveInputToMap,
+  serializeSubjectiveMap,
+  gradeSubjectiveBySlots,
+} from "@/lib/subjective-answer";
 
 const OPTION_CIRCLES = ["①", "②", "③", "④", "⑤"] as const;
 
@@ -158,15 +164,28 @@ export default function InteractiveSolvePage() {
   const currentQ = questions[currentIdx];
   const currentDraft = currentQ ? drafts[currentQ.id] : undefined;
 
+  const currentSubjectiveSlots = useMemo(() => {
+    if (!currentQ || currentQ.questionType !== "SUBJECTIVE") return [];
+    return extractSubjectiveSlots(currentQ.subjectiveAnswer, currentQ.questionText, currentQ.boxContent);
+  }, [currentQ]);
+
+  const currentSubjectiveMap = useMemo(() => {
+    if (!currentDraft || currentSubjectiveSlots.length === 0) return {};
+    return parseSubjectiveInputToMap(currentDraft.subjectiveInput, currentSubjectiveSlots);
+  }, [currentDraft, currentSubjectiveSlots]);
+
+  const currentSubjectiveGrade = useMemo(() => {
+    if (!currentQ || !currentDraft?.checked || currentQ.questionType !== "SUBJECTIVE") return null;
+    return gradeSubjectiveBySlots(currentDraft.subjectiveInput, currentQ.subjectiveAnswer, currentSubjectiveSlots);
+  }, [currentQ, currentDraft, currentSubjectiveSlots]);
+
   const evaluateQuestionCorrect = (q: SolveQuestionItem, d: LocalDraftState): boolean | null => {
     if (q.questionType === "OBJECTIVE") {
       if (d.selectedOption === null) return null;
       return q.correctOptions.includes(d.selectedOption);
     }
-    const cleanInput = d.subjectiveInput.trim().replace(/\s+/g, "").toLowerCase();
-    if (!cleanInput || !q.subjectiveAnswer) return null;
-    const cleanAns = q.subjectiveAnswer.trim().replace(/\s+/g, "").toLowerCase();
-    return cleanInput === cleanAns || cleanAns.includes(cleanInput);
+    const slots = extractSubjectiveSlots(q.subjectiveAnswer, q.questionText, q.boxContent);
+    return gradeSubjectiveBySlots(d.subjectiveInput, q.subjectiveAnswer, slots).isAllCorrect;
   };
 
   const persistQuestionToDb = useCallback(
@@ -776,21 +795,78 @@ export default function InteractiveSolvePage() {
                   })}
                 </div>
               ) : (
-                /* 주관식(단답형) 입력 및 자체 O/★/X 평가 */
+                /* 주관식(단답형) 다중 빈칸(ㄱ·ㄴ·ㄷ) 입력 및 자체 O/★/X 평가 */
                 <div className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-3">
-                  <label className="block text-xs font-black text-slate-300">주관식 단답 입력</label>
-                  <input
-                    type="text"
-                    value={currentDraft.subjectiveInput}
-                    onChange={(e) =>
-                      updateCurrentDraft((prev) => ({
-                        ...prev,
-                        subjectiveInput: e.target.value,
-                      }))
-                    }
-                    placeholder="답을 입력하거나 종이책 풀고 확인만 누르세요"
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#FF5A36]"
-                  />
+                  <div className="flex items-center justify-between gap-2">
+                    <label className="text-xs font-black text-slate-300">
+                      주관식 단답 입력 ({currentSubjectiveSlots.length}칸)
+                    </label>
+                    {currentDraft.checked && currentDraft.isCorrect !== null && (
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                          currentDraft.isCorrect
+                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                            : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                        }`}
+                      >
+                        {currentDraft.isCorrect ? "✅ 정답" : "❌ 오답"}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    {currentSubjectiveSlots.map((slot) => {
+                      const slotVal = currentSubjectiveMap[slot.key] ?? "";
+                      const slotOk = currentSubjectiveGrade?.slotCorrectness[slot.key];
+                      let inputBorder = "border-white/[0.1] focus:border-[#FF5A36]";
+                      if (currentDraft.checked && slotOk === true) {
+                        inputBorder = "border-emerald-500/60 bg-emerald-950/20";
+                      } else if (currentDraft.checked && slotOk === false) {
+                        inputBorder = "border-rose-500/60 bg-rose-950/20";
+                      }
+
+                      return (
+                        <div key={slot.key} className="flex items-center gap-2">
+                          <span className="w-8 h-10 shrink-0 rounded-xl bg-[#101015] border border-white/[0.1] text-xs font-black text-[#FF7A59] flex items-center justify-center">
+                            {slot.label}
+                          </span>
+                          <div className="relative flex-1">
+                            <input
+                              type="text"
+                              value={slotVal}
+                              onChange={(e) => {
+                                const nextMap = {
+                                  ...currentSubjectiveMap,
+                                  [slot.key]: e.target.value,
+                                };
+                                const serialized = serializeSubjectiveMap(nextMap, currentSubjectiveSlots);
+                                updateCurrentDraft((prev) => ({
+                                  ...prev,
+                                  subjectiveInput: serialized,
+                                }));
+                              }}
+                              placeholder={
+                                currentSubjectiveSlots.length > 1
+                                  ? `(${slot.label}) 답 입력`
+                                  : "답을 입력하거나 종이책 풀고 확인만 누르세요"
+                              }
+                              className={`w-full px-3.5 py-2.5 pr-12 rounded-xl bg-[#0E0E12] border text-sm text-white placeholder:text-slate-500 focus:outline-none ${inputBorder}`}
+                            />
+                            {currentDraft.checked && slotOk !== undefined && slotOk !== null && (
+                              <span
+                                className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10.5px] font-black ${
+                                  slotOk ? "text-emerald-300" : "text-rose-300"
+                                }`}
+                              >
+                                {slotOk ? "✓ 일치" : "✕ 오답"}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
                   {currentDraft.checked && currentQ.subjectiveAnswer && (
                     <div className="p-3 rounded-xl bg-emerald-950/35 border border-emerald-500/40 space-y-1">
                       <div className="text-[10.5px] text-emerald-300 font-black">공식(현행) 정답</div>
