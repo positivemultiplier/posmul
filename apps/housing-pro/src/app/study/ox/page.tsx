@@ -19,10 +19,6 @@ import { REAL_2026_EXAM_OX_CARDS } from "@/data/mock-exam-options";
 import { SerialRegisterModal } from "@/components/auth/serial-register-modal";
 import { TierLockBanner } from "@/components/study/tier-lock-banner";
 import { getUserSerialStatusAction } from "@/app/actions/serial.actions";
-import {
-  MasteryConcentricRings,
-  MASTERY_TIER_META,
-} from "@/components/study/mastery-concentric-rings";
 
 export default function OxSwipeStudyPage() {
   const [selectedTier, setSelectedTier] = useState<number>(1); // 기본 1회독(20% 뼈대 선지)
@@ -186,60 +182,23 @@ export default function OxSwipeStudyPage() {
           </div>
         )}
 
-        {/* 1~5회독 누적 동심원 해금 필터 바 */}
-        <div className="grid grid-cols-5 gap-1.5 pb-0.5">
-          {MASTERY_TIER_META.map((meta) => {
-            const locked = meta.tier > 1 && !isSerialVerified;
-            const isSelected = !isScanWeakMode && selectedTier === meta.tier;
-            // 해당 회독까지 누적 채워지는 5겹 링 미리보기 데이터
-            const previewProgress: [number, number, number, number, number] = [
-              meta.tier >= 1 ? 100 : 0,
-              meta.tier >= 2 ? 100 : 0,
-              meta.tier >= 3 ? 100 : 0,
-              meta.tier >= 4 ? 100 : 0,
-              meta.tier >= 5 ? 100 : 0,
-            ];
-
+        {/* 1~5회독 해금 필터 바 */}
+        <div className="grid grid-cols-5 gap-1 pb-0.5">
+          {[1, 2, 3, 4, 5].map((tier) => {
+            const locked = tier > 1 && !isSerialVerified;
             return (
               <button
-                key={meta.tier}
+                key={tier}
                 type="button"
-                onClick={() => handleTierChange(meta.tier)}
-                className={`py-1.5 px-1 rounded-xl text-[10px] font-black transition flex flex-col items-center justify-center gap-1 border ${
-                  isSelected
-                    ? "bg-[#1D1D26] text-white shadow-md"
-                    : "bg-[#0E0E12] text-slate-400 hover:text-white border-white/[0.06]"
+                onClick={() => handleTierChange(tier)}
+                className={`py-1.5 rounded-xl text-[10.5px] font-black transition flex items-center justify-center gap-0.5 ${
+                  !isScanWeakMode && selectedTier === tier
+                    ? "bg-[#FF5A36] text-white shadow-md"
+                    : "bg-[#0E0E12] text-slate-400 hover:text-white border border-white/[0.05]"
                 }`}
-                style={
-                  isSelected
-                    ? {
-                        borderColor: meta.color,
-                        boxShadow: `0 0 12px ${meta.trackColor}`,
-                      }
-                    : undefined
-                }
               >
-                <div className="relative flex items-center justify-center">
-                  <MasteryConcentricRings
-                    variant="mini"
-                    size={26}
-                    tierProgress={previewProgress}
-                    selectedTier={isSelected ? meta.tier : null}
-                  />
-                  {locked && (
-                    <span className="absolute -top-1 -right-1.5 w-3.5 h-3.5 rounded-full bg-[#16161C] border border-amber-500/50 flex items-center justify-center">
-                      <Lock className="w-2 h-2 text-amber-400" />
-                    </span>
-                  )}
-                </div>
-                <div className="flex items-center gap-0.5 leading-none">
-                  <span style={{ color: isSelected ? meta.color : undefined }}>
-                    {meta.tier}회독
-                  </span>
-                  <span className="text-[8.5px] font-mono opacity-70">
-                    {meta.coveragePct}%
-                  </span>
-                </div>
+                {locked && <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />}
+                <span>{tier}회독</span>
               </button>
             );
           })}
@@ -309,25 +268,9 @@ export default function OxSwipeStudyPage() {
             <div className="flex-1 flex flex-col justify-center p-6 rounded-3xl bg-gradient-to-b from-[#1D1D24] to-[#16161C] border border-white/[0.08] shadow-2xl space-y-5 min-h-[260px]">
               <div className="flex items-center justify-between flex-wrap gap-1.5">
                 <div className="flex items-center gap-1.5">
-                  {(() => {
-                    const cardTierMeta =
-                      MASTERY_TIER_META[(currentCard.masteryTier - 1) as 0 | 1 | 2 | 3 | 4] ??
-                      MASTERY_TIER_META[0];
-                    return (
-                      <span
-                        className={`px-2.5 py-0.5 rounded-full border text-[10px] font-black flex items-center gap-1 ${cardTierMeta.badgeBgClass} ${cardTierMeta.badgeTextClass} ${cardTierMeta.borderClass}`}
-                      >
-                        <span
-                          className="w-1.5 h-1.5 rounded-full"
-                          style={{ backgroundColor: cardTierMeta.color }}
-                        />
-                        <span>
-                          {currentCard.masteryTier}회독 ({currentCard.masteryTier * 20}%) · 선지{" "}
-                          {currentCard.optionNumber}번
-                        </span>
-                      </span>
-                    );
-                  })()}
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#FF5A36]/15 text-[#FF7A59] border border-[#FF5A36]/30 text-[10px] font-black">
+                    {currentCard.masteryTier}회독 ({currentCard.masteryTier * 20}%) · 선지 {currentCard.optionNumber}번
+                  </span>
 
                   {currentCardScanMark === "STAR" && (
                     <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-black flex items-center gap-0.5">

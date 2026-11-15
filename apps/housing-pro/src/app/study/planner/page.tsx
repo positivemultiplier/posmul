@@ -3,27 +3,31 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
-  Calendar,
-  Clock,
-  Flame,
-  LayoutGrid,
-  CheckCircle2,
-  Camera,
-  Zap,
-  ArrowRight,
+  ChevronDown,
   ChevronRight,
+  ChevronLeft,
+  BookOpen,
+  Calendar,
   Sparkles,
-  RotateCcw,
+  CheckCircle2,
+  Clock,
+  Trash2,
+  Play,
+  ChevronsDownUp,
+  ChevronsUpDown,
+  X,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
-import { REAL_2026_CHAPTERS, type ExamChapterPlan } from "@/data/mock-exam-chapters";
+import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
 import {
-  MasteryConcentricRings,
-  MASTERY_TIER_META,
-  calculateChapterMasterySummary,
-} from "@/components/study/mastery-concentric-rings";
+  addDaysISO,
+  diffDaysISO,
+  type MatrixCellStatus,
+  type StudySubjectNode,
+  type StudyTopicNode,
+} from "@/data/study-textbooks";
 
-// 열품타 하루 표준 24시간 (05시 ~ 익일 04시)
+// 열품타 하루 표준 24시간 (05시 ~ 익일 04시) — 보조 일일 타임테이블용
 const YPT_HOURS = [
   5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4,
 ];
@@ -33,616 +37,900 @@ interface TimetableBlock {
   label: string;
 }
 
-// 초기 자동 기록된 학습 타임라인 색칠 생성기
-function createInitialGrid(): Record<string, TimetableBlock> {
+function createInitialTimetableGrid(): Record<string, TimetableBlock> {
   const map: Record<string, TimetableBlock> = {};
-
   const fillRange = (hour: number, startSlot: number, endSlot: number, block: TimetableBlock) => {
     for (let s = startSlot; s <= endSlot; s++) {
       map[`${hour}-${s}`] = block;
     }
   };
-
-  // 07:00~08:50 주택법 (주황)
-  fillRange(7, 0, 5, { color: "#FF5A36", label: "주택법" });
-  fillRange(8, 0, 4, { color: "#FF5A36", label: "주택법" });
-
-  // 10:00~11:40 공동주택관리법 (하늘)
-  fillRange(10, 0, 5, { color: "#38BDF8", label: "공동주택관리법" });
-  fillRange(11, 0, 3, { color: "#38BDF8", label: "공동주택관리법" });
-
-  // 14:00~16:10 관리실무 (초록)
+  fillRange(7, 0, 5, { color: "#FF5A36", label: "주택법·건축법" });
+  fillRange(8, 0, 4, { color: "#FF5A36", label: "주택법·건축법" });
+  fillRange(10, 0, 5, { color: "#F59E0B", label: "공동주택관리법" });
+  fillRange(11, 0, 3, { color: "#F59E0B", label: "공동주택관리법" });
   fillRange(14, 0, 5, { color: "#10B981", label: "관리실무" });
   fillRange(15, 0, 5, { color: "#10B981", label: "관리실무" });
-  fillRange(16, 0, 0, { color: "#10B981", label: "관리실무" });
-
-  // 20:00~22:30 오답 O/X 복습 (보라)
-  fillRange(20, 0, 5, { color: "#A855F7", label: "O/X 오답복습" });
-  fillRange(21, 0, 5, { color: "#A855F7", label: "O/X 오답복습" });
-  fillRange(22, 0, 2, { color: "#A855F7", label: "O/X 오답복습" });
-
+  fillRange(20, 0, 5, { color: "#3B82F6", label: "민법" });
   return map;
 }
 
-export default function YptMobilePlannerPage() {
-  const [activeTab, setActiveTab] = useState<"diary" | "heatmap" | "board">("diary");
-  const [chapters, setChapters] = useState<ExamChapterPlan[]>(REAL_2026_CHAPTERS);
+const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"];
+
+interface EditingCellState {
+  subject: StudySubjectNode;
+  unitTitle: string;
+  topic: StudyTopicNode;
+  dateISO: string;
+  status: MatrixCellStatus;
+  keyword: string;
+  minutes: number;
+}
+
+export default function StudyPlannerMatrixPage() {
+  const {
+    todayISO,
+    examDate,
+    activeBook,
+    subjects,
+    matrixLogs,
+    collapsedSubjectIds,
+    upsertMatrixCell,
+    deleteMatrixCell,
+    toggleSubjectCollapse,
+    setAllSubjectsCollapsed,
+  } = useStudyCurriculum();
+
+  const [viewMode, setViewMode] = useState<"matrix" | "diary">("matrix");
+  const [stageFilter, setStageFilter] = useState<"ALL" | "1차" | "2차">("ALL");
+  const [windowStartOffset, setWindowStartOffset] = useState<number>(-12); // 오늘 기준 -12일 ~ +5일 (18일치)
+  const [editingCell, setEditingCell] = useState<EditingCellState | null>(null);
+
+  // 보조: 일일 타임테이블 상태
   const [timetableGrid, setTimetableGrid] = useState<Record<string, TimetableBlock>>(
-    () => createInitialGrid()
+    () => createInitialTimetableGrid()
   );
-  const [selectedHeatmapCell, setSelectedHeatmapCell] = useState<{
-    chapter: ExamChapterPlan;
-    tier: number;
-  } | null>(null);
-  const [focusedHeroTier, setFocusedHeroTier] = useState<number | null>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const tab = params.get("tab");
-      if (tab === "heatmap" || tab === "board" || tab === "diary") {
-        setActiveTab(tab);
+    if (typeof globalThis !== "undefined" && "location" in globalThis) {
+      const params = new globalThis.URLSearchParams(globalThis.location.search);
+      if (params.get("tab") === "diary") {
+        setViewMode("diary");
       }
     }
   }, []);
 
-  // 타임테이블 총 순공시간 계산 (1칸 = 10분)
-  const totalMinutes = useMemo(() => {
-    return Object.keys(timetableGrid).length * 10;
-  }, [timetableGrid]);
+  // 시험일까지 남은 일수 (D-Day)
+  const dDayToExam = useMemo(() => diffDaysISO(todayISO, examDate), [todayISO, examDate]);
 
-  const totalHoursText = `${String(Math.floor(totalMinutes / 60)).padStart(2, "0")}H ${String(
-    totalMinutes % 60
-  ).padStart(2, "0")}M`;
+  // 매트릭스 가로 날짜 열 (18일 윈도우)
+  const dateColumns = useMemo(() => {
+    const cols: Array<{
+      dateISO: string;
+      mmdd: string;
+      weekday: string;
+      dayOfWeek: number;
+      dDayLabel: string;
+      isToday: boolean;
+      isFuture: boolean;
+    }> = [];
 
-  // 목표 6시간(360분) 대비 달성률
-  const achievementPct = Math.round((totalMinutes / 360) * 100);
+    for (let i = 0; i < 18; i++) {
+      const offset = windowStartOffset + i;
+      const dateISO = addDaysISO(todayISO, offset);
+      const [y, m, d] = dateISO.split("-").map(Number);
+      const dt = new Date(y, (m || 1) - 1, d || 1);
+      const dayOfWeek = dt.getDay();
+      const dRemaining = diffDaysISO(dateISO, examDate);
+      const dDayLabel =
+        dRemaining === 0 ? "D-DAY" : dRemaining > 0 ? `D-${dRemaining}` : `D+${Math.abs(dRemaining)}`;
 
-  // 전체 1~5회독 문항수 가중 평균 진도율 (동심원 허브용)
-  const overallTierProgress = useMemo((): [number, number, number, number, number] => {
-    const totalQuestions = chapters.reduce((acc, c) => acc + c.questionCount, 0);
-    if (totalQuestions === 0) return [0, 0, 0, 0, 0];
+      cols.push({
+        dateISO,
+        mmdd: `${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}`,
+        weekday: WEEKDAY_KO[dayOfWeek],
+        dayOfWeek,
+        dDayLabel,
+        isToday: dateISO === todayISO,
+        isFuture: dateISO > todayISO,
+      });
+    }
+    return cols;
+  }, [todayISO, examDate, windowStartOffset]);
 
-    const calcTierAvg = (tierIndex: number) => {
-      const weighted = chapters.reduce(
-        (acc, c) => acc + c.tierProgress[tierIndex] * c.questionCount,
-        0
-      );
-      return Math.round(weighted / totalQuestions);
+  // 차수 필터링된 과목 목록
+  const visibleSubjects = useMemo(() => {
+    if (stageFilter === "ALL") return subjects;
+    return subjects.filter((s) => s.examStage === stageFilter);
+  }, [subjects, stageFilter]);
+
+  // 전체 목차 수 및 누적 완료 통계
+  const summaryStats = useMemo(() => {
+    let totalTopics = 0;
+    let coveredTopics = 0;
+    let totalDoneCells = 0;
+    let totalPlanCells = 0;
+
+    for (const subj of visibleSubjects) {
+      for (const unit of subj.units) {
+        for (const topic of unit.topics) {
+          totalTopics += 1;
+          let topicDoneCount = 0;
+          for (const [key, cell] of Object.entries(matrixLogs)) {
+            if (key.startsWith(`${topic.id}::`)) {
+              if (cell.status === "done") {
+                topicDoneCount += 1;
+                totalDoneCells += 1;
+              } else {
+                totalPlanCells += 1;
+              }
+            }
+          }
+          if (topicDoneCount > 0) coveredTopics += 1;
+        }
+      }
+    }
+
+    return {
+      totalTopics,
+      coveredTopics,
+      totalDoneCells,
+      totalPlanCells,
+      coveragePct: totalTopics > 0 ? Math.round((coveredTopics / totalTopics) * 100) : 0,
     };
+  }, [visibleSubjects, matrixLogs]);
 
-    return [
-      calcTierAvg(0),
-      calcTierAvg(1),
-      calcTierAvg(2),
-      calcTierAvg(3),
-      calcTierAvg(4),
-    ];
-  }, [chapters]);
+  // 목차별 누적 회독(완료 셀 수) 계산
+  const getTopicDoneCount = (topicId: string) => {
+    let count = 0;
+    for (const [key, cell] of Object.entries(matrixLogs)) {
+      if (key.startsWith(`${topicId}::`) && cell.status === "done") {
+        count += 1;
+      }
+    }
+    return count;
+  };
 
-  // 전체 회독 종합 진도율
-  const overallProgressPct = useMemo(() => {
-    const sum = overallTierProgress.reduce((acc, v) => acc + v, 0);
-    return Math.round(sum / 5);
-  }, [overallTierProgress]);
+  // 과목이 접혔을 때 날짜별 요약(완료 수 / 계획 수) 계산
+  const getSubjectDaySummary = (subject: StudySubjectNode, dateISO: string) => {
+    let doneCount = 0;
+    let planCount = 0;
+    let firstKeyword = "";
 
-  // 블록 이동
-  const moveChapter = (
-    id: string,
-    targetBlock: "morning" | "afternoon1" | "afternoon2" | "unassigned"
+    for (const unit of subject.units) {
+      for (const topic of unit.topics) {
+        const cell = matrixLogs[makeMatrixKey(topic.id, dateISO)];
+        if (cell) {
+          if (cell.status === "done") {
+            doneCount += 1;
+            if (!firstKeyword) firstKeyword = cell.keyword;
+          } else {
+            planCount += 1;
+            if (!firstKeyword) firstKeyword = cell.keyword;
+          }
+        }
+      }
+    }
+    return { doneCount, planCount, firstKeyword };
+  };
+
+  const allCollapsed =
+    visibleSubjects.length > 0 &&
+    visibleSubjects.every((s) => collapsedSubjectIds.includes(s.id));
+
+  const openCellEditor = (
+    subject: StudySubjectNode,
+    unitTitle: string,
+    topic: StudyTopicNode,
+    dateISO: string
   ) => {
-    setChapters((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, timeBlock: targetBlock } : c))
-    );
+    const existing = matrixLogs[makeMatrixKey(topic.id, dateISO)];
+    const defaultStatus: MatrixCellStatus = dateISO > todayISO ? "plan" : "done";
+    setEditingCell({
+      subject,
+      unitTitle,
+      topic,
+      dateISO,
+      status: existing?.status ?? defaultStatus,
+      keyword: existing?.keyword ?? topic.defaultKeyword,
+      minutes: existing?.minutes ?? topic.estimatedMinutes,
+    });
   };
 
-  // 미완료 단원 자동 이월 시뮬레이션
-  const handleCarryOverUnfinished = () => {
-    setChapters((prev) =>
-      prev.map((c) => (c.timeBlock === "unassigned" ? { ...c, timeBlock: "morning" } : c))
-    );
+  const handleSaveEditingCell = () => {
+    if (!editingCell) return;
+    upsertMatrixCell(editingCell.topic.id, editingCell.dateISO, {
+      status: editingCell.status,
+      keyword: editingCell.keyword.trim() || editingCell.topic.defaultKeyword,
+      minutes: editingCell.minutes,
+    });
+    setEditingCell(null);
   };
 
-  const handleToggleHeroTier = (tier: number) => {
-    setFocusedHeroTier((prev) => (prev === tier ? null : tier));
+  const handleDeleteEditingCell = () => {
+    if (!editingCell) return;
+    deleteMatrixCell(editingCell.topic.id, editingCell.dateISO);
+    setEditingCell(null);
   };
+
+  // 타임테이블 총 순공시간
+  const totalDiaryMinutes = useMemo(
+    () => Object.keys(timetableGrid).length * 10,
+    [timetableGrid]
+  );
 
   return (
     <MobileAppShell>
-      {/* 상단 앱 헤더 */}
-      <header className="px-4 py-3 bg-[#16161C] border-b border-white/[0.06] space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-[#FF5A36]" />
-            <h1 className="text-sm font-black text-white">
-              열품타 자동 다이어리 · 플래너
-            </h1>
-          </div>
-          <span className="text-[11px] font-mono font-bold text-[#FF7A59]">
-            2026.11.13 (금)
-          </span>
-        </div>
-
-        {/* 상단 3탭 세그먼트 컨트롤 */}
-        <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[#0E0E12] border border-white/[0.06] text-[11px] font-black">
-          <button
-            type="button"
-            onClick={() => setActiveTab("diary")}
-            className={`py-2 rounded-xl transition ${
-              activeTab === "diary"
-                ? "bg-[#FF5A36] text-white shadow-md"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            📊 오늘 다이어리
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("heatmap")}
-            className={`py-2 rounded-xl transition ${
-              activeTab === "heatmap"
-                ? "bg-[#FF5A36] text-white shadow-md"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            🎯 1~5회독 링
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("board")}
-            className={`py-2 rounded-xl transition ${
-              activeTab === "board"
-                ? "bg-[#FF5A36] text-white shadow-md"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            🗂️ 타임블록 보드
-          </button>
-        </div>
-      </header>
-
-      <div className="px-4 py-4 space-y-4">
-        {activeTab === "diary" && (
-          /* ========================================================== */
-          /* 1. 오늘 다이어리 (열품타 10분 단위 24시간 색칠 타임테이블) */
-          /* ========================================================== */
-          <div className="space-y-4">
-            {/* 요약 통계 3단 카드 */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="p-3 rounded-2xl bg-[#1A1A21] border border-white/[0.06] text-center space-y-0.5">
-                <div className="text-[10px] text-slate-400 font-bold">오늘 순공시간</div>
-                <div className="font-mono text-sm font-black text-white">{totalHoursText}</div>
-              </div>
-              <div className="p-3 rounded-2xl bg-[#1A1A21] border border-[#FF5A36]/30 text-center space-y-0.5">
-                <div className="text-[10px] text-slate-400 font-bold">목표 달성률</div>
-                <div className="font-mono text-sm font-black text-[#FF7A59]">
-                  {achievementPct}%
-                </div>
-              </div>
-              <div className="p-3 rounded-2xl bg-[#1A1A21] border border-white/[0.06] text-center space-y-0.5">
-                <div className="text-[10px] text-slate-400 font-bold">AI 스캔 기록</div>
-                <div className="font-mono text-xs font-black text-amber-300 pt-0.5">
-                  p.48 외 2건
-                </div>
-              </div>
-            </div>
-
-            {/* 자동 기록 학습 타임라인 요약 */}
-            <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-2.5">
-              <div className="flex items-center justify-between text-xs font-black text-white">
-                <span className="flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-[#FF5A36]" />
-                  <span>무입력 자동 기록된 과목별 범례</span>
-                </span>
-                <span className="text-[10px] font-bold text-slate-400">1칸 = 10분</span>
-              </div>
-              <div className="flex flex-wrap gap-2 text-[10.5px] font-bold">
-                {[
-                  { color: "#FF5A36", label: "주택법 (1h 50m)" },
-                  { color: "#38BDF8", label: "공동주택관리법 (1h 40m)" },
-                  { color: "#10B981", label: "관리실무 (2h 10m)" },
-                  { color: "#A855F7", label: "O/X 오답복습 (2h 30m)" },
-                ].map((legend) => (
-                  <span
-                    key={legend.label}
-                    className="px-2 py-1 rounded-lg bg-[#121216] border border-white/[0.06] flex items-center gap-1.5 text-slate-200"
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-sm"
-                      style={{ backgroundColor: legend.color }}
-                    />
-                    <span>{legend.label}</span>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* ⏱️ 열품타 시그니처 24시간 × 6칸(10분 단위) 타임테이블 그리드 */}
-            <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-2 shadow-xl">
-              {/* 상단 열 헤더 (10m ~ 60m) */}
-              <div className="grid grid-cols-[36px_1fr] gap-2 items-center text-[10px] font-mono font-bold text-slate-500 pb-1 border-b border-white/[0.06]">
-                <div className="text-center">시</div>
-                <div className="grid grid-cols-6 gap-1 text-center">
-                  <span>10</span>
-                  <span>20</span>
-                  <span>30</span>
-                  <span>40</span>
-                  <span>50</span>
-                  <span>60</span>
-                </div>
-              </div>
-
-              {/* 24시간 행 렌더링 */}
-              <div className="space-y-1">
-                {YPT_HOURS.map((hour) => (
-                  <div key={hour} className="grid grid-cols-[36px_1fr] gap-2 items-center">
-                    <div className="font-mono text-[10.5px] font-bold text-slate-400 text-center">
-                      {String(hour).padStart(2, "0")}
-                    </div>
-                    <div className="grid grid-cols-6 gap-1">
-                      {[0, 1, 2, 3, 4, 5].map((slot) => {
-                        const key = `${hour}-${slot}`;
-                        const cell = timetableGrid[key];
-                        return (
-                          <button
-                            key={slot}
-                            type="button"
-                            onClick={() => {
-                              // 클릭 시 수동 체크 토글 가능
-                              setTimetableGrid((prev) => {
-                                const copy = { ...prev };
-                                if (copy[key]) {
-                                  delete copy[key];
-                                } else {
-                                  copy[key] = { color: "#FF5A36", label: "직접 추가" };
-                                }
-                                return copy;
-                              });
-                            }}
-                            title={
-                              cell
-                                ? `${String(hour).padStart(2, "0")}:${slot * 10}~${(slot + 1) * 10} (${cell.label})`
-                                : `${String(hour).padStart(2, "0")}:${slot * 10} 비어 있음 (탭하여 추가)`
-                            }
-                            className={`h-4 rounded-[3px] transition ${
-                              cell
-                                ? "opacity-95 hover:opacity-100 shadow-sm"
-                                : "bg-[#111115] border border-white/[0.04] hover:border-white/[0.15]"
-                            }`}
-                            style={cell ? { backgroundColor: cell.color } : undefined}
-                          />
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "heatmap" && (
-          /* ========================================================== */
-          /* 2. 5겹 동심원 마스터리 링 (1~5회독 누적 조감도) */
-          /* ========================================================== */
-          <div className="space-y-4">
-            {/* 상단 Hero 동심원 허브 */}
-            <div className="p-4 rounded-3xl bg-gradient-to-b from-[#1D1D25] to-[#15151B] border border-white/[0.08] shadow-2xl space-y-4">
-              <div className="flex items-center justify-between gap-2">
-                <div className="space-y-0.5">
-                  <div className="text-xs font-black text-white flex items-center gap-1.5">
-                    <Flame className="w-4 h-4 text-[#FF5A36] fill-[#FF5A36]" />
-                    <span>2026 제29회 48문항 마스터리 링</span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    안쪽(1회독 뼈대)에서 바깥쪽(5회독 완주)으로 링을 채워가세요
-                  </p>
-                </div>
-                <span className="px-2.5 py-1 rounded-full bg-[#FF5A36]/15 border border-[#FF5A36]/35 font-mono text-xs font-black text-[#FF7A59] shrink-0">
-                  {overallProgressPct}%
-                </span>
-              </div>
-
-              <div className="flex flex-col sm:flex-row items-center gap-4">
-                {/* 좌측 대형 5겹 동심원 SVG */}
-                <div className="flex items-center justify-center shrink-0">
-                  <MasteryConcentricRings
-                    variant="hero"
-                    size={184}
-                    tierProgress={overallTierProgress}
-                    selectedTier={focusedHeroTier}
-                    onSelectTier={handleToggleHeroTier}
-                  />
-                </div>
-
-                {/* 우측 1~5회독 레이어 범례 & 인터랙티브 필터 */}
-                <div className="w-full flex-1 space-y-1.5">
-                  {MASTERY_TIER_META.map((meta, idx) => {
-                    const pct = overallTierProgress[idx];
-                    const isFocused = focusedHeroTier === meta.tier;
-
-                    return (
-                      <button
-                        key={meta.tier}
-                        type="button"
-                        onClick={() => handleToggleHeroTier(meta.tier)}
-                        className={`w-full px-2.5 py-1.5 rounded-xl border text-left transition flex items-center gap-2 ${
-                          isFocused
-                            ? "bg-white/[0.08] border-white/30 shadow-sm"
-                            : "bg-[#111116]/80 border-white/[0.05] hover:border-white/[0.14]"
-                        }`}
-                      >
-                        <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0"
-                          style={{
-                            backgroundColor: meta.color,
-                            boxShadow: pct >= 100 ? `0 0 8px ${meta.color}` : undefined,
-                          }}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between text-[10.5px] font-extrabold">
-                            <span className="text-slate-200 truncate">
-                              {meta.title}
-                            </span>
-                            <span
-                              className="font-mono font-black ml-2 shrink-0"
-                              style={{ color: meta.color }}
-                            >
-                              {pct}%
-                            </span>
-                          </div>
-                          <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden mt-1">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{
-                                width: `${pct}%`,
-                                backgroundColor: meta.color,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* 단원별 5겹 동심원 카드 (6단원) */}
-            <div className="space-y-2.5">
-              {chapters.map((ch) => {
-                const summary = calculateChapterMasterySummary(ch.tierProgress);
-                const isThisChapterSelected = selectedHeatmapCell?.chapter.id === ch.id;
-                const activeCardTier = isThisChapterSelected
-                  ? selectedHeatmapCell.tier
-                  : focusedHeroTier;
-
-                return (
-                  <div
-                    key={ch.id}
-                    className={`p-3.5 rounded-2xl border transition space-y-3 ${
-                      isThisChapterSelected
-                        ? "bg-[#1D1B24] border-[#FF5A36]/50 shadow-lg"
-                        : "bg-[#1A1A21] border-white/[0.06]"
-                    }`}
-                  >
-                    {/* 단원 헤더 */}
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="text-xs font-extrabold text-white truncate">
-                          {ch.title}
-                        </div>
-                        <div className="text-[10px] text-slate-400 truncate mt-0.5">
-                          {ch.questionCount}문항 · 핵심: {ch.keyTopics[0]}
-                        </div>
-                      </div>
-                      <span className="px-2 py-0.5 rounded-full bg-[#111116] border border-white/[0.08] text-[10px] font-mono font-black text-slate-200 shrink-0">
-                        {summary.completedRounds}R 완주 · {summary.equivalentRounds}R
-                      </span>
-                    </div>
-
-                    {/* 좌측 동심원 링 + 우측 1~5회독 미니 게이지 레일 */}
-                    <div className="flex items-center gap-3.5">
-                      <MasteryConcentricRings
-                        variant="card"
-                        size={92}
-                        tierProgress={ch.tierProgress}
-                        selectedTier={activeCardTier}
-                        onSelectTier={(tier) => setSelectedHeatmapCell({ chapter: ch, tier })}
-                      />
-
-                      <div className="flex-1 grid grid-cols-1 gap-1.5 min-w-0">
-                        {MASTERY_TIER_META.map((meta, idx) => {
-                          const pct = ch.tierProgress[idx];
-                          const isCellSelected =
-                            isThisChapterSelected && selectedHeatmapCell?.tier === meta.tier;
-                          const isHeroFiltered =
-                            !isThisChapterSelected && focusedHeroTier === meta.tier;
-
-                          return (
-                            <button
-                              key={meta.tier}
-                              type="button"
-                              onClick={() =>
-                                setSelectedHeatmapCell({ chapter: ch, tier: meta.tier })
-                              }
-                              className={`w-full px-2 py-1 rounded-lg border transition flex items-center gap-2 ${
-                                isCellSelected
-                                  ? "bg-white/[0.1] border-white/40"
-                                  : isHeroFiltered
-                                  ? "bg-white/[0.06] border-white/20"
-                                  : "bg-[#121217] border-white/[0.04] hover:border-white/[0.15]"
-                              }`}
-                            >
-                              <span
-                                className="text-[10px] font-mono font-black w-5 text-left shrink-0"
-                                style={{ color: meta.color }}
-                              >
-                                {meta.shortLabel}
-                              </span>
-                              <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                                <div
-                                  className="h-full rounded-full transition-all duration-300"
-                                  style={{
-                                    width: `${pct}%`,
-                                    backgroundColor: meta.color,
-                                  }}
-                                />
-                              </div>
-                              <span
-                                className={`text-[10px] font-mono font-bold w-8 text-right shrink-0 ${
-                                  pct >= 100
-                                    ? "text-white font-black"
-                                    : pct > 0
-                                    ? "text-slate-300"
-                                    : "text-slate-600"
-                                }`}
-                              >
-                                {pct}%
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* 선택된 단원·회독 상세 및 O/X 직결 액션 */}
-                    {isThisChapterSelected && selectedHeatmapCell && (
-                      <div className="pt-2.5 border-t border-white/[0.08] space-y-2">
-                        <div className="flex items-center justify-between text-[11px]">
-                          <span className="font-black text-white">
-                            {MASTERY_TIER_META[selectedHeatmapCell.tier - 1].title} (
-                            {selectedHeatmapCell.tier * 20}%)
-                          </span>
-                          <span
-                            className="font-mono font-black"
-                            style={{
-                              color: MASTERY_TIER_META[selectedHeatmapCell.tier - 1].color,
-                            }}
-                          >
-                            달성률{" "}
-                            {ch.tierProgress[selectedHeatmapCell.tier - 1]}%
-                          </span>
-                        </div>
-                        <p className="text-[10.5px] text-slate-300">
-                          핵심 테마: {ch.keyTopics.join(" · ")}
-                        </p>
-                        <Link
-                          href={`/study/ox?tier=${selectedHeatmapCell.tier}`}
-                          className="w-full py-2.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white font-black text-xs flex items-center justify-center gap-1.5 transition shadow-md shadow-[#FF5A36]/25"
-                        >
-                          <Zap className="w-3.5 h-3.5" />
-                          <span>
-                            {selectedHeatmapCell.tier}회독 3초 컷 O/X 복습 바로 시작
-                          </span>
-                          <ArrowRight className="w-3.5 h-3.5" />
-                        </Link>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {activeTab === "board" && (
-          /* ========================================================== */
-          /* 3. 모바일 원터치 타임블록 보드 (오전 / 오후1 / 오후2) */
-          /* ========================================================== */
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 rounded-2xl bg-[#1A1A21] border border-white/[0.06] text-xs">
-              <span className="font-bold text-slate-300">
-                오늘 할 단원을 타임블록에 배치하세요
+      {/* 상단 플래너 헤더 */}
+      <header className="px-4 py-3 bg-[#16161C] border-b border-white/[0.06] space-y-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <Calendar className="w-4 h-4 text-[#FF5A36] shrink-0" />
+              <h1 className="text-sm font-black text-white truncate">
+                전 범위 회독 플래너
+              </h1>
+              <span className="px-2 py-0.5 rounded-full bg-[#FF5A36]/15 border border-[#FF5A36]/40 font-mono text-[10px] font-black text-[#FF7A59] shrink-0">
+                {dDayToExam >= 0 ? `D-${dDayToExam}` : `D+${Math.abs(dDayToExam)}`}
               </span>
+            </div>
+
+            {/* 적용 중인 교재 칩 -> 클릭 시 교재 탭 이동 */}
+            <Link
+              href="/study/books"
+              className="mt-1 inline-flex items-center gap-1.5 text-[10.5px] font-bold text-slate-300 hover:text-white transition max-w-full"
+            >
+              <BookOpen className="w-3 h-3 text-amber-400 shrink-0" />
+              <span className="truncate">{activeBook.title}</span>
+              <span className="text-[9.5px] text-[#FF7A59] underline shrink-0">교재변경</span>
+            </Link>
+          </div>
+
+          {/* 매트릭스 / 일일 타임테이블 전환 */}
+          <div className="flex items-center bg-[#0D0D11] p-0.5 rounded-xl border border-white/[0.08] text-[10px] font-black shrink-0">
+            <button
+              type="button"
+              onClick={() => setViewMode("matrix")}
+              className={`px-2.5 py-1.5 rounded-lg transition ${
+                viewMode === "matrix" ? "bg-[#FF5A36] text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              목차 매트릭스
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("diary")}
+              className={`px-2.5 py-1.5 rounded-lg transition ${
+                viewMode === "diary" ? "bg-[#FF5A36] text-white" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              일일표
+            </button>
+          </div>
+        </div>
+
+        {viewMode === "matrix" && (
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
+            {/* 1차/2차 필터 & 일괄 접기/펴기 */}
+            <div className="flex items-center gap-1">
+              {(["ALL", "1차", "2차"] as const).map((stage) => (
+                <button
+                  key={stage}
+                  type="button"
+                  onClick={() => setStageFilter(stage)}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-black border transition ${
+                    stageFilter === stage
+                      ? "bg-white text-slate-950 border-white"
+                      : "bg-[#0E0E12] text-slate-400 border-white/[0.08] hover:text-white"
+                  }`}
+                >
+                  {stage === "ALL" ? "전체" : stage}
+                </button>
+              ))}
+
               <button
                 type="button"
-                onClick={handleCarryOverUnfinished}
-                className="px-2.5 py-1 rounded-lg bg-[#FF5A36]/20 text-[#FF7A59] border border-[#FF5A36]/40 text-[11px] font-black flex items-center gap-1 hover:bg-[#FF5A36]/30 transition"
+                onClick={() => setAllSubjectsCollapsed(!allCollapsed)}
+                className="ml-1 px-2 py-1 rounded-lg bg-[#0E0E12] border border-white/[0.08] text-[10px] font-bold text-slate-300 hover:text-white flex items-center gap-1 transition"
               >
-                <RotateCcw className="w-3 h-3" />
-                <span>미완료 자동 이월</span>
+                {allCollapsed ? (
+                  <>
+                    <ChevronsUpDown className="w-3 h-3 text-[#FF7A59]" />
+                    <span>모두 펴기</span>
+                  </>
+                ) : (
+                  <>
+                    <ChevronsDownUp className="w-3 h-3 text-slate-400" />
+                    <span>모두 접기</span>
+                  </>
+                )}
               </button>
             </div>
 
-            {(
-              [
-                { key: "morning", label: "🌅 오전 집중 (07:00~11:30)" },
-                { key: "afternoon1", label: "☀️ 오후 1블록 (13:30~16:30)" },
-                { key: "afternoon2", label: "🌆 오후 2블록 (19:00~22:00)" },
-                { key: "unassigned", label: "📦 대기 단원 (미배치)" },
-              ] as const
-            ).map((block) => {
-              const items = chapters.filter((c) => c.timeBlock === block.key);
-              const totalQ = items.reduce((a, b) => a + b.questionCount, 0);
-              const totalM = items.reduce((a, b) => a + b.estimatedMinutes, 0);
-
-              return (
-                <div
-                  key={block.key}
-                  className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-2.5"
-                >
-                  <div className="flex items-center justify-between text-xs border-b border-white/[0.06] pb-2">
-                    <span className="font-black text-white">{block.label}</span>
-                    <span className="font-mono text-[11px] text-[#FF7A59] font-bold">
-                      {totalQ}문항 · 약 {totalM}분
-                    </span>
-                  </div>
-
-                  {items.length === 0 ? (
-                    <p className="text-[11px] text-slate-500 py-2 text-center">
-                      배치된 단원이 없습니다
-                    </p>
-                  ) : (
-                    <div className="space-y-2">
-                      {items.map((ch) => (
-                        <div
-                          key={ch.id}
-                          className="p-3 rounded-xl bg-[#121216] border border-white/[0.06] space-y-2"
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-xs font-extrabold text-white truncate">
-                              {ch.title}
-                            </span>
-                            <span className="text-[10px] font-mono text-slate-400 shrink-0">
-                              {ch.questionCount}문항 / {ch.estimatedMinutes}분
-                            </span>
-                          </div>
-
-                          {/* 원터치 블록 이동 버튼 */}
-                          <div className="grid grid-cols-4 gap-1 text-[10px] font-bold">
-                            {(
-                              [
-                                { id: "morning", name: "오전" },
-                                { id: "afternoon1", name: "오후1" },
-                                { id: "afternoon2", name: "오후2" },
-                                { id: "unassigned", name: "보류" },
-                              ] as const
-                            ).map((target) => (
-                              <button
-                                key={target.id}
-                                type="button"
-                                onClick={() => moveChapter(ch.id, target.id)}
-                                className={`py-1 rounded-lg transition ${
-                                  ch.timeBlock === target.id
-                                    ? "bg-[#FF5A36] text-white"
-                                    : "bg-white/[0.05] text-slate-400 hover:text-white"
-                                }`}
-                              >
-                                {target.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {/* 날짜 윈도우 이동 */}
+            <div className="flex items-center gap-1 text-[10px] font-bold">
+              <button
+                type="button"
+                onClick={() => setWindowStartOffset((prev) => prev - 7)}
+                className="p-1 rounded-lg bg-[#0E0E12] border border-white/[0.08] text-slate-300 hover:text-white"
+                title="이전 7일"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setWindowStartOffset(-12)}
+                className="px-2 py-1 rounded-lg bg-[#0E0E12] border border-[#FF5A36]/40 text-[#FF7A59] hover:bg-[#FF5A36]/15"
+              >
+                오늘
+              </button>
+              <button
+                type="button"
+                onClick={() => setWindowStartOffset((prev) => prev + 7)}
+                className="p-1 rounded-lg bg-[#0E0E12] border border-white/[0.08] text-slate-300 hover:text-white"
+                title="다음 7일"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         )}
-      </div>
+      </header>
+
+      {viewMode === "matrix" ? (
+        <div className="flex-1 flex flex-col">
+          {/* 상단 요약 바 & 범례 */}
+          <div className="px-4 py-2.5 bg-[#131318] border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+            <div className="flex items-center gap-3 font-bold">
+              <span className="text-slate-300">
+                범위 커버{" "}
+                <strong className="font-mono text-white">
+                  {summaryStats.coveredTopics}/{summaryStats.totalTopics}
+                </strong>
+                <span className="text-[#FF7A59] font-mono ml-1">({summaryStats.coveragePct}%)</span>
+              </span>
+              <span className="text-slate-400">
+                완료 <strong className="text-emerald-300 font-mono">{summaryStats.totalDoneCells}</strong> · 계획{" "}
+                <strong className="text-sky-300 font-mono">{summaryStats.totalPlanCells}</strong>
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2.5 text-[10px] text-slate-400 font-bold">
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm bg-[#FF5A36]" />
+                <span>완료</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm border border-dashed border-[#FF5A36] bg-[#FF5A36]/20" />
+                <span>계획</span>
+              </span>
+              <span className="text-slate-500">셀 탭=입력</span>
+            </div>
+          </div>
+
+          {/* ========================================================== */}
+          {/* 엑셀 스타일 계층 목차 × D-Day 날짜 타임라인 매트릭스 */}
+          {/* ========================================================== */}
+          <div className="flex-1 overflow-x-auto bg-[#0D0D11]">
+            <table className="border-collapse w-max min-w-full text-left select-none">
+              {/* 상단 D-Day + 날짜 고정 헤더 */}
+              <thead className="sticky top-0 z-30 bg-[#16161D]">
+                <tr>
+                  <th className="sticky left-0 z-40 w-[166px] sm:w-[238px] min-w-[166px] sm:min-w-[238px] bg-[#181820] border-b border-r border-white/[0.12] px-2.5 py-2 align-bottom">
+                    <div className="flex items-center justify-between text-[10px] font-black text-slate-300">
+                      <span>차수 · 과목 · 목차</span>
+                      <span className="text-slate-500 font-mono">누적</span>
+                    </div>
+                  </th>
+                  {dateColumns.map((col) => (
+                    <th
+                      key={col.dateISO}
+                      className={`w-[58px] min-w-[58px] border-b border-r border-white/[0.08] px-1 py-1.5 text-center align-middle ${
+                        col.isToday
+                          ? "bg-[#FF5A36]/20 border-x-[#FF5A36]/60"
+                          : col.isFuture
+                          ? "bg-[#13131A]"
+                          : "bg-[#16161D]"
+                      }`}
+                    >
+                      <div
+                        className={`text-[9px] font-mono font-black leading-none ${
+                          col.isToday ? "text-[#FF7A59]" : "text-slate-400"
+                        }`}
+                      >
+                        {col.dDayLabel}
+                      </div>
+                      <div
+                        className={`text-[10px] font-mono font-bold mt-1 leading-none ${
+                          col.isToday
+                            ? "text-white"
+                            : col.dayOfWeek === 0
+                            ? "text-rose-400"
+                            : col.dayOfWeek === 6
+                            ? "text-sky-400"
+                            : "text-slate-300"
+                        }`}
+                      >
+                        {col.mmdd}
+                      </div>
+                      <div className="text-[8.5px] text-slate-500 mt-0.5 leading-none">
+                        {col.isToday ? "오늘" : col.weekday}
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+
+              <tbody>
+                {visibleSubjects.map((subject) => {
+                  const isCollapsed = collapsedSubjectIds.includes(subject.id);
+                  const subjectTopicCount = subject.units.reduce(
+                    (acc, u) => acc + u.topics.length,
+                    0
+                  );
+                  const subjectTotalDone = subject.units.reduce(
+                    (acc, u) =>
+                      acc +
+                      u.topics.reduce((tAcc, t) => tAcc + getTopicDoneCount(t.id), 0),
+                    0
+                  );
+
+                  return (
+                    <SubjectRowsGroup
+                      key={subject.id}
+                      subject={subject}
+                      isCollapsed={isCollapsed}
+                      subjectTopicCount={subjectTopicCount}
+                      subjectTotalDone={subjectTotalDone}
+                      dateColumns={dateColumns}
+                      matrixLogs={matrixLogs}
+                      getTopicDoneCount={getTopicDoneCount}
+                      getSubjectDaySummary={getSubjectDaySummary}
+                      onToggleCollapse={() => toggleSubjectCollapse(subject.id)}
+                      onCellClick={openCellEditor}
+                    />
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* ========================================================== */
+        /* 보조: 일일 24시간 10분 단위 타임테이블 */
+        /* ========================================================== */
+        <div className="px-4 py-4 space-y-4">
+          <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.06] flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-black text-white">
+              <Sparkles className="w-4 h-4 text-[#FF5A36]" />
+              <span>오늘 10분 단위 타임테이블</span>
+            </div>
+            <span className="font-mono text-xs font-black text-[#FF7A59]">
+              {String(Math.floor(totalDiaryMinutes / 60)).padStart(2, "0")}H{" "}
+              {String(totalDiaryMinutes % 60).padStart(2, "0")}M
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-2 shadow-xl">
+            <div className="grid grid-cols-[36px_1fr] gap-2 items-center text-[10px] font-mono font-bold text-slate-500 pb-1 border-b border-white/[0.06]">
+              <div className="text-center">시</div>
+              <div className="grid grid-cols-6 gap-1 text-center">
+                <span>10</span>
+                <span>20</span>
+                <span>30</span>
+                <span>40</span>
+                <span>50</span>
+                <span>60</span>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              {YPT_HOURS.map((hour) => (
+                <div key={hour} className="grid grid-cols-[36px_1fr] gap-2 items-center">
+                  <div className="font-mono text-[10.5px] font-bold text-slate-400 text-center">
+                    {String(hour).padStart(2, "0")}
+                  </div>
+                  <div className="grid grid-cols-6 gap-1">
+                    {[0, 1, 2, 3, 4, 5].map((slot) => {
+                      const key = `${hour}-${slot}`;
+                      const cell = timetableGrid[key];
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          onClick={() => {
+                            setTimetableGrid((prev) => {
+                              const copy = { ...prev };
+                              if (copy[key]) delete copy[key];
+                              else copy[key] = { color: "#FF5A36", label: "직접 추가" };
+                              return copy;
+                            });
+                          }}
+                          className={`h-4 rounded-[3px] transition ${
+                            cell
+                              ? "opacity-95 hover:opacity-100"
+                              : "bg-[#111115] border border-white/[0.04] hover:border-white/[0.15]"
+                          }`}
+                          style={cell ? { backgroundColor: cell.color } : undefined}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================== */}
+      {/* 매트릭스 셀 편집 바텀시트 / 모달 */}
+      {/* ========================================================== */}
+      {editingCell && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
+          <div className="w-full max-w-[420px] rounded-3xl bg-[#181820] border border-white/[0.12] p-5 space-y-4 shadow-2xl">
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="px-2 py-0.5 rounded-md text-[10px] font-black text-white"
+                    style={{ backgroundColor: editingCell.subject.color }}
+                  >
+                    {editingCell.subject.examStage} · {editingCell.subject.shortTitle}
+                  </span>
+                  <span className="text-[11px] font-mono font-bold text-slate-400">
+                    {editingCell.dateISO}
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-white truncate">
+                  {editingCell.unitTitle} &gt; {editingCell.topic.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingCell(null)}
+                className="p-1.5 rounded-full bg-white/[0.06] text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* 상태 선택: 완료 vs 계획 */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setEditingCell({ ...editingCell, status: "done" })}
+                className={`py-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition ${
+                  editingCell.status === "done"
+                    ? "text-white border-white/40 shadow-md"
+                    : "bg-[#111116] text-slate-400 border-white/[0.06]"
+                }`}
+                style={
+                  editingCell.status === "done"
+                    ? { backgroundColor: editingCell.subject.color }
+                    : undefined
+                }
+              >
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>공부 완료 (색칠)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditingCell({ ...editingCell, status: "plan" })}
+                className={`py-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition ${
+                  editingCell.status === "plan"
+                    ? "bg-sky-500/20 text-sky-200 border-sky-400 border-dashed"
+                    : "bg-[#111116] text-slate-400 border-white/[0.06]"
+                }`}
+              >
+                <Clock className="w-3.5 h-3.5" />
+                <span>학습 계획 (예정)</span>
+              </button>
+            </div>
+
+            {/* 셀 키워드 입력 + 퀵 칩 */}
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-bold text-slate-300">
+                셀 표시 키워드 (한눈에 볼 요약 단어)
+              </label>
+              <input
+                type="text"
+                maxLength={14}
+                value={editingCell.keyword}
+                onChange={(e) =>
+                  setEditingCell({ ...editingCell, keyword: e.target.value })
+                }
+                placeholder="예: 간선시설, p.48, O/X"
+                className="w-full px-3 py-2.5 rounded-xl bg-[#101015] border border-white/[0.1] text-xs font-bold text-white focus:outline-none focus:border-[#FF5A36]"
+              />
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {[
+                  editingCell.topic.defaultKeyword,
+                  "기본회독",
+                  "기출풀이",
+                  "O/X오답",
+                  "암기점검",
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setEditingCell({ ...editingCell, keyword: preset })}
+                    className="px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.12] text-[10px] font-bold text-slate-300"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 학습 시간 */}
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold text-slate-300">학습 시간</span>
+              <div className="flex items-center gap-1">
+                {[20, 30, 45, 60].map((min) => (
+                  <button
+                    key={min}
+                    type="button"
+                    onClick={() => setEditingCell({ ...editingCell, minutes: min })}
+                    className={`px-2 py-1 rounded-lg text-[10.5px] font-mono font-bold transition ${
+                      editingCell.minutes === min
+                        ? "bg-[#FF5A36] text-white"
+                        : "bg-[#101015] text-slate-400 border border-white/[0.06]"
+                    }`}
+                  >
+                    {min}분
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* 액션 버튼 */}
+            <div className="grid grid-cols-[auto_1fr] gap-2 pt-1">
+              <button
+                type="button"
+                onClick={handleDeleteEditingCell}
+                className="px-3 py-2.5 rounded-xl bg-rose-950/50 border border-rose-500/30 text-rose-300 text-xs font-bold flex items-center gap-1 hover:bg-rose-950"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>비우기</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveEditingCell}
+                className="py-2.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white font-black text-xs transition"
+              >
+                매트릭스에 저장
+              </button>
+            </div>
+
+            <Link
+              href={`/?topic=${editingCell.topic.id}`}
+              className="w-full py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 border border-white/[0.06]"
+            >
+              <Play className="w-3 h-3 text-[#FF5A36] fill-[#FF5A36]" />
+              <span>이 목차로 지금 집중 타이머 바로 시작</span>
+            </Link>
+          </div>
+        </div>
+      )}
     </MobileAppShell>
+  );
+}
+
+interface SubjectRowsGroupProps {
+  subject: StudySubjectNode;
+  isCollapsed: boolean;
+  subjectTopicCount: number;
+  subjectTotalDone: number;
+  dateColumns: Array<{ dateISO: string; isToday: boolean }>;
+  matrixLogs: Record<string, { keyword: string; status: MatrixCellStatus; minutes?: number }>;
+  getTopicDoneCount: (topicId: string) => number;
+  getSubjectDaySummary: (
+    subject: StudySubjectNode,
+    dateISO: string
+  ) => { doneCount: number; planCount: number; firstKeyword: string };
+  onToggleCollapse: () => void;
+  onCellClick: (
+    subject: StudySubjectNode,
+    unitTitle: string,
+    topic: StudyTopicNode,
+    dateISO: string
+  ) => void;
+}
+
+function SubjectRowsGroup({
+  subject,
+  isCollapsed,
+  subjectTopicCount,
+  subjectTotalDone,
+  dateColumns,
+  matrixLogs,
+  getTopicDoneCount,
+  getSubjectDaySummary,
+  onToggleCollapse,
+  onCellClick,
+}: SubjectRowsGroupProps) {
+  return (
+    <>
+      {/* 과목 그룹 헤더 행 (접기/펴기 버튼 + 접힘 시 날짜별 요약 셀) */}
+      <tr className="border-b border-white/[0.1]">
+        <td
+          className="sticky left-0 z-20 border-r border-white/[0.12] px-2 py-2 bg-[#16161F]"
+          style={{ boxShadow: `inset 4px 0 0 ${subject.color}` }}
+        >
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="w-full flex items-center justify-between gap-1.5 text-left group"
+          >
+            <div className="flex items-center gap-1.5 min-w-0">
+              {isCollapsed ? (
+                <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              ) : (
+                <ChevronDown className="w-3.5 h-3.5 text-white shrink-0" />
+              )}
+              <span
+                className="px-1.5 py-0.5 rounded text-[9px] font-black text-white shrink-0"
+                style={{ backgroundColor: subject.color }}
+              >
+                {subject.examStage}
+              </span>
+              <span className="text-[11px] font-black text-white truncate group-hover:underline">
+                {subject.title}
+              </span>
+            </div>
+            <span className="text-[9.5px] font-mono font-bold text-slate-400 shrink-0">
+              {isCollapsed ? `${subjectTopicCount}목차 · ` : ""}
+              <strong style={{ color: subject.color }}>{subjectTotalDone}R</strong>
+            </span>
+          </button>
+        </td>
+
+        {/* 접힌 상태에서는 과목 헤더 줄에 날짜별 압축 요약 표시, 펼친 상태에서는 은은한 과목 밴드 */}
+        {dateColumns.map((col) => {
+          const summary = getSubjectDaySummary(subject, col.dateISO);
+          const hasDone = summary.doneCount > 0;
+          const hasPlan = summary.planCount > 0;
+
+          return (
+            <td
+              key={col.dateISO}
+              className={`border-r border-white/[0.06] px-0.5 py-1 text-center align-middle ${
+                col.isToday ? "bg-[#FF5A36]/[0.06]" : "bg-[#13131A]"
+              }`}
+            >
+              {isCollapsed ? (
+                hasDone ? (
+                  <button
+                    type="button"
+                    onClick={onToggleCollapse}
+                    className="w-full py-1 rounded text-[9px] font-black text-white truncate px-0.5"
+                    style={{ backgroundColor: subject.color }}
+                    title={`${subject.title} (${col.dateISO}): ${summary.doneCount}개 완료`}
+                  >
+                    {summary.doneCount > 1 ? `${summary.doneCount}건` : summary.firstKeyword}
+                  </button>
+                ) : hasPlan ? (
+                  <button
+                    type="button"
+                    onClick={onToggleCollapse}
+                    className="w-full py-1 rounded border border-dashed text-[9px] font-bold truncate px-0.5"
+                    style={{
+                      borderColor: subject.color,
+                      color: subject.color,
+                      backgroundColor: `${subject.color}1F`,
+                    }}
+                  >
+                    계획{summary.planCount}
+                  </button>
+                ) : (
+                  <span className="text-[9px] text-slate-700">·</span>
+                )
+              ) : (
+                <div
+                  className="h-2 w-full rounded-sm opacity-25"
+                  style={{ backgroundColor: subject.color }}
+                />
+              )}
+            </td>
+          );
+        })}
+      </tr>
+
+      {/* 펼쳐진 상태: 대단원 + 세부 목차 행 렌더링 */}
+      {!isCollapsed &&
+        subject.units.map((unit) =>
+          unit.topics.map((topic, tIdx) => {
+            const doneCount = getTopicDoneCount(topic.id);
+
+            return (
+              <tr
+                key={topic.id}
+                className="border-b border-white/[0.05] hover:bg-white/[0.02] transition-colors"
+              >
+                {/* 좌측 고정 목차명 */}
+                <td
+                  className="sticky left-0 z-10 bg-[#111116] border-r border-white/[0.12] px-2.5 py-1.5"
+                  style={{ boxShadow: `inset 4px 0 0 ${subject.color}88` }}
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <div className="min-w-0">
+                      {tIdx === 0 && (
+                        <div className="text-[8.5px] font-extrabold text-slate-500 truncate leading-tight">
+                          {unit.title}
+                        </div>
+                      )}
+                      <div className="text-[10.5px] font-bold text-slate-200 truncate leading-tight">
+                        {topic.title}
+                      </div>
+                    </div>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-black shrink-0 ${
+                        doneCount === 0
+                          ? "bg-white/[0.04] text-slate-600"
+                          : "text-white"
+                      }`}
+                      style={
+                        doneCount > 0
+                          ? { backgroundColor: `${subject.color}33`, color: subject.color }
+                          : undefined
+                      }
+                    >
+                      {doneCount}R
+                    </span>
+                  </div>
+                </td>
+
+                {/* 날짜별 교차 셀 */}
+                {dateColumns.map((col) => {
+                  const cell = matrixLogs[makeMatrixKey(topic.id, col.dateISO)];
+
+                  return (
+                    <td
+                      key={col.dateISO}
+                      className={`border-r border-white/[0.05] p-0.5 text-center align-middle ${
+                        col.isToday ? "bg-[#FF5A36]/[0.07]" : ""
+                      }`}
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onCellClick(subject, unit.title, topic, col.dateISO)
+                        }
+                        className={`w-full h-7 rounded-[4px] px-0.5 text-[9px] leading-tight flex items-center justify-center truncate transition ${
+                          cell
+                            ? cell.status === "done"
+                              ? "text-white font-black shadow-sm hover:brightness-110"
+                              : "border border-dashed font-bold hover:brightness-110"
+                            : "hover:bg-white/[0.08] text-transparent hover:text-slate-500"
+                        }`}
+                        style={
+                          cell
+                            ? cell.status === "done"
+                              ? { backgroundColor: subject.color }
+                              : {
+                                  borderColor: subject.color,
+                                  backgroundColor: `${subject.color}24`,
+                                  color: "#E2E8F0",
+                                }
+                            : undefined
+                        }
+                        title={
+                          cell
+                            ? `${topic.title} (${col.dateISO}): ${cell.keyword} (${
+                                cell.status === "done" ? "완료" : "계획"
+                              })`
+                            : `${topic.title} (${col.dateISO}) 탭하여 기록/계획`
+                        }
+                      >
+                        {cell ? cell.keyword : "+"}
+                      </button>
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })
+        )}
+    </>
   );
 }

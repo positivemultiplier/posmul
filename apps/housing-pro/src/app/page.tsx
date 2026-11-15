@@ -4,10 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import {
   Play,
-  Flame,
   KeyRound,
-  Sparkles,
-  ShieldCheck,
   GraduationCap,
   Briefcase,
   Target,
@@ -15,6 +12,9 @@ import {
   Camera,
   Zap,
   ChevronRight,
+  ChevronDown,
+  BookOpen,
+  TableProperties,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { YptFocusOverlay } from "@/components/mobile/ypt-focus-overlay";
@@ -29,27 +29,8 @@ import { StudyConeStoreModal } from "@/components/study/study-cone-store-modal";
 import { UserStudyConeItem, STUDY_CONE_CATALOG } from "@/data/mock-study-cones";
 import { getUserStudyConesAction } from "@/app/actions/study-cone.actions";
 import { ContextualPredictionWidget } from "@/components/prediction/contextual-prediction-widget";
-import { REAL_2026_CHAPTERS } from "@/data/mock-exam-chapters";
-import {
-  MasteryConcentricRings,
-  MASTERY_TIER_META,
-  calculateChapterMasterySummary,
-} from "@/components/study/mastery-concentric-rings";
-
-interface ChapterTimerMeta {
-  color: string;
-  reviewWaiting: number;
-  initialSeconds: number;
-}
-
-const CHAPTER_TIMER_META: Record<string, ChapterTimerMeta> = {
-  "chap-1-housing-law": { color: "#FF5A36", reviewWaiting: 3, initialSeconds: 4360 }, // 01:12:40
-  "chap-2-apt-mgmt-law": { color: "#38BDF8", reviewWaiting: 5, initialSeconds: 3738 }, // 01:02:18
-  "chap-3-building-law": { color: "#A855F7", reviewWaiting: 2, initialSeconds: 1820 }, // 00:30:20
-  "chap-4-safety-fire-law": { color: "#10B981", reviewWaiting: 4, initialSeconds: 2100 }, // 00:35:00
-  "chap-5-rental-redevelopment": { color: "#F59E0B", reviewWaiting: 1, initialSeconds: 780 }, // 00:13:00
-  "chap-6-labor-equipment": { color: "#EC4899", reviewWaiting: 6, initialSeconds: 540 }, // 00:09:00
-};
+import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
+import { diffDaysISO, findTopicMetaInSubjects } from "@/data/study-textbooks";
 
 function formatHHMMSS(totalSec: number, spaced = false): string {
   const h = Math.floor(totalSec / 3600);
@@ -60,10 +41,21 @@ function formatHHMMSS(totalSec: number, spaced = false): string {
 }
 
 export default function HousingProDashboardPage() {
+  const {
+    todayISO,
+    examDate,
+    activeBook,
+    subjects,
+    matrixLogs,
+    recordStudySession,
+  } = useStudyCurriculum();
+
   // 모드 전환: 수험생 모드(열품타) vs 현직 관리소장 Pro View
   const [isProView, setIsProView] = useState(false);
-  // 열품타 내부 3개 서브탭
+  // 타이머 화면 내부 서브탭
   const [activeSubTab, setActiveSubTab] = useState<"timer" | "group" | "predict">("timer");
+  // 타이머 목록에서 펼쳐진 과목 ID (기본 첫 2과목 펼침)
+  const [expandedSubjectIds, setExpandedSubjectIds] = useState<string[]>([]);
 
   // 보유 PMP 및 정품 시리얼 인증 상태
   const [userPmpBalance, setUserPmpBalance] = useState<number>(1000);
@@ -83,17 +75,10 @@ export default function HousingProDashboardPage() {
   });
   const [isConeModalOpen, setIsConeModalOpen] = useState(false);
 
-  // 단원별 누적 시간 상태 (기본 합계 = 13,338초 = 03:42:18)
-  const [chapterSeconds, setChapterSeconds] = useState<Record<string, number>>(() => {
-    const init: Record<string, number> = {};
-    for (const ch of REAL_2026_CHAPTERS) {
-      init[ch.id] = CHAPTER_TIMER_META[ch.id]?.initialSeconds ?? 0;
-    }
-    return init;
-  });
-
-  // 전체화면 몰입 집중 모드 대상 단원
-  const [focusChapterId, setFocusChapterId] = useState<string | null>(null);
+  // 목차별 오늘 추가 집중 시간 (초)
+  const [sessionExtraSeconds, setSessionExtraSeconds] = useState<Record<string, number>>({});
+  // 전체화면 몰입 집중 모드 대상 목차 ID
+  const [focusTopicId, setFocusTopicId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   // Pro View 단지 프로필 상태
@@ -109,24 +94,47 @@ export default function HousingProDashboardPage() {
     savedFineAmountKrw: 48000000,
   });
 
-  // 초기 마운트: ?mode=pro 감지 & 시리얼/스터디콘 상태 로드
+  // 기본으로 과목 1개(주택법 또는 첫 과목) 펼쳐두기
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
+    if (subjects.length > 0 && expandedSubjectIds.length === 0) {
+      const target = subjects.find((s) => s.examStage === "2차") || subjects[0];
+      setExpandedSubjectIds([target.id]);
+    }
+  }, [subjects, expandedSubjectIds.length]);
+
+  // 초기 마운트: ?mode=pro, ?topic=... 감지 & 시리얼/스터디콘 상태 로드
+  useEffect(() => {
+    if (typeof globalThis !== "undefined" && "location" in globalThis) {
+      const params = new globalThis.URLSearchParams(globalThis.location.search);
       if (params.get("mode") === "pro") {
         setIsProView(true);
       }
+      const topicParam = params.get("topic");
+      if (topicParam) {
+        const found = findTopicMetaInSubjects(subjects, topicParam);
+        if (found) {
+          setExpandedSubjectIds((prev) =>
+            prev.includes(found.subject.id) ? prev : [...prev, found.subject.id]
+          );
+          setFocusTopicId(topicParam);
+        }
+      }
 
-      const cached = localStorage.getItem("housing_pro_serial_auth");
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          if (parsed.serialCode) {
-            setIsSerialVerified(true);
-            setVerifiedBookTitle(parsed.bookTitle || null);
+      if ("localStorage" in globalThis) {
+        const cached = globalThis.localStorage.getItem("housing_pro_serial_auth");
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached) as {
+              serialCode?: string;
+              bookTitle?: string;
+            };
+            if (parsed.serialCode) {
+              setIsSerialVerified(true);
+              setVerifiedBookTitle(parsed.bookTitle || null);
+            }
+          } catch {
+            // ignore
           }
-        } catch (e) {
-          console.error(e);
         }
       }
     }
@@ -143,34 +151,67 @@ export default function HousingProDashboardPage() {
         setEquippedCone(res.equippedCone);
       }
     });
-  }, []);
+  }, [subjects]);
 
-  // 총 공부 시간 & 목표(06:00:00 = 21,600초) 달성률
+  // 과목별 누적 초 계산 (매트릭스 오늘 완료 분 + 현재 세션 추가 초 + 기본 데모 시드)
+  const subjectSecondsMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const subj of subjects) {
+      let totalSec = 0;
+      for (const unit of subj.units) {
+        for (const topic of unit.topics) {
+          const todayLog = matrixLogs[makeMatrixKey(topic.id, todayISO)];
+          if (todayLog?.status === "done" && todayLog.minutes) {
+            totalSec += todayLog.minutes * 60;
+          }
+          totalSec += sessionExtraSeconds[topic.id] || 0;
+        }
+      }
+      map[subj.id] = totalSec;
+    }
+    return map;
+  }, [subjects, matrixLogs, todayISO, sessionExtraSeconds]);
+
+  // 오늘 총 순공시간 (최소 데모 기준 + 실시간 누적)
   const totalStudySeconds = useMemo(() => {
-    return Object.values(chapterSeconds).reduce((acc, sec) => acc + sec, 0);
-  }, [chapterSeconds]);
+    const sum = Object.values(subjectSecondsMap).reduce((acc, s) => acc + s, 0);
+    return sum > 0 ? sum : 7200; // 오늘 기록 없을 시 기본 02:00:00 표시
+  }, [subjectSecondsMap]);
 
-  const targetSeconds = 21600; // 06:00:00
+  const targetSeconds = 21600; // 목표 06:00:00
   const goalPct = Math.min(100, Math.round((totalStudySeconds / targetSeconds) * 100));
+  const dDayToExam = useMemo(() => diffDaysISO(todayISO, examDate), [todayISO, examDate]);
 
   const currentConeSpec =
     STUDY_CONE_CATALOG.find((s) => s.coneType === equippedCone.coneType) ||
     STUDY_CONE_CATALOG[0];
 
-  const activeFocusChapter = REAL_2026_CHAPTERS.find((c) => c.id === focusChapterId);
+  const activeFocusMeta = useMemo(
+    () => (focusTopicId ? findTopicMetaInSubjects(subjects, focusTopicId) : null),
+    [focusTopicId, subjects]
+  );
+
+  const toggleExpandSubject = (subjectId: string) => {
+    setExpandedSubjectIds((prev) =>
+      prev.includes(subjectId) ? prev.filter((id) => id !== subjectId) : [...prev, subjectId]
+    );
+  };
 
   const handleConfirmValidFocusTime = (elapsedSeconds: number) => {
-    if (!focusChapterId) return;
-    setChapterSeconds((prev) => ({
+    if (!focusTopicId) return;
+    setSessionExtraSeconds((prev) => ({
       ...prev,
-      [focusChapterId]: (prev[focusChapterId] || 0) + elapsedSeconds,
+      [focusTopicId]: (prev[focusTopicId] || 0) + elapsedSeconds,
     }));
+    // 플래너 매트릭스 오늘 날짜에 자동 기록!
+    recordStudySession(focusTopicId, elapsedSeconds);
+
     setUserPmpBalance((prev) => prev + 10);
     setToastMsg(
-      `유효 집중 시간 +${Math.max(1, Math.round(elapsedSeconds / 60))}분 확정! (+10 PMP 적립)`
+      `집중 완료! 플래너 매트릭스 오늘 칸에 자동 기록되었습니다 (+10 PMP)`
     );
-    setFocusChapterId(null);
-    setTimeout(() => setToastMsg(null), 4000);
+    setFocusTopicId(null);
+    globalThis.setTimeout(() => setToastMsg(null), 4000);
   };
 
   const handleDefendSuccess = (amountKrw: number) => {
@@ -183,7 +224,7 @@ export default function HousingProDashboardPage() {
 
   return (
     <MobileAppShell isProMode={isProView} onSelectProMode={setIsProView}>
-      {/* 📱 상단 앱 헤더 */}
+      {/* 상단 앱 헤더 */}
       <header
         className={`px-4 py-3 flex items-center justify-between gap-2 border-b border-white/[0.06] ${
           isProView ? "bg-[#0D1322]" : "bg-[#16161C]"
@@ -197,7 +238,11 @@ export default function HousingProDashboardPage() {
                 : "bg-[#FF5A36]/20 text-[#FF7A59] border border-[#FF5A36]/40"
             }`}
           >
-            {isProView ? "PRO 소장" : "D-142 제29회 2차"}
+            {isProView
+              ? "PRO 소장"
+              : dDayToExam >= 0
+              ? `D-${dDayToExam} 제29회`
+              : `D+${Math.abs(dDayToExam)}`}
           </span>
 
           {!isProView && (
@@ -264,43 +309,44 @@ export default function HousingProDashboardPage() {
 
       {!isProView ? (
         /* ========================================================== */
-        /* 1. 열품타(YPT) 감성 모바일 수험생 홈 화면 */
+        /* 1. 수험생 집중 타이머 홈 (교재 목차 -> 플래너 매트릭스 자동 연동) */
         /* ========================================================== */
         <div className="px-4 py-4 space-y-4">
-          {/* 🔥 열품타 히어로 스톱워치 존 */}
+          {/* 열품타 히어로 스톱워치 존 */}
           <section className="rounded-3xl bg-gradient-to-b from-[#1D1D24] to-[#141419] border border-white/[0.08] p-5 text-center space-y-3 shadow-2xl relative overflow-hidden">
-            {/* 은은한 오렌지 글로우 */}
             <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-56 h-32 bg-[#FF5A36]/15 blur-3xl pointer-events-none" />
 
-            {/* 진화 스터디콘 캐릭터 아바타 (클릭 시 상점 모달) */}
-            <div className="flex justify-center">
+            <div className="flex items-center justify-center gap-2 flex-wrap">
               <button
                 type="button"
                 onClick={() => setIsConeModalOpen(true)}
-                className="group relative inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#121216] border border-[#FF5A36]/40 hover:border-[#FF5A36] transition shadow-md"
+                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#121216] border border-[#FF5A36]/40 hover:border-[#FF5A36] transition shadow-md"
               >
-                <span className="text-xl animate-bounce">{currentConeSpec.badgeEmoji}</span>
-                <div className="text-left">
-                  <div className="text-[11px] font-black text-white flex items-center gap-1">
-                    <span>Lv.{equippedCone.currentLevel}</span>
-                    <span className="text-[#FF7A59]">{currentConeSpec.name}</span>
-                  </div>
-                </div>
-                <Flame className="w-3.5 h-3.5 text-[#FF5A36] fill-[#FF5A36] animate-pulse" />
+                <span className="text-base">{currentConeSpec.badgeEmoji}</span>
+                <span className="text-[10.5px] font-black text-white">
+                  Lv.{equippedCone.currentLevel}{" "}
+                  <span className="text-[#FF7A59]">{currentConeSpec.name}</span>
+                </span>
               </button>
+
+              <Link
+                href="/study/books"
+                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[10px] font-bold text-slate-300 max-w-[200px]"
+              >
+                <BookOpen className="w-3 h-3 text-amber-400 shrink-0" />
+                <span className="truncate">{activeBook.badge}</span>
+              </Link>
             </div>
 
-            {/* 초대형 디지털 스톱워치 */}
             <div className="space-y-1">
               <div className="text-[11px] font-bold text-slate-400 tracking-wide">
-                오늘 총 순공시간
+                오늘 총 순공시간 (매트릭스 자동 반영)
               </div>
-              <div className="font-mono text-5xl font-black tracking-wider text-white tabular-nums">
+              <div className="font-mono text-4xl sm:text-5xl font-black tracking-wider text-white tabular-nums">
                 {formatHHMMSS(totalStudySeconds, true)}
               </div>
             </div>
 
-            {/* 목표(06:00:00) 달성률 오렌지 게이지 바 */}
             <div className="space-y-1.5 pt-1">
               <div className="flex items-center justify-between text-[11px] font-bold">
                 <span className="text-slate-400 flex items-center gap-1">
@@ -320,7 +366,7 @@ export default function HousingProDashboardPage() {
             </div>
           </section>
 
-          {/* 🔀 3개 내부 서브탭 */}
+          {/* 서브탭 */}
           <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[#1A1A21] border border-white/[0.06] text-[11px] font-black">
             <button
               type="button"
@@ -331,7 +377,7 @@ export default function HousingProDashboardPage() {
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              ⏱️ 과목 타이머
+              ⏱️ 목차 타이머
             </button>
             <button
               type="button"
@@ -342,7 +388,7 @@ export default function HousingProDashboardPage() {
                   : "text-slate-400 hover:text-white"
               }`}
             >
-              🔥 그룹 불빛 (8/12)
+              🔥 그룹 불빛
             </button>
             <button
               type="button"
@@ -357,107 +403,134 @@ export default function HousingProDashboardPage() {
             </button>
           </div>
 
-          {/* 서브탭 컨텐츠 */}
           {activeSubTab === "timer" && (
             <div className="space-y-2.5">
-              {/* 과목별 한 줄 재생 리스트 (5겹 회독 동심원 링 포함) */}
-              {REAL_2026_CHAPTERS.map((chapter) => {
-                const meta = CHAPTER_TIMER_META[chapter.id] || {
-                  color: "#FF5A36",
-                  reviewWaiting: 2,
-                  initialSeconds: 0,
-                };
-                const sec = chapterSeconds[chapter.id] || 0;
-                const mastery = calculateChapterMasterySummary(chapter.tierProgress);
-                const activeTierMeta = MASTERY_TIER_META[mastery.activeTier - 1];
+              {/* 선택된 교재의 과목 > 세부목차 아코디언 타이머 */}
+              {subjects.map((subject) => {
+                const isExpanded = expandedSubjectIds.includes(subject.id);
+                const subjSeconds = subjectSecondsMap[subject.id] || 0;
+                const topicList = subject.units.flatMap((u) =>
+                  u.topics.map((t) => ({ unitTitle: u.title, topic: t }))
+                );
 
                 return (
                   <div
-                    key={chapter.id}
-                    className="px-3.5 py-3 rounded-2xl bg-[#1A1A21] border border-white/[0.06] hover:border-[#FF5A36]/40 flex items-center justify-between gap-3 transition"
+                    key={subject.id}
+                    className="rounded-2xl bg-[#1A1A21] border border-white/[0.06] overflow-hidden"
                   >
-                    {/* 좌측 5겹 회독 동심원 링 + 단원명 + 회독/복습 대기 */}
-                    <div className="flex items-center gap-3 min-w-0">
-                      <Link
-                        href="/study/planner?tab=heatmap"
-                        title="회독 마스터리 링 자세히 보기"
-                        className="shrink-0 hover:scale-105 transition-transform"
-                      >
-                        <MasteryConcentricRings
-                          variant="mini"
-                          size={40}
-                          tierProgress={chapter.tierProgress}
-                        />
-                      </Link>
-                      <div className="min-w-0">
-                        <div className="text-xs font-extrabold text-white truncate">
-                          {chapter.title}
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[10.5px] text-slate-400 pt-0.5 flex-wrap">
-                          <span
-                            className={`px-1.5 py-0.2 rounded-md font-mono font-black text-[9.5px] border ${activeTierMeta.badgeBgClass} ${activeTierMeta.badgeTextClass} ${activeTierMeta.borderClass}`}
-                          >
-                            {mastery.activeTier}R {chapter.tierProgress[mastery.activeTier - 1]}%
-                          </span>
-                          <span>·</span>
-                          <span>{chapter.questionCount}문항</span>
-                          <span>·</span>
-                          <Link
-                            href="/study/ox"
-                            className="text-amber-300 font-bold hover:underline"
-                          >
-                            ★/X 복습 {meta.reviewWaiting}
-                          </Link>
-                        </div>
+                    {/* 과목 헤더 (접기/펴기) */}
+                    <button
+                      type="button"
+                      onClick={() => toggleExpandSubject(subject.id)}
+                      className="w-full px-3.5 py-3 flex items-center justify-between gap-2 hover:bg-white/[0.02] transition"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {isExpanded ? (
+                          <ChevronDown className="w-4 h-4 text-slate-300 shrink-0" />
+                        ) : (
+                          <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                        )}
+                        <span
+                          className="px-1.5 py-0.5 rounded text-[9.5px] font-black text-white shrink-0"
+                          style={{ backgroundColor: subject.color }}
+                        >
+                          {subject.examStage}
+                        </span>
+                        <span className="text-xs font-black text-white truncate">
+                          {subject.title}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-bold shrink-0">
+                          ({topicList.length})
+                        </span>
                       </div>
-                    </div>
 
-                    {/* 우측 누적시간 + 오렌지 원형 [▶] 재생 버튼 */}
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="font-mono text-xs font-bold text-slate-200 tabular-nums">
-                        {formatHHMMSS(sec)}
+                      <span className="font-mono text-xs font-bold text-slate-300 tabular-nums shrink-0">
+                        {formatHHMMSS(subjSeconds)}
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setFocusChapterId(chapter.id)}
-                        className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF5A36] to-[#FF8008] hover:scale-105 text-white flex items-center justify-center shadow-[0_4px_14px_rgba(255,90,54,0.4)] transition"
-                        aria-label={`${chapter.title} 집중 시작`}
-                      >
-                        <Play className="w-4 h-4 fill-white ml-0.5" />
-                      </button>
-                    </div>
+                    </button>
+
+                    {/* 세부 목차 재생 리스트 */}
+                    {isExpanded && (
+                      <div className="px-3 pb-3 pt-1 space-y-1.5 border-t border-white/[0.05] bg-[#14141A]">
+                        {topicList.map(({ unitTitle, topic }) => {
+                          const todayCell = matrixLogs[makeMatrixKey(topic.id, todayISO)];
+                          let doneRounds = 0;
+                          for (const [k, v] of Object.entries(matrixLogs)) {
+                            if (k.startsWith(`${topic.id}::`) && v.status === "done") {
+                              doneRounds += 1;
+                            }
+                          }
+
+                          return (
+                            <div
+                              key={topic.id}
+                              className="px-3 py-2 rounded-xl bg-[#1A1A22] border border-white/[0.05] flex items-center justify-between gap-2"
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[9.5px] font-bold text-slate-400 truncate">
+                                    {unitTitle}
+                                  </span>
+                                  <span
+                                    className="px-1.5 py-0.2 rounded text-[9px] font-mono font-black"
+                                    style={{
+                                      backgroundColor: `${subject.color}25`,
+                                      color: subject.color,
+                                    }}
+                                  >
+                                    {doneRounds}R
+                                  </span>
+                                  {todayCell?.status === "done" && (
+                                    <span className="text-[9px] font-black text-emerald-400">
+                                      오늘완료
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-[11.5px] font-extrabold text-white truncate mt-0.5">
+                                  {topic.title}
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => setFocusTopicId(topic.id)}
+                                className="w-8 h-8 rounded-full text-white flex items-center justify-center shadow-md hover:scale-105 transition shrink-0"
+                                style={{ backgroundColor: subject.color }}
+                                aria-label={`${topic.title} 집중 시작`}
+                              >
+                                <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 );
               })}
 
-              {/* 퀵 액션 스트립: AI 스캔 & 3초 O/X */}
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              {/* 퀵 액션 스트립 */}
+              <div className="grid grid-cols-3 gap-2 pt-1">
+                <Link
+                  href="/study/planner"
+                  className="p-2.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-[#FF5A36] flex flex-col items-center gap-1 text-center transition"
+                >
+                  <TableProperties className="w-4 h-4 text-[#FF5A36]" />
+                  <span className="text-[10.5px] font-black text-white">매트릭스</span>
+                </Link>
                 <Link
                   href="/scan"
-                  className="p-3 rounded-2xl bg-[#1A1A21] border border-[#FF5A36]/30 hover:border-[#FF5A36] flex items-center justify-between transition"
+                  className="p-2.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-[#FF5A36] flex flex-col items-center gap-1 text-center transition"
                 >
-                  <div className="flex items-center gap-2">
-                    <Camera className="w-4 h-4 text-[#FF5A36]" />
-                    <div className="text-left">
-                      <div className="text-[11px] font-black text-white">종이책 AI 스캔</div>
-                      <div className="text-[10px] text-amber-300 font-bold">+40 PMP 적립</div>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                  <Camera className="w-4 h-4 text-amber-400" />
+                  <span className="text-[10.5px] font-black text-white">AI 스캔</span>
                 </Link>
-
                 <Link
                   href="/study/ox"
-                  className="p-3 rounded-2xl bg-[#1A1A21] border border-sky-500/30 hover:border-sky-400 flex items-center justify-between transition"
+                  className="p-2.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-sky-400 flex flex-col items-center gap-1 text-center transition"
                 >
-                  <div className="flex items-center gap-2">
-                    <Zap className="w-4 h-4 text-sky-400" />
-                    <div className="text-left">
-                      <div className="text-[11px] font-black text-white">3초 컷 O/X 덱</div>
-                      <div className="text-[10px] text-sky-300 font-bold">240선지 복습</div>
-                    </div>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                  <Zap className="w-4 h-4 text-sky-400" />
+                  <span className="text-[10.5px] font-black text-white">3초 O/X</span>
                 </Link>
               </div>
             </div>
@@ -472,7 +545,6 @@ export default function HousingProDashboardPage() {
 
           {activeSubTab === "predict" && (
             <div className="space-y-3">
-              {/* 정품 시리얼 등록 모바일 카드 */}
               <div className="p-4 rounded-2xl bg-[#1A1A21] border border-amber-500/30 flex items-center justify-between gap-3">
                 <div className="space-y-0.5">
                   <div className="text-xs font-black text-white flex items-center gap-1.5">
@@ -500,7 +572,6 @@ export default function HousingProDashboardPage() {
                 )}
               </div>
 
-              {/* 상시 예측 마켓 위젯 */}
               <ContextualPredictionWidget
                 userPmpBalance={userPmpBalance}
                 onBalanceChange={setUserPmpBalance}
@@ -510,7 +581,7 @@ export default function HousingProDashboardPage() {
         </div>
       ) : (
         /* ========================================================== */
-        /* 2. Pro View 모드 (현직 소장 업무용: 게이미피케이션 일체 숨김) */
+        /* 2. Pro View 모드 (현직 소장 업무용) */
         /* ========================================================== */
         <div className="px-4 py-4 space-y-4">
           <ComplexProfileBar
@@ -525,18 +596,20 @@ export default function HousingProDashboardPage() {
 
       {/* 열품타 전체화면 몰입 집중 모드 오버레이 */}
       <YptFocusOverlay
-        isOpen={Boolean(focusChapterId)}
-        subjectTitle={activeFocusChapter?.title || ""}
-        subjectColor={
-          (focusChapterId && CHAPTER_TIMER_META[focusChapterId]?.color) || "#FF5A36"
+        isOpen={Boolean(focusTopicId)}
+        subjectTitle={
+          activeFocusMeta
+            ? `${activeFocusMeta.subject.shortTitle} · ${activeFocusMeta.topic.title}`
+            : ""
         }
+        subjectColor={activeFocusMeta?.subject.color || "#FF5A36"}
         coneEmoji={currentConeSpec.badgeEmoji}
         coneLevel={equippedCone.currentLevel}
         onConfirmValidTime={handleConfirmValidFocusTime}
-        onCancel={() => setFocusChapterId(null)}
+        onCancel={() => setFocusTopicId(null)}
       />
 
-      {/* 정품 시리얼 등록 모달 (z-50) */}
+      {/* 정품 시리얼 등록 모달 */}
       <SerialRegisterModal
         isOpen={isSerialModalOpen}
         onClose={() => setIsSerialModalOpen(false)}
@@ -546,7 +619,7 @@ export default function HousingProDashboardPage() {
         }}
       />
 
-      {/* 진화 스터디콘 상점 & 도감 모달 (z-50) */}
+      {/* 진화 스터디콘 상점 모달 */}
       <StudyConeStoreModal
         isOpen={isConeModalOpen}
         onClose={() => setIsConeModalOpen(false)}
