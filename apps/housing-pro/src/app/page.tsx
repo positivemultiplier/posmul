@@ -30,6 +30,11 @@ import { UserStudyConeItem, STUDY_CONE_CATALOG } from "@/data/mock-study-cones";
 import { getUserStudyConesAction } from "@/app/actions/study-cone.actions";
 import { ContextualPredictionWidget } from "@/components/prediction/contextual-prediction-widget";
 import { REAL_2026_CHAPTERS } from "@/data/mock-exam-chapters";
+import {
+  MasteryConcentricRings,
+  MASTERY_TIER_META,
+  calculateChapterMasterySummary,
+} from "@/components/study/mastery-concentric-rings";
 
 interface ChapterTimerMeta {
   color: string;
@@ -355,7 +360,7 @@ export default function HousingProDashboardPage() {
           {/* 서브탭 컨텐츠 */}
           {activeSubTab === "timer" && (
             <div className="space-y-2.5">
-              {/* 과목별 한 줄 재생 리스트 */}
+              {/* 과목별 한 줄 재생 리스트 (5겹 회독 동심원 링 포함) */}
               {REAL_2026_CHAPTERS.map((chapter) => {
                 const meta = CHAPTER_TIMER_META[chapter.id] || {
                   color: "#FF5A36",
@@ -363,30 +368,45 @@ export default function HousingProDashboardPage() {
                   initialSeconds: 0,
                 };
                 const sec = chapterSeconds[chapter.id] || 0;
+                const mastery = calculateChapterMasterySummary(chapter.tierProgress);
+                const activeTierMeta = MASTERY_TIER_META[mastery.activeTier - 1];
 
                 return (
                   <div
                     key={chapter.id}
                     className="px-3.5 py-3 rounded-2xl bg-[#1A1A21] border border-white/[0.06] hover:border-[#FF5A36]/40 flex items-center justify-between gap-3 transition"
                   >
-                    {/* 좌측 컬러 도트 + 단원명 + 복습 대기 */}
+                    {/* 좌측 5겹 회독 동심원 링 + 단원명 + 회독/복습 대기 */}
                     <div className="flex items-center gap-3 min-w-0">
-                      <span
-                        className="w-3 h-3 rounded-full shrink-0 shadow-sm"
-                        style={{ backgroundColor: meta.color }}
-                      />
+                      <Link
+                        href="/study/planner?tab=heatmap"
+                        title="회독 마스터리 링 자세히 보기"
+                        className="shrink-0 hover:scale-105 transition-transform"
+                      >
+                        <MasteryConcentricRings
+                          variant="mini"
+                          size={40}
+                          tierProgress={chapter.tierProgress}
+                        />
+                      </Link>
                       <div className="min-w-0">
                         <div className="text-xs font-extrabold text-white truncate">
                           {chapter.title}
                         </div>
-                        <div className="flex items-center gap-2 text-[10.5px] text-slate-400 pt-0.5">
+                        <div className="flex items-center gap-1.5 text-[10.5px] text-slate-400 pt-0.5 flex-wrap">
+                          <span
+                            className={`px-1.5 py-0.2 rounded-md font-mono font-black text-[9.5px] border ${activeTierMeta.badgeBgClass} ${activeTierMeta.badgeTextClass} ${activeTierMeta.borderClass}`}
+                          >
+                            {mastery.activeTier}R {chapter.tierProgress[mastery.activeTier - 1]}%
+                          </span>
+                          <span>·</span>
                           <span>{chapter.questionCount}문항</span>
                           <span>·</span>
                           <Link
                             href="/study/ox"
                             className="text-amber-300 font-bold hover:underline"
                           >
-                            ★/X 복습 대기 {meta.reviewWaiting}개
+                            ★/X 복습 {meta.reviewWaiting}
                           </Link>
                         </div>
                       </div>

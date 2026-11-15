@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Calendar,
@@ -17,6 +17,11 @@ import {
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { REAL_2026_CHAPTERS, type ExamChapterPlan } from "@/data/mock-exam-chapters";
+import {
+  MasteryConcentricRings,
+  MASTERY_TIER_META,
+  calculateChapterMasterySummary,
+} from "@/components/study/mastery-concentric-rings";
 
 // 열품타 하루 표준 24시간 (05시 ~ 익일 04시)
 const YPT_HOURS = [
@@ -69,6 +74,17 @@ export default function YptMobilePlannerPage() {
     chapter: ExamChapterPlan;
     tier: number;
   } | null>(null);
+  const [focusedHeroTier, setFocusedHeroTier] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get("tab");
+      if (tab === "heatmap" || tab === "board" || tab === "diary") {
+        setActiveTab(tab);
+      }
+    }
+  }, []);
 
   // 타임테이블 총 순공시간 계산 (1칸 = 10분)
   const totalMinutes = useMemo(() => {
@@ -82,14 +98,33 @@ export default function YptMobilePlannerPage() {
   // 목표 6시간(360분) 대비 달성률
   const achievementPct = Math.round((totalMinutes / 360) * 100);
 
-  // 전체 회독 진도율
-  const overallProgressPct = useMemo(() => {
-    const totalPossible = chapters.length * 5 * 100;
-    const currentTotal = chapters.reduce((acc, c) => {
-      return acc + c.tierProgress.reduce((tAcc, p) => tAcc + p, 0);
-    }, 0);
-    return Math.round((currentTotal / totalPossible) * 100);
+  // 전체 1~5회독 문항수 가중 평균 진도율 (동심원 허브용)
+  const overallTierProgress = useMemo((): [number, number, number, number, number] => {
+    const totalQuestions = chapters.reduce((acc, c) => acc + c.questionCount, 0);
+    if (totalQuestions === 0) return [0, 0, 0, 0, 0];
+
+    const calcTierAvg = (tierIndex: number) => {
+      const weighted = chapters.reduce(
+        (acc, c) => acc + c.tierProgress[tierIndex] * c.questionCount,
+        0
+      );
+      return Math.round(weighted / totalQuestions);
+    };
+
+    return [
+      calcTierAvg(0),
+      calcTierAvg(1),
+      calcTierAvg(2),
+      calcTierAvg(3),
+      calcTierAvg(4),
+    ];
   }, [chapters]);
+
+  // 전체 회독 종합 진도율
+  const overallProgressPct = useMemo(() => {
+    const sum = overallTierProgress.reduce((acc, v) => acc + v, 0);
+    return Math.round(sum / 5);
+  }, [overallTierProgress]);
 
   // 블록 이동
   const moveChapter = (
@@ -108,14 +143,8 @@ export default function YptMobilePlannerPage() {
     );
   };
 
-  // 열품타 오렌지 5단계 농도 매핑 함수
-  const getHeatmapTileStyle = (pct: number) => {
-    if (pct >= 100) return "bg-[#FF5A36] text-white border-[#FF5A36] font-black shadow-md shadow-[#FF5A36]/25";
-    if (pct >= 80) return "bg-[#FF5A36]/85 text-white border-[#FF5A36]/80 font-black";
-    if (pct >= 60) return "bg-[#FF5A36]/60 text-white border-[#FF5A36]/60 font-bold";
-    if (pct >= 35) return "bg-[#FF5A36]/35 text-orange-100 border-[#FF5A36]/40 font-bold";
-    if (pct > 0) return "bg-[#FF5A36]/15 text-[#FF8A6B] border-[#FF5A36]/25 font-bold";
-    return "bg-[#1A1A21] text-slate-600 border-white/[0.04]";
+  const handleToggleHeroTier = (tier: number) => {
+    setFocusedHeroTier((prev) => (prev === tier ? null : tier));
   };
 
   return (
@@ -156,7 +185,7 @@ export default function YptMobilePlannerPage() {
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            🔥 1~5회독 히트맵
+            🎯 1~5회독 링
           </button>
           <button
             type="button"
@@ -294,105 +323,226 @@ export default function YptMobilePlannerPage() {
 
         {activeTab === "heatmap" && (
           /* ========================================================== */
-          /* 2. 열품타 오렌지 5단계 농도 1~5회독 히트맵 (전체 조감도) */
+          /* 2. 5겹 동심원 마스터리 링 (1~5회독 누적 조감도) */
           /* ========================================================== */
           <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.08] flex items-center justify-between">
-              <div className="space-y-0.5">
-                <div className="text-xs font-black text-white flex items-center gap-1.5">
-                  <Flame className="w-4 h-4 text-[#FF5A36] fill-[#FF5A36]" />
-                  <span>2026 제29회 48문항 회독 히트맵</span>
+            {/* 상단 Hero 동심원 허브 */}
+            <div className="p-4 rounded-3xl bg-gradient-to-b from-[#1D1D25] to-[#15151B] border border-white/[0.08] shadow-2xl space-y-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="space-y-0.5">
+                  <div className="text-xs font-black text-white flex items-center gap-1.5">
+                    <Flame className="w-4 h-4 text-[#FF5A36] fill-[#FF5A36]" />
+                    <span>2026 제29회 48문항 마스터리 링</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    안쪽(1회독 뼈대)에서 바깥쪽(5회독 완주)으로 링을 채워가세요
+                  </p>
                 </div>
-                <p className="text-[11px] text-slate-400">
-                  타일을 터치하면 해당 단원·회독 O/X 복습 덱으로 직결됩니다
-                </p>
-              </div>
-              <div className="text-right shrink-0">
-                <div className="text-[10px] text-slate-400 font-bold">종합 완주율</div>
-                <div className="font-mono text-lg font-black text-[#FF5A36]">
+                <span className="px-2.5 py-1 rounded-full bg-[#FF5A36]/15 border border-[#FF5A36]/35 font-mono text-xs font-black text-[#FF7A59] shrink-0">
                   {overallProgressPct}%
+                </span>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center gap-4">
+                {/* 좌측 대형 5겹 동심원 SVG */}
+                <div className="flex items-center justify-center shrink-0">
+                  <MasteryConcentricRings
+                    variant="hero"
+                    size={184}
+                    tierProgress={overallTierProgress}
+                    selectedTier={focusedHeroTier}
+                    onSelectTier={handleToggleHeroTier}
+                  />
+                </div>
+
+                {/* 우측 1~5회독 레이어 범례 & 인터랙티브 필터 */}
+                <div className="w-full flex-1 space-y-1.5">
+                  {MASTERY_TIER_META.map((meta, idx) => {
+                    const pct = overallTierProgress[idx];
+                    const isFocused = focusedHeroTier === meta.tier;
+
+                    return (
+                      <button
+                        key={meta.tier}
+                        type="button"
+                        onClick={() => handleToggleHeroTier(meta.tier)}
+                        className={`w-full px-2.5 py-1.5 rounded-xl border text-left transition flex items-center gap-2 ${
+                          isFocused
+                            ? "bg-white/[0.08] border-white/30 shadow-sm"
+                            : "bg-[#111116]/80 border-white/[0.05] hover:border-white/[0.14]"
+                        }`}
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{
+                            backgroundColor: meta.color,
+                            boxShadow: pct >= 100 ? `0 0 8px ${meta.color}` : undefined,
+                          }}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between text-[10.5px] font-extrabold">
+                            <span className="text-slate-200 truncate">
+                              {meta.title}
+                            </span>
+                            <span
+                              className="font-mono font-black ml-2 shrink-0"
+                              style={{ color: meta.color }}
+                            >
+                              {pct}%
+                            </span>
+                          </div>
+                          <div className="h-1 rounded-full bg-white/[0.06] overflow-hidden mt-1">
+                            <div
+                              className="h-full rounded-full transition-all duration-500"
+                              style={{
+                                width: `${pct}%`,
+                                backgroundColor: meta.color,
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </div>
 
-            {/* 농도 범례 */}
-            <div className="flex items-center justify-end gap-1.5 text-[10px] text-slate-400 font-bold">
-              <span>미학습</span>
-              <span className="w-3.5 h-3.5 rounded bg-[#FF5A36]/15 border border-[#FF5A36]/25" />
-              <span className="w-3.5 h-3.5 rounded bg-[#FF5A36]/35 border border-[#FF5A36]/40" />
-              <span className="w-3.5 h-3.5 rounded bg-[#FF5A36]/60 border border-[#FF5A36]/60" />
-              <span className="w-3.5 h-3.5 rounded bg-[#FF5A36]/85 border border-[#FF5A36]/80" />
-              <span className="w-3.5 h-3.5 rounded bg-[#FF5A36] border border-[#FF5A36]" />
-              <span className="text-white">100%</span>
-            </div>
-
-            {/* 6단원 x 1~5회독 (30칸 매트릭스) */}
+            {/* 단원별 5겹 동심원 카드 (6단원) */}
             <div className="space-y-2.5">
-              {chapters.map((ch) => (
-                <div
-                  key={ch.id}
-                  className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-2.5"
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-extrabold text-white truncate">
-                      {ch.title}
-                    </span>
-                    <span className="text-[10px] font-bold text-slate-400 shrink-0">
-                      {ch.questionCount}문항
-                    </span>
-                  </div>
+              {chapters.map((ch) => {
+                const summary = calculateChapterMasterySummary(ch.tierProgress);
+                const isThisChapterSelected = selectedHeatmapCell?.chapter.id === ch.id;
+                const activeCardTier = isThisChapterSelected
+                  ? selectedHeatmapCell.tier
+                  : focusedHeroTier;
 
-                  <div className="grid grid-cols-5 gap-1.5">
-                    {ch.tierProgress.map((pct, idx) => {
-                      const tier = idx + 1;
-                      const isSelected =
-                        selectedHeatmapCell?.chapter.id === ch.id &&
-                        selectedHeatmapCell?.tier === tier;
+                return (
+                  <div
+                    key={ch.id}
+                    className={`p-3.5 rounded-2xl border transition space-y-3 ${
+                      isThisChapterSelected
+                        ? "bg-[#1D1B24] border-[#FF5A36]/50 shadow-lg"
+                        : "bg-[#1A1A21] border-white/[0.06]"
+                    }`}
+                  >
+                    {/* 단원 헤더 */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <div className="text-xs font-extrabold text-white truncate">
+                          {ch.title}
+                        </div>
+                        <div className="text-[10px] text-slate-400 truncate mt-0.5">
+                          {ch.questionCount}문항 · 핵심: {ch.keyTopics[0]}
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded-full bg-[#111116] border border-white/[0.08] text-[10px] font-mono font-black text-slate-200 shrink-0">
+                        {summary.completedRounds}R 완주 · {summary.equivalentRounds}R
+                      </span>
+                    </div>
 
-                      return (
-                        <button
-                          key={tier}
-                          type="button"
-                          onClick={() => setSelectedHeatmapCell({ chapter: ch, tier })}
-                          className={`py-2.5 rounded-xl border text-center transition ${getHeatmapTileStyle(
-                            pct
-                          )} ${isSelected ? "ring-2 ring-white" : ""}`}
+                    {/* 좌측 동심원 링 + 우측 1~5회독 미니 게이지 레일 */}
+                    <div className="flex items-center gap-3.5">
+                      <MasteryConcentricRings
+                        variant="card"
+                        size={92}
+                        tierProgress={ch.tierProgress}
+                        selectedTier={activeCardTier}
+                        onSelectTier={(tier) => setSelectedHeatmapCell({ chapter: ch, tier })}
+                      />
+
+                      <div className="flex-1 grid grid-cols-1 gap-1.5 min-w-0">
+                        {MASTERY_TIER_META.map((meta, idx) => {
+                          const pct = ch.tierProgress[idx];
+                          const isCellSelected =
+                            isThisChapterSelected && selectedHeatmapCell?.tier === meta.tier;
+                          const isHeroFiltered =
+                            !isThisChapterSelected && focusedHeroTier === meta.tier;
+
+                          return (
+                            <button
+                              key={meta.tier}
+                              type="button"
+                              onClick={() =>
+                                setSelectedHeatmapCell({ chapter: ch, tier: meta.tier })
+                              }
+                              className={`w-full px-2 py-1 rounded-lg border transition flex items-center gap-2 ${
+                                isCellSelected
+                                  ? "bg-white/[0.1] border-white/40"
+                                  : isHeroFiltered
+                                  ? "bg-white/[0.06] border-white/20"
+                                  : "bg-[#121217] border-white/[0.04] hover:border-white/[0.15]"
+                              }`}
+                            >
+                              <span
+                                className="text-[10px] font-mono font-black w-5 text-left shrink-0"
+                                style={{ color: meta.color }}
+                              >
+                                {meta.shortLabel}
+                              </span>
+                              <div className="flex-1 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-300"
+                                  style={{
+                                    width: `${pct}%`,
+                                    backgroundColor: meta.color,
+                                  }}
+                                />
+                              </div>
+                              <span
+                                className={`text-[10px] font-mono font-bold w-8 text-right shrink-0 ${
+                                  pct >= 100
+                                    ? "text-white font-black"
+                                    : pct > 0
+                                    ? "text-slate-300"
+                                    : "text-slate-600"
+                                }`}
+                              >
+                                {pct}%
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 선택된 단원·회독 상세 및 O/X 직결 액션 */}
+                    {isThisChapterSelected && selectedHeatmapCell && (
+                      <div className="pt-2.5 border-t border-white/[0.08] space-y-2">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="font-black text-white">
+                            {MASTERY_TIER_META[selectedHeatmapCell.tier - 1].title} (
+                            {selectedHeatmapCell.tier * 20}%)
+                          </span>
+                          <span
+                            className="font-mono font-black"
+                            style={{
+                              color: MASTERY_TIER_META[selectedHeatmapCell.tier - 1].color,
+                            }}
+                          >
+                            달성률{" "}
+                            {ch.tierProgress[selectedHeatmapCell.tier - 1]}%
+                          </span>
+                        </div>
+                        <p className="text-[10.5px] text-slate-300">
+                          핵심 테마: {ch.keyTopics.join(" · ")}
+                        </p>
+                        <Link
+                          href={`/study/ox?tier=${selectedHeatmapCell.tier}`}
+                          className="w-full py-2.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white font-black text-xs flex items-center justify-center gap-1.5 transition shadow-md shadow-[#FF5A36]/25"
                         >
-                          <div className="text-[9.5px] opacity-85">{tier}회독</div>
-                          <div className="text-xs font-mono">{pct}%</div>
-                        </button>
-                      );
-                    })}
+                          <Zap className="w-3.5 h-3.5" />
+                          <span>
+                            {selectedHeatmapCell.tier}회독 3초 컷 O/X 복습 바로 시작
+                          </span>
+                          <ArrowRight className="w-3.5 h-3.5" />
+                        </Link>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-
-            {/* 선택된 셀 상세 및 O/X 직결 */}
-            {selectedHeatmapCell && (
-              <div className="p-4 rounded-2xl bg-[#1D1615] border border-[#FF5A36]/50 space-y-2.5 shadow-lg">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="font-black text-white">
-                    {selectedHeatmapCell.chapter.title} · {selectedHeatmapCell.tier}회독 (
-                    {selectedHeatmapCell.tier * 20}%)
-                  </span>
-                  <span className="font-mono text-[#FF7A59] font-black">
-                    달성률 {selectedHeatmapCell.chapter.tierProgress[selectedHeatmapCell.tier - 1]}%
-                  </span>
-                </div>
-                <p className="text-[11px] text-slate-300">
-                  핵심 테마: {selectedHeatmapCell.chapter.keyTopics.join(" · ")}
-                </p>
-                <Link
-                  href="/study/ox"
-                  className="w-full py-2.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white font-black text-xs flex items-center justify-center gap-1.5 transition"
-                >
-                  <Zap className="w-3.5 h-3.5" />
-                  <span>이 회독 3초 컷 O/X 복습 바로 시작</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-            )}
           </div>
         )}
 
