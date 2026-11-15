@@ -179,8 +179,9 @@ export class AiNewsroomDeskAdapter {
       "1. 원천 텍스트에 없는 구체적 수치·날짜·발언·통계를 절대 지어내지 마세요(환각 엄금).",
       "2. 원천 텍스트의 문장을 그대로 복붙하지 말고, 시민의 눈높이에서 배경과 의미를 재구성해 쉽게 풀어쓰세요.",
       "3. 영문 원문(OpenAI/DeepMind/HuggingFace 등)은 정확한 한국어로 번역·해설하세요.",
-      "4. 광주광역시(동구·서구·남구·북구·광산구)·전라남도 이슈는 'gwangju', AI 기술/모델은 'ai', 경제·재정·정책·부동산은 'economy', KIA 타이거즈·광주FC·경기는 'sports'로 분류하세요.",
-      "5. 퀴즈(quiz)는 반드시 작성한 본문 내용만으로 정확히 답을 고를 수 있는 4지선다 2문항을 만드세요.",
+      "4. 공공기관 보도자료의 경우 홍보성·미사여구를 걷어내고, 실제 지원 대상·예산·신청 기간·기대 효과와 한계를 시민 관점에서 객관적으로 정리하세요.",
+      "5. 광주광역시(동구·서구·남구·북구·광산구)·전라남도 이슈는 'gwangju', AI 기술/모델은 'ai', 경제·재정·정책·부동산은 'economy', KIA 타이거즈·광주FC·경기는 'sports'로 분류하세요.",
+      "6. 퀴즈(quiz)는 반드시 작성한 본문 내용만으로 정확히 답을 고를 수 있는 4지선다 2문항을 만드세요.",
       "",
       "[출력 JSON 스키마 - JSON 외 텍스트 금지]",
       "{",
@@ -258,7 +259,9 @@ export class AiNewsroomDeskAdapter {
         );
 
         const districtHint = String(raw.districtHint ?? "").trim();
-        const regionSourceHint = /로컬 뉴스/.test(input.sourceTitle)
+        const regionSourceHint = /로컬 뉴스|보도자료|구청|시청|도청/.test(
+          input.sourceTitle
+        )
           ? input.sourceTitle
           : "";
         const region = detectNewsRegionFromText(

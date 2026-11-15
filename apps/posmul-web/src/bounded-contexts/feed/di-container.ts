@@ -3,6 +3,7 @@ import { FetchRssItemsUseCase } from "./application/use-cases/fetch-rss-items.us
 import { FetchBillsUseCase } from "./application/use-cases/fetch-bills.use-case";
 import { FinancialMarketCollector } from "./infrastructure/collectors/financial-market.collector";
 import { BoxOfficeCollector } from "./infrastructure/collectors/boxoffice.collector";
+import { PublicPressCollector } from "./infrastructure/collectors/public-press.collector";
 import { GeminiClassifierAdapter } from "./infrastructure/adapters/gemini-classifier.adapter";
 import { ClassifyContentUseCase } from "./application/use-cases/classify-content.use-case";
 import { CreatePredictionDraftUseCase } from "./application/use-cases/create-prediction-draft.use-case";
@@ -34,6 +35,11 @@ export function getFinancialMarketCollector(): FinancialMarketCollector {
 export function getBoxOfficeCollector(): BoxOfficeCollector {
   const repo = getFeedRepository();
   return new BoxOfficeCollector(repo);
+}
+
+export function getPublicPressCollector(): PublicPressCollector {
+  const repo = getFeedRepository();
+  return new PublicPressCollector(repo, repo);
 }
 
 export function getGeminiClassifierAdapter(): GeminiClassifierAdapter {

@@ -5,6 +5,7 @@ import {
   getFinancialMarketCollector,
   getBoxOfficeCollector,
   getFetchBillsUseCase,
+  getPublicPressCollector,
 } from "@/bounded-contexts/feed/di-container";
 import { requireAdminApi } from "@/shared/lib/security/admin-auth";
 import { schedulerConfigService } from "@/bounded-contexts/prediction/application/services/scheduler-config.service";
@@ -30,6 +31,14 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category") || "all";
 
     const results: Record<string, any> = {};
+
+    if (category === "all" || category === "gwangju" || category === "public_press") {
+      const publicCollector = getPublicPressCollector();
+      const publicRes = await publicCollector.collect();
+      results.publicPress = publicRes.success
+        ? publicRes.data
+        : { error: (publicRes as { error?: Error }).error?.message || "Failed" };
+    }
 
     if (category === "all" || category === "gwangju") {
       const rssUseCase = getFetchRssItemsUseCase();

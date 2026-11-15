@@ -5,6 +5,7 @@ import {
   getClassifyContentUseCase,
   getCreatePredictionDraftUseCase,
   getFetchRssItemsUseCase,
+  getPublicPressCollector,
 } from "@/bounded-contexts/feed/di-container";
 import { schedulerConfigService } from "@/bounded-contexts/prediction/application/services/scheduler-config.service";
 import { feedLifecycleService } from "@/bounded-contexts/feed/application/services/feed-lifecycle.service";
@@ -37,14 +38,25 @@ export async function GET(request: Request) {
 
     const logs: string[] = [];
 
-    // 1. RSS 뉴스 및 피드 수집
+    // 1. RSS 공식 피드 + 지자체 1차 보도자료 통합 수집
     const fetchRss = getFetchRssItemsUseCase();
-    const rssRes = await fetchRss.execute({ category: "ALL" });
+    const publicCollector = getPublicPressCollector();
+    const [rssRes, publicRes] = await Promise.all([
+      fetchRss.execute({ category: "ALL" }),
+      publicCollector.collect(),
+    ]);
     if (isFailure(rssRes)) {
       logs.push(`RSS fetch failed: ${rssRes.error.message}`);
     } else {
       logs.push(
         `RSS fetched: ${rssRes.data.fetchedCount} items from ${rssRes.data.sourceCount} sources`
+      );
+    }
+    if (isFailure(publicRes)) {
+      logs.push(`Public press fetch failed: ${publicRes.error.message}`);
+    } else {
+      logs.push(
+        `Public press fetched: ${publicRes.data.totalCollected} items from ${publicRes.data.agenciesChecked} agencies`
       );
     }
 

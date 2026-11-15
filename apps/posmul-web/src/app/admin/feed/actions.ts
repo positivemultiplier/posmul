@@ -9,6 +9,7 @@ import {
   getBoxOfficeCollector,
   getFetchBillsUseCase,
   getGeminiClassifierAdapter,
+  getPublicPressCollector,
 } from "@/bounded-contexts/feed/di-container";
 import { ContentClassification } from "@/bounded-contexts/feed/domain/value-objects/feed-types";
 
@@ -336,8 +337,14 @@ export async function ignoreFeedItem(feedItemId: string): Promise<{ success: boo
 export async function fetchFeedsByCategoryAction(category?: string): Promise<{ success: boolean; message: string }> {
   await assertAdminSession();
   try {
+    const normalizedCat = (category || "ALL").toUpperCase();
+    const shouldCollectPublicPress = normalizedCat === "ALL" || normalizedCat === "GWANGJU";
+
     const useCase = getFetchRssItemsUseCase();
-    const result = await useCase.execute({ category });
+    const [result, publicRes] = await Promise.all([
+      useCase.execute({ category }),
+      shouldCollectPublicPress ? getPublicPressCollector().collect() : Promise.resolve(null),
+    ]);
 
     revalidatePath("/admin/feed");
 
@@ -346,6 +353,16 @@ export async function fetchFeedsByCategoryAction(category?: string): Promise<{ s
     }
 
     const { fetchedCount, sourceCount } = result.data;
+    const publicCollected = publicRes && publicRes.success ? publicRes.data.totalCollected : 0;
+    const publicAgencies = publicRes && publicRes.success ? publicRes.data.agenciesChecked : 0;
+
+    if (shouldCollectPublicPress) {
+      return {
+        success: true,
+        message: `RSS(${sourceCount}개) ${fetchedCount}건 + 지자체 보도자료(${publicAgencies}개 기관) ${publicCollected}건 등 총 ${fetchedCount + publicCollected}건 수집 완료`,
+      };
+    }
+
     return {
       success: true,
       message: `${sourceCount}개 소스에서 신규 기사 ${fetchedCount}건을 성공적으로 수집했습니다.`,
