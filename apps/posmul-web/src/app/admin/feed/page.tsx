@@ -14,11 +14,16 @@ import {
   fetchBillsAction,
   fetchAllFeedsAction,
   generateAiDraftForFeedItemAction,
+  getAiNewsDraftsAction,
+  generateAiNewsFromFeedItemAction,
+  generateAiNewsBatchAction,
+  updateAiNewsDraftStatusAction,
   FeedItemDTO,
   BillDTO,
   FeedStatsDTO,
   PublishGameInput,
 } from "./actions";
+import type { DraftNewsArticleItem } from "@/bounded-contexts/forum/infrastructure/repositories/supabase-news.repository";
 import {
   Sparkles,
   FileText,
@@ -40,9 +45,21 @@ import {
   DollarSign,
   Tv,
   Scale,
+  Newspaper,
+  MapPin,
+  Cpu,
 } from "lucide-react";
 
-type CategoryFilter = "ALL" | "BILLS" | "SPORTS" | "ECONOMY" | "ENTERTAINMENT" | "POLICY";
+type CategoryFilter =
+  | "ALL"
+  | "NEWSROOM"
+  | "GWANGJU"
+  | "AI"
+  | "BILLS"
+  | "SPORTS"
+  | "ECONOMY"
+  | "ENTERTAINMENT"
+  | "POLICY";
 
 export default function AdminFeedPage() {
   const [stats, setStats] = useState<FeedStatsDTO>({
@@ -55,6 +72,7 @@ export default function AdminFeedPage() {
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>("ALL");
   const [feedItems, setFeedItems] = useState<FeedItemDTO[]>([]);
   const [bills, setBills] = useState<BillDTO[]>([]);
+  const [newsDrafts, setNewsDrafts] = useState<DraftNewsArticleItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -75,17 +93,19 @@ export default function AdminFeedPage() {
   const loadData = async (cat: CategoryFilter = activeCategory) => {
     setIsLoading(true);
     try {
-      const [s, items, b] = await Promise.all([
+      const [s, items, b, drafts] = await Promise.all([
         getFeedStats(),
         getFeedItems({
-          category: cat === "BILLS" ? undefined : cat,
+          category: cat === "BILLS" || cat === "NEWSROOM" ? undefined : cat,
           limit: 100,
         }),
         getBills(50),
+        getAiNewsDraftsAction(),
       ]);
       setStats(s);
       setFeedItems(items);
       setBills(b);
+      setNewsDrafts(drafts);
     } catch (e) {
       console.error(e);
     } finally {
@@ -104,7 +124,7 @@ export default function AdminFeedPage() {
 
   // 수집 액션 핸들러들
   const handleTriggerCollect = async (
-    type: "ALL" | "SPORTS" | "ECONOMY" | "ENTERTAINMENT" | "MARKET" | "BILLS"
+    type: "ALL" | "GWANGJU" | "AI" | "SPORTS" | "ECONOMY" | "ENTERTAINMENT" | "MARKET" | "BILLS"
   ) => {
     setIsFetching(true);
     setStatusMessage("수집 엔진이 동작 중입니다...");
@@ -112,6 +132,10 @@ export default function AdminFeedPage() {
       let res: { success: boolean; message: string };
       if (type === "ALL") {
         res = await fetchAllFeedsAction();
+      } else if (type === "GWANGJU") {
+        res = await fetchFeedsByCategoryAction("GWANGJU");
+      } else if (type === "AI") {
+        res = await fetchFeedsByCategoryAction("AI");
       } else if (type === "SPORTS") {
         res = await fetchFeedsByCategoryAction("SPORTS");
       } else if (type === "ECONOMY") {
@@ -275,9 +299,49 @@ export default function AdminFeedPage() {
     });
   };
 
+  // AI 뉴스 일괄/단건 편집 핸들러
+  const handleGenerateAiNewsBatch = async (publishMode: "draft" | "published") => {
+    setIsFetching(true);
+    setStatusMessage("PosMul AI 언론사 데스크가 기사와 이해도 퀴즈를 작성 중입니다...");
+    try {
+      const catHint =
+        activeCategory === "GWANGJU" || activeCategory === "AI" || activeCategory === "ECONOMY" || activeCategory === "SPORTS"
+          ? activeCategory
+          : "ALL";
+      const res = await generateAiNewsBatchAction(catHint, 4, publishMode);
+      setStatusMessage(res.message);
+      await loadData();
+    } catch (err: unknown) {
+      setStatusMessage(`❌ AI 뉴스 생성 오류: ${err instanceof Error ? err.message : "오류"}`);
+    } finally {
+      setIsFetching(false);
+    }
+  };
+
+  const handlePublishSingleNews = (feedItemId: string, mode: "draft" | "published") => {
+    startTransition(async () => {
+      setStatusMessage("AI 데스크가 원문을 요약하고 퀴즈를 생성 중입니다...");
+      const res = await generateAiNewsFromFeedItemAction(feedItemId, mode);
+      setStatusMessage(res.message);
+      await loadData();
+    });
+  };
+
+  const handleDraftDecision = (postId: string, status: "published" | "archived") => {
+    startTransition(async () => {
+      const res = await updateAiNewsDraftStatusAction(postId, status);
+      setStatusMessage(res.message);
+      await loadData();
+    });
+  };
+
   // 카테고리 뱃지 헬퍼
   const getCategoryBadge = (cat?: string) => {
     switch (cat?.toUpperCase()) {
+      case "GWANGJU":
+        return { label: "전남·광주", bg: "bg-teal-500/10 text-teal-300 border-teal-500/30", icon: "📍" };
+      case "AI":
+        return { label: "AI·테크", bg: "bg-violet-500/10 text-violet-300 border-violet-500/30", icon: "🤖" };
       case "SPORTS":
         return { label: "스포츠", bg: "bg-blue-500/10 text-blue-400 border-blue-500/30", icon: "⚽" };
       case "ECONOMY":
@@ -367,6 +431,24 @@ export default function AdminFeedPage() {
           </button>
 
           <button
+            onClick={() => handleTriggerCollect("GWANGJU")}
+            disabled={isFetching}
+            className="px-3.5 py-2.5 rounded-xl bg-teal-950/40 hover:bg-teal-900/50 border border-teal-500/30 text-teal-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
+          >
+            <MapPin className="w-3.5 h-3.5 text-teal-400" />
+            📍 광주·전남(5개구) 수집
+          </button>
+
+          <button
+            onClick={() => handleTriggerCollect("AI")}
+            disabled={isFetching}
+            className="px-3.5 py-2.5 rounded-xl bg-violet-950/40 hover:bg-violet-900/50 border border-violet-500/30 text-violet-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
+          >
+            <Cpu className="w-3.5 h-3.5 text-violet-400" />
+            🤖 AI 공식블로그 수집
+          </button>
+
+          <button
             onClick={() => handleTriggerCollect("SPORTS")}
             disabled={isFetching}
             className="px-3.5 py-2.5 rounded-xl bg-blue-950/40 hover:bg-blue-900/50 border border-blue-500/30 text-blue-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
@@ -409,6 +491,16 @@ export default function AdminFeedPage() {
           >
             <Vote className="w-3.5 h-3.5 text-purple-400" />
             🏛️ 국회 의안 수집
+          </button>
+
+          {/* AI 언론사 브리핑 일괄 작성 */}
+          <button
+            onClick={() => handleGenerateAiNewsBatch("draft")}
+            disabled={isFetching || isPending}
+            className="px-3.5 py-2.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
+          >
+            <Newspaper className="w-3.5 h-3.5" />
+            📰 AI 뉴스 초안 4건 생성
           </button>
 
           {/* 무인 자동 정산 (Auto-Settle) 원클릭 트리거 */}
@@ -495,6 +587,39 @@ export default function AdminFeedPage() {
           </button>
 
           <button
+            onClick={() => handleCategoryChange("NEWSROOM")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${
+              activeCategory === "NEWSROOM"
+                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-500/25"
+                : "bg-slate-900 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-950/40"
+            }`}
+          >
+            📰 AI 뉴스 데스크 ({newsDrafts.length})
+          </button>
+
+          <button
+            onClick={() => handleCategoryChange("GWANGJU")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${
+              activeCategory === "GWANGJU"
+                ? "bg-teal-600 text-white shadow-lg shadow-teal-500/25"
+                : "bg-slate-900 text-slate-400 hover:text-white"
+            }`}
+          >
+            📍 광주·전남 ({stats.categoryCounts.GWANGJU || 0})
+          </button>
+
+          <button
+            onClick={() => handleCategoryChange("AI")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${
+              activeCategory === "AI"
+                ? "bg-violet-600 text-white shadow-lg shadow-violet-500/25"
+                : "bg-slate-900 text-slate-400 hover:text-white"
+            }`}
+          >
+            🤖 AI ({stats.categoryCounts.AI || 0})
+          </button>
+
+          <button
             onClick={() => handleCategoryChange("SPORTS")}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all flex items-center gap-1.5 ${
               activeCategory === "SPORTS"
@@ -568,6 +693,104 @@ export default function AdminFeedPage() {
         <div className="py-20 text-center text-slate-500">
           <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-2 text-blue-500" />
           데이터를 불러오는 중입니다...
+        </div>
+      ) : activeCategory === "NEWSROOM" ? (
+        /* AI 언론사 데스크: 초안 검토 & 원클릭 발행 */
+        <div className="space-y-4">
+          <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-bold text-emerald-300">
+                PosMul AI 언론사 데스크 · 승인 대기 초안 ({newsDrafts.length}건)
+              </h3>
+              <p className="text-xs text-slate-400 mt-0.5">
+                AI가 3줄 요약, 지역코드(광주 5개구), 팩트체크 메모, 이해도 퀴즈를 작성한 기사입니다. 검토 후 정식 발행하세요.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleGenerateAiNewsBatch("draft")}
+                disabled={isFetching || isPending}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-700 disabled:opacity-50"
+              >
+                + 새 초안 4건 생성
+              </button>
+              <button
+                onClick={() => handleGenerateAiNewsBatch("published")}
+                disabled={isFetching || isPending}
+                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold disabled:opacity-50"
+              >
+                🚀 즉시 발행 4건 생성
+              </button>
+            </div>
+          </div>
+
+          {newsDrafts.length === 0 ? (
+            <div className="py-16 text-center text-slate-500 border border-slate-800 rounded-2xl">
+              승인 대기 중인 AI 뉴스 초안이 없습니다. 상단 버튼으로 새 브리핑을 생성해 보세요.
+            </div>
+          ) : (
+            newsDrafts.map((draft) => (
+              <div
+                key={draft.id}
+                className="p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-emerald-500/40 transition-all shadow-lg space-y-3"
+              >
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="px-2.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 font-bold">
+                      {draft.category.toUpperCase()}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/30 font-semibold">
+                      📍 {draft.regionName} ({draft.regionCode})
+                    </span>
+                    <span className="text-slate-400">출처: {draft.sourceName}</span>
+                    <span className="text-slate-500">· 모델: {draft.aiModel}</span>
+                    <span className="text-yellow-400 font-semibold">· 퀴즈 {draft.quizCount}문항</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDraftDecision(draft.id, "published")}
+                      disabled={isPending}
+                      className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all disabled:opacity-50"
+                    >
+                      ✅ 정식 발행 (/forum/news)
+                    </button>
+                    <button
+                      onClick={() => handleDraftDecision(draft.id, "archived")}
+                      disabled={isPending}
+                      className="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-red-300 text-xs font-semibold border border-slate-700"
+                    >
+                      보관(제외)
+                    </button>
+                  </div>
+                </div>
+
+                <h4 className="text-base font-bold text-white">{draft.title}</h4>
+
+                {draft.threeLineSummary.length > 0 && (
+                  <ul className="space-y-1 text-xs text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-800">
+                    {draft.threeLineSummary.map((line, i) => (
+                      <li key={i}>• {line}</li>
+                    ))}
+                  </ul>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                  <span>팩트체크: {draft.factCheckNote}</span>
+                  {draft.sourceUrl && (
+                    <a
+                      href={draft.sourceUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-blue-400 hover:underline flex items-center gap-1"
+                    >
+                      원문 확인 <ExternalLink className="w-3 h-3" />
+                    </a>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       ) : activeCategory === "BILLS" ? (
         /* 국회 의안 목록 */
@@ -679,11 +902,19 @@ export default function AdminFeedPage() {
                     {!isPublished && (
                       <>
                         <button
+                          onClick={() => handlePublishSingleNews(item.id, "published")}
+                          disabled={isPending}
+                          className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
+                        >
+                          <Newspaper className="w-3.5 h-3.5" />
+                          AI 뉴스 발행
+                        </button>
+                        <button
                           onClick={() => openItemModal(item)}
                           className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition-all"
                         >
                           <Send className="w-3.5 h-3.5" />
-                          발행 설정 (AI 초안)
+                          예측 게임 설정
                         </button>
                         <button
                           onClick={() => handleIgnore(item.id)}

@@ -77,6 +77,8 @@ export async function getFeedStats(): Promise<FeedStatsDTO> {
 
     const categoryCounts: Record<string, number> = {
       ALL: items.length,
+      GWANGJU: 0,
+      AI: 0,
       SPORTS: 0,
       ECONOMY: 0,
       ENTERTAINMENT: 0,
@@ -109,7 +111,7 @@ export async function getFeedStats(): Promise<FeedStatsDTO> {
       predictionCandidates: 0,
       publishedGames: 0,
       totalBills: 0,
-      categoryCounts: { ALL: 0, SPORTS: 0, ECONOMY: 0, ENTERTAINMENT: 0, POLICY: 0 },
+      categoryCounts: { ALL: 0, GWANGJU: 0, AI: 0, SPORTS: 0, ECONOMY: 0, ENTERTAINMENT: 0, POLICY: 0 },
     };
   }
 }
@@ -537,4 +539,124 @@ export async function autoSettleBillsAction() {
       error: e?.message || "자동 정산 실행 중 오류가 발생했습니다.",
     };
   }
+}
+
+/**
+ * PosMul AI 언론사 데스크: 승인 대기 중인 뉴스 초안 목록 조회
+ */
+export async function getAiNewsDraftsAction() {
+  await assertAdminSession();
+  const { SupabaseNewsRepository } = await import(
+    "@/bounded-contexts/forum/infrastructure/repositories/supabase-news.repository"
+  );
+  const repo = new SupabaseNewsRepository();
+  return repo.listDraftNews(30);
+}
+
+/**
+ * PosMul AI 언론사 데스크: 개별 피드 아이템을 AI 뉴스 브리핑으로 생성
+ */
+export async function generateAiNewsFromFeedItemAction(
+  feedItemId: string,
+  publishMode: "draft" | "published" = "draft"
+): Promise<{ success: boolean; message: string; articleId?: string }> {
+  await assertAdminSession();
+  try {
+    const { PublishAiNewsUseCase } = await import(
+      "@/bounded-contexts/forum/application/use-cases/publish-ai-news.use-case"
+    );
+    const useCase = new PublishAiNewsUseCase();
+    const res = await useCase.publishSingleFeedItem(feedItemId, publishMode);
+
+    revalidatePath("/admin/feed");
+    revalidatePath("/forum/news");
+
+    if (!res.success) {
+      return { success: false, message: res.error || "AI 뉴스 생성에 실패했습니다." };
+    }
+
+    if (res.alreadyExists) {
+      return {
+        success: true,
+        articleId: res.articleId,
+        message: "이미 AI 뉴스로 편집된 피드입니다.",
+      };
+    }
+
+    return {
+      success: true,
+      articleId: res.articleId,
+      message:
+        publishMode === "published"
+          ? `📰 AI 뉴스 즉시 발행 완료: ${res.title}`
+          : `📝 AI 뉴스 초안 저장 완료 (승인 대기): ${res.title}`,
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "AI 뉴스 생성 중 오류 발생",
+    };
+  }
+}
+
+/**
+ * PosMul AI 언론사 데스크: 최신 피드에서 AI 뉴스 브리핑 일괄 생성
+ */
+export async function generateAiNewsBatchAction(
+  sourceCategory: string = "ALL",
+  limit: number = 4,
+  publishMode: "draft" | "published" = "draft"
+): Promise<{ success: boolean; message: string }> {
+  await assertAdminSession();
+  try {
+    const { PublishAiNewsUseCase } = await import(
+      "@/bounded-contexts/forum/application/use-cases/publish-ai-news.use-case"
+    );
+    const useCase = new PublishAiNewsUseCase();
+    const res = await useCase.publishBatchFromFeed({
+      sourceCategory,
+      limit,
+      publishMode,
+    });
+
+    revalidatePath("/admin/feed");
+    revalidatePath("/forum/news");
+
+    return {
+      success: true,
+      message: `AI 언론사 일괄 생성 완료 (신규 ${res.created}건, 중복스킵 ${res.skipped}건, 실패 ${res.failed}건)`,
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : "AI 뉴스 일괄 생성 중 오류 발생",
+    };
+  }
+}
+
+/**
+ * PosMul AI 언론사 데스크: 초안 기사 정식 발행 / 보관
+ */
+export async function updateAiNewsDraftStatusAction(
+  postId: string,
+  status: "published" | "archived"
+): Promise<{ success: boolean; message: string }> {
+  await assertAdminSession();
+  const { SupabaseNewsRepository } = await import(
+    "@/bounded-contexts/forum/infrastructure/repositories/supabase-news.repository"
+  );
+  const repo = new SupabaseNewsRepository();
+  const res = await repo.updateNewsStatus(postId, status);
+
+  revalidatePath("/admin/feed");
+  revalidatePath("/forum/news");
+
+  if (!res.success) {
+    return { success: false, message: res.error || "상태 변경 실패" };
+  }
+
+  return {
+    success: true,
+    message: status === "published" ? "📰 정식 기사로 발행되었습니다!" : "초안을 보관함으로 이동했습니다.",
+  };
 }

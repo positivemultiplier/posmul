@@ -111,6 +111,15 @@ export class SupabaseFeedRepository implements IRssSourceRepository, IFeedItemRe
 
     // --- Feed Item ---
     private async saveFeedItem(item: FeedItem): Promise<Result<void>> {
+        const publishedIso =
+            item.publishedAt && !Number.isNaN(item.publishedAt.getTime())
+                ? item.publishedAt.toISOString()
+                : null;
+        const processedIso =
+            item.processedAt && !Number.isNaN(item.processedAt.getTime())
+                ? item.processedAt.toISOString()
+                : null;
+
         // any cast to bypass strict generated types mismatch for now
         const row: any = {
             id: item.id.toString(),
@@ -118,10 +127,10 @@ export class SupabaseFeedRepository implements IRssSourceRepository, IFeedItemRe
             title: item.title,
             link: item.link,
             content_summary: item.contentSummary,
-            published_at: item.publishedAt?.toISOString(),
+            published_at: publishedIso,
             ai_classification: item.aiClassification,
             process_status: item.processStatus,
-            processed_at: item.processedAt?.toISOString(),
+            processed_at: processedIso,
             created_at: new Date().toISOString(),
         };
 

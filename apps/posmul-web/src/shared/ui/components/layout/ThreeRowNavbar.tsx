@@ -58,9 +58,10 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         segmentAliases: ["news"],
         subcategories: [
           { title: "전체 뉴스", path: "/forum/news" },
-          { title: "정책·법률", path: "/forum/news?category=policy" },
-          { title: "경제·재정", path: "/forum/news?category=economy" },
-          { title: "사회·복지", path: "/forum/news?category=society" },
+          { title: "📍 전남·광주", path: "/forum/news?category=gwangju" },
+          { title: "🤖 AI·테크", path: "/forum/news?category=ai" },
+          { title: "📈 경제·정책", path: "/forum/news?category=economy" },
+          { title: "⚽ 스포츠", path: "/forum/news?category=sports" },
         ],
       },
       budget: {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { isFailure } from "@posmul/auth-economy-sdk";
 import {
   getFetchRssItemsUseCase,
   getFinancialMarketCollector,
@@ -29,6 +30,22 @@ export async function GET(request: NextRequest) {
     const category = searchParams.get("category") || "all";
 
     const results: Record<string, any> = {};
+
+    if (category === "all" || category === "gwangju") {
+      const rssUseCase = getFetchRssItemsUseCase();
+      const gwangjuRes = await rssUseCase.execute({ category: "GWANGJU" });
+      results.gwangju = isFailure(gwangjuRes)
+        ? { error: gwangjuRes.error.message || "Failed" }
+        : gwangjuRes.data;
+    }
+
+    if (category === "all" || category === "ai") {
+      const rssUseCase = getFetchRssItemsUseCase();
+      const aiRes = await rssUseCase.execute({ category: "AI" });
+      results.ai = isFailure(aiRes)
+        ? { error: aiRes.error.message || "Failed" }
+        : aiRes.data;
+    }
 
     if (category === "all" || category === "sports") {
       const rssUseCase = getFetchRssItemsUseCase();
@@ -97,6 +114,26 @@ export async function GET(request: NextRequest) {
         : { error: (draftRes as any).error?.message || "Failed to create drafts" };
     } catch (draftErr: any) {
       results.autoCreatedGames = { error: draftErr?.message || "Auto creation skipped" };
+    }
+
+    // 3차로 PosMul AI 언론사 데스크 브리핑(광주·전남 / AI / 경제 / 스포츠) 생성
+    if (searchParams.get("autoNews") !== "false") {
+      try {
+        const { PublishAiNewsUseCase } = await import(
+          "@/bounded-contexts/forum/application/use-cases/publish-ai-news.use-case"
+        );
+        const newsMode = searchParams.get("newsMode") === "published" ? "published" : "draft";
+        const newsUseCase = new PublishAiNewsUseCase();
+        results.aiNewsroom = await newsUseCase.publishBatchFromFeed({
+          sourceCategory: category === "all" ? "ALL" : category.toUpperCase(),
+          limit: 4,
+          publishMode: newsMode,
+        });
+      } catch (newsErr: unknown) {
+        results.aiNewsroom = {
+          error: newsErr instanceof Error ? newsErr.message : "AI news generation skipped",
+        };
+      }
     }
 
     try {
