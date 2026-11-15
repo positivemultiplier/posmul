@@ -16,8 +16,8 @@ import {
   type ChapterProgressSummary,
 } from "@/app/actions/exam-study.actions";
 
-const STORAGE_KEY = "housing_pro_curriculum_v3";
-const LEGACY_STORAGE_KEY = "housing_pro_curriculum_v2";
+const STORAGE_KEY = "housing_pro_curriculum_v4";
+const LEGACY_STORAGE_KEY = "housing_pro_curriculum_v3";
 const CLIENT_KEY_STORAGE = "housing_pro_client_key";
 const SYNC_EVENT = "housing-pro-curriculum-sync";
 

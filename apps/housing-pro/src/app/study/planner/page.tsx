@@ -831,10 +831,10 @@ function SubjectRowsGroup({
         })}
       </tr>
 
-      {/* 펼쳐진 상태: 대단원 + 세부 목차 행 렌더링 */}
+      {/* 펼쳐진 상태: 대단원(편제) + 49개 세부 목차 행 렌더링 */}
       {!isCollapsed &&
         subject.units.map((unit) =>
-          unit.topics.map((topic) => {
+          unit.topics.map((topic, tIdx) => {
             const doneCount = getTopicDoneCount(topic.id);
             const chapterStat = topic.chapterCode ? chapterTotals[topic.chapterCode] : undefined;
             const solvedCount = chapterStat?.solvedCount ?? 0;
@@ -851,6 +851,11 @@ function SubjectRowsGroup({
                 >
                   <div className="flex items-center justify-between gap-1.5">
                     <div className="min-w-0">
+                      {tIdx === 0 && (
+                        <div className="text-[8.5px] font-extrabold text-slate-500 truncate leading-tight mb-0.5">
+                          {unit.title}
+                        </div>
+                      )}
                       <div className="text-[10.5px] font-bold text-slate-200 truncate leading-tight">
                         {topic.title}
                       </div>

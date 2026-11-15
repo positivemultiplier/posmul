@@ -353,6 +353,8 @@ interface RawQuestionCatalogRow {
   subject: string;
   chapter_code: string | null;
   chapter_title: string | null;
+  detail_code: string | null;
+  detail_title: string | null;
 }
 
 /**
@@ -371,7 +373,7 @@ export async function fetchStudySolveSetsAction(clientKey: string): Promise<{
       const { data, error } = await supabaseAdmin
         .schema("vertical_housing")
         .from("exam_questions")
-        .select("id, exam_year, exam_round, exam_stage, subject, chapter_code, chapter_title")
+        .select("id, exam_year, exam_round, exam_stage, subject, chapter_code, chapter_title, detail_code, detail_title")
         .neq("law_status", "DEPRECATED")
         .order("exam_year", { ascending: false })
         .order("question_number", { ascending: true })
@@ -400,18 +402,22 @@ export async function fetchStudySolveSetsAction(clientKey: string): Promise<{
     const solvedSet = new Set((qLogs ?? []).map((r: { question_id: string }) => r.question_id));
     const sets: StudySetSummary[] = [];
 
-    // 1) 단원별 20제 묶음 (각 단원의 문항들을 20개 단위로 슬라이스)
+    // 1) 공식 49개 세부 단원별 20제 묶음 (각 단원의 문항들을 20개 단위로 슬라이스)
     const byChapter = new Map<string, RawQuestionCatalogRow[]>();
     for (const r of allRows) {
-      const code = r.chapter_code || "ETC";
+      const code = r.detail_code || r.chapter_code || "ETC";
       const key = `${r.exam_stage}::${r.subject}::${code}`;
       if (!byChapter.has(key)) byChapter.set(key, []);
       byChapter.get(key)!.push(r);
     }
 
-    for (const [groupKey, list] of byChapter.entries()) {
+    const sortedChapterEntries = Array.from(byChapter.entries()).sort((a, b) =>
+      a[0].localeCompare(b[0])
+    );
+
+    for (const [groupKey, list] of sortedChapterEntries) {
       const [stage, subject, code] = groupKey.split("::");
-      const chapterTitle = list[0]?.chapter_title || code;
+      const chapterTitle = list[0]?.detail_title || list[0]?.chapter_title || code;
       const chunkCount = Math.ceil(list.length / 20);
       for (let i = 0; i < chunkCount; i++) {
         const slice = list.slice(i * 20, (i + 1) * 20);
@@ -519,7 +525,7 @@ export async function fetchSolveSetQuestionsAction(
       query = query
         .eq("exam_stage", stage)
         .eq("subject", subject)
-        .eq("chapter_code", code)
+        .or(`detail_code.eq.${code},chapter_code.eq.${code}`)
         .order("exam_year", { ascending: false })
         .order("question_number", { ascending: true });
     } else if (kind === "ROUND") {
@@ -917,7 +923,9 @@ export async function fetchStudyMatrixSyncAction(clientKey: string): Promise<{
       is_correct: boolean | null;
       solved_at: string | null;
       updated_at: string | null;
-      question: { chapter_code: string | null } | Array<{ chapter_code: string | null }>;
+      question:
+        | { detail_code: string | null; chapter_code: string | null }
+        | Array<{ detail_code: string | null; chapter_code: string | null }>;
     }
 
     const allLogs: JoinedLogRow[] = [];
@@ -926,7 +934,7 @@ export async function fetchStudyMatrixSyncAction(clientKey: string): Promise<{
       const { data, error } = await supabaseAdmin
         .schema("vertical_housing")
         .from("study_question_logs")
-        .select("question_id, is_correct, solved_at, updated_at, question:exam_questions!inner(chapter_code)")
+        .select("question_id, is_correct, solved_at, updated_at, question:exam_questions!inner(detail_code, chapter_code)")
         .eq("client_key", clientKey)
         .range(from, from + PAGE - 1);
 
@@ -943,7 +951,7 @@ export async function fetchStudyMatrixSyncAction(clientKey: string): Promise<{
 
     for (const row of allLogs) {
       const q = Array.isArray(row.question) ? row.question[0] : row.question;
-      const chapterCode = q?.chapter_code;
+      const chapterCode = q?.detail_code || q?.chapter_code;
       if (!chapterCode) continue;
 
       if (!chapterTotals[chapterCode]) {
