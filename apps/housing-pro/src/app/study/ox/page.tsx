@@ -30,6 +30,8 @@ import { getUserSerialStatusAction } from "@/app/actions/serial.actions";
 import {
   fetchExamOxCardsAction,
   fetchLawAmendedQuestionsAction,
+  fetchUserWeakOxCardsAction,
+  promoteWeakOptionToOAction,
   type ExamOxCardItem,
   type AmendedQuestionPreviewItem,
   type LawStatus,
@@ -115,6 +117,8 @@ export default function OxSwipeStudyPage() {
   const [selectedSubject, setSelectedSubject] = useState<string>("ALL");
   const [onlyRepeated, setOnlyRepeated] = useState<boolean>(false);
   const [isScanWeakMode, setIsScanWeakMode] = useState(false);
+  const [isDbWeakMode, setIsDbWeakMode] = useState(false);
+  const [clientKey, setClientKey] = useState("");
   const [scannedWeakIds, setScannedWeakIds] = useState<string[]>([]);
   const [scannedMarkMap, setScannedMarkMap] = useState<Record<string, "O" | "STAR" | "X">>({});
 
@@ -148,6 +152,14 @@ export default function OxSwipeStudyPage() {
       const tierParam = Number(searchParams.get("tier"));
       if (tierParam >= 1 && tierParam <= 5) {
         setSelectedTier(tierParam);
+      }
+
+      const existingKey = window.localStorage.getItem("housing_pro_client_key") || "demo-housing-guest";
+      window.localStorage.setItem("housing_pro_client_key", existingKey);
+      setClientKey(existingKey);
+
+      if (searchParams.get("mode") === "weak") {
+        setIsDbWeakMode(true);
       }
 
       const cached = localStorage.getItem("housing_pro_serial_auth");
@@ -188,6 +200,22 @@ export default function OxSwipeStudyPage() {
 
   const loadDbCards = useCallback(async () => {
     setIsLoadingCards(true);
+    if (isDbWeakMode) {
+      const weakKey =
+        clientKey ||
+        (typeof window !== "undefined" ? window.localStorage.getItem("housing_pro_client_key") : null) ||
+        "demo-housing-guest";
+      const weakRes = await fetchUserWeakOxCardsAction(weakKey);
+      if (weakRes.success) {
+        setDbCards(weakRes.cards);
+        setTotalMatchedCount(weakRes.cards.length);
+        setScannedMarkMap((prev) => ({ ...prev, ...weakRes.markMap }));
+        setUsingFallbackMock(false);
+      }
+      setIsLoadingCards(false);
+      return;
+    }
+
     const res = await fetchExamOxCardsAction({
       subject: selectedSubject,
       maxTier: selectedTier,
@@ -211,7 +239,7 @@ export default function OxSwipeStudyPage() {
       setUsingFallbackMock(false);
     }
     setIsLoadingCards(false);
-  }, [selectedSubject, selectedTier, onlyRepeated]);
+  }, [selectedSubject, selectedTier, onlyRepeated, isDbWeakMode, clientKey]);
 
   useEffect(() => {
     if (!isScanWeakMode) {
@@ -239,7 +267,7 @@ export default function OxSwipeStudyPage() {
     return dbCards;
   }, [isScanWeakMode, scannedWeakIds, dbCards]);
 
-  const isTierLocked = !isScanWeakMode && selectedTier > 1 && !isSerialVerified;
+  const isTierLocked = !isScanWeakMode && !isDbWeakMode && selectedTier > 1 && !isSerialVerified;
   const currentCard = activeCards[currentIndex];
   const isFinished = !isLoadingCards && currentIndex >= activeCards.length;
 
@@ -264,6 +292,9 @@ export default function OxSwipeStudyPage() {
           [currentCard.id]: "O",
         }));
       }
+      if (isDbWeakMode && clientKey && currentCard) {
+        void promoteWeakOptionToOAction(clientKey, currentCard.id);
+      }
     }
   };
 
@@ -274,6 +305,7 @@ export default function OxSwipeStudyPage() {
 
   const handleTierChange = (tier: number) => {
     setIsScanWeakMode(false);
+    setIsDbWeakMode(false);
     setSelectedTier(tier);
     setCurrentIndex(0);
     resetCardTransientState();
@@ -281,6 +313,7 @@ export default function OxSwipeStudyPage() {
 
   const handleSubjectChange = (subjectKey: string) => {
     setIsScanWeakMode(false);
+    setIsDbWeakMode(false);
     setSelectedSubject(subjectKey);
     setCurrentIndex(0);
     resetCardTransientState();
@@ -388,18 +421,41 @@ export default function OxSwipeStudyPage() {
           })}
         </div>
 
-        {/* 과목 필터 + 다빈출 전용 토글 */}
+        {/* 과목 필터 + 다빈출 · 내 약점 · 20제 풀기 */}
         {!isScanWeakMode && (
           <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+            <Link
+              href="/study/solve"
+              className="shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-black border bg-[#FF5A36]/15 text-[#FF7A59] border-[#FF5A36]/40 hover:bg-[#FF5A36]/25 transition"
+            >
+              ✍️ 20제 풀기
+            </Link>
             <button
               type="button"
               onClick={() => {
+                setIsDbWeakMode((prev) => !prev);
+                setCurrentIndex(0);
+                resetCardTransientState();
+              }}
+              className={`shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-black border flex items-center gap-1 transition ${
+                isDbWeakMode
+                  ? "bg-amber-500 text-slate-950 border-amber-400"
+                  : "bg-[#0E0E12] text-amber-300 border-amber-500/30"
+              }`}
+            >
+              <Star className="w-3 h-3" />
+              <span>내 ★/X 약점</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsDbWeakMode(false);
                 setOnlyRepeated((prev) => !prev);
                 setCurrentIndex(0);
                 resetCardTransientState();
               }}
               className={`shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-black border flex items-center gap-1 transition ${
-                onlyRepeated || selectedTier === 1
+                !isDbWeakMode && (onlyRepeated || selectedTier === 1)
                   ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
                   : "bg-[#0E0E12] text-slate-400 border-white/[0.06]"
               }`}

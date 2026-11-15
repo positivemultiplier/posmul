@@ -52,7 +52,8 @@ export function MobileAppShell({
   const isMoreTab =
     pathname.startsWith("/study/more") ||
     pathname.startsWith("/scan") ||
-    pathname.startsWith("/study/ox");
+    pathname.startsWith("/study/ox") ||
+    pathname.startsWith("/study/solve");
 
   // 소장Pro 바텀 5탭 활성화
   const isProHomeTab = pathname === "/pro";

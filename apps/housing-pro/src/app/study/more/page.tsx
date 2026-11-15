@@ -16,6 +16,7 @@ import {
   ChevronRight,
   LayoutGrid,
   ArrowRight,
+  ListChecks,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { YptGroupGrid } from "@/components/mobile/ypt-group-grid";
@@ -446,9 +447,27 @@ export default function StudyMoreHubPage() {
           <YptGroupGrid myStudySeconds={13338} myConeEmoji="🦉" />
         )}
 
-        {/* 4. 학습 도구 뷰 (AI 스캔 · 3초 O/X · 플래너/통계 바로가기) */}
+        {/* 4. 학습 도구 뷰 (20제 지문체크 · 3초 O/X · AI 스캔) */}
         {activeView === "tools" && (
           <div className="space-y-3">
+            <Link
+              href="/study/solve"
+              className="p-4 rounded-2xl bg-gradient-to-r from-[#241917] to-[#1A1A21] border border-[#FF5A36]/50 hover:border-[#FF5A36] flex items-center justify-between transition"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#FF5A36]/20 text-[#FF7A59] flex items-center justify-center">
+                  <ListChecks className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-black text-white">20제 문제·지문 O/★/X 체크</div>
+                  <div className="text-[11px] text-slate-300">
+                    1문제마다 즉시 저장 · 종이책 병행 & 이동중 빠른 복습
+                  </div>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-[#FF7A59]" />
+            </Link>
+
             <Link
               href="/scan"
               className="p-4 rounded-2xl bg-[#1A1A21] border border-[#FF5A36]/40 hover:border-[#FF5A36] flex items-center justify-between transition"
