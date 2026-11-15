@@ -290,18 +290,16 @@ export default function StudyPlannerMatrixPage() {
             <button
               type="button"
               onClick={() => setViewMode("matrix")}
-              className={`px-2.5 py-1.5 rounded-lg transition ${
-                viewMode === "matrix" ? "bg-[#FF5A36] text-white" : "text-slate-400 hover:text-white"
-              }`}
+              className={`px-2.5 py-1.5 rounded-lg transition ${viewMode === "matrix" ? "bg-[#FF5A36] text-white" : "text-slate-400 hover:text-white"
+                }`}
             >
               목차 매트릭스
             </button>
             <button
               type="button"
               onClick={() => setViewMode("diary")}
-              className={`px-2.5 py-1.5 rounded-lg transition ${
-                viewMode === "diary" ? "bg-[#FF5A36] text-white" : "text-slate-400 hover:text-white"
-              }`}
+              className={`px-2.5 py-1.5 rounded-lg transition ${viewMode === "diary" ? "bg-[#FF5A36] text-white" : "text-slate-400 hover:text-white"
+                }`}
             >
               일일표
             </button>
@@ -317,11 +315,10 @@ export default function StudyPlannerMatrixPage() {
                   key={stage}
                   type="button"
                   onClick={() => setStageFilter(stage)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-black border transition ${
-                    stageFilter === stage
-                      ? "bg-white text-slate-950 border-white"
-                      : "bg-[#0E0E12] text-slate-400 border-white/[0.08] hover:text-white"
-                  }`}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-black border transition ${stageFilter === stage
+                    ? "bg-white text-slate-950 border-white"
+                    : "bg-[#0E0E12] text-slate-400 border-white/[0.08] hover:text-white"
+                    }`}
                 >
                   {stage === "ALL" ? "전체" : stage}
                 </button>
@@ -424,31 +421,28 @@ export default function StudyPlannerMatrixPage() {
                   {dateColumns.map((col) => (
                     <th
                       key={col.dateISO}
-                      className={`w-[58px] min-w-[58px] border-b border-r border-white/[0.08] px-1 py-1.5 text-center align-middle ${
-                        col.isToday
-                          ? "bg-[#FF5A36]/20 border-x-[#FF5A36]/60"
-                          : col.isFuture
+                      className={`w-[58px] min-w-[58px] border-b border-r border-white/[0.08] px-1 py-1.5 text-center align-middle ${col.isToday
+                        ? "bg-[#FF5A36]/20 border-x-[#FF5A36]/60"
+                        : col.isFuture
                           ? "bg-[#13131A]"
                           : "bg-[#16161D]"
-                      }`}
+                        }`}
                     >
                       <div
-                        className={`text-[9px] font-mono font-black leading-none ${
-                          col.isToday ? "text-[#FF7A59]" : "text-slate-400"
-                        }`}
+                        className={`text-[9px] font-mono font-black leading-none ${col.isToday ? "text-[#FF7A59]" : "text-slate-400"
+                          }`}
                       >
                         {col.dDayLabel}
                       </div>
                       <div
-                        className={`text-[10px] font-mono font-bold mt-1 leading-none ${
-                          col.isToday
-                            ? "text-white"
-                            : col.dayOfWeek === 0
+                        className={`text-[10px] font-mono font-bold mt-1 leading-none ${col.isToday
+                          ? "text-white"
+                          : col.dayOfWeek === 0
                             ? "text-rose-400"
                             : col.dayOfWeek === 6
-                            ? "text-sky-400"
-                            : "text-slate-300"
-                        }`}
+                              ? "text-sky-400"
+                              : "text-slate-300"
+                          }`}
                       >
                         {col.mmdd}
                       </div>
@@ -545,11 +539,10 @@ export default function StudyPlannerMatrixPage() {
                               return copy;
                             });
                           }}
-                          className={`h-4 rounded-[3px] transition ${
-                            cell
-                              ? "opacity-95 hover:opacity-100"
-                              : "bg-[#111115] border border-white/[0.04] hover:border-white/[0.15]"
-                          }`}
+                          className={`h-4 rounded-[3px] transition ${cell
+                            ? "opacity-95 hover:opacity-100"
+                            : "bg-[#111115] border border-white/[0.04] hover:border-white/[0.15]"
+                            }`}
                           style={cell ? { backgroundColor: cell.color } : undefined}
                         />
                       );
@@ -599,11 +592,10 @@ export default function StudyPlannerMatrixPage() {
               <button
                 type="button"
                 onClick={() => setEditingCell({ ...editingCell, status: "done" })}
-                className={`py-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition ${
-                  editingCell.status === "done"
-                    ? "text-white border-white/40 shadow-md"
-                    : "bg-[#111116] text-slate-400 border-white/[0.06]"
-                }`}
+                className={`py-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition ${editingCell.status === "done"
+                  ? "text-white border-white/40 shadow-md"
+                  : "bg-[#111116] text-slate-400 border-white/[0.06]"
+                  }`}
                 style={
                   editingCell.status === "done"
                     ? { backgroundColor: editingCell.subject.color }
@@ -616,11 +608,10 @@ export default function StudyPlannerMatrixPage() {
               <button
                 type="button"
                 onClick={() => setEditingCell({ ...editingCell, status: "plan" })}
-                className={`py-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition ${
-                  editingCell.status === "plan"
-                    ? "bg-sky-500/20 text-sky-200 border-sky-400 border-dashed"
-                    : "bg-[#111116] text-slate-400 border-white/[0.06]"
-                }`}
+                className={`py-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition ${editingCell.status === "plan"
+                  ? "bg-sky-500/20 text-sky-200 border-sky-400 border-dashed"
+                  : "bg-[#111116] text-slate-400 border-white/[0.06]"
+                  }`}
               >
                 <Clock className="w-3.5 h-3.5" />
                 <span>학습 계획 (예정)</span>
@@ -671,11 +662,10 @@ export default function StudyPlannerMatrixPage() {
                     key={min}
                     type="button"
                     onClick={() => setEditingCell({ ...editingCell, minutes: min })}
-                    className={`px-2 py-1 rounded-lg text-[10.5px] font-mono font-bold transition ${
-                      editingCell.minutes === min
-                        ? "bg-[#FF5A36] text-white"
-                        : "bg-[#101015] text-slate-400 border border-white/[0.06]"
-                    }`}
+                    className={`px-2 py-1 rounded-lg text-[10.5px] font-mono font-bold transition ${editingCell.minutes === min
+                      ? "bg-[#FF5A36] text-white"
+                      : "bg-[#101015] text-slate-400 border border-white/[0.06]"
+                      }`}
                   >
                     {min}분
                   </button>
@@ -794,9 +784,8 @@ function SubjectRowsGroup({
           return (
             <td
               key={col.dateISO}
-              className={`border-r border-white/[0.06] px-0.5 py-1 text-center align-middle ${
-                col.isToday ? "bg-[#FF5A36]/[0.06]" : "bg-[#13131A]"
-              }`}
+              className={`border-r border-white/[0.06] px-0.5 py-1 text-center align-middle ${col.isToday ? "bg-[#FF5A36]/[0.06]" : "bg-[#13131A]"
+                }`}
             >
               {isCollapsed ? (
                 hasDone ? (
@@ -864,11 +853,10 @@ function SubjectRowsGroup({
                       </div>
                     </div>
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-black shrink-0 ${
-                        doneCount === 0
-                          ? "bg-white/[0.04] text-slate-600"
-                          : "text-white"
-                      }`}
+                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-black shrink-0 ${doneCount === 0
+                        ? "bg-white/[0.04] text-slate-600"
+                        : "text-white"
+                        }`}
                       style={
                         doneCount > 0
                           ? { backgroundColor: `${subject.color}33`, color: subject.color }
@@ -887,38 +875,35 @@ function SubjectRowsGroup({
                   return (
                     <td
                       key={col.dateISO}
-                      className={`border-r border-white/[0.05] p-0.5 text-center align-middle ${
-                        col.isToday ? "bg-[#FF5A36]/[0.07]" : ""
-                      }`}
+                      className={`border-r border-white/[0.05] p-0.5 text-center align-middle ${col.isToday ? "bg-[#FF5A36]/[0.07]" : ""
+                        }`}
                     >
                       <button
                         type="button"
                         onClick={() =>
                           onCellClick(subject, unit.title, topic, col.dateISO)
                         }
-                        className={`w-full h-7 rounded-[4px] px-0.5 text-[9px] leading-tight flex items-center justify-center truncate transition ${
-                          cell
-                            ? cell.status === "done"
-                              ? "text-white font-black shadow-sm hover:brightness-110"
-                              : "border border-dashed font-bold hover:brightness-110"
-                            : "hover:bg-white/[0.08] text-transparent hover:text-slate-500"
-                        }`}
+                        className={`w-full h-7 rounded-[4px] px-0.5 text-[9px] leading-tight flex items-center justify-center truncate transition ${cell
+                          ? cell.status === "done"
+                            ? "text-white font-black shadow-sm hover:brightness-110"
+                            : "border border-dashed font-bold hover:brightness-110"
+                          : "hover:bg-white/[0.08] text-transparent hover:text-slate-500"
+                          }`}
                         style={
                           cell
                             ? cell.status === "done"
                               ? { backgroundColor: subject.color }
                               : {
-                                  borderColor: subject.color,
-                                  backgroundColor: `${subject.color}24`,
-                                  color: "#E2E8F0",
-                                }
+                                borderColor: subject.color,
+                                backgroundColor: `${subject.color}24`,
+                                color: "#E2E8F0",
+                              }
                             : undefined
                         }
                         title={
                           cell
-                            ? `${topic.title} (${col.dateISO}): ${cell.keyword} (${
-                                cell.status === "done" ? "완료" : "계획"
-                              })`
+                            ? `${topic.title} (${col.dateISO}): ${cell.keyword} (${cell.status === "done" ? "완료" : "계획"
+                            })`
                             : `${topic.title} (${col.dateISO}) 탭하여 기록/계획`
                         }
                       >

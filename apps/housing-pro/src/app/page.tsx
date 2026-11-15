@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Play,
   KeyRound,
@@ -19,10 +20,6 @@ import {
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { YptFocusOverlay } from "@/components/mobile/ypt-focus-overlay";
 import { YptGroupGrid } from "@/components/mobile/ypt-group-grid";
-import { ComplexProfileBar, ComplexProfile } from "@/components/pro-view/complex-profile-bar";
-import { LegalDdayScheduler } from "@/components/pro-view/legal-dday-scheduler";
-import { AiBriefingViewer } from "@/components/pro-view/ai-briefing-viewer";
-import { LifecycleLockinBridge } from "@/components/pro-view/lifecycle-lockin-bridge";
 import { SerialRegisterModal } from "@/components/auth/serial-register-modal";
 import { getUserSerialStatusAction } from "@/app/actions/serial.actions";
 import { StudyConeStoreModal } from "@/components/study/study-cone-store-modal";
@@ -31,6 +28,7 @@ import { getUserStudyConesAction } from "@/app/actions/study-cone.actions";
 import { ContextualPredictionWidget } from "@/components/prediction/contextual-prediction-widget";
 import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
 import { diffDaysISO, findTopicMetaInSubjects } from "@/data/study-textbooks";
+import { getSavedPersonaMode, setSavedPersonaMode } from "@/lib/pro-workspace-store";
 
 function formatHHMMSS(totalSec: number, spaced = false): string {
   const h = Math.floor(totalSec / 3600);
@@ -40,7 +38,8 @@ function formatHHMMSS(totalSec: number, spaced = false): string {
   return spaced ? parts.join(" : ") : parts.join(":");
 }
 
-export default function HousingProDashboardPage() {
+export default function HousingProStudentTimerPage() {
+  const router = useRouter();
   const {
     todayISO,
     examDate,
@@ -50,11 +49,8 @@ export default function HousingProDashboardPage() {
     recordStudySession,
   } = useStudyCurriculum();
 
-  // 모드 전환: 수험생 모드(열품타) vs 현직 관리소장 Pro View
-  const [isProView, setIsProView] = useState(false);
   // 타이머 화면 내부 서브탭
   const [activeSubTab, setActiveSubTab] = useState<"timer" | "group" | "predict">("timer");
-  // 타이머 목록에서 펼쳐진 과목 ID (기본 첫 2과목 펼침)
   const [expandedSubjectIds, setExpandedSubjectIds] = useState<string[]>([]);
 
   // 보유 PMP 및 정품 시리얼 인증 상태
@@ -77,24 +73,10 @@ export default function HousingProDashboardPage() {
 
   // 목차별 오늘 추가 집중 시간 (초)
   const [sessionExtraSeconds, setSessionExtraSeconds] = useState<Record<string, number>>({});
-  // 전체화면 몰입 집중 모드 대상 목차 ID
   const [focusTopicId, setFocusTopicId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // Pro View 단지 프로필 상태
-  const [complexProfile, setComplexProfile] = useState<ComplexProfile>({
-    name: "래미안 파크팰리스",
-    totalHouseholds: 1240,
-    buildingCount: 14,
-    elevatorCount: 28,
-    heatingType: "지역난방",
-    fireGrade: "1급",
-    completionDate: "2018-05",
-    accidentFreeDays: 342,
-    savedFineAmountKrw: 48000000,
-  });
-
-  // 기본으로 과목 1개(주택법 또는 첫 과목) 펼쳐두기
+  // 기본으로 과목 1개 펼치기
   useEffect(() => {
     if (subjects.length > 0 && expandedSubjectIds.length === 0) {
       const target = subjects.find((s) => s.examStage === "2차") || subjects[0];
@@ -102,13 +84,21 @@ export default function HousingProDashboardPage() {
     }
   }, [subjects, expandedSubjectIds.length]);
 
-  // 초기 마운트: ?mode=pro, ?topic=... 감지 & 시리얼/스터디콘 상태 로드
+  // 초기 마운트: ?mode=pro 또는 저장된 소장 페르소나 감지 시 /pro 전용 앱으로 라우팅
   useEffect(() => {
     if (typeof globalThis !== "undefined" && "location" in globalThis) {
       const params = new globalThis.URLSearchParams(globalThis.location.search);
       if (params.get("mode") === "pro") {
-        setIsProView(true);
+        setSavedPersonaMode("pro");
+        router.replace("/pro");
+        return;
       }
+
+      if (!params.get("topic") && getSavedPersonaMode() === "pro") {
+        router.replace("/pro");
+        return;
+      }
+
       const topicParam = params.get("topic");
       if (topicParam) {
         const found = findTopicMetaInSubjects(subjects, topicParam);
@@ -151,9 +141,8 @@ export default function HousingProDashboardPage() {
         setEquippedCone(res.equippedCone);
       }
     });
-  }, [subjects]);
+  }, [router, subjects]);
 
-  // 과목별 누적 초 계산 (매트릭스 오늘 완료 분 + 현재 세션 추가 초 + 기본 데모 시드)
   const subjectSecondsMap = useMemo(() => {
     const map: Record<string, number> = {};
     for (const subj of subjects) {
@@ -172,13 +161,12 @@ export default function HousingProDashboardPage() {
     return map;
   }, [subjects, matrixLogs, todayISO, sessionExtraSeconds]);
 
-  // 오늘 총 순공시간 (최소 데모 기준 + 실시간 누적)
   const totalStudySeconds = useMemo(() => {
     const sum = Object.values(subjectSecondsMap).reduce((acc, s) => acc + s, 0);
-    return sum > 0 ? sum : 7200; // 오늘 기록 없을 시 기본 02:00:00 표시
+    return sum > 0 ? sum : 7200;
   }, [subjectSecondsMap]);
 
-  const targetSeconds = 21600; // 목표 06:00:00
+  const targetSeconds = 21600;
   const goalPct = Math.min(100, Math.round((totalStudySeconds / targetSeconds) * 100));
   const dDayToExam = useMemo(() => diffDaysISO(todayISO, examDate), [todayISO, examDate]);
 
@@ -203,94 +191,62 @@ export default function HousingProDashboardPage() {
       ...prev,
       [focusTopicId]: (prev[focusTopicId] || 0) + elapsedSeconds,
     }));
-    // 플래너 매트릭스 오늘 날짜에 자동 기록!
     recordStudySession(focusTopicId, elapsedSeconds);
 
     setUserPmpBalance((prev) => prev + 10);
-    setToastMsg(
-      `집중 완료! 플래너 매트릭스 오늘 칸에 자동 기록되었습니다 (+10 PMP)`
-    );
+    setToastMsg("집중 완료! 플래너 매트릭스 오늘 칸에 자동 기록되었습니다 (+10 PMP)");
     setFocusTopicId(null);
     globalThis.setTimeout(() => setToastMsg(null), 4000);
   };
 
-  const handleDefendSuccess = (amountKrw: number) => {
-    setComplexProfile((prev) => ({
-      ...prev,
-      savedFineAmountKrw: prev.savedFineAmountKrw + amountKrw,
-      accidentFreeDays: prev.accidentFreeDays + 1,
-    }));
+  const handleEnterProMode = () => {
+    setSavedPersonaMode("pro");
+    router.push("/pro");
   };
 
   return (
-    <MobileAppShell isProMode={isProView} onSelectProMode={setIsProView}>
+    <MobileAppShell>
       {/* 상단 앱 헤더 */}
-      <header
-        className={`px-4 py-3 flex items-center justify-between gap-2 border-b border-white/[0.06] ${
-          isProView ? "bg-[#0D1322]" : "bg-[#16161C]"
-        }`}
-      >
+      <header className="px-4 py-3 flex items-center justify-between gap-2 border-b border-white/[0.06] bg-[#16161C]">
         <div className="flex items-center gap-2 min-w-0">
-          <span
-            className={`px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 ${
-              isProView
-                ? "bg-indigo-600 text-white"
-                : "bg-[#FF5A36]/20 text-[#FF7A59] border border-[#FF5A36]/40"
-            }`}
-          >
-            {isProView
-              ? "PRO 소장"
-              : dDayToExam >= 0
-              ? `D-${dDayToExam} 제29회`
-              : `D+${Math.abs(dDayToExam)}`}
+          <span className="px-2 py-0.5 rounded-full text-[10px] font-black shrink-0 bg-[#FF5A36]/20 text-[#FF7A59] border border-[#FF5A36]/40">
+            {dDayToExam >= 0 ? `D-${dDayToExam} 제29회` : `D+${Math.abs(dDayToExam)}`}
           </span>
 
-          {!isProView && (
-            <button
-              type="button"
-              onClick={() => setIsSerialModalOpen(true)}
-              className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition truncate ${
-                isSerialVerified
-                  ? "bg-amber-950/80 text-amber-300 border border-amber-500/30"
-                  : "bg-white/[0.06] hover:bg-white/[0.12] text-slate-300"
-              }`}
-              title={verifiedBookTitle || "정품 교재 시리얼 등록"}
-            >
-              <KeyRound className="w-3 h-3 text-amber-400 shrink-0" />
-              <span>{isSerialVerified ? "정품인증" : "키등록"}</span>
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setIsSerialModalOpen(true)}
+            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition truncate ${
+              isSerialVerified
+                ? "bg-amber-950/80 text-amber-300 border border-amber-500/30"
+                : "bg-white/[0.06] hover:bg-white/[0.12] text-slate-300"
+            }`}
+            title={verifiedBookTitle || "정품 교재 시리얼 등록"}
+          >
+            <KeyRound className="w-3 h-3 text-amber-400 shrink-0" />
+            <span>{isSerialVerified ? "정품인증" : "키등록"}</span>
+          </button>
         </div>
 
-        {/* 우측 PMP 배지 & 모드 스위치 */}
+        {/* 우측 PMP 배지 & 페르소나 스위치 */}
         <div className="flex items-center gap-2 shrink-0">
-          {!isProView && (
-            <button
-              type="button"
-              onClick={() => setActiveSubTab("predict")}
-              className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-black text-amber-300 font-mono"
-            >
-              {userPmpBalance.toLocaleString()} PMP
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("predict")}
+            className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-black text-amber-300 font-mono"
+          >
+            {userPmpBalance.toLocaleString()} PMP
+          </button>
 
           <div className="flex items-center bg-[#0B0B0E] p-0.5 rounded-lg border border-white/[0.08] text-[10px] font-black">
-            <button
-              type="button"
-              onClick={() => setIsProView(false)}
-              className={`px-2 py-1 rounded-md transition flex items-center gap-1 ${
-                !isProView ? "bg-[#FF5A36] text-white" : "text-slate-400 hover:text-white"
-              }`}
-            >
+            <span className="px-2 py-1 rounded-md bg-[#FF5A36] text-white flex items-center gap-1">
               <GraduationCap className="w-3 h-3" />
               <span>수험</span>
-            </button>
+            </span>
             <button
               type="button"
-              onClick={() => setIsProView(true)}
-              className={`px-2 py-1 rounded-md transition flex items-center gap-1 ${
-                isProView ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"
-              }`}
+              onClick={handleEnterProMode}
+              className="px-2 py-1 rounded-md text-slate-400 hover:text-white transition flex items-center gap-1"
             >
               <Briefcase className="w-3 h-3" />
               <span>소장Pro</span>
@@ -307,294 +263,272 @@ export default function HousingProDashboardPage() {
         </div>
       )}
 
-      {!isProView ? (
-        /* ========================================================== */
-        /* 1. 수험생 집중 타이머 홈 (교재 목차 -> 플래너 매트릭스 자동 연동) */
-        /* ========================================================== */
-        <div className="px-4 py-4 space-y-4">
-          {/* 열품타 히어로 스톱워치 존 */}
-          <section className="rounded-3xl bg-gradient-to-b from-[#1D1D24] to-[#141419] border border-white/[0.08] p-5 text-center space-y-3 shadow-2xl relative overflow-hidden">
-            <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-56 h-32 bg-[#FF5A36]/15 blur-3xl pointer-events-none" />
+      {/* 수험생 집중 타이머 홈 */}
+      <div className="px-4 py-4 space-y-4">
+        <section className="rounded-3xl bg-gradient-to-b from-[#1D1D24] to-[#141419] border border-white/[0.08] p-5 text-center space-y-3 shadow-2xl relative overflow-hidden">
+          <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-56 h-32 bg-[#FF5A36]/15 blur-3xl pointer-events-none" />
 
-            <div className="flex items-center justify-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() => setIsConeModalOpen(true)}
-                className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#121216] border border-[#FF5A36]/40 hover:border-[#FF5A36] transition shadow-md"
-              >
-                <span className="text-base">{currentConeSpec.badgeEmoji}</span>
-                <span className="text-[10.5px] font-black text-white">
-                  Lv.{equippedCone.currentLevel}{" "}
-                  <span className="text-[#FF7A59]">{currentConeSpec.name}</span>
-                </span>
-              </button>
-
-              <Link
-                href="/study/books"
-                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[10px] font-bold text-slate-300 max-w-[200px]"
-              >
-                <BookOpen className="w-3 h-3 text-amber-400 shrink-0" />
-                <span className="truncate">{activeBook.badge}</span>
-              </Link>
-            </div>
-
-            <div className="space-y-1">
-              <div className="text-[11px] font-bold text-slate-400 tracking-wide">
-                오늘 총 순공시간 (매트릭스 자동 반영)
-              </div>
-              <div className="font-mono text-4xl sm:text-5xl font-black tracking-wider text-white tabular-nums">
-                {formatHHMMSS(totalStudySeconds, true)}
-              </div>
-            </div>
-
-            <div className="space-y-1.5 pt-1">
-              <div className="flex items-center justify-between text-[11px] font-bold">
-                <span className="text-slate-400 flex items-center gap-1">
-                  <Target className="w-3 h-3 text-[#FF5A36]" />
-                  <span>오늘 목표 06:00:00</span>
-                </span>
-                <span className="text-[#FF7A59] font-black font-mono">
-                  {goalPct}% 달성
-                </span>
-              </div>
-              <div className="h-2 rounded-full bg-[#0B0B0E] border border-white/[0.05] overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-[#FF5A36] to-[#FF8008] transition-all duration-500"
-                  style={{ width: `${goalPct}%` }}
-                />
-              </div>
-            </div>
-          </section>
-
-          {/* 서브탭 */}
-          <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[#1A1A21] border border-white/[0.06] text-[11px] font-black">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
             <button
               type="button"
-              onClick={() => setActiveSubTab("timer")}
-              className={`py-2 rounded-xl transition ${
-                activeSubTab === "timer"
-                  ? "bg-[#FF5A36] text-white shadow-md"
-                  : "text-slate-400 hover:text-white"
-              }`}
+              onClick={() => setIsConeModalOpen(true)}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#121216] border border-[#FF5A36]/40 hover:border-[#FF5A36] transition shadow-md"
             >
-              ⏱️ 목차 타이머
+              <span className="text-base">{currentConeSpec.badgeEmoji}</span>
+              <span className="text-[10.5px] font-black text-white">
+                Lv.{equippedCone.currentLevel}{" "}
+                <span className="text-[#FF7A59]">{currentConeSpec.name}</span>
+              </span>
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveSubTab("group")}
-              className={`py-2 rounded-xl transition ${
-                activeSubTab === "group"
-                  ? "bg-[#FF5A36] text-white shadow-md"
-                  : "text-slate-400 hover:text-white"
-              }`}
+
+            <Link
+              href="/study/books"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[10px] font-bold text-slate-300 max-w-[200px]"
             >
-              🔥 그룹 불빛
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveSubTab("predict")}
-              className={`py-2 rounded-xl transition ${
-                activeSubTab === "predict"
-                  ? "bg-[#FF5A36] text-white shadow-md"
-                  : "text-slate-400 hover:text-white"
-              }`}
-            >
-              🎯 예측·PMP
-            </button>
+              <BookOpen className="w-3 h-3 text-amber-400 shrink-0" />
+              <span className="truncate">{activeBook.badge}</span>
+            </Link>
           </div>
 
-          {activeSubTab === "timer" && (
-            <div className="space-y-2.5">
-              {/* 선택된 교재의 과목 > 세부목차 아코디언 타이머 */}
-              {subjects.map((subject) => {
-                const isExpanded = expandedSubjectIds.includes(subject.id);
-                const subjSeconds = subjectSecondsMap[subject.id] || 0;
-                const topicList = subject.units.flatMap((u) =>
-                  u.topics.map((t) => ({ unitTitle: u.title, topic: t }))
-                );
-
-                return (
-                  <div
-                    key={subject.id}
-                    className="rounded-2xl bg-[#1A1A21] border border-white/[0.06] overflow-hidden"
-                  >
-                    {/* 과목 헤더 (접기/펴기) */}
-                    <button
-                      type="button"
-                      onClick={() => toggleExpandSubject(subject.id)}
-                      className="w-full px-3.5 py-3 flex items-center justify-between gap-2 hover:bg-white/[0.02] transition"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {isExpanded ? (
-                          <ChevronDown className="w-4 h-4 text-slate-300 shrink-0" />
-                        ) : (
-                          <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
-                        )}
-                        <span
-                          className="px-1.5 py-0.5 rounded text-[9.5px] font-black text-white shrink-0"
-                          style={{ backgroundColor: subject.color }}
-                        >
-                          {subject.examStage}
-                        </span>
-                        <span className="text-xs font-black text-white truncate">
-                          {subject.title}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-bold shrink-0">
-                          ({topicList.length})
-                        </span>
-                      </div>
-
-                      <span className="font-mono text-xs font-bold text-slate-300 tabular-nums shrink-0">
-                        {formatHHMMSS(subjSeconds)}
-                      </span>
-                    </button>
-
-                    {/* 세부 목차 재생 리스트 */}
-                    {isExpanded && (
-                      <div className="px-3 pb-3 pt-1 space-y-1.5 border-t border-white/[0.05] bg-[#14141A]">
-                        {topicList.map(({ unitTitle, topic }) => {
-                          const todayCell = matrixLogs[makeMatrixKey(topic.id, todayISO)];
-                          let doneRounds = 0;
-                          for (const [k, v] of Object.entries(matrixLogs)) {
-                            if (k.startsWith(`${topic.id}::`) && v.status === "done") {
-                              doneRounds += 1;
-                            }
-                          }
-
-                          return (
-                            <div
-                              key={topic.id}
-                              className="px-3 py-2 rounded-xl bg-[#1A1A22] border border-white/[0.05] flex items-center justify-between gap-2"
-                            >
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[9.5px] font-bold text-slate-400 truncate">
-                                    {unitTitle}
-                                  </span>
-                                  <span
-                                    className="px-1.5 py-0.2 rounded text-[9px] font-mono font-black"
-                                    style={{
-                                      backgroundColor: `${subject.color}25`,
-                                      color: subject.color,
-                                    }}
-                                  >
-                                    {doneRounds}R
-                                  </span>
-                                  {todayCell?.status === "done" && (
-                                    <span className="text-[9px] font-black text-emerald-400">
-                                      오늘완료
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="text-[11.5px] font-extrabold text-white truncate mt-0.5">
-                                  {topic.title}
-                                </div>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => setFocusTopicId(topic.id)}
-                                className="w-8 h-8 rounded-full text-white flex items-center justify-center shadow-md hover:scale-105 transition shrink-0"
-                                style={{ backgroundColor: subject.color }}
-                                aria-label={`${topic.title} 집중 시작`}
-                              >
-                                <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
-                              </button>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-
-              {/* 퀵 액션 스트립 */}
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                <Link
-                  href="/study/planner"
-                  className="p-2.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-[#FF5A36] flex flex-col items-center gap-1 text-center transition"
-                >
-                  <TableProperties className="w-4 h-4 text-[#FF5A36]" />
-                  <span className="text-[10.5px] font-black text-white">매트릭스</span>
-                </Link>
-                <Link
-                  href="/scan"
-                  className="p-2.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-[#FF5A36] flex flex-col items-center gap-1 text-center transition"
-                >
-                  <Camera className="w-4 h-4 text-amber-400" />
-                  <span className="text-[10.5px] font-black text-white">AI 스캔</span>
-                </Link>
-                <Link
-                  href="/study/ox"
-                  className="p-2.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-sky-400 flex flex-col items-center gap-1 text-center transition"
-                >
-                  <Zap className="w-4 h-4 text-sky-400" />
-                  <span className="text-[10.5px] font-black text-white">3초 O/X</span>
-                </Link>
-              </div>
+          <div className="space-y-1">
+            <div className="text-[11px] font-bold text-slate-400 tracking-wide">
+              오늘 총 순공시간 (매트릭스 자동 반영)
             </div>
-          )}
+            <div className="font-mono text-4xl sm:text-5xl font-black tracking-wider text-white tabular-nums">
+              {formatHHMMSS(totalStudySeconds, true)}
+            </div>
+          </div>
 
-          {activeSubTab === "group" && (
-            <YptGroupGrid
-              myStudySeconds={totalStudySeconds}
-              myConeEmoji={currentConeSpec.badgeEmoji}
-            />
-          )}
-
-          {activeSubTab === "predict" && (
-            <div className="space-y-3">
-              <div className="p-4 rounded-2xl bg-[#1A1A21] border border-amber-500/30 flex items-center justify-between gap-3">
-                <div className="space-y-0.5">
-                  <div className="text-xs font-black text-white flex items-center gap-1.5">
-                    <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                    <span>
-                      {isSerialVerified
-                        ? "POD 정품 교재 인증 완료"
-                        : "POD 종이책 정품 시리얼 등록"}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    {isSerialVerified
-                      ? "1~5회독 240선지 해금 및 스캔 +40 PMP 활성"
-                      : "등록 즉시 2~5회독 해금 + AI 스캔 PMP 적립"}
-                  </p>
-                </div>
-                {!isSerialVerified && (
-                  <button
-                    type="button"
-                    onClick={() => setIsSerialModalOpen(true)}
-                    className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[11px] shrink-0"
-                  >
-                    등록하기
-                  </button>
-                )}
-              </div>
-
-              <ContextualPredictionWidget
-                userPmpBalance={userPmpBalance}
-                onBalanceChange={setUserPmpBalance}
+          <div className="space-y-1.5 pt-1">
+            <div className="flex items-center justify-between text-[11px] font-bold">
+              <span className="text-slate-400 flex items-center gap-1">
+                <Target className="w-3 h-3 text-[#FF5A36]" />
+                <span>오늘 목표 06:00:00</span>
+              </span>
+              <span className="text-[#FF7A59] font-black font-mono">
+                {goalPct}% 달성
+              </span>
+            </div>
+            <div className="h-2 rounded-full bg-[#0B0B0E] border border-white/[0.05] overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#FF5A36] to-[#FF8008] transition-all duration-500"
+                style={{ width: `${goalPct}%` }}
               />
             </div>
-          )}
-        </div>
-      ) : (
-        /* ========================================================== */
-        /* 2. Pro View 모드 (현직 소장 업무용) */
-        /* ========================================================== */
-        <div className="px-4 py-4 space-y-4">
-          <ComplexProfileBar
-            profile={complexProfile}
-            onUpdateProfile={setComplexProfile}
-          />
-          <LifecycleLockinBridge />
-          <LegalDdayScheduler onSuccessDefend={handleDefendSuccess} />
-          <AiBriefingViewer />
-        </div>
-      )}
+          </div>
+        </section>
 
-      {/* 열품타 전체화면 몰입 집중 모드 오버레이 */}
+        {/* 서브탭 */}
+        <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[#1A1A21] border border-white/[0.06] text-[11px] font-black">
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("timer")}
+            className={`py-2 rounded-xl transition ${
+              activeSubTab === "timer"
+                ? "bg-[#FF5A36] text-white shadow-md"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            ⏱️ 목차 타이머
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("group")}
+            className={`py-2 rounded-xl transition ${
+              activeSubTab === "group"
+                ? "bg-[#FF5A36] text-white shadow-md"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            🔥 그룹 불빛
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveSubTab("predict")}
+            className={`py-2 rounded-xl transition ${
+              activeSubTab === "predict"
+                ? "bg-[#FF5A36] text-white shadow-md"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            🎯 예측·PMP
+          </button>
+        </div>
+
+        {activeSubTab === "timer" && (
+          <div className="space-y-2.5">
+            {subjects.map((subject) => {
+              const isExpanded = expandedSubjectIds.includes(subject.id);
+              const subjSeconds = subjectSecondsMap[subject.id] || 0;
+              const topicList = subject.units.flatMap((u) =>
+                u.topics.map((t) => ({ unitTitle: u.title, topic: t }))
+              );
+
+              return (
+                <div
+                  key={subject.id}
+                  className="rounded-2xl bg-[#1A1A21] border border-white/[0.06] overflow-hidden"
+                >
+                  <button
+                    type="button"
+                    onClick={() => toggleExpandSubject(subject.id)}
+                    className="w-full px-3.5 py-3 flex items-center justify-between gap-2 hover:bg-white/[0.02] transition"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      {isExpanded ? (
+                        <ChevronDown className="w-4 h-4 text-slate-300 shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                      )}
+                      <span
+                        className="px-1.5 py-0.5 rounded text-[9.5px] font-black text-white shrink-0"
+                        style={{ backgroundColor: subject.color }}
+                      >
+                        {subject.examStage}
+                      </span>
+                      <span className="text-xs font-black text-white truncate">
+                        {subject.title}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-bold shrink-0">
+                        ({topicList.length})
+                      </span>
+                    </div>
+
+                    <span className="font-mono text-xs font-bold text-slate-300 tabular-nums shrink-0">
+                      {formatHHMMSS(subjSeconds)}
+                    </span>
+                  </button>
+
+                  {isExpanded && (
+                    <div className="px-3 pb-3 pt-1 space-y-1.5 border-t border-white/[0.05] bg-[#14141A]">
+                      {topicList.map(({ unitTitle, topic }) => {
+                        const todayCell = matrixLogs[makeMatrixKey(topic.id, todayISO)];
+                        let doneRounds = 0;
+                        for (const [k, v] of Object.entries(matrixLogs)) {
+                          if (k.startsWith(`${topic.id}::`) && v.status === "done") {
+                            doneRounds += 1;
+                          }
+                        }
+
+                        return (
+                          <div
+                            key={topic.id}
+                            className="px-3 py-2 rounded-xl bg-[#1A1A22] border border-white/[0.05] flex items-center justify-between gap-2"
+                          >
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="text-[9.5px] font-bold text-slate-400 truncate">
+                                  {unitTitle}
+                                </span>
+                                <span
+                                  className="px-1.5 py-0.2 rounded text-[9px] font-mono font-black"
+                                  style={{
+                                    backgroundColor: `${subject.color}25`,
+                                    color: subject.color,
+                                  }}
+                                >
+                                  {doneRounds}R
+                                </span>
+                                {todayCell?.status === "done" && (
+                                  <span className="text-[9px] font-black text-emerald-400">
+                                    오늘완료
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11.5px] font-extrabold text-white truncate mt-0.5">
+                                {topic.title}
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => setFocusTopicId(topic.id)}
+                              className="w-8 h-8 rounded-full text-white flex items-center justify-center shadow-md hover:scale-105 transition shrink-0"
+                              style={{ backgroundColor: subject.color }}
+                              aria-label={`${topic.title} 집중 시작`}
+                            >
+                              <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              <Link
+                href="/study/planner"
+                className="p-2.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-[#FF5A36] flex flex-col items-center gap-1 text-center transition"
+              >
+                <TableProperties className="w-4 h-4 text-[#FF5A36]" />
+                <span className="text-[10.5px] font-black text-white">매트릭스</span>
+              </Link>
+              <Link
+                href="/scan"
+                className="p-2.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-[#FF5A36] flex flex-col items-center gap-1 text-center transition"
+              >
+                <Camera className="w-4 h-4 text-amber-400" />
+                <span className="text-[10.5px] font-black text-white">AI 스캔</span>
+              </Link>
+              <Link
+                href="/study/ox"
+                className="p-2.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-sky-400 flex flex-col items-center gap-1 text-center transition"
+              >
+                <Zap className="w-4 h-4 text-sky-400" />
+                <span className="text-[10.5px] font-black text-white">3초 O/X</span>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {activeSubTab === "group" && (
+          <YptGroupGrid
+            myStudySeconds={totalStudySeconds}
+            myConeEmoji={currentConeSpec.badgeEmoji}
+          />
+        )}
+
+        {activeSubTab === "predict" && (
+          <div className="space-y-3">
+            <div className="p-4 rounded-2xl bg-[#1A1A21] border border-amber-500/30 flex items-center justify-between gap-3">
+              <div className="space-y-0.5">
+                <div className="text-xs font-black text-white flex items-center gap-1.5">
+                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                  <span>
+                    {isSerialVerified
+                      ? "POD 정품 교재 인증 완료"
+                      : "POD 종이책 정품 시리얼 등록"}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  {isSerialVerified
+                    ? "1~5회독 240선지 해금 및 스캔 +40 PMP 활성"
+                    : "등록 즉시 2~5회독 해금 + AI 스캔 PMP 적립"}
+                </p>
+              </div>
+              {!isSerialVerified && (
+                <button
+                  type="button"
+                  onClick={() => setIsSerialModalOpen(true)}
+                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[11px] shrink-0"
+                >
+                  등록하기
+                </button>
+              )}
+            </div>
+
+            <ContextualPredictionWidget
+              userPmpBalance={userPmpBalance}
+              onBalanceChange={setUserPmpBalance}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* 집중 타이머 오버레이 */}
       <YptFocusOverlay
         isOpen={Boolean(focusTopicId)}
         subjectTitle={
