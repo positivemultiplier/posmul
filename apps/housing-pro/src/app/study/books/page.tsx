@@ -238,17 +238,37 @@ export default function TextbookCatalogPage() {
                           <span className="text-slate-400">[{subj.examStage}]</span>
                           <span>{subj.title}</span>
                         </div>
-                        <div className="pl-3.5 flex flex-wrap gap-1">
-                          {subj.units.flatMap((u) =>
-                            u.topics.map((t) => (
-                              <span
-                                key={t.id}
-                                className="px-2 py-0.5 rounded-md bg-[#111116] border border-white/[0.06] text-[9.5px] text-slate-300"
-                              >
-                                {t.title}
-                              </span>
-                            ))
-                          )}
+                        <div className="pl-3 space-y-1.5">
+                          {subj.units.map((u) => (
+                            <div key={u.id} className="space-y-1">
+                              <div className="text-[9.5px] font-extrabold text-slate-400">
+                                {u.title}
+                              </div>
+                              <div className="flex flex-wrap gap-1">
+                                {u.topics.map((t) => (
+                                  <span
+                                    key={t.id}
+                                    className="px-2 py-0.5 rounded-md bg-[#111116] border border-white/[0.06] text-[9.5px] text-slate-200 flex items-center gap-1"
+                                  >
+                                    {t.topicNo && (
+                                      <span
+                                        className="font-mono font-black"
+                                        style={{ color: subj.color }}
+                                      >
+                                        {t.topicNo}.
+                                      </span>
+                                    )}
+                                    <span>{t.title}</span>
+                                    {typeof t.questionCount === "number" && (
+                                      <span className="text-[8.5px] font-mono text-slate-500">
+                                        ({t.questionCount})
+                                      </span>
+                                    )}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))}

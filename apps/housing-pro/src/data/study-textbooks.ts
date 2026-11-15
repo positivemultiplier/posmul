@@ -6,6 +6,10 @@
 export interface StudyTopicNode {
   id: string;
   chapterCode?: string;
+  /** 과목 내 세부 목차 넘버링 (예: "01", "02") */
+  topicNo?: string;
+  /** 전체 69개 목차 일련번호 (1 ~ 69) */
+  globalOrder?: number;
   questionCount?: number;
   title: string;
   defaultKeyword: string;
@@ -14,6 +18,8 @@ export interface StudyTopicNode {
 
 export interface StudyUnitNode {
   id: string;
+  /** 과목 내 대단원 번호 (예: "Ⅰ", "Ⅱ", "Ⅲ") */
+  unitNo?: string;
   title: string;
   topics: StudyTopicNode[];
 }
@@ -99,7 +105,7 @@ export function diffDaysISO(fromISO: string, toISO: string): number {
 }
 
 // ============================================================================
-// [별표 7] + 균형 분할 69개 공식 세부 목차 (1차 40개 + 2차 29개 = 69개)
+// [별표 7] + 균형 분할 69개 공식 세부 목차 (1차 39개 + 2차 30개 = 69개)
 // ============================================================================
 
 const SUBJECTS_FIRST_STAGE: StudySubjectNode[] = [
@@ -777,6 +783,93 @@ const SUBJECTS_SECOND_STAGE: StudySubjectNode[] = [
   },
 ];
 
+const ROMAN_NUMERALS = ["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ"] as const;
+
+/**
+ * 5과목·대단원·세부목차에 일관된 계층 넘버링(Ⅰ. 대단원 / 01. 세부목차 / 전체순번 1~69)을 부여합니다.
+ */
+function applyCurriculumNumbering(rawSubjects: StudySubjectNode[]): StudySubjectNode[] {
+  let globalOrder = 0;
+  return rawSubjects.map((subject) => {
+    let subjectTopicSeq = 0;
+    const units = subject.units.map((unit, uIdx) => {
+      const unitNo = ROMAN_NUMERALS[uIdx] ?? String(uIdx + 1);
+      const hasRomanPrefix = /^[ⅠⅡⅢⅣⅤⅥ]\.\s/.test(unit.title);
+      const titledUnit = hasRomanPrefix ? unit.title : `${unitNo}. ${unit.title}`;
+
+      const topics = unit.topics.map((topic) => {
+        subjectTopicSeq += 1;
+        globalOrder += 1;
+        return {
+          ...topic,
+          topicNo: String(subjectTopicSeq).padStart(2, "0"),
+          globalOrder,
+        };
+      });
+
+      return {
+        ...unit,
+        unitNo,
+        title: titledUnit,
+        topics,
+      };
+    });
+
+    return {
+      ...subject,
+      units,
+    };
+  });
+}
+
+const NUMBERED_ALL_SUBJECTS = applyCurriculumNumbering([
+  ...SUBJECTS_FIRST_STAGE,
+  ...SUBJECTS_SECOND_STAGE,
+]);
+const NUMBERED_SECOND_STAGE = NUMBERED_ALL_SUBJECTS.filter((s) => s.examStage === "2차");
+const NUMBERED_LAW_SUBJECT = NUMBERED_SECOND_STAGE[0];
+
+export interface CurriculumOrderMeta {
+  chapterCode: string;
+  examStage: "1차" | "2차";
+  subject: string;
+  subjectShort: string;
+  subjectColor: string;
+  unitTitle: string;
+  topicNo: string;
+  globalOrder: number;
+  title: string;
+  numberedTitle: string;
+  questionCount: number;
+}
+
+/** chapterCode -> 공식 커리큘럼 순번/넘버링 메타데이터 맵 */
+export const CURRICULUM_ORDER_MAP: Record<string, CurriculumOrderMeta> = (() => {
+  const map: Record<string, CurriculumOrderMeta> = {};
+  for (const subject of NUMBERED_ALL_SUBJECTS) {
+    for (const unit of subject.units) {
+      for (const topic of unit.topics) {
+        if (!topic.chapterCode) continue;
+        const topicNo = topic.topicNo ?? "00";
+        map[topic.chapterCode] = {
+          chapterCode: topic.chapterCode,
+          examStage: subject.examStage,
+          subject: subject.title,
+          subjectShort: subject.shortTitle,
+          subjectColor: subject.color,
+          unitTitle: unit.title,
+          topicNo,
+          globalOrder: topic.globalOrder ?? 999,
+          title: topic.title,
+          numberedTitle: `${topicNo}. ${topic.title}`,
+          questionCount: topic.questionCount ?? 0,
+        };
+      }
+    }
+  }
+  return map;
+})();
+
 // ============================================================================
 // 출시 교재 카탈로그 (공식 [별표 7] 69개 세부 목차 기준)
 // ============================================================================
@@ -792,21 +885,21 @@ export const TEXTBOOK_CATALOG: TextbookCatalogItem[] = [
     coverColor: "#FF5A36",
     requiresSerial: false,
     defaultExamDate: "2026-12-12",
-    subjects: [...SUBJECTS_FIRST_STAGE, ...SUBJECTS_SECOND_STAGE],
+    subjects: NUMBERED_ALL_SUBJECTS,
     seedOffsets: [],
     seedTodos: [],
   },
   {
     id: "book-2nd-48-2026",
-    title: "2026 제29회 2차 [별표 7] 29목차 집중 (560제)",
-    subtitle: "주택관리관계법규 16단원 + 공동주택관리실무 13단원 세밀 공략",
+    title: "2026 제29회 2차 [별표 7] 30목차 집중 (560제)",
+    subtitle: "주택관리관계법규 16단원 + 공동주택관리실무 14단원 세밀 공략",
     author: "PosMul 수험전략팀",
     edition: "2차 단기 집중판",
-    badge: "2차 29목차",
+    badge: "2차 30목차",
     coverColor: "#F59E0B",
     requiresSerial: false,
     defaultExamDate: "2026-12-12",
-    subjects: SUBJECTS_SECOND_STAGE,
+    subjects: NUMBERED_SECOND_STAGE,
     seedOffsets: [],
     seedTodos: [],
   },
@@ -820,7 +913,7 @@ export const TEXTBOOK_CATALOG: TextbookCatalogItem[] = [
     coverColor: "#A855F7",
     requiresSerial: false,
     defaultExamDate: "2026-12-12",
-    subjects: [SUBJECTS_SECOND_STAGE[0]],
+    subjects: [NUMBERED_LAW_SUBJECT],
     seedOffsets: [],
     seedTodos: [],
   },

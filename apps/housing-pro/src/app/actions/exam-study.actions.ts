@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase";
+import { CURRICULUM_ORDER_MAP } from "@/data/study-textbooks";
 
 export type LawStatus = "VALID" | "NEEDS_REVIEW" | "AMENDED_MODIFIED" | "DEPRECATED";
 
@@ -402,7 +403,7 @@ export async function fetchStudySolveSetsAction(clientKey: string): Promise<{
     const solvedSet = new Set((qLogs ?? []).map((r: { question_id: string }) => r.question_id));
     const sets: StudySetSummary[] = [];
 
-    // 1) 공식 49개 세부 단원별 20제 묶음 (각 단원의 문항들을 20개 단위로 슬라이스)
+    // 1) 공식 69개 세부 단원별 20제 묶음 (교재 목차 순번 정렬 + 넘버링 부여)
     const byChapter = new Map<string, RawQuestionCatalogRow[]>();
     for (const r of allRows) {
       const code = r.detail_code || r.chapter_code || "ETC";
@@ -411,13 +412,20 @@ export async function fetchStudySolveSetsAction(clientKey: string): Promise<{
       byChapter.get(key)!.push(r);
     }
 
-    const sortedChapterEntries = Array.from(byChapter.entries()).sort((a, b) =>
-      a[0].localeCompare(b[0])
-    );
+    const sortedChapterEntries = Array.from(byChapter.entries()).sort((a, b) => {
+      const codeA = a[0].split("::")[2] || "";
+      const codeB = b[0].split("::")[2] || "";
+      const orderA = CURRICULUM_ORDER_MAP[codeA]?.globalOrder ?? 9999;
+      const orderB = CURRICULUM_ORDER_MAP[codeB]?.globalOrder ?? 9999;
+      if (orderA !== orderB) return orderA - orderB;
+      return a[0].localeCompare(b[0]);
+    });
 
     for (const [groupKey, list] of sortedChapterEntries) {
       const [stage, subject, code] = groupKey.split("::");
-      const chapterTitle = list[0]?.detail_title || list[0]?.chapter_title || code;
+      const meta = CURRICULUM_ORDER_MAP[code];
+      const rawTitle = meta?.title || list[0]?.detail_title || list[0]?.chapter_title || code;
+      const chapterTitle = meta ? `${meta.topicNo}. ${rawTitle}` : rawTitle;
       const chunkCount = Math.ceil(list.length / 20);
       for (let i = 0; i < chunkCount; i++) {
         const slice = list.slice(i * 20, (i + 1) * 20);
@@ -996,6 +1004,671 @@ export async function fetchStudyMatrixSyncAction(clientKey: string): Promise<{
       matrixCells: {},
       chapterTotals: {},
       error: err instanceof Error ? err.message : "DB 매트릭스 동기화 실패",
+    };
+  }
+}
+
+// ============================================================================
+// 7개년 출제빈도 · 문제풀이 진도 · 과목별 예상 점수 · 합격률 예측 통계
+// ============================================================================
+
+export interface TopicAnalyticsItem {
+  chapterCode: string;
+  topicNo: string;
+  globalOrder: number;
+  examStage: "1차" | "2차";
+  subject: string;
+  subjectShort: string;
+  subjectColor: string;
+  unitTitle: string;
+  title: string;
+  numberedTitle: string;
+  totalQuestions: number;
+  avgPerYear: number;
+  shareInSubjectPct: number;
+  recent3YCount: number;
+  trend: "UP" | "FLAT" | "DOWN";
+  yearlyCounts: Record<number, number>;
+  highTierCount: number;
+  solvedCount: number;
+  correctCount: number;
+  accuracyPct: number | null;
+  optOCount: number;
+  optStarCount: number;
+  optXCount: number;
+  priorityScore: number;
+}
+
+export interface SubjectAnalyticsItem {
+  examStage: "1차" | "2차";
+  subject: string;
+  shortTitle: string;
+  color: string;
+  totalQuestions: number;
+  solvedCount: number;
+  progressPct: number;
+  correctCount: number;
+  rawAccuracyPct: number | null;
+  weightedAccuracyPct: number | null;
+  optionMasteryPct: number | null;
+  predictedScore: number | null;
+  scoreRange: [number, number] | null;
+  cutlineRisk: "DANGER" | "CAUTION" | "PASS" | "UNMEASURED";
+  confidenceLevel: "HIGH" | "MEDIUM" | "LOW" | "NONE";
+  optOCount: number;
+  optStarCount: number;
+  optXCount: number;
+  topPriorityTopic: {
+    chapterCode: string;
+    numberedTitle: string;
+    totalQuestions: number;
+    shareInSubjectPct: number;
+    accuracyPct: number | null;
+  } | null;
+}
+
+export interface StagePassPrediction {
+  examStage: "1차" | "2차";
+  subjects: string[];
+  solvedCount: number;
+  totalQuestions: number;
+  measuredSubjectCount: number;
+  predictedAvg: number | null;
+  passProbability: number | null;
+  minSubjectScore: number | null;
+  failRiskSubjects: string[];
+  status: "PASS_LIKELY" | "BORDERLINE" | "FAIL_RISK" | "INSUFFICIENT_DATA";
+  summaryMessage: string;
+}
+
+export interface DailyStudyTrendPoint {
+  dateISO: string;
+  mmdd: string;
+  solved: number;
+  correct: number;
+  accuracyPct: number;
+}
+
+export interface StudyAnalyticsResult {
+  success: boolean;
+  years: number[];
+  overall: {
+    totalQuestions: number;
+    totalSolved: number;
+    totalCorrect: number;
+    progressPct: number;
+    accuracyPct: number | null;
+    optionStats: {
+      totalMarks: number;
+      oCount: number;
+      starCount: number;
+      xCount: number;
+      masteryPct: number | null;
+    };
+    questionMarkStats: {
+      oCount: number;
+      starCount: number;
+      xCount: number;
+    };
+  };
+  topics: TopicAnalyticsItem[];
+  subjects: SubjectAnalyticsItem[];
+  stagePredictions: StagePassPrediction[];
+  dailyTrend: DailyStudyTrendPoint[];
+  error?: string;
+}
+
+const SUBJECT_PASS_ORDER: Array<{
+  examStage: "1차" | "2차";
+  subject: string;
+  shortTitle: string;
+  color: string;
+}> = [
+  { examStage: "1차", subject: "민법", shortTitle: "민법", color: "#3B82F6" },
+  { examStage: "1차", subject: "회계원리", shortTitle: "회계원리", color: "#0EA5E9" },
+  { examStage: "1차", subject: "공동주택시설개론", shortTitle: "시설개론", color: "#14B8A6" },
+  { examStage: "2차", subject: "주택관리관계법규", shortTitle: "관계법규", color: "#FF5A36" },
+  { examStage: "2차", subject: "공동주택관리실무", shortTitle: "관리실무", color: "#10B981" },
+];
+
+function logisticPassProb(margin: number, scale: number): number {
+  return 1 / (1 + Math.exp(-(1.7 * margin) / Math.max(1, scale)));
+}
+
+function clampNum(v: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, v));
+}
+
+/**
+ * DB 1,400문항 출제 빅데이터(2019~2025)와 사용자의 문제풀이·선지 이해도 이력을 결합해
+ * 출제빈도, 학습진도, 과목별 예상 점수, 1차/2차 예상 합격률을 계산합니다.
+ */
+export async function fetchStudyAnalyticsAction(
+  clientKey: string
+): Promise<StudyAnalyticsResult> {
+  const emptyOverall = {
+    totalQuestions: 0,
+    totalSolved: 0,
+    totalCorrect: 0,
+    progressPct: 0,
+    accuracyPct: null,
+    optionStats: { totalMarks: 0, oCount: 0, starCount: 0, xCount: 0, masteryPct: null },
+    questionMarkStats: { oCount: 0, starCount: 0, xCount: 0 },
+  };
+
+  try {
+    interface RawAnalyticsQuestion {
+      id: string;
+      exam_year: number;
+      exam_stage: "1차" | "2차";
+      subject: string;
+      detail_code: string | null;
+      detail_title: string | null;
+      chapter_code: string | null;
+      chapter_title: string | null;
+      importance_tier: string | null;
+    }
+
+    const allQuestions: RawAnalyticsQuestion[] = [];
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabaseAdmin
+        .schema("vertical_housing")
+        .from("exam_questions")
+        .select(
+          "id, exam_year, exam_stage, subject, detail_code, detail_title, chapter_code, chapter_title, importance_tier"
+        )
+        .neq("law_status", "DEPRECATED")
+        .range(from, from + PAGE - 1);
+
+      if (error) {
+        return {
+          success: false,
+          years: [],
+          overall: emptyOverall,
+          topics: [],
+          subjects: [],
+          stagePredictions: [],
+          dailyTrend: [],
+          error: error.message,
+        };
+      }
+      if (!data || data.length === 0) break;
+      allQuestions.push(...(data as RawAnalyticsQuestion[]));
+      if (data.length < PAGE) break;
+    }
+
+    interface RawQLog {
+      question_id: string;
+      is_correct: boolean | null;
+      question_mark: MarkStatus | null;
+      updated_at: string | null;
+      solved_at: string | null;
+    }
+    interface RawOptLog {
+      question_id: string;
+      mark_status: MarkStatus;
+    }
+
+    const qLogs: RawQLog[] = [];
+    const optLogs: RawOptLog[] = [];
+
+    if (clientKey) {
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabaseAdmin
+          .schema("vertical_housing")
+          .from("study_question_logs")
+          .select("question_id, is_correct, question_mark, updated_at, solved_at")
+          .eq("client_key", clientKey)
+          .range(from, from + PAGE - 1);
+        if (error || !data || data.length === 0) break;
+        qLogs.push(...(data as RawQLog[]));
+        if (data.length < PAGE) break;
+      }
+
+      for (let from = 0; ; from += PAGE) {
+        const { data, error } = await supabaseAdmin
+          .schema("vertical_housing")
+          .from("study_option_logs")
+          .select("question_id, mark_status")
+          .eq("client_key", clientKey)
+          .range(from, from + PAGE - 1);
+        if (error || !data || data.length === 0) break;
+        optLogs.push(...(data as RawOptLog[]));
+        if (data.length < PAGE) break;
+      }
+    }
+
+    const yearsSet = new Set<number>();
+    const questionById = new Map<string, RawAnalyticsQuestion>();
+    const subjectTotalCount = new Map<string, number>();
+
+    for (const q of allQuestions) {
+      yearsSet.add(q.exam_year);
+      questionById.set(q.id, q);
+      subjectTotalCount.set(q.subject, (subjectTotalCount.get(q.subject) ?? 0) + 1);
+    }
+
+    const years = Array.from(yearsSet).sort((a, b) => a - b);
+    const totalYears = Math.max(1, years.length);
+    const recentThresholdYear =
+      years.length >= 3 ? years[years.length - 3] : (years[0] ?? 2023);
+
+    const qLogByQId = new Map<string, RawQLog>();
+    const dailyAggMap = new Map<string, { solved: number; correct: number }>();
+    const qMarkCounts = { oCount: 0, starCount: 0, xCount: 0 };
+
+    for (const l of qLogs) {
+      qLogByQId.set(l.question_id, l);
+      if (l.question_mark === "O") qMarkCounts.oCount += 1;
+      else if (l.question_mark === "STAR") qMarkCounts.starCount += 1;
+      else if (l.question_mark === "X") qMarkCounts.xCount += 1;
+
+      const ts = l.updated_at || l.solved_at;
+      if (ts) {
+        const dateISO = toKstDateISO(ts);
+        const cur = dailyAggMap.get(dateISO) ?? { solved: 0, correct: 0 };
+        cur.solved += 1;
+        if (l.is_correct === true) cur.correct += 1;
+        dailyAggMap.set(dateISO, cur);
+      }
+    }
+
+    const optAggByQId = new Map<string, { o: number; star: number; x: number }>();
+    let totalOptO = 0;
+    let totalOptStar = 0;
+    let totalOptX = 0;
+
+    for (const ol of optLogs) {
+      const cur = optAggByQId.get(ol.question_id) ?? { o: 0, star: 0, x: 0 };
+      if (ol.mark_status === "O") {
+        cur.o += 1;
+        totalOptO += 1;
+      } else if (ol.mark_status === "STAR") {
+        cur.star += 1;
+        totalOptStar += 1;
+      } else if (ol.mark_status === "X") {
+        cur.x += 1;
+        totalOptX += 1;
+      }
+      optAggByQId.set(ol.question_id, cur);
+    }
+
+    // 단원별 집계 버킷
+    interface TopicBucket {
+      chapterCode: string;
+      examStage: "1차" | "2차";
+      subject: string;
+      rawTitle: string;
+      totalQuestions: number;
+      recent3YCount: number;
+      prevYCount: number;
+      yearlyCounts: Record<number, number>;
+      highTierCount: number;
+      solvedCount: number;
+      correctCount: number;
+      optOCount: number;
+      optStarCount: number;
+      optXCount: number;
+    }
+
+    const topicBuckets = new Map<string, TopicBucket>();
+    for (const q of allQuestions) {
+      const code = q.detail_code || q.chapter_code || "ETC";
+      let b = topicBuckets.get(code);
+      if (!b) {
+        b = {
+          chapterCode: code,
+          examStage: q.exam_stage,
+          subject: q.subject,
+          rawTitle: q.detail_title || q.chapter_title || code,
+          totalQuestions: 0,
+          recent3YCount: 0,
+          prevYCount: 0,
+          yearlyCounts: {},
+          highTierCount: 0,
+          solvedCount: 0,
+          correctCount: 0,
+          optOCount: 0,
+          optStarCount: 0,
+          optXCount: 0,
+        };
+        topicBuckets.set(code, b);
+      }
+
+      b.totalQuestions += 1;
+      b.yearlyCounts[q.exam_year] = (b.yearlyCounts[q.exam_year] ?? 0) + 1;
+      if (q.exam_year >= recentThresholdYear) {
+        b.recent3YCount += 1;
+      } else {
+        b.prevYCount += 1;
+      }
+      if (q.importance_tier === "S" || q.importance_tier === "A") {
+        b.highTierCount += 1;
+      }
+
+      const log = qLogByQId.get(q.id);
+      if (log) {
+        b.solvedCount += 1;
+        if (log.is_correct === true) b.correctCount += 1;
+      }
+
+      const oAgg = optAggByQId.get(q.id);
+      if (oAgg) {
+        b.optOCount += oAgg.o;
+        b.optStarCount += oAgg.star;
+        b.optXCount += oAgg.x;
+      }
+    }
+
+    const recentYearsDenom = Math.min(3, years.length);
+    const prevYearsDenom = Math.max(1, years.length - recentYearsDenom);
+
+    const topics: TopicAnalyticsItem[] = Array.from(topicBuckets.values())
+      .map((b) => {
+        const meta = CURRICULUM_ORDER_MAP[b.chapterCode];
+        const subjTotal = Math.max(1, subjectTotalCount.get(b.subject) ?? 280);
+        const shareInSubjectPct =
+          Math.round((b.totalQuestions / subjTotal) * 1000) / 10;
+        const avgPerYear = Math.round((b.totalQuestions / totalYears) * 10) / 10;
+
+        const recentAvg = b.recent3YCount / Math.max(1, recentYearsDenom);
+        const prevAvg = years.length > recentYearsDenom ? b.prevYCount / prevYearsDenom : recentAvg;
+        let trend: "UP" | "FLAT" | "DOWN" = "FLAT";
+        if (recentAvg - prevAvg >= 0.45) trend = "UP";
+        else if (prevAvg - recentAvg >= 0.45) trend = "DOWN";
+
+        const accuracyPct =
+          b.solvedCount > 0
+            ? Math.round((b.correctCount / b.solvedCount) * 1000) / 10
+            : null;
+
+        // 공략 우선순위 점수: 출제비중이 높고, 아직 안 풀었거나 정답률이 낮을수록 높음
+        const weaknessFactor =
+          accuracyPct === null ? 0.85 : clampNum((100 - accuracyPct) / 100, 0.05, 1);
+        const unsolvedBoost =
+          1 - clampNum(b.solvedCount / Math.max(1, b.totalQuestions), 0, 1) * 0.35;
+        const priorityScore =
+          Math.round(shareInSubjectPct * weaknessFactor * unsolvedBoost * 10) / 10;
+
+        return {
+          chapterCode: b.chapterCode,
+          topicNo: meta?.topicNo ?? "00",
+          globalOrder: meta?.globalOrder ?? 999,
+          examStage: meta?.examStage ?? b.examStage,
+          subject: meta?.subject ?? b.subject,
+          subjectShort: meta?.subjectShort ?? b.subject,
+          subjectColor: meta?.subjectColor ?? "#FF5A36",
+          unitTitle: meta?.unitTitle ?? "",
+          title: meta?.title ?? b.rawTitle,
+          numberedTitle: meta?.numberedTitle ?? b.rawTitle,
+          totalQuestions: b.totalQuestions,
+          avgPerYear,
+          shareInSubjectPct,
+          recent3YCount: b.recent3YCount,
+          trend,
+          yearlyCounts: b.yearlyCounts,
+          highTierCount: b.highTierCount,
+          solvedCount: b.solvedCount,
+          correctCount: b.correctCount,
+          accuracyPct,
+          optOCount: b.optOCount,
+          optStarCount: b.optStarCount,
+          optXCount: b.optXCount,
+          priorityScore,
+        };
+      })
+      .sort((a, b) => a.globalOrder - b.globalOrder);
+
+    // 과목별 통계 및 예상 점수 산출
+    const subjects: SubjectAnalyticsItem[] = SUBJECT_PASS_ORDER.map((subjMeta) => {
+      const sTopics = topics.filter((t) => t.subject === subjMeta.subject);
+      const totalQ = Math.max(
+        1,
+        sTopics.reduce((sum, t) => sum + t.totalQuestions, 0)
+      );
+      const solvedCount = sTopics.reduce((sum, t) => sum + t.solvedCount, 0);
+      const correctCount = sTopics.reduce((sum, t) => sum + t.correctCount, 0);
+      const optOCount = sTopics.reduce((sum, t) => sum + t.optOCount, 0);
+      const optStarCount = sTopics.reduce((sum, t) => sum + t.optStarCount, 0);
+      const optXCount = sTopics.reduce((sum, t) => sum + t.optXCount, 0);
+
+      const progressPct = Math.round((solvedCount / totalQ) * 1000) / 10;
+      const rawAccuracyPct =
+        solvedCount > 0 ? Math.round((correctCount / solvedCount) * 1000) / 10 : null;
+
+      // 출제비중 가중 정답률
+      let weightedSum = 0;
+      let weightTotal = 0;
+      for (const t of sTopics) {
+        if (t.solvedCount > 0 && t.accuracyPct !== null) {
+          const w = t.totalQuestions / totalQ;
+          weightedSum += t.accuracyPct * w;
+          weightTotal += w;
+        }
+      }
+      const weightedAccuracyPct =
+        weightTotal > 0 ? Math.round((weightedSum / weightTotal) * 10) / 10 : null;
+
+      const optTotal = optOCount + optStarCount + optXCount;
+      const optionMasteryPct =
+        optTotal > 0 ? Math.round((optOCount / optTotal) * 1000) / 10 : null;
+
+      let predictedScore: number | null = null;
+      let scoreRange: [number, number] | null = null;
+      let cutlineRisk: "DANGER" | "CAUTION" | "PASS" | "UNMEASURED" = "UNMEASURED";
+      let confidenceLevel: "HIGH" | "MEDIUM" | "LOW" | "NONE" = "NONE";
+
+      if (solvedCount > 0 && weightedAccuracyPct !== null) {
+        // 소표본 과대추정 방지용 베이지안 스무딩 (사전 평균 50점, 가중 표본 8문항)
+        const PRIOR_SCORE = 50;
+        const PRIOR_WEIGHT = 8;
+        const baseScore =
+          (weightedAccuracyPct * solvedCount + PRIOR_SCORE * PRIOR_WEIGHT) /
+          (solvedCount + PRIOR_WEIGHT);
+
+        // 지문(선지) 이해도 보정 (-5 ~ +3점)
+        const optDelta =
+          optionMasteryPct !== null
+            ? clampNum(((optionMasteryPct - 65) / 100) * 10, -5, 3)
+            : 0;
+
+        predictedScore = Math.round(clampNum(baseScore + optDelta, 5, 98) * 10) / 10;
+
+        const margin = Math.max(
+          3,
+          Math.round(16 / Math.sqrt(Math.max(1, solvedCount / 5)))
+        );
+        scoreRange = [
+          Math.max(0, Math.round(predictedScore - margin)),
+          Math.min(100, Math.round(predictedScore + margin)),
+        ];
+
+        if (predictedScore < 40) cutlineRisk = "DANGER";
+        else if (predictedScore < 60) cutlineRisk = "CAUTION";
+        else cutlineRisk = "PASS";
+
+        if (solvedCount >= 80) confidenceLevel = "HIGH";
+        else if (solvedCount >= 20) confidenceLevel = "MEDIUM";
+        else confidenceLevel = "LOW";
+      }
+
+      const sortedPriority = [...sTopics].sort((a, b) => b.priorityScore - a.priorityScore);
+      const topT = sortedPriority[0];
+
+      return {
+        examStage: subjMeta.examStage,
+        subject: subjMeta.subject,
+        shortTitle: subjMeta.shortTitle,
+        color: subjMeta.color,
+        totalQuestions: totalQ,
+        solvedCount,
+        progressPct,
+        correctCount,
+        rawAccuracyPct,
+        weightedAccuracyPct,
+        optionMasteryPct,
+        predictedScore,
+        scoreRange,
+        cutlineRisk,
+        confidenceLevel,
+        optOCount,
+        optStarCount,
+        optXCount,
+        topPriorityTopic: topT
+          ? {
+              chapterCode: topT.chapterCode,
+              numberedTitle: topT.numberedTitle,
+              totalQuestions: topT.totalQuestions,
+              shareInSubjectPct: topT.shareInSubjectPct,
+              accuracyPct: topT.accuracyPct,
+            }
+          : null,
+      };
+    });
+
+    // 1차 / 2차 합격률 예측 (과락 40점 & 평균 60점 법정 기준)
+    const stagePredictions: StagePassPrediction[] = (["1차", "2차"] as const).map(
+      (stage) => {
+        const stageSubjs = subjects.filter((s) => s.examStage === stage);
+        const solvedCount = stageSubjs.reduce((sum, s) => sum + s.solvedCount, 0);
+        const totalQuestions = stageSubjs.reduce((sum, s) => sum + s.totalQuestions, 0);
+        const measured = stageSubjs.filter((s) => s.predictedScore !== null);
+
+        if (measured.length === 0 || solvedCount < 3) {
+          return {
+            examStage: stage,
+            subjects: stageSubjs.map((s) => s.shortTitle),
+            solvedCount,
+            totalQuestions,
+            measuredSubjectCount: measured.length,
+            predictedAvg: null,
+            passProbability: null,
+            minSubjectScore: null,
+            failRiskSubjects: [],
+            status: "INSUFFICIENT_DATA",
+            summaryMessage: `${stage} 문제를 3문항 이상 풀면 예상 점수 및 합격 확률이 실시간 계산됩니다.`,
+          };
+        }
+
+        // 미측정 과목이 있을 때는 측정된 과목 평균으로 표시하되 안내 문구 구분
+        const scores = stageSubjs.map((s) => s.predictedScore);
+        const avgMeasured =
+          measured.reduce((sum, s) => sum + (s.predictedScore ?? 0), 0) / measured.length;
+        const predictedAvg = Math.round(avgMeasured * 10) / 10;
+        const minSubjectScore = Math.min(
+          ...measured.map((s) => s.predictedScore ?? 0)
+        );
+        const failRiskSubjects = measured
+          .filter((s) => (s.predictedScore ?? 0) < 40)
+          .map((s) => s.shortTitle);
+
+        // 합격 확률: 평균 60점 돌파 확률 × 과목별 40점 과락 회피 확률 곱
+        const avgScale = Math.max(6, 14 - Math.min(8, solvedCount / 25));
+        let passProb = logisticPassProb(predictedAvg - 60, avgScale);
+        for (const s of measured) {
+          const subjScale = Math.max(6, 14 - Math.min(8, s.solvedCount / 15));
+          passProb *= logisticPassProb((s.predictedScore ?? 0) - 40, subjScale);
+        }
+        // 전 과목이 아직 측정되지 않았으면 표본 불완전성 반영
+        if (measured.length < stageSubjs.length) {
+          passProb *= 0.85;
+        }
+        const passProbability = Math.round(clampNum(passProb * 100, 1, 99));
+
+        let status: StagePassPrediction["status"] = "BORDERLINE";
+        if (failRiskSubjects.length > 0 || predictedAvg < 52) {
+          status = "FAIL_RISK";
+        } else if (predictedAvg >= 65 && minSubjectScore >= 48 && passProbability >= 65) {
+          status = "PASS_LIKELY";
+        }
+
+        const missingNames = stageSubjs
+          .filter((_, idx) => scores[idx] === null)
+          .map((s) => s.shortTitle);
+
+        let summaryMessage = "";
+        if (failRiskSubjects.length > 0) {
+          summaryMessage = `과락 위험(${failRiskSubjects.join(", ")} 40점 미만)! 해당 과목 빈출 단원부터 즉시 보강하세요.`;
+        } else if (missingNames.length > 0) {
+          summaryMessage = `미응시 과목(${missingNames.join(", ")})을 1세트 이상 풀면 ${stage} 전체 예측 정밀도가 완성됩니다.`;
+        } else if (predictedAvg >= 60) {
+          summaryMessage = `합격권(평균 60점+) 진입! 취약 단원 오답과 지문 ★/X 소거로 점수 굳히기에 들어가세요.`;
+        } else {
+          const gap = Math.round((60 - predictedAvg) * 10) / 10;
+          summaryMessage = `합격 커트라인까지 평균 +${gap}점 필요! 출제비중 상위 단원 정복이 가장 빠릅니다.`;
+        }
+
+        return {
+          examStage: stage,
+          subjects: stageSubjs.map((s) => s.shortTitle),
+          solvedCount,
+          totalQuestions,
+          measuredSubjectCount: measured.length,
+          predictedAvg,
+          passProbability,
+          minSubjectScore,
+          failRiskSubjects,
+          status,
+          summaryMessage,
+        };
+      }
+    );
+
+    const totalSolved = qLogByQId.size;
+    const totalCorrect = Array.from(qLogByQId.values()).filter(
+      (l) => l.is_correct === true
+    ).length;
+    const totalQAll = Math.max(1, allQuestions.length);
+    const optTotalAll = totalOptO + totalOptStar + totalOptX;
+
+    const dailyTrend: DailyStudyTrendPoint[] = Array.from(dailyAggMap.entries())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .slice(-14)
+      .map(([dateISO, agg]) => ({
+        dateISO,
+        mmdd: dateISO.slice(5).replace("-", "/"),
+        solved: agg.solved,
+        correct: agg.correct,
+        accuracyPct:
+          agg.solved > 0 ? Math.round((agg.correct / agg.solved) * 100) : 0,
+      }));
+
+    return {
+      success: true,
+      years,
+      overall: {
+        totalQuestions: allQuestions.length,
+        totalSolved,
+        totalCorrect,
+        progressPct: Math.round((totalSolved / totalQAll) * 1000) / 10,
+        accuracyPct:
+          totalSolved > 0 ? Math.round((totalCorrect / totalSolved) * 1000) / 10 : null,
+        optionStats: {
+          totalMarks: optTotalAll,
+          oCount: totalOptO,
+          starCount: totalOptStar,
+          xCount: totalOptX,
+          masteryPct:
+            optTotalAll > 0 ? Math.round((totalOptO / optTotalAll) * 1000) / 10 : null,
+        },
+        questionMarkStats: qMarkCounts,
+      },
+      topics,
+      subjects,
+      stagePredictions,
+      dailyTrend,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      years: [],
+      overall: emptyOverall,
+      topics: [],
+      subjects: [],
+      stagePredictions: [],
+      dailyTrend: [],
+      error: err instanceof Error ? err.message : "통계 집계 실패",
     };
   }
 }

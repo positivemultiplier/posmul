@@ -435,8 +435,16 @@ export default function HousingProStudentTimerPage() {
                                   </span>
                                 )}
                               </div>
-                              <div className="text-[11.5px] font-extrabold text-white truncate mt-0.5">
-                                {topic.title}
+                              <div className="text-[11.5px] font-extrabold text-white truncate mt-0.5 flex items-center gap-1">
+                                {topic.topicNo && (
+                                  <span
+                                    className="font-mono text-[10.5px] font-black shrink-0"
+                                    style={{ color: subject.color }}
+                                  >
+                                    {topic.topicNo}.
+                                  </span>
+                                )}
+                                <span className="truncate">{topic.title}</span>
                               </div>
                             </div>
 

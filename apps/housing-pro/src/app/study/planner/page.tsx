@@ -856,8 +856,18 @@ function SubjectRowsGroup({
                           {unit.title}
                         </div>
                       )}
-                      <div className="text-[10.5px] font-bold text-slate-200 truncate leading-tight">
-                        {topic.title}
+                      <div className="flex items-center gap-1 min-w-0">
+                        {topic.topicNo && (
+                          <span
+                            className="text-[9.5px] font-mono font-black shrink-0"
+                            style={{ color: subject.color }}
+                          >
+                            {topic.topicNo}.
+                          </span>
+                        )}
+                        <span className="text-[10.5px] font-bold text-slate-200 truncate leading-tight">
+                          {topic.title}
+                        </span>
                       </div>
                       {typeof topic.questionCount === "number" && (
                         <div className="text-[8.5px] font-mono text-slate-400 leading-tight mt-0.5">
