@@ -873,3 +873,121 @@ export async function promoteWeakOptionToOAction(
     return { success: false };
   }
 }
+
+export interface ChapterProgressSummary {
+  solvedCount: number;
+  correctCount: number;
+}
+
+export interface StudyMatrixSyncCell {
+  keyword: string;
+  status: "done";
+  minutes: number;
+  updatedAt: string;
+  source: "db";
+}
+
+function toKstDateISO(isoTimestamp: string): string {
+  const dt = new Date(isoTimestamp);
+  if (Number.isNaN(dt.getTime())) return isoTimestamp.slice(0, 10);
+  const kst = new Date(dt.getTime() + 9 * 60 * 60 * 1000);
+  const y = kst.getUTCFullYear();
+  const m = String(kst.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(kst.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * /study/solve에서 사용자가 실제로 푼 문제 이력(study_question_logs)을
+ * 한국시간(KST) 날짜 × 단원(chapter_code) 단위로 집계하여 플래너 매트릭스와 연동합니다.
+ */
+export async function fetchStudyMatrixSyncAction(clientKey: string): Promise<{
+  success: boolean;
+  matrixCells: Record<string, StudyMatrixSyncCell>;
+  chapterTotals: Record<string, ChapterProgressSummary>;
+  error?: string;
+}> {
+  try {
+    if (!clientKey) {
+      return { success: true, matrixCells: {}, chapterTotals: {} };
+    }
+
+    interface JoinedLogRow {
+      question_id: string;
+      is_correct: boolean | null;
+      solved_at: string | null;
+      updated_at: string | null;
+      question: { chapter_code: string | null } | Array<{ chapter_code: string | null }>;
+    }
+
+    const allLogs: JoinedLogRow[] = [];
+    const PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await supabaseAdmin
+        .schema("vertical_housing")
+        .from("study_question_logs")
+        .select("question_id, is_correct, solved_at, updated_at, question:exam_questions!inner(chapter_code)")
+        .eq("client_key", clientKey)
+        .range(from, from + PAGE - 1);
+
+      if (error) {
+        return { success: false, matrixCells: {}, chapterTotals: {}, error: error.message };
+      }
+      if (!data || data.length === 0) break;
+      allLogs.push(...(data as unknown as JoinedLogRow[]));
+      if (data.length < PAGE) break;
+    }
+
+    const dailyMap = new Map<string, { solved: number; correct: number }>();
+    const chapterTotals: Record<string, ChapterProgressSummary> = {};
+
+    for (const row of allLogs) {
+      const q = Array.isArray(row.question) ? row.question[0] : row.question;
+      const chapterCode = q?.chapter_code;
+      if (!chapterCode) continue;
+
+      if (!chapterTotals[chapterCode]) {
+        chapterTotals[chapterCode] = { solvedCount: 0, correctCount: 0 };
+      }
+      chapterTotals[chapterCode].solvedCount += 1;
+      if (row.is_correct === true) {
+        chapterTotals[chapterCode].correctCount += 1;
+      }
+
+      const ts = row.updated_at || row.solved_at;
+      if (!ts) continue;
+      const dateISO = toKstDateISO(ts);
+      const cellKey = `top-${chapterCode}::${dateISO}`;
+
+      const prev = dailyMap.get(cellKey) ?? { solved: 0, correct: 0 };
+      prev.solved += 1;
+      if (row.is_correct === true) prev.correct += 1;
+      dailyMap.set(cellKey, prev);
+    }
+
+    const matrixCells: Record<string, StudyMatrixSyncCell> = {};
+    for (const [cellKey, agg] of dailyMap.entries()) {
+      const dateISO = cellKey.split("::")[1] || "";
+      matrixCells[cellKey] = {
+        keyword: `${agg.solved}제·${agg.correct}O`,
+        status: "done",
+        minutes: Math.max(5, agg.solved * 2),
+        updatedAt: dateISO,
+        source: "db",
+      };
+    }
+
+    return {
+      success: true,
+      matrixCells,
+      chapterTotals,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      matrixCells: {},
+      chapterTotals: {},
+      error: err instanceof Error ? err.message : "DB 매트릭스 동기화 실패",
+    };
+  }
+}

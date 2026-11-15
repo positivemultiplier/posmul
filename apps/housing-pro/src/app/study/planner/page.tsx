@@ -16,6 +16,7 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   X,
+  FileCheck2,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
@@ -38,20 +39,7 @@ interface TimetableBlock {
 }
 
 function createInitialTimetableGrid(): Record<string, TimetableBlock> {
-  const map: Record<string, TimetableBlock> = {};
-  const fillRange = (hour: number, startSlot: number, endSlot: number, block: TimetableBlock) => {
-    for (let s = startSlot; s <= endSlot; s++) {
-      map[`${hour}-${s}`] = block;
-    }
-  };
-  fillRange(7, 0, 5, { color: "#FF5A36", label: "주택법·건축법" });
-  fillRange(8, 0, 4, { color: "#FF5A36", label: "주택법·건축법" });
-  fillRange(10, 0, 5, { color: "#F59E0B", label: "공동주택관리법" });
-  fillRange(11, 0, 3, { color: "#F59E0B", label: "공동주택관리법" });
-  fillRange(14, 0, 5, { color: "#10B981", label: "관리실무" });
-  fillRange(15, 0, 5, { color: "#10B981", label: "관리실무" });
-  fillRange(20, 0, 5, { color: "#3B82F6", label: "민법" });
-  return map;
+  return {};
 }
 
 const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"];
@@ -73,6 +61,7 @@ export default function StudyPlannerMatrixPage() {
     activeBook,
     subjects,
     matrixLogs,
+    chapterTotals,
     collapsedSubjectIds,
     upsertMatrixCell,
     deleteMatrixCell,
@@ -392,6 +381,9 @@ export default function StudyPlannerMatrixPage() {
             </div>
 
             <div className="flex items-center gap-2.5 text-[10px] text-slate-400 font-bold">
+              <span className="px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                기출DB 자동연동
+              </span>
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-sm bg-[#FF5A36]" />
                 <span>완료</span>
@@ -477,6 +469,7 @@ export default function StudyPlannerMatrixPage() {
                       subjectTotalDone={subjectTotalDone}
                       dateColumns={dateColumns}
                       matrixLogs={matrixLogs}
+                      chapterTotals={chapterTotals}
                       getTopicDoneCount={getTopicDoneCount}
                       getSubjectDaySummary={getSubjectDaySummary}
                       onToggleCollapse={() => toggleSubjectCollapse(subject.id)}
@@ -692,13 +685,24 @@ export default function StudyPlannerMatrixPage() {
               </button>
             </div>
 
-            <Link
-              href={`/?topic=${editingCell.topic.id}`}
-              className="w-full py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 border border-white/[0.06]"
-            >
-              <Play className="w-3 h-3 text-[#FF5A36] fill-[#FF5A36]" />
-              <span>이 목차로 지금 집중 타이머 바로 시작</span>
-            </Link>
+            <div className="space-y-1.5">
+              {editingCell.topic.chapterCode && (
+                <Link
+                  href={`/study/solve?chapter=${editingCell.topic.chapterCode}`}
+                  className="w-full py-2.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 text-[11px] font-black flex items-center justify-center gap-1.5 border border-emerald-500/35 transition"
+                >
+                  <FileCheck2 className="w-3.5 h-3.5" />
+                  <span>이 단원 기출 20제 바로 풀기</span>
+                </Link>
+              )}
+              <Link
+                href={`/?topic=${editingCell.topic.id}`}
+                className="w-full py-2 rounded-xl bg-white/[0.05] hover:bg-white/[0.1] text-slate-200 text-[11px] font-bold flex items-center justify-center gap-1.5 border border-white/[0.06]"
+              >
+                <Play className="w-3 h-3 text-[#FF5A36] fill-[#FF5A36]" />
+                <span>이 목차로 지금 집중 타이머 바로 시작</span>
+              </Link>
+            </div>
           </div>
         </div>
       )}
@@ -713,6 +717,7 @@ interface SubjectRowsGroupProps {
   subjectTotalDone: number;
   dateColumns: Array<{ dateISO: string; isToday: boolean }>;
   matrixLogs: Record<string, { keyword: string; status: MatrixCellStatus; minutes?: number }>;
+  chapterTotals: Record<string, { solvedCount: number; correctCount: number }>;
   getTopicDoneCount: (topicId: string) => number;
   getSubjectDaySummary: (
     subject: StudySubjectNode,
@@ -734,6 +739,7 @@ function SubjectRowsGroup({
   subjectTotalDone,
   dateColumns,
   matrixLogs,
+  chapterTotals,
   getTopicDoneCount,
   getSubjectDaySummary,
   onToggleCollapse,
@@ -828,8 +834,10 @@ function SubjectRowsGroup({
       {/* 펼쳐진 상태: 대단원 + 세부 목차 행 렌더링 */}
       {!isCollapsed &&
         subject.units.map((unit) =>
-          unit.topics.map((topic, tIdx) => {
+          unit.topics.map((topic) => {
             const doneCount = getTopicDoneCount(topic.id);
+            const chapterStat = topic.chapterCode ? chapterTotals[topic.chapterCode] : undefined;
+            const solvedCount = chapterStat?.solvedCount ?? 0;
 
             return (
               <tr
@@ -843,14 +851,17 @@ function SubjectRowsGroup({
                 >
                   <div className="flex items-center justify-between gap-1.5">
                     <div className="min-w-0">
-                      {tIdx === 0 && (
-                        <div className="text-[8.5px] font-extrabold text-slate-500 truncate leading-tight">
-                          {unit.title}
-                        </div>
-                      )}
                       <div className="text-[10.5px] font-bold text-slate-200 truncate leading-tight">
                         {topic.title}
                       </div>
+                      {typeof topic.questionCount === "number" && (
+                        <div className="text-[8.5px] font-mono text-slate-400 leading-tight mt-0.5">
+                          <span className={solvedCount > 0 ? "text-emerald-300 font-bold" : ""}>
+                            {solvedCount}
+                          </span>
+                          <span>/{topic.questionCount}제</span>
+                        </div>
+                      )}
                     </div>
                     <span
                       className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-black shrink-0 ${doneCount === 0

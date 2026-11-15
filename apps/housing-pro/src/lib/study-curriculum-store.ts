@@ -11,8 +11,14 @@ import {
   addDaysISO,
   findTopicMetaInSubjects,
 } from "@/data/study-textbooks";
+import {
+  fetchStudyMatrixSyncAction,
+  type ChapterProgressSummary,
+} from "@/app/actions/exam-study.actions";
 
-const STORAGE_KEY = "housing_pro_curriculum_v2";
+const STORAGE_KEY = "housing_pro_curriculum_v3";
+const LEGACY_STORAGE_KEY = "housing_pro_curriculum_v2";
+const CLIENT_KEY_STORAGE = "housing_pro_client_key";
 const SYNC_EVENT = "housing-pro-curriculum-sync";
 
 export interface CurriculumPersistedState {
@@ -91,11 +97,29 @@ function readStoredState(todayISO: string): CurriculumPersistedState {
   }
   try {
     const raw = globalThis.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return createDefaultState(todayISO);
+    if (!raw) {
+      // 구식 v2 목차에서 사용자가 설정한 시험일(examDate)만 있으면 승계
+      const fallback = createDefaultState(todayISO);
+      const legacyRaw = globalThis.localStorage.getItem(LEGACY_STORAGE_KEY);
+      if (legacyRaw) {
+        try {
+          const legacyParsed = JSON.parse(legacyRaw) as { examDate?: string };
+          if (legacyParsed.examDate) {
+            fallback.examDate = legacyParsed.examDate;
+          }
+        } catch {
+          // ignore
+        }
+      }
+      return fallback;
+    }
     const parsed = JSON.parse(raw) as Partial<CurriculumPersistedState>;
     const fallback = createDefaultState(todayISO);
+    const validBookId = TEXTBOOK_CATALOG.some((b) => b.id === parsed.activeBookId)
+      ? (parsed.activeBookId as string)
+      : fallback.activeBookId;
     return {
-      activeBookId: parsed.activeBookId || fallback.activeBookId,
+      activeBookId: validBookId,
       examDate: parsed.examDate || fallback.examDate,
       logsByBook: parsed.logsByBook || fallback.logsByBook,
       customTopicsByBook: parsed.customTopicsByBook || {},
@@ -128,21 +152,43 @@ export function useStudyCurriculum() {
     createDefaultState(todayISO)
   );
   const [isHydrated, setIsHydrated] = useState(false);
+  const [dbMatrixCells, setDbMatrixCells] = useState<Record<string, MatrixCellLog>>({});
+  const [chapterTotals, setChapterTotals] = useState<Record<string, ChapterProgressSummary>>({});
+
+  const refreshDbSync = useCallback(async () => {
+    if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return;
+    const clientKey = globalThis.localStorage.getItem(CLIENT_KEY_STORAGE);
+    if (!clientKey) return;
+    const res = await fetchStudyMatrixSyncAction(clientKey);
+    if (res.success) {
+      setDbMatrixCells(res.matrixCells);
+      setChapterTotals(res.chapterTotals);
+    }
+  }, []);
 
   useEffect(() => {
     setState(readStoredState(todayISO));
     setIsHydrated(true);
+    refreshDbSync();
 
     const handleSync = () => {
       setState(readStoredState(todayISO));
+      refreshDbSync();
+    };
+    const handleFocus = () => {
+      refreshDbSync();
     };
 
     if (typeof globalThis !== "undefined" && "addEventListener" in globalThis) {
       globalThis.addEventListener(SYNC_EVENT, handleSync);
-      return () => globalThis.removeEventListener(SYNC_EVENT, handleSync);
+      globalThis.addEventListener("focus", handleFocus);
+      return () => {
+        globalThis.removeEventListener(SYNC_EVENT, handleSync);
+        globalThis.removeEventListener("focus", handleFocus);
+      };
     }
     return undefined;
-  }, [todayISO]);
+  }, [todayISO, refreshDbSync]);
 
   const updateState = useCallback(
     (updater: (prev: CurriculumPersistedState) => CurriculumPersistedState) => {
@@ -176,10 +222,13 @@ export function useStudyCurriculum() {
   }, [activeBook, state.customTopicsByBook]);
 
   const matrixLogs: Record<string, MatrixCellLog> = useMemo(() => {
-    return (
-      state.logsByBook[activeBook.id] ?? buildSeedLogs(activeBook, todayISO)
-    );
-  }, [activeBook, state.logsByBook, todayISO]);
+    const manualLogs =
+      state.logsByBook[activeBook.id] ?? buildSeedLogs(activeBook, todayISO);
+    return {
+      ...dbMatrixCells,
+      ...manualLogs,
+    };
+  }, [activeBook, state.logsByBook, todayISO, dbMatrixCells]);
 
   const todos: StudyTodoItem[] = useMemo(() => {
     return (
@@ -443,6 +492,8 @@ export function useStudyCurriculum() {
     catalog: TEXTBOOK_CATALOG,
     subjects,
     matrixLogs,
+    chapterTotals,
+    refreshDbSync,
     todos,
     collapsedSubjectIds: state.collapsedSubjectIds,
     selectTextbook,

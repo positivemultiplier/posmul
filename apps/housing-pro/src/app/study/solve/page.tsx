@@ -78,6 +78,7 @@ export default function InteractiveSolvePage() {
 
   const [catalogCategory, setCatalogCategory] = useState<"CHAPTER" | "ROUND">("CHAPTER");
   const [subjectFilter, setSubjectFilter] = useState<string>("ALL");
+  const [chapterFilter, setChapterFilter] = useState<string | null>(null);
 
   // 현재 활성화된 세트 풀이 상태
   const [activeSet, setActiveSet] = useState<StudySetSummary | null>(null);
@@ -110,6 +111,14 @@ export default function InteractiveSolvePage() {
   useEffect(() => {
     const key = getOrCreateClientKey();
     setClientKey(key);
+    if (typeof globalThis !== "undefined" && "location" in globalThis) {
+      const params = new globalThis.URLSearchParams(globalThis.location.search);
+      const ch = params.get("chapter");
+      if (ch) {
+        setChapterFilter(ch);
+        setCatalogCategory("CHAPTER");
+      }
+    }
     refreshCatalog(key);
   }, [refreshCatalog]);
 
@@ -117,9 +126,10 @@ export default function InteractiveSolvePage() {
     return sets.filter((s) => {
       if (s.category !== catalogCategory) return false;
       if (subjectFilter !== "ALL" && s.subject !== subjectFilter) return false;
+      if (chapterFilter && !s.setKey.includes(`::${chapterFilter}::`)) return false;
       return true;
     });
-  }, [sets, catalogCategory, subjectFilter]);
+  }, [sets, catalogCategory, subjectFilter, chapterFilter]);
 
   const availableSubjects = useMemo(() => {
     const set = new Set(sets.map((s) => s.subject));
@@ -485,13 +495,26 @@ export default function InteractiveSolvePage() {
             </div>
 
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+              {chapterFilter && (
+                <button
+                  type="button"
+                  onClick={() => setChapterFilter(null)}
+                  className="shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1"
+                >
+                  <span>플래너 선택 단원만 보기</span>
+                  <X className="w-3 h-3" />
+                </button>
+              )}
               {availableSubjects.map((subj) => (
                 <button
                   key={subj}
                   type="button"
-                  onClick={() => setSubjectFilter(subj)}
+                  onClick={() => {
+                    setChapterFilter(null);
+                    setSubjectFilter(subj);
+                  }}
                   className={`shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-bold border transition ${
-                    subjectFilter === subj
+                    subjectFilter === subj && !chapterFilter
                       ? "bg-white text-slate-950 border-white"
                       : "bg-[#0E0E12] text-slate-400 border-white/[0.06]"
                   }`}
