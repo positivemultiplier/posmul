@@ -25,32 +25,13 @@ function LoginForm() {
     searchParams.get("next") ||
     "/dashboard";
 
-  // 1. 구글 소셜 로그인
-  const handleGoogleLogin = async () => {
+  // 1. 구글 소셜 로그인 (서버 Route Handler 기반 PKCE + HttpOnly 백업 쿠키)
+  const handleGoogleLogin = () => {
     setIsLoading(true);
     setLoadingProvider("google");
     setError(null);
-
-    try {
-      const supabase = createClient();
-      const nextQuery = redirectTarget ? `?next=${encodeURIComponent(redirectTarget)}` : "";
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback${nextQuery}`,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
-        },
-      });
-
-      if (error) throw error;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "구글 로그인 중 오류가 발생했습니다.");
-      setIsLoading(false);
-      setLoadingProvider(null);
-    }
+    const nextQuery = redirectTarget ? `?next=${encodeURIComponent(redirectTarget)}` : "";
+    window.location.href = `/api/auth/google/login${nextQuery}`;
   };
 
   // 2. 카카오 1초 간편 로그인

@@ -72,28 +72,11 @@ function HousingProLoginForm() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setIsLoading(true);
     setLoadingProvider("google");
     setError(null);
-    try {
-      const supabase = createClient();
-      const callbackUrl = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
-        nextPath
-      )}`;
-      const { error: oauthErr } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: callbackUrl,
-          queryParams: { access_type: "offline", prompt: "consent" },
-        },
-      });
-      if (oauthErr) throw oauthErr;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "구글 로그인 중 오류가 발생했습니다.");
-      setIsLoading(false);
-      setLoadingProvider(null);
-    }
+    window.location.href = `/api/auth/google/login?next=${encodeURIComponent(nextPath)}`;
   };
 
   const handlePosmulSocialLogin = (provider: "kakao" | "naver") => {

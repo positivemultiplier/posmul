@@ -19,6 +19,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${redirectOrigin}/auth/login?error=no_code`);
   }
 
+  const getCookiesWithPkceBackup = () => {
+    const reqCookies = request.cookies.getAll();
+    const hasCodeVerifier = reqCookies.some(
+      (c) => c.name.includes("code-verifier") && Boolean(c.value)
+    );
+    if (!hasCodeVerifier) {
+      const backupRaw = request.cookies.get("posmul_pkce_cv")?.value;
+      if (backupRaw) {
+        try {
+          const parsed = JSON.parse(backupRaw) as Array<{ name: string; value: string }>;
+          if (Array.isArray(parsed)) {
+            return [...reqCookies, ...parsed];
+          }
+        } catch {
+          // ignore malformed backup cookie
+        }
+      }
+    }
+    return reqCookies;
+  };
+
   const capturedCookies: Array<{ name: string; value: string; options?: Record<string, unknown> }> = [];
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,7 +47,7 @@ export async function GET(request: NextRequest) {
     {
       cookies: {
         getAll() {
-          return request.cookies.getAll();
+          return getCookiesWithPkceBackup();
         },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value, options }) => {
@@ -61,7 +82,16 @@ export async function GET(request: NextRequest) {
       ...options,
       ...(ssoDomain ? { domain: ssoDomain } : {}),
     });
+    if (ssoDomain && name.includes("-auth-token") && value) {
+      response.cookies.set(name, "", { path: "/", maxAge: 0, sameSite: "lax" });
+    }
   });
+  response.cookies.set("posmul_pkce_cv", "", {
+    path: "/",
+    maxAge: 0,
+    ...(ssoDomain ? { domain: ssoDomain } : {}),
+  });
+  response.cookies.set("posmul_pkce_cv", "", { path: "/", maxAge: 0 });
 
   return response;
 }
