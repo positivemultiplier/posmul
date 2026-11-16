@@ -68,6 +68,24 @@ export function createClient() {
   const isHttps =
     typeof window !== "undefined" && window.location.protocol === "https:";
 
+  if (cookieDomain && typeof document !== "undefined") {
+    const parsed = parseDocumentCookies();
+    const nameCounts = new Map<string, number>();
+    for (const { name } of parsed) {
+      nameCounts.set(name, (nameCounts.get(name) ?? 0) + 1);
+    }
+    for (const [name, count] of nameCounts.entries()) {
+      if (count >= 2 && name.startsWith("sb-")) {
+        document.cookie = serializeDocumentCookie(name, "", {
+          path: "/",
+          maxAge: 0,
+          sameSite: "lax",
+          secure: isHttps,
+        });
+      }
+    }
+  }
+
   const client = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "https://mock.supabase.co",
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "mock-anon-key",
@@ -88,7 +106,8 @@ export function createClient() {
               ...(cookieDomain ? { domain: cookieDomain } : {}),
             };
             document.cookie = serializeDocumentCookie(name, value, resolvedOptions);
-            if (cookieDomain && (isRemoval || name.includes("-auth-token"))) {
+            // 오직 쿠키 삭제 요청일 때만 기존 Host-Only 잔존 쿠키도 함께 제거
+            if (cookieDomain && isRemoval) {
               document.cookie = serializeDocumentCookie(name, "", {
                 path: "/",
                 maxAge: 0,

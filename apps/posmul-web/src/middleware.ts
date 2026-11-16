@@ -1,5 +1,6 @@
-import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import { createServerClient } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from "next/server";
+import { resolveCrossSubdomainCookieDomain } from "./lib/supabase/sso-cookie";
 
 const VALID_PASSWORDS = [
   "modoo3gi",
@@ -7,11 +8,65 @@ const VALID_PASSWORDS = [
   (process.env.SITE_SECRET_PASS || "").trim().toLowerCase(),
 ].filter(Boolean);
 
-export function middleware(request: NextRequest) {
+async function refreshPosmulSessionCookie(
+  request: NextRequest,
+  baseResponse: NextResponse
+): Promise<NextResponse> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!supabaseUrl || !supabaseAnonKey) {
+    return baseResponse;
+  }
+
+  const hasSbCookie = request.cookies
+    .getAll()
+    .some((c) => c.name.startsWith("sb-") && Boolean(c.value));
+  if (!hasSbCookie) {
+    return baseResponse;
+  }
+
+  const host = request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const ssoDomain = resolveCrossSubdomainCookieDomain(host);
+  const isHttps = request.nextUrl.protocol === "https:" || Boolean(ssoDomain);
+
+  let response = baseResponse;
+  try {
+    const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        getAll() {
+          return request.cookies.getAll();
+        },
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => {
+            request.cookies.set(name, value);
+          });
+          response = NextResponse.next({ request });
+          response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
+          cookiesToSet.forEach(({ name, value, options }) => {
+            response.cookies.set(name, value, {
+              ...options,
+              path: "/",
+              sameSite: "lax",
+              secure: isHttps,
+              ...(ssoDomain ? { domain: ssoDomain } : {}),
+            });
+          });
+        },
+      },
+    });
+
+    await supabase.auth.getUser();
+  } catch {
+    // 미들웨어 세션 갱신 중 일시 오류 시 페이지 응답 유지
+  }
+
+  return response;
+}
+
+export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
   // 1. 게이트 화면, 게이트 검증 API, OAuth 인증 콜백, M2M 크론/헬스체크 API, 정적 파일 등은 미들웨어 통과
-  // (각 보호 API 라우트는 자체적으로 requireAdminApi(..., { allowCronSecret: true })로 인증 검증)
   if (
     pathname.startsWith("/gate") ||
     pathname.startsWith("/api/gate") ||
@@ -25,7 +80,7 @@ export function middleware(request: NextRequest) {
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||
     pathname === "/favicon.ico" ||
-    /\.(.*)$/.test(pathname) // 정적 파일 확장자 (.png, .jpg, .svg, .webp 등)
+    /\.(.*)$/.test(pathname)
   ) {
     const response = NextResponse.next();
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
@@ -38,7 +93,6 @@ export function middleware(request: NextRequest) {
     .toLowerCase();
 
   if (queryPass && VALID_PASSWORDS.includes(queryPass)) {
-    // 쿼리 파라미터를 제거한 깔끔한 URL로 리다이렉트
     const cleanUrl = new URL(pathname, request.url);
     searchParams.forEach((val, key) => {
       if (key !== "pass" && key !== "secret") {
@@ -49,7 +103,7 @@ export function middleware(request: NextRequest) {
     const redirectResponse = NextResponse.redirect(cleanUrl);
     redirectResponse.cookies.set("posmul_access_pass", "granted", {
       path: "/",
-      maxAge: 60 * 60 * 24 * 30, // 30일
+      maxAge: 60 * 60 * 24 * 30,
       httpOnly: false,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
@@ -62,9 +116,12 @@ export function middleware(request: NextRequest) {
   const hasAccess = request.cookies.get("posmul_access_pass")?.value === "granted";
 
   if (hasAccess) {
-    const response = NextResponse.next();
+    const response = NextResponse.next({ request });
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-    return response;
+    if (pathname.startsWith("/api/")) {
+      return response;
+    }
+    return refreshPosmulSessionCookie(request, response);
   }
 
   // 4. API 요청인데 쿠키가 없는 경우 401 Unauthorized 반환
@@ -78,7 +135,7 @@ export function middleware(request: NextRequest) {
     );
   }
 
-  // 5. 일반 방문자: /gate 로 리다이렉트 (직전 접근하려던 경로 보존)
+  // 5. 일반 방문자: /gate 로 리다이렉트
   const gateUrl = new URL("/gate", request.url);
   const currentFullUrl = pathname + (request.nextUrl.search || "");
   if (pathname !== "/" || request.nextUrl.search) {
@@ -92,13 +149,6 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
     "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
-

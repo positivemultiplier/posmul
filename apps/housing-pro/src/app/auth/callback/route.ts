@@ -76,22 +76,24 @@ export async function GET(request: NextRequest) {
   }
 
   const ssoDomain = resolveCrossSubdomainCookieDomain(new URL(redirectOrigin).hostname);
+  const isHttps = redirectOrigin.startsWith("https://");
   const response = NextResponse.redirect(`${redirectOrigin}${nextPath}`);
   capturedCookies.forEach(({ name, value, options }) => {
     response.cookies.set(name, value, {
       ...options,
+      path: "/",
+      sameSite: "lax",
+      secure: isHttps,
       ...(ssoDomain ? { domain: ssoDomain } : {}),
     });
-    if (ssoDomain && name.includes("-auth-token") && value) {
-      response.cookies.set(name, "", { path: "/", maxAge: 0, sameSite: "lax" });
-    }
   });
   response.cookies.set("posmul_pkce_cv", "", {
     path: "/",
     maxAge: 0,
+    sameSite: "lax",
+    secure: isHttps,
     ...(ssoDomain ? { domain: ssoDomain } : {}),
   });
-  response.cookies.set("posmul_pkce_cv", "", { path: "/", maxAge: 0 });
 
   return response;
 }

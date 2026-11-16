@@ -550,7 +550,13 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
         const {
           data: { session },
         } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
+        if (session?.user) {
+          setUser(session.user);
+        } else {
+          // 쿠키가 서버에서 갱신됐거나 막 콜백으로 돌아온 경우 getUser()로 한 번 더 확인
+          const { data } = await supabase.auth.getUser();
+          setUser(data.user ?? null);
+        }
       } finally {
         setAuthResolved(true);
       }
@@ -566,7 +572,16 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
     });
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, [supabase, pathname]);
+
+  const resolvedUserLabel = user
+    ? ((user.user_metadata?.display_name as string | undefined) ||
+        (user.user_metadata?.nickname as string | undefined) ||
+        (user.user_metadata?.full_name as string | undefined) ||
+        (user.user_metadata?.name as string | undefined) ||
+        user.email?.split("@")[0] ||
+        "시민")
+    : null;
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -706,10 +721,11 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                 </Link>
                 <Link
                   href="/dashboard?onboarding=1"
-                  title="개인맞춤 설정"
-                  className="w-7 h-7 rounded-full bg-slate-800 hover:bg-blue-600/40 border border-slate-700 hover:border-blue-400/50 flex items-center justify-center text-xs font-bold text-slate-200 transition-colors"
+                  title={`로그인 계정: ${user.email ?? resolvedUserLabel ?? ""}`}
+                  className="px-2.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/40 flex items-center gap-1.5 text-xs font-bold text-emerald-200 transition-colors max-w-[140px]"
                 >
-                  {user.email?.[0]?.toUpperCase() ?? "U"}
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                  <span className="truncate">{resolvedUserLabel} 님</span>
                 </Link>
                 <button
                   onClick={handleSignOut}
@@ -886,23 +902,29 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                 🏡 PosMul 힐링룸 미니홈피 (새 창)
               </a>
               {user ? (
-                <div className="grid grid-cols-2 gap-2">
-                  <Link
-                    href="/dashboard"
-                    onClick={() => setMobileOpen(false)}
-                    className="block px-4 py-2 bg-slate-800 text-slate-200 rounded-xl text-center text-xs font-semibold"
-                  >
-                    대시보드
-                  </Link>
-                  <button
-                    onClick={() => {
-                      handleSignOut();
-                      setMobileOpen(false);
-                    }}
-                    className="block w-full px-4 py-2 bg-rose-950/50 text-rose-300 rounded-xl text-center text-xs font-semibold"
-                  >
-                    로그아웃
-                  </button>
+                <div className="space-y-2">
+                  <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-400/30 text-xs font-bold text-emerald-200 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                    <span className="truncate">로그인됨: {resolvedUserLabel} 님 ({user.email})</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileOpen(false)}
+                      className="block px-4 py-2 bg-slate-800 text-slate-200 rounded-xl text-center text-xs font-semibold"
+                    >
+                      대시보드
+                    </Link>
+                    <button
+                      onClick={() => {
+                        handleSignOut();
+                        setMobileOpen(false);
+                      }}
+                      className="block w-full px-4 py-2 bg-rose-950/50 text-rose-300 rounded-xl text-center text-xs font-semibold"
+                    >
+                      로그아웃
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-2">

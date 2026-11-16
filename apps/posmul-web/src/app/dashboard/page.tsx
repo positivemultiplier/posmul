@@ -1,6 +1,12 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { createClient } from "../../lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
+import {
+  createAdminSupabaseClient,
+  ensureUserProfile,
+  ensureEconomyAccount,
+} from "../auth/auth-helper";
 import { getLiveRoomsWithStatusAction } from "../live/actions/live.actions";
 import {
   DEFAULT_PERSONALIZATION,
@@ -56,6 +62,17 @@ export default async function DashboardPage() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { persistSession: false } }
   );
+
+  // 다른 서비스(pro.posmul.com 등)에서 먼저 가입 후 넘어온 로그인 유저도 코어 프로필/계좌 자동 보장
+  if (user) {
+    try {
+      const helperAdmin = createAdminSupabaseClient();
+      await ensureUserProfile(helperAdmin, user);
+      await ensureEconomyAccount(helperAdmin, user.id);
+    } catch (err) {
+      console.warn("[dashboard] cross-service provision warning:", err);
+    }
+  }
 
   // 병렬 서버 조회
   const [
@@ -399,6 +416,17 @@ export default async function DashboardPage() {
         </div>
       }
     >
+      {!isAuthenticated && (
+        <div className="bg-amber-950/70 border-b border-amber-500/40 px-4 py-2.5 text-center text-xs font-bold text-amber-200 flex flex-wrap items-center justify-center gap-3">
+          <span>⚠️ 현재 비로그인 미리보기(데모) 상태입니다. 로그인하셔야 내 PMP/PMC 잔액과 참여 기록이 유지됩니다.</span>
+          <Link
+            href="/auth/login?next=/dashboard"
+            className="px-3 py-1 rounded-lg bg-amber-400 text-slate-950 font-black hover:bg-amber-300 transition"
+          >
+            PosMul 통합 로그인 →
+          </Link>
+        </div>
+      )}
       <UserDashboardClient initialData={initialData} />
     </Suspense>
   );
