@@ -8,9 +8,17 @@ import { createClient } from "../../../lib/supabase/server";
 import {
   HealingRoomError,
   buyHealingRoomItem,
+  deleteHealingCreation,
   loadHealingRoomData,
+  resonateHealingCreation,
+  saveHealingCreation,
+  saveHealingWorldview,
   updateHealingRoom,
   writeHealingRoomGuestbook,
+  type CreationKind,
+  type CreationPayloadItem,
+  type WorldviewCharacterItem,
+  type WorldviewTimelineItem,
 } from "../../healing-room/healing-room-service";
 
 export const dynamic = "force-dynamic";
@@ -41,10 +49,49 @@ interface WriteGuestbookRequestBody {
   relationLabel?: unknown;
 }
 
+interface SaveWorldviewRequestBody {
+  action: "save_worldview";
+  universeTitle?: unknown;
+  tagline?: unknown;
+  genreTags?: unknown;
+  prologueMd?: unknown;
+  timeline?: unknown;
+  characters?: unknown;
+  nonCommercialPledge?: unknown;
+}
+
+interface SaveCreationRequestBody {
+  action: "save_creation";
+  id?: unknown;
+  kind?: unknown;
+  title?: unknown;
+  subtitle?: unknown;
+  coverUrl?: unknown;
+  loreConnection?: unknown;
+  creatorNote?: unknown;
+  aiTools?: unknown;
+  items?: unknown;
+}
+
+interface DeleteCreationRequestBody {
+  action: "delete_creation";
+  creationId?: unknown;
+}
+
+interface ResonateCreationRequestBody {
+  action: "resonate_creation";
+  creationId?: unknown;
+  viewerKey?: unknown;
+}
+
 type HealingRoomPostBody =
   | UpdateRoomRequestBody
   | BuyItemRequestBody
   | WriteGuestbookRequestBody
+  | SaveWorldviewRequestBody
+  | SaveCreationRequestBody
+  | DeleteCreationRequestBody
+  | ResonateCreationRequestBody
   | { action?: unknown };
 
 async function resolveViewerUserId(): Promise<string | null> {
@@ -153,6 +200,69 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         guestName: typeof body.guestName === "string" ? body.guestName : undefined,
         relationLabel: typeof body.relationLabel === "string" ? body.relationLabel : undefined,
       });
+      return NextResponse.json({ success: true, data }, { status: 200 });
+    }
+
+    if (rawBody.action === "save_worldview") {
+      const body = rawBody as SaveWorldviewRequestBody;
+      const data = await saveHealingWorldview(viewerUserId, {
+        universeTitle: typeof body.universeTitle === "string" ? body.universeTitle : "",
+        tagline: typeof body.tagline === "string" ? body.tagline : undefined,
+        genreTags: Array.isArray(body.genreTags)
+          ? body.genreTags.filter((g): g is string => typeof g === "string")
+          : undefined,
+        prologueMd: typeof body.prologueMd === "string" ? body.prologueMd : undefined,
+        timeline: Array.isArray(body.timeline) ? (body.timeline as WorldviewTimelineItem[]) : undefined,
+        characters: Array.isArray(body.characters)
+          ? (body.characters as WorldviewCharacterItem[])
+          : undefined,
+        nonCommercialPledge:
+          typeof body.nonCommercialPledge === "boolean" ? body.nonCommercialPledge : true,
+      });
+      return NextResponse.json({ success: true, data }, { status: 200 });
+    }
+
+    if (rawBody.action === "save_creation") {
+      const body = rawBody as SaveCreationRequestBody;
+      const data = await saveHealingCreation(viewerUserId, {
+        id: typeof body.id === "string" ? body.id : undefined,
+        kind: (typeof body.kind === "string" ? body.kind : "novel") as CreationKind,
+        title: typeof body.title === "string" ? body.title : "",
+        subtitle: typeof body.subtitle === "string" ? body.subtitle : undefined,
+        coverUrl: typeof body.coverUrl === "string" ? body.coverUrl : null,
+        loreConnection: typeof body.loreConnection === "string" ? body.loreConnection : "",
+        creatorNote: typeof body.creatorNote === "string" ? body.creatorNote : undefined,
+        aiTools: Array.isArray(body.aiTools)
+          ? body.aiTools.filter((t): t is string => typeof t === "string")
+          : undefined,
+        items: Array.isArray(body.items) ? (body.items as CreationPayloadItem[]) : [],
+      });
+      return NextResponse.json({ success: true, data }, { status: 200 });
+    }
+
+    if (rawBody.action === "delete_creation") {
+      const body = rawBody as DeleteCreationRequestBody;
+      if (typeof body.creationId !== "string") {
+        throw new HealingRoomError("삭제할 creationId가 필요합니다.", 400);
+      }
+      const data = await deleteHealingCreation(viewerUserId, body.creationId);
+      return NextResponse.json({ success: true, data }, { status: 200 });
+    }
+
+    if (rawBody.action === "resonate_creation") {
+      const body = rawBody as ResonateCreationRequestBody;
+      if (typeof body.creationId !== "string") {
+        throw new HealingRoomError("공명할 creationId가 필요합니다.", 400);
+      }
+      const ipFallback =
+        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        request.headers.get("user-agent")?.slice(0, 40) ||
+        "guest";
+      const viewerKey =
+        typeof body.viewerKey === "string" && body.viewerKey.trim().length > 0
+          ? body.viewerKey.trim()
+          : `g:${ipFallback}`;
+      const data = await resonateHealingCreation(viewerUserId, viewerKey, body.creationId);
       return NextResponse.json({ success: true, data }, { status: 200 });
     }
 

@@ -14,7 +14,10 @@ import {
   Pause,
   Play,
   RefreshCw,
+  Repeat,
+  Repeat1,
   ShoppingBag,
+  Shuffle,
   SkipForward,
   Sparkles,
   Square,
@@ -31,7 +34,11 @@ import {
   type AnyHealingItem,
   type HealingItemCategory,
 } from "./healing-room-catalog";
-import type { HealingRoomPageData } from "./healing-room-service";
+import type {
+  HealingRoomPageData,
+  SaveCreationInput,
+  SaveWorldviewInput,
+} from "./healing-room-service";
 import {
   POSMUL_FRIENDS,
   POSMUL_STICKER_MAP,
@@ -41,13 +48,24 @@ import {
   type PosMulFriendId,
 } from "@/shared/characters/posmul-friends";
 import { IsometricMiniroomStage } from "./components/IsometricMiniroomStage";
+import { WorldviewTabPanel } from "./components/WorldviewTabPanel";
+import { CreationsTabPanel } from "./components/CreationsTabPanel";
 
 interface HealingRoomClientProps {
   initialData: HealingRoomPageData;
 }
 
-type CyTabKey = "home" | "profile" | "prediction" | "donation" | "shop" | "guestbook";
+type CyTabKey =
+  | "home"
+  | "worldview"
+  | "creations"
+  | "profile"
+  | "prediction"
+  | "donation"
+  | "shop"
+  | "guestbook";
 type ShopCategoryFilter = "all" | HealingItemCategory;
+type BgmPlayMode = "sequential" | "shuffle" | "repeat-one";
 
 interface FeedbackNotice {
   type: "success" | "error" | "info";
@@ -107,6 +125,20 @@ const CY_BOOKMARK_TABS: ReadonlyArray<{
     icon: "🏠",
     inactiveClass: "bg-indigo-700 border-indigo-400/60 hover:bg-indigo-600 text-indigo-50",
     activeAccent: "text-indigo-900 border-l-indigo-500",
+  },
+  {
+    key: "worldview",
+    label: "세계관",
+    icon: "🌌",
+    inactiveClass: "bg-violet-700 border-violet-400/60 hover:bg-violet-600 text-violet-50",
+    activeAccent: "text-violet-900 border-l-violet-500",
+  },
+  {
+    key: "creations",
+    label: "작품관",
+    icon: "🎨",
+    inactiveClass: "bg-fuchsia-700 border-fuchsia-400/60 hover:bg-fuchsia-600 text-fuchsia-50",
+    activeAccent: "text-fuchsia-900 border-l-fuchsia-500",
   },
   {
     key: "profile",
@@ -188,12 +220,14 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
   const [showStickerPicker, setShowStickerPicker] = useState(false);
   const [stickerFriendFilter, setStickerFriendFilter] = useState<"all" | PosMulFriendId>("all");
 
-  // BGM 플레이어 상태 (MP3 오리지널 음원 + Web Audio API 로파이 겸용)
+  // BGM 플레이어 상태 (MP3 오리지널 음원 + Web Audio API 로파이 겸용 · 기본값: 순차반복)
   const [isBgmPlaying, setIsBgmPlaying] = useState(false);
   const [previewBgmId, setPreviewBgmId] = useState(initialData.room.bgmTrack);
+  const [bgmPlayMode, setBgmPlayMode] = useState<BgmPlayMode>("sequential");
   const htmlAudioRef = useRef<HTMLAudioElement | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const bgmTimerRef = useRef<number | null>(null);
+  const bgmAdvanceTimerRef = useRef<number | null>(null);
   const noteStepRef = useRef(0);
 
   // 우측 미니홈피 위젯 감성 게이지
@@ -263,7 +297,19 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     room.bgmTrack,
   ]);
 
-  // MP3 오리지널 음원 & Web Audio API BGM 재생/정지
+  const pickAdjacentBgmId = (currentId: string, mode: BgmPlayMode): string => {
+    if (bgmTracks.length === 0) return currentId;
+    if (mode === "repeat-one") return currentId;
+    if (mode === "shuffle" && bgmTracks.length > 1) {
+      const candidates = bgmTracks.filter((t) => t.id !== currentId);
+      const picked = candidates[Math.floor(Math.random() * candidates.length)];
+      return picked?.id ?? bgmTracks[0].id;
+    }
+    const idx = bgmTracks.findIndex((t) => t.id === currentId);
+    return bgmTracks[(idx + 1) % bgmTracks.length].id;
+  };
+
+  // MP3 오리지널 음원 & Web Audio API BGM 재생/정지 (순차반복/랜덤반복/1곡반복 지원)
   useEffect(() => {
     const stopBgmAudio = () => {
       if (htmlAudioRef.current) {
@@ -274,6 +320,10 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
       if (bgmTimerRef.current !== null) {
         window.clearInterval(bgmTimerRef.current);
         bgmTimerRef.current = null;
+      }
+      if (bgmAdvanceTimerRef.current !== null) {
+        window.clearTimeout(bgmAdvanceTimerRef.current);
+        bgmAdvanceTimerRef.current = null;
       }
       if (audioCtxRef.current && audioCtxRef.current.state !== "closed") {
         void audioCtxRef.current.close().catch(() => undefined);
@@ -288,8 +338,13 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
 
     if (activeBgm.audioUrl) {
       const audio = new Audio(activeBgm.audioUrl);
-      audio.loop = true;
+      audio.loop = bgmPlayMode === "repeat-one";
       audio.volume = 0.55;
+      if (bgmPlayMode !== "repeat-one") {
+        audio.onended = () => {
+          setPreviewBgmId((prevId) => pickAdjacentBgmId(prevId, bgmPlayMode));
+        };
+      }
       htmlAudioRef.current = audio;
       void audio.play().catch(() => {
         setIsBgmPlaying(false);
@@ -352,8 +407,15 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     playAmbientNote();
     bgmTimerRef.current = window.setInterval(playAmbientNote, 1350);
 
+    // 로파이 합성 트랙도 순차반복/랜덤반복 모드에서는 45초마다 다음 곡으로 자동 전환
+    if (bgmPlayMode !== "repeat-one" && bgmTracks.length > 1) {
+      bgmAdvanceTimerRef.current = window.setTimeout(() => {
+        setPreviewBgmId((prevId) => pickAdjacentBgmId(prevId, bgmPlayMode));
+      }, 45000);
+    }
+
     return stopBgmAudio;
-  }, [isBgmPlaying, activeBgm]);
+  }, [isBgmPlaying, activeBgm, bgmPlayMode, bgmTracks]);
 
   const showNotice = (type: FeedbackNotice["type"], message: string) => {
     setNotice({ type, message });
@@ -639,21 +701,93 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     );
   }
 
+  function handleCycleBgmPlayMode() {
+    setBgmPlayMode((prev) => {
+      const next: BgmPlayMode =
+        prev === "sequential" ? "shuffle" : prev === "shuffle" ? "repeat-one" : "sequential";
+      const label =
+        next === "sequential" ? "순차반복" : next === "shuffle" ? "랜덤반복" : "한곡반복";
+      showNotice("info", `🎵 주크박스 재생 모드를 '${label}'으로 변경했습니다.`);
+      return next;
+    });
+  }
+
+  function handlePlayAlbumTrack(bgmId: string) {
+    setPreviewBgmId(bgmId);
+    setIsBgmPlaying(true);
+    showNotice("info", "💿 자작 앨범 트랙을 주크박스에서 재생합니다.");
+  }
+
+  async function handleSaveWorldview(input: SaveWorldviewInput): Promise<boolean> {
+    return postAction(
+      { action: "save_worldview", ...input },
+      "🌌 나만의 내면 세계관 바이블을 저장했습니다."
+    );
+  }
+
+  async function handleSaveCreation(input: SaveCreationInput): Promise<boolean> {
+    return postAction(
+      { action: "save_creation", ...input },
+      "🎨 비상업 순수 창작물이 작품관에 출판되었습니다."
+    );
+  }
+
+  async function handleDeleteCreation(creationId: string): Promise<boolean> {
+    return postAction(
+      { action: "delete_creation", creationId },
+      "🗑️ 선택한 작품을 작품관에서 내렸습니다."
+    );
+  }
+
+  async function handleResonateCreation(creationId: string): Promise<void> {
+    let guestKey = "guest";
+    if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem("posmul_healing_viewer_key");
+      if (stored) {
+        guestKey = stored;
+      } else {
+        guestKey = `v-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
+        window.localStorage.setItem("posmul_healing_viewer_key", guestKey);
+      }
+    }
+    await postAction(
+      { action: "resonate_creation", creationId, viewerKey: guestKey },
+      "👏 작품에 따뜻한 공명을 보냈습니다!"
+    );
+  }
+
   async function handleNextBgm() {
-    const idx = bgmTracks.findIndex((t) => t.id === previewBgmId);
-    const nextTrack = bgmTracks[(idx + 1) % bgmTracks.length];
+    const nextId = pickAdjacentBgmId(previewBgmId, bgmPlayMode === "repeat-one" ? "sequential" : bgmPlayMode);
+    const nextTrack = bgmTracks.find((t) => t.id === nextId) ?? bgmTracks[0];
+    if (!nextTrack) return;
     setPreviewBgmId(nextTrack.id);
     if (isOwner) {
       await postAction(
         { action: "update_room", bgmTrack: nextTrack.id },
-        `💿 Lo-Fi BGM을 '${nextTrack.label}'(으)로 변경했습니다.`
+        `💿 BGM을 '${nextTrack.label}'(으)로 전환했습니다.`
       );
     }
   }
 
-  // PosMul 시민 선순환 Activity News 4줄
+  // PosMul 시민 선순환 & 창작 Activity News
   const updatedNewsLines = useMemo(() => {
     const lines: Array<{ tag: string; tagClass: string; text: string; targetTab: CyTabKey }> = [];
+
+    if (data.worldview) {
+      lines.push({
+        tag: "[세계관]",
+        tagClass: "bg-violet-100 text-violet-800 border-violet-200",
+        text: `${data.worldview.universeTitle} (${data.creations.length}개 창작물 전시 중)`,
+        targetTab: "worldview",
+      });
+    } else if (data.creations[0]) {
+      lines.push({
+        tag: "[작품관]",
+        tagClass: "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200",
+        text: `새 비상업 창작: ${data.creations[0].title}`,
+        targetTab: "creations",
+      });
+    }
 
     if (data.donations[0]) {
       lines.push({
@@ -794,6 +928,17 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                 <span>로그인하고 내 방 만들기</span>
               </Link>
             )}
+
+            <button
+              type="button"
+              disabled={isBusy}
+              onClick={() => void visitRoom({ wave: true })}
+              className="inline-flex items-center gap-1 rounded-lg border border-cyan-400/50 bg-gradient-to-r from-cyan-500/25 to-indigo-500/25 px-2.5 py-1 text-[11px] font-extrabold text-cyan-200 transition hover:brightness-125"
+              title="누군가의 내면 세계관으로 우연히 놀러 가기"
+            >
+              <Waves className="h-3 w-3" />
+              <span>취향 파도타기</span>
+            </button>
 
             <a
               href="/characters"
@@ -1055,7 +1200,9 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             .filter((n) => n.userId !== room.userId)
                             .map((neighbor) => (
                               <option key={neighbor.userId} value={neighbor.userId}>
-                                🌊 {neighbor.ownerNickname} ({neighbor.regionLabel})
+                                🌊 {neighbor.ownerNickname}
+                                {neighbor.universeTitle ? ` · ${neighbor.universeTitle}` : ` (${neighbor.regionLabel})`}
+                                {(neighbor.creationsCount ?? 0) > 0 ? ` [${neighbor.creationsCount}]` : ""}
                               </option>
                             ))}
                         </select>
@@ -1275,6 +1422,67 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                         />
                       </div>
 
+                      {/* 2-2단: 내면 세계관 & 비상업 순수 창작 아틀리에 쇼케이스 */}
+                      <div className="rounded-xl border border-violet-200/80 bg-gradient-to-r from-violet-50/80 via-white to-fuchsia-50/70 p-3 shadow-xs">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div>
+                            <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold text-violet-800">
+                              🌌 CREATOR UNIVERSE · 비상업 순수 창작
+                            </span>
+                            <h3 className="mt-1 text-xs font-black text-slate-900">
+                              {data.worldview?.universeTitle ?? `${room.ownerNickname}의 내면 세계관`}
+                            </h3>
+                            <p className="text-[11px] text-slate-600">
+                              {data.worldview?.tagline ||
+                                "현실에 드러내지 못한 취향으로 음악 앨범·그림 전시·소설을 빚어 전시하는 공간"}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab("worldview")}
+                              className="rounded-lg border border-violet-300 bg-white px-2.5 py-1 text-[11px] font-bold text-violet-800 hover:bg-violet-50"
+                            >
+                              세계관 보기
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab("creations")}
+                              className="rounded-lg bg-violet-700 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-violet-800"
+                            >
+                              작품관 ({data.creations.length})
+                            </button>
+                          </div>
+                        </div>
+
+                        {data.creations.length > 0 && (
+                          <div className="mt-2.5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                            {data.creations.slice(0, 3).map((cr) => (
+                              <button
+                                key={cr.id}
+                                type="button"
+                                onClick={() => setActiveTab("creations")}
+                                className="rounded-lg border border-slate-200/90 bg-white px-2.5 py-2 text-left transition hover:border-violet-400"
+                              >
+                                <div className="flex items-center justify-between text-[10px] font-bold text-slate-500">
+                                  <span>
+                                    {cr.kind === "album"
+                                      ? "💿 앨범"
+                                      : cr.kind === "exhibition"
+                                        ? "🖼️ 전시"
+                                        : "📖 출판"}
+                                  </span>
+                                  <span className="text-rose-500">👏 {cr.resonanceCount}</span>
+                                </div>
+                                <div className="mt-0.5 truncate text-[11px] font-extrabold text-slate-900">
+                                  {cr.title}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
                       {/* 3단: What friends say */}
                       <div className="pt-1">
                         <div className="mb-2 flex items-center justify-between border-b border-slate-200 pb-1">
@@ -1396,6 +1604,42 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                         </ul>
                       </div>
                     </div>
+                  )}
+
+                  {/* ========================================================== */}
+                  {/* TAB 1-2: 세계관 (나만의 내면 우주 바이블)                 */}
+                  {/* ========================================================== */}
+                  {activeTab === "worldview" && (
+                    <WorldviewTabPanel
+                      worldview={data.worldview}
+                      ownerNickname={room.ownerNickname}
+                      isOwner={isOwner}
+                      isAuthenticated={isAuthenticated}
+                      isBusy={isBusy}
+                      titleColorClass={binderSkin.titleColor}
+                      onSaveWorldview={handleSaveWorldview}
+                      onJumpToCreations={() => setActiveTab("creations")}
+                    />
+                  )}
+
+                  {/* ========================================================== */}
+                  {/* TAB 1-3: 작품관 (자작 앨범 · 그림 전시 · 소설 출판)        */}
+                  {/* ========================================================== */}
+                  {activeTab === "creations" && (
+                    <CreationsTabPanel
+                      creations={data.creations}
+                      ownerNickname={room.ownerNickname}
+                      universeTitle={data.worldview?.universeTitle}
+                      isOwner={isOwner}
+                      isBusy={isBusy}
+                      viewerPmpBalance={data.viewerPmpBalance}
+                      nextCreationPmpCost={data.nextCreationPmpCost}
+                      titleColorClass={binderSkin.titleColor}
+                      onSaveCreation={handleSaveCreation}
+                      onDeleteCreation={handleDeleteCreation}
+                      onResonateCreation={handleResonateCreation}
+                      onPlayAlbumTrack={handlePlayAlbumTrack}
+                    />
                   )}
 
                   {/* ========================================================== */}
@@ -2042,7 +2286,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
             {/* === 다이어리 우측 돌출 도메인 컬러 책갈피 인덱스 탭 (xl 데스크톱 전용) === */}
             <nav
               aria-label="미니홈피 메뉴 탭"
-              className="hidden xl:flex flex-col gap-1.5 absolute -right-[84px] top-12 z-20 w-[86px]"
+              className="hidden xl:flex flex-col gap-1 absolute -right-[86px] top-10 z-20 w-[88px]"
             >
               {CY_BOOKMARK_TABS.map((tab) => {
                 const active = activeTab === tab.key;
@@ -2051,7 +2295,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                     key={tab.key}
                     type="button"
                     onClick={() => setActiveTab(tab.key)}
-                    className={`flex items-center gap-1 rounded-r-lg border-2 border-l-0 px-2 py-2 text-left text-xs font-extrabold shadow-md transition-all ${
+                    className={`flex items-center gap-1 rounded-r-lg border-2 border-l-0 px-2 py-1.5 text-left text-[11.5px] font-extrabold shadow-md transition-all ${
                       active
                         ? `-ml-1 border-amber-200 border-l-4 bg-white ${tab.activeAccent}`
                         : `${tab.inactiveClass}`
@@ -2158,15 +2402,19 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
               </div>
             </div>
 
-            {/* PosMul Lo-Fi 주크박스 */}
+            {/* PosMul Lo-Fi & 자작 앨범 주크박스 */}
             <div className="border-t border-slate-800 bg-[#0b101d] p-3">
               <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-slate-400">
                 <span>💿 POSMUL JUKEBOX</span>
                 <span className={isBgmPlaying ? "text-amber-300 animate-pulse" : "text-slate-500"}>
                   {isBgmPlaying
-                    ? "● ON AIR"
+                    ? bgmPlayMode === "shuffle"
+                      ? "● 랜덤 ON AIR"
+                      : bgmPlayMode === "repeat-one"
+                        ? "● 1곡 ON AIR"
+                        : "● 순차 ON AIR"
                     : activeBgm.audioUrl
-                      ? "MP3 ORIGINAL"
+                      ? "AUDIO ORIGINAL"
                       : "LO-FI"}
                 </span>
               </div>
@@ -2208,6 +2456,37 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                   title="다음 BGM"
                 >
                   <SkipForward className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCycleBgmPlayMode}
+                  className={`rounded-md border px-1.5 py-1 text-[10px] font-bold transition ${
+                    bgmPlayMode === "shuffle"
+                      ? "border-cyan-500/50 bg-cyan-500/20 text-cyan-200"
+                      : bgmPlayMode === "repeat-one"
+                        ? "border-rose-500/50 bg-rose-500/20 text-rose-200"
+                        : "border-indigo-500/50 bg-indigo-500/20 text-indigo-200"
+                  }`}
+                  title="재생 모드 전환 (순차반복 ↔ 랜덤반복 ↔ 한곡반복)"
+                >
+                  {bgmPlayMode === "sequential" && (
+                    <span className="inline-flex items-center gap-0.5">
+                      <Repeat className="h-3 w-3" />
+                      <span>순차</span>
+                    </span>
+                  )}
+                  {bgmPlayMode === "shuffle" && (
+                    <span className="inline-flex items-center gap-0.5">
+                      <Shuffle className="h-3 w-3" />
+                      <span>랜덤</span>
+                    </span>
+                  )}
+                  {bgmPlayMode === "repeat-one" && (
+                    <span className="inline-flex items-center gap-0.5">
+                      <Repeat1 className="h-3 w-3" />
+                      <span>1곡</span>
+                    </span>
+                  )}
                 </button>
               </div>
 

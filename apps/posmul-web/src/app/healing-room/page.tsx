@@ -9,9 +9,9 @@ import { loadHealingRoomData } from "./healing-room-service";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "힐링룸 미니홈피 | PosMul",
+  title: "힐링룸 창작 아틀리에 | PosMul",
   description:
-    "현실의 나를 잠시 내려놓고, 예측게임·공공 기부 활동과 나만의 미니룸으로 힐링하는 PosMul 감성 공간",
+    "나만의 내면 세계관을 설계하고 AI 음악 앨범·그림 전시회·소설 출판을 비상업 순수 창작으로 뽐내는 PosMul 힐링룸",
 };
 
 interface HealingRoomPageProps {

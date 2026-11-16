@@ -55,6 +55,75 @@ export interface HealingNeighborSummary {
   regionLabel: string;
   todayVisits: number;
   totalVisits: number;
+  universeTitle?: string | null;
+  creationsCount?: number;
+}
+
+export interface WorldviewTimelineItem {
+  era: string;
+  title: string;
+  summary: string;
+}
+
+export interface WorldviewCharacterItem {
+  name: string;
+  role: string;
+  trait: string;
+  bio: string;
+}
+
+export interface HealingWorldview {
+  userId: string;
+  universeTitle: string;
+  tagline: string;
+  genreTags: string[];
+  prologueMd: string;
+  timeline: WorldviewTimelineItem[];
+  characters: WorldviewCharacterItem[];
+  nonCommercialPledge: boolean;
+  updatedAt: string;
+}
+
+export type CreationKind = "album" | "exhibition" | "novel";
+
+export interface AlbumTrackItem {
+  title: string;
+  audioUrl: string;
+  durationSec?: number;
+  lyricsOrMood: string;
+}
+
+export interface ExhibitionPieceItem {
+  title: string;
+  imageUrl: string;
+  docentNote: string;
+}
+
+export interface NovelChapterItem {
+  chapterTitle: string;
+  body: string;
+}
+
+export type CreationPayloadItem =
+  | AlbumTrackItem
+  | ExhibitionPieceItem
+  | NovelChapterItem;
+
+export interface HealingCreationItem {
+  id: string;
+  userId: string;
+  kind: CreationKind;
+  title: string;
+  subtitle: string;
+  coverUrl: string | null;
+  loreConnection: string;
+  creatorNote: string;
+  aiTools: string[];
+  items: CreationPayloadItem[];
+  resonanceCount: number;
+  isPublished: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface DonationShowcaseItem {
@@ -124,6 +193,9 @@ export interface HealingRoomPageData {
   guestbooks: GuestbookEntryItem[];
   neighbors: HealingNeighborSummary[];
   bgmTracks: BgmTrackOption[];
+  worldview: HealingWorldview | null;
+  creations: HealingCreationItem[];
+  nextCreationPmpCost: number;
 }
 
 interface RawBgmTrackRow {
@@ -486,15 +558,40 @@ async function ensureAndLoadRoom(
 }
 
 async function fetchNeighborRooms(): Promise<HealingNeighborSummary[]> {
-  const { data } = await supabaseAdmin
-    .schema("user")
-    .from("healing_rooms")
-    .select("user_id, owner_nickname, room_title, minimi_style, region_label, today_visits, total_visits")
-    .order("total_visits", { ascending: false })
-    .limit(20);
+  const [{ data }, { data: wvRows }, { data: crRows }] = await Promise.all([
+    supabaseAdmin
+      .schema("user")
+      .from("healing_rooms")
+      .select("user_id, owner_nickname, room_title, minimi_style, region_label, today_visits, total_visits")
+      .order("total_visits", { ascending: false })
+      .limit(30),
+    supabaseAdmin
+      .schema("user")
+      .from("healing_worldviews")
+      .select("user_id, universe_title"),
+    supabaseAdmin
+      .schema("user")
+      .from("healing_creations")
+      .select("user_id")
+      .eq("is_published", true),
+  ]);
 
   if (!Array.isArray(data)) {
     return [];
+  }
+
+  const universeMap = new Map<string, string>();
+  if (Array.isArray(wvRows)) {
+    for (const wv of wvRows as Array<{ user_id: string; universe_title: string }>) {
+      universeMap.set(wv.user_id, wv.universe_title);
+    }
+  }
+
+  const creationCountMap = new Map<string, number>();
+  if (Array.isArray(crRows)) {
+    for (const cr of crRows as Array<{ user_id: string }>) {
+      creationCountMap.set(cr.user_id, (creationCountMap.get(cr.user_id) ?? 0) + 1);
+    }
   }
 
   return data.map((row) => {
@@ -515,12 +612,14 @@ async function fetchNeighborRooms(): Promise<HealingNeighborSummary[]> {
       regionLabel: item.region_label,
       todayVisits: Number(item.today_visits ?? 0),
       totalVisits: Number(item.total_visits ?? 0),
+      universeTitle: universeMap.get(item.user_id) ?? null,
+      creationsCount: creationCountMap.get(item.user_id) ?? 0,
     };
   });
 }
 
 /**
- * 파도타기(wave) 시 현재 방 다음 이웃의 userId를 순환 선택합니다.
+ * 파도타기(wave) 시 현재 방을 제외하고, 세계관/창작물을 보유한 이웃을 우선 랜덤 선택합니다.
  */
 function pickWaveNeighborUserId(
   neighbors: HealingNeighborSummary[],
@@ -530,16 +629,16 @@ function pickWaveNeighborUserId(
   if (neighbors.length === 0) {
     return fallbackUserId;
   }
-  if (!currentRoomUserId) {
+  const others = neighbors.filter((n) => n.userId !== currentRoomUserId);
+  if (others.length === 0) {
     return neighbors[0].userId;
   }
-  const currentIndex = neighbors.findIndex((neighbor) => neighbor.userId === currentRoomUserId);
-  if (currentIndex === -1) {
-    const firstDifferent = neighbors.find((neighbor) => neighbor.userId !== currentRoomUserId);
-    return firstDifferent ? firstDifferent.userId : neighbors[0].userId;
-  }
-  const nextIndex = (currentIndex + 1) % neighbors.length;
-  return neighbors[nextIndex].userId;
+  const creativeOthers = others.filter(
+    (n) => Boolean(n.universeTitle) || (n.creationsCount ?? 0) > 0
+  );
+  const pool = creativeOthers.length > 0 ? creativeOthers : others;
+  const randomIdx = Math.floor(Math.random() * pool.length);
+  return pool[randomIdx].userId;
 }
 
 /**
@@ -572,7 +671,9 @@ export async function loadHealingRoomData(
     { data: createdGameRowsRaw, count: createdGamesExactCount },
     { data: predictionRowsRaw, count: predictionExactCount },
     { data: guestbookRowsRaw },
-    bgmTracks,
+    baseBgmTracks,
+    { data: worldviewRaw },
+    { data: creationRowsRaw },
   ] = await Promise.all([
     fetchAccountBalances(room.userId),
     viewerUserId && viewerUserId !== room.userId
@@ -621,6 +722,20 @@ export async function loadHealingRoomData(
       .order("created_at", { ascending: false })
       .limit(30),
     listActiveHealingRoomBgms(),
+    supabaseAdmin
+      .schema("user")
+      .from("healing_worldviews")
+      .select("*")
+      .eq("user_id", room.userId)
+      .maybeSingle(),
+    supabaseAdmin
+      .schema("user")
+      .from("healing_creations")
+      .select("*")
+      .eq("user_id", room.userId)
+      .eq("is_published", true)
+      .order("created_at", { ascending: false })
+      .limit(30),
   ]);
 
   const userScore = scoreRaw as RawUserScoreRow | null;
@@ -717,6 +832,89 @@ export async function loadHealingRoomData(
     guestbookCount: guestbooks.length,
   });
 
+  const worldview: HealingWorldview | null = worldviewRaw
+    ? (() => {
+        const wv = worldviewRaw as {
+          user_id: string;
+          universe_title: string;
+          tagline: string | null;
+          genre_tags: string[] | null;
+          prologue_md: string | null;
+          timeline_json: unknown;
+          characters_json: unknown;
+          non_commercial_pledge: boolean | null;
+          updated_at: string;
+        };
+        return {
+          userId: wv.user_id,
+          universeTitle: wv.universe_title,
+          tagline: wv.tagline ?? "",
+          genreTags: Array.isArray(wv.genre_tags) ? wv.genre_tags : [],
+          prologueMd: wv.prologue_md ?? "",
+          timeline: Array.isArray(wv.timeline_json) ? (wv.timeline_json as WorldviewTimelineItem[]) : [],
+          characters: Array.isArray(wv.characters_json) ? (wv.characters_json as WorldviewCharacterItem[]) : [],
+          nonCommercialPledge: wv.non_commercial_pledge ?? true,
+          updatedAt: wv.updated_at,
+        };
+      })()
+    : null;
+
+  const creations: HealingCreationItem[] = Array.isArray(creationRowsRaw)
+    ? (
+        creationRowsRaw as Array<{
+          id: string;
+          user_id: string;
+          kind: CreationKind;
+          title: string;
+          subtitle: string | null;
+          cover_url: string | null;
+          lore_connection: string | null;
+          creator_note: string | null;
+          ai_tools: string[] | null;
+          items_json: unknown;
+          resonance_count: number | null;
+          is_published: boolean | null;
+          created_at: string;
+          updated_at: string;
+        }>
+      ).map((cr) => ({
+        id: cr.id,
+        userId: cr.user_id,
+        kind: cr.kind,
+        title: cr.title,
+        subtitle: cr.subtitle ?? "",
+        coverUrl: cr.cover_url ?? null,
+        loreConnection: cr.lore_connection ?? "",
+        creatorNote: cr.creator_note ?? "",
+        aiTools: Array.isArray(cr.ai_tools) ? cr.ai_tools : [],
+        items: Array.isArray(cr.items_json) ? (cr.items_json as CreationPayloadItem[]) : [],
+        resonanceCount: Number(cr.resonance_count ?? 0),
+        isPublished: cr.is_published ?? true,
+        createdAt: cr.created_at,
+        updatedAt: cr.updated_at,
+      }))
+    : [];
+
+  // 자작 앨범 트랙들을 방 주크박스 리스트 상단에 편입
+  const customAlbumTracks: BgmTrackOption[] = [];
+  for (const cr of creations) {
+    if (cr.kind !== "album") continue;
+    cr.items.forEach((rawTrack, idx) => {
+      const track = rawTrack as AlbumTrackItem;
+      if (!track?.title) return;
+      customAlbumTracks.push({
+        id: `custom-${cr.id}-${idx}`,
+        label: `💿 ${track.title} · ${cr.title}`,
+        artist: room.ownerNickname,
+        moodDesc: track.lyricsOrMood || cr.subtitle || "자작 창작 앨범 트랙",
+        audioUrl: track.audioUrl?.trim() || undefined,
+        frequencies: [220, 277.18, 329.63, 440],
+        waveform: "triangle",
+      });
+    });
+  }
+  const bgmTracks: BgmTrackOption[] = [...customAlbumTracks, ...baseBgmTracks];
+
   // 이웃 목록에 본인 방 최신 정보 동기화
   const refreshedNeighbors = neighbors.some((n) => n.userId === room.userId)
     ? neighbors.map((n) =>
@@ -729,6 +927,8 @@ export async function loadHealingRoomData(
               regionLabel: room.regionLabel,
               todayVisits: room.todayVisits,
               totalVisits: room.totalVisits,
+              universeTitle: worldview?.universeTitle ?? n.universeTitle ?? null,
+              creationsCount: creations.length,
             }
           : n
       )
@@ -741,12 +941,15 @@ export async function loadHealingRoomData(
           regionLabel: room.regionLabel,
           todayVisits: room.todayVisits,
           totalVisits: room.totalVisits,
+          universeTitle: worldview?.universeTitle ?? null,
+          creationsCount: creations.length,
         },
         ...neighbors,
       ];
 
   const isOwner = Boolean(viewerUserId && viewerUserId === room.userId);
   const resolvedViewerBalances = viewerAccount ?? (isOwner ? ownerAccount : { pmpBalance: 0, pmcBalance: 0 });
+  const nextCreationPmpCost = creations.length >= 3 ? 20 : 0;
 
   return {
     room,
@@ -772,6 +975,9 @@ export async function loadHealingRoomData(
     guestbooks,
     neighbors: refreshedNeighbors,
     bgmTracks,
+    worldview,
+    creations,
+    nextCreationPmpCost,
   };
 }
 
@@ -818,7 +1024,9 @@ export async function updateHealingRoom(
   }
   if (typeof input.bgmTrack === "string") {
     const activeBgms = await listActiveHealingRoomBgms();
+    const isCustomAlbumTrack = input.bgmTrack.startsWith("custom-");
     const validBgm =
+      isCustomAlbumTrack ||
       activeBgms.some((track) => track.id === input.bgmTrack) ||
       BGM_TRACKS.some((track) => track.id === input.bgmTrack);
     if (!validBgm) {
@@ -1079,6 +1287,323 @@ export async function writeHealingRoomGuestbook(
   return loadHealingRoomData({
     viewerUserId,
     targetUserId: input.roomUserId,
+    incrementVisit: false,
+  });
+}
+
+export interface SaveWorldviewInput {
+  universeTitle: string;
+  tagline?: string;
+  genreTags?: string[];
+  prologueMd?: string;
+  timeline?: WorldviewTimelineItem[];
+  characters?: WorldviewCharacterItem[];
+  nonCommercialPledge?: boolean;
+}
+
+/**
+ * 개인 창작자의 내면 세계관 바이블을 생성·수정합니다.
+ */
+export async function saveHealingWorldview(
+  viewerUserId: string | null,
+  input: SaveWorldviewInput
+): Promise<HealingRoomPageData> {
+  if (!isValidUuid(viewerUserId)) {
+    throw new HealingRoomError("로그인 후 나만의 세계관을 작성할 수 있습니다.", 401);
+  }
+
+  const universeTitle = assertValidTextLength(input.universeTitle, "세계관 이름", 2, 60);
+  const tagline = (input.tagline ?? "").trim().slice(0, 120);
+  const prologueMd = (input.prologueMd ?? "").trim().slice(0, 4000);
+  const genreTags = (input.genreTags ?? [])
+    .map((t) => t.trim().slice(0, 20))
+    .filter(Boolean)
+    .slice(0, 8);
+  const timeline = (input.timeline ?? [])
+    .filter((item) => item && item.title?.trim())
+    .slice(0, 12)
+    .map((item) => ({
+      era: (item.era ?? "").trim().slice(0, 30),
+      title: item.title.trim().slice(0, 60),
+      summary: (item.summary ?? "").trim().slice(0, 240),
+    }));
+  const characters = (input.characters ?? [])
+    .filter((ch) => ch && ch.name?.trim())
+    .slice(0, 12)
+    .map((ch) => ({
+      name: ch.name.trim().slice(0, 30),
+      role: (ch.role ?? "").trim().slice(0, 30),
+      trait: (ch.trait ?? "").trim().slice(0, 60),
+      bio: (ch.bio ?? "").trim().slice(0, 260),
+    }));
+
+  await ensureAndLoadRoom(viewerUserId, false);
+
+  const { error } = await supabaseAdmin
+    .schema("user")
+    .from("healing_worldviews")
+    .upsert(
+      {
+        user_id: viewerUserId,
+        universe_title: universeTitle,
+        tagline,
+        genre_tags: genreTags,
+        prologue_md: prologueMd,
+        timeline_json: timeline,
+        characters_json: characters,
+        non_commercial_pledge: input.nonCommercialPledge ?? true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" }
+    );
+
+  if (error) {
+    throw new HealingRoomError(`세계관 저장에 실패했습니다: ${error.message}`, 500);
+  }
+
+  return loadHealingRoomData({
+    viewerUserId,
+    targetUserId: viewerUserId,
+    incrementVisit: false,
+  });
+}
+
+export interface SaveCreationInput {
+  id?: string;
+  kind: CreationKind;
+  title: string;
+  subtitle?: string;
+  coverUrl?: string | null;
+  loreConnection: string;
+  creatorNote?: string;
+  aiTools?: string[];
+  items: CreationPayloadItem[];
+}
+
+/**
+ * AI 활용 음악 앨범·그림 전시·소설을 비상업 순수 창작물로 출판합니다.
+ * - 단편 슬롭 방지를 위해 세계관 연결 설명(loreConnection 8자 이상)을 필수로 확인합니다.
+ * - 첫 3작품은 0 PMP 무료이며, 4번째 이상 신규 출판 시 20 PMP를 예치 소비합니다.
+ */
+export async function saveHealingCreation(
+  viewerUserId: string | null,
+  input: SaveCreationInput
+): Promise<HealingRoomPageData> {
+  if (!isValidUuid(viewerUserId)) {
+    throw new HealingRoomError("로그인 후 작품을 출판할 수 있습니다.", 401);
+  }
+
+  if (input.kind !== "album" && input.kind !== "exhibition" && input.kind !== "novel") {
+    throw new HealingRoomError("올바른 창작 형식을 선택해주세요.", 400);
+  }
+
+  const title = assertValidTextLength(input.title, "작품 제목", 2, 80);
+  const loreConnection = assertValidTextLength(
+    input.loreConnection ?? "",
+    "내 세계관과의 연결 설명(단순 도배 방지용)",
+    8,
+    500
+  );
+  const subtitle = (input.subtitle ?? "").trim().slice(0, 120);
+  const creatorNote = (input.creatorNote ?? "").trim().slice(0, 1500);
+  const coverUrl = input.coverUrl?.trim() ? input.coverUrl.trim().slice(0, 1000) : null;
+  const aiTools = (input.aiTools ?? [])
+    .map((t) => t.trim().slice(0, 24))
+    .filter(Boolean)
+    .slice(0, 6);
+
+  if (!Array.isArray(input.items) || input.items.length === 0) {
+    throw new HealingRoomError("최소 1개 이상의 트랙·작품·챕터를 등록해주세요.", 400);
+  }
+
+  await ensureAndLoadRoom(viewerUserId, false);
+
+  const isEditing = Boolean(input.id && isValidUuid(input.id));
+  let pmpCost = 0;
+
+  if (!isEditing) {
+    const { count } = await supabaseAdmin
+      .schema("user")
+      .from("healing_creations")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", viewerUserId);
+
+    if ((count ?? 0) >= 3) {
+      pmpCost = 20;
+      const account = await fetchAccountBalances(viewerUserId);
+      if (account.pmpBalance < pmpCost) {
+        throw new HealingRoomError(
+          `추가 작품 출판에는 활동 포인트 ${pmpCost} PMP가 필요합니다. (보유: ${account.pmpBalance} PMP · 공론장/가치소비로 적립 가능)`,
+          400
+        );
+      }
+      const nextPmp = account.pmpBalance - pmpCost;
+      const { error: spendError } = await supabaseAdmin
+        .schema("economy")
+        .from("pmp_pmc_accounts")
+        .update({ pmp_balance: nextPmp, updated_at: new Date().toISOString() })
+        .eq("user_id", viewerUserId);
+
+      if (spendError) {
+        throw new HealingRoomError(`PMP 차감 중 오류: ${spendError.message}`, 500);
+      }
+
+      const { error: ledgerError } = await supabaseAdmin
+        .schema("economy")
+        .from("pmp_pmc_transactions")
+        .insert({
+          user_id: viewerUserId,
+          transaction_type: "PMP_SPEND",
+          pmp_amount: -pmpCost,
+          pmc_amount: 0,
+          description: `힐링룸 창작물 출판: ${title}`,
+          metadata: { source: "healing_room_creation", kind: input.kind },
+        });
+
+      if (ledgerError) {
+        await supabaseAdmin
+          .schema("economy")
+          .from("pmp_pmc_accounts")
+          .update({ pmp_balance: account.pmpBalance, updated_at: new Date().toISOString() })
+          .eq("user_id", viewerUserId);
+        throw new HealingRoomError(`원장 기록 오류로 안전하게 취소되었습니다: ${ledgerError.message}`, 500);
+      }
+    }
+  }
+
+  const sanitizedItems = input.items.slice(0, 20);
+  if (isEditing && input.id) {
+    const { error } = await supabaseAdmin
+      .schema("user")
+      .from("healing_creations")
+      .update({
+        kind: input.kind,
+        title,
+        subtitle,
+        cover_url: coverUrl,
+        lore_connection: loreConnection,
+        creator_note: creatorNote,
+        ai_tools: aiTools,
+        items_json: sanitizedItems,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", input.id)
+      .eq("user_id", viewerUserId);
+
+    if (error) {
+      throw new HealingRoomError(`작품 수정에 실패했습니다: ${error.message}`, 500);
+    }
+  } else {
+    const { error } = await supabaseAdmin
+      .schema("user")
+      .from("healing_creations")
+      .insert({
+        user_id: viewerUserId,
+        kind: input.kind,
+        title,
+        subtitle,
+        cover_url: coverUrl,
+        lore_connection: loreConnection,
+        creator_note: creatorNote,
+        ai_tools: aiTools,
+        items_json: sanitizedItems,
+        is_published: true,
+      });
+
+    if (error) {
+      throw new HealingRoomError(`작품 출판에 실패했습니다: ${error.message}`, 500);
+    }
+  }
+
+  return loadHealingRoomData({
+    viewerUserId,
+    targetUserId: viewerUserId,
+    incrementVisit: false,
+  });
+}
+
+/**
+ * 본인 창작물을 삭제합니다.
+ */
+export async function deleteHealingCreation(
+  viewerUserId: string | null,
+  creationId: string
+): Promise<HealingRoomPageData> {
+  if (!isValidUuid(viewerUserId)) {
+    throw new HealingRoomError("로그인이 필요합니다.", 401);
+  }
+  if (!isValidUuid(creationId)) {
+    throw new HealingRoomError("올바른 작품 ID가 아닙니다.", 400);
+  }
+
+  const { error } = await supabaseAdmin
+    .schema("user")
+    .from("healing_creations")
+    .delete()
+    .eq("id", creationId)
+    .eq("user_id", viewerUserId);
+
+  if (error) {
+    throw new HealingRoomError(`작품 삭제에 실패했습니다: ${error.message}`, 500);
+  }
+
+  return loadHealingRoomData({
+    viewerUserId,
+    targetUserId: viewerUserId,
+    incrementVisit: false,
+  });
+}
+
+/**
+ * 비상업 순수 창작물에 '공명(응원 박수)'을 보냅니다. (1인 1작품 1회)
+ */
+export async function resonateHealingCreation(
+  viewerUserId: string | null,
+  viewerKey: string,
+  creationId: string
+): Promise<HealingRoomPageData> {
+  if (!isValidUuid(creationId)) {
+    throw new HealingRoomError("올바른 작품 ID가 아닙니다.", 400);
+  }
+
+  const { data: targetRow } = await supabaseAdmin
+    .schema("user")
+    .from("healing_creations")
+    .select("id, user_id, resonance_count")
+    .eq("id", creationId)
+    .maybeSingle();
+
+  if (!targetRow) {
+    throw new HealingRoomError("존재하지 않는 작품입니다.", 404);
+  }
+
+  const typedTarget = targetRow as { id: string; user_id: string; resonance_count: number };
+  const resolvedKey = isValidUuid(viewerUserId) ? `u:${viewerUserId}` : viewerKey;
+
+  const { error: dupError } = await supabaseAdmin
+    .schema("user")
+    .from("healing_creation_resonances")
+    .insert({
+      creation_id: creationId,
+      viewer_key: resolvedKey.slice(0, 120),
+    });
+
+  if (dupError) {
+    if (dupError.code === "23505") {
+      throw new HealingRoomError("이미 이 작품에 따뜻한 공명을 보내셨습니다!", 409);
+    }
+    throw new HealingRoomError(`공명 기록에 실패했습니다: ${dupError.message}`, 500);
+  }
+
+  await supabaseAdmin
+    .schema("user")
+    .from("healing_creations")
+    .update({ resonance_count: (typedTarget.resonance_count ?? 0) + 1 })
+    .eq("id", creationId);
+
+  return loadHealingRoomData({
+    viewerUserId,
+    targetUserId: typedTarget.user_id,
     incrementVisit: false,
   });
 }
