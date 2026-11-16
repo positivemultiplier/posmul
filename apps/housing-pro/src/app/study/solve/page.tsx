@@ -25,6 +25,10 @@ import {
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
+import {
+  TheoryBottomSheet,
+  type TheorySheetTarget,
+} from "@/components/study/theory-bottom-sheet";
 import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
 import {
   fetchStudySolveSetsAction,
@@ -102,9 +106,10 @@ export default function InteractiveSolvePage() {
 
   // 문항별 로컬 답안/선지마킹 상태 맵
   const [drafts, setDrafts] = useState<Record<string, LocalDraftState>>({});
-  // 펼침 상태 (선지별 반복 출제 이력, 개정 원문 보기)
+  // 펼침 상태 (선지별 반복 출제 이력, 개정 원문 보기, 선지 관련 이론 바텀시트)
   const [expandedRepeatOptId, setExpandedRepeatOptId] = useState<string | null>(null);
   const [showOriginalQ, setShowOriginalQ] = useState<boolean>(false);
+  const [theoryTarget, setTheoryTarget] = useState<TheorySheetTarget | null>(null);
 
   const refreshCatalog = useCallback(async (key: string) => {
     setLoadingSets(true);
@@ -870,15 +875,31 @@ export default function InteractiveSolvePage() {
               {currentQ.questionType === "OBJECTIVE" ? (
                 isBoxComboQuestion ? (
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between px-1">
+                    <div className="flex items-center justify-between px-1 gap-2">
                       <span className="text-[10.5px] font-bold text-slate-400">
                         조합 정답 선택 (위 &lt;보기&gt; 체크 기반)
                       </span>
-                      {suggestedComboOptionNumber !== null && !currentDraft.checked && (
-                        <span className="text-[10px] font-black text-amber-300">
-                          체크 일치: {OPTION_CIRCLES[suggestedComboOptionNumber - 1] ?? `${suggestedComboOptionNumber}번`}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-1.5">
+                        {suggestedComboOptionNumber !== null && !currentDraft.checked && (
+                          <span className="text-[10px] font-black text-amber-300">
+                            체크 일치: {OPTION_CIRCLES[suggestedComboOptionNumber - 1] ?? `${suggestedComboOptionNumber}번`}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTheoryTarget({
+                              subject: currentQ.subject,
+                              detailCode: currentQ.detailCode,
+                              chapterTitle: currentQ.chapterTitle,
+                            })
+                          }
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-[10px] font-bold text-indigo-200 transition"
+                        >
+                          <BookOpen className="w-3 h-3" />
+                          단원 이론
+                        </button>
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
@@ -1031,6 +1052,56 @@ export default function InteractiveSolvePage() {
                                 <X className="w-3.5 h-3.5" />
                               </button>
                             </div>
+                          </div>
+
+                          {/* 선지 이해 불가 시 바로 이론으로 점프 (★/X 마킹 시 하이라이트) */}
+                          <div className="flex items-center justify-between gap-2 pt-0.5">
+                            {optMark === "STAR" || optMark === "X" ? (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setTheoryTarget({
+                                    subject: currentQ.subject,
+                                    detailCode: currentQ.detailCode,
+                                    sectionCode: opt.theorySectionCode,
+                                    chapterTitle: currentQ.chapterTitle,
+                                    statement: opt.optionText,
+                                    isCorrectStatement: currentDraft.checked ? opt.isCorrect : null,
+                                    citation: currentDraft.checked ? opt.legalCitation : null,
+                                    trapSummary: currentDraft.checked ? opt.trapSummary : null,
+                                  })
+                                }
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/40 text-[10.5px] font-bold text-indigo-200 transition"
+                              >
+                                <BookOpen className="w-3 h-3 text-indigo-300" />
+                                이해 안 되는 선지 · 관련 이론 바로 보기
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setTheoryTarget({
+                                    subject: currentQ.subject,
+                                    detailCode: currentQ.detailCode,
+                                    sectionCode: opt.theorySectionCode,
+                                    chapterTitle: currentQ.chapterTitle,
+                                    statement: opt.optionText,
+                                    isCorrectStatement: currentDraft.checked ? opt.isCorrect : null,
+                                    citation: currentDraft.checked ? opt.legalCitation : null,
+                                    trapSummary: currentDraft.checked ? opt.trapSummary : null,
+                                  })
+                                }
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/[0.04] hover:bg-indigo-500/15 border border-white/[0.08] hover:border-indigo-400/30 text-[10px] text-slate-400 hover:text-indigo-200 transition"
+                              >
+                                <BookOpen className="w-3 h-3" />
+                                관련 이론
+                              </button>
+                            )}
+                            {opt.theorySectionCode && (
+                              <span className="text-[9.5px] font-mono text-slate-500">
+                                {opt.theorySectionCode}
+                              </span>
+                            )}
                           </div>
 
                           {/* 채점 후: 지문 옳고 그름 + 함정·법령 해설 + 반복 출제 연도 이력 토글 */}
@@ -1262,6 +1333,11 @@ export default function InteractiveSolvePage() {
           </div>
         ) : null}
       </div>
+
+      <TheoryBottomSheet
+        target={theoryTarget}
+        onClose={() => setTheoryTarget(null)}
+      />
     </MobileAppShell>
   );
 }

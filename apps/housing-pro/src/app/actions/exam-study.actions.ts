@@ -31,6 +31,7 @@ export interface ExamOxCardItem {
   examRound: number;
   examStage: string;
   subject: string;
+  detailCode?: string | null;
   chapterTitle: string | null;
   importanceTier: string | null;
   questionNumber: number;
@@ -41,6 +42,7 @@ export interface ExamOxCardItem {
   masteryTier: number;
   trapCorrection: string | null;
   citation: string | null;
+  theorySectionCode?: string | null;
   repeatCount: number;
   appearedCitations: OxCitationItem[];
   lawStatus: LawStatus;
@@ -81,6 +83,7 @@ interface JoinedQuestionRow {
   exam_round: number;
   exam_stage: string;
   subject: string;
+  detail_code?: string | null;
   chapter_title: string | null;
   importance_tier: string | null;
   question_number: number;
@@ -100,6 +103,7 @@ interface RawOptionJoinedRow {
   mastery_tier: number | null;
   trap_summary: string | null;
   legal_citation: string | null;
+  theory_section_code?: string | null;
   repeat_count: number | null;
   appeared_citations: OxCitationItem[] | null;
   is_amended: boolean | null;
@@ -131,6 +135,7 @@ export async function fetchExamOxCardsAction(
         mastery_tier,
         trap_summary,
         legal_citation,
+        theory_section_code,
         repeat_count,
         appeared_citations,
         is_amended,
@@ -191,6 +196,7 @@ export async function fetchExamOxCardsAction(
         examRound: q.exam_round,
         examStage: q.exam_stage,
         subject: q.subject,
+        detailCode: q.detail_code ?? null,
         chapterTitle: q.chapter_title,
         importanceTier: q.importance_tier,
         questionNumber: q.question_number,
@@ -201,6 +207,7 @@ export async function fetchExamOxCardsAction(
         masteryTier: row.mastery_tier ?? 2,
         trapCorrection: row.trap_summary,
         citation: row.legal_citation,
+        theorySectionCode: row.theory_section_code ?? null,
         repeatCount: row.repeat_count ?? 1,
         appearedCitations: citations,
         lawStatus: qLawStatus,
@@ -257,6 +264,7 @@ export async function fetchLawAmendedQuestionsAction(): Promise<{
       exam_round: number;
       exam_stage: string;
       subject: string;
+      detail_code: string | null;
       chapter_title: string | null;
       question_number: number;
       question_type: string;
@@ -320,6 +328,7 @@ export interface SolveOptionItem {
   isCorrect: boolean;
   trapSummary: string | null;
   legalCitation: string | null;
+  theorySectionCode: string | null;
   repeatCount: number;
   appearedCitations: OxCitationItem[];
   isAmended: boolean;
@@ -334,6 +343,7 @@ export interface SolveQuestionItem {
   examRound: number;
   examStage: string;
   subject: string;
+  detailCode: string | null;
   chapterTitle: string | null;
   importanceTier: string | null;
   questionNumber: number;
@@ -519,6 +529,7 @@ export async function fetchSolveSetQuestionsAction(
         exam_round,
         exam_stage,
         subject,
+        detail_code,
         chapter_title,
         importance_tier,
         question_number,
@@ -568,6 +579,7 @@ export async function fetchSolveSetQuestionsAction(
       exam_round: number;
       exam_stage: string;
       subject: string;
+      detail_code: string | null;
       chapter_title: string | null;
       importance_tier: string | null;
       question_number: number;
@@ -593,7 +605,7 @@ export async function fetchSolveSetQuestionsAction(
         .schema("vertical_housing")
         .from("exam_options")
         .select(
-          "id, question_id, option_number, option_text, is_correct, trap_summary, legal_citation, repeat_count, appeared_citations, is_amended, amended_note, original_option_text"
+          "id, question_id, option_number, option_text, is_correct, trap_summary, legal_citation, theory_section_code, repeat_count, appeared_citations, is_amended, amended_note, original_option_text"
         )
         .in("question_id", qIds)
         .order("option_number", { ascending: true }),
@@ -629,6 +641,7 @@ export async function fetchSolveSetQuestionsAction(
       is_correct: boolean;
       trap_summary: string | null;
       legal_citation: string | null;
+      theory_section_code: string | null;
       repeat_count: number | null;
       appeared_citations: OxCitationItem[] | null;
       is_amended: boolean | null;
@@ -643,6 +656,7 @@ export async function fetchSolveSetQuestionsAction(
         isCorrect: o.is_correct,
         trapSummary: o.trap_summary ?? null,
         legalCitation: o.legal_citation ?? null,
+        theorySectionCode: o.theory_section_code ?? null,
         repeatCount: o.repeat_count ?? 1,
         appearedCitations: Array.isArray(o.appeared_citations) ? o.appeared_citations : [],
         isAmended: Boolean(o.is_amended),
@@ -671,6 +685,7 @@ export async function fetchSolveSetQuestionsAction(
         examRound: q.exam_round,
         examStage: q.exam_stage,
         subject: q.subject,
+        detailCode: q.detail_code ?? null,
         chapterTitle: q.chapter_title,
         importanceTier: q.importance_tier,
         questionNumber: q.question_number,
@@ -811,6 +826,7 @@ export async function fetchUserWeakOxCardsAction(clientKey: string): Promise<{
         mastery_tier,
         trap_summary,
         legal_citation,
+        theory_section_code,
         repeat_count,
         appeared_citations,
         is_amended,
@@ -822,6 +838,7 @@ export async function fetchUserWeakOxCardsAction(clientKey: string): Promise<{
           exam_round,
           exam_stage,
           subject,
+          detail_code,
           chapter_title,
           importance_tier,
           question_number,
@@ -850,6 +867,7 @@ export async function fetchUserWeakOxCardsAction(clientKey: string): Promise<{
         examRound: q.exam_round,
         examStage: q.exam_stage,
         subject: q.subject,
+        detailCode: q.detail_code ?? null,
         chapterTitle: q.chapter_title,
         importanceTier: q.importance_tier,
         questionNumber: q.question_number,
@@ -860,6 +878,7 @@ export async function fetchUserWeakOxCardsAction(clientKey: string): Promise<{
         masteryTier: row.mastery_tier ?? 2,
         trapCorrection: row.trap_summary,
         citation: row.legal_citation,
+        theorySectionCode: row.theory_section_code ?? null,
         repeatCount: row.repeat_count ?? 1,
         appearedCitations: Array.isArray(row.appeared_citations) ? row.appeared_citations : [],
         lawStatus: q.law_status ?? "VALID",
@@ -1854,6 +1873,123 @@ export async function fetchChapterStudyPacketAction(
       amendedCount: 0,
       keyOptions: [],
       error: err instanceof Error ? err.message : "단원 학습 패킷 조회 실패",
+    };
+  }
+}
+
+export interface TheorySectionDoc {
+  sectionCode: string;
+  detailCode: string;
+  subject: string;
+  chapterTitle: string;
+  sectionTitle: string;
+  keywords: string[];
+  bodyMd: string;
+  sortOrder: number;
+}
+
+export interface TheoryBundleResponse {
+  success: boolean;
+  detailCode: string | null;
+  targetSectionCode: string | null;
+  sections: TheorySectionDoc[];
+  error?: string;
+}
+
+/**
+ * 2차 과목 이론(.md 동기화 DB: vertical_housing.theory_sections) 단원 및 소주제 섹션을 조회합니다.
+ * sectionCode 만 넘어와도 해당 단원의 모든 소주제 섹션을 함께 반환하여 앞뒤 맥락 전환이 가능합니다.
+ */
+export async function fetchTheoryBundleAction(params: {
+  sectionCode?: string | null;
+  detailCode?: string | null;
+}): Promise<TheoryBundleResponse> {
+  try {
+    let resolvedDetailCode = params.detailCode ?? null;
+    const targetSectionCode = params.sectionCode ?? null;
+
+    if (!resolvedDetailCode && targetSectionCode) {
+      const { data: one } = await supabaseAdmin
+        .schema("vertical_housing")
+        .from("theory_sections")
+        .select("detail_code")
+        .eq("section_code", targetSectionCode)
+        .maybeSingle();
+
+      resolvedDetailCode = (one as { detail_code?: string } | null)?.detail_code ?? null;
+      if (!resolvedDetailCode && targetSectionCode.includes("-")) {
+        resolvedDetailCode = targetSectionCode.split("-")[0] ?? null;
+      }
+    }
+
+    if (!resolvedDetailCode) {
+      return {
+        success: true,
+        detailCode: null,
+        targetSectionCode,
+        sections: [],
+      };
+    }
+
+    const { data, error } = await supabaseAdmin
+      .schema("vertical_housing")
+      .from("theory_sections")
+      .select(
+        "section_code, detail_code, subject, chapter_title, section_title, keywords, body_md, sort_order"
+      )
+      .eq("detail_code", resolvedDetailCode)
+      .order("sort_order", { ascending: true });
+
+    if (error) {
+      return {
+        success: false,
+        detailCode: resolvedDetailCode,
+        targetSectionCode,
+        sections: [],
+        error: error.message,
+      };
+    }
+
+    const sections: TheorySectionDoc[] = (data ?? []).map(
+      (row: {
+        section_code: string;
+        detail_code: string;
+        subject: string;
+        chapter_title: string;
+        section_title: string;
+        keywords: string[] | null;
+        body_md: string;
+        sort_order: number | null;
+      }) => ({
+        sectionCode: row.section_code,
+        detailCode: row.detail_code,
+        subject: row.subject,
+        chapterTitle: row.chapter_title,
+        sectionTitle: row.section_title,
+        keywords: Array.isArray(row.keywords) ? row.keywords : [],
+        bodyMd: row.body_md,
+        sortOrder: row.sort_order ?? 0,
+      })
+    );
+
+    const activeSection =
+      sections.find((s) => s.sectionCode === targetSectionCode)?.sectionCode ??
+      sections[0]?.sectionCode ??
+      null;
+
+    return {
+      success: true,
+      detailCode: resolvedDetailCode,
+      targetSectionCode: activeSection,
+      sections,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      detailCode: params.detailCode ?? null,
+      targetSectionCode: params.sectionCode ?? null,
+      sections: [],
+      error: err instanceof Error ? err.message : "이론 섹션 조회 실패",
     };
   }
 }

@@ -20,9 +20,21 @@ import {
   FileWarning,
   History,
   BookCheck,
+  BookOpen,
   Loader2,
 } from "lucide-react";
+import {
+  motion,
+  useMotionValue,
+  useTransform,
+  animate,
+  type PanInfo,
+} from "framer-motion";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
+import {
+  TheoryBottomSheet,
+  type TheorySheetTarget,
+} from "@/components/study/theory-bottom-sheet";
 import { REAL_2026_EXAM_OX_CARDS } from "@/data/mock-exam-options";
 import { SerialRegisterModal } from "@/components/auth/serial-register-modal";
 import { getUserSerialStatusAction } from "@/app/actions/serial.actions";
@@ -139,9 +151,16 @@ export default function OxSwipeStudyPage() {
   const [userSelected, setUserSelected] = useState<boolean | null>(null);
   const [earnedPmpTotal, setEarnedPmpTotal] = useState(0);
 
-  // 반복 출제 이력 & 원문 보기 토글
+  // 반복 출제 이력 & 원문 보기 & 이론 바텀시트 토글
   const [showRepeatHistory, setShowRepeatHistory] = useState(false);
   const [showOriginalText, setShowOriginalText] = useState(false);
+  const [theoryTarget, setTheoryTarget] = useState<TheorySheetTarget | null>(null);
+
+  // 스와이프 카드 모션 값 (좌: X, 우: O)
+  const dragX = useMotionValue(0);
+  const cardRotate = useTransform(dragX, [-180, 0, 180], [-8, 0, 8]);
+  const stampOOpacity = useTransform(dragX, [24, 110], [0, 1]);
+  const stampXOpacity = useTransform(dragX, [-110, -24], [1, 0]);
 
   // 개정·검수 문항 뷰어 패널
   const [isAmendedPanelOpen, setIsAmendedPanelOpen] = useState(false);
@@ -277,11 +296,30 @@ export default function OxSwipeStudyPage() {
   const currentCard = activeCards[currentIndex];
   const isFinished = !isLoadingCards && currentIndex >= activeCards.length;
 
+  useEffect(() => {
+    dragX.set(0);
+  }, [currentIndex, currentCard?.id, dragX]);
+
+  const openCurrentCardTheory = () => {
+    if (!currentCard) return;
+    setTheoryTarget({
+      subject: currentCard.subject,
+      detailCode: currentCard.detailCode ?? null,
+      sectionCode: currentCard.theorySectionCode ?? null,
+      chapterTitle: currentCard.chapterTitle,
+      statement: currentCard.statement,
+      isCorrectStatement: answered !== null ? currentCard.isCorrectStatement : null,
+      citation: answered !== null ? currentCard.citation : null,
+      trapSummary: answered !== null ? currentCard.trapCorrection : null,
+    });
+  };
+
   const resetCardTransientState = () => {
     setAnswered(null);
     setUserSelected(null);
     setShowRepeatHistory(false);
     setShowOriginalText(false);
+    dragX.set(0);
   };
 
   const handleAnswer = (selected: boolean) => {
@@ -318,6 +356,27 @@ export default function OxSwipeStudyPage() {
   const handleNext = () => {
     resetCardTransientState();
     setCurrentIndex((prev) => prev + 1);
+  };
+
+  const handleCardDragEnd = (
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo
+  ) => {
+    void animate(dragX, 0, { type: "spring", stiffness: 420, damping: 32 });
+    if (!currentCard || isTierLocked) return;
+
+    if (answered === null) {
+      if (info.offset.x > 90 || info.velocity.x > 420) {
+        handleAnswer(true);
+      } else if (info.offset.x < -90 || info.velocity.x < -420) {
+        handleAnswer(false);
+      }
+      return;
+    }
+
+    if (Math.abs(info.offset.x) > 75 || Math.abs(info.velocity.x) > 360) {
+      handleNext();
+    }
   };
 
   const handleTierChange = (tier: number) => {
@@ -628,8 +687,34 @@ export default function OxSwipeStudyPage() {
               </div>
             </div>
 
-            {/* 화면 중앙 대형 플래시카드 */}
-            <div className="flex-1 flex flex-col justify-center p-5 rounded-3xl bg-gradient-to-b from-[#1D1D24] to-[#16161C] border border-white/[0.08] shadow-2xl space-y-4 min-h-[280px]">
+            {/* 화면 중앙 대형 스와이프 플래시카드 (좌: X · 우: O) */}
+            <motion.div
+              key={currentCard.id}
+              style={{ x: dragX, rotate: cardRotate }}
+              drag="x"
+              dragConstraints={{ left: 0, right: 0 }}
+              dragElastic={0.45}
+              onDragEnd={handleCardDragEnd}
+              className="relative select-none touch-pan-y cursor-grab active:cursor-grabbing flex-1 flex flex-col justify-center p-5 rounded-3xl bg-gradient-to-b from-[#1D1D24] to-[#16161C] border border-white/[0.08] shadow-2xl space-y-4 min-h-[280px]"
+            >
+              {/* 스와이프 X(왼쪽) / O(오른쪽) 도장 오버레이 */}
+              {answered === null && (
+                <>
+                  <motion.div
+                    style={{ opacity: stampXOpacity }}
+                    className="pointer-events-none absolute top-4 left-4 z-20 px-3 py-1 rounded-xl border-2 border-rose-400 bg-rose-950/85 text-rose-300 font-black text-sm -rotate-12 shadow-lg"
+                  >
+                    X 틀림
+                  </motion.div>
+                  <motion.div
+                    style={{ opacity: stampOOpacity }}
+                    className="pointer-events-none absolute top-4 right-4 z-20 px-3 py-1 rounded-xl border-2 border-emerald-400 bg-emerald-950/85 text-emerald-300 font-black text-sm rotate-12 shadow-lg"
+                  >
+                    O 옳음
+                  </motion.div>
+                </>
+              )}
+
               {/* 상단 배지 줄: 회독/선지 + 반복출제 횟수 + 개정 표시 */}
               <div className="flex items-center justify-between flex-wrap gap-1.5">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -808,7 +893,29 @@ export default function OxSwipeStudyPage() {
                   </div>
                 </div>
               )}
-            </div>
+
+              {/* 카드 하단: 스와이프 힌트 & 관련 이론 바로 열기 */}
+              <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {answered === null
+                    ? "← 스와이프 X (틀림)  ·  O (옳음) 스와이프 →"
+                    : "← 좌·우로 스와이프하면 다음 카드 →"}
+                </span>
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={openCurrentCardTheory}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-[11px] font-bold border transition ${
+                    answered === false
+                      ? "bg-indigo-500/25 border-indigo-400/50 text-indigo-100 hover:bg-indigo-500/35"
+                      : "bg-white/[0.05] border-white/[0.1] text-indigo-200 hover:bg-indigo-500/20"
+                  }`}
+                >
+                  <BookOpen className="w-3.5 h-3.5 text-indigo-300" />
+                  <span>관련 이론 바로 보기</span>
+                </button>
+              </div>
+            </motion.div>
 
             {/* 하단 엄지손가락 대형 O / X 터치 버튼 */}
             <div className="space-y-2.5">
@@ -888,6 +995,12 @@ export default function OxSwipeStudyPage() {
         isOpen={isSerialModalOpen}
         onClose={() => setIsSerialModalOpen(false)}
         onSuccess={() => setIsSerialVerified(true)}
+      />
+
+      {/* 관련 이론 .md 바텀시트 */}
+      <TheoryBottomSheet
+        target={theoryTarget}
+        onClose={() => setTheoryTarget(null)}
       />
     </MobileAppShell>
   );

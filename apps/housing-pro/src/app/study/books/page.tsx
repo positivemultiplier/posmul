@@ -28,6 +28,10 @@ import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import { SerialRegisterModal } from "@/components/auth/serial-register-modal";
 import { getUserSerialStatusAction } from "@/app/actions/serial.actions";
 import {
+  TheoryBottomSheet,
+  type TheorySheetTarget,
+} from "@/components/study/theory-bottom-sheet";
+import {
   fetchChapterStudyPacketAction,
   type ChapterStudyPacketResult,
 } from "@/app/actions/exam-study.actions";
@@ -64,6 +68,7 @@ export default function AppStandaloneStudyCenterPage() {
   const [packetLoading, setPacketLoading] = useState(false);
   const [chapterPacket, setChapterPacket] = useState<ChapterStudyPacketResult | null>(null);
   const [miniOxAnswers, setMiniOxAnswers] = useState<Record<string, boolean>>({});
+  const [theoryTarget, setTheoryTarget] = useState<TheorySheetTarget | null>(null);
 
   // 기존 교재 설정/시리얼 보조 상태
   const [previewBookId, setPreviewBookId] = useState<string | null>(activeBook.id);
@@ -434,6 +439,24 @@ export default function AppStandaloneStudyCenterPage() {
                                     <div className="p-3 rounded-xl bg-[#1A1A23] border border-white/[0.08] text-[11px] text-slate-300">
                                       이 단원의 주요 출제 기출과 선지를 아래에서 바로 학습할 수 있습니다.
                                     </div>
+                                  )}
+
+                                  {/* 1-2. 2차 상세 이론서(.md) 전체 보기 버튼 */}
+                                  {subj.examStage === "2차" && topic.chapterCode && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setTheoryTarget({
+                                          subject: subj.shortTitle,
+                                          detailCode: topic.chapterCode,
+                                          chapterTitle: topic.title,
+                                        })
+                                      }
+                                      className="w-full py-2.5 px-3 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-400/35 text-xs font-bold text-indigo-200 flex items-center justify-center gap-2 transition"
+                                    >
+                                      <BookOpen className="w-3.5 h-3.5 text-indigo-300" />
+                                      <span>2차 상세 이론서(.md 비교표·조문) 열기</span>
+                                    </button>
                                   )}
 
                                   {/* 2. 실제 DB 기출 법령·함정 지문 O/X 즉시 훈련 */}
@@ -830,6 +853,11 @@ export default function AppStandaloneStudyCenterPage() {
           setIsSerialVerified(true);
           showToast("정품 교재 시리얼이 인증되었습니다!");
         }}
+      />
+
+      <TheoryBottomSheet
+        target={theoryTarget}
+        onClose={() => setTheoryTarget(null)}
       />
     </MobileAppShell>
   );
