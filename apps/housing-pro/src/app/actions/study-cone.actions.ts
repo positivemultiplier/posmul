@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase";
+import { resolveAuthenticatedUser } from "@/lib/auth-provision";
 import { STUDY_CONE_CATALOG, StudyConeSpec, UserStudyConeItem } from "@/data/mock-study-cones";
 
 export interface StudyConeOperationResult {
@@ -29,13 +30,23 @@ const DEFAULT_USER_CONES: UserStudyConeItem[] = [
 /**
  * 🎒 유저의 스터디콘 인벤토리 조회
  */
-export async function getUserStudyConesAction(userId: string): Promise<StudyConeOperationResult> {
+export async function getUserStudyConesAction(userId?: string): Promise<StudyConeOperationResult> {
   try {
+    const sessionUser = await resolveAuthenticatedUser();
+    const targetUserId = sessionUser?.id || userId;
+    if (!targetUserId) {
+      return {
+        success: true,
+        message: "기본 스터디콘 조회 완료",
+        cones: DEFAULT_USER_CONES,
+        equippedCone: DEFAULT_USER_CONES[0],
+      };
+    }
     const { data: cones, error } = await supabaseAdmin
       .schema("vertical_housing")
       .from("study_cones")
       .select("*")
-      .eq("user_id", userId);
+      .eq("user_id", targetUserId);
 
     if (error || !cones || cones.length === 0) {
       return {
@@ -82,7 +93,9 @@ export async function purchaseStudyConeAction(params: {
   userId: string;
   coneType: StudyConeSpec["coneType"];
 }): Promise<StudyConeOperationResult> {
-  const { userId, coneType } = params;
+  const { coneType } = params;
+  const sessionUser = await resolveAuthenticatedUser();
+  const userId = sessionUser?.id || params.userId;
   const spec = STUDY_CONE_CATALOG.find((s) => s.coneType === coneType);
 
   if (!spec) {
@@ -170,7 +183,9 @@ export async function equipStudyConeAction(params: {
   userId: string;
   coneType: StudyConeSpec["coneType"];
 }): Promise<StudyConeOperationResult> {
-  const { userId, coneType } = params;
+  const { coneType } = params;
+  const sessionUser = await resolveAuthenticatedUser();
+  const userId = sessionUser?.id || params.userId;
 
   try {
     await supabaseAdmin

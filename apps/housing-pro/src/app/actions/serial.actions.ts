@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase";
+import { resolveAuthenticatedUser } from "@/lib/auth-provision";
 
 export interface SerialVerificationResult {
   success: boolean;
@@ -31,13 +32,22 @@ const VALID_SAMPLE_SERIALS: Record<string, { bookTitle: string; bookCode: string
 /**
  * 🔑 유저의 POD 정품 시리얼 인증 상태 조회
  */
-export async function getUserSerialStatusAction(userId: string): Promise<SerialVerificationResult> {
+export async function getUserSerialStatusAction(userId?: string): Promise<SerialVerificationResult> {
   try {
+    const sessionUser = await resolveAuthenticatedUser();
+    const targetUserId = sessionUser?.id || userId;
+    if (!targetUserId) {
+      return {
+        success: true,
+        isRegistered: false,
+        message: "교재 없이 무료 학습 중",
+      };
+    }
     const { data: serial, error } = await supabaseAdmin
       .schema("vertical_housing")
       .from("book_serials")
       .select("*")
-      .eq("registered_user_id", userId)
+      .eq("registered_user_id", targetUserId)
       .eq("status", "ACTIVE")
       .maybeSingle();
 
@@ -75,7 +85,9 @@ export async function verifyAndRegisterSerialAction(params: {
   userId: string;
   serialCode: string;
 }): Promise<SerialVerificationResult> {
-  const { userId, serialCode } = params;
+  const { serialCode } = params;
+  const sessionUser = await resolveAuthenticatedUser();
+  const userId = sessionUser?.id || params.userId;
   const cleanCode = serialCode.trim().toUpperCase();
 
   if (!cleanCode) {

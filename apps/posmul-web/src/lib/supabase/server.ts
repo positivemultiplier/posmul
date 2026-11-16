@@ -1,8 +1,12 @@
 import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { cookies, headers } from 'next/headers'
+import { resolveCrossSubdomainCookieDomain } from './sso-cookie'
 
 export async function createClient() {
     const cookieStore = await cookies()
+    const headerStore = await headers()
+    const host = headerStore.get('x-forwarded-host') || headerStore.get('host')
+    const ssoDomain = resolveCrossSubdomainCookieDomain(host)
 
     return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +19,10 @@ export async function createClient() {
                 setAll(cookiesToSet) {
                     try {
                         cookiesToSet.forEach(({ name, value, options }) =>
-                            cookieStore.set(name, value, options)
+                            cookieStore.set(name, value, {
+                                ...options,
+                                ...(ssoDomain ? { domain: ssoDomain } : {}),
+                            })
                         )
                     } catch {
                         // The `setAll` method was called from a Server Component.

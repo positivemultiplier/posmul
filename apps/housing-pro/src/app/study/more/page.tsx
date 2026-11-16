@@ -17,15 +17,21 @@ import {
   LayoutGrid,
   ArrowRight,
   ListChecks,
+  BookOpen,
+  ShieldCheck,
+  LogIn,
+  LogOut,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { YptGroupGrid } from "@/components/mobile/ypt-group-grid";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
+import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import { formatDateISO, flattenTopics } from "@/data/study-textbooks";
 
 type MoreViewMode = "todo" | "calendar" | "group" | "tools";
 
 export default function StudyMoreHubPage() {
+  const { isLoggedIn, profile, pmpBalance, pmcBalance, signOut } = useStudyAuth();
   const {
     todayISO,
     activeBook,
@@ -197,18 +203,59 @@ export default function StudyMoreHubPage() {
             }`}
           >
             <Zap className="w-3.5 h-3.5" />
-            <span>스캔·OX</span>
+            <span>학습도구</span>
           </button>
         </div>
       </header>
 
       <div className="px-4 py-4 space-y-4">
+        {/* PosMul 계정 연동 상태 요약 바 */}
+        <div className="p-3.5 rounded-2xl bg-[#16161D] border border-white/[0.08] flex items-center justify-between gap-2">
+          {isLoggedIn ? (
+            <>
+              <div className="min-w-0 space-y-0.5">
+                <div className="text-xs font-black text-white flex items-center gap-1.5">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <span className="truncate">{profile.displayName} (PosMul 연동)</span>
+                </div>
+                <div className="text-[10.5px] font-mono text-amber-300">
+                  {pmpBalance.toLocaleString()} PMP · {pmcBalance.toLocaleString()} PMC
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="px-2.5 py-1.5 rounded-xl bg-white/[0.06] hover:bg-rose-950/50 text-[10.5px] font-bold text-slate-300 hover:text-rose-300 flex items-center gap-1 shrink-0"
+              >
+                <LogOut className="w-3 h-3" />
+                <span>로그아웃</span>
+              </button>
+            </>
+          ) : (
+            <>
+              <div className="min-w-0 space-y-0.5">
+                <div className="text-xs font-black text-white">게스트 모드 (임시 브라우저 저장)</div>
+                <div className="text-[10.5px] text-slate-400">
+                  로그인 시 PosMul 지갑과 모든 학습 기록이 영구 동기화됩니다.
+                </div>
+              </div>
+              <Link
+                href="/auth/login?next=/study/more"
+                className="px-3 py-1.5 rounded-xl bg-[#FF5A36] text-white text-[11px] font-black flex items-center gap-1 shrink-0"
+              >
+                <LogIn className="w-3.5 h-3.5" />
+                <span>로그인</span>
+              </Link>
+            </>
+          )}
+        </div>
+
         {/* 1. 할일 뷰 */}
         {activeView === "todo" && (
           <div className="space-y-4">
             <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.06] flex items-center justify-between">
               <div>
-                <div className="text-xs font-black text-white">교재 연동 오늘 할일</div>
+                <div className="text-xs font-black text-white">내 오늘 학습 할일</div>
                 <div className="text-[10.5px] text-slate-400 mt-0.5">
                   완료 {completedTodoCount} / {todos.length}건
                 </div>
@@ -447,9 +494,27 @@ export default function StudyMoreHubPage() {
           <YptGroupGrid myStudySeconds={13338} myConeEmoji="🦉" />
         )}
 
-        {/* 4. 학습 도구 뷰 (20제 지문체크 · 3초 O/X · AI 스캔) */}
+        {/* 4. 학습 도구 뷰 (단원 개념학습 · 20제 문제풀이 · 3초 O/X · AI 스캔) */}
         {activeView === "tools" && (
           <div className="space-y-3">
+            <Link
+              href="/study/books"
+              className="p-4 rounded-2xl bg-gradient-to-r from-[#1A212B] to-[#1A1A21] border border-sky-500/45 hover:border-sky-400 flex items-center justify-between transition"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/20 text-sky-300 flex items-center justify-center">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-black text-white">69단원 개념·기출 학습센터</div>
+                  <div className="text-[11px] text-slate-300">
+                    교재 없이 앱에서 핵심 이론·암기수치·조문 O/X 즉시 학습
+                  </div>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-sky-300" />
+            </Link>
+
             <Link
               href="/study/solve"
               className="p-4 rounded-2xl bg-gradient-to-r from-[#241917] to-[#1A1A21] border border-[#FF5A36]/50 hover:border-[#FF5A36] flex items-center justify-between transition"
@@ -459,31 +524,13 @@ export default function StudyMoreHubPage() {
                   <ListChecks className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-xs font-black text-white">20제 문제·지문 O/★/X 체크</div>
+                  <div className="text-xs font-black text-white">기출 1,400제 · 20제 실전풀이</div>
                   <div className="text-[11px] text-slate-300">
-                    1문제마다 즉시 저장 · 종이책 병행 & 이동중 빠른 복습
+                    선지별 함정·법령 해설 제공 &amp; PosMul 계정 실시간 저장
                   </div>
                 </div>
               </div>
               <ArrowRight className="w-4 h-4 text-[#FF7A59]" />
-            </Link>
-
-            <Link
-              href="/scan"
-              className="p-4 rounded-2xl bg-[#1A1A21] border border-[#FF5A36]/40 hover:border-[#FF5A36] flex items-center justify-between transition"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-[#FF5A36]/15 text-[#FF5A36] flex items-center justify-center">
-                  <Camera className="w-5 h-5" />
-                </div>
-                <div>
-                  <div className="text-xs font-black text-white">종이책 AI 비전 스캔</div>
-                  <div className="text-[11px] text-slate-400">
-                    시험지/교재 O·★·X 손글씨 마킹 자동 채점 (+40 PMP)
-                  </div>
-                </div>
-              </div>
-              <ArrowRight className="w-4 h-4 text-slate-400" />
             </Link>
 
             <Link
@@ -495,9 +542,27 @@ export default function StudyMoreHubPage() {
                   <Zap className="w-5 h-5" />
                 </div>
                 <div>
-                  <div className="text-xs font-black text-white">3초 컷 1줄 O/X 덱</div>
+                  <div className="text-xs font-black text-white">3초 컷 1줄 O/X 덱 (전범위 개방)</div>
                   <div className="text-[11px] text-slate-400">
-                    1~5회독 240선지 및 스캔 ★/X 약점 복습
+                    교재 시리얼 없이 5,880선지 전 범위 및 약점 복습 (+PMP)
+                  </div>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-slate-400" />
+            </Link>
+
+            <Link
+              href="/scan"
+              className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-[#FF5A36] flex items-center justify-between transition"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-[#FF5A36]/15 text-[#FF5A36] flex items-center justify-center">
+                  <Camera className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="text-xs font-black text-white">종이책 AI 비전 스캔 (선택)</div>
+                  <div className="text-[11px] text-slate-400">
+                    종이 시험지 보유 시 O·★·X 손글씨 마킹 자동 인식
                   </div>
                 </div>
               </div>

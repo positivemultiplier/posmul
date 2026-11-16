@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase";
+import { resolveOwnerKeyAndUser } from "@/lib/auth-provision";
 import { CURRICULUM_ORDER_MAP } from "@/data/study-textbooks";
 
 export type LawStatus = "VALID" | "NEEDS_REVIEW" | "AMENDED_MODIFIED" | "DEPRECATED";
@@ -68,6 +69,7 @@ export interface AmendedQuestionPreviewItem {
 
 export interface FetchExamOxCardsInput {
   subject?: string;
+  detailCode?: string;
   maxTier?: number;
   onlyRepeated?: boolean;
   limit?: number;
@@ -114,7 +116,7 @@ export async function fetchExamOxCardsAction(
   input: FetchExamOxCardsInput = {}
 ): Promise<{ success: boolean; cards: ExamOxCardItem[]; totalMatched: number; error?: string }> {
   try {
-    const { subject = "ALL", maxTier = 5, onlyRepeated = false, limit = 60 } = input;
+    const { subject = "ALL", detailCode, maxTier = 5, onlyRepeated = false, limit = 60 } = input;
 
     let query = supabaseAdmin
       .schema("vertical_housing")
@@ -140,6 +142,7 @@ export async function fetchExamOxCardsAction(
           exam_round,
           exam_stage,
           subject,
+          detail_code,
           chapter_title,
           importance_tier,
           question_number,
@@ -158,6 +161,9 @@ export async function fetchExamOxCardsAction(
 
     if (subject !== "ALL") {
       query = query.eq("question.subject", subject);
+    }
+    if (detailCode) {
+      query = query.eq("question.detail_code", detailCode);
     }
     if (onlyRepeated) {
       query = query.gte("repeat_count", 2);
@@ -312,6 +318,8 @@ export interface SolveOptionItem {
   optionNumber: number;
   optionText: string;
   isCorrect: boolean;
+  trapSummary: string | null;
+  legalCitation: string | null;
   repeatCount: number;
   appearedCitations: OxCitationItem[];
   isAmended: boolean;
@@ -368,6 +376,7 @@ export async function fetchStudySolveSetsAction(clientKey: string): Promise<{
   error?: string;
 }> {
   try {
+    const { ownerKey } = await resolveOwnerKeyAndUser(clientKey);
     const allRows: RawQuestionCatalogRow[] = [];
     const PAGE = 1000;
     for (let from = 0; ; from += PAGE) {
@@ -391,12 +400,12 @@ export async function fetchStudySolveSetsAction(clientKey: string): Promise<{
         .schema("vertical_housing")
         .from("study_question_logs")
         .select("question_id")
-        .eq("client_key", clientKey),
+        .eq("client_key", ownerKey),
       supabaseAdmin
         .schema("vertical_housing")
         .from("study_option_logs")
         .select("id", { count: "exact", head: true })
-        .eq("client_key", clientKey)
+        .eq("client_key", ownerKey)
         .in("mark_status", ["STAR", "X"]),
     ]);
 
@@ -577,13 +586,14 @@ export async function fetchSolveSetQuestionsAction(
       return { success: true, questions: [] };
     }
 
+    const { ownerKey } = await resolveOwnerKeyAndUser(clientKey);
     const qIds = rawQuestions.map((q) => q.id);
     const [{ data: optRows, error: optErr }, { data: qLogs }, { data: optLogs }] = await Promise.all([
       supabaseAdmin
         .schema("vertical_housing")
         .from("exam_options")
         .select(
-          "id, question_id, option_number, option_text, is_correct, repeat_count, appeared_citations, is_amended, amended_note, original_option_text"
+          "id, question_id, option_number, option_text, is_correct, trap_summary, legal_citation, repeat_count, appeared_citations, is_amended, amended_note, original_option_text"
         )
         .in("question_id", qIds)
         .order("option_number", { ascending: true }),
@@ -591,13 +601,13 @@ export async function fetchSolveSetQuestionsAction(
         .schema("vertical_housing")
         .from("study_question_logs")
         .select("question_id, selected_option, subjective_input, is_correct, question_mark, box_marks")
-        .eq("client_key", clientKey)
+        .eq("client_key", ownerKey)
         .in("question_id", qIds),
       supabaseAdmin
         .schema("vertical_housing")
         .from("study_option_logs")
         .select("option_id, mark_status")
-        .eq("client_key", clientKey)
+        .eq("client_key", ownerKey)
         .in("question_id", qIds),
     ]);
 
@@ -617,6 +627,8 @@ export async function fetchSolveSetQuestionsAction(
       option_number: number;
       option_text: string;
       is_correct: boolean;
+      trap_summary: string | null;
+      legal_citation: string | null;
       repeat_count: number | null;
       appeared_citations: OxCitationItem[] | null;
       is_amended: boolean | null;
@@ -629,6 +641,8 @@ export async function fetchSolveSetQuestionsAction(
         optionNumber: o.option_number,
         optionText: o.option_text,
         isCorrect: o.is_correct,
+        trapSummary: o.trap_summary ?? null,
+        legalCitation: o.legal_citation ?? null,
         repeatCount: o.repeat_count ?? 1,
         appearedCitations: Array.isArray(o.appeared_citations) ? o.appeared_citations : [],
         isAmended: Boolean(o.is_amended),
@@ -707,13 +721,15 @@ export async function saveSingleQuestionSolveAction(
   input: SaveSingleQuestionSolveInput
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    const { user, ownerKey } = await resolveOwnerKeyAndUser(input.clientKey);
     const nowIso = new Date().toISOString();
     const { error: qErr } = await supabaseAdmin
       .schema("vertical_housing")
       .from("study_question_logs")
       .upsert(
         {
-          client_key: input.clientKey,
+          client_key: ownerKey,
+          user_id: user?.id ?? null,
           set_key: input.setKey,
           question_id: input.questionId,
           selected_option: input.selectedOption,
@@ -730,7 +746,8 @@ export async function saveSingleQuestionSolveAction(
 
     if (input.optionMarks.length > 0) {
       const optRows = input.optionMarks.map((m) => ({
-        client_key: input.clientKey,
+        client_key: ownerKey,
+        user_id: user?.id ?? null,
         question_id: input.questionId,
         option_id: m.optionId,
         mark_status: m.markStatus,
@@ -764,11 +781,12 @@ export async function fetchUserWeakOxCardsAction(clientKey: string): Promise<{
   error?: string;
 }> {
   try {
+    const { ownerKey } = await resolveOwnerKeyAndUser(clientKey);
     const { data: logs, error: logErr } = await supabaseAdmin
       .schema("vertical_housing")
       .from("study_option_logs")
       .select("option_id, mark_status")
-      .eq("client_key", clientKey)
+      .eq("client_key", ownerKey)
       .in("mark_status", ["STAR", "X"])
       .order("updated_at", { ascending: false })
       .limit(80);
@@ -871,6 +889,7 @@ export async function promoteWeakOptionToOAction(
   optionId: string
 ): Promise<{ success: boolean }> {
   try {
+    const { ownerKey } = await resolveOwnerKeyAndUser(clientKey);
     const { error } = await supabaseAdmin
       .schema("vertical_housing")
       .from("study_option_logs")
@@ -879,7 +898,7 @@ export async function promoteWeakOptionToOAction(
         mastered_by_ox: true,
         updated_at: new Date().toISOString(),
       })
-      .eq("client_key", clientKey)
+      .eq("client_key", ownerKey)
       .eq("option_id", optionId);
 
     return { success: !error };
@@ -922,7 +941,8 @@ export async function fetchStudyMatrixSyncAction(clientKey: string): Promise<{
   error?: string;
 }> {
   try {
-    if (!clientKey) {
+    const { ownerKey } = await resolveOwnerKeyAndUser(clientKey);
+    if (!ownerKey) {
       return { success: true, matrixCells: {}, chapterTotals: {} };
     }
 
@@ -943,7 +963,7 @@ export async function fetchStudyMatrixSyncAction(clientKey: string): Promise<{
         .schema("vertical_housing")
         .from("study_question_logs")
         .select("question_id, is_correct, solved_at, updated_at, question:exam_questions!inner(detail_code, chapter_code)")
-        .eq("client_key", clientKey)
+        .eq("client_key", ownerKey)
         .range(from, from + PAGE - 1);
 
       if (error) {
@@ -1212,14 +1232,15 @@ export async function fetchStudyAnalyticsAction(
 
     const qLogs: RawQLog[] = [];
     const optLogs: RawOptLog[] = [];
+    const { ownerKey } = await resolveOwnerKeyAndUser(clientKey);
 
-    if (clientKey) {
+    if (ownerKey) {
       for (let from = 0; ; from += PAGE) {
         const { data, error } = await supabaseAdmin
           .schema("vertical_housing")
           .from("study_question_logs")
           .select("question_id, is_correct, question_mark, updated_at, solved_at")
-          .eq("client_key", clientKey)
+          .eq("client_key", ownerKey)
           .range(from, from + PAGE - 1);
         if (error || !data || data.length === 0) break;
         qLogs.push(...(data as RawQLog[]));
@@ -1231,7 +1252,7 @@ export async function fetchStudyAnalyticsAction(
           .schema("vertical_housing")
           .from("study_option_logs")
           .select("question_id, mark_status")
-          .eq("client_key", clientKey)
+          .eq("client_key", ownerKey)
           .range(from, from + PAGE - 1);
         if (error || !data || data.length === 0) break;
         optLogs.push(...(data as RawOptLog[]));
@@ -1669,6 +1690,170 @@ export async function fetchStudyAnalyticsAction(
       stagePredictions: [],
       dailyTrend: [],
       error: err instanceof Error ? err.message : "통계 집계 실패",
+    };
+  }
+}
+
+export interface ChapterKeyPointOption {
+  id: string;
+  statement: string;
+  isCorrect: boolean;
+  citation: string | null;
+  trapSummary: string | null;
+  repeatCount: number;
+  isAmended: boolean;
+  amendedNote: string | null;
+  examYear: number;
+  questionNumber: number;
+}
+
+export interface ChapterStudyPacketResult {
+  success: boolean;
+  detailCode: string;
+  totalQuestions: number;
+  solvedCount: number;
+  correctCount: number;
+  recentYears: number[];
+  amendedCount: number;
+  keyOptions: ChapterKeyPointOption[];
+  error?: string;
+}
+
+/**
+ * 교재 없이 단원 학습센터(/study/books)에서 바로 공부할 수 있도록
+ * 해당 세부 단원의 기출 통계·개정 문항·핵심 조문/함정 O/X 선지를 조회합니다.
+ */
+export async function fetchChapterStudyPacketAction(
+  detailCode: string,
+  clientKey?: string
+): Promise<ChapterStudyPacketResult> {
+  try {
+    const { ownerKey } = await resolveOwnerKeyAndUser(clientKey);
+    const { data: qRows, error: qErr } = await supabaseAdmin
+      .schema("vertical_housing")
+      .from("exam_questions")
+      .select("id, exam_year, question_number, law_status")
+      .or(`detail_code.eq.${detailCode},chapter_code.eq.${detailCode}`)
+      .neq("law_status", "DEPRECATED")
+      .order("exam_year", { ascending: false });
+
+    if (qErr) {
+      return {
+        success: false,
+        detailCode,
+        totalQuestions: 0,
+        solvedCount: 0,
+        correctCount: 0,
+        recentYears: [],
+        amendedCount: 0,
+        keyOptions: [],
+        error: qErr.message,
+      };
+    }
+
+    const questions = (qRows ?? []) as Array<{
+      id: string;
+      exam_year: number;
+      question_number: number;
+      law_status: string | null;
+    }>;
+
+    if (questions.length === 0) {
+      return {
+        success: true,
+        detailCode,
+        totalQuestions: 0,
+        solvedCount: 0,
+        correctCount: 0,
+        recentYears: [],
+        amendedCount: 0,
+        keyOptions: [],
+      };
+    }
+
+    const qIds = questions.map((q) => q.id);
+    const qMetaById = new Map(questions.map((q) => [q.id, q]));
+    const recentYears = Array.from(new Set(questions.map((q) => q.exam_year)))
+      .sort((a, b) => b - a)
+      .slice(0, 5);
+    const amendedCount = questions.filter((q) => q.law_status === "AMENDED_MODIFIED").length;
+
+    const [{ data: logs }, { data: optRows }] = await Promise.all([
+      supabaseAdmin
+        .schema("vertical_housing")
+        .from("study_question_logs")
+        .select("question_id, is_correct")
+        .eq("client_key", ownerKey)
+        .in("question_id", qIds),
+      supabaseAdmin
+        .schema("vertical_housing")
+        .from("exam_options")
+        .select(
+          "id, question_id, option_text, is_correct, legal_citation, trap_summary, repeat_count, is_amended, amended_note, mastery_tier"
+        )
+        .in("question_id", qIds)
+        .order("repeat_count", { ascending: false })
+        .order("mastery_tier", { ascending: true })
+        .limit(40),
+    ]);
+
+    const solvedCount = (logs ?? []).length;
+    const correctCount = (logs ?? []).filter((l: { is_correct: boolean | null }) => l.is_correct === true).length;
+
+    const seenTexts = new Set<string>();
+    const keyOptions: ChapterKeyPointOption[] = [];
+    for (const o of (optRows ?? []) as Array<{
+      id: string;
+      question_id: string;
+      option_text: string;
+      is_correct: boolean;
+      legal_citation: string | null;
+      trap_summary: string | null;
+      repeat_count: number | null;
+      is_amended: boolean | null;
+      amended_note: string | null;
+    }>) {
+      const normalized = o.option_text.trim();
+      if (normalized.length < 18 || seenTexts.has(normalized)) continue;
+      if (/^[ㄱㄴㄷㄹㅁ,\s]+$/.test(normalized)) continue;
+      seenTexts.add(normalized);
+      const qMeta = qMetaById.get(o.question_id);
+      keyOptions.push({
+        id: o.id,
+        statement: normalized,
+        isCorrect: o.is_correct,
+        citation: o.legal_citation,
+        trapSummary: o.trap_summary,
+        repeatCount: o.repeat_count ?? 1,
+        isAmended: Boolean(o.is_amended),
+        amendedNote: o.amended_note,
+        examYear: qMeta?.exam_year ?? 2025,
+        questionNumber: qMeta?.question_number ?? 1,
+      });
+      if (keyOptions.length >= 10) break;
+    }
+
+    return {
+      success: true,
+      detailCode,
+      totalQuestions: questions.length,
+      solvedCount,
+      correctCount,
+      recentYears,
+      amendedCount,
+      keyOptions,
+    };
+  } catch (err) {
+    return {
+      success: false,
+      detailCode,
+      totalQuestions: 0,
+      solvedCount: 0,
+      correctCount: 0,
+      recentYears: [],
+      amendedCount: 0,
+      keyOptions: [],
+      error: err instanceof Error ? err.message : "단원 학습 패킷 조회 실패",
     };
   }
 }

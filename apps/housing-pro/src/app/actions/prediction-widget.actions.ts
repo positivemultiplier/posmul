@@ -1,6 +1,7 @@
 "use server";
 
 import { supabaseAdmin } from "@/lib/supabase";
+import { resolveAuthenticatedUser } from "@/lib/auth-provision";
 import { HOUSING_PREDICTION_GAMES, HousingPredictionGame } from "@/data/mock-housing-predictions";
 
 export interface PredictionParticipationResult {
@@ -24,7 +25,9 @@ export async function participateHousingPredictionAction(params: {
   optionId: string;
   pmpAmount: number;
 }): Promise<PredictionParticipationResult> {
-  const { userId, gameId, optionId, pmpAmount } = params;
+  const { gameId, optionId, pmpAmount } = params;
+  const sessionUser = await resolveAuthenticatedUser();
+  const userId = sessionUser?.id || params.userId;
 
   if (pmpAmount <= 0) {
     return {

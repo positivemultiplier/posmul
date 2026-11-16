@@ -15,6 +15,8 @@ import {
   fetchStudyMatrixSyncAction,
   type ChapterProgressSummary,
 } from "@/app/actions/exam-study.actions";
+import { syncPlannerStateToDbAction } from "@/app/actions/auth-profile.actions";
+import { useStudyAuth } from "@/components/auth/study-auth-provider";
 
 const STORAGE_KEY = "housing_pro_curriculum_v5";
 const LEGACY_STORAGE_KEY = "housing_pro_curriculum_v4";
@@ -147,6 +149,7 @@ function persistState(next: CurriculumPersistedState): void {
  * 교재 선택 -> 목차 자동 주입 -> 플래너 매트릭스 · 타이머 · 통계 · 할일 · 달력을 하나로 동기화하는 훅
  */
 export function useStudyCurriculum() {
+  const { isLoggedIn, effectiveOwnerKey, profile } = useStudyAuth();
   const todayISO = useMemo(() => formatDateISO(new Date()), []);
   const [state, setState] = useState<CurriculumPersistedState>(() =>
     createDefaultState(todayISO)
@@ -156,15 +159,45 @@ export function useStudyCurriculum() {
   const [chapterTotals, setChapterTotals] = useState<Record<string, ChapterProgressSummary>>({});
 
   const refreshDbSync = useCallback(async () => {
-    if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return;
-    const clientKey = globalThis.localStorage.getItem(CLIENT_KEY_STORAGE);
-    if (!clientKey) return;
-    const res = await fetchStudyMatrixSyncAction(clientKey);
+    const syncKey = effectiveOwnerKey;
+    if (!syncKey) return;
+    const res = await fetchStudyMatrixSyncAction(syncKey);
     if (res.success) {
       setDbMatrixCells(res.matrixCells);
       setChapterTotals(res.chapterTotals);
     }
-  }, []);
+  }, [effectiveOwnerKey]);
+
+  // 로그인 시 서버 study_user_profiles 의 planner_state / examDate 병합
+  useEffect(() => {
+    if (!isLoggedIn || !profile.userId) return;
+    const remote = profile.plannerState as Partial<CurriculumPersistedState> | undefined;
+    if (!remote && !profile.examDate) return;
+
+    setState((prev) => {
+      const mergedLogs: Record<string, Record<string, MatrixCellLog>> = {
+        ...prev.logsByBook,
+      };
+      if (remote?.logsByBook) {
+        for (const [bId, cells] of Object.entries(remote.logsByBook)) {
+          mergedLogs[bId] = { ...(cells || {}), ...(mergedLogs[bId] || {}) };
+        }
+      }
+      const next: CurriculumPersistedState = {
+        ...prev,
+        examDate: profile.examDate || remote?.examDate || prev.examDate,
+        logsByBook: mergedLogs,
+        todosByBook: remote?.todosByBook
+          ? { ...remote.todosByBook, ...prev.todosByBook }
+          : prev.todosByBook,
+        customTopicsByBook: remote?.customTopicsByBook
+          ? { ...remote.customTopicsByBook, ...prev.customTopicsByBook }
+          : prev.customTopicsByBook,
+      };
+      persistState(next);
+      return next;
+    });
+  }, [isLoggedIn, profile.userId, profile.examDate, profile.plannerState]);
 
   useEffect(() => {
     setState(readStoredState(todayISO));
@@ -191,14 +224,25 @@ export function useStudyCurriculum() {
   }, [todayISO, refreshDbSync]);
 
   const updateState = useCallback(
-    (updater: (prev: CurriculumPersistedState) => CurriculumPersistedState) => {
+    (
+      updater: (prev: CurriculumPersistedState) => CurriculumPersistedState,
+      addedFocusSeconds = 0
+    ) => {
       setState((prev) => {
         const next = updater(prev);
         persistState(next);
+        if (isLoggedIn) {
+          void syncPlannerStateToDbAction({
+            examDate: next.examDate,
+            activeTrack: "app_only_69",
+            addedFocusSeconds,
+            plannerState: next as unknown as Record<string, unknown>,
+          });
+        }
         return next;
       });
     },
-    []
+    [isLoggedIn]
   );
 
   const activeBook = useMemo(
@@ -345,7 +389,7 @@ export function useStudyCurriculum() {
             },
           },
         };
-      });
+      }, Math.max(0, Math.round(elapsedSeconds)));
     },
     [activeBook, subjects, todayISO, updateState]
   );

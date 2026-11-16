@@ -16,6 +16,9 @@ import {
   ChevronDown,
   BookOpen,
   TableProperties,
+  ListChecks,
+  LogIn,
+  ShieldCheck,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { YptFocusOverlay } from "@/components/mobile/ypt-focus-overlay";
@@ -25,6 +28,8 @@ import { getUserSerialStatusAction } from "@/app/actions/serial.actions";
 import { StudyConeStoreModal } from "@/components/study/study-cone-store-modal";
 import { UserStudyConeItem, STUDY_CONE_CATALOG } from "@/data/mock-study-cones";
 import { getUserStudyConesAction } from "@/app/actions/study-cone.actions";
+import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
+import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import { ContextualPredictionWidget } from "@/components/prediction/contextual-prediction-widget";
 import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
 import { diffDaysISO, findTopicMetaInSubjects } from "@/data/study-textbooks";
@@ -41,6 +46,13 @@ function formatHHMMSS(totalSec: number, spaced = false): string {
 export default function HousingProStudentTimerPage() {
   const router = useRouter();
   const {
+    isLoggedIn,
+    profile,
+    pmpBalance,
+    setLocalPmpBalance,
+    adjustLocalPmpBalance,
+  } = useStudyAuth();
+  const {
     todayISO,
     examDate,
     activeBook,
@@ -53,8 +65,9 @@ export default function HousingProStudentTimerPage() {
   const [activeSubTab, setActiveSubTab] = useState<"timer" | "group" | "predict">("timer");
   const [expandedSubjectIds, setExpandedSubjectIds] = useState<string[]>([]);
 
-  // 보유 PMP 및 정품 시리얼 인증 상태
-  const [userPmpBalance, setUserPmpBalance] = useState<number>(1000);
+  // 보유 PMP (로그인 시 PosMul 원장 연동, 게스트 시 체험 잔액)
+  const [guestPmpBalance, setGuestPmpBalance] = useState<number>(1000);
+  const effectivePmpBalance = isLoggedIn ? pmpBalance : guestPmpBalance;
   const [isSerialVerified, setIsSerialVerified] = useState(false);
   const [isSerialModalOpen, setIsSerialModalOpen] = useState(false);
   const [verifiedBookTitle, setVerifiedBookTitle] = useState<string | null>(null);
@@ -129,19 +142,19 @@ export default function HousingProStudentTimerPage() {
       }
     }
 
-    getUserSerialStatusAction("user-demo-housing-1").then((res) => {
+    void getUserSerialStatusAction().then((res) => {
       if (res.isRegistered) {
         setIsSerialVerified(true);
         if (res.bookTitle) setVerifiedBookTitle(res.bookTitle);
       }
     });
 
-    getUserStudyConesAction("user-demo-housing-1").then((res) => {
+    void getUserStudyConesAction().then((res) => {
       if (res.equippedCone) {
         setEquippedCone(res.equippedCone);
       }
     });
-  }, [router, subjects]);
+  }, [router, subjects, profile.userId]);
 
   const subjectSecondsMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -193,8 +206,21 @@ export default function HousingProStudentTimerPage() {
     }));
     recordStudySession(focusTopicId, elapsedSeconds);
 
-    setUserPmpBalance((prev) => prev + 10);
-    setToastMsg("집중 완료! 플래너 매트릭스 오늘 칸에 자동 기록되었습니다 (+10 PMP)");
+    if (isLoggedIn) {
+      void grantAppStudyPmpAction({ kind: "FOCUS" }).then((rewardRes) => {
+        if (rewardRes.success && rewardRes.authenticated) {
+          if (typeof rewardRes.newBalance === "number") {
+            setLocalPmpBalance(rewardRes.newBalance);
+          } else {
+            adjustLocalPmpBalance(rewardRes.earnedPmp);
+          }
+        }
+      });
+      setToastMsg("집중 완료! 플래너·PosMul 계정에 저장되었습니다 (+10 PMP)");
+    } else {
+      setGuestPmpBalance((prev) => prev + 10);
+      setToastMsg("집중 완료! 로그인하시면 PosMul 지갑과 모든 기기에 영구 저장됩니다.");
+    }
     setFocusTopicId(null);
     globalThis.setTimeout(() => setToastMsg(null), 4000);
   };
@@ -213,19 +239,24 @@ export default function HousingProStudentTimerPage() {
             {dDayToExam >= 0 ? `D-${dDayToExam} 제29회` : `D+${Math.abs(dDayToExam)}`}
           </span>
 
-          <button
-            type="button"
-            onClick={() => setIsSerialModalOpen(true)}
-            className={`px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 transition truncate ${
-              isSerialVerified
-                ? "bg-amber-950/80 text-amber-300 border border-amber-500/30"
-                : "bg-white/[0.06] hover:bg-white/[0.12] text-slate-300"
-            }`}
-            title={verifiedBookTitle || "정품 교재 시리얼 등록"}
-          >
-            <KeyRound className="w-3 h-3 text-amber-400 shrink-0" />
-            <span>{isSerialVerified ? "정품인증" : "키등록"}</span>
-          </button>
+          {isLoggedIn ? (
+            <span
+              className="px-2 py-0.5 rounded-full text-[10px] font-black flex items-center gap-1 bg-emerald-950/70 text-emerald-300 border border-emerald-500/35 truncate"
+              title="PosMul 계정에 학습 기록·PMP가 실시간 연동 중"
+            >
+              <ShieldCheck className="w-3 h-3 shrink-0" />
+              <span className="truncate">PosMul 연동됨</span>
+            </span>
+          ) : (
+            <Link
+              href="/auth/login?next=/"
+              className="px-2 py-0.5 rounded-full text-[10px] font-black flex items-center gap-1 bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/40 transition truncate"
+              title="PosMul 계정 로그인 (개인 기록 영구 저장)"
+            >
+              <LogIn className="w-3 h-3 shrink-0" />
+              <span>기록 저장 로그인</span>
+            </Link>
+          )}
         </div>
 
         {/* 우측 PMP 배지 & 페르소나 스위치 */}
@@ -235,7 +266,7 @@ export default function HousingProStudentTimerPage() {
             onClick={() => setActiveSubTab("predict")}
             className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-[10px] font-black text-amber-300 font-mono"
           >
-            {userPmpBalance.toLocaleString()} PMP
+            {effectivePmpBalance.toLocaleString()} PMP
           </button>
 
           <div className="flex items-center bg-[#0B0B0E] p-0.5 rounded-lg border border-white/[0.08] text-[10px] font-black">
@@ -468,18 +499,18 @@ export default function HousingProStudentTimerPage() {
 
             <div className="grid grid-cols-3 gap-2 pt-1">
               <Link
-                href="/study/planner"
+                href="/study/books"
                 className="p-2.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-[#FF5A36] flex flex-col items-center gap-1 text-center transition"
               >
-                <TableProperties className="w-4 h-4 text-[#FF5A36]" />
-                <span className="text-[10.5px] font-black text-white">매트릭스</span>
+                <BookOpen className="w-4 h-4 text-[#FF5A36]" />
+                <span className="text-[10.5px] font-black text-white">단원개념</span>
               </Link>
               <Link
-                href="/scan"
+                href="/study/solve"
                 className="p-2.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] hover:border-[#FF5A36] flex flex-col items-center gap-1 text-center transition"
               >
-                <Camera className="w-4 h-4 text-amber-400" />
-                <span className="text-[10.5px] font-black text-white">AI 스캔</span>
+                <ListChecks className="w-4 h-4 text-amber-400" />
+                <span className="text-[10.5px] font-black text-white">기출 20제</span>
               </Link>
               <Link
                 href="/study/ox"
@@ -501,36 +532,38 @@ export default function HousingProStudentTimerPage() {
 
         {activeSubTab === "predict" && (
           <div className="space-y-3">
-            <div className="p-4 rounded-2xl bg-[#1A1A21] border border-amber-500/30 flex items-center justify-between gap-3">
+            <div className="p-4 rounded-2xl bg-[#1A1A21] border border-emerald-500/30 flex items-center justify-between gap-3">
               <div className="space-y-0.5">
                 <div className="text-xs font-black text-white flex items-center gap-1.5">
-                  <KeyRound className="w-3.5 h-3.5 text-amber-400" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
                   <span>
-                    {isSerialVerified
-                      ? "POD 정품 교재 인증 완료"
-                      : "POD 종이책 정품 시리얼 등록"}
+                    {isLoggedIn
+                      ? `${profile.displayName} · PosMul 지갑 연동됨`
+                      : "PosMul 계정 로그인하고 PMP 적립하기"}
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-400">
-                  {isSerialVerified
-                    ? "1~5회독 240선지 해금 및 스캔 +40 PMP 활성"
-                    : "등록 즉시 2~5회독 해금 + AI 스캔 PMP 적립"}
+                  {isLoggedIn
+                    ? "교재 없이 O/X·기출·타이머 학습만으로도 PosMul 계정에 PMP가 실시간 적립됩니다."
+                    : "로그인 시 가입 +10,000 PMP와 함께 모든 학습 기록이 계정에 영구 저장됩니다."}
                 </p>
               </div>
-              {!isSerialVerified && (
-                <button
-                  type="button"
-                  onClick={() => setIsSerialModalOpen(true)}
-                  className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[11px] shrink-0"
+              {!isLoggedIn && (
+                <Link
+                  href="/auth/login?next=/"
+                  className="px-3 py-1.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white font-black text-[11px] shrink-0"
                 >
-                  등록하기
-                </button>
+                  로그인
+                </Link>
               )}
             </div>
 
             <ContextualPredictionWidget
-              userPmpBalance={userPmpBalance}
-              onBalanceChange={setUserPmpBalance}
+              userPmpBalance={effectivePmpBalance}
+              onBalanceChange={(nextBal) => {
+                if (isLoggedIn) setLocalPmpBalance(nextBal);
+                else setGuestPmpBalance(nextBal);
+              }}
             />
           </div>
         )}

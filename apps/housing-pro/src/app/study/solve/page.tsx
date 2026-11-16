@@ -24,6 +24,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
+import { useStudyAuth } from "@/components/auth/study-auth-provider";
+import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
 import {
   fetchStudySolveSetsAction,
   fetchSolveSetQuestionsAction,
@@ -71,7 +73,13 @@ function getDistinctYearsLabel(yearsInput: Array<{ year: number }>): string {
 }
 
 export default function InteractiveSolvePage() {
-  const [clientKey, setClientKey] = useState<string>("");
+  const {
+    isLoggedIn,
+    isLoading: authLoading,
+    effectiveOwnerKey,
+    setLocalPmpBalance,
+    adjustLocalPmpBalance,
+  } = useStudyAuth();
   const [sets, setSets] = useState<StudySetSummary[]>([]);
   const [weakOptionCount, setWeakOptionCount] = useState<number>(0);
   const [loadingSets, setLoadingSets] = useState<boolean>(true);
@@ -109,8 +117,6 @@ export default function InteractiveSolvePage() {
   }, []);
 
   useEffect(() => {
-    const key = getOrCreateClientKey();
-    setClientKey(key);
     if (typeof globalThis !== "undefined" && "location" in globalThis) {
       const params = new globalThis.URLSearchParams(globalThis.location.search);
       const ch = params.get("chapter");
@@ -119,8 +125,12 @@ export default function InteractiveSolvePage() {
         setCatalogCategory("CHAPTER");
       }
     }
-    refreshCatalog(key);
-  }, [refreshCatalog]);
+  }, []);
+
+  useEffect(() => {
+    if (authLoading) return;
+    void refreshCatalog(effectiveOwnerKey);
+  }, [authLoading, effectiveOwnerKey, refreshCatalog]);
 
   const filteredSets = useMemo(() => {
     return sets.filter((s) => {
@@ -137,14 +147,14 @@ export default function InteractiveSolvePage() {
   }, [sets]);
 
   const handleOpenSet = async (setSummary: StudySetSummary) => {
-    if (!clientKey) return;
+    if (!effectiveOwnerKey) return;
     setActiveSet(setSummary);
     setLoadingQuestions(true);
     setShowSummary(false);
     setExpandedRepeatOptId(null);
     setShowOriginalQ(false);
 
-    const res = await fetchSolveSetQuestionsAction(clientKey, setSummary.setKey);
+    const res = await fetchSolveSetQuestionsAction(effectiveOwnerKey, setSummary.setKey);
     if (res.success) {
       setQuestions(res.questions);
       const nextDrafts: Record<string, LocalDraftState> = {};
@@ -259,7 +269,7 @@ export default function InteractiveSolvePage() {
 
   const persistQuestionToDb = useCallback(
     async (q: SolveQuestionItem, d: LocalDraftState, markChecked: boolean) => {
-      if (!clientKey || !activeSet) return;
+      if (!effectiveOwnerKey || !activeSet) return;
       const computedCorrect = markChecked ? evaluateQuestionCorrect(q, d) : d.isCorrect;
 
       // 오답이거나 미확신일 때 별도 선지 마킹을 하나도 안 했으면 정답 선지와 오답 선택 선지를 자동으로 'STAR'로 저장해 약점 O/X에 연결
@@ -284,7 +294,7 @@ export default function InteractiveSolvePage() {
 
       setSavingId(q.id);
       await saveSingleQuestionSolveAction({
-        clientKey,
+        clientKey: effectiveOwnerKey,
         setKey: activeSet.setKey,
         questionId: q.id,
         selectedOption: d.selectedOption,
@@ -296,7 +306,7 @@ export default function InteractiveSolvePage() {
       });
       setSavingId(null);
     },
-    [clientKey, activeSet]
+    [effectiveOwnerKey, activeSet]
   );
 
   const updateCurrentDraft = (updater: (prev: LocalDraftState) => LocalDraftState) => {
@@ -367,6 +377,7 @@ export default function InteractiveSolvePage() {
 
   const handleCheckAndSaveCurrent = async () => {
     if (!currentQ || !currentDraft) return;
+    const wasChecked = currentDraft.checked;
     const isCorrect = evaluateQuestionCorrect(currentQ, currentDraft);
     const updated: LocalDraftState = {
       ...currentDraft,
@@ -375,6 +386,17 @@ export default function InteractiveSolvePage() {
     };
     setDrafts((prev) => ({ ...prev, [currentQ.id]: updated }));
     await persistQuestionToDb(currentQ, updated, true);
+
+    if (!wasChecked && isCorrect === true && isLoggedIn) {
+      const rewardRes = await grantAppStudyPmpAction({ kind: "SOLVE" });
+      if (rewardRes.success && rewardRes.authenticated) {
+        if (typeof rewardRes.newBalance === "number") {
+          setLocalPmpBalance(rewardRes.newBalance);
+        } else {
+          adjustLocalPmpBalance(rewardRes.earnedPmp);
+        }
+      }
+    }
   };
 
   const handleMoveQuestion = async (targetIdx: number) => {
@@ -402,7 +424,7 @@ export default function InteractiveSolvePage() {
     );
     setDrafts(nextDrafts);
     setShowSummary(true);
-    if (clientKey) refreshCatalog(clientKey);
+    if (effectiveOwnerKey) refreshCatalog(effectiveOwnerKey);
   };
 
   const summaryStats = useMemo(() => {
@@ -435,7 +457,7 @@ export default function InteractiveSolvePage() {
                 type="button"
                 onClick={() => {
                   setActiveSet(null);
-                  if (clientKey) refreshCatalog(clientKey);
+                  if (effectiveOwnerKey) refreshCatalog(effectiveOwnerKey);
                 }}
                 className="p-1.5 rounded-lg bg-white/[0.06] text-slate-300 hover:text-white shrink-0"
                 aria-label="세트 목록으로"
@@ -548,7 +570,7 @@ export default function InteractiveSolvePage() {
                   className="px-2 py-1 rounded-lg text-[10px] font-bold bg-[#0E0E12] text-slate-300 border border-white/[0.08] flex items-center gap-1"
                 >
                   {compactQuestionMode ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                  <span>{compactQuestionMode ? "본문 펼치기" : "종이책 모드(본문접기)"}</span>
+                  <span>{compactQuestionMode ? "본문 펼치기" : "본문 간략접기"}</span>
                 </button>
               </div>
               <span className="text-[10.5px] font-mono text-[#FF7A59] font-bold">
@@ -1011,44 +1033,61 @@ export default function InteractiveSolvePage() {
                             </div>
                           </div>
 
-                          {/* 채점 후: 지문 옳고 그름 + 반복 출제 연도 이력 토글 */}
+                          {/* 채점 후: 지문 옳고 그름 + 함정·법령 해설 + 반복 출제 연도 이력 토글 */}
                           {currentDraft.checked && (
-                            <div className="pt-1.5 border-t border-white/[0.06] flex items-center justify-between gap-2 flex-wrap">
-                              <div className="flex items-center gap-1.5 text-[10px] font-bold">
-                                {isAnswer && (
-                                  <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-                                    정답 선지
+                            <div className="pt-1.5 border-t border-white/[0.06] space-y-1.5">
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <div className="flex items-center gap-1.5 text-[10px] font-bold">
+                                  {isAnswer && (
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
+                                      정답 선지
+                                    </span>
+                                  )}
+                                  <span className={opt.isCorrect ? "text-emerald-300" : "text-rose-300"}>
+                                    지문 판정: {opt.isCorrect ? "O (옳음)" : "X (틀림)"}
                                   </span>
-                                )}
-                                <span className={opt.isCorrect ? "text-emerald-300" : "text-rose-300"}>
-                                  지문 판정: {opt.isCorrect ? "O (옳음)" : "X (틀림)"}
-                                </span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setExpandedRepeatOptId(showRepeat ? null : opt.id)}
+                                  className={`px-2 py-0.5 rounded-full text-[9.5px] font-black border flex items-center gap-1 ${
+                                    opt.repeatCount >= 2
+                                      ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
+                                      : "bg-white/[0.05] text-slate-400 border-white/[0.08]"
+                                  }`}
+                                >
+                                  {opt.repeatCount >= 2 ? (
+                                    <>
+                                      <Flame className="w-2.5 h-2.5" />
+                                      <span>
+                                        {opt.repeatCount}회 출제 ({getDistinctYearsLabel(opt.appearedCitations)})
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <History className="w-2.5 h-2.5" />
+                                      <span>{currentQ.examYear}년 단일</span>
+                                    </>
+                                  )}
+                                  {showRepeat ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
+                                </button>
                               </div>
 
-                              <button
-                                type="button"
-                                onClick={() => setExpandedRepeatOptId(showRepeat ? null : opt.id)}
-                                className={`px-2 py-0.5 rounded-full text-[9.5px] font-black border flex items-center gap-1 ${
-                                  opt.repeatCount >= 2
-                                    ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
-                                    : "bg-white/[0.05] text-slate-400 border-white/[0.08]"
-                                }`}
-                              >
-                                {opt.repeatCount >= 2 ? (
-                                  <>
-                                    <Flame className="w-2.5 h-2.5" />
-                                    <span>
-                                      {opt.repeatCount}회 출제 ({getDistinctYearsLabel(opt.appearedCitations)})
-                                    </span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <History className="w-2.5 h-2.5" />
-                                    <span>{currentQ.examYear}년 단일</span>
-                                  </>
-                                )}
-                                {showRepeat ? <ChevronUp className="w-2.5 h-2.5" /> : <ChevronDown className="w-2.5 h-2.5" />}
-                              </button>
+                              {(opt.trapSummary || opt.legalCitation) && (
+                                <div className="p-2 rounded-lg bg-black/25 border border-white/[0.06] space-y-0.5 text-[10.5px]">
+                                  {opt.trapSummary && (
+                                    <div className="text-amber-300 font-bold">
+                                      💡 {opt.trapSummary}
+                                    </div>
+                                  )}
+                                  {opt.legalCitation && (
+                                    <div className="text-slate-400 font-mono text-[9.5px]">
+                                      근거: {opt.legalCitation}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
                           )}
 

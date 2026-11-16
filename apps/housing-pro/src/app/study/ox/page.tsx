@@ -25,8 +25,9 @@ import {
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { REAL_2026_EXAM_OX_CARDS } from "@/data/mock-exam-options";
 import { SerialRegisterModal } from "@/components/auth/serial-register-modal";
-import { TierLockBanner } from "@/components/study/tier-lock-banner";
 import { getUserSerialStatusAction } from "@/app/actions/serial.actions";
+import { useStudyAuth } from "@/components/auth/study-auth-provider";
+import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
 import {
   fetchExamOxCardsAction,
   fetchLawAmendedQuestionsAction,
@@ -113,12 +114,18 @@ function LawStatusBadge({ status, isAmendedOption }: { status: LawStatus; isAmen
 }
 
 export default function OxSwipeStudyPage() {
+  const {
+    isLoggedIn,
+    effectiveOwnerKey,
+    setLocalPmpBalance,
+    adjustLocalPmpBalance,
+  } = useStudyAuth();
   const [selectedTier, setSelectedTier] = useState<number>(1);
   const [selectedSubject, setSelectedSubject] = useState<string>("ALL");
+  const [chapterFilter, setChapterFilter] = useState<string | null>(null);
   const [onlyRepeated, setOnlyRepeated] = useState<boolean>(false);
   const [isScanWeakMode, setIsScanWeakMode] = useState(false);
   const [isDbWeakMode, setIsDbWeakMode] = useState(false);
-  const [clientKey, setClientKey] = useState("");
   const [scannedWeakIds, setScannedWeakIds] = useState<string[]>([]);
   const [scannedMarkMap, setScannedMarkMap] = useState<Record<string, "O" | "STAR" | "X">>({});
 
@@ -154,9 +161,11 @@ export default function OxSwipeStudyPage() {
         setSelectedTier(tierParam);
       }
 
-      const existingKey = window.localStorage.getItem("housing_pro_client_key") || "demo-housing-guest";
-      window.localStorage.setItem("housing_pro_client_key", existingKey);
-      setClientKey(existingKey);
+      const chParam = searchParams.get("chapter");
+      if (chParam) {
+        setChapterFilter(chParam);
+        setSelectedTier(5);
+      }
 
       if (searchParams.get("mode") === "weak") {
         setIsDbWeakMode(true);
@@ -191,7 +200,7 @@ export default function OxSwipeStudyPage() {
       }
     }
 
-    getUserSerialStatusAction("user-demo-housing-1").then((res) => {
+    void getUserSerialStatusAction().then((res) => {
       if (res.isRegistered) {
         setIsSerialVerified(true);
       }
@@ -201,11 +210,7 @@ export default function OxSwipeStudyPage() {
   const loadDbCards = useCallback(async () => {
     setIsLoadingCards(true);
     if (isDbWeakMode) {
-      const weakKey =
-        clientKey ||
-        (typeof window !== "undefined" ? window.localStorage.getItem("housing_pro_client_key") : null) ||
-        "demo-housing-guest";
-      const weakRes = await fetchUserWeakOxCardsAction(weakKey);
+      const weakRes = await fetchUserWeakOxCardsAction(effectiveOwnerKey);
       if (weakRes.success) {
         setDbCards(weakRes.cards);
         setTotalMatchedCount(weakRes.cards.length);
@@ -218,8 +223,9 @@ export default function OxSwipeStudyPage() {
 
     const res = await fetchExamOxCardsAction({
       subject: selectedSubject,
+      detailCode: chapterFilter || undefined,
       maxTier: selectedTier,
-      onlyRepeated: onlyRepeated || selectedTier === 1,
+      onlyRepeated: !chapterFilter && (onlyRepeated || selectedTier === 1),
       limit: 60,
     });
 
@@ -239,7 +245,7 @@ export default function OxSwipeStudyPage() {
       setUsingFallbackMock(false);
     }
     setIsLoadingCards(false);
-  }, [selectedSubject, selectedTier, onlyRepeated, isDbWeakMode, clientKey]);
+  }, [selectedSubject, chapterFilter, selectedTier, onlyRepeated, isDbWeakMode, effectiveOwnerKey]);
 
   useEffect(() => {
     if (!isScanWeakMode) {
@@ -267,7 +273,7 @@ export default function OxSwipeStudyPage() {
     return dbCards;
   }, [isScanWeakMode, scannedWeakIds, dbCards]);
 
-  const isTierLocked = !isScanWeakMode && !isDbWeakMode && selectedTier > 1 && !isSerialVerified;
+  const isTierLocked = false; // 교재 시리얼 없이 1~5회독 전체 앱 단독 전면 개방
   const currentCard = activeCards[currentIndex];
   const isFinished = !isLoadingCards && currentIndex >= activeCards.length;
 
@@ -292,8 +298,19 @@ export default function OxSwipeStudyPage() {
           [currentCard.id]: "O",
         }));
       }
-      if (isDbWeakMode && clientKey && currentCard) {
-        void promoteWeakOptionToOAction(clientKey, currentCard.id);
+      if (isDbWeakMode && effectiveOwnerKey && currentCard) {
+        void promoteWeakOptionToOAction(effectiveOwnerKey, currentCard.id);
+      }
+      if (isLoggedIn) {
+        void grantAppStudyPmpAction({ kind: "OX" }).then((rewardRes) => {
+          if (rewardRes.success && rewardRes.authenticated) {
+            if (typeof rewardRes.newBalance === "number") {
+              setLocalPmpBalance(rewardRes.newBalance);
+            } else {
+              adjustLocalPmpBalance(rewardRes.earnedPmp);
+            }
+          }
+        });
       }
     }
   };
@@ -359,21 +376,22 @@ export default function OxSwipeStudyPage() {
               <BookCheck className="w-3 h-3" />
               <span>개정검수</span>
             </button>
-            {isSerialVerified ? (
-              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                <span>정품</span>
-              </span>
-            ) : (
+            {chapterFilter && (
               <button
                 type="button"
-                onClick={() => setIsSerialModalOpen(true)}
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/[0.08] text-amber-300 border border-amber-500/30 flex items-center gap-1"
+                onClick={() => {
+                  setChapterFilter(null);
+                  setCurrentIndex(0);
+                  resetCardTransientState();
+                }}
+                className="text-[10px] font-black px-2 py-0.5 rounded-full bg-[#FF5A36]/20 text-[#FF7A59] border border-[#FF5A36]/40"
               >
-                <KeyRound className="w-3 h-3" />
-                <span>키등록</span>
+                단원 필터 ✕
               </button>
             )}
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-500/35">
+              교재없이 무료해금
+            </span>
           </div>
         </div>
 
@@ -399,26 +417,22 @@ export default function OxSwipeStudyPage() {
           </div>
         )}
 
-        {/* 1~5회독 해금 필터 바 */}
+        {/* 1~5회독 전 범위 무료 해금 필터 바 */}
         <div className="grid grid-cols-5 gap-1">
-          {[1, 2, 3, 4, 5].map((tier) => {
-            const locked = tier > 1 && !isSerialVerified;
-            return (
-              <button
-                key={tier}
-                type="button"
-                onClick={() => handleTierChange(tier)}
-                className={`py-1.5 rounded-xl text-[10.5px] font-black transition flex items-center justify-center gap-0.5 ${
-                  !isScanWeakMode && selectedTier === tier
-                    ? "bg-[#FF5A36] text-white shadow-md"
-                    : "bg-[#0E0E12] text-slate-400 hover:text-white border border-white/[0.05]"
-                }`}
-              >
-                {locked && <Lock className="w-2.5 h-2.5 text-amber-400 shrink-0" />}
-                <span>{tier === 1 ? "1회독·다빈출" : `${tier}회독`}</span>
-              </button>
-            );
-          })}
+          {[1, 2, 3, 4, 5].map((tier) => (
+            <button
+              key={tier}
+              type="button"
+              onClick={() => handleTierChange(tier)}
+              className={`py-1.5 rounded-xl text-[10.5px] font-black transition flex items-center justify-center gap-0.5 ${
+                !isScanWeakMode && selectedTier === tier
+                  ? "bg-[#FF5A36] text-white shadow-md"
+                  : "bg-[#0E0E12] text-slate-400 hover:text-white border border-white/[0.05]"
+              }`}
+            >
+              <span>{tier === 1 ? "1회독·다빈출" : `${tier}회독`}</span>
+            </button>
+          ))}
         </div>
 
         {/* 과목 필터 + 다빈출 · 내 약점 · 20제 풀기 */}
@@ -582,41 +596,8 @@ export default function OxSwipeStudyPage() {
       {/* 메인 카드 영역 */}
       <div className="px-4 py-4 flex-1 flex flex-col justify-between space-y-4">
         {isTierLocked ? (
-          <div className="space-y-4">
-            <TierLockBanner
-              currentTier={selectedTier}
-              onOpenSerialModal={() => setIsSerialModalOpen(true)}
-            />
-
-            <div className="p-6 rounded-3xl bg-[#1A1A21] border border-white/[0.08] text-center space-y-4">
-              <div className="w-12 h-12 rounded-full bg-[#121216] border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
-                <Lock className="w-6 h-6" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-black text-white">
-                  {selectedTier}회독 ({selectedTier * 20}%) 카드 잠금
-                </h3>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  1회독(다빈출 핵심 260지문)은 무료 체험 가능하며, 정품 시리얼 등록 시 7개년 전체 3,515개 O/X 지문이 해금됩니다.
-                </p>
-              </div>
-              <div className="grid grid-cols-2 gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => handleTierChange(1)}
-                  className="py-2.5 rounded-xl bg-white/[0.06] text-slate-200 text-xs font-bold"
-                >
-                  1회독 풀기
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsSerialModalOpen(true)}
-                  className="py-2.5 rounded-xl bg-amber-500 text-slate-950 text-xs font-black"
-                >
-                  정품 시리얼 등록
-                </button>
-              </div>
-            </div>
+          <div className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.08] text-xs text-slate-300">
+            카드를 불러오는 중입니다.
           </div>
         ) : isLoadingCards && !isScanWeakMode ? (
           <div className="my-auto py-12 flex flex-col items-center justify-center gap-3 text-slate-400">
@@ -892,10 +873,10 @@ export default function OxSwipeStudyPage() {
                 다시 풀기
               </button>
               <Link
-                href="/scan"
+                href="/study/books"
                 className="py-3 rounded-xl bg-[#FF5A36] text-white font-black text-xs flex items-center justify-center"
               >
-                카메라 스캐너로
+                단원 개념학습으로
               </Link>
             </div>
           </div>

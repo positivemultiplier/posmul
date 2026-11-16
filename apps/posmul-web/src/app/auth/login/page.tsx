@@ -103,6 +103,10 @@ function LoginForm() {
         }
       }
 
+      if (targetRoute.startsWith("http://") || targetRoute.startsWith("https://")) {
+        window.location.href = targetRoute;
+        return;
+      }
       router.push(targetRoute);
       router.refresh();
     } catch (err) {

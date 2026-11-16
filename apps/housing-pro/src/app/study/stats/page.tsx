@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
+import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import { addDaysISO, diffDaysISO, flattenTopics } from "@/data/study-textbooks";
 import {
   fetchStudyAnalyticsAction,
@@ -43,6 +44,7 @@ const SUBJECT_FILTER_OPTIONS = [
 ] as const;
 
 export default function StudyStatisticsPage() {
+  const { isLoading: authLoading, effectiveOwnerKey } = useStudyAuth();
   const {
     todayISO,
     activeBook,
@@ -63,11 +65,7 @@ export default function StudyStatisticsPage() {
 
   const loadAnalytics = async () => {
     setLoadingDb(true);
-    let clientKey = "";
-    if (typeof globalThis !== "undefined" && "localStorage" in globalThis) {
-      clientKey = globalThis.localStorage.getItem("housing_pro_client_key") || "";
-    }
-    const res = await fetchStudyAnalyticsAction(clientKey);
+    const res = await fetchStudyAnalyticsAction(effectiveOwnerKey);
     if (res.success) {
       setAnalyticsData(res);
     }
@@ -75,8 +73,9 @@ export default function StudyStatisticsPage() {
   };
 
   useEffect(() => {
-    loadAnalytics();
-  }, []);
+    if (authLoading) return;
+    void loadAnalytics();
+  }, [authLoading, effectiveOwnerKey]);
 
   // 플래너 매트릭스 기반 회독·구멍 통계 계산
   const matrixAnalytics = useMemo(() => {

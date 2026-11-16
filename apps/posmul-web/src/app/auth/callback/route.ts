@@ -5,6 +5,10 @@ import {
   ensureUserProfile,
   ensureEconomyAccount,
 } from "../auth-helper";
+import {
+  resolveCrossSubdomainCookieDomain,
+  resolveTrustedRedirectUrl,
+} from "../../../lib/supabase/sso-cookie";
 
 function getRedirectOrigin(request: NextRequest, requestUrl: URL): string {
   const forwardedHost = request.headers.get("x-forwarded-host");
@@ -137,14 +141,16 @@ async function completeCustomOAuthLogin(params: {
     console.warn(`[${provider}] profile/economy init non-fatal error:`, err);
   }
 
-  const finalTargetUrl = `${redirectOrigin}${
-    resolvedPath.startsWith("/") ? resolvedPath : "/" + resolvedPath
-  }`;
+  const finalTargetUrl = resolveTrustedRedirectUrl(redirectOrigin, resolvedPath);
+  const ssoDomain = resolveCrossSubdomainCookieDomain(new URL(redirectOrigin).hostname);
   const response = NextResponse.redirect(finalTargetUrl);
 
-  // 캡처된 Supabase 세션 쿠키 세팅
+  // 캡처된 Supabase 세션 쿠키 세팅 (.posmul.com 크로스 서브도메인 SSO 포함)
   capturedCookies.forEach(({ name, value, options }) =>
-    response.cookies.set(name, value, options)
+    response.cookies.set(name, value, {
+      ...options,
+      ...(ssoDomain ? { domain: ssoDomain } : {}),
+    })
   );
 
   // 임시 OAuth 쿠키 정리
@@ -366,12 +372,14 @@ export async function GET(request: NextRequest) {
     // 프로필/보너스 초기화 오류 시에도 로그인 세션은 정상 유지
   }
 
-  const finalTargetUrl = `${redirectOrigin}${
-    resolvedPath.startsWith("/") ? resolvedPath : "/" + resolvedPath
-  }`;
+  const finalTargetUrl = resolveTrustedRedirectUrl(redirectOrigin, resolvedPath);
+  const ssoDomain = resolveCrossSubdomainCookieDomain(new URL(redirectOrigin).hostname);
   const response = NextResponse.redirect(finalTargetUrl);
   capturedCookies.forEach(({ name, value, options }) =>
-    response.cookies.set(name, value, options)
+    response.cookies.set(name, value, {
+      ...options,
+      ...(ssoDomain ? { domain: ssoDomain } : {}),
+    })
   );
 
   return response;

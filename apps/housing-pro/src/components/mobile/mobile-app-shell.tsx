@@ -21,8 +21,12 @@ import {
   TrendingUp,
   MessageSquare,
   GraduationCap,
+  LogIn,
+  LogOut,
+  UserCheck,
 } from "lucide-react";
 import { setSavedPersonaMode } from "@/lib/pro-workspace-store";
+import { useStudyAuth } from "@/components/auth/study-auth-provider";
 
 interface MobileAppShellProps {
   children: ReactNode;
@@ -40,6 +44,7 @@ export function MobileAppShell({
   const pathname = usePathname();
   const router = useRouter();
   const [isWideView, setIsWideView] = useState(false);
+  const { isLoggedIn, profile, pmpBalance, signOut } = useStudyAuth();
 
   // 경로 기반 + prop 기반 소장Pro 모드 판별
   const isProShell = pathname.startsWith("/pro") || isProMode;
@@ -150,6 +155,35 @@ export function MobileAppShell({
               <Wifi className="w-3 h-3" />
               <BatteryCharging className="w-3.5 h-3.5 text-emerald-400" />
             </div>
+
+            {isLoggedIn ? (
+              <div className="flex items-center gap-1">
+                <span
+                  className="px-2 py-0.5 rounded-md bg-emerald-950/70 border border-emerald-500/35 text-emerald-200 text-[10px] font-black flex items-center gap-1 max-w-[130px] truncate"
+                  title={`${profile.displayName} · PosMul ${pmpBalance.toLocaleString()} PMP`}
+                >
+                  <UserCheck className="w-3 h-3 text-emerald-400 shrink-0" />
+                  <span className="truncate">{profile.displayName}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void signOut()}
+                  className="p-1 rounded-md bg-white/[0.06] hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 transition"
+                  title="로그아웃"
+                >
+                  <LogOut className="w-3 h-3" />
+                </button>
+              </div>
+            ) : (
+              <Link
+                href={`/auth/login?next=${encodeURIComponent(pathname || "/")}`}
+                className="px-2 py-0.5 rounded-md bg-[#FF5A36]/20 hover:bg-[#FF5A36]/30 border border-[#FF5A36]/40 text-[#FF7A59] text-[10px] font-black flex items-center gap-1 transition"
+                title="PosMul 계정 로그인 (개인 기록 영구 연동)"
+              >
+                <LogIn className="w-3 h-3" />
+                <span>로그인</span>
+              </Link>
+            )}
           </div>
         </div>
 
@@ -275,7 +309,7 @@ export function MobileAppShell({
                 }`}
               >
                 <BookOpen className="w-5 h-5" />
-                <span className="text-[10px] font-extrabold">교재</span>
+                <span className="text-[10px] font-extrabold">단원학습</span>
               </Link>
 
               <Link
