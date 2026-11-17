@@ -21,6 +21,11 @@ import {
   Sparkles,
   X,
   Zap,
+  Check,
+  Trash2,
+  Archive,
+  ArchiveRestore,
+  Palette,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
@@ -37,18 +42,31 @@ import {
 } from "@/app/actions/exam-study.actions";
 import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
 import { getChapterConceptNote } from "@/data/study-concept-notes";
-import type { StudySubjectNode, StudyTopicNode } from "@/data/study-textbooks";
+import {
+  CUSTOM_SUBJECT_COLOR_PALETTE,
+  type StudySubjectNode,
+  type StudyTopicNode,
+} from "@/data/study-textbooks";
 
 type CenterTab = "concept" | "settings";
 
 export default function AppStandaloneStudyCenterPage() {
   const {
     activeBook,
+    activeBooks,
+    activeBookIds,
     catalog,
     subjects,
+    archivedSubjects,
     examDate,
     setExamDate,
-    selectTextbook,
+    toggleBookActive,
+    addCustomBook,
+    deleteCustomBook,
+    addCustomSubject,
+    updateSubjectCustomization,
+    archiveSubject,
+    restoreSubject,
     addCustomTopic,
     chapterTotals,
   } = useStudyCurriculum();
@@ -70,11 +88,18 @@ export default function AppStandaloneStudyCenterPage() {
   const [miniOxAnswers, setMiniOxAnswers] = useState<Record<string, boolean>>({});
   const [theoryTarget, setTheoryTarget] = useState<TheorySheetTarget | null>(null);
 
-  // 기존 교재 설정/시리얼 보조 상태
+  // 기존 교재 설정/시리얼/커스텀 과목 보조 상태
   const [previewBookId, setPreviewBookId] = useState<string | null>(activeBook.id);
   const [selectedUnitId, setSelectedUnitId] = useState<string>("");
   const [newTopicTitle, setNewTopicTitle] = useState("");
   const [newTopicKeyword, setNewTopicKeyword] = useState("");
+  const [newCustomBookTitle, setNewCustomBookTitle] = useState("");
+  const [newCustomBookBadge, setNewCustomBookBadge] = useState("");
+  const [newCustomBookColor, setNewCustomBookColor] = useState<string>("#FF5A36");
+  const [newCustomSubjTitle, setNewCustomSubjTitle] = useState("");
+  const [newCustomSubjColor, setNewCustomSubjColor] = useState<string>(
+    CUSTOM_SUBJECT_COLOR_PALETTE[0]
+  );
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isSerialVerified, setIsSerialVerified] = useState(false);
   const [isSerialModalOpen, setIsSerialModalOpen] = useState(false);
@@ -169,10 +194,43 @@ export default function AppStandaloneStudyCenterPage() {
     [selectedTopic]
   );
 
-  const handleSelectBook = (bookId: string, title: string) => {
-    selectTextbook(bookId);
+  const handleToggleBook = (bookId: string, title: string) => {
+    const isCurrentlyActive = activeBookIds.includes(bookId);
+    if (isCurrentlyActive && activeBookIds.length <= 1) {
+      showToast("최소 1권 이상의 교재가 선택되어야 합니다.");
+      return;
+    }
+    toggleBookActive(bookId);
     setPreviewBookId(bookId);
-    showToast(`「${title}」 커리큘럼이 플래너·타이머에 반영되었습니다!`);
+    showToast(
+      isCurrentlyActive
+        ? `「${title}」을(를) 활성 교재에서 해제했습니다.`
+        : `「${title}」이(가) 다중 교재에 추가 적용되었습니다!`
+    );
+  };
+
+  const handleAddCustomBook = () => {
+    if (!newCustomBookTitle.trim()) return;
+    addCustomBook({
+      title: newCustomBookTitle.trim(),
+      badge: newCustomBookBadge.trim() || newCustomBookTitle.trim().slice(0, 6),
+      coverColor: newCustomBookColor,
+      firstSubjectTitle: newCustomBookTitle.trim(),
+    });
+    showToast(`커스텀 교재 「${newCustomBookTitle.trim()}」이(가) 추가되었습니다.`);
+    setNewCustomBookTitle("");
+    setNewCustomBookBadge("");
+  };
+
+  const handleAddCustomSubject = () => {
+    if (!newCustomSubjTitle.trim()) return;
+    addCustomSubject({
+      title: newCustomSubjTitle.trim(),
+      color: newCustomSubjColor,
+      examStage: "2차",
+    });
+    showToast(`커스텀 과목 「${newCustomSubjTitle.trim()}」이(가) 추가되었습니다.`);
+    setNewCustomSubjTitle("");
   };
 
   const handleAddTopic = () => {
@@ -652,8 +710,12 @@ export default function AppStandaloneStudyCenterPage() {
               </Link>
             </div>
             <div>
-              <h2 className="text-sm font-black text-white">{activeBook.title}</h2>
-              <p className="text-[11px] text-slate-400 mt-0.5">{activeBook.subtitle}</p>
+              <h2 className="text-sm font-black text-white">
+                {activeBooks.map((b) => b.badge).join(" + ")} ({activeBooks.length}권 동시 적용중)
+              </h2>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                대표 교재: {activeBook.title}
+              </p>
             </div>
             <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between gap-2">
               <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
@@ -697,14 +759,56 @@ export default function AppStandaloneStudyCenterPage() {
 
           <section className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black text-white">커리큘럼 템플릿 선택</h3>
+              <h3 className="text-xs font-black text-white">
+                다중 교재 선택 &amp; 커스텀 교재 추가
+              </h3>
               <span className="text-[10px] text-slate-400 font-bold">
-                총 {catalog.length}종
+                {activeBookIds.length}권 선택 / 총 {catalog.length}종
               </span>
             </div>
 
+            {/* 커스텀 교재 추가 카드 */}
+            <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-2">
+              <div className="text-[11px] font-black text-white flex items-center gap-1.5">
+                <Plus className="w-3.5 h-3.5 text-[#FF5A36]" />
+                <span>새 커스텀 교재 직접 추가</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-[1fr_110px_auto] gap-2">
+                <input
+                  type="text"
+                  value={newCustomBookTitle}
+                  onChange={(e) => setNewCustomBookTitle(e.target.value)}
+                  placeholder="교재명 (예: 나만의 파이널 모의고사)"
+                  className="px-3 py-2 rounded-xl bg-[#101015] border border-white/[0.1] text-xs text-white"
+                />
+                <input
+                  type="text"
+                  value={newCustomBookBadge}
+                  onChange={(e) => setNewCustomBookBadge(e.target.value)}
+                  placeholder="배지 (예: 파이널)"
+                  className="px-3 py-2 rounded-xl bg-[#101015] border border-white/[0.1] text-xs text-white"
+                />
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="color"
+                    value={newCustomBookColor}
+                    onChange={(e) => setNewCustomBookColor(e.target.value)}
+                    className="w-8 h-8 rounded bg-transparent cursor-pointer"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddCustomBook}
+                    className="px-3 py-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-xs font-black shrink-0"
+                  >
+                    추가
+                  </button>
+                </div>
+              </div>
+            </div>
+
             {catalog.map((book) => {
-              const isActive = book.id === activeBook.id;
+              const isActive = activeBookIds.includes(book.id);
+              const isCustomBook = book.id.startsWith("custom-book-");
               const isPreviewOpen = previewBookId === book.id;
               const topicCount = book.subjects.reduce(
                 (acc, s) => acc + s.units.reduce((uAcc, u) => uAcc + u.topics.length, 0),
@@ -721,16 +825,28 @@ export default function AppStandaloneStudyCenterPage() {
                   }`}
                 >
                   <div className="space-y-1">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <span
-                        className="px-2 py-0.5 rounded-md text-[9.5px] font-black text-white"
-                        style={{ backgroundColor: book.coverColor }}
-                      >
-                        {book.badge}
-                      </span>
-                      <span className="text-[10px] font-bold text-slate-400">
-                        {book.subjects.length}과목 · {topicCount}세부목차
-                      </span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span
+                          className="px-2 py-0.5 rounded-md text-[9.5px] font-black text-white"
+                          style={{ backgroundColor: book.coverColor }}
+                        >
+                          {book.badge}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400">
+                          {book.subjects.length}과목 · {topicCount}세부목차
+                        </span>
+                      </div>
+                      {isCustomBook && (
+                        <button
+                          type="button"
+                          onClick={() => deleteCustomBook(book.id)}
+                          className="p-1 rounded-lg text-slate-500 hover:text-rose-400"
+                          title="커스텀 교재 삭제"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                     <h4 className="text-xs font-black text-white">{book.title}</h4>
                     <p className="text-[11px] text-slate-400 leading-snug">{book.subtitle}</p>
@@ -750,20 +866,27 @@ export default function AppStandaloneStudyCenterPage() {
                       <span>목차 미리보기</span>
                     </button>
 
-                    {isActive ? (
-                      <span className="px-3 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/40 text-emerald-300 text-[11px] font-black flex items-center gap-1">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        <span>적용 중</span>
-                      </span>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleSelectBook(book.id, book.title)}
-                        className="px-3.5 py-1.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-[11px] font-black transition"
-                      >
-                        목차 적용하기
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleToggleBook(book.id, book.title)}
+                      className={`px-3.5 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1.5 border transition ${
+                        isActive
+                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
+                          : "bg-[#FF5A36] hover:bg-[#ff6d4d] border-[#FF5A36] text-white"
+                      }`}
+                    >
+                      {isActive ? (
+                        <>
+                          <Check className="w-3.5 h-3.5" />
+                          <span>함께 적용중 (해제)</span>
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>교재 추가 적용</span>
+                        </>
+                      )}
+                    </button>
                   </div>
 
                   {isPreviewOpen && (
@@ -796,6 +919,102 @@ export default function AppStandaloneStudyCenterPage() {
                 </div>
               );
             })}
+          </section>
+
+          <section className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs font-black text-white">
+                <Palette className="w-4 h-4 text-[#FF5A36]" />
+                <span>과목 색상 커스텀 · 보관함 관리</span>
+              </div>
+              <Link
+                href="/study/planner"
+                className="text-[10.5px] font-bold text-[#FF7A59] hover:underline"
+              >
+                플래너에서 상세편집 →
+              </Link>
+            </div>
+
+            <div className="space-y-1.5">
+              {subjects.map((subj) => (
+                <div
+                  key={subj.id}
+                  className="px-3 py-2 rounded-xl bg-[#111116] border border-white/[0.06] flex items-center justify-between gap-2"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <input
+                      type="color"
+                      value={subj.color}
+                      onChange={(e) =>
+                        updateSubjectCustomization(subj.id, { color: e.target.value })
+                      }
+                      className="w-5 h-5 rounded-full bg-transparent cursor-pointer shrink-0"
+                      title="과목 색상 변경"
+                    />
+                    <span className="text-xs font-bold text-white truncate">
+                      {subj.title}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => archiveSubject(subj.id)}
+                    className="px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-[10px] font-bold text-slate-300 flex items-center gap-1 shrink-0"
+                  >
+                    <Archive className="w-3 h-3" />
+                    <span>보관</span>
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="text"
+                value={newCustomSubjTitle}
+                onChange={(e) => setNewCustomSubjTitle(e.target.value)}
+                placeholder="새 커스텀 과목명 (예: 파이널 정리)"
+                className="flex-1 px-3 py-2 rounded-xl bg-[#101015] border border-white/[0.1] text-xs text-white"
+              />
+              <input
+                type="color"
+                value={newCustomSubjColor}
+                onChange={(e) => setNewCustomSubjColor(e.target.value)}
+                className="w-8 h-8 bg-transparent cursor-pointer shrink-0"
+              />
+              <button
+                type="button"
+                onClick={handleAddCustomSubject}
+                className="px-3 py-2 rounded-xl bg-[#FF5A36] text-white text-xs font-black shrink-0"
+              >
+                과목추가
+              </button>
+            </div>
+
+            {archivedSubjects.length > 0 && (
+              <div className="pt-2 border-t border-white/[0.06] space-y-1.5">
+                <div className="text-[10.5px] font-black text-slate-400">
+                  보관함 ({archivedSubjects.length})
+                </div>
+                {archivedSubjects.map((subj) => (
+                  <div
+                    key={subj.id}
+                    className="px-3 py-1.5 rounded-xl bg-[#101015] border border-white/[0.05] flex items-center justify-between gap-2"
+                  >
+                    <span className="text-[11px] font-bold text-slate-400 truncate">
+                      {subj.title}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => restoreSubject(subj.id)}
+                      className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 text-[10px] font-black flex items-center gap-1"
+                    >
+                      <ArchiveRestore className="w-3 h-3" />
+                      <span>꺼내기</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </section>
 
           <section className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-3">

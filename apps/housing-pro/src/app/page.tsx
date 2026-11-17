@@ -65,13 +65,15 @@ export default function HousingProStudentTimerPage() {
     todayISO,
     examDate,
     activeBook,
+    activeBooks,
     subjects,
     matrixLogs,
     recordStudySession,
   } = useStudyCurriculum();
 
-  // 타이머 화면 내부 서브탭
+  // 타이머 화면 내부 서브탭 & 오늘/전체 계획 범위 토글
   const [activeSubTab, setActiveSubTab] = useState<"timer" | "group" | "predict">("timer");
+  const [timerPlanScope, setTimerPlanScope] = useState<"today" | "all">("today");
   const [expandedSubjectIds, setExpandedSubjectIds] = useState<string[]>([]);
 
   // 보유 PMP (로그인 시 PosMul 원장 연동, 게스트 시 체험 잔액)
@@ -170,12 +172,32 @@ export default function HousingProStudentTimerPage() {
     [plannedSubjects]
   );
 
+  // 오늘(날짜변경 기준 todayISO) 기준 학습계획 단원 필터링
+  const todayPlannedSubjects = useMemo(() => {
+    return plannedSubjects
+      .map((item) => ({
+        subject: item.subject,
+        topicList: item.topicList.filter((t) =>
+          t.planEntries.some((p) => p.dateISO === todayISO)
+        ),
+      }))
+      .filter((item) => item.topicList.length > 0);
+  }, [plannedSubjects, todayISO]);
+
+  const totalTodayPlannedTopics = useMemo(
+    () => todayPlannedSubjects.reduce((acc, s) => acc + s.topicList.length, 0),
+    [todayPlannedSubjects]
+  );
+
+  const visibleTimerSubjects =
+    timerPlanScope === "today" ? todayPlannedSubjects : plannedSubjects;
+
   // 기본으로 학습계획이 있는 과목 펼치기
   useEffect(() => {
-    if (plannedSubjects.length > 0 && expandedSubjectIds.length === 0) {
-      setExpandedSubjectIds(plannedSubjects.map((p) => p.subject.id));
+    if (visibleTimerSubjects.length > 0 && expandedSubjectIds.length === 0) {
+      setExpandedSubjectIds(visibleTimerSubjects.map((p) => p.subject.id));
     }
-  }, [plannedSubjects, expandedSubjectIds.length]);
+  }, [visibleTimerSubjects, expandedSubjectIds.length]);
 
   // 초기 마운트: ?mode=pro 또는 저장된 소장 페르소나 감지 시 /pro 전용 앱으로 라우팅
   useEffect(() => {
@@ -409,10 +431,14 @@ export default function HousingProStudentTimerPage() {
 
             <Link
               href="/study/books"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[10px] font-bold text-slate-300 max-w-[200px]"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/[0.05] hover:bg-white/[0.1] border border-white/[0.08] text-[10px] font-bold text-slate-300 max-w-[220px]"
             >
               <BookOpen className="w-3 h-3 text-amber-400 shrink-0" />
-              <span className="truncate">{activeBook.badge}</span>
+              <span className="truncate">
+                {activeBooks.length > 1
+                  ? `${activeBook.badge} 외 ${activeBooks.length - 1}권`
+                  : activeBook.badge}
+              </span>
             </Link>
           </div>
 
@@ -449,33 +475,30 @@ export default function HousingProStudentTimerPage() {
           <button
             type="button"
             onClick={() => setActiveSubTab("timer")}
-            className={`py-2 rounded-xl transition ${
-              activeSubTab === "timer"
+            className={`py-2 rounded-xl transition ${activeSubTab === "timer"
                 ? "bg-[#FF5A36] text-white shadow-md"
                 : "text-slate-400 hover:text-white"
-            }`}
+              }`}
           >
             ⏱️ 목차 타이머
           </button>
           <button
             type="button"
             onClick={() => setActiveSubTab("group")}
-            className={`py-2 rounded-xl transition ${
-              activeSubTab === "group"
+            className={`py-2 rounded-xl transition ${activeSubTab === "group"
                 ? "bg-[#FF5A36] text-white shadow-md"
                 : "text-slate-400 hover:text-white"
-            }`}
+              }`}
           >
             🔥 그룹 불빛
           </button>
           <button
             type="button"
             onClick={() => setActiveSubTab("predict")}
-            className={`py-2 rounded-xl transition ${
-              activeSubTab === "predict"
+            className={`py-2 rounded-xl transition ${activeSubTab === "predict"
                 ? "bg-[#FF5A36] text-white shadow-md"
                 : "text-slate-400 hover:text-white"
-            }`}
+              }`}
           >
             🎯 예측·PMP
           </button>
@@ -483,44 +506,78 @@ export default function HousingProStudentTimerPage() {
 
         {activeSubTab === "timer" && (
           <div className="space-y-2.5">
-            {plannedSubjects.length === 0 ? (
+            {/* 오늘 계획 / 전체 예정 계획 필터 바 */}
+            <div className="px-3 py-2 rounded-xl bg-[#1A1A21] border border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setTimerPlanScope("today")}
+                  className={`px-2.5 py-1 rounded-lg font-black transition ${
+                    timerPlanScope === "today"
+                      ? "bg-[#FF5A36] text-white"
+                      : "bg-[#111116] text-slate-400 hover:text-white"
+                  }`}
+                >
+                  오늘 계획 ({totalTodayPlannedTopics})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTimerPlanScope("all")}
+                  className={`px-2.5 py-1 rounded-lg font-black transition ${
+                    timerPlanScope === "all"
+                      ? "bg-[#FF5A36] text-white"
+                      : "bg-[#111116] text-slate-400 hover:text-white"
+                  }`}
+                >
+                  전체 계획 ({totalPlannedTopics})
+                </button>
+              </div>
+              <Link
+                href="/study/planner"
+                className="text-sky-300 hover:text-sky-200 font-black flex items-center gap-1 shrink-0"
+              >
+                <span>플래너 수정</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+
+            {visibleTimerSubjects.length === 0 ? (
               <div className="p-6 rounded-2xl bg-[#1A1A21] border border-dashed border-white/[0.14] text-center space-y-3">
                 <CalendarPlus className="w-8 h-8 text-slate-500 mx-auto" />
                 <div className="space-y-1">
                   <p className="text-xs font-black text-white">
-                    플래너에 학습계획으로 선택된 단원이 없습니다.
+                    {timerPlanScope === "today"
+                      ? `오늘(${todayISO}) 학습계획으로 선택된 단원이 없습니다.`
+                      : "플래너에 학습계획으로 선택된 단원이 없습니다."}
                   </p>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
                     플래너 목차 매트릭스에서 학습할 단원에 <strong>학습 계획</strong>을 체크하면
                     이곳 타이머 목록에 자동으로 노출됩니다.
                   </p>
                 </div>
-                <Link
-                  href="/study/planner"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-xs font-black transition"
-                >
-                  <TableProperties className="w-3.5 h-3.5" />
-                  <span>플래너에서 학습계획 선택하기</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {timerPlanScope === "today" && totalPlannedTopics > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setTimerPlanScope("all")}
+                      className="inline-flex items-center gap-1 px-3.5 py-2 rounded-xl bg-sky-500/20 border border-sky-500/40 text-sky-200 text-xs font-black transition"
+                    >
+                      <span>전체 계획 {totalPlannedTopics}개 보기</span>
+                    </button>
+                  )}
+                  <Link
+                    href="/study/planner"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-xs font-black transition"
+                  >
+                    <TableProperties className="w-3.5 h-3.5" />
+                    <span>플래너에서 학습계획 선택하기</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </Link>
+                </div>
               </div>
             ) : (
               <>
-                <div className="px-3.5 py-2.5 rounded-xl bg-[#1A1A21] border border-white/[0.06] flex items-center justify-between gap-2 text-[10.5px]">
-                  <span className="text-slate-300 font-bold">
-                    플래너 학습계획 단원{" "}
-                    <strong className="text-[#FF7A59] font-mono">{totalPlannedTopics}개</strong>만 노출 중
-                  </span>
-                  <Link
-                    href="/study/planner"
-                    className="text-sky-300 hover:text-sky-200 font-black flex items-center gap-1 shrink-0"
-                  >
-                    <span>플래너 수정</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </Link>
-                </div>
-
-                {plannedSubjects.map(({ subject, topicList }) => {
+                {visibleTimerSubjects.map(({ subject, topicList }) => {
                   const isExpanded = expandedSubjectIds.includes(subject.id);
                   const subjSeconds = subjectSecondsMap[subject.id] || 0;
 
@@ -589,13 +646,12 @@ export default function HousingProStudentTimerPage() {
                                 <div className="min-w-0">
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span
-                                      className={`px-1.5 py-0.2 rounded text-[9px] font-black ${
-                                        primaryPlan.status === "partial"
+                                      className={`px-1.5 py-0.2 rounded text-[9px] font-black ${primaryPlan.status === "partial"
                                           ? "bg-amber-500/20 text-amber-300"
                                           : isTodayPlan
                                             ? "bg-[#FF5A36]/20 text-[#FF7A59]"
                                             : "bg-sky-500/15 text-sky-300"
-                                      }`}
+                                        }`}
                                     >
                                       {primaryPlan.status === "partial"
                                         ? "◐ 진행중"

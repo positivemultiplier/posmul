@@ -24,6 +24,21 @@ export interface StudyUnitNode {
   topics: StudyTopicNode[];
 }
 
+export const CUSTOM_SUBJECT_COLOR_PALETTE = [
+  "#C4E538",
+  "#EC4899",
+  "#A855F7",
+  "#7C3AED",
+  "#F97316",
+  "#FF5A36",
+  "#3B82F6",
+  "#10B981",
+  "#06B6D4",
+  "#F59E0B",
+  "#F43F5E",
+  "#64748B",
+] as const;
+
 export interface StudySubjectNode {
   id: string;
   examStage: "1차" | "2차";
@@ -31,6 +46,11 @@ export interface StudySubjectNode {
   shortTitle: string;
   color: string;
   units: StudyUnitNode[];
+  bookId?: string;
+  bookTitle?: string;
+  bookBadge?: string;
+  isCustom?: boolean;
+  isArchived?: boolean;
 }
 
 export type MatrixCellStatus = "done" | "plan" | "partial";
@@ -41,6 +61,13 @@ export interface MatrixCellLog {
   minutes?: number;
   updatedAt?: string;
   source?: "db" | "manual";
+  customColor?: string;
+}
+
+export interface TimetableSlotLog {
+  color: string;
+  label: string;
+  topicId?: string;
 }
 
 export interface StudyTodoItem {
@@ -87,6 +114,21 @@ export function formatDateISO(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}-${m}-${d}`;
+}
+
+/** 날짜 변경 기준 시각(예: 새벽 4시)을 반영한 논리적 '오늘' 날짜 계산 */
+export function computeLogicalTodayISO(dayResetHour = 4, now = new Date()): string {
+  const adjusted = new Date(now.getTime());
+  if (adjusted.getHours() < dayResetHour) {
+    adjusted.setDate(adjusted.getDate() - 1);
+  }
+  return formatDateISO(adjusted);
+}
+
+/** 날짜 변경 기준 시각부터 24시간 시퀀스 반환 */
+export function getHoursFromReset(dayResetHour = 4): number[] {
+  const normalized = ((Math.floor(dayResetHour) % 24) + 24) % 24;
+  return Array.from({ length: 24 }, (_, i) => (normalized + i) % 24);
 }
 
 export function addDaysISO(baseISO: string, offsetDays: number): string {
