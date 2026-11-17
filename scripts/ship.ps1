@@ -15,7 +15,7 @@ param(
   [switch]$CheckOnly
 )
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 $RepoRoot = "c:\G\posmul"
 Set-Location -Path $RepoRoot
 
