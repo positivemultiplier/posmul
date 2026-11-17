@@ -20,7 +20,7 @@ interface YptFocusOverlayProps {
   subjectColor: string;
   coneEmoji: string;
   coneLevel: number;
-  onConfirmValidTime: (elapsedSeconds: number) => void;
+  onConfirmValidTime: (elapsedSeconds: number, completionMode?: "done" | "partial") => void;
   onCancel: () => void;
 }
 
@@ -42,6 +42,7 @@ export function YptFocusOverlay({
 }: YptFocusOverlayProps) {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showVerifyModal, setShowVerifyModal] = useState(false);
+  const [completionMode, setCompletionMode] = useState<"done" | "partial">("done");
   const [quizIndex, setQuizIndex] = useState(0);
   const [quizCorrectCount, setQuizCorrectCount] = useState(0);
   const [quizFeedback, setQuizFeedback] = useState<string | null>(null);
@@ -60,6 +61,7 @@ export function YptFocusOverlay({
     if (isOpen) {
       setElapsedSeconds(0);
       setShowVerifyModal(false);
+      setCompletionMode("done");
       setQuizIndex(0);
       setQuizCorrectCount(0);
       setQuizFeedback(null);
@@ -87,7 +89,7 @@ export function YptFocusOverlay({
       setQuizFeedback(null);
       if (quizIndex + 1 >= quickCards.length) {
         // 3문항 완료 시 유효시간 즉시 확정
-        onConfirmValidTime(Math.max(elapsedSeconds, 60));
+        onConfirmValidTime(Math.max(elapsedSeconds, 60), completionMode);
       } else {
         setQuizIndex((prev) => prev + 1);
       }
@@ -185,6 +187,37 @@ export function YptFocusOverlay({
             <p className="text-xs text-slate-300 leading-relaxed">
               방금 공부한 <strong className="text-white">{subjectTitle}</strong>의 종이책을 AI 스캔(+40 PMP)하거나, 아래 <strong>3초 컷 O/X 3문제</strong>를 풀어 공부 시간을 확정하세요!
             </p>
+
+            {/* 단원 완주 vs 진행중(내일 이어하기 이월) 선택 */}
+            <div className="space-y-1.5">
+              <div className="text-[10.5px] font-bold text-slate-400">
+                오늘 이 단원 진행 상태
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCompletionMode("done")}
+                  className={`py-2 px-2 rounded-xl border text-[11px] font-black transition ${
+                    completionMode === "done"
+                      ? "bg-emerald-500/20 border-emerald-400 text-emerald-200"
+                      : "bg-[#121216] border-white/[0.08] text-slate-400 hover:text-white"
+                  }`}
+                >
+                  단원 완료 (1R 완주)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCompletionMode("partial")}
+                  className={`py-2 px-2 rounded-xl border text-[11px] font-black transition ${
+                    completionMode === "partial"
+                      ? "bg-amber-500/20 border-amber-400 text-amber-200"
+                      : "bg-[#121216] border-white/[0.08] text-slate-400 hover:text-white"
+                  }`}
+                >
+                  진행중 (내일 이어하기)
+                </button>
+              </div>
+            </div>
 
             {/* 즉석 3문항 퀴즈 카드 */}
             {currentQuizCard && (

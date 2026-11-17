@@ -19,6 +19,8 @@ import {
   ListChecks,
   LogIn,
   ShieldCheck,
+  CalendarPlus,
+  ArrowRight,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { YptFocusOverlay } from "@/components/mobile/ypt-focus-overlay";
@@ -32,7 +34,14 @@ import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import { ContextualPredictionWidget } from "@/components/prediction/contextual-prediction-widget";
 import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
-import { diffDaysISO, findTopicMetaInSubjects } from "@/data/study-textbooks";
+import {
+  addDaysISO,
+  diffDaysISO,
+  findTopicMetaInSubjects,
+  type MatrixCellStatus,
+  type StudySubjectNode,
+  type StudyTopicNode,
+} from "@/data/study-textbooks";
 import { getSavedPersonaMode, setSavedPersonaMode } from "@/lib/pro-workspace-store";
 
 function formatHHMMSS(totalSec: number, spaced = false): string {
@@ -89,13 +98,84 @@ export default function HousingProStudentTimerPage() {
   const [focusTopicId, setFocusTopicId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
-  // 기본으로 과목 1개 펼치기
-  useEffect(() => {
-    if (subjects.length > 0 && expandedSubjectIds.length === 0) {
-      const target = subjects.find((s) => s.examStage === "2차") || subjects[0];
-      setExpandedSubjectIds([target.id]);
+  // 플래너 목차 매트릭스에서 '학습계획(plan)' 또는 '진행중(partial)'으로 선택된 단원만 추출
+  const plannedSubjects = useMemo(() => {
+    const result: Array<{
+      subject: StudySubjectNode;
+      topicList: Array<{
+        unitTitle: string;
+        topic: StudyTopicNode;
+        planEntries: Array<{
+          dateISO: string;
+          status: MatrixCellStatus;
+          keyword: string;
+          minutes?: number;
+        }>;
+      }>;
+    }> = [];
+
+    for (const subject of subjects) {
+      const topicList: Array<{
+        unitTitle: string;
+        topic: StudyTopicNode;
+        planEntries: Array<{
+          dateISO: string;
+          status: MatrixCellStatus;
+          keyword: string;
+          minutes?: number;
+        }>;
+      }> = [];
+
+      for (const unit of subject.units) {
+        for (const topic of unit.topics) {
+          const prefix = `${topic.id}::`;
+          const planEntries: Array<{
+            dateISO: string;
+            status: MatrixCellStatus;
+            keyword: string;
+            minutes?: number;
+          }> = [];
+
+          for (const [key, cell] of Object.entries(matrixLogs)) {
+            if (
+              key.startsWith(prefix) &&
+              (cell.status === "plan" || cell.status === "partial")
+            ) {
+              planEntries.push({
+                dateISO: key.slice(prefix.length),
+                status: cell.status,
+                keyword: cell.keyword,
+                minutes: cell.minutes,
+              });
+            }
+          }
+
+          if (planEntries.length > 0) {
+            planEntries.sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+            topicList.push({ unitTitle: unit.title, topic, planEntries });
+          }
+        }
+      }
+
+      if (topicList.length > 0) {
+        result.push({ subject, topicList });
+      }
     }
-  }, [subjects, expandedSubjectIds.length]);
+
+    return result;
+  }, [subjects, matrixLogs]);
+
+  const totalPlannedTopics = useMemo(
+    () => plannedSubjects.reduce((acc, s) => acc + s.topicList.length, 0),
+    [plannedSubjects]
+  );
+
+  // 기본으로 학습계획이 있는 과목 펼치기
+  useEffect(() => {
+    if (plannedSubjects.length > 0 && expandedSubjectIds.length === 0) {
+      setExpandedSubjectIds(plannedSubjects.map((p) => p.subject.id));
+    }
+  }, [plannedSubjects, expandedSubjectIds.length]);
 
   // 초기 마운트: ?mode=pro 또는 저장된 소장 페르소나 감지 시 /pro 전용 앱으로 라우팅
   useEffect(() => {
@@ -163,7 +243,11 @@ export default function HousingProStudentTimerPage() {
       for (const unit of subj.units) {
         for (const topic of unit.topics) {
           const todayLog = matrixLogs[makeMatrixKey(topic.id, todayISO)];
-          if (todayLog?.status === "done" && todayLog.minutes) {
+          if (
+            todayLog &&
+            (todayLog.status === "done" || todayLog.status === "partial") &&
+            todayLog.minutes
+          ) {
             totalSec += todayLog.minutes * 60;
           }
           totalSec += sessionExtraSeconds[topic.id] || 0;
@@ -198,13 +282,16 @@ export default function HousingProStudentTimerPage() {
     );
   };
 
-  const handleConfirmValidFocusTime = (elapsedSeconds: number) => {
+  const handleConfirmValidFocusTime = (
+    elapsedSeconds: number,
+    completionMode: "done" | "partial" = "done"
+  ) => {
     if (!focusTopicId) return;
     setSessionExtraSeconds((prev) => ({
       ...prev,
       [focusTopicId]: (prev[focusTopicId] || 0) + elapsedSeconds,
     }));
-    recordStudySession(focusTopicId, elapsedSeconds);
+    recordStudySession(focusTopicId, elapsedSeconds, undefined, completionMode);
 
     if (isLoggedIn) {
       void grantAppStudyPmpAction({ kind: "FOCUS" }).then((rewardRes) => {
@@ -216,10 +303,18 @@ export default function HousingProStudentTimerPage() {
           }
         }
       });
-      setToastMsg("집중 완료! 플래너·PosMul 계정에 저장되었습니다 (+10 PMP)");
+      setToastMsg(
+        completionMode === "partial"
+          ? "부분학습 저장 완료! 내일 플래너에 '이어서학습'이 자동 이월되었습니다 (+10 PMP)"
+          : "집중 완료! 플래너·PosMul 계정에 저장되었습니다 (+10 PMP)"
+      );
     } else {
       setGuestPmpBalance((prev) => prev + 10);
-      setToastMsg("집중 완료! 로그인하시면 PosMul 지갑과 모든 기기에 영구 저장됩니다.");
+      setToastMsg(
+        completionMode === "partial"
+          ? "부분학습이 저장되고 내일 이어하기로 이월되었습니다."
+          : "집중 완료! 로그인하시면 PosMul 지갑과 모든 기기에 영구 저장됩니다."
+      );
     }
     setFocusTopicId(null);
     globalThis.setTimeout(() => setToastMsg(null), 4000);
@@ -388,114 +483,181 @@ export default function HousingProStudentTimerPage() {
 
         {activeSubTab === "timer" && (
           <div className="space-y-2.5">
-            {subjects.map((subject) => {
-              const isExpanded = expandedSubjectIds.includes(subject.id);
-              const subjSeconds = subjectSecondsMap[subject.id] || 0;
-              const topicList = subject.units.flatMap((u) =>
-                u.topics.map((t) => ({ unitTitle: u.title, topic: t }))
-              );
-
-              return (
-                <div
-                  key={subject.id}
-                  className="rounded-2xl bg-[#1A1A21] border border-white/[0.06] overflow-hidden"
-                >
-                  <button
-                    type="button"
-                    onClick={() => toggleExpandSubject(subject.id)}
-                    className="w-full px-3.5 py-3 flex items-center justify-between gap-2 hover:bg-white/[0.02] transition"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      {isExpanded ? (
-                        <ChevronDown className="w-4 h-4 text-slate-300 shrink-0" />
-                      ) : (
-                        <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
-                      )}
-                      <span
-                        className="px-1.5 py-0.5 rounded text-[9.5px] font-black text-white shrink-0"
-                        style={{ backgroundColor: subject.color }}
-                      >
-                        {subject.examStage}
-                      </span>
-                      <span className="text-xs font-black text-white truncate">
-                        {subject.title}
-                      </span>
-                      <span className="text-[10px] text-slate-400 font-bold shrink-0">
-                        ({topicList.length})
-                      </span>
-                    </div>
-
-                    <span className="font-mono text-xs font-bold text-slate-300 tabular-nums shrink-0">
-                      {formatHHMMSS(subjSeconds)}
-                    </span>
-                  </button>
-
-                  {isExpanded && (
-                    <div className="px-3 pb-3 pt-1 space-y-1.5 border-t border-white/[0.05] bg-[#14141A]">
-                      {topicList.map(({ unitTitle, topic }) => {
-                        const todayCell = matrixLogs[makeMatrixKey(topic.id, todayISO)];
-                        let doneRounds = 0;
-                        for (const [k, v] of Object.entries(matrixLogs)) {
-                          if (k.startsWith(`${topic.id}::`) && v.status === "done") {
-                            doneRounds += 1;
-                          }
-                        }
-
-                        return (
-                          <div
-                            key={topic.id}
-                            className="px-3 py-2 rounded-xl bg-[#1A1A22] border border-white/[0.05] flex items-center justify-between gap-2"
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-1.5">
-                                <span className="text-[9.5px] font-bold text-slate-400 truncate">
-                                  {unitTitle}
-                                </span>
-                                <span
-                                  className="px-1.5 py-0.2 rounded text-[9px] font-mono font-black"
-                                  style={{
-                                    backgroundColor: `${subject.color}25`,
-                                    color: subject.color,
-                                  }}
-                                >
-                                  {doneRounds}R
-                                </span>
-                                {todayCell?.status === "done" && (
-                                  <span className="text-[9px] font-black text-emerald-400">
-                                    오늘완료
-                                  </span>
-                                )}
-                              </div>
-                              <div className="text-[11.5px] font-extrabold text-white truncate mt-0.5 flex items-center gap-1">
-                                {topic.topicNo && (
-                                  <span
-                                    className="font-mono text-[10.5px] font-black shrink-0"
-                                    style={{ color: subject.color }}
-                                  >
-                                    {topic.topicNo}.
-                                  </span>
-                                )}
-                                <span className="truncate">{topic.title}</span>
-                              </div>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => setFocusTopicId(topic.id)}
-                              className="w-8 h-8 rounded-full text-white flex items-center justify-center shadow-md hover:scale-105 transition shrink-0"
-                              style={{ backgroundColor: subject.color }}
-                              aria-label={`${topic.title} 집중 시작`}
-                            >
-                              <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+            {plannedSubjects.length === 0 ? (
+              <div className="p-6 rounded-2xl bg-[#1A1A21] border border-dashed border-white/[0.14] text-center space-y-3">
+                <CalendarPlus className="w-8 h-8 text-slate-500 mx-auto" />
+                <div className="space-y-1">
+                  <p className="text-xs font-black text-white">
+                    플래너에 학습계획으로 선택된 단원이 없습니다.
+                  </p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    플래너 목차 매트릭스에서 학습할 단원에 <strong>학습 계획</strong>을 체크하면
+                    이곳 타이머 목록에 자동으로 노출됩니다.
+                  </p>
                 </div>
-              );
-            })}
+                <Link
+                  href="/study/planner"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-xs font-black transition"
+                >
+                  <TableProperties className="w-3.5 h-3.5" />
+                  <span>플래너에서 학습계획 선택하기</span>
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            ) : (
+              <>
+                <div className="px-3.5 py-2.5 rounded-xl bg-[#1A1A21] border border-white/[0.06] flex items-center justify-between gap-2 text-[10.5px]">
+                  <span className="text-slate-300 font-bold">
+                    플래너 학습계획 단원{" "}
+                    <strong className="text-[#FF7A59] font-mono">{totalPlannedTopics}개</strong>만 노출 중
+                  </span>
+                  <Link
+                    href="/study/planner"
+                    className="text-sky-300 hover:text-sky-200 font-black flex items-center gap-1 shrink-0"
+                  >
+                    <span>플래너 수정</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </Link>
+                </div>
+
+                {plannedSubjects.map(({ subject, topicList }) => {
+                  const isExpanded = expandedSubjectIds.includes(subject.id);
+                  const subjSeconds = subjectSecondsMap[subject.id] || 0;
+
+                  return (
+                    <div
+                      key={subject.id}
+                      className="rounded-2xl bg-[#1A1A21] border border-white/[0.06] overflow-hidden"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => toggleExpandSubject(subject.id)}
+                        className="w-full px-3.5 py-3 flex items-center justify-between gap-2 hover:bg-white/[0.02] transition"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          {isExpanded ? (
+                            <ChevronDown className="w-4 h-4 text-slate-300 shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-4 h-4 text-slate-500 shrink-0" />
+                          )}
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[9.5px] font-black text-white shrink-0"
+                            style={{ backgroundColor: subject.color }}
+                          >
+                            {subject.examStage}
+                          </span>
+                          <span className="text-xs font-black text-white truncate">
+                            {subject.title}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold shrink-0">
+                            ({topicList.length})
+                          </span>
+                        </div>
+
+                        <span className="font-mono text-xs font-bold text-slate-300 tabular-nums shrink-0">
+                          {formatHHMMSS(subjSeconds)}
+                        </span>
+                      </button>
+
+                      {isExpanded && (
+                        <div className="px-3 pb-3 pt-1 space-y-1.5 border-t border-white/[0.05] bg-[#14141A]">
+                          {topicList.map(({ unitTitle, topic, planEntries }) => {
+                            const todayCell = matrixLogs[makeMatrixKey(topic.id, todayISO)];
+                            const primaryPlan =
+                              planEntries.find((p) => p.dateISO === todayISO) || planEntries[0];
+                            const isTodayPlan = primaryPlan.dateISO === todayISO;
+                            const isTomorrowPlan =
+                              primaryPlan.dateISO === addDaysISO(todayISO, 1);
+                            const dateBadgeLabel = isTodayPlan
+                              ? "오늘 계획"
+                              : isTomorrowPlan
+                                ? "내일 계획"
+                                : `${primaryPlan.dateISO.slice(5).replace("-", "/")} 계획`;
+
+                            let doneRounds = 0;
+                            for (const [k, v] of Object.entries(matrixLogs)) {
+                              if (k.startsWith(`${topic.id}::`) && v.status === "done") {
+                                doneRounds += 1;
+                              }
+                            }
+
+                            return (
+                              <div
+                                key={topic.id}
+                                className="px-3 py-2 rounded-xl bg-[#1A1A22] border border-white/[0.05] flex items-center justify-between gap-2"
+                              >
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span
+                                      className={`px-1.5 py-0.2 rounded text-[9px] font-black ${
+                                        primaryPlan.status === "partial"
+                                          ? "bg-amber-500/20 text-amber-300"
+                                          : isTodayPlan
+                                            ? "bg-[#FF5A36]/20 text-[#FF7A59]"
+                                            : "bg-sky-500/15 text-sky-300"
+                                      }`}
+                                    >
+                                      {primaryPlan.status === "partial"
+                                        ? "◐ 진행중"
+                                        : dateBadgeLabel}
+                                    </span>
+                                    <span className="text-[9.5px] font-bold text-slate-400 truncate">
+                                      {unitTitle}
+                                    </span>
+                                    <span
+                                      className="px-1.5 py-0.2 rounded text-[9px] font-mono font-black"
+                                      style={{
+                                        backgroundColor: `${subject.color}25`,
+                                        color: subject.color,
+                                      }}
+                                    >
+                                      {doneRounds}R
+                                    </span>
+                                    {todayCell?.status === "done" && (
+                                      <span className="text-[9px] font-black text-emerald-400">
+                                        오늘완료
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-[11.5px] font-extrabold text-white truncate mt-0.5 flex items-center gap-1">
+                                    {topic.topicNo && (
+                                      <span
+                                        className="font-mono text-[10.5px] font-black shrink-0"
+                                        style={{ color: subject.color }}
+                                      >
+                                        {topic.topicNo}.
+                                      </span>
+                                    )}
+                                    <span className="truncate">{topic.title}</span>
+                                  </div>
+                                  <div className="text-[9.5px] text-slate-400 truncate mt-0.5">
+                                    키워드: {primaryPlan.keyword} ·{" "}
+                                    {primaryPlan.minutes ?? topic.estimatedMinutes}분
+                                    {planEntries.length > 1
+                                      ? ` (외 ${planEntries.length - 1}일 계획)`
+                                      : ""}
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => setFocusTopicId(topic.id)}
+                                  className="w-8 h-8 rounded-full text-white flex items-center justify-center shadow-md hover:scale-105 transition shrink-0"
+                                  style={{ backgroundColor: subject.color }}
+                                  aria-label={`${topic.title} 집중 시작`}
+                                >
+                                  <Play className="w-3.5 h-3.5 fill-white ml-0.5" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </>
+            )}
 
             <div className="grid grid-cols-3 gap-2 pt-1">
               <Link

@@ -358,35 +358,135 @@ export function useStudyCurriculum() {
     [activeBook, todayISO, updateState]
   );
 
-  /** 타이머 완료 시 오늘 날짜 매트릭스 셀에 자동 색칠 및 시간 누적 */
-  const recordStudySession = useCallback(
-    (topicId: string, elapsedSeconds: number, customKeyword?: string) => {
-      const addedMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
-      const meta = findTopicMetaInSubjects(subjects, topicId);
-
+  /** 다일(1~3일) 연속 분할 학습계획 일괄 배치 */
+  const scheduleMultiDayPlan = useCallback(
+    (
+      topicId: string,
+      startDateISO: string,
+      spanDays: 1 | 2 | 3,
+      baseKeyword: string,
+      minutesPerDay: number
+    ) => {
+      const cleanKeyword = baseKeyword.trim() || "학습계획";
       updateState((prev) => {
-        const bookLogs =
-          prev.logsByBook[activeBook.id] ?? buildSeedLogs(activeBook, todayISO);
-        const key = makeMatrixKey(topicId, todayISO);
-        const existing = bookLogs[key];
+        const bookLogs = {
+          ...(prev.logsByBook[activeBook.id] ?? buildSeedLogs(activeBook, todayISO)),
+        };
+
+        for (let i = 0; i < spanDays; i += 1) {
+          const targetDate = addDaysISO(startDateISO, i);
+          const key = makeMatrixKey(topicId, targetDate);
+          const prefix = spanDays > 1 ? `${i + 1}/${spanDays} ` : "";
+          bookLogs[key] = {
+            keyword: `${prefix}${cleanKeyword}`.slice(0, 14),
+            status: "plan",
+            minutes: minutesPerDay,
+            updatedAt: todayISO,
+          };
+        }
 
         return {
           ...prev,
           logsByBook: {
             ...prev.logsByBook,
-            [activeBook.id]: {
-              ...bookLogs,
-              [key]: {
-                keyword:
-                  customKeyword?.trim() ||
-                  existing?.keyword ||
-                  meta?.topic.defaultKeyword ||
-                  "집중학습",
-                status: "done",
-                minutes: (existing?.minutes || 0) + addedMinutes,
-                updatedAt: todayISO,
-              },
-            },
+            [activeBook.id]: bookLogs,
+          },
+        };
+      });
+    },
+    [activeBook, todayISO, updateState]
+  );
+
+  /** 당일 부분학습(진행중) 기록 후 다음날 이어하기 학습계획 자동 이월 */
+  const carryOverTopicToNextDay = useCallback(
+    (topicId: string, dateISO: string, keyword: string, todayMinutes: number) => {
+      const nextDateISO = addDaysISO(dateISO, 1);
+      const cleanKeyword = keyword.trim() || "진행중";
+
+      updateState((prev) => {
+        const bookLogs = {
+          ...(prev.logsByBook[activeBook.id] ?? buildSeedLogs(activeBook, todayISO)),
+        };
+        const currentKey = makeMatrixKey(topicId, dateISO);
+        const nextKey = makeMatrixKey(topicId, nextDateISO);
+
+        bookLogs[currentKey] = {
+          keyword: cleanKeyword.slice(0, 14),
+          status: "partial",
+          minutes: todayMinutes,
+          updatedAt: todayISO,
+        };
+
+        const existingNext = bookLogs[nextKey];
+        if (!existingNext || existingNext.status !== "done") {
+          bookLogs[nextKey] = {
+            keyword: existingNext?.keyword || "이어서학습",
+            status: "plan",
+            minutes: existingNext?.minutes ?? todayMinutes,
+            updatedAt: todayISO,
+          };
+        }
+
+        return {
+          ...prev,
+          logsByBook: {
+            ...prev.logsByBook,
+            [activeBook.id]: bookLogs,
+          },
+        };
+      });
+    },
+    [activeBook, todayISO, updateState]
+  );
+
+  /** 타이머 완료 시 오늘 날짜 매트릭스 셀에 자동 색칠(완료 또는 진행중+내일이월) 및 시간 누적 */
+  const recordStudySession = useCallback(
+    (
+      topicId: string,
+      elapsedSeconds: number,
+      customKeyword?: string,
+      completionMode: "done" | "partial" = "done"
+    ) => {
+      const addedMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
+      const meta = findTopicMetaInSubjects(subjects, topicId);
+
+      updateState((prev) => {
+        const bookLogs = {
+          ...(prev.logsByBook[activeBook.id] ?? buildSeedLogs(activeBook, todayISO)),
+        };
+        const key = makeMatrixKey(topicId, todayISO);
+        const existing = bookLogs[key];
+
+        bookLogs[key] = {
+          keyword:
+            customKeyword?.trim() ||
+            existing?.keyword ||
+            meta?.topic.defaultKeyword ||
+            (completionMode === "partial" ? "진행중" : "집중학습"),
+          status: completionMode,
+          minutes: (existing?.minutes || 0) + addedMinutes,
+          updatedAt: todayISO,
+        };
+
+        if (completionMode === "partial") {
+          const tomorrowISO = addDaysISO(todayISO, 1);
+          const tomorrowKey = makeMatrixKey(topicId, tomorrowISO);
+          const existingTomorrow = bookLogs[tomorrowKey];
+          if (!existingTomorrow || existingTomorrow.status !== "done") {
+            bookLogs[tomorrowKey] = {
+              keyword: existingTomorrow?.keyword || "이어서학습",
+              status: "plan",
+              minutes: existingTomorrow?.minutes ?? meta?.topic.estimatedMinutes ?? 30,
+              updatedAt: todayISO,
+            };
+          }
+        }
+
+        return {
+          ...prev,
+          logsByBook: {
+            ...prev.logsByBook,
+            [activeBook.id]: bookLogs,
           },
         };
       }, Math.max(0, Math.round(elapsedSeconds)));
@@ -543,6 +643,8 @@ export function useStudyCurriculum() {
     selectTextbook,
     upsertMatrixCell,
     deleteMatrixCell,
+    scheduleMultiDayPlan,
+    carryOverTopicToNextDay,
     recordStudySession,
     toggleSubjectCollapse,
     setAllSubjectsCollapsed,

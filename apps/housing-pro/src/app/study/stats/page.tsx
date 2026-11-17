@@ -90,9 +90,14 @@ export default function StudyStatisticsPage() {
       let lastDoneDate: string | null = null;
 
       for (const [key, cell] of Object.entries(matrixLogs)) {
-        if (key.startsWith(`${topic.id}::`) && cell.status === "done") {
+        if (
+          key.startsWith(`${topic.id}::`) &&
+          (cell.status === "done" || cell.status === "partial")
+        ) {
           const dateISO = key.split("::")[1];
-          doneCount += 1;
+          if (cell.status === "done") {
+            doneCount += 1;
+          }
           minutes += cell.minutes || topic.estimatedMinutes;
           if (!lastDoneDate || dateISO > lastDoneDate) {
             lastDoneDate = dateISO;

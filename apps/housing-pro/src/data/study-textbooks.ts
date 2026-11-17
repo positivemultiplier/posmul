@@ -33,7 +33,7 @@ export interface StudySubjectNode {
   units: StudyUnitNode[];
 }
 
-export type MatrixCellStatus = "done" | "plan";
+export type MatrixCellStatus = "done" | "plan" | "partial";
 
 export interface MatrixCellLog {
   keyword: string;

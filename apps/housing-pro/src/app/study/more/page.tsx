@@ -26,7 +26,7 @@ import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { YptGroupGrid } from "@/components/mobile/ypt-group-grid";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
-import { formatDateISO, flattenTopics } from "@/data/study-textbooks";
+import { formatDateISO, flattenTopics, type MatrixCellStatus } from "@/data/study-textbooks";
 
 type MoreViewMode = "todo" | "calendar" | "group" | "tools";
 
@@ -95,7 +95,7 @@ export default function StudyMoreHubPage() {
         subjectTitle: string;
         subjectColor: string;
         keyword: string;
-        status: "done" | "plan";
+        status: MatrixCellStatus;
         minutes: number;
       }>
     > = {};
@@ -421,7 +421,11 @@ export default function StudyMoreHubPage() {
                           <span
                             key={i}
                             className={`w-1.5 h-1.5 rounded-full ${
-                              l.status === "plan" ? "opacity-45" : ""
+                              l.status === "plan"
+                                ? "opacity-45"
+                                : l.status === "partial"
+                                  ? "opacity-75 ring-1 ring-amber-400"
+                                  : ""
                             }`}
                             style={{ backgroundColor: l.subjectColor }}
                           />
@@ -476,10 +480,12 @@ export default function StudyMoreHubPage() {
                         className={`text-[9.5px] font-black px-2 py-0.5 rounded-full shrink-0 ${
                           log.status === "done"
                             ? "bg-emerald-500/15 text-emerald-300"
-                            : "bg-sky-500/15 text-sky-300"
+                            : log.status === "partial"
+                              ? "bg-amber-500/20 text-amber-300"
+                              : "bg-sky-500/15 text-sky-300"
                         }`}
                       >
-                        {log.status === "done" ? "완료" : "계획"}
+                        {log.status === "done" ? "완료" : log.status === "partial" ? "진행중" : "계획"}
                       </span>
                     </div>
                   ))}

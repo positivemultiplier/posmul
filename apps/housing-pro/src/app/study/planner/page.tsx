@@ -17,12 +17,16 @@ import {
   ChevronsUpDown,
   X,
   FileCheck2,
+  ArrowRight,
+  CalendarPlus,
+  ListTodo,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
 import {
   addDaysISO,
   diffDaysISO,
+  type MatrixCellLog,
   type MatrixCellStatus,
   type StudySubjectNode,
   type StudyTopicNode,
@@ -52,6 +56,8 @@ interface EditingCellState {
   status: MatrixCellStatus;
   keyword: string;
   minutes: number;
+  planSpanDays: 1 | 2 | 3;
+  carryOverTomorrow: boolean;
 }
 
 export default function StudyPlannerMatrixPage() {
@@ -65,6 +71,8 @@ export default function StudyPlannerMatrixPage() {
     collapsedSubjectIds,
     upsertMatrixCell,
     deleteMatrixCell,
+    scheduleMultiDayPlan,
+    carryOverTopicToNextDay,
     toggleSubjectCollapse,
     setAllSubjectsCollapsed,
   } = useStudyCurriculum();
@@ -73,6 +81,7 @@ export default function StudyPlannerMatrixPage() {
   const [stageFilter, setStageFilter] = useState<"ALL" | "1차" | "2차">("ALL");
   const [windowStartOffset, setWindowStartOffset] = useState<number>(-12); // 오늘 기준 -12일 ~ +5일 (18일치)
   const [editingCell, setEditingCell] = useState<EditingCellState | null>(null);
+  const [selectedPaletteTopicId, setSelectedPaletteTopicId] = useState<string | null>(null);
 
   // 보조: 일일 타임테이블 상태
   const [timetableGrid, setTimetableGrid] = useState<Record<string, TimetableBlock>>(
@@ -137,6 +146,7 @@ export default function StudyPlannerMatrixPage() {
     let totalTopics = 0;
     let coveredTopics = 0;
     let totalDoneCells = 0;
+    let totalPartialCells = 0;
     let totalPlanCells = 0;
 
     for (const subj of visibleSubjects) {
@@ -149,6 +159,8 @@ export default function StudyPlannerMatrixPage() {
               if (cell.status === "done") {
                 topicDoneCount += 1;
                 totalDoneCells += 1;
+              } else if (cell.status === "partial") {
+                totalPartialCells += 1;
               } else {
                 totalPlanCells += 1;
               }
@@ -163,10 +175,80 @@ export default function StudyPlannerMatrixPage() {
       totalTopics,
       coveredTopics,
       totalDoneCells,
+      totalPartialCells,
       totalPlanCells,
       coveragePct: totalTopics > 0 ? Math.round((coveredTopics / totalTopics) * 100) : 0,
     };
   }, [visibleSubjects, matrixLogs]);
+
+  // 목차 매트릭스에서 '학습계획(plan)' 또는 '진행중(partial)'으로 선택된 항목만 추출 (일정표 전용)
+  const plannedScheduleItems = useMemo(() => {
+    const items: Array<{
+      key: string;
+      dateISO: string;
+      subject: StudySubjectNode;
+      unitTitle: string;
+      topic: StudyTopicNode;
+      cell: MatrixCellLog;
+    }> = [];
+
+    for (const subject of subjects) {
+      for (const unit of subject.units) {
+        for (const topic of unit.topics) {
+          const prefix = `${topic.id}::`;
+          for (const [key, cell] of Object.entries(matrixLogs)) {
+            if (
+              key.startsWith(prefix) &&
+              (cell.status === "plan" || cell.status === "partial")
+            ) {
+              const dateISO = key.slice(prefix.length);
+              items.push({
+                key,
+                dateISO,
+                subject,
+                unitTitle: unit.title,
+                topic,
+                cell,
+              });
+            }
+          }
+        }
+      }
+    }
+
+    return items.sort((a, b) => {
+      if (a.dateISO !== b.dateISO) return a.dateISO.localeCompare(b.dateISO);
+      return (a.topic.globalOrder ?? 999) - (b.topic.globalOrder ?? 999);
+    });
+  }, [subjects, matrixLogs]);
+
+  // 타임테이블 팔레트용: 학습계획으로 선택된 고유 단원 목록
+  const plannedTopicPalette = useMemo(() => {
+    const seen = new Set<string>();
+    const list: Array<{
+      topicId: string;
+      subject: StudySubjectNode;
+      topic: StudyTopicNode;
+    }> = [];
+    for (const item of plannedScheduleItems) {
+      if (seen.has(item.topic.id)) continue;
+      seen.add(item.topic.id);
+      list.push({
+        topicId: item.topic.id,
+        subject: item.subject,
+        topic: item.topic,
+      });
+    }
+    return list;
+  }, [plannedScheduleItems]);
+
+  const activePaletteItem = useMemo(() => {
+    if (plannedTopicPalette.length === 0) return null;
+    return (
+      plannedTopicPalette.find((p) => p.topicId === selectedPaletteTopicId) ||
+      plannedTopicPalette[0]
+    );
+  }, [plannedTopicPalette, selectedPaletteTopicId]);
 
   // 목차별 누적 회독(완료 셀 수) 계산
   const getTopicDoneCount = (topicId: string) => {
@@ -179,9 +261,10 @@ export default function StudyPlannerMatrixPage() {
     return count;
   };
 
-  // 과목이 접혔을 때 날짜별 요약(완료 수 / 계획 수) 계산
+  // 과목이 접혔을 때 날짜별 요약(완료 수 / 진행중 수 / 계획 수) 계산
   const getSubjectDaySummary = (subject: StudySubjectNode, dateISO: string) => {
     let doneCount = 0;
+    let partialCount = 0;
     let planCount = 0;
     let firstKeyword = "";
 
@@ -192,6 +275,9 @@ export default function StudyPlannerMatrixPage() {
           if (cell.status === "done") {
             doneCount += 1;
             if (!firstKeyword) firstKeyword = cell.keyword;
+          } else if (cell.status === "partial") {
+            partialCount += 1;
+            if (!firstKeyword) firstKeyword = cell.keyword;
           } else {
             planCount += 1;
             if (!firstKeyword) firstKeyword = cell.keyword;
@@ -199,7 +285,7 @@ export default function StudyPlannerMatrixPage() {
         }
       }
     }
-    return { doneCount, planCount, firstKeyword };
+    return { doneCount, partialCount, planCount, firstKeyword };
   };
 
   const allCollapsed =
@@ -222,16 +308,37 @@ export default function StudyPlannerMatrixPage() {
       status: existing?.status ?? defaultStatus,
       keyword: existing?.keyword ?? topic.defaultKeyword,
       minutes: existing?.minutes ?? topic.estimatedMinutes,
+      planSpanDays: 1,
+      carryOverTomorrow: true,
     });
   };
 
   const handleSaveEditingCell = () => {
     if (!editingCell) return;
-    upsertMatrixCell(editingCell.topic.id, editingCell.dateISO, {
-      status: editingCell.status,
-      keyword: editingCell.keyword.trim() || editingCell.topic.defaultKeyword,
-      minutes: editingCell.minutes,
-    });
+    const cleanKeyword = editingCell.keyword.trim() || editingCell.topic.defaultKeyword;
+
+    if (editingCell.status === "plan") {
+      scheduleMultiDayPlan(
+        editingCell.topic.id,
+        editingCell.dateISO,
+        editingCell.planSpanDays,
+        cleanKeyword,
+        editingCell.minutes
+      );
+    } else if (editingCell.status === "partial" && editingCell.carryOverTomorrow) {
+      carryOverTopicToNextDay(
+        editingCell.topic.id,
+        editingCell.dateISO,
+        cleanKeyword,
+        editingCell.minutes
+      );
+    } else {
+      upsertMatrixCell(editingCell.topic.id, editingCell.dateISO, {
+        status: editingCell.status,
+        keyword: cleanKeyword,
+        minutes: editingCell.minutes,
+      });
+    }
     setEditingCell(null);
   };
 
@@ -274,7 +381,7 @@ export default function StudyPlannerMatrixPage() {
             </Link>
           </div>
 
-          {/* 매트릭스 / 일일 타임테이블 전환 */}
+          {/* 매트릭스 / 일정표 전환 */}
           <div className="flex items-center bg-[#0D0D11] p-0.5 rounded-xl border border-white/[0.08] text-[10px] font-black shrink-0">
             <button
               type="button"
@@ -287,10 +394,19 @@ export default function StudyPlannerMatrixPage() {
             <button
               type="button"
               onClick={() => setViewMode("diary")}
-              className={`px-2.5 py-1.5 rounded-lg transition ${viewMode === "diary" ? "bg-[#FF5A36] text-white" : "text-slate-400 hover:text-white"
+              className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 ${viewMode === "diary" ? "bg-[#FF5A36] text-white" : "text-slate-400 hover:text-white"
                 }`}
             >
-              일일표
+              <span>일정표</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono ${
+                  viewMode === "diary"
+                    ? "bg-white/20 text-white"
+                    : "bg-sky-500/20 text-sky-300"
+                }`}
+              >
+                {plannedScheduleItems.length}
+              </span>
             </button>
           </div>
         </div>
@@ -375,7 +491,8 @@ export default function StudyPlannerMatrixPage() {
                 <span className="text-[#FF7A59] font-mono ml-1">({summaryStats.coveragePct}%)</span>
               </span>
               <span className="text-slate-400">
-                완료 <strong className="text-emerald-300 font-mono">{summaryStats.totalDoneCells}</strong> · 계획{" "}
+                완료 <strong className="text-emerald-300 font-mono">{summaryStats.totalDoneCells}</strong> · 진행중{" "}
+                <strong className="text-amber-300 font-mono">{summaryStats.totalPartialCells}</strong> · 계획{" "}
                 <strong className="text-sky-300 font-mono">{summaryStats.totalPlanCells}</strong>
               </span>
             </div>
@@ -386,7 +503,11 @@ export default function StudyPlannerMatrixPage() {
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-sm bg-[#FF5A36]" />
-                <span>완료</span>
+                <span>완료(1R)</span>
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="w-2.5 h-2.5 rounded-sm border border-amber-400 bg-amber-500/30" />
+                <span>진행중</span>
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-sm border border-dashed border-[#FF5A36] bg-[#FF5A36]/20" />
@@ -483,68 +604,272 @@ export default function StudyPlannerMatrixPage() {
         </div>
       ) : (
         /* ========================================================== */
-        /* 보조: 일일 24시간 10분 단위 타임테이블 */
+        /* 플래너 일정표: 목차 매트릭스에서 '학습계획'으로 선택한 단원만 노출 */
         /* ========================================================== */
         <div className="px-4 py-4 space-y-4">
-          <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.06] flex items-center justify-between">
-            <div className="flex items-center gap-2 text-xs font-black text-white">
-              <Sparkles className="w-4 h-4 text-[#FF5A36]" />
-              <span>오늘 10분 단위 타임테이블</span>
+          <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.06] flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 text-xs font-black text-white">
+                <ListTodo className="w-4 h-4 text-[#FF5A36] shrink-0" />
+                <span>학습계획 일정표</span>
+              </div>
+              <p className="text-[10.5px] text-slate-400 mt-0.5">
+                목차 매트릭스에서 <strong className="text-sky-300">학습계획</strong> 또는{" "}
+                <strong className="text-amber-300">진행중</strong>으로 선택한 단원만 표시됩니다.
+              </p>
             </div>
-            <span className="font-mono text-xs font-black text-[#FF7A59]">
-              {String(Math.floor(totalDiaryMinutes / 60)).padStart(2, "0")}H{" "}
-              {String(totalDiaryMinutes % 60).padStart(2, "0")}M
+            <span className="px-2.5 py-1 rounded-xl bg-sky-500/15 border border-sky-500/30 font-mono text-[11px] font-black text-sky-300 shrink-0">
+              {plannedScheduleItems.length}건 예정
             </span>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-2 shadow-xl">
-            <div className="grid grid-cols-[36px_1fr] gap-2 items-center text-[10px] font-mono font-bold text-slate-500 pb-1 border-b border-white/[0.06]">
-              <div className="text-center">시</div>
-              <div className="grid grid-cols-6 gap-1 text-center">
-                <span>10</span>
-                <span>20</span>
-                <span>30</span>
-                <span>40</span>
-                <span>50</span>
-                <span>60</span>
+          {plannedScheduleItems.length === 0 ? (
+            <div className="p-6 rounded-2xl bg-[#1A1A21] border border-dashed border-white/[0.14] text-center space-y-3">
+              <CalendarPlus className="w-8 h-8 text-slate-500 mx-auto" />
+              <div className="space-y-1">
+                <p className="text-xs font-black text-white">
+                  목차 매트릭스에서 학습계획으로 선택한 단원이 없습니다.
+                </p>
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  목차 매트릭스에서 날짜 셀을 탭해 <strong>학습 계획(1~3일 분할)</strong>을 지정하면
+                  이곳 일정표와 홈 타이머에 자동으로 노출됩니다.
+                </p>
               </div>
+              <button
+                type="button"
+                onClick={() => setViewMode("matrix")}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-xs font-black transition"
+              >
+                <span>목차 매트릭스에서 계획 선택하기</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
+          ) : (
+            <>
+              {/* 선택된 학습계획 단원 일정 카드 목록 */}
+              <div className="space-y-2">
+                {plannedScheduleItems.map((item) => {
+                  const isToday = item.dateISO === todayISO;
+                  const isTomorrow = item.dateISO === addDaysISO(todayISO, 1);
+                  const isOverdue = item.dateISO < todayISO;
+                  const [y, m, d] = item.dateISO.split("-").map(Number);
+                  const dt = new Date(y, (m || 1) - 1, d || 1);
+                  const weekdayLabel = WEEKDAY_KO[dt.getDay()];
+                  const dateLabel = isToday
+                    ? "오늘"
+                    : isTomorrow
+                      ? "내일"
+                      : `${String(m).padStart(2, "0")}/${String(d).padStart(2, "0")}(${weekdayLabel})`;
+                  const isPartial = item.cell.status === "partial";
+                  const estMinutes = item.cell.minutes ?? item.topic.estimatedMinutes;
 
-            <div className="space-y-1">
-              {YPT_HOURS.map((hour) => (
-                <div key={hour} className="grid grid-cols-[36px_1fr] gap-2 items-center">
-                  <div className="font-mono text-[10.5px] font-bold text-slate-400 text-center">
-                    {String(hour).padStart(2, "0")}
-                  </div>
-                  <div className="grid grid-cols-6 gap-1">
-                    {[0, 1, 2, 3, 4, 5].map((slot) => {
-                      const key = `${hour}-${slot}`;
-                      const cell = timetableGrid[key];
-                      return (
+                  return (
+                    <div
+                      key={item.key}
+                      className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-2.5"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 space-y-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span
+                              className={`px-2 py-0.5 rounded-md text-[9.5px] font-mono font-black ${
+                                isToday
+                                  ? "bg-[#FF5A36]/20 text-[#FF7A59] border border-[#FF5A36]/40"
+                                  : isOverdue
+                                    ? "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                                    : "bg-sky-500/15 text-sky-300 border border-sky-500/30"
+                              }`}
+                            >
+                              {dateLabel}
+                              {isOverdue ? " · 지연" : ""}
+                            </span>
+                            <span
+                              className="px-1.5 py-0.5 rounded text-[9.5px] font-black text-white"
+                              style={{ backgroundColor: item.subject.color }}
+                            >
+                              {item.subject.examStage} · {item.subject.shortTitle}
+                            </span>
+                            <span
+                              className={`px-1.5 py-0.5 rounded text-[9.5px] font-black ${
+                                isPartial
+                                  ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                                  : "bg-white/[0.06] text-slate-300"
+                              }`}
+                            >
+                              {isPartial ? "◐ 진행중" : "학습계획"} · {item.cell.keyword}
+                            </span>
+                          </div>
+
+                          <div className="text-xs font-black text-white flex items-center gap-1 truncate">
+                            {item.topic.topicNo && (
+                              <span
+                                className="font-mono shrink-0"
+                                style={{ color: item.subject.color }}
+                              >
+                                {item.topic.topicNo}.
+                              </span>
+                            )}
+                            <span className="truncate">{item.topic.title}</span>
+                          </div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {item.unitTitle} · 목표 {estMinutes}분
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                        <Link
+                          href={`/?topic=${item.topic.id}`}
+                          className="py-1.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-[10px] font-black flex items-center justify-center gap-1 transition"
+                        >
+                          <Play className="w-3 h-3 fill-white" />
+                          <span>타이머</span>
+                        </Link>
                         <button
-                          key={slot}
                           type="button"
-                          onClick={() => {
-                            setTimetableGrid((prev) => {
-                              const copy = { ...prev };
-                              if (copy[key]) delete copy[key];
-                              else copy[key] = { color: "#FF5A36", label: "직접 추가" };
-                              return copy;
-                            });
+                          onClick={() =>
+                            carryOverTopicToNextDay(
+                              item.topic.id,
+                              item.dateISO,
+                              item.cell.keyword,
+                              estMinutes
+                            )
+                          }
+                          className="py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 text-[10px] font-black transition"
+                          title="당일은 진행중으로 남기고 내일 날짜로 이어서 학습계획 이월"
+                        >
+                          내일이월
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            upsertMatrixCell(item.topic.id, item.dateISO, {
+                              status: "done",
+                              keyword: item.cell.keyword,
+                              minutes: estMinutes,
+                            })
+                          }
+                          className="py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-[10px] font-black transition"
+                        >
+                          완료(1R)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteMatrixCell(item.topic.id, item.dateISO)}
+                          className="py-1.5 rounded-xl bg-white/[0.05] hover:bg-rose-950/60 border border-white/[0.08] text-slate-300 hover:text-rose-300 text-[10px] font-bold transition"
+                        >
+                          해제
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 선택된 학습계획 단원 전용 일일 10분 타임테이블 */}
+              <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-3 shadow-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-black text-white">
+                    <Sparkles className="w-4 h-4 text-[#FF5A36]" />
+                    <span>계획 단원 시간 배분표 (10분 단위)</span>
+                  </div>
+                  <span className="font-mono text-xs font-black text-[#FF7A59]">
+                    {String(Math.floor(totalDiaryMinutes / 60)).padStart(2, "0")}H{" "}
+                    {String(totalDiaryMinutes % 60).padStart(2, "0")}M
+                  </span>
+                </div>
+
+                {/* 학습계획 단원 팔레트 (계획된 단원만 노출) */}
+                <div className="flex flex-wrap gap-1.5">
+                  {plannedTopicPalette.map((p) => {
+                    const isSelected = activePaletteItem?.topicId === p.topicId;
+                    return (
+                      <button
+                        key={p.topicId}
+                        type="button"
+                        onClick={() => setSelectedPaletteTopicId(p.topicId)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-black border flex items-center gap-1.5 transition ${
+                          isSelected
+                            ? "text-white border-white shadow"
+                            : "bg-[#111116] text-slate-300 border-white/[0.08] hover:border-white/25"
+                        }`}
+                        style={
+                          isSelected
+                            ? { backgroundColor: p.subject.color }
+                            : undefined
+                        }
+                      >
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{
+                            backgroundColor: isSelected ? "#FFFFFF" : p.subject.color,
                           }}
-                          className={`h-4 rounded-[3px] transition ${cell
-                            ? "opacity-95 hover:opacity-100"
-                            : "bg-[#111115] border border-white/[0.04] hover:border-white/[0.15]"
-                            }`}
-                          style={cell ? { backgroundColor: cell.color } : undefined}
                         />
-                      );
-                    })}
+                        <span className="truncate max-w-[160px]">
+                          {p.topic.topicNo ? `${p.topic.topicNo}. ` : ""}
+                          {p.topic.title}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="grid grid-cols-[36px_1fr] gap-2 items-center text-[10px] font-mono font-bold text-slate-500 pb-1 border-b border-white/[0.06]">
+                  <div className="text-center">시</div>
+                  <div className="grid grid-cols-6 gap-1 text-center">
+                    <span>10</span>
+                    <span>20</span>
+                    <span>30</span>
+                    <span>40</span>
+                    <span>50</span>
+                    <span>60</span>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+
+                <div className="space-y-1">
+                  {YPT_HOURS.map((hour) => (
+                    <div key={hour} className="grid grid-cols-[36px_1fr] gap-2 items-center">
+                      <div className="font-mono text-[10.5px] font-bold text-slate-400 text-center">
+                        {String(hour).padStart(2, "0")}
+                      </div>
+                      <div className="grid grid-cols-6 gap-1">
+                        {[0, 1, 2, 3, 4, 5].map((slot) => {
+                          const key = `${hour}-${slot}`;
+                          const cell = timetableGrid[key];
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              onClick={() => {
+                                if (!activePaletteItem) return;
+                                setTimetableGrid((prev) => {
+                                  const copy = { ...prev };
+                                  if (copy[key]) delete copy[key];
+                                  else
+                                    copy[key] = {
+                                      color: activePaletteItem.subject.color,
+                                      label: activePaletteItem.topic.title,
+                                    };
+                                  return copy;
+                                });
+                              }}
+                              title={cell ? cell.label : activePaletteItem?.topic.title}
+                              className={`h-4 rounded-[3px] transition ${
+                                cell
+                                  ? "opacity-95 hover:opacity-100"
+                                  : "bg-[#111115] border border-white/[0.04] hover:border-white/[0.15]"
+                              }`}
+                              style={cell ? { backgroundColor: cell.color } : undefined}
+                            />
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -580,35 +905,96 @@ export default function StudyPlannerMatrixPage() {
               </button>
             </div>
 
-            {/* 상태 선택: 완료 vs 계획 */}
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setEditingCell({ ...editingCell, status: "done" })}
-                className={`py-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition ${editingCell.status === "done"
-                  ? "text-white border-white/40 shadow-md"
-                  : "bg-[#111116] text-slate-400 border-white/[0.06]"
-                  }`}
-                style={
-                  editingCell.status === "done"
-                    ? { backgroundColor: editingCell.subject.color }
-                    : undefined
-                }
-              >
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                <span>공부 완료 (색칠)</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setEditingCell({ ...editingCell, status: "plan" })}
-                className={`py-2.5 rounded-xl border text-xs font-black flex items-center justify-center gap-1.5 transition ${editingCell.status === "plan"
-                  ? "bg-sky-500/20 text-sky-200 border-sky-400 border-dashed"
-                  : "bg-[#111116] text-slate-400 border-white/[0.06]"
-                  }`}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>학습 계획 (예정)</span>
-              </button>
+            {/* 상태 선택: 완료 vs 진행중(부분) vs 계획 */}
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-3 gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setEditingCell({ ...editingCell, status: "done" })}
+                  className={`py-2.5 px-1.5 rounded-xl border text-[11px] font-black flex items-center justify-center gap-1 transition ${editingCell.status === "done"
+                    ? "text-white border-white/40 shadow-md"
+                    : "bg-[#111116] text-slate-400 border-white/[0.06]"
+                    }`}
+                  style={
+                    editingCell.status === "done"
+                      ? { backgroundColor: editingCell.subject.color }
+                      : undefined
+                  }
+                >
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>완료 (1R)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingCell({ ...editingCell, status: "partial" })}
+                  className={`py-2.5 px-1.5 rounded-xl border text-[11px] font-black flex items-center justify-center gap-1 transition ${editingCell.status === "partial"
+                    ? "bg-amber-500/20 text-amber-200 border-amber-400"
+                    : "bg-[#111116] text-slate-400 border-white/[0.06]"
+                    }`}
+                >
+                  <Sparkles className="w-3.5 h-3.5 shrink-0" />
+                  <span>진행중(분할)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingCell({ ...editingCell, status: "plan" })}
+                  className={`py-2.5 px-1.5 rounded-xl border text-[11px] font-black flex items-center justify-center gap-1 transition ${editingCell.status === "plan"
+                    ? "bg-sky-500/20 text-sky-200 border-sky-400 border-dashed"
+                    : "bg-[#111116] text-slate-400 border-white/[0.06]"
+                    }`}
+                >
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  <span>학습 계획</span>
+                </button>
+              </div>
+
+              {editingCell.status === "plan" && (
+                <div className="p-2.5 rounded-xl bg-sky-950/30 border border-sky-500/25 space-y-1.5">
+                  <div className="text-[10.5px] font-bold text-sky-200 flex items-center justify-between">
+                    <span>며칠 동안 나누어 학습할까요? (다일 계획 분할)</span>
+                    <span className="font-mono text-[10px] text-sky-300">
+                      {editingCell.planSpanDays}일 연속
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([1, 2, 3] as const).map((days) => (
+                      <button
+                        key={days}
+                        type="button"
+                        onClick={() => setEditingCell({ ...editingCell, planSpanDays: days })}
+                        className={`py-1.5 rounded-lg text-[10.5px] font-black border transition ${
+                          editingCell.planSpanDays === days
+                            ? "bg-sky-500 text-white border-sky-400"
+                            : "bg-[#101015] text-slate-300 border-white/[0.08] hover:border-sky-500/40"
+                        }`}
+                      >
+                        {days === 1 ? "1일 완성" : `${days}일 연속 분할`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {editingCell.status === "partial" && (
+                <div className="p-2.5 rounded-xl bg-amber-950/30 border border-amber-500/25 space-y-1.5">
+                  <label className="flex items-center justify-between gap-2 cursor-pointer">
+                    <span className="text-[10.5px] font-bold text-amber-200">
+                      내일({addDaysISO(editingCell.dateISO, 1)})에 &apos;이어서학습&apos; 계획 자동 배치
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={editingCell.carryOverTomorrow}
+                      onChange={(e) =>
+                        setEditingCell({ ...editingCell, carryOverTomorrow: e.target.checked })
+                      }
+                      className="w-4 h-4 accent-amber-400 rounded"
+                    />
+                  </label>
+                  <p className="text-[9.5px] text-amber-200/75 leading-snug">
+                    진행중 상태는 순공시간에만 합산되며, 단원을 최종 <strong>완료</strong> 처리할 때만 1회독(+1R)으로 집계됩니다.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* 셀 키워드 입력 + 퀵 칩 */}
@@ -722,7 +1108,7 @@ interface SubjectRowsGroupProps {
   getSubjectDaySummary: (
     subject: StudySubjectNode,
     dateISO: string
-  ) => { doneCount: number; planCount: number; firstKeyword: string };
+  ) => { doneCount: number; partialCount: number; planCount: number; firstKeyword: string };
   onToggleCollapse: () => void;
   onCellClick: (
     subject: StudySubjectNode,
@@ -785,6 +1171,7 @@ function SubjectRowsGroup({
         {dateColumns.map((col) => {
           const summary = getSubjectDaySummary(subject, col.dateISO);
           const hasDone = summary.doneCount > 0;
+          const hasPartial = summary.partialCount > 0;
           const hasPlan = summary.planCount > 0;
 
           return (
@@ -803,6 +1190,15 @@ function SubjectRowsGroup({
                     title={`${subject.title} (${col.dateISO}): ${summary.doneCount}개 완료`}
                   >
                     {summary.doneCount > 1 ? `${summary.doneCount}건` : summary.firstKeyword}
+                  </button>
+                ) : hasPartial ? (
+                  <button
+                    type="button"
+                    onClick={onToggleCollapse}
+                    className="w-full py-1 rounded border border-amber-400 text-[9px] font-bold text-amber-200 bg-amber-500/20 truncate px-0.5"
+                    title={`${subject.title} (${col.dateISO}): ${summary.partialCount}개 진행중`}
+                  >
+                    ◐진행{summary.partialCount}
                   </button>
                 ) : hasPlan ? (
                   <button
@@ -912,28 +1308,44 @@ function SubjectRowsGroup({
                         className={`w-full h-7 rounded-[4px] px-0.5 text-[9px] leading-tight flex items-center justify-center truncate transition ${cell
                           ? cell.status === "done"
                             ? "text-white font-black shadow-sm hover:brightness-110"
-                            : "border border-dashed font-bold hover:brightness-110"
+                            : cell.status === "partial"
+                              ? "border border-amber-400 font-bold hover:brightness-110"
+                              : "border border-dashed font-bold hover:brightness-110"
                           : "hover:bg-white/[0.08] text-transparent hover:text-slate-500"
                           }`}
                         style={
                           cell
                             ? cell.status === "done"
                               ? { backgroundColor: subject.color }
-                              : {
-                                borderColor: subject.color,
-                                backgroundColor: `${subject.color}24`,
-                                color: "#E2E8F0",
-                              }
+                              : cell.status === "partial"
+                                ? {
+                                  backgroundColor: `${subject.color}42`,
+                                  color: "#FDE68A",
+                                }
+                                : {
+                                  borderColor: subject.color,
+                                  backgroundColor: `${subject.color}24`,
+                                  color: "#E2E8F0",
+                                }
                             : undefined
                         }
                         title={
                           cell
-                            ? `${topic.title} (${col.dateISO}): ${cell.keyword} (${cell.status === "done" ? "완료" : "계획"
-                            })`
+                            ? `${topic.title} (${col.dateISO}): ${cell.keyword} (${
+                                cell.status === "done"
+                                  ? "완료"
+                                  : cell.status === "partial"
+                                    ? "진행중(이월)"
+                                    : "계획"
+                              })`
                             : `${topic.title} (${col.dateISO}) 탭하여 기록/계획`
                         }
                       >
-                        {cell ? cell.keyword : "+"}
+                        {cell
+                          ? cell.status === "partial"
+                            ? `◐${cell.keyword}`
+                            : cell.keyword
+                          : "+"}
                       </button>
                     </td>
                   );
