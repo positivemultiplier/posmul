@@ -58,6 +58,7 @@ export default function AppStandaloneStudyCenterPage() {
     catalog,
     subjects,
     archivedSubjects,
+    categories,
     examDate,
     setExamDate,
     toggleBookActive,
@@ -759,10 +760,15 @@ export default function AppStandaloneStudyCenterPage() {
 
           <section className="space-y-2.5">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-black text-white">
-                다중 교재 선택 &amp; 커스텀 교재 추가
-              </h3>
-              <span className="text-[10px] text-slate-400 font-bold">
+              <div>
+                <h3 className="text-xs font-black text-white">
+                  다중 교재 선택 &amp; 커스텀 교재 추가
+                </h3>
+                <p className="text-[10px] text-emerald-300/90 mt-0.5">
+                  교재를 해제(서재로 빼기)해도 기존 회독·계획 기록과 추가 단원은 안전하게 보존됩니다.
+                </p>
+              </div>
+              <span className="text-[10px] text-slate-400 font-bold shrink-0">
                 {activeBookIds.length}권 선택 / 총 {catalog.length}종
               </span>
             </div>
@@ -954,6 +960,23 @@ export default function AppStandaloneStudyCenterPage() {
                     <span className="text-xs font-bold text-white truncate">
                       {subj.title}
                     </span>
+                    <select
+                      value={
+                        subj.category ||
+                        (subj.examStage === "1차" ? "주택관리사 1차" : "주택관리사 2차")
+                      }
+                      onChange={(e) =>
+                        updateSubjectCustomization(subj.id, { category: e.target.value })
+                      }
+                      className="px-1.5 py-0.5 rounded bg-[#181822] border border-white/[0.1] text-[9.5px] font-bold text-slate-300 shrink-0"
+                      title="과목 분류 변경"
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <button
                     type="button"

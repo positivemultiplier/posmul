@@ -31,6 +31,8 @@ import {
   Paintbrush,
   MousePointerClick,
   Check,
+  Tag,
+  Library,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
@@ -39,6 +41,7 @@ import {
   addDaysISO,
   diffDaysISO,
   getHoursFromReset,
+  getRoundColorStyle,
   type MatrixCellLog,
   type MatrixCellStatus,
   type StudySubjectNode,
@@ -66,7 +69,7 @@ interface EditingCellState {
 interface EditingSubjectFormState {
   subjectId: string;
   title: string;
-  examStage: "1차" | "2차";
+  category: string;
   color: string;
   firstUnitId?: string;
   newTopicTitle: string;
@@ -84,7 +87,7 @@ interface ScheduleTopicItem {
 function getMondayStartWeekDates(anchorISO: string): string[] {
   const [y, m, d] = anchorISO.split("-").map(Number);
   const dt = new Date(y, (m || 1) - 1, d || 1);
-  const day = dt.getDay(); // 0=일, 1=월 ...
+  const day = dt.getDay();
   const diffToMon = day === 0 ? -6 : 1 - day;
   const mondayISO = addDaysISO(anchorISO, diffToMon);
   return Array.from({ length: 7 }, (_, i) => addDaysISO(mondayISO, i));
@@ -106,11 +109,12 @@ export default function StudyPlannerMatrixPage() {
     dayResetHour,
     setDayResetHour,
     examDate,
-    activeBooks,
     activeBookIds,
     catalog,
     subjects,
     archivedSubjects,
+    categories,
+    addCustomCategory,
     matrixLogs,
     timetablesByDate,
     setTimetableSlots,
@@ -125,6 +129,7 @@ export default function StudyPlannerMatrixPage() {
     restoreSubject,
     deleteSubject,
     addCustomTopic,
+    deleteCustomTopic,
     upsertMatrixCell,
     upsertMatrixCellsBulk,
     deleteMatrixCell,
@@ -141,11 +146,22 @@ export default function StudyPlannerMatrixPage() {
   const [showCompletedInDay, setShowCompletedInDay] = useState<boolean>(false);
   const prevTodayRef = useRef<string>(todayISO);
 
-  const [stageFilter, setStageFilter] = useState<"ALL" | "1차" | "2차">("ALL");
-  const [windowStartOffset, setWindowStartOffset] = useState<number>(-12);
+  // ③ 확장형 분류(Category) 필터
+  const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [isAddingCategory, setIsAddingCategory] = useState<boolean>(false);
+  const [newCategoryName, setNewCategoryName] = useState<string>("");
+
+  // ② 오늘을 첫 기준 열(offset = 0)로 시작
+  const [windowStartOffset, setWindowStartOffset] = useState<number>(0);
   const [editingCell, setEditingCell] = useState<EditingCellState | null>(null);
   const [selectedPaletteTopicId, setSelectedPaletteTopicId] = useState<string | null>(null);
   const [quickAddTopicId, setQuickAddTopicId] = useState<string>("");
+
+  // ③ 책 표지 선택 팝오버 / 상세 액션
+  const [selectedShelfBookId, setSelectedShelfBookId] = useState<string | null>(null);
+
+  // ① 매트릭스 하단 인라인 책 추가 / 과목 추가 폼
+  const [bottomInlineMode, setBottomInlineMode] = useState<"none" | "book" | "subject">("none");
 
   // 드래그 연속 입력 & 커스텀 색상 브러시 상태 (매트릭스)
   const [dragMode, setDragMode] = useState<MatrixDragMode>("tap");
@@ -159,23 +175,24 @@ export default function StudyPlannerMatrixPage() {
   const [useCustomTimetableColor, setUseCustomTimetableColor] = useState<boolean>(false);
   const [ttDragAction, setTtDragAction] = useState<"paint" | "erase" | null>(null);
 
-  // 과목 · 다중 교재 편집 모달 (첨부 이미지 UI 반영)
+  // 과목 · 다중 교재 편집 모달
   const [isManagerModalOpen, setIsManagerModalOpen] = useState<boolean>(false);
   const [openMenuSubjectId, setOpenMenuSubjectId] = useState<string | null>(null);
   const [editingSubjectForm, setEditingSubjectForm] =
     useState<EditingSubjectFormState | null>(null);
   const [isAddingSubject, setIsAddingSubject] = useState<boolean>(false);
   const [newSubjTitle, setNewSubjTitle] = useState<string>("");
-  const [newSubjStage, setNewSubjStage] = useState<"1차" | "2차">("2차");
+  const [newSubjCategory, setNewSubjCategory] = useState<string>("주택관리사 2차");
   const [newSubjColor, setNewSubjColor] = useState<string>(CUSTOM_SUBJECT_COLOR_PALETTE[0]);
   const [newSubjTopicsText, setNewSubjTopicsText] = useState<string>("");
 
   const [isAddingBook, setIsAddingBook] = useState<boolean>(false);
   const [newBookTitle, setNewBookTitle] = useState<string>("");
   const [newBookBadge, setNewBookBadge] = useState<string>("");
+  const [newBookCategory, setNewBookCategory] = useState<string>("주택관리사 2차");
   const [newBookColor, setNewBookColor] = useState<string>("#FF5A36");
 
-  // todayISO가 날짜 변경 기준 시각 변경 등으로 갱신될 때, 기존 오늘을 보고 있던 경우 동적 동기화
+  // todayISO 동적 동기화
   useEffect(() => {
     if (prevTodayRef.current !== todayISO) {
       if (selectedDiaryDate === prevTodayRef.current) {
@@ -188,18 +205,14 @@ export default function StudyPlannerMatrixPage() {
   useEffect(() => {
     if (typeof globalThis !== "undefined" && "location" in globalThis) {
       const params = new globalThis.URLSearchParams(globalThis.location.search);
-      if (params.get("tab") === "diary") {
-        setViewMode("diary");
-      }
-      if (params.get("scope") === "week") {
-        setDiaryScope("week");
-      }
+      if (params.get("tab") === "diary") setViewMode("diary");
+      if (params.get("scope") === "week") setDiaryScope("week");
     }
   }, []);
 
   const dDayToExam = useMemo(() => diffDaysISO(todayISO, examDate), [todayISO, examDate]);
 
-  // 매트릭스 가로 날짜 열 (18일 윈도우)
+  // 매트릭스 가로 날짜 열 (18일 윈도우, 기본 오늘 기준 0 ~ +17일)
   const dateColumns = useMemo(() => {
     const cols: Array<{
       dateISO: string;
@@ -234,13 +247,26 @@ export default function StudyPlannerMatrixPage() {
     return cols;
   }, [todayISO, examDate, windowStartOffset]);
 
-  // 차수 필터링된 활성 과목 목록
-  const visibleSubjects = useMemo(() => {
-    if (stageFilter === "ALL") return subjects;
-    return subjects.filter((s) => s.examStage === stageFilter);
-  }, [subjects, stageFilter]);
+  // 활성 과목들에서 쓰이는 분류 목록 (필터 바 노출용)
+  const usedCategories = useMemo(() => {
+    const set = new Set<string>();
+    for (const s of subjects) {
+      set.add(s.category || (s.examStage === "1차" ? "주택관리사 1차" : "주택관리사 2차"));
+    }
+    return Array.from(set);
+  }, [subjects]);
 
-  // 모든 활성 단원 플랫 리스트 (빠른 계획 추가용)
+  // 분류 필터링된 활성 과목 목록
+  const visibleSubjects = useMemo(() => {
+    if (categoryFilter === "ALL") return subjects;
+    return subjects.filter(
+      (s) =>
+        (s.category || (s.examStage === "1차" ? "주택관리사 1차" : "주택관리사 2차")) ===
+        categoryFilter
+    );
+  }, [subjects, categoryFilter]);
+
+  // 모든 활성 단원 플랫 리스트
   const allActiveTopicEntries = useMemo(() => {
     const list: Array<{ subject: StudySubjectNode; unitTitle: string; topic: StudyTopicNode }> = [];
     for (const s of subjects) {
@@ -258,6 +284,29 @@ export default function StudyPlannerMatrixPage() {
       setQuickAddTopicId(allActiveTopicEntries[0].topic.id);
     }
   }, [allActiveTopicEntries, quickAddTopicId]);
+
+  // 단원별 완료 셀들의 날짜순 회독 차수 계산 (1R -> 2R -> 3R ... 회독 농도용)
+  const topicDoneOrderMap = useMemo(() => {
+    const byTopic = new Map<string, Array<{ key: string; dateISO: string }>>();
+    for (const [key, cell] of Object.entries(matrixLogs)) {
+      if (cell.status !== "done") continue;
+      const sepIdx = key.indexOf("::");
+      if (sepIdx <= 0) continue;
+      const topicId = key.slice(0, sepIdx);
+      const dateISO = key.slice(sepIdx + 2);
+      const arr = byTopic.get(topicId) || [];
+      arr.push({ key, dateISO });
+      byTopic.set(topicId, arr);
+    }
+    const orderMap = new Map<string, number>();
+    for (const arr of byTopic.values()) {
+      arr.sort((a, b) => a.dateISO.localeCompare(b.dateISO));
+      arr.forEach((entry, idx) => {
+        orderMap.set(entry.key, idx + 1);
+      });
+    }
+    return orderMap;
+  }, [matrixLogs]);
 
   // 전체 목차 수 및 누적 완료 통계
   const summaryStats = useMemo(() => {
@@ -299,7 +348,7 @@ export default function StudyPlannerMatrixPage() {
     };
   }, [visibleSubjects, matrixLogs]);
 
-  // 전체 목차 매트릭스의 셀 맵 추출 (일정표 1일/1주일 공용 소스)
+  // 전체 목차 매트릭스 항목 추출 (일정표 1일/1주일 공용 소스)
   const allScheduleItems = useMemo(() => {
     const items: ScheduleTopicItem[] = [];
     for (const subject of subjects) {
@@ -327,7 +376,6 @@ export default function StudyPlannerMatrixPage() {
     });
   }, [subjects, matrixLogs]);
 
-  // 오늘 기준 계획 건수 (헤더 배지용)
   const todayPlannedCount = useMemo(
     () =>
       allScheduleItems.filter(
@@ -338,7 +386,6 @@ export default function StudyPlannerMatrixPage() {
     [allScheduleItems, todayISO]
   );
 
-  // 선택된 1일(`selectedDiaryDate`)에 해당하는 항목만 필터링
   const selectedDayItems = useMemo(
     () => allScheduleItems.filter((i) => i.dateISO === selectedDiaryDate),
     [allScheduleItems, selectedDiaryDate]
@@ -370,7 +417,6 @@ export default function StudyPlannerMatrixPage() {
     [selectedDayPlannedItems]
   );
 
-  // 1주간 일정표 날짜 (월 ~ 일)
   const weekDates = useMemo(
     () => getMondayStartWeekDates(selectedDiaryDate),
     [selectedDiaryDate]
@@ -394,7 +440,6 @@ export default function StudyPlannerMatrixPage() {
     };
   }, [allScheduleItems, weekDates]);
 
-  // 날짜별 타임테이블 데이터 & 동적 시간축 (dayResetHour 반영)
   const dayTimetableGrid: Record<string, TimetableSlotLog> = useMemo(
     () => timetablesByDate[selectedDiaryDate] || {},
     [timetablesByDate, selectedDiaryDate]
@@ -410,7 +455,6 @@ export default function StudyPlannerMatrixPage() {
     [dayTimetableGrid]
   );
 
-  // 타임테이블 팔레트: 선택된 날짜의 학습계획 단원만 노출
   const plannedTopicPalette = useMemo(() => {
     const seen = new Set<string>();
     const list: Array<{
@@ -462,7 +506,6 @@ export default function StudyPlannerMatrixPage() {
     };
   }, [useCustomTimetableColor, timetableBrushColor, activePaletteItem]);
 
-  // 매트릭스 토픽 ID -> 메타 빠른 조회 맵 (드래그 벌크 커밋용)
   const topicMetaMap = useMemo(() => {
     const map = new Map<
       string,
@@ -559,7 +602,6 @@ export default function StudyPlannerMatrixPage() {
 
   const dragKeySet = useMemo(() => new Set(dragSelectedKeys), [dragSelectedKeys]);
 
-  // 타임테이블 슬롯 드래그 적용
   const applyTimetableSlotAction = useCallback(
     (slotKey: string, action: "paint" | "erase") => {
       setTimetableSlots(selectedDiaryDate, (prev) => {
@@ -579,7 +621,6 @@ export default function StudyPlannerMatrixPage() {
     [selectedDiaryDate, setTimetableSlots, activeTimetableBrush]
   );
 
-  // 목차별 누적 회독(완료 셀 수) 계산
   const getTopicDoneCount = (topicId: string) => {
     let count = 0;
     for (const [key, cell] of Object.entries(matrixLogs)) {
@@ -590,7 +631,6 @@ export default function StudyPlannerMatrixPage() {
     return count;
   };
 
-  // 과목이 접혔을 때 날짜별 요약(완료 수 / 진행중 수 / 계획 수) 계산
   const getSubjectDaySummary = (subject: StudySubjectNode, dateISO: string) => {
     let doneCount = 0;
     let partialCount = 0;
@@ -713,7 +753,9 @@ export default function StudyPlannerMatrixPage() {
     setEditingSubjectForm({
       subjectId: subj.id,
       title: subj.title,
-      examStage: subj.examStage,
+      category:
+        subj.category ||
+        (subj.examStage === "1차" ? "주택관리사 1차" : "주택관리사 2차"),
       color: subj.color,
       firstUnitId: subj.units[0]?.id,
       newTopicTitle: "",
@@ -722,9 +764,11 @@ export default function StudyPlannerMatrixPage() {
 
   const handleSaveSubjectForm = () => {
     if (!editingSubjectForm) return;
+    const isFirstStage = editingSubjectForm.category.includes("1차");
     updateSubjectCustomization(editingSubjectForm.subjectId, {
       title: editingSubjectForm.title.trim() || undefined,
-      examStage: editingSubjectForm.examStage,
+      category: editingSubjectForm.category,
+      examStage: isFirstStage ? "1차" : "2차",
       color: editingSubjectForm.color,
     });
     if (editingSubjectForm.firstUnitId && editingSubjectForm.newTopicTitle.trim()) {
@@ -745,13 +789,15 @@ export default function StudyPlannerMatrixPage() {
       .filter(Boolean);
     addCustomSubject({
       title: newSubjTitle.trim(),
-      examStage: newSubjStage,
+      examStage: newSubjCategory.includes("1차") ? "1차" : "2차",
+      category: newSubjCategory,
       color: newSubjColor,
       topicTitles: topics,
     });
     setNewSubjTitle("");
     setNewSubjTopicsText("");
     setIsAddingSubject(false);
+    setBottomInlineMode("none");
   };
 
   const handleCreateCustomBook = () => {
@@ -761,97 +807,271 @@ export default function StudyPlannerMatrixPage() {
       badge: newBookBadge.trim() || newBookTitle.trim().slice(0, 6),
       coverColor: newBookColor,
       firstSubjectTitle: newBookTitle.trim(),
+      examStage: newBookCategory.includes("1차") ? "1차" : "2차",
+      category: newBookCategory,
     });
     setNewBookTitle("");
     setNewBookBadge("");
     setIsAddingBook(false);
+    setBottomInlineMode("none");
   };
+
+  const handleAddCategorySubmit = () => {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    addCustomCategory(trimmed);
+    setCategoryFilter(trimmed);
+    setNewCategoryName("");
+    setIsAddingCategory(false);
+  };
+
+  const inactiveShelfBooks = useMemo(
+    () => catalog.filter((b) => !activeBookIds.includes(b.id)),
+    [catalog, activeBookIds]
+  );
+
+  const selectedShelfBook = useMemo(
+    () =>
+      selectedShelfBookId
+        ? catalog.find((b) => b.id === selectedShelfBookId) || null
+        : null,
+    [catalog, selectedShelfBookId]
+  );
 
   return (
     <MobileAppShell>
-      {/* 상단 플래너 헤더 */}
+      {/* 상단 플래너 헤더 (③ 회독플래너 + 책 표지 가로 나열 + 확장 분류) */}
       <header className="px-4 py-3 bg-[#16161C] border-b border-white/[0.06] space-y-2.5">
         <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <div className="flex items-center gap-1.5">
-              <Calendar className="w-4 h-4 text-[#FF5A36] shrink-0" />
-              <h1 className="text-sm font-black text-white truncate">
-                전 범위 회독 플래너
-              </h1>
-              <span className="px-2 py-0.5 rounded-full bg-[#FF5A36]/15 border border-[#FF5A36]/40 font-mono text-[10px] font-black text-[#FF7A59] shrink-0">
-                {dDayToExam >= 0 ? `D-${dDayToExam}` : `D+${Math.abs(dDayToExam)}`}
-              </span>
-            </div>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <Calendar className="w-4 h-4 text-[#FF5A36] shrink-0" />
+            <h1 className="text-sm font-black text-white truncate">회독플래너</h1>
+            <span className="px-2 py-0.5 rounded-full bg-[#FF5A36]/15 border border-[#FF5A36]/40 font-mono text-[10px] font-black text-[#FF7A59] shrink-0">
+              {dDayToExam >= 0 ? `D-${dDayToExam}` : `D+${Math.abs(dDayToExam)}`}
+            </span>
+          </div>
 
-            {/* 적용 중인 다중 교재 + 커스텀 편집 모달 오픈 버튼 */}
-            <div className="mt-1 flex items-center gap-2 max-w-full">
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsManagerModalOpen(true)}
+              className="px-2 py-1 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-[10px] font-black text-slate-200 flex items-center gap-1 transition"
+            >
+              <SlidersHorizontal className="w-3 h-3 text-[#FF7A59]" />
+              <span>과목·교재 편집</span>
+            </button>
+
+            <div className="flex items-center bg-[#0D0D11] p-0.5 rounded-xl border border-white/[0.08] text-[10px] font-black">
               <button
                 type="button"
-                onClick={() => setIsManagerModalOpen(true)}
-                className="inline-flex items-center gap-1.5 text-[10.5px] font-bold text-slate-300 hover:text-white transition min-w-0"
+                onClick={() => setViewMode("matrix")}
+                className={`px-2.5 py-1.5 rounded-lg transition ${
+                  viewMode === "matrix"
+                    ? "bg-[#FF5A36] text-white"
+                    : "text-slate-400 hover:text-white"
+                }`}
               >
-                <BookOpen className="w-3 h-3 text-amber-400 shrink-0" />
-                <span className="truncate">
-                  {activeBooks.map((b) => b.badge).join(" + ")} ({activeBooks.length}권)
-                </span>
-                <span className="px-1.5 py-0.5 rounded-md bg-white/[0.08] text-[9.5px] text-[#FF7A59] font-black flex items-center gap-0.5 shrink-0">
-                  <SlidersHorizontal className="w-2.5 h-2.5" />
-                  <span>과목·교재 편집</span>
+                목차 매트릭스
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("diary")}
+                className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 ${
+                  viewMode === "diary"
+                    ? "bg-[#FF5A36] text-white"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <span>일정표</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono ${
+                    viewMode === "diary"
+                      ? "bg-white/20 text-white"
+                      : "bg-sky-500/20 text-sky-300"
+                  }`}
+                >
+                  {todayPlannedCount}
                 </span>
               </button>
             </div>
           </div>
-
-          {/* 목차 매트릭스 / 일정표 전환 */}
-          <div className="flex items-center bg-[#0D0D11] p-0.5 rounded-xl border border-white/[0.08] text-[10px] font-black shrink-0">
-            <button
-              type="button"
-              onClick={() => setViewMode("matrix")}
-              className={`px-2.5 py-1.5 rounded-lg transition ${
-                viewMode === "matrix" ? "bg-[#FF5A36] text-white" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              목차 매트릭스
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("diary")}
-              className={`px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 ${
-                viewMode === "diary" ? "bg-[#FF5A36] text-white" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <span>일정표</span>
-              <span
-                className={`px-1.5 py-0.2 rounded-full text-[9px] font-mono ${
-                  viewMode === "diary"
-                    ? "bg-white/20 text-white"
-                    : "bg-sky-500/20 text-sky-300"
-                }`}
-              >
-                {todayPlannedCount}
-              </span>
-            </button>
-          </div>
         </div>
+
+        {/* ③ 책 표지(Book Cover) 이미지 가로 나열 책장 */}
+        <div className="flex items-stretch gap-2 overflow-x-auto pb-1 no-scrollbar">
+          {catalog.map((book) => {
+            const isActive = activeBookIds.includes(book.id);
+            const isSelectedShelf = selectedShelfBookId === book.id;
+            const topicCount = book.subjects.reduce(
+              (acc, s) => acc + s.units.reduce((uAcc, u) => uAcc + u.topics.length, 0),
+              0
+            );
+
+            return (
+              <div
+                key={book.id}
+                className={`relative shrink-0 w-[108px] rounded-xl overflow-hidden border transition cursor-pointer select-none flex flex-col justify-between ${
+                  isSelectedShelf
+                    ? "ring-2 ring-white border-white"
+                    : isActive
+                      ? "border-[#FF5A36]/70 shadow-lg"
+                      : "border-white/[0.08] opacity-65 hover:opacity-100"
+                }`}
+                style={{
+                  background: `linear-gradient(145deg, ${book.coverColor}33 0%, #121218 85%)`,
+                }}
+                onClick={() => {
+                  if (!isActive) {
+                    toggleBookActive(book.id);
+                  } else {
+                    setSelectedShelfBookId(isSelectedShelf ? null : book.id);
+                  }
+                }}
+                title={
+                  isActive
+                    ? `${book.title} (클릭하여 단원추가·편집·서재로 빼기)`
+                    : `${book.title} (서재에서 꺼내 플래너에 추가 — 이전 기록 보존됨)`
+                }
+              >
+                {/* 책등 입체 바 */}
+                <div
+                  className="absolute left-0 top-0 bottom-0 w-1.5"
+                  style={{ backgroundColor: book.coverColor }}
+                />
+                <div className="pl-2.5 pr-2 pt-2 pb-1.5 space-y-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span
+                      className="px-1.5 py-0.2 rounded text-[8.5px] font-black text-white truncate max-w-[64px]"
+                      style={{ backgroundColor: book.coverColor }}
+                    >
+                      {book.badge}
+                    </span>
+                    <span
+                      className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black shrink-0 ${
+                        isActive
+                          ? "bg-emerald-500 text-white"
+                          : "bg-white/10 text-slate-300"
+                      }`}
+                    >
+                      {isActive ? "✓" : "+"}
+                    </span>
+                  </div>
+                  <div className="text-[10px] font-black text-white line-clamp-2 leading-tight min-h-[24px]">
+                    {book.title}
+                  </div>
+                  <div className="text-[8.5px] font-mono text-slate-300 flex items-center justify-between">
+                    <span>{topicCount}단원</span>
+                    <span className={isActive ? "text-emerald-300" : "text-slate-400"}>
+                      {isActive ? "적용중" : "서재"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* 책 표지 끝: + 책 추가 미니 표지 카드 */}
+          <button
+            type="button"
+            onClick={() => {
+              setBottomInlineMode("book");
+              setIsManagerModalOpen(true);
+              setIsAddingBook(true);
+            }}
+            className="shrink-0 w-[84px] rounded-xl border border-dashed border-white/[0.2] hover:border-[#FF5A36] bg-[#111116] hover:bg-[#191922] p-2 flex flex-col items-center justify-center gap-1 text-slate-300 hover:text-white transition"
+          >
+            <Plus className="w-4 h-4 text-[#FF7A59]" />
+            <span className="text-[10px] font-black">책 추가</span>
+          </button>
+        </div>
+
+        {/* 책 표지 클릭 시 나타나는 빠른 책 관리 액션 바 */}
+        {selectedShelfBook && (
+          <div className="p-2.5 rounded-xl bg-[#111117] border border-white/[0.1] flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: selectedShelfBook.coverColor }}
+              />
+              <span className="font-black text-white truncate">
+                {selectedShelfBook.title}
+              </span>
+              <span className="text-[9.5px] text-emerald-300 shrink-0">
+                (빼도 기록 보존)
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsManagerModalOpen(true);
+                  setSelectedShelfBookId(null);
+                }}
+                className="px-2 py-1 rounded-lg bg-white/[0.08] hover:bg-white/[0.14] text-white font-bold"
+              >
+                과목·단원 편집
+              </button>
+              {activeBookIds.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    toggleBookActive(selectedShelfBook.id);
+                    setSelectedShelfBookId(null);
+                  }}
+                  className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 font-black"
+                >
+                  서재로 빼기(데이터유지)
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setSelectedShelfBookId(null)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {viewMode === "matrix" && (
           <div className="flex flex-wrap items-center justify-between gap-2 pt-0.5">
-            {/* 1차/2차 필터 & 일괄 접기/펴기 */}
-            <div className="flex items-center gap-1">
-              {(["ALL", "1차", "2차"] as const).map((stage) => (
+            {/* ③ 확장형 분류(Category) 필터 & 모두 접기/펴기 */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setCategoryFilter("ALL")}
+                className={`px-2 py-1 rounded-lg text-[10px] font-black border transition ${
+                  categoryFilter === "ALL"
+                    ? "bg-white text-slate-950 border-white"
+                    : "bg-[#0E0E12] text-slate-400 border-white/[0.08] hover:text-white"
+                }`}
+              >
+                전체
+              </button>
+              {usedCategories.map((cat) => (
                 <button
-                  key={stage}
+                  key={cat}
                   type="button"
-                  onClick={() => setStageFilter(stage)}
+                  onClick={() => setCategoryFilter(cat)}
                   className={`px-2 py-1 rounded-lg text-[10px] font-black border transition ${
-                    stageFilter === stage
+                    categoryFilter === cat
                       ? "bg-white text-slate-950 border-white"
                       : "bg-[#0E0E12] text-slate-400 border-white/[0.08] hover:text-white"
                   }`}
                 >
-                  {stage === "ALL" ? "전체" : stage}
+                  {cat}
                 </button>
               ))}
+              <button
+                type="button"
+                onClick={() => setIsAddingCategory((prev) => !prev)}
+                className="px-2 py-1 rounded-lg bg-[#0E0E12] border border-dashed border-white/[0.15] text-[10px] font-bold text-slate-300 hover:text-white flex items-center gap-0.5"
+                title="새 분류 추가"
+              >
+                <Tag className="w-3 h-3 text-[#FF7A59]" />
+                <span>+분류</span>
+              </button>
 
               <button
                 type="button"
@@ -872,39 +1092,102 @@ export default function StudyPlannerMatrixPage() {
               </button>
             </div>
 
-            {/* 날짜 윈도우 이동 */}
+            {/* ② 오늘 기준 날짜 윈도우 이동 */}
             <div className="flex items-center gap-1 text-[10px] font-bold">
               <button
                 type="button"
                 onClick={() => setWindowStartOffset((prev) => prev - 7)}
+                className="px-1.5 py-1 rounded-lg bg-[#0E0E12] border border-white/[0.08] text-slate-300 hover:text-white"
+                title="7일 전"
+              >
+                -7일
+              </button>
+              <button
+                type="button"
+                onClick={() => setWindowStartOffset((prev) => prev - 1)}
                 className="p-1 rounded-lg bg-[#0E0E12] border border-white/[0.08] text-slate-300 hover:text-white"
-                title="이전 7일"
+                title="1일 전"
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
-                onClick={() => setWindowStartOffset(-12)}
-                className="px-2 py-1 rounded-lg bg-[#0E0E12] border border-[#FF5A36]/40 text-[#FF7A59] hover:bg-[#FF5A36]/15"
+                onClick={() => setWindowStartOffset(0)}
+                className={`px-2 py-1 rounded-lg border font-black ${
+                  windowStartOffset === 0
+                    ? "bg-[#FF5A36] border-[#FF5A36] text-white"
+                    : "bg-[#0E0E12] border-[#FF5A36]/40 text-[#FF7A59]"
+                }`}
+                title="오늘 날짜가 첫 번째 열에 오도록 이동"
               >
-                오늘
+                오늘 시작
+              </button>
+              <button
+                type="button"
+                onClick={() => setWindowStartOffset(-3)}
+                className={`px-2 py-1 rounded-lg border font-bold ${
+                  windowStartOffset === -3
+                    ? "bg-white/15 border-white/30 text-white"
+                    : "bg-[#0E0E12] border-white/[0.08] text-slate-400 hover:text-white"
+                }`}
+                title="최근 3일과 앞으로 14일 함께 보기"
+              >
+                오늘 중심
+              </button>
+              <button
+                type="button"
+                onClick={() => setWindowStartOffset((prev) => prev + 1)}
+                className="p-1 rounded-lg bg-[#0E0E12] border border-white/[0.08] text-slate-300 hover:text-white"
+                title="1일 후"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setWindowStartOffset((prev) => prev + 7)}
-                className="p-1 rounded-lg bg-[#0E0E12] border border-white/[0.08] text-slate-300 hover:text-white"
-                title="다음 7일"
+                className="px-1.5 py-1 rounded-lg bg-[#0E0E12] border border-white/[0.08] text-slate-300 hover:text-white"
+                title="7일 후"
               >
-                <ChevronRight className="w-3.5 h-3.5" />
+                +7일
               </button>
             </div>
+          </div>
+        )}
+
+        {/* 새 분류 추가 인라인 바 */}
+        {isAddingCategory && viewMode === "matrix" && (
+          <div className="p-2 rounded-xl bg-[#0E0E14] border border-[#FF5A36]/40 flex items-center gap-2">
+            <input
+              type="text"
+              value={newCategoryName}
+              onChange={(e) => setNewCategoryName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") handleAddCategorySubmit();
+              }}
+              placeholder="새 분류 입력 (예: 영어, 수학, 과학, 컴퓨터)"
+              className="flex-1 px-2.5 py-1 rounded-lg bg-[#16161E] border border-white/[0.1] text-[11px] text-white"
+            />
+            <button
+              type="button"
+              onClick={handleAddCategorySubmit}
+              className="px-3 py-1 rounded-lg bg-[#FF5A36] text-white text-[10.5px] font-black"
+            >
+              분류 추가
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsAddingCategory(false)}
+              className="p-1 text-slate-400 hover:text-white"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         )}
       </header>
 
       {viewMode === "matrix" ? (
         <div className="flex-1 flex flex-col">
-          {/* 상단 요약 바 & 범례 */}
+          {/* 상단 요약 바 & 회독 농도(Shade) 범례 */}
           <div className="px-4 py-2 bg-[#131318] border-b border-white/[0.06] flex flex-wrap items-center justify-between gap-2 text-[10.5px]">
             <div className="flex items-center gap-3 font-bold">
               <span className="text-slate-300">
@@ -912,7 +1195,9 @@ export default function StudyPlannerMatrixPage() {
                 <strong className="font-mono text-white">
                   {summaryStats.coveredTopics}/{summaryStats.totalTopics}
                 </strong>
-                <span className="text-[#FF7A59] font-mono ml-1">({summaryStats.coveragePct}%)</span>
+                <span className="text-[#FF7A59] font-mono ml-1">
+                  ({summaryStats.coveragePct}%)
+                </span>
               </span>
               <span className="text-slate-400">
                 완료 <strong className="text-emerald-300 font-mono">{summaryStats.totalDoneCells}</strong> · 진행중{" "}
@@ -921,10 +1206,24 @@ export default function StudyPlannerMatrixPage() {
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold">
-              <span className="flex items-center gap-1">
-                <span className="w-2.5 h-2.5 rounded-sm bg-[#FF5A36]" />
-                <span>완료(1R)</span>
+            <div className="flex items-center gap-2 text-[10px] text-slate-400 font-bold flex-wrap">
+              <span className="flex items-center gap-1" title="회독이 쌓일수록 색이 진해집니다">
+                <span>회독농도</span>
+                {[1, 2, 3, 4, 5].map((r) => {
+                  const st = getRoundColorStyle("#FF5A36", r);
+                  return (
+                    <span
+                      key={r}
+                      className="w-3 h-3 rounded-sm inline-flex items-center justify-center text-[7px] font-mono text-white"
+                      style={{
+                        backgroundColor: st.backgroundColor,
+                        border: `1px solid ${st.borderColor}`,
+                      }}
+                    >
+                      {r}
+                    </span>
+                  );
+                })}
               </span>
               <span className="flex items-center gap-1">
                 <span className="w-2.5 h-2.5 rounded-sm border border-amber-400 bg-amber-500/30" />
@@ -970,7 +1269,6 @@ export default function StudyPlannerMatrixPage() {
               })}
             </div>
 
-            {/* 색상 커스텀 브러시 팔레트 */}
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                 <Palette className="w-3 h-3 text-amber-300" />
@@ -1002,7 +1300,7 @@ export default function StudyPlannerMatrixPage() {
                 />
               ))}
               <label
-                className="w-5 h-5 rounded-full border border-white/30 overflow-hidden cursor-pointer flex items-center justify-center bg-[#1A1A22]"
+                className="w-5 h-5 rounded-full border border-white/30 overflow-hidden cursor-pointer flex items-center justify-center bg-[#1A1A22] relative"
                 title="직접 색상 지정"
               >
                 <input
@@ -1046,10 +1344,10 @@ export default function StudyPlannerMatrixPage() {
             <table className="border-collapse w-max min-w-full text-left select-none">
               <thead className="sticky top-0 z-30 bg-[#16161D]">
                 <tr>
-                  <th className="sticky left-0 z-40 w-[166px] sm:w-[238px] min-w-[166px] sm:min-w-[238px] bg-[#181820] border-b border-r border-white/[0.12] px-2.5 py-2 align-bottom">
+                  <th className="sticky left-0 z-40 w-[186px] sm:w-[258px] min-w-[186px] sm:min-w-[258px] bg-[#181820] border-b border-r border-white/[0.12] px-2.5 py-2 align-bottom">
                     <div className="flex items-center justify-between text-[10px] font-black text-slate-300">
-                      <span>차수 · 과목 · 목차</span>
-                      <span className="text-slate-500 font-mono">누적</span>
+                      <span>분류 · 책/과목 · 단원</span>
+                      <span className="text-slate-500 font-mono">회독</span>
                     </div>
                   </th>
                   {dateColumns.map((col) => (
@@ -1063,29 +1361,40 @@ export default function StudyPlannerMatrixPage() {
                             : "bg-[#16161D]"
                       }`}
                     >
-                      <div
-                        className={`text-[9px] font-mono font-black leading-none ${
-                          col.isToday ? "text-[#FF7A59]" : "text-slate-400"
-                        }`}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedDiaryDate(col.dateISO);
+                          setDiaryScope("day");
+                          setViewMode("diary");
+                        }}
+                        className="w-full hover:opacity-80 transition"
+                        title={`${col.dateISO} 1일 일정표 열기`}
                       >
-                        {col.dDayLabel}
-                      </div>
-                      <div
-                        className={`text-[10px] font-mono font-bold mt-1 leading-none ${
-                          col.isToday
-                            ? "text-white"
-                            : col.dayOfWeek === 0
-                              ? "text-rose-400"
-                              : col.dayOfWeek === 6
-                                ? "text-sky-400"
-                                : "text-slate-300"
-                        }`}
-                      >
-                        {col.mmdd}
-                      </div>
-                      <div className="text-[8.5px] text-slate-500 mt-0.5 leading-none">
-                        {col.isToday ? "오늘" : col.weekday}
-                      </div>
+                        <div
+                          className={`text-[9px] font-mono font-black leading-none ${
+                            col.isToday ? "text-[#FF7A59]" : "text-slate-400"
+                          }`}
+                        >
+                          {col.dDayLabel}
+                        </div>
+                        <div
+                          className={`text-[10px] font-mono font-bold mt-1 leading-none ${
+                            col.isToday
+                              ? "text-white"
+                              : col.dayOfWeek === 0
+                                ? "text-rose-400"
+                                : col.dayOfWeek === 6
+                                  ? "text-sky-400"
+                                  : "text-slate-300"
+                          }`}
+                        >
+                          {col.mmdd}
+                        </div>
+                        <div className="text-[8.5px] text-slate-500 mt-0.5 leading-none">
+                          {col.isToday ? "오늘" : col.weekday}
+                        </div>
+                      </button>
                     </th>
                   ))}
                 </tr>
@@ -1114,6 +1423,7 @@ export default function StudyPlannerMatrixPage() {
                       subjectTotalDone={subjectTotalDone}
                       dateColumns={dateColumns}
                       matrixLogs={matrixLogs}
+                      topicDoneOrderMap={topicDoneOrderMap}
                       chapterTotals={chapterTotals}
                       dragMode={dragMode}
                       dragKeySet={dragKeySet}
@@ -1125,9 +1435,231 @@ export default function StudyPlannerMatrixPage() {
                       onCellPointerEnter={(key) => {
                         if (isMatrixDragging) extendMatrixDrag(key);
                       }}
+                      onAddInlineTopic={(unitId, title, keyword) =>
+                        addCustomTopic(unitId, title, keyword)
+                      }
+                      onDeleteCustomTopic={(unitId, topicId) =>
+                        deleteCustomTopic(unitId, topicId)
+                      }
                     />
                   );
                 })}
+
+                {/* ① 매트릭스 하단: + 책 추가 / + 과목 추가 / 서재 책 다시 넣기 */}
+                <tr className="border-t border-white/[0.1] bg-[#121218]">
+                  <td
+                    colSpan={dateColumns.length + 1}
+                    className="px-3 py-3"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setBottomInlineMode((prev) =>
+                            prev === "book" ? "none" : "book"
+                          )
+                        }
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-black flex items-center gap-1.5 transition ${
+                          bottomInlineMode === "book"
+                            ? "bg-[#FF5A36] border-[#FF5A36] text-white"
+                            : "bg-[#1A1A23] border-dashed border-white/[0.2] text-white hover:border-[#FF5A36]"
+                        }`}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>책 추가</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setBottomInlineMode((prev) =>
+                            prev === "subject" ? "none" : "subject"
+                          )
+                        }
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-black flex items-center gap-1.5 transition ${
+                          bottomInlineMode === "subject"
+                            ? "bg-sky-500 border-sky-400 text-white"
+                            : "bg-[#1A1A23] border-white/[0.12] text-slate-200 hover:border-sky-400"
+                        }`}
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>과목 추가</span>
+                      </button>
+
+                      {inactiveShelfBooks.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap pl-1">
+                          <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
+                            <Library className="w-3 h-3 text-amber-300" />
+                            <span>서재(기록보존):</span>
+                          </span>
+                          {inactiveShelfBooks.map((book) => (
+                            <button
+                              key={book.id}
+                              type="button"
+                              onClick={() => toggleBookActive(book.id)}
+                              className="px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.12] border border-white/[0.1] text-[10px] font-bold text-slate-200 flex items-center gap-1"
+                            >
+                              <Plus className="w-2.5 h-2.5 text-emerald-400" />
+                              <span>{book.badge}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 인라인 새 책 추가 폼 */}
+                    {bottomInlineMode === "book" && (
+                      <div className="mt-3 p-3.5 rounded-2xl bg-[#181822] border border-[#FF5A36]/45 max-w-md space-y-2.5">
+                        <div className="text-xs font-black text-white">
+                          새 책(교재) 추가하기
+                        </div>
+                        <input
+                          type="text"
+                          value={newBookTitle}
+                          onChange={(e) => setNewBookTitle(e.target.value)}
+                          placeholder="책 제목 (예: 수학의 정석, 토익 보카, 동형 모고)"
+                          className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
+                        />
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            value={newBookBadge}
+                            onChange={(e) => setNewBookBadge(e.target.value)}
+                            placeholder="짧은 배지 (예: 수1, 토익)"
+                            className="px-3 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[11px] text-white"
+                          />
+                          <select
+                            value={newBookCategory}
+                            onChange={(e) => setNewBookCategory(e.target.value)}
+                            className="px-2.5 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[11px] font-bold text-white"
+                          >
+                            {categories.map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-slate-400">
+                            표지 색:
+                          </span>
+                          {CUSTOM_SUBJECT_COLOR_PALETTE.slice(0, 8).map((hex) => (
+                            <button
+                              key={hex}
+                              type="button"
+                              onClick={() => setNewBookColor(hex)}
+                              className={`w-4 h-4 rounded-full border ${
+                                newBookColor === hex
+                                  ? "border-white scale-110 ring-1 ring-white"
+                                  : "border-white/20"
+                              }`}
+                              style={{ backgroundColor: hex }}
+                            />
+                          ))}
+                          <input
+                            type="color"
+                            value={newBookColor}
+                            onChange={(e) => setNewBookColor(e.target.value)}
+                            className="w-6 h-5 bg-transparent cursor-pointer"
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setBottomInlineMode("none")}
+                            className="px-3 py-1.5 rounded-xl bg-white/[0.06] text-xs font-bold text-slate-300"
+                          >
+                            취소
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCreateCustomBook}
+                            className="px-3.5 py-1.5 rounded-xl bg-[#FF5A36] text-xs font-black text-white"
+                          >
+                            책 추가 &amp; 플래너 적용
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 인라인 새 과목 추가 폼 */}
+                    {bottomInlineMode === "subject" && (
+                      <div className="mt-3 p-3.5 rounded-2xl bg-[#181822] border border-sky-500/45 max-w-md space-y-2.5">
+                        <div className="text-xs font-black text-white">
+                          새 과목 추가하기
+                        </div>
+                        <div className="grid grid-cols-[1fr_auto] gap-2">
+                          <input
+                            type="text"
+                            value={newSubjTitle}
+                            onChange={(e) => setNewSubjTitle(e.target.value)}
+                            placeholder="과목명 (예: 미적분, 영문법, 물리)"
+                            className="px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
+                          />
+                          <select
+                            value={newSubjCategory}
+                            onChange={(e) => setNewSubjCategory(e.target.value)}
+                            className="px-2.5 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
+                          >
+                            {categories.map((cat) => (
+                              <option key={cat} value={cat}>
+                                {cat}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <input
+                          type="text"
+                          value={newSubjTopicsText}
+                          onChange={(e) => setNewSubjTopicsText(e.target.value)}
+                          placeholder="초기 단원 (쉼표 구분, 예: 1단원, 2단원, 3단원)"
+                          className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
+                        />
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[10px] font-bold text-slate-400">
+                            과목 색:
+                          </span>
+                          {CUSTOM_SUBJECT_COLOR_PALETTE.slice(0, 8).map((hex) => (
+                            <button
+                              key={hex}
+                              type="button"
+                              onClick={() => setNewSubjColor(hex)}
+                              className={`w-4 h-4 rounded-full border ${
+                                newSubjColor === hex
+                                  ? "border-white scale-110 ring-1 ring-white"
+                                  : "border-white/20"
+                              }`}
+                              style={{ backgroundColor: hex }}
+                            />
+                          ))}
+                          <input
+                            type="color"
+                            value={newSubjColor}
+                            onChange={(e) => setNewSubjColor(e.target.value)}
+                            className="w-6 h-5 bg-transparent cursor-pointer"
+                          />
+                        </div>
+                        <div className="flex justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => setBottomInlineMode("none")}
+                            className="px-3 py-1.5 rounded-xl bg-white/[0.06] text-xs font-bold text-slate-300"
+                          >
+                            취소
+                          </button>
+                          <button
+                            type="button"
+                            onClick={handleCreateCustomSubject}
+                            className="px-3.5 py-1.5 rounded-xl bg-sky-500 text-xs font-black text-white"
+                          >
+                            과목 생성
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -1137,7 +1669,6 @@ export default function StudyPlannerMatrixPage() {
         /* 플래너 일정표: 1일(오늘 기준) / 1주간 탭 + 동적 날짜·시간 + 드래그 타임테이블 */
         /* ========================================================== */
         <div className="px-4 py-4 space-y-4">
-          {/* 일정표 상단 컨트롤: 1일/1주간 탭 + 날짜 변경 기준 시각 + 날짜 네비게이터 */}
           <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center bg-[#0D0D11] p-0.5 rounded-xl border border-white/[0.08] text-[10.5px] font-black">
@@ -1165,14 +1696,12 @@ export default function StudyPlannerMatrixPage() {
                 </button>
               </div>
 
-              {/* 날짜 변경 기준 (Day Reset Hour) 설정 */}
               <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-300">
                 <span className="text-slate-400">날짜변경 기준</span>
                 <select
                   value={dayResetHour}
                   onChange={(e) => setDayResetHour(Number(e.target.value))}
                   className="px-2 py-1 rounded-lg bg-[#0E0E12] border border-white/[0.12] text-[10.5px] font-mono font-black text-amber-300 focus:outline-none focus:border-[#FF5A36]"
-                  title="하루가 시작되는 기준 시각 (예: 04시 기준 시 새벽 3시는 전날로 집계)"
                 >
                   {[0, 1, 2, 3, 4, 5, 6].map((h) => (
                     <option key={h} value={h}>
@@ -1183,7 +1712,6 @@ export default function StudyPlannerMatrixPage() {
               </div>
             </div>
 
-            {/* 날짜 / 주간 이동 바 */}
             {diaryScope === "day" ? (
               <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/[0.06]">
                 <div className="flex items-center gap-1.5">
@@ -1191,7 +1719,6 @@ export default function StudyPlannerMatrixPage() {
                     type="button"
                     onClick={() => setSelectedDiaryDate(addDaysISO(selectedDiaryDate, -1))}
                     className="p-1.5 rounded-lg bg-[#101015] border border-white/[0.08] text-slate-300 hover:text-white"
-                    title="이전 날짜"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
@@ -1207,7 +1734,6 @@ export default function StudyPlannerMatrixPage() {
                     type="button"
                     onClick={() => setSelectedDiaryDate(addDaysISO(selectedDiaryDate, 1))}
                     className="p-1.5 rounded-lg bg-[#101015] border border-white/[0.08] text-slate-300 hover:text-white"
-                    title="다음 날짜"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
@@ -1240,7 +1766,6 @@ export default function StudyPlannerMatrixPage() {
                     type="button"
                     onClick={() => setSelectedDiaryDate(addDaysISO(selectedDiaryDate, -7))}
                     className="p-1.5 rounded-lg bg-[#101015] border border-white/[0.08] text-slate-300 hover:text-white"
-                    title="이전 주"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
@@ -1252,7 +1777,6 @@ export default function StudyPlannerMatrixPage() {
                     type="button"
                     onClick={() => setSelectedDiaryDate(addDaysISO(selectedDiaryDate, 7))}
                     className="p-1.5 rounded-lg bg-[#101015] border border-white/[0.08] text-slate-300 hover:text-white"
-                    title="다음 주"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
@@ -1279,7 +1803,6 @@ export default function StudyPlannerMatrixPage() {
 
           {diaryScope === "day" ? (
             <>
-              {/* 선택된 날짜(1일 기준) 계획 요약 & 빠른 단원 계획 추가 */}
               <div className="p-3 rounded-2xl bg-[#16161C] border border-white/[0.06] space-y-2.5">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5 text-xs font-black text-white">
@@ -1302,7 +1825,6 @@ export default function StudyPlannerMatrixPage() {
                   )}
                 </div>
 
-                {/* 이 날짜에 단원 계획 바로 추가 */}
                 {allActiveTopicEntries.length > 0 && (
                   <div className="flex items-center gap-1.5">
                     <select
@@ -1359,6 +1881,8 @@ export default function StudyPlannerMatrixPage() {
                     const isDone = item.cell.status === "done";
                     const estMinutes = item.cell.minutes ?? item.topic.estimatedMinutes;
                     const itemColor = item.cell.customColor || item.subject.color;
+                    const roundNum = topicDoneOrderMap.get(item.key) || getTopicDoneCount(item.topic.id);
+                    const roundShade = getRoundColorStyle(itemColor, Math.max(1, roundNum));
 
                     return (
                       <div
@@ -1372,26 +1896,39 @@ export default function StudyPlannerMatrixPage() {
                                 className="px-1.5 py-0.5 rounded text-[9.5px] font-black text-white"
                                 style={{ backgroundColor: itemColor }}
                               >
-                                {item.subject.examStage} · {item.subject.shortTitle}
+                                {item.subject.category || item.subject.examStage} ·{" "}
+                                {item.subject.shortTitle}
                               </span>
                               <span
                                 className={`px-1.5 py-0.5 rounded text-[9.5px] font-black ${
                                   isDone
-                                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                                    ? ""
                                     : isPartial
                                       ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
                                       : "bg-sky-500/15 text-sky-300 border border-sky-500/30"
                                 }`}
+                                style={
+                                  isDone
+                                    ? {
+                                        backgroundColor: roundShade.backgroundColor,
+                                        border: `1px solid ${roundShade.borderColor}`,
+                                        color: roundShade.textColor,
+                                      }
+                                    : undefined
+                                }
                               >
-                                {isDone ? "✓ 완료" : isPartial ? "◐ 진행중" : "학습계획"} ·{" "}
-                                {item.cell.keyword}
+                                {isDone
+                                  ? `${roundNum}R 완료`
+                                  : isPartial
+                                    ? "◐ 진행중"
+                                    : "학습계획"}{" "}
+                                · {item.cell.keyword}
                               </span>
 
-                              {/* 셀 커스텀 색상 직접 변경 */}
                               <label
                                 className="w-4 h-4 rounded-full border border-white/30 cursor-pointer relative overflow-hidden shrink-0"
                                 style={{ backgroundColor: itemColor }}
-                                title="색상 커스텀 변경"
+                                title="색상 커스텀 변경 (타임테이블 연동)"
                               >
                                 <input
                                   type="color"
@@ -1419,12 +1956,11 @@ export default function StudyPlannerMatrixPage() {
                               <span className="truncate">{item.topic.title}</span>
                             </div>
                             <div className="text-[10px] text-slate-400 truncate">
-                              {item.unitTitle}
+                              {item.unitTitle} · 누적 {getTopicDoneCount(item.topic.id)}R
                             </div>
                           </div>
                         </div>
 
-                        {/* 날짜 이동 & 목표 시간 동적 조절 바 */}
                         <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/[0.06] text-[10px]">
                           <div className="flex items-center gap-1">
                             <span className="text-slate-400 font-bold">날짜:</span>
@@ -1507,7 +2043,7 @@ export default function StudyPlannerMatrixPage() {
                 </div>
               )}
 
-              {/* 선택된 날짜 전용 10분 단위 타임테이블 (드래그 연속 색칠 + 색상 커스텀 + 동적 시작시각) */}
+              {/* 선택된 날짜 전용 10분 단위 타임테이블 */}
               <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-3 shadow-xl">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 text-xs font-black text-white">
@@ -1522,7 +2058,6 @@ export default function StudyPlannerMatrixPage() {
                   </span>
                 </div>
 
-                {/* 브러시 선택: 선택 날짜 계획 단원 + 커스텀 색상 */}
                 <div className="space-y-2">
                   {plannedTopicPalette.length > 0 && (
                     <div className="flex flex-wrap gap-1.5">
@@ -1558,7 +2093,6 @@ export default function StudyPlannerMatrixPage() {
                     </div>
                   )}
 
-                  {/* 커스텀 브러시 색상 팔레트 */}
                   <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[10px]">
                     <span className="text-slate-400 font-bold flex items-center gap-1">
                       <Palette className="w-3 h-3 text-amber-300" />
@@ -1578,13 +2112,9 @@ export default function StudyPlannerMatrixPage() {
                             : "border-white/20 opacity-80 hover:opacity-100"
                         }`}
                         style={{ backgroundColor: hex }}
-                        title={`브러시 색 ${hex}`}
                       />
                     ))}
-                    <label
-                      className="px-2 py-0.5 rounded-md bg-[#111116] border border-white/[0.1] text-[9.5px] font-bold text-slate-300 cursor-pointer flex items-center gap-1 relative"
-                      title="직접 색상 선택"
-                    >
+                    <label className="px-2 py-0.5 rounded-md bg-[#111116] border border-white/[0.1] text-[9.5px] font-bold text-slate-300 cursor-pointer flex items-center gap-1 relative">
                       <span
                         className="w-2.5 h-2.5 rounded-full"
                         style={{ backgroundColor: timetableBrushColor }}
@@ -1681,9 +2211,6 @@ export default function StudyPlannerMatrixPage() {
               </div>
             </>
           ) : (
-            /* ========================================================== */
-            /* 1주간 일정표 (월 ~ 일 7일 카드 뷰) */
-            /* ========================================================== */
             <div className="space-y-2.5">
               {weekDates.map((dateISO) => {
                 const dayItems = allScheduleItems.filter((i) => i.dateISO === dateISO);
@@ -1801,7 +2328,6 @@ export default function StudyPlannerMatrixPage() {
                                     deleteMatrixCell(item.topic.id, item.dateISO)
                                   }
                                   className="p-1 rounded-lg text-slate-500 hover:text-rose-300"
-                                  title="계획 해제"
                                 >
                                   <X className="w-3 h-3" />
                                 </button>
@@ -1844,17 +2370,17 @@ export default function StudyPlannerMatrixPage() {
               </Link>
             </div>
 
-            {/* 1. 다중 교재 선택 & 커스텀 교재 추가 */}
+            {/* 1. 다중 교재 선택 & 커스텀 교재 추가 (책 빼도 데이터 보존) */}
             <div className="space-y-2">
               <div className="flex items-center justify-between text-[11px] font-bold text-slate-300">
-                <span>적용 교재 다중 선택 ({activeBookIds.length}권 선택됨)</span>
+                <span>적용 책 선택 ({activeBookIds.length}권 · 빼도 기록 보존)</span>
                 <button
                   type="button"
                   onClick={() => setIsAddingBook((prev) => !prev)}
                   className="text-[#FF7A59] font-black flex items-center gap-0.5"
                 >
                   <Plus className="w-3 h-3" />
-                  <span>새 교재 추가</span>
+                  <span>새 책 추가</span>
                 </button>
               </div>
 
@@ -1864,7 +2390,7 @@ export default function StudyPlannerMatrixPage() {
                     type="text"
                     value={newBookTitle}
                     onChange={(e) => setNewBookTitle(e.target.value)}
-                    placeholder="교재명 (예: 2026 동형 모의고사 문제집)"
+                    placeholder="책 제목 (예: 수학의 정석, 토익 보카)"
                     className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
                   />
                   <div className="grid grid-cols-2 gap-2">
@@ -1872,11 +2398,24 @@ export default function StudyPlannerMatrixPage() {
                       type="text"
                       value={newBookBadge}
                       onChange={(e) => setNewBookBadge(e.target.value)}
-                      placeholder="짧은 배지 (예: 동형모고)"
+                      placeholder="짧은 배지"
                       className="px-3 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[11px] text-white"
                     />
-                    <div className="flex items-center gap-1.5 px-2 py-1 rounded-xl bg-[#0E0E12] border border-white/[0.1]">
-                      <span className="text-[10px] text-slate-400">색상</span>
+                    <select
+                      value={newBookCategory}
+                      onChange={(e) => setNewBookCategory(e.target.value)}
+                      className="px-2 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[11px] font-bold text-white"
+                    >
+                      {categories.map((cat) => (
+                        <option key={cat} value={cat}>
+                          {cat}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] text-slate-400">표지색</span>
                       <input
                         type="color"
                         value={newBookColor}
@@ -1884,22 +2423,22 @@ export default function StudyPlannerMatrixPage() {
                         className="w-6 h-6 bg-transparent cursor-pointer"
                       />
                     </div>
-                  </div>
-                  <div className="flex justify-end gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingBook(false)}
-                      className="px-3 py-1.5 rounded-xl bg-white/[0.06] text-[10.5px] font-bold text-slate-300"
-                    >
-                      취소
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleCreateCustomBook}
-                      className="px-3 py-1.5 rounded-xl bg-[#FF5A36] text-[10.5px] font-black text-white"
-                    >
-                      교재 추가 &amp; 적용
-                    </button>
+                    <div className="flex gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingBook(false)}
+                        className="px-3 py-1.5 rounded-xl bg-white/[0.06] text-[10.5px] font-bold text-slate-300"
+                      >
+                        취소
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleCreateCustomBook}
+                        className="px-3 py-1.5 rounded-xl bg-[#FF5A36] text-[10.5px] font-black text-white"
+                      >
+                        책 추가 &amp; 적용
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1946,7 +2485,7 @@ export default function StudyPlannerMatrixPage() {
                           type="button"
                           onClick={() => deleteCustomBook(book.id)}
                           className="p-1 text-slate-500 hover:text-rose-400 shrink-0"
-                          title="커스텀 교재 삭제"
+                          title="책 완전 삭제"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -1957,7 +2496,7 @@ export default function StudyPlannerMatrixPage() {
               </div>
             </div>
 
-            {/* 2. 첨부 이미지 스타일: 활성 과목 다크 카드 리스트 */}
+            {/* 2. 활성 과목 다크 카드 리스트 */}
             <div className="rounded-2xl bg-[#18181D] border border-white/[0.06] divide-y divide-white/[0.05] overflow-visible">
               {subjects.map((subj) => {
                 const isMenuOpen = openMenuSubjectId === subj.id;
@@ -1976,7 +2515,7 @@ export default function StudyPlannerMatrixPage() {
                           {subj.title}
                         </div>
                         <div className="text-[9.5px] text-slate-400 truncate">
-                          {subj.examStage} · {subj.bookBadge || "기본"} ·{" "}
+                          {subj.category || subj.examStage} · {subj.bookBadge || "기본"} ·{" "}
                           {subj.units.reduce((acc, u) => acc + u.topics.length, 0)}단원
                         </div>
                       </div>
@@ -1988,7 +2527,6 @@ export default function StudyPlannerMatrixPage() {
                         setOpenMenuSubjectId(isMenuOpen ? null : subj.id)
                       }
                       className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/[0.08]"
-                      aria-label={`${subj.title} 메뉴`}
                     >
                       <MoreVertical className="w-4 h-4" />
                     </button>
@@ -2031,7 +2569,6 @@ export default function StudyPlannerMatrixPage() {
                 );
               })}
 
-              {/* + 과목추가 버튼 행 */}
               <button
                 type="button"
                 onClick={() => setIsAddingSubject((prev) => !prev)}
@@ -2044,7 +2581,6 @@ export default function StudyPlannerMatrixPage() {
               </button>
             </div>
 
-            {/* 새 과목 추가 인라인 폼 */}
             {isAddingSubject && (
               <div className="p-3.5 rounded-2xl bg-[#181822] border border-[#FF5A36]/45 space-y-2.5">
                 <div className="text-xs font-black text-white">새 커스텀 과목 추가</div>
@@ -2053,25 +2589,26 @@ export default function StudyPlannerMatrixPage() {
                     type="text"
                     value={newSubjTitle}
                     onChange={(e) => setNewSubjTitle(e.target.value)}
-                    placeholder="과목명 (예: 핵심 기출 오답노트)"
+                    placeholder="과목명 (예: 미적분, 영단어)"
                     className="px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
                   />
                   <select
-                    value={newSubjStage}
-                    onChange={(e) =>
-                      setNewSubjStage(e.target.value as "1차" | "2차")
-                    }
+                    value={newSubjCategory}
+                    onChange={(e) => setNewSubjCategory(e.target.value)}
                     className="px-2.5 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
                   >
-                    <option value="1차">1차</option>
-                    <option value="2차">2차</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <input
                   type="text"
                   value={newSubjTopicsText}
                   onChange={(e) => setNewSubjTopicsText(e.target.value)}
-                  placeholder="초기 단원 (쉼표 구분, 예: 1회차, 2회차, 최종암기)"
+                  placeholder="초기 단원 (쉼표 구분, 예: 1단원, 2단원)"
                   className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
                 />
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -2115,11 +2652,10 @@ export default function StudyPlannerMatrixPage() {
               </div>
             )}
 
-            {/* 선택 과목 수정(이름/색상/단원 추가) 인라인 패널 */}
             {editingSubjectForm && (
               <div className="p-3.5 rounded-2xl bg-[#1B1B25] border border-sky-500/40 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-white">과목 정보 · 색상 수정</span>
+                  <span className="text-xs font-black text-white">과목 정보 · 분류 · 색상 수정</span>
                   <button
                     type="button"
                     onClick={() => setEditingSubjectForm(null)}
@@ -2141,17 +2677,20 @@ export default function StudyPlannerMatrixPage() {
                     className="px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
                   />
                   <select
-                    value={editingSubjectForm.examStage}
+                    value={editingSubjectForm.category}
                     onChange={(e) =>
                       setEditingSubjectForm({
                         ...editingSubjectForm,
-                        examStage: e.target.value as "1차" | "2차",
+                        category: e.target.value,
                       })
                     }
                     className="px-2.5 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
                   >
-                    <option value="1차">1차</option>
-                    <option value="2차">2차</option>
+                    {categories.map((cat) => (
+                      <option key={cat} value={cat}>
+                        {cat}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -2202,12 +2741,12 @@ export default function StudyPlannerMatrixPage() {
                   onClick={handleSaveSubjectForm}
                   className="w-full py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-black"
                 >
-                  변경 사항 저장
+                  변경 사항 저장 (일정표·통계 색상 동시 반영)
                 </button>
               </div>
             )}
 
-            {/* 3. 첨부 이미지 하단: 보관함 N */}
+            {/* 3. 보관함 N */}
             <div className="space-y-2 pt-1">
               <div className="text-xs font-black text-slate-300 px-1">
                 보관함 {archivedSubjects.length}
@@ -2305,7 +2844,8 @@ export default function StudyPlannerMatrixPage() {
                       backgroundColor: editingCell.customColor || editingCell.subject.color,
                     }}
                   >
-                    {editingCell.subject.examStage} · {editingCell.subject.shortTitle}
+                    {editingCell.subject.category || editingCell.subject.examStage} ·{" "}
+                    {editingCell.subject.shortTitle}
                   </span>
                   <span className="text-[11px] font-mono font-bold text-slate-400">
                     {editingCell.dateISO}
@@ -2324,7 +2864,6 @@ export default function StudyPlannerMatrixPage() {
               </button>
             </div>
 
-            {/* 상태 선택: 완료 vs 진행중(부분) vs 계획 */}
             <div className="space-y-2.5">
               <div className="grid grid-cols-3 gap-1.5">
                 <button
@@ -2416,13 +2955,12 @@ export default function StudyPlannerMatrixPage() {
                     />
                   </label>
                   <p className="text-[9.5px] text-amber-200/75 leading-snug">
-                    진행중 상태는 순공시간에만 합산되며, 단원을 최종 <strong>완료</strong> 처리할 때만 1회독(+1R)으로 집계됩니다.
+                    진행중 상태는 순공시간에만 합산되며, 단원을 최종 <strong>완료</strong> 처리할 때만 회독(+1R)이 진해집니다.
                   </p>
                 </div>
               )}
             </div>
 
-            {/* 셀 커스텀 색상 선택 */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-[11px] font-bold text-slate-300 mr-1">셀 색상</span>
               <button
@@ -2458,11 +2996,9 @@ export default function StudyPlannerMatrixPage() {
                   setEditingCell({ ...editingCell, customColor: e.target.value })
                 }
                 className="w-6 h-5 bg-transparent cursor-pointer"
-                title="직접 색상 지정"
               />
             </div>
 
-            {/* 셀 키워드 입력 + 퀵 칩 */}
             <div className="space-y-1.5">
               <label className="text-[11px] font-bold text-slate-300">
                 셀 표시 키워드 (한눈에 볼 요약 단어)
@@ -2497,7 +3033,6 @@ export default function StudyPlannerMatrixPage() {
               </div>
             </div>
 
-            {/* 학습 시간 */}
             <div className="flex items-center justify-between gap-2">
               <span className="text-[11px] font-bold text-slate-300">학습 시간</span>
               <div className="flex items-center gap-1">
@@ -2518,7 +3053,6 @@ export default function StudyPlannerMatrixPage() {
               </div>
             </div>
 
-            {/* 액션 버튼 */}
             <div className="grid grid-cols-[auto_1fr] gap-2 pt-1">
               <button
                 type="button"
@@ -2569,6 +3103,7 @@ interface SubjectRowsGroupProps {
   subjectTotalDone: number;
   dateColumns: Array<{ dateISO: string; isToday: boolean }>;
   matrixLogs: Record<string, MatrixCellLog>;
+  topicDoneOrderMap: Map<string, number>;
   chapterTotals: Record<string, { solvedCount: number; correctCount: number }>;
   dragMode: MatrixDragMode;
   dragKeySet: Set<string>;
@@ -2586,6 +3121,8 @@ interface SubjectRowsGroupProps {
   ) => void;
   onCellPointerDown: (matrixKey: string) => void;
   onCellPointerEnter: (matrixKey: string) => void;
+  onAddInlineTopic: (unitId: string, title: string, keyword: string) => void;
+  onDeleteCustomTopic: (unitId: string, topicId: string) => void;
 }
 
 function SubjectRowsGroup({
@@ -2595,6 +3132,7 @@ function SubjectRowsGroup({
   subjectTotalDone,
   dateColumns,
   matrixLogs,
+  topicDoneOrderMap,
   chapterTotals,
   dragMode,
   dragKeySet,
@@ -2604,7 +3142,22 @@ function SubjectRowsGroup({
   onCellClick,
   onCellPointerDown,
   onCellPointerEnter,
+  onAddInlineTopic,
+  onDeleteCustomTopic,
 }: SubjectRowsGroupProps) {
+  const [isAddingTopic, setIsAddingTopic] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newKeyword, setNewKeyword] = useState("");
+  const defaultUnitId = subject.units[0]?.id;
+
+  const submitInlineTopic = () => {
+    if (!defaultUnitId || !newTitle.trim()) return;
+    onAddInlineTopic(defaultUnitId, newTitle.trim(), newKeyword.trim());
+    setNewTitle("");
+    setNewKeyword("");
+    setIsAddingTopic(false);
+  };
+
   return (
     <>
       <tr className="border-b border-white/[0.1]">
@@ -2612,32 +3165,47 @@ function SubjectRowsGroup({
           className="sticky left-0 z-20 border-r border-white/[0.12] px-2 py-2 bg-[#16161F]"
           style={{ boxShadow: `inset 4px 0 0 ${subject.color}` }}
         >
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            className="w-full flex items-center justify-between gap-1.5 text-left group"
-          >
-            <div className="flex items-center gap-1.5 min-w-0">
+          <div className="flex items-center justify-between gap-1">
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="flex items-center gap-1.5 min-w-0 flex-1 text-left group"
+            >
               {isCollapsed ? (
                 <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
               ) : (
                 <ChevronDown className="w-3.5 h-3.5 text-white shrink-0" />
               )}
               <span
-                className="px-1.5 py-0.5 rounded text-[9px] font-black text-white shrink-0"
+                className="px-1.5 py-0.5 rounded text-[8.5px] font-black text-white shrink-0 max-w-[66px] truncate"
                 style={{ backgroundColor: subject.color }}
+                title={subject.category || subject.examStage}
               >
-                {subject.examStage}
+                {subject.category || subject.examStage}
               </span>
               <span className="text-[11px] font-black text-white truncate group-hover:underline">
                 {subject.title}
               </span>
+            </button>
+
+            <div className="flex items-center gap-1 shrink-0">
+              {defaultUnitId && (
+                <button
+                  type="button"
+                  onClick={() => setIsAddingTopic((prev) => !prev)}
+                  className="px-1.5 py-0.5 rounded bg-white/[0.07] hover:bg-[#FF5A36] text-[9px] font-black text-slate-200 hover:text-white flex items-center gap-0.5 transition"
+                  title={`${subject.title}에 단원 추가`}
+                >
+                  <Plus className="w-2.5 h-2.5" />
+                  <span>단원</span>
+                </button>
+              )}
+              <span className="text-[9.5px] font-mono font-bold text-slate-400">
+                {isCollapsed ? `${subjectTopicCount}·` : ""}
+                <strong style={{ color: subject.color }}>{subjectTotalDone}R</strong>
+              </span>
             </div>
-            <span className="text-[9.5px] font-mono font-bold text-slate-400 shrink-0">
-              {isCollapsed ? `${subjectTopicCount}목차 · ` : ""}
-              <strong style={{ color: subject.color }}>{subjectTotalDone}R</strong>
-            </span>
-          </button>
+          </div>
         </td>
 
         {dateColumns.map((col) => {
@@ -2645,6 +3213,7 @@ function SubjectRowsGroup({
           const hasDone = summary.doneCount > 0;
           const hasPartial = summary.partialCount > 0;
           const hasPlan = summary.planCount > 0;
+          const doneShade = getRoundColorStyle(subject.color, Math.min(5, summary.doneCount));
 
           return (
             <td
@@ -2658,8 +3227,12 @@ function SubjectRowsGroup({
                   <button
                     type="button"
                     onClick={onToggleCollapse}
-                    className="w-full py-1 rounded text-[9px] font-black text-white truncate px-0.5"
-                    style={{ backgroundColor: subject.color }}
+                    className="w-full py-1 rounded text-[9px] font-black truncate px-0.5"
+                    style={{
+                      backgroundColor: doneShade.backgroundColor,
+                      border: `1px solid ${doneShade.borderColor}`,
+                      color: doneShade.textColor,
+                    }}
                     title={`${subject.title} (${col.dateISO}): ${summary.doneCount}개 완료`}
                   >
                     {summary.doneCount > 1 ? `${summary.doneCount}건` : summary.firstKeyword}
@@ -2669,7 +3242,6 @@ function SubjectRowsGroup({
                     type="button"
                     onClick={onToggleCollapse}
                     className="w-full py-1 rounded border border-amber-400 text-[9px] font-bold text-amber-200 bg-amber-500/20 truncate px-0.5"
-                    title={`${subject.title} (${col.dateISO}): ${summary.partialCount}개 진행중`}
                   >
                     ◐진행{summary.partialCount}
                   </button>
@@ -2700,12 +3272,58 @@ function SubjectRowsGroup({
         })}
       </tr>
 
+      {/* ① 책/과목 내부 + 단원 인라인 입력 행 */}
+      {isAddingTopic && defaultUnitId && (
+        <tr className="border-b border-[#FF5A36]/30 bg-[#181822]">
+          <td
+            colSpan={dateColumns.length + 1}
+            className="px-3 py-2"
+          >
+            <div className="flex flex-wrap items-center gap-1.5 max-w-lg">
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") submitInlineTopic();
+                }}
+                placeholder={`${subject.title} 새 단원명 (예: 2단원 기출오답)`}
+                className="flex-1 min-w-[160px] px-2.5 py-1 rounded-lg bg-[#0E0E12] border border-white/[0.12] text-[11px] text-white"
+              />
+              <input
+                type="text"
+                value={newKeyword}
+                onChange={(e) => setNewKeyword(e.target.value)}
+                placeholder="키워드"
+                className="w-24 px-2 py-1 rounded-lg bg-[#0E0E12] border border-white/[0.12] text-[11px] text-white"
+              />
+              <button
+                type="button"
+                onClick={submitInlineTopic}
+                className="px-2.5 py-1 rounded-lg bg-[#FF5A36] text-white text-[10.5px] font-black"
+              >
+                추가
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsAddingTopic(false)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </td>
+        </tr>
+      )}
+
       {!isCollapsed &&
         subject.units.map((unit) =>
           unit.topics.map((topic, tIdx) => {
             const doneCount = getTopicDoneCount(topic.id);
+            const roundBadgeShade = getRoundColorStyle(subject.color, doneCount);
             const chapterStat = topic.chapterCode ? chapterTotals[topic.chapterCode] : undefined;
             const solvedCount = chapterStat?.solvedCount ?? 0;
+            const isCustomTopic = topic.id.startsWith("custom-topic-");
 
             return (
               <tr
@@ -2735,6 +3353,16 @@ function SubjectRowsGroup({
                         <span className="text-[10.5px] font-bold text-slate-200 truncate leading-tight">
                           {topic.title}
                         </span>
+                        {isCustomTopic && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteCustomTopic(unit.id, topic.id)}
+                            className="text-slate-600 hover:text-rose-400 shrink-0"
+                            title="커스텀 단원 삭제"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        )}
                       </div>
                       {typeof topic.questionCount === "number" && (
                         <div className="text-[8.5px] font-mono text-slate-400 leading-tight mt-0.5">
@@ -2746,16 +3374,14 @@ function SubjectRowsGroup({
                       )}
                     </div>
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[9px] font-mono font-black shrink-0 ${
-                        doneCount === 0
-                          ? "bg-white/[0.04] text-slate-600"
-                          : "text-white"
-                      }`}
-                      style={
-                        doneCount > 0
-                          ? { backgroundColor: `${subject.color}33`, color: subject.color }
-                          : undefined
-                      }
+                      className="px-1.5 py-0.5 rounded text-[9px] font-mono font-black shrink-0"
+                      style={{
+                        backgroundColor: roundBadgeShade.backgroundColor,
+                        border: `1px solid ${roundBadgeShade.borderColor}`,
+                        color: roundBadgeShade.textColor,
+                        boxShadow: roundBadgeShade.boxShadow,
+                      }}
+                      title={`누적 ${doneCount}회독 (회독이 쌓일수록 진해짐)`}
                     >
                       {doneCount}R
                     </span>
@@ -2767,6 +3393,8 @@ function SubjectRowsGroup({
                   const cell = matrixLogs[mKey];
                   const isDragSelected = dragKeySet.has(mKey);
                   const resolvedColor = cell?.customColor || subject.color;
+                  const cellRound = topicDoneOrderMap.get(mKey) || 1;
+                  const doneShade = getRoundColorStyle(resolvedColor, cellRound);
 
                   return (
                     <td
@@ -2800,7 +3428,7 @@ function SubjectRowsGroup({
                             ? "ring-2 ring-white bg-[#FF5A36]/40 text-white font-black"
                             : cell
                               ? cell.status === "done"
-                                ? "text-white font-black shadow-sm hover:brightness-110"
+                                ? "font-black hover:brightness-110"
                                 : cell.status === "partial"
                                   ? "border border-amber-400 font-bold hover:brightness-110"
                                   : "border border-dashed font-bold hover:brightness-110"
@@ -2809,7 +3437,12 @@ function SubjectRowsGroup({
                         style={
                           !isDragSelected && cell
                             ? cell.status === "done"
-                              ? { backgroundColor: resolvedColor }
+                              ? {
+                                  backgroundColor: doneShade.backgroundColor,
+                                  border: `1px solid ${doneShade.borderColor}`,
+                                  color: doneShade.textColor,
+                                  boxShadow: doneShade.boxShadow,
+                                }
                               : cell.status === "partial"
                                 ? {
                                     backgroundColor: `${resolvedColor}42`,
@@ -2826,7 +3459,7 @@ function SubjectRowsGroup({
                           cell
                             ? `${topic.title} (${col.dateISO}): ${cell.keyword} (${
                                 cell.status === "done"
-                                  ? "완료"
+                                  ? `${cellRound}회독 완료`
                                   : cell.status === "partial"
                                     ? "진행중(이월)"
                                     : "계획"
@@ -2835,9 +3468,11 @@ function SubjectRowsGroup({
                         }
                       >
                         {cell
-                          ? cell.status === "partial"
-                            ? `◐${cell.keyword}`
-                            : cell.keyword
+                          ? cell.status === "done"
+                            ? `${cellRound}R ${cell.keyword}`
+                            : cell.status === "partial"
+                              ? `◐${cell.keyword}`
+                              : cell.keyword
                           : "+"}
                       </button>
                     </td>
@@ -2847,6 +3482,22 @@ function SubjectRowsGroup({
             );
           })
         )}
+
+      {/* 펼쳐진 상태에서 하단 + 단원 추가 버튼 행 */}
+      {!isCollapsed && defaultUnitId && (
+        <tr className="border-b border-white/[0.08] bg-[#101016]">
+          <td colSpan={dateColumns.length + 1} className="px-3 py-1">
+            <button
+              type="button"
+              onClick={() => setIsAddingTopic((prev) => !prev)}
+              className="text-[10px] font-bold text-slate-400 hover:text-[#FF7A59] flex items-center gap-1 transition"
+            >
+              <Plus className="w-3 h-3" />
+              <span>{subject.title}에 단원 추가</span>
+            </button>
+          </td>
+        </tr>
+      )}
     </>
   );
 }

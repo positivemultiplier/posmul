@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   TEXTBOOK_CATALOG,
+  DEFAULT_SUBJECT_CATEGORIES,
   type TextbookCatalogItem,
   type StudySubjectNode,
   type MatrixCellLog,
@@ -36,6 +37,7 @@ export interface SubjectOverrideItem {
   shortTitle?: string;
   color?: string;
   examStage?: "1차" | "2차";
+  category?: string;
 }
 
 export interface CurriculumPersistedState {
@@ -46,7 +48,9 @@ export interface CurriculumPersistedState {
   customBooks?: CustomBookItem[];
   /** 사용자 추가 커스텀 과목 목록 */
   customSubjects?: StudySubjectNode[];
-  /** 과목별 이름/색상/차수 커스텀 오버라이드 */
+  /** 사용자 확장 커스텀 분류 목록 */
+  customCategories?: string[];
+  /** 과목별 이름/색상/차수/분류 커스텀 오버라이드 */
   subjectOverrides?: Record<string, SubjectOverrideItem>;
   /** 보관함에 넣은 과목 ID 목록 */
   archivedSubjectIds?: string[];
@@ -113,6 +117,7 @@ function createDefaultState(todayISO: string): CurriculumPersistedState {
     activeBookIds: [defaultBook.id],
     customBooks: [],
     customSubjects: [],
+    customCategories: [],
     subjectOverrides: {},
     archivedSubjectIds: [],
     dayResetHour: 4,
@@ -172,6 +177,7 @@ function readStoredState(todayISO: string): CurriculumPersistedState {
       activeBookIds,
       customBooks,
       customSubjects: Array.isArray(parsed.customSubjects) ? parsed.customSubjects : [],
+      customCategories: Array.isArray(parsed.customCategories) ? parsed.customCategories : [],
       subjectOverrides: parsed.subjectOverrides || {},
       archivedSubjectIds: Array.isArray(parsed.archivedSubjectIds)
         ? parsed.archivedSubjectIds
@@ -272,6 +278,12 @@ export function useStudyCurriculum() {
           (prev.customSubjects?.length ?? 0) > 0
             ? prev.customSubjects
             : remote?.customSubjects,
+        customCategories: Array.from(
+          new Set([
+            ...(remote?.customCategories || []),
+            ...(prev.customCategories || []),
+          ])
+        ),
         subjectOverrides: {
           ...(remote?.subjectOverrides || {}),
           ...(prev.subjectOverrides || {}),
@@ -446,12 +458,16 @@ export function useStudyCurriculum() {
 
     return rawSubjects.map((subject) => {
       const ov = overrides[subject.id];
+      const resolvedStage = ov?.examStage ?? subject.examStage;
+      const defaultCategory =
+        resolvedStage === "1차" ? "주택관리사 1차" : "주택관리사 2차";
       return {
         ...subject,
         title: ov?.title ?? subject.title,
         shortTitle: ov?.shortTitle ?? (ov?.title ? ov.title.slice(0, 6) : subject.shortTitle),
         color: ov?.color ?? subject.color,
-        examStage: ov?.examStage ?? subject.examStage,
+        examStage: resolvedStage,
+        category: ov?.category ?? subject.category ?? defaultCategory,
         isArchived: archivedSet.has(subject.id),
         units: subject.units.map((unit) => {
           const extra = mergedUnitTopics[unit.id] || [];
@@ -470,6 +486,18 @@ export function useStudyCurriculum() {
     state.subjectOverrides,
     state.archivedSubjectIds,
   ]);
+
+  /** 확장형 분류 목록 (기본 프리셋 + 사용자 커스텀 분류 + 사용 중 분류) */
+  const categories: string[] = useMemo(() => {
+    const set = new Set<string>([
+      ...DEFAULT_SUBJECT_CATEGORIES,
+      ...(state.customCategories || []),
+    ]);
+    for (const s of allMergedSubjects) {
+      if (s.category) set.add(s.category);
+    }
+    return Array.from(set);
+  }, [state.customCategories, allMergedSubjects]);
 
   /** 보관함 제외 활성 과목 목록 */
   const subjects: StudySubjectNode[] = useMemo(
@@ -588,6 +616,7 @@ export function useStudyCurriculum() {
       coverColor: string;
       firstSubjectTitle?: string;
       examStage?: "1차" | "2차";
+      category?: string;
     }) => {
       const trimmedTitle = params.title.trim();
       if (!trimmedTitle) return;
@@ -597,6 +626,10 @@ export function useStudyCurriculum() {
       const unitId = `custom-unit-${now}`;
       const topicId = `custom-top-${now}`;
       const subjTitle = (params.firstSubjectTitle || trimmedTitle).trim();
+      const stage = params.examStage || "2차";
+      const category =
+        params.category?.trim() ||
+        (stage === "1차" ? "주택관리사 1차" : "주택관리사 2차");
 
       const newBook: CustomBookItem = {
         id: bookId,
@@ -608,7 +641,8 @@ export function useStudyCurriculum() {
 
       const initialSubject: StudySubjectNode = {
         id: subjId,
-        examStage: params.examStage || "2차",
+        examStage: stage,
+        category,
         title: subjTitle,
         shortTitle: subjTitle.slice(0, 6),
         color: params.coverColor || "#FF5A36",
@@ -681,11 +715,34 @@ export function useStudyCurriculum() {
     [updateState]
   );
 
+  /** 새 커스텀 분류 추가 */
+  const addCustomCategory = useCallback(
+    (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      updateState((prev) => {
+        const current = prev.customCategories || [];
+        if (
+          current.includes(trimmed) ||
+          (DEFAULT_SUBJECT_CATEGORIES as readonly string[]).includes(trimmed)
+        ) {
+          return prev;
+        }
+        return {
+          ...prev,
+          customCategories: [...current, trimmed],
+        };
+      });
+    },
+    [updateState]
+  );
+
   /** 새 커스텀 과목 추가 */
   const addCustomSubject = useCallback(
     (params: {
       title: string;
       examStage?: "1차" | "2차";
+      category?: string;
       color: string;
       bookId?: string;
       unitTitle?: string;
@@ -697,15 +754,20 @@ export function useStudyCurriculum() {
       const subjId = `custom-subj-${now}`;
       const unitId = `custom-unit-${now}`;
       const rawTopics = (params.topicTitles || []).map((t) => t.trim()).filter(Boolean);
-      const topicNames = rawTopics.length > 0 ? rawTopics : [`${trimmed} 핵심학습`];
+      const topicNames = rawTopics.length > 0 ? rawTopics : [`${trimmed} 1단원`];
 
       const linkedBook = params.bookId
         ? allCatalogBooks.find((b) => b.id === params.bookId)
         : undefined;
+      const stage = params.examStage || "2차";
+      const category =
+        params.category?.trim() ||
+        (stage === "1차" ? "주택관리사 1차" : "주택관리사 2차");
 
       const newSubject: StudySubjectNode = {
         id: subjId,
-        examStage: params.examStage || "2차",
+        examStage: stage,
+        category,
         title: trimmed,
         shortTitle: trimmed.slice(0, 6),
         color: params.color || "#FF5A36",
@@ -737,9 +799,17 @@ export function useStudyCurriculum() {
     [allCatalogBooks, updateState]
   );
 
-  /** 과목 이름/차수/색상 수정 */
+  /** 과목 이름/차수/분류/색상 수정 (타임테이블 슬롯 색상 자동 동기화) */
   const updateSubjectCustomization = useCallback(
     (subjectId: string, patch: SubjectOverrideItem) => {
+      const targetSubject = allMergedSubjects.find((s) => s.id === subjectId);
+      const subjectTopicIds = new Set<string>();
+      if (targetSubject) {
+        for (const u of targetSubject.units) {
+          for (const t of u.topics) subjectTopicIds.add(t.id);
+        }
+      }
+
       updateState((prev) => {
         const nextCustomSubjects = (prev.customSubjects || []).map((subj) => {
           if (subj.id !== subjectId) return subj;
@@ -750,13 +820,34 @@ export function useStudyCurriculum() {
             shortTitle: patch.shortTitle?.trim() || nextTitle.slice(0, 6),
             color: patch.color || subj.color,
             examStage: patch.examStage || subj.examStage,
+            category: patch.category?.trim() || subj.category,
           };
         });
         const prevOv = prev.subjectOverrides?.[subjectId] || {};
         const nextTitle = patch.title?.trim() || prevOv.title;
+
+        // 색상 변경 시 타임테이블에 이미 칠해진 해당 과목 단원 슬롯 색상도 동기화
+        let nextTimetables = prev.timetablesByDate;
+        if (patch.color && subjectTopicIds.size > 0 && prev.timetablesByDate) {
+          const updatedMap: Record<string, Record<string, TimetableSlotLog>> = {};
+          for (const [dISO, slots] of Object.entries(prev.timetablesByDate)) {
+            const nextDay: Record<string, TimetableSlotLog> = {};
+            for (const [sKey, sVal] of Object.entries(slots)) {
+              if (sVal.topicId && subjectTopicIds.has(sVal.topicId)) {
+                nextDay[sKey] = { ...sVal, color: patch.color };
+              } else {
+                nextDay[sKey] = sVal;
+              }
+            }
+            updatedMap[dISO] = nextDay;
+          }
+          nextTimetables = updatedMap;
+        }
+
         return {
           ...prev,
           customSubjects: nextCustomSubjects,
+          timetablesByDate: nextTimetables,
           subjectOverrides: {
             ...(prev.subjectOverrides || {}),
             [subjectId]: {
@@ -768,7 +859,7 @@ export function useStudyCurriculum() {
         };
       });
     },
-    [updateState]
+    [allMergedSubjects, updateState]
   );
 
   /** 과목 보관함에 넣기 */
@@ -868,14 +959,28 @@ export function useStudyCurriculum() {
     [updateState]
   );
 
-  /** 매트릭스 셀 등록/수정 */
+  /** 매트릭스 셀 등록/수정 (customColor 변경 시 해당 날짜 타임테이블 슬롯 색상도 동기화) */
   const upsertMatrixCell = useCallback(
     (topicId: string, dateISO: string, cell: MatrixCellLog) => {
       updateState((prev) => {
         const bookLogs =
           prev.logsByBook[activeBook.id] ?? buildSeedLogs(activeBook, todayISO);
+        let nextTimetables = prev.timetablesByDate;
+        if (cell.customColor && prev.timetablesByDate?.[dateISO]) {
+          const daySlots = prev.timetablesByDate[dateISO];
+          const nextDaySlots: Record<string, TimetableSlotLog> = {};
+          for (const [sKey, sVal] of Object.entries(daySlots)) {
+            nextDaySlots[sKey] =
+              sVal.topicId === topicId ? { ...sVal, color: cell.customColor } : sVal;
+          }
+          nextTimetables = {
+            ...prev.timetablesByDate,
+            [dateISO]: nextDaySlots,
+          };
+        }
         return {
           ...prev,
+          timetablesByDate: nextTimetables,
           logsByBook: {
             ...prev.logsByBook,
             [activeBook.id]: {
@@ -1167,6 +1272,35 @@ export function useStudyCurriculum() {
     [activeBook.id, updateState]
   );
 
+  /** 커스텀 목차 삭제 */
+  const deleteCustomTopic = useCallback(
+    (unitId: string, topicId: string) => {
+      updateState((prev) => {
+        const nextCustomTopicsByBook: CurriculumPersistedState["customTopicsByBook"] = {};
+        for (const [bId, unitMap] of Object.entries(prev.customTopicsByBook)) {
+          const list = unitMap[unitId];
+          nextCustomTopicsByBook[bId] = list
+            ? { ...unitMap, [unitId]: list.filter((t) => t.id !== topicId) }
+            : unitMap;
+        }
+        const nextCustomSubjects = (prev.customSubjects || []).map((subj) => ({
+          ...subj,
+          units: subj.units.map((u) =>
+            u.id === unitId
+              ? { ...u, topics: u.topics.filter((t) => t.id !== topicId) }
+              : u
+          ),
+        }));
+        return {
+          ...prev,
+          customTopicsByBook: nextCustomTopicsByBook,
+          customSubjects: nextCustomSubjects,
+        };
+      });
+    },
+    [updateState]
+  );
+
   /** 할일 토글 */
   const toggleTodo = useCallback(
     (todoId: string) => {
@@ -1255,6 +1389,8 @@ export function useStudyCurriculum() {
     catalog: allCatalogBooks,
     subjects,
     archivedSubjects,
+    categories,
+    addCustomCategory,
     matrixLogs,
     timetablesByDate,
     setTimetableSlots,
@@ -1281,6 +1417,7 @@ export function useStudyCurriculum() {
     toggleSubjectCollapse,
     setAllSubjectsCollapsed,
     addCustomTopic,
+    deleteCustomTopic,
     toggleTodo,
     addTodo,
     deleteTodo,

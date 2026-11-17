@@ -26,7 +26,12 @@ import {
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
-import { addDaysISO, diffDaysISO, flattenTopics } from "@/data/study-textbooks";
+import {
+  addDaysISO,
+  diffDaysISO,
+  flattenTopics,
+  getRoundColorStyle,
+} from "@/data/study-textbooks";
 import {
   fetchStudyAnalyticsAction,
   type StudyAnalyticsResult,
@@ -76,6 +81,53 @@ export default function StudyStatisticsPage() {
     if (authLoading) return;
     void loadAnalytics();
   }, [authLoading, effectiveOwnerKey]);
+
+  // 플래너에서 커스텀 변경한 과목 색상과 일관되게 동기화하는 조회 맵
+  const customColorLookup = useMemo(() => {
+    const byChapter = new Map<string, string>();
+    const bySubjectTitle = new Map<string, string>();
+    const bySubjectId = new Map<string, string>();
+
+    for (const s of subjects) {
+      bySubjectId.set(s.id, s.color);
+      bySubjectTitle.set(s.title, s.color);
+      bySubjectTitle.set(s.shortTitle, s.color);
+      for (const u of s.units) {
+        for (const t of u.topics) {
+          if (t.chapterCode) byChapter.set(t.chapterCode, s.color);
+        }
+      }
+    }
+
+    const resolve = (
+      fallbackColor: string,
+      subjectName?: string,
+      chapterCode?: string
+    ): string => {
+      if (chapterCode && byChapter.has(chapterCode)) {
+        return byChapter.get(chapterCode) as string;
+      }
+      if (subjectName && bySubjectTitle.has(subjectName)) {
+        return bySubjectTitle.get(subjectName) as string;
+      }
+      const idMap: Record<string, string> = {
+        민법: "subj-1-civil",
+        회계원리: "subj-1-accounting",
+        공동주택시설개론: "subj-1-facility",
+        시설개론: "subj-1-facility",
+        주택관리관계법규: "subj-2-law",
+        관계법규: "subj-2-law",
+        공동주택관리실무: "subj-2-practice",
+        관리실무: "subj-2-practice",
+      };
+      if (subjectName && idMap[subjectName] && bySubjectId.has(idMap[subjectName])) {
+        return bySubjectId.get(idMap[subjectName]) as string;
+      }
+      return fallbackColor;
+    };
+
+    return { resolve };
+  }, [subjects]);
 
   // 플래너 매트릭스 기반 회독·구멍 통계 계산
   const matrixAnalytics = useMemo(() => {
@@ -482,6 +534,7 @@ export default function StudyStatisticsPage() {
 
               <div className="space-y-3">
                 {analyticsData.subjects.map((subj) => {
+                  const syncedColor = customColorLookup.resolve(subj.color, subj.subject);
                   const scorePct = subj.predictedScore ?? 0;
                   const riskBadge =
                     subj.cutlineRisk === "PASS"
@@ -510,7 +563,7 @@ export default function StudyStatisticsPage() {
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span
                             className="px-1.5 py-0.5 rounded text-[9px] font-black text-white shrink-0"
-                            style={{ backgroundColor: subj.color }}
+                            style={{ backgroundColor: syncedColor }}
                           >
                             {subj.examStage}
                           </span>
@@ -543,7 +596,7 @@ export default function StudyStatisticsPage() {
                           style={{
                             width: `${scorePct}%`,
                             backgroundColor:
-                              subj.cutlineRisk === "DANGER" ? "#FB7185" : subj.color,
+                              subj.cutlineRisk === "DANGER" ? "#FB7185" : syncedColor,
                           }}
                         />
                         {/* 40점 과락 마커 */}
@@ -729,6 +782,11 @@ export default function StudyStatisticsPage() {
                 {topFrequentTopics.map((t, idx) => {
                   const maxQ = Math.max(1, topFrequentTopics[0]?.totalQuestions ?? 39);
                   const wPct = Math.round((t.totalQuestions / maxQ) * 100);
+                  const syncedColor = customColorLookup.resolve(
+                    t.subjectColor,
+                    t.subject,
+                    t.chapterCode
+                  );
                   return (
                     <Link
                       key={t.chapterCode}
@@ -742,7 +800,7 @@ export default function StudyStatisticsPage() {
                           </span>
                           <span
                             className="px-1.5 py-0.2 rounded text-[9px] font-black text-white shrink-0"
-                            style={{ backgroundColor: t.subjectColor }}
+                            style={{ backgroundColor: syncedColor }}
                           >
                             {t.subjectShort}
                           </span>
@@ -757,7 +815,7 @@ export default function StudyStatisticsPage() {
                       <div className="h-1.5 rounded-full bg-[#09090D] overflow-hidden">
                         <div
                           className="h-full rounded-full"
-                          style={{ width: `${wPct}%`, backgroundColor: t.subjectColor }}
+                          style={{ width: `${wPct}%`, backgroundColor: syncedColor }}
                         />
                       </div>
                     </Link>
@@ -769,6 +827,11 @@ export default function StudyStatisticsPage() {
             {/* 단원별 7개년 연도 히트맵 & 추세 목록 */}
             <section className="space-y-2">
               {filteredFrequencyTopics.map((t) => {
+                const syncedColor = customColorLookup.resolve(
+                  t.subjectColor,
+                  t.subject,
+                  t.chapterCode
+                );
                 return (
                   <div
                     key={t.chapterCode}
@@ -779,7 +842,7 @@ export default function StudyStatisticsPage() {
                         <div className="flex items-center gap-1.5 flex-wrap">
                           <span
                             className="px-1.5 py-0.2 rounded text-[9px] font-black text-white"
-                            style={{ backgroundColor: t.subjectColor }}
+                            style={{ backgroundColor: syncedColor }}
                           >
                             {t.subjectShort}
                           </span>
@@ -806,7 +869,7 @@ export default function StudyStatisticsPage() {
                         <div className="text-xs font-black text-white flex items-center gap-1">
                           <span
                             className="font-mono shrink-0"
-                            style={{ color: t.subjectColor }}
+                            style={{ color: syncedColor }}
                           >
                             {t.topicNo}.
                           </span>
@@ -1052,6 +1115,11 @@ export default function StudyStatisticsPage() {
                     t.totalQuestions > 0
                       ? Math.round((t.solvedCount / t.totalQuestions) * 100)
                       : 0;
+                  const syncedColor = customColorLookup.resolve(
+                    t.subjectColor,
+                    t.subject,
+                    t.chapterCode
+                  );
                   return (
                     <div
                       key={t.chapterCode}
@@ -1061,13 +1129,13 @@ export default function StudyStatisticsPage() {
                         <div className="flex items-center gap-1.5 min-w-0">
                           <span
                             className="px-1.5 py-0.2 rounded text-[9px] font-black text-white shrink-0"
-                            style={{ backgroundColor: t.subjectColor }}
+                            style={{ backgroundColor: syncedColor }}
                           >
                             {t.subjectShort}
                           </span>
                           <span
                             className="font-mono text-[11px] font-black shrink-0"
-                            style={{ color: t.subjectColor }}
+                            style={{ color: syncedColor }}
                           >
                             {t.topicNo}.
                           </span>
@@ -1084,7 +1152,7 @@ export default function StudyStatisticsPage() {
                       <div className="h-1.5 rounded-full bg-[#101015] overflow-hidden">
                         <div
                           className="h-full rounded-full transition-all"
-                          style={{ width: `${progPct}%`, backgroundColor: t.subjectColor }}
+                          style={{ width: `${progPct}%`, backgroundColor: syncedColor }}
                         />
                       </div>
 
@@ -1196,41 +1264,58 @@ export default function StudyStatisticsPage() {
               </div>
 
               <div className="space-y-2.5">
-                {matrixAnalytics.subjectStats.map((item) => (
-                  <div key={item.subject.id} className="space-y-1">
-                    <div className="flex items-center justify-between text-[11px]">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span
-                          className="px-1.5 py-0.2 rounded text-[9px] font-black text-white"
-                          style={{ backgroundColor: item.subject.color }}
-                        >
-                          {item.subject.examStage}
-                        </span>
-                        <span className="font-extrabold text-white truncate">
-                          {item.subject.title}
-                        </span>
+                {matrixAnalytics.subjectStats.map((item) => {
+                  const roundShade = getRoundColorStyle(
+                    item.subject.color,
+                    item.avgRounds > 0 ? Math.max(1, Math.round(item.avgRounds)) : 0
+                  );
+                  return (
+                    <div key={item.subject.id} className="space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span
+                            className="px-1.5 py-0.2 rounded text-[9px] font-black text-white"
+                            style={{ backgroundColor: item.subject.color }}
+                          >
+                            {item.subject.category || item.subject.examStage}
+                          </span>
+                          <span className="font-extrabold text-white truncate">
+                            {item.subject.title}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 font-mono text-[10.5px] shrink-0">
+                          <span className="text-slate-400">
+                            {item.coveredTopics}/{item.totalTopics}목차
+                          </span>
+                          <span
+                            className="px-1.5 py-0.2 rounded text-[9.5px] font-black"
+                            style={{
+                              backgroundColor: roundShade.backgroundColor,
+                              border: `1px solid ${roundShade.borderColor}`,
+                              color: roundShade.textColor,
+                              boxShadow: roundShade.boxShadow,
+                            }}
+                          >
+                            평균 {item.avgRounds}R
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 font-mono text-[10.5px] shrink-0">
-                        <span className="text-slate-400">
-                          {item.coveredTopics}/{item.totalTopics}목차
-                        </span>
-                        <span className="font-black" style={{ color: item.subject.color }}>
-                          평균 {item.avgRounds}R
-                        </span>
-                      </div>
-                    </div>
 
-                    <div className="h-2 rounded-full bg-[#101015] overflow-hidden border border-white/[0.04]">
-                      <div
-                        className="h-full rounded-full transition-all duration-500"
-                        style={{
-                          width: `${item.coveragePct}%`,
-                          backgroundColor: item.subject.color,
-                        }}
-                      />
+                      <div className="h-2 rounded-full bg-[#101015] overflow-hidden border border-white/[0.04]">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${item.coveragePct}%`,
+                            backgroundColor:
+                              item.avgRounds > 0
+                                ? roundShade.backgroundColor
+                                : item.subject.color,
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </section>
 
@@ -1246,30 +1331,39 @@ export default function StudyStatisticsPage() {
 
               <div className="space-y-2">
                 {matrixAnalytics.weakTopics.map(
-                  ({ subject, unit, topic, doneCount, daysSinceLast }) => (
-                    <div
-                      key={topic.id}
-                      className="p-3 rounded-xl bg-[#111116] border border-white/[0.06] flex items-center justify-between gap-2.5"
-                    >
-                      <div className="min-w-0 space-y-0.5">
-                        <div className="flex items-center gap-1.5">
-                          <span
-                            className="w-2 h-2 rounded-full shrink-0"
-                            style={{ backgroundColor: subject.color }}
-                          />
-                          <span className="text-[10px] font-bold text-slate-400 truncate">
-                            {subject.shortTitle} &gt; {unit.title}
-                          </span>
-                          {doneCount === 0 ? (
-                            <span className="px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 text-[9px] font-black">
-                              0회독 구멍
+                  ({ subject, unit, topic, doneCount, daysSinceLast }) => {
+                    const topicRoundShade = getRoundColorStyle(subject.color, doneCount);
+                    return (
+                      <div
+                        key={topic.id}
+                        className="p-3 rounded-xl bg-[#111116] border border-white/[0.06] flex items-center justify-between gap-2.5"
+                      >
+                        <div className="min-w-0 space-y-0.5">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: subject.color }}
+                            />
+                            <span className="text-[10px] font-bold text-slate-400 truncate">
+                              {subject.shortTitle} &gt; {unit.title}
                             </span>
-                          ) : (
-                            <span className="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-300 text-[9px] font-mono font-black">
-                              {daysSinceLast}일 전 ({doneCount}R)
-                            </span>
-                          )}
-                        </div>
+                            {doneCount === 0 ? (
+                              <span className="px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 text-[9px] font-black">
+                                0회독 구멍
+                              </span>
+                            ) : (
+                              <span
+                                className="px-1.5 py-0.2 rounded text-[9px] font-mono font-black"
+                                style={{
+                                  backgroundColor: topicRoundShade.backgroundColor,
+                                  border: `1px solid ${topicRoundShade.borderColor}`,
+                                  color: topicRoundShade.textColor,
+                                }}
+                              >
+                                {daysSinceLast}일 전 ({doneCount}R)
+                              </span>
+                            )}
+                          </div>
                         <div className="text-xs font-extrabold text-white truncate flex items-center gap-1">
                           {topic.topicNo && (
                             <span
@@ -1298,8 +1392,9 @@ export default function StudyStatisticsPage() {
                         <span>내일 계획</span>
                       </button>
                     </div>
-                  )
-                )}
+                  );
+                }
+              )}
               </div>
 
               <div className="pt-1 flex items-center justify-end">

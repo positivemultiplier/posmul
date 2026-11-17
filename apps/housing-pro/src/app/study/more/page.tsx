@@ -26,7 +26,12 @@ import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { YptGroupGrid } from "@/components/mobile/ypt-group-grid";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
-import { formatDateISO, flattenTopics, type MatrixCellStatus } from "@/data/study-textbooks";
+import {
+  formatDateISO,
+  flattenTopics,
+  getRoundColorStyle,
+  type MatrixCellStatus,
+} from "@/data/study-textbooks";
 
 type MoreViewMode = "todo" | "calendar" | "group" | "tools";
 
@@ -86,8 +91,15 @@ export default function StudyMoreHubPage() {
     setNewTodoTitle("");
   };
 
-  // 날짜별 매트릭스 로그 맵 (달력 점/상세용)
+  // 날짜별 매트릭스 로그 맵 (달력 점/상세용 — 커스텀 색상 및 회독 농도 연동)
   const logsByDate = useMemo(() => {
+    const doneCountsByTopic = new Map<string, number>();
+    for (const [k, cell] of Object.entries(matrixLogs)) {
+      if (cell.status !== "done") continue;
+      const tId = k.split("::")[0];
+      if (tId) doneCountsByTopic.set(tId, (doneCountsByTopic.get(tId) || 0) + 1);
+    }
+
     const map: Record<
       string,
       Array<{
@@ -97,6 +109,7 @@ export default function StudyMoreHubPage() {
         keyword: string;
         status: MatrixCellStatus;
         minutes: number;
+        doneRounds: number;
       }>
     > = {};
 
@@ -108,10 +121,11 @@ export default function StudyMoreHubPage() {
       map[dateISO].push({
         topicTitle: found.topic.title,
         subjectTitle: found.subject.shortTitle,
-        subjectColor: found.subject.color,
+        subjectColor: cell.customColor || found.subject.color,
         keyword: cell.keyword,
         status: cell.status,
         minutes: cell.minutes || found.topic.estimatedMinutes,
+        doneRounds: doneCountsByTopic.get(topicId) || 0,
       });
     }
     return map;
@@ -417,19 +431,30 @@ export default function StudyMoreHubPage() {
                         {cell.day}
                       </span>
                       <div className="flex items-center gap-0.5 flex-wrap justify-center max-w-full overflow-hidden">
-                        {dayLogs.slice(0, 4).map((l, i) => (
-                          <span
-                            key={i}
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              l.status === "plan"
-                                ? "opacity-45"
-                                : l.status === "partial"
-                                  ? "opacity-75 ring-1 ring-amber-400"
-                                  : ""
-                            }`}
-                            style={{ backgroundColor: l.subjectColor }}
-                          />
-                        ))}
+                        {dayLogs.slice(0, 4).map((l, i) => {
+                          const shade = getRoundColorStyle(
+                            l.subjectColor,
+                            Math.max(1, l.doneRounds)
+                          );
+                          return (
+                            <span
+                              key={i}
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                l.status === "plan"
+                                  ? "opacity-45"
+                                  : l.status === "partial"
+                                    ? "opacity-75 ring-1 ring-amber-400"
+                                    : ""
+                              }`}
+                              style={{
+                                backgroundColor:
+                                  l.status === "done"
+                                    ? shade.backgroundColor
+                                    : l.subjectColor,
+                              }}
+                            />
+                          );
+                        })}
                       </div>
                     </button>
                   );
@@ -455,40 +480,59 @@ export default function StudyMoreHubPage() {
                 </p>
               ) : (
                 <div className="space-y-1.5">
-                  {selectedDateLogs.map((log, i) => (
-                    <div
-                      key={i}
-                      className="p-2.5 rounded-xl bg-[#111116] border border-white/[0.06] flex items-center justify-between gap-2"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span
-                          className="px-1.5 py-0.5 rounded text-[9.5px] font-black text-white shrink-0"
-                          style={{ backgroundColor: log.subjectColor }}
-                        >
-                          {log.subjectTitle}
-                        </span>
-                        <div className="min-w-0">
-                          <div className="text-[11px] font-bold text-white truncate">
-                            {log.topicTitle}
-                          </div>
-                          <div className="text-[10px] text-slate-400">
-                            키워드: {log.keyword} · {log.minutes}분
+                  {selectedDateLogs.map((log, i) => {
+                    const shade = getRoundColorStyle(
+                      log.subjectColor,
+                      Math.max(1, log.doneRounds)
+                    );
+                    return (
+                      <div
+                        key={i}
+                        className="p-2.5 rounded-xl bg-[#111116] border border-white/[0.06] flex items-center justify-between gap-2"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="px-1.5 py-0.5 rounded text-[9.5px] font-black text-white shrink-0"
+                            style={{ backgroundColor: log.subjectColor }}
+                          >
+                            {log.subjectTitle}
+                          </span>
+                          <div className="min-w-0">
+                            <div className="text-[11px] font-bold text-white truncate">
+                              {log.topicTitle}
+                            </div>
+                            <div className="text-[10px] text-slate-400">
+                              키워드: {log.keyword} · {log.minutes}분
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <span
-                        className={`text-[9.5px] font-black px-2 py-0.5 rounded-full shrink-0 ${
-                          log.status === "done"
-                            ? "bg-emerald-500/15 text-emerald-300"
+                        <span
+                          className={`text-[9.5px] font-black px-2 py-0.5 rounded-full shrink-0 ${
+                            log.status === "done"
+                              ? ""
+                              : log.status === "partial"
+                                ? "bg-amber-500/20 text-amber-300"
+                                : "bg-sky-500/15 text-sky-300"
+                          }`}
+                          style={
+                            log.status === "done"
+                              ? {
+                                  backgroundColor: shade.backgroundColor,
+                                  border: `1px solid ${shade.borderColor}`,
+                                  color: shade.textColor,
+                                }
+                              : undefined
+                          }
+                        >
+                          {log.status === "done"
+                            ? `${Math.max(1, log.doneRounds)}R 완료`
                             : log.status === "partial"
-                              ? "bg-amber-500/20 text-amber-300"
-                              : "bg-sky-500/15 text-sky-300"
-                        }`}
-                      >
-                        {log.status === "done" ? "완료" : log.status === "partial" ? "진행중" : "계획"}
-                      </span>
-                    </div>
-                  ))}
+                              ? "진행중"
+                              : "계획"}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>

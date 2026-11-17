@@ -24,6 +24,19 @@ export interface StudyUnitNode {
   topics: StudyTopicNode[];
 }
 
+export const DEFAULT_SUBJECT_CATEGORIES = [
+  "주택관리사 1차",
+  "주택관리사 2차",
+  "국어",
+  "영어",
+  "수학",
+  "과학",
+  "사회·역사",
+  "전공·자격",
+  "기출·모고",
+  "오답·정리",
+] as const;
+
 export const CUSTOM_SUBJECT_COLOR_PALETTE = [
   "#C4E538",
   "#EC4899",
@@ -42,6 +55,7 @@ export const CUSTOM_SUBJECT_COLOR_PALETTE = [
 export interface StudySubjectNode {
   id: string;
   examStage: "1차" | "2차";
+  category?: string;
   title: string;
   shortTitle: string;
   color: string;
@@ -129,6 +143,80 @@ export function computeLogicalTodayISO(dayResetHour = 4, now = new Date()): stri
 export function getHoursFromReset(dayResetHour = 4): number[] {
   const normalized = ((Math.floor(dayResetHour) % 24) + 24) % 24;
   return Array.from({ length: 24 }, (_, i) => (normalized + i) % 24);
+}
+
+/** HEX 색상을 RGBA 문자열로 변환 */
+export function hexToRgba(hex: string, alpha: number): string {
+  const cleaned = (hex || "#FF5A36").replace("#", "").trim();
+  const full =
+    cleaned.length === 3
+      ? cleaned
+          .split("")
+          .map((c) => c + c)
+          .join("")
+      : cleaned.length === 6
+        ? cleaned
+        : "FF5A36";
+  const r = Number.parseInt(full.slice(0, 2), 16);
+  const g = Number.parseInt(full.slice(2, 4), 16);
+  const b = Number.parseInt(full.slice(4, 6), 16);
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) {
+    return `rgba(255, 90, 54, ${alpha})`;
+  }
+  return `rgba(${r}, ${g}, ${b}, ${Math.max(0, Math.min(1, alpha))})`;
+}
+
+/** 회독 수(1R -> 2R -> 3R -> 4R -> 5R+)에 따라 점점 진해지는 농도(Shade) 스타일 반환 */
+export function getRoundColorStyle(
+  hex: string,
+  roundCount: number
+): {
+  backgroundColor: string;
+  borderColor: string;
+  textColor: string;
+  boxShadow?: string;
+} {
+  if (roundCount <= 0) {
+    return {
+      backgroundColor: "rgba(255, 255, 255, 0.04)",
+      borderColor: "rgba(255, 255, 255, 0.08)",
+      textColor: "#64748B",
+    };
+  }
+  if (roundCount === 1) {
+    return {
+      backgroundColor: hexToRgba(hex, 0.38),
+      borderColor: hexToRgba(hex, 0.58),
+      textColor: "#F8FAFC",
+    };
+  }
+  if (roundCount === 2) {
+    return {
+      backgroundColor: hexToRgba(hex, 0.58),
+      borderColor: hexToRgba(hex, 0.78),
+      textColor: "#FFFFFF",
+    };
+  }
+  if (roundCount === 3) {
+    return {
+      backgroundColor: hexToRgba(hex, 0.78),
+      borderColor: hexToRgba(hex, 0.92),
+      textColor: "#FFFFFF",
+    };
+  }
+  if (roundCount === 4) {
+    return {
+      backgroundColor: hexToRgba(hex, 0.92),
+      borderColor: hex,
+      textColor: "#FFFFFF",
+    };
+  }
+  return {
+    backgroundColor: hexToRgba(hex, 1),
+    borderColor: "#FFFFFF",
+    textColor: "#FFFFFF",
+    boxShadow: `0 0 8px ${hexToRgba(hex, 0.55)}`,
+  };
 }
 
 export function addDaysISO(baseISO: string, offsetDays: number): string {
