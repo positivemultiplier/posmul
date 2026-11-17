@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
 import { StudyAuthProvider } from "@/components/auth/study-auth-provider";
 import "./globals.css";
 
@@ -17,6 +18,7 @@ export default function RootLayout({
     <html lang="ko">
       <body className="min-h-screen bg-[#070709] text-slate-100 antialiased">
         <StudyAuthProvider>{children}</StudyAuthProvider>
+        <Analytics />
       </body>
     </html>
   );

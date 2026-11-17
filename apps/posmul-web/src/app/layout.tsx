@@ -2,6 +2,7 @@ import { type ReactNode, Suspense } from "react";
 
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 
 import { ThemeProvider } from "../bounded-contexts/prediction/presentation/utils/ThemeProvider";
 import { BottomNavigation } from "../shared/ui/components/BottomNavigation";
@@ -120,6 +121,7 @@ export default function RootLayout({
             </div>
           </ToastProvider>
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
