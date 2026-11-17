@@ -95,7 +95,7 @@ function Invoke-QuietVercelDeploy {
       Copy-Item -Force $proVercel $rootVercel
     }
 
-    $deployOut = & npx vercel --prod --yes 2>&1
+    $deployOut = & pnpm dlx vercel --prod --yes 2>&1
     if ($LASTEXITCODE -ne 0) {
       Write-Output "[DEPLOY FAIL] $Target"
       $deployOut | Select-Object -Last 25
