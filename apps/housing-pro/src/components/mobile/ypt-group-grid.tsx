@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Bell,
   CalendarDays,
+  Camera,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -24,14 +25,15 @@ import {
   Users,
   X,
 } from "lucide-react";
-import {
-  INITIAL_STUDY_GROUPS,
-  type StudyGroupChatMessage,
-  type StudyGroupMemberItem,
-  type StudyGroupRoom,
+import type {
+  StudyGroupChatMessage,
+  StudyGroupMemberItem,
 } from "@/data/study-timer-tools";
+import { useStudyGroupsStore } from "@/lib/study-groups-store";
+import { StudyGroupCreateWizard } from "@/components/mobile/study-group-create-wizard";
 
 type GroupSubTab = "home" | "attendance" | "ranking" | "browse" | "chat";
+type BrowseSortMode = "newest" | "attendance" | "studyTime" | "cam" | "mission";
 
 interface YptGroupGridProps {
   myStudySeconds: number;
@@ -41,6 +43,7 @@ interface YptGroupGridProps {
   isMeStudying?: boolean;
   hideOthers?: boolean;
   accentHex?: string;
+  isTimerRunning?: boolean;
 }
 
 function formatHHMMSS(totalSec: number): string {
@@ -63,51 +66,122 @@ const WEEKDAYS = ["월", "화", "수", "목", "금", "토", "일"];
 export function YptGroupGrid({
   myStudySeconds,
   myConeEmoji,
-  myNickname = "나 (예비소장)",
+  myNickname = "posmul",
   currentSubjectLabel = "주택관리 관계법규",
   isMeStudying = true,
   hideOthers = false,
   accentHex = "#FF5A36",
+  isTimerRunning = false,
 }: YptGroupGridProps) {
-  const [rooms, setRooms] = useState<StudyGroupRoom[]>(INITIAL_STUDY_GROUPS);
-  const [joinedRoomIds, setJoinedRoomIds] = useState<string[]>([
-    "grp-29th-pass",
-    "grp-2nd-focus",
-  ]);
-  const [activeRoomId, setActiveRoomId] = useState<string>("grp-29th-pass");
+  const {
+    rooms,
+    joinedRoomIds,
+    joinedRooms,
+    activeRoomId,
+    profilesByRoomId,
+    setActiveRoomId,
+    createAndJoinRoom,
+    joinRoomWithProfile,
+    updateRoomProfile,
+    leaveRoom,
+    addGroupChat,
+  } = useStudyGroupsStore();
+
   const [groupTab, setGroupTab] = useState<GroupSubTab>("home");
+  // 마지막 슬라이드('스터디 그룹을 추가하세요.') 표시 여부
+  const [isAddSlideActive, setIsAddSlideActive] = useState(false);
+
+  // 스와이프 제스처 추적
+  const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
 
   // 출석부 · 랭킹 · 찾기 필터
   const [attendanceWeekOffset, setAttendanceWeekOffset] = useState(0);
   const [rankPeriod, setRankPeriod] = useState<"day" | "week">("day");
+  const [browseSort, setBrowseSort] = useState<BrowseSortMode>("newest");
   const [browseFilter, setBrowseFilter] = useState<{
     onlyCert: boolean;
+    onlyCam: boolean;
     onlyVacant: boolean;
     onlyPublic: boolean;
     query: string;
-  }>({ onlyCert: true, onlyVacant: false, onlyPublic: false, query: "" });
+  }>({
+    onlyCert: true,
+    onlyCam: false,
+    onlyVacant: false,
+    onlyPublic: false,
+    query: "",
+  });
 
-  // 그룹 정보 설정 모달 · 그룹 만들기 모달 · 초대 복사 피드백 · 채팅 입력
+  // + 확장 FAB & 그룹 만들기/가입/프로필 위저드
+  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
+  const [wizardState, setWizardState] = useState<{
+    open: boolean;
+    mode: "create" | "join" | "profile";
+    studyType: "general" | "cam";
+    targetRoomId?: string;
+  }>({ open: false, mode: "create", studyType: "general" });
+
+  // 그룹 정보 설정 모달 · 초대 복사 · 채팅
   const [showGroupInfoModal, setShowGroupInfoModal] = useState(false);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [newRoomTitle, setNewRoomTitle] = useState("");
-  const [newRoomGoal, setNewRoomGoal] = useState(4);
-  const [newRoomNotice, setNewRoomNotice] = useState("");
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [chatDraft, setChatDraft] = useState("");
 
-  const activeRoom = useMemo(
-    () => rooms.find((r) => r.id === activeRoomId) || rooms[0],
-    [rooms, activeRoomId]
-  );
+  const currentJoinedIndex = useMemo(() => {
+    if (isAddSlideActive) return joinedRooms.length;
+    const idx = joinedRooms.findIndex((r) => r.id === activeRoomId);
+    return idx >= 0 ? idx : 0;
+  }, [isAddSlideActive, joinedRooms, activeRoomId]);
+
+  const activeRoom = useMemo(() => {
+    if (isAddSlideActive) return null;
+    return joinedRooms[currentJoinedIndex] || joinedRooms[0] || rooms[0] || null;
+  }, [isAddSlideActive, joinedRooms, currentJoinedIndex, rooms]);
+
+  // 현재 방에서의 내 프로필 (방마다 별도 닉네임·스터디콘 지원)
+  const effectiveMyProfile = useMemo(() => {
+    const saved = activeRoom ? profilesByRoomId[activeRoom.id] : undefined;
+    return {
+      nickname: saved?.nickname || myNickname,
+      coneEmoji: saved?.coneEmoji || myConeEmoji,
+    };
+  }, [activeRoom, profilesByRoomId, myNickname, myConeEmoji]);
+
+  // 스와이프 좌/우 이동 핸들러
+  const totalSlidesCount = joinedRooms.length + 1; // +1은 '스터디 그룹을 추가하세요.' 슬라이드
+  const goToSlide = (nextIdx: number) => {
+    const wrapped = (nextIdx + totalSlidesCount) % totalSlidesCount;
+    if (wrapped >= joinedRooms.length) {
+      setIsAddSlideActive(true);
+    } else {
+      setIsAddSlideActive(false);
+      const target = joinedRooms[wrapped];
+      if (target) setActiveRoomId(target.id);
+    }
+  };
+
+  const handleTouchStart = (clientX: number, clientY: number) => {
+    swipeStartRef.current = { x: clientX, y: clientY };
+  };
+
+  const handleTouchEnd = (clientX: number, clientY: number) => {
+    const start = swipeStartRef.current;
+    swipeStartRef.current = null;
+    if (!start || groupTab !== "home") return;
+    const dx = clientX - start.x;
+    const dy = clientY - start.y;
+    if (Math.abs(dx) > 44 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+      if (dx < 0) goToSlide(currentJoinedIndex + 1);
+      else goToSlide(currentJoinedIndex - 1);
+    }
+  };
 
   // '나'를 포함한 현재 방 멤버 목록
   const mergedMembers: StudyGroupMemberItem[] = useMemo(() => {
     if (!activeRoom) return [];
     const meItem: StudyGroupMemberItem = {
       id: "me",
-      nickname: myNickname,
-      emoji: myConeEmoji,
+      nickname: effectiveMyProfile.nickname,
+      emoji: effectiveMyProfile.coneEmoji,
       todaySeconds: myStudySeconds,
       isStudying: isMeStudying,
       subject: currentSubjectLabel,
@@ -123,10 +197,23 @@ export function YptGroupGrid({
       isMe: true,
     };
     const others = activeRoom.members.filter((m) => !m.isMe);
-    return [...others.slice(0, 11), meItem];
-  }, [activeRoom, myNickname, myConeEmoji, myStudySeconds, isMeStudying, currentSubjectLabel]);
+    if (others.length === 0) return [meItem];
+    // 레퍼런스 2, 3처럼 중간 또는 마지막에 자연스럽게 배치
+    const insertIdx = Math.min(5, others.length);
+    return [...others.slice(0, insertIdx), meItem, ...others.slice(insertIdx, 11)];
+  }, [
+    activeRoom,
+    effectiveMyProfile,
+    myStudySeconds,
+    isMeStudying,
+    currentSubjectLabel,
+  ]);
 
-  const studyingCount = mergedMembers.filter((m) => m.isStudying).length;
+  const activeMembersCount = mergedMembers.filter((m) => m.isStudying).length;
+  const displayStudyingCount =
+    activeRoom?.onlineCountOverride && activeMembersCount > 0
+      ? activeRoom.onlineCountOverride
+      : activeMembersCount;
 
   const rankedMembers = useMemo(() => {
     return [...mergedMembers].sort((a, b) => {
@@ -160,49 +247,58 @@ export function YptGroupGrid({
       : rankedMembers[0]?.weeklySeconds.reduce((s, v) => s + v, 0) || 1
   );
 
+  // 그룹 탐색 필터 + 정렬 (레퍼런스 5)
+  const browseRooms = useMemo(() => {
+    const filtered = rooms.filter((r) => {
+      if (browseFilter.onlyCert && !r.category.includes("자격증") && !r.category.includes("주택")) {
+        return false;
+      }
+      if (browseFilter.onlyCam && r.studyType !== "cam") return false;
+      if (browseFilter.onlyVacant && r.memberCount >= r.capacity) return false;
+      if (browseFilter.onlyPublic && !r.isPublic) return false;
+      if (browseSort === "cam" && r.studyType !== "cam") return false;
+      if (browseSort === "mission" && !r.hasMission) return false;
+      if (
+        browseFilter.query.trim() &&
+        !r.title.toLowerCase().includes(browseFilter.query.trim().toLowerCase())
+      ) {
+        return false;
+      }
+      return true;
+    });
+
+    return [...filtered].sort((a, b) => {
+      if (browseSort === "attendance") return b.attendancePct - a.attendancePct;
+      if (browseSort === "studyTime") {
+        const aSec = a.members.reduce((s, m) => s + m.todaySeconds, 0);
+        const bSec = b.members.reduce((s, m) => s + m.todaySeconds, 0);
+        return bSec - aSec;
+      }
+      return b.createdAtMs - a.createdAtMs;
+    });
+  }, [rooms, browseFilter, browseSort]);
+
+  const wizardTargetRoom = useMemo(
+    () =>
+      wizardState.targetRoomId
+        ? rooms.find((r) => r.id === wizardState.targetRoomId)
+        : activeRoom || undefined,
+    [rooms, wizardState.targetRoomId, activeRoom]
+  );
+
   const handleSendChat = () => {
     const clean = chatDraft.trim();
     if (!clean || !activeRoom) return;
     const msg: StudyGroupChatMessage = {
       id: `chat-${Date.now()}`,
-      sender: myNickname,
-      emoji: myConeEmoji,
+      sender: effectiveMyProfile.nickname,
+      emoji: effectiveMyProfile.coneEmoji,
       text: clean,
       timeLabel: new Date().toTimeString().slice(0, 5),
       isMe: true,
     };
-    setRooms((prev) =>
-      prev.map((r) => (r.id === activeRoom.id ? { ...r, chats: [...r.chats, msg] } : r))
-    );
+    addGroupChat(activeRoom.id, msg);
     setChatDraft("");
-  };
-
-  const handleCreateRoom = () => {
-    const title = newRoomTitle.trim();
-    if (!title) return;
-    const newId = `grp-custom-${Date.now()}`;
-    const created: StudyGroupRoom = {
-      id: newId,
-      title,
-      category: "자격증",
-      notice: newRoomNotice.trim() || "오늘도 주택관리사 합격을 향해 집중!",
-      leaderName: myNickname,
-      goalHours: newRoomGoal,
-      capacity: 30,
-      memberCount: 1,
-      attendancePct: 100,
-      isPublic: true,
-      createdLabel: "오늘 개설",
-      members: [],
-      chats: [],
-    };
-    setRooms((prev) => [created, ...prev]);
-    setJoinedRoomIds((prev) => [newId, ...prev]);
-    setActiveRoomId(newId);
-    setShowCreateModal(false);
-    setNewRoomTitle("");
-    setNewRoomNotice("");
-    setGroupTab("home");
   };
 
   const handleCopyInvite = () => {
@@ -215,144 +311,258 @@ export function YptGroupGrid({
     setTimeout(() => setCopiedInvite(false), 2000);
   };
 
-  const browseRooms = useMemo(() => {
-    return rooms.filter((r) => {
-      if (browseFilter.onlyCert && r.category !== "자격증") return false;
-      if (browseFilter.onlyVacant && r.memberCount >= r.capacity) return false;
-      if (browseFilter.onlyPublic && !r.isPublic) return false;
-      if (
-        browseFilter.query.trim() &&
-        !r.title.toLowerCase().includes(browseFilter.query.trim().toLowerCase())
-      ) {
-        return false;
-      }
-      return true;
-    });
-  }, [rooms, browseFilter]);
-
-  if (!activeRoom) return null;
-
   return (
-    <div className="space-y-2.5">
-      {/* 그룹 헤더 카드 (레퍼런스 이미지 3, 7) */}
-      <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <button
-              type="button"
-              onClick={() => setGroupTab("browse")}
-              className="text-sm font-black text-white truncate flex items-center gap-1 hover:text-[#FF8A6B] transition max-w-full"
-              title="내 가입 그룹 전환 또는 새 그룹 찾기"
-            >
-              <span className="truncate">{activeRoom.title}</span>
-              <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            </button>
-            <div className="flex items-center gap-2 text-[10.5px] text-slate-400 mt-0.5">
-              <span className="font-bold flex items-center gap-1" style={{ color: accentHex }}>
-                <Flame className="w-3 h-3 fill-current" />
-                <span>{studyingCount}명 공부중</span>
-              </span>
-              <span>·</span>
-              <span className="text-amber-300 font-bold">
-                내 순위 {myRank}위 / {mergedMembers.length}명
-              </span>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowGroupInfoModal(true)}
-            className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 shrink-0"
-            title="그룹 정보 · 설정"
-          >
-            <MoreHorizontal className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* 공지 / 규칙 바 */}
-        <div className="px-2.5 py-1.5 rounded-xl bg-[#0E0E13] border border-white/[0.06] text-[10.5px] text-slate-300 flex items-center gap-1.5">
-          <span className="px-1.5 py-0.2 rounded bg-[#FF5A36]/20 text-[#FF8A6B] text-[9px] font-black shrink-0">
-            규칙
-          </span>
-          <span className="truncate">{activeRoom.notice}</span>
-        </div>
-      </div>
-
-      {/* 1. 홈(열공방 4열 책상 그리드) — 레퍼런스 이미지 3 & 7 */}
+    <div className="space-y-2.5 relative">
+      {/* ========================================================== */}
+      {/* 메인 스터디 그룹 카드 (레퍼런스 1~4: 좌우 스와이프 전환) */}
+      {/* ========================================================== */}
       {groupTab === "home" && (
-        <div className="grid grid-cols-4 gap-1.5">
-          {mergedMembers.map((member) => {
-            const isMasked = hideOthers && !member.isMe;
-            const studying = member.isStudying && !isMasked;
+        <div
+          onTouchStart={(e) => {
+            const t = e.touches[0];
+            if (t) handleTouchStart(t.clientX, t.clientY);
+          }}
+          onTouchEnd={(e) => {
+            const t = e.changedTouches[0];
+            if (t) handleTouchEnd(t.clientX, t.clientY);
+          }}
+          className="rounded-3xl bg-[#14141B] border border-white/[0.08] p-3.5 space-y-3 select-none"
+        >
+          {isAddSlideActive || !activeRoom ? (
+            /* 레퍼런스 이미지 4: 마지막 슬라이드 "스터디 그룹을 추가하세요." */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-black text-white">
+                  스터디 그룹을 추가하세요.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setGroupTab("browse")}
+                  className="p-1 rounded-lg hover:bg-white/[0.08] text-slate-400"
+                >
+                  <MoreHorizontal className="w-4 h-4" />
+                </button>
+              </div>
 
-            return (
-              <div
-                key={member.id}
-                className={`rounded-xl px-1.5 py-2.5 flex flex-col items-center text-center transition relative ${
-                  member.isMe
-                    ? "bg-[#1A1617] border shadow-md"
-                    : studying
-                      ? "bg-[#16151B] border border-white/[0.08]"
-                      : "bg-[#121217] border border-white/[0.04] opacity-70"
-                }`}
-                style={
-                  member.isMe
-                    ? { borderColor: accentHex, boxShadow: `0 0 18px ${accentHex}26` }
-                    : undefined
-                }
-              >
-                {/* 책상 + 램프 / 공부중 스터디콘 캐릭터 */}
-                <div className="h-11 flex items-center justify-center relative">
-                  {studying ? (
-                    <div className="relative flex flex-col items-center">
-                      <span className="text-2xl leading-none drop-shadow">
-                        {member.emoji}
+              <div className="py-10 px-4 text-center space-y-4">
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  스터디 그룹을 추가하면
+                  <br />
+                  함께 공부중인 그룹원들의 모습을
+                  <br />
+                  이곳에서 스와이프하며 볼 수 있습니다.
+                  {isTimerRunning && (
+                    <>
+                      <br />
+                      <span className="text-slate-400 text-[11px]">
+                        여러 방을 개설·가입해 경쟁해 보세요!
                       </span>
-                      <div
-                        className="w-8 h-1 rounded-full mt-1"
-                        style={{ backgroundColor: accentHex }}
-                      />
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center text-slate-600">
-                      {member.todaySeconds > 0 && !isMasked ? (
-                        <Clock className="w-3 h-3 text-slate-500 mb-0.5" />
-                      ) : null}
-                      <LampDesk className="w-6 h-6 stroke-[1.5]" />
-                    </div>
+                    </>
                   )}
-                </div>
+                </p>
 
-                {/* 닉네임 */}
-                <div
-                  className={`text-[10px] font-extrabold truncate w-full mt-1 ${
-                    member.isMe
-                      ? "text-white"
-                      : studying
-                        ? "text-[#FF8A6B]"
-                        : "text-slate-400"
-                  }`}
-                >
-                  {isMasked ? "열공중" : member.nickname}
-                </div>
-
-                {/* 공부 시간 */}
-                <div
-                  className={`font-mono text-[10px] font-black tracking-tight tabular-nums ${
-                    studying ? "text-[#FF7A59]" : "text-slate-500"
-                  }`}
-                  style={studying ? { color: accentHex } : undefined}
-                >
-                  {isMasked ? "••:••:••" : formatHHMMSS(member.todaySeconds)}
+                <div className="flex items-center justify-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setGroupTab("browse")}
+                    className="px-3.5 py-2 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-xs font-black text-white transition"
+                  >
+                    그룹 찾기
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setWizardState({
+                        open: true,
+                        mode: "create",
+                        studyType: "general",
+                      })
+                    }
+                    className="px-3.5 py-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-xs font-black text-white flex items-center gap-1 transition"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>새 그룹 만들기</span>
+                  </button>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ) : (
+            /* 가입된 스터디방 실시간 4열 책상 타일 */
+            <>
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setGroupTab("browse")}
+                      className="text-sm font-black text-white truncate hover:text-[#FF8A6B] transition text-left"
+                    >
+                      {activeRoom.title}
+                    </button>
+                    {activeRoom.studyType === "cam" && (
+                      <span className="px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 text-[9px] font-black shrink-0">
+                        캠
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 text-[10.5px] text-slate-400 mt-0.5">
+                    <span className="font-bold flex items-center gap-1" style={{ color: accentHex }}>
+                      <Flame className="w-3 h-3 fill-current" />
+                      <span>{displayStudyingCount}명 공부중</span>
+                    </span>
+                    <span>·</span>
+                    <span className="text-amber-300 font-bold">
+                      내 순위 {myRank}위
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => goToSlide(currentJoinedIndex - 1)}
+                    className="p-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] text-slate-400 hover:text-white"
+                    title="이전 스터디방 (좌로 스와이프)"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => goToSlide(currentJoinedIndex + 1)}
+                    className="p-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] text-slate-400 hover:text-white"
+                    title="다음 스터디방 (우로 스와이프)"
+                  >
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowGroupInfoModal(true)}
+                    className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300"
+                    title="그룹 정보 · 설정"
+                  >
+                    <MoreHorizontal className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* 4열 책상 타일 그리드 */}
+              <div className="grid grid-cols-4 gap-1.5">
+                {mergedMembers.map((member) => {
+                  const isMasked = hideOthers && !member.isMe;
+                  const studying = member.isStudying && !isMasked;
+
+                  return (
+                    <div
+                      key={member.id}
+                      onClick={() => {
+                        if (member.isMe && activeRoom) {
+                          setWizardState({
+                            open: true,
+                            mode: "profile",
+                            studyType: activeRoom.studyType,
+                            targetRoomId: activeRoom.id,
+                          });
+                        }
+                      }}
+                      className={`rounded-xl px-1.5 py-2.5 flex flex-col items-center text-center transition relative ${
+                        member.isMe
+                          ? "bg-[#1C1617] border cursor-pointer"
+                          : studying
+                            ? "bg-[#18171E] border border-white/[0.06]"
+                            : "bg-[#111116] border border-white/[0.04] opacity-75"
+                      }`}
+                      style={
+                        member.isMe
+                          ? {
+                              borderColor: accentHex,
+                              boxShadow: `0 0 18px ${accentHex}26`,
+                            }
+                          : undefined
+                      }
+                      title={member.isMe ? "탭하여 이 방의 닉네임·스터디콘 변경" : undefined}
+                    >
+                      <div className="h-11 flex items-center justify-center relative">
+                        {studying ? (
+                          <div className="relative flex flex-col items-center">
+                            <span className="text-2xl leading-none drop-shadow">
+                              {member.emoji}
+                            </span>
+                            <div
+                              className="w-8 h-1 rounded-full mt-1"
+                              style={{ backgroundColor: accentHex }}
+                            />
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center text-slate-600">
+                            {member.todaySeconds > 0 && !isMasked ? (
+                              <Clock className="w-3 h-3 text-slate-500 mb-0.5" />
+                            ) : null}
+                            <LampDesk className="w-6 h-6 stroke-[1.5]" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div
+                        className={`text-[10px] font-extrabold truncate w-full mt-1 ${
+                          member.isMe
+                            ? "text-white"
+                            : studying
+                              ? "text-[#FF8A6B]"
+                              : "text-slate-400"
+                        }`}
+                      >
+                        {isMasked ? "열공중" : member.nickname}
+                      </div>
+
+                      <div
+                        className={`font-mono text-[10px] font-black tracking-tight tabular-nums ${
+                          studying ? "text-[#FF7A59]" : "text-slate-500"
+                        }`}
+                        style={studying ? { color: accentHex } : undefined}
+                      >
+                        {isMasked ? "••:••:••" : formatHHMMSS(member.todaySeconds)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* 스와이프 페이지 도트 인디케이터 (가입된 그룹 수 + 추가 슬라이드) */}
+          <div className="flex items-center justify-center gap-1.5 pt-1">
+            {joinedRooms.map((r, idx) => {
+              const active = !isAddSlideActive && idx === currentJoinedIndex;
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => goToSlide(idx)}
+                  className={`h-1.5 rounded-full transition-all ${
+                    active ? "w-5" : "w-1.5 bg-white/25 hover:bg-white/45"
+                  }`}
+                  style={active ? { backgroundColor: accentHex } : undefined}
+                  title={r.title}
+                />
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => goToSlide(joinedRooms.length)}
+              className={`h-1.5 rounded-full transition-all ${
+                isAddSlideActive
+                  ? "w-5 bg-amber-400"
+                  : "w-1.5 bg-white/20 hover:bg-white/45"
+              }`}
+              title="스터디 그룹 추가"
+            />
+            <span className="text-[9.5px] text-slate-500 ml-1">스와이프 전환</span>
+          </div>
         </div>
       )}
 
-      {/* 2. 출석부 (요일별 히트맵 블록) — 레퍼런스 이미지 5 */}
-      {groupTab === "attendance" && (
+      {/* 2. 출석부 */}
+      {groupTab === "attendance" && activeRoom && (
         <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-3">
           <div className="flex items-center justify-between text-xs font-black text-white">
             <button
@@ -364,7 +574,7 @@ export function YptGroupGrid({
             </button>
             <span>
               {attendanceWeekOffset === 0
-                ? "이번 주 출석부 (공부시간)"
+                ? `${activeRoom.title} · 이번 주 출석부`
                 : `${Math.abs(attendanceWeekOffset)}주 전 출석부`}
             </span>
             <button
@@ -382,7 +592,7 @@ export function YptGroupGrid({
               목표시간 <strong className="text-white">{activeRoom.goalHours}시간</strong>
             </span>
             <span>
-              그룹 출석률{" "}
+              출석률{" "}
               <strong style={{ color: accentHex }}>{activeRoom.attendancePct}%</strong>
             </span>
           </div>
@@ -428,8 +638,8 @@ export function YptGroupGrid({
         </div>
       )}
 
-      {/* 3. 랭킹 (일간/주간 순위 & 오렌지 게이지 바) — 레퍼런스 이미지 4 */}
-      {groupTab === "ranking" && (
+      {/* 3. 랭킹 */}
+      {groupTab === "ranking" && activeRoom && (
         <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-3">
           <div className="flex items-center justify-between">
             <div className="text-[10.5px] text-slate-300 space-y-0.5">
@@ -521,23 +731,38 @@ export function YptGroupGrid({
         </div>
       )}
 
-      {/* 4. 내 가입 그룹 & 스터디 그룹 탐색/개설 — 레퍼런스 이미지 8 & 9 */}
+      {/* 4. 스터디 그룹 찾기 · 여러 방 가입 · 캠/일반 스터디 개설 (레퍼런스 이미지 5) */}
       {groupTab === "browse" && (
-        <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-black text-white">내 그룹 · 스터디방 찾기</span>
-            <button
-              type="button"
-              onClick={() => setShowCreateModal(true)}
-              className="px-2.5 py-1 rounded-lg bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-[10.5px] font-black flex items-center gap-1"
-            >
-              <Plus className="w-3 h-3" />
-              <span>방 만들기</span>
-            </button>
+        <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-2.5 relative pb-12">
+          {/* 상단 정렬 탭 (신규 · 출석률 · 공부량 · 캠 스터디 · 미션인증) */}
+          <div className="flex items-center gap-3 border-b border-white/[0.08] pb-2 overflow-x-auto no-scrollbar text-[11px] font-black">
+            {(
+              [
+                { id: "newest", label: "신규" },
+                { id: "attendance", label: "출석률" },
+                { id: "studyTime", label: "공부량" },
+                { id: "cam", label: "캠 스터디" },
+                { id: "mission", label: "미션인증" },
+              ] as const
+            ).map((sTab) => (
+              <button
+                key={sTab.id}
+                type="button"
+                onClick={() => setBrowseSort(sTab.id)}
+                className={`pb-1 shrink-0 transition border-b-2 ${
+                  browseSort === sTab.id
+                    ? "text-white border-[#FF5A36]"
+                    : "text-slate-500 border-transparent hover:text-slate-300"
+                }`}
+              >
+                {sTab.label}
+              </button>
+            ))}
           </div>
 
+          {/* 체크 필터 + 검색 */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <div className="relative flex-1 min-w-[140px]">
+            <div className="relative flex-1 min-w-[120px]">
               <Search className="w-3 h-3 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
@@ -545,99 +770,159 @@ export function YptGroupGrid({
                 onChange={(e) =>
                   setBrowseFilter((prev) => ({ ...prev, query: e.target.value }))
                 }
-                placeholder="그룹명 검색..."
+                placeholder="스터디 그룹 검색..."
                 className="w-full pl-7 pr-2.5 py-1 rounded-lg bg-[#0D0D12] border border-white/[0.08] text-[10.5px] text-white"
               />
             </div>
-            <button
-              type="button"
-              onClick={() =>
-                setBrowseFilter((p) => ({ ...p, onlyCert: !p.onlyCert }))
-              }
-              className={`px-2 py-1 rounded-lg text-[10px] font-bold border ${
-                browseFilter.onlyCert
-                  ? "bg-[#FF5A36]/20 border-[#FF5A36] text-[#FF8A6B]"
-                  : "bg-white/[0.04] border-white/[0.08] text-slate-400"
-              }`}
-            >
-              자격증
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                setBrowseFilter((p) => ({ ...p, onlyVacant: !p.onlyVacant }))
-              }
-              className={`px-2 py-1 rounded-lg text-[10px] font-bold border ${
-                browseFilter.onlyVacant
-                  ? "bg-sky-500/20 border-sky-400 text-sky-200"
-                  : "bg-white/[0.04] border-white/[0.08] text-slate-400"
-              }`}
-            >
-              빈자리
-            </button>
+            {(
+              [
+                { key: "onlyCert", label: "자격증" },
+                { key: "onlyCam", label: "캠" },
+                { key: "onlyVacant", label: "빈자리" },
+                { key: "onlyPublic", label: "공개" },
+              ] as const
+            ).map((flt) => {
+              const checked = browseFilter[flt.key];
+              return (
+                <button
+                  key={flt.key}
+                  type="button"
+                  onClick={() =>
+                    setBrowseFilter((p) => ({ ...p, [flt.key]: !p[flt.key] }))
+                  }
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1 ${
+                    checked
+                      ? "bg-[#FF5A36]/20 border-[#FF5A36] text-[#FF8A6B]"
+                      : "bg-white/[0.04] border-white/[0.08] text-slate-400"
+                  }`}
+                >
+                  {checked && <Check className="w-2.5 h-2.5" />}
+                  <span>{flt.label}</span>
+                </button>
+              );
+            })}
           </div>
 
-          <div className="space-y-1.5 max-h-48 overflow-y-auto">
+          {/* 그룹 카드 목록 */}
+          <div className="space-y-2 max-h-56 overflow-y-auto pr-0.5">
             {browseRooms.map((r) => {
               const isJoined = joinedRoomIds.includes(r.id);
-              const isSelected = r.id === activeRoom.id;
+              const isSelected = !isAddSlideActive && r.id === activeRoom?.id;
               return (
                 <div
                   key={r.id}
-                  className={`p-2.5 rounded-xl border flex items-center justify-between gap-2 ${
+                  className={`p-3 rounded-xl border space-y-1.5 ${
                     isSelected
                       ? "bg-[#FF5A36]/12 border-[#FF5A36]"
                       : "bg-[#101016] border-white/[0.07]"
                   }`}
                 >
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-black text-white truncate flex items-center gap-1">
-                      {!r.isPublic && <Lock className="w-3 h-3 text-amber-400 shrink-0" />}
-                      <span className="truncate">{r.title}</span>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#FF8A6B]">
+                        <span>{r.category}</span>
+                        {r.studyType === "cam" && <Camera className="w-3 h-3" />}
+                        {!r.isPublic && <Lock className="w-3 h-3 text-amber-400" />}
+                        {r.joinMethod === "approval" && (
+                          <span className="text-[9px] text-slate-400">· 승인가입</span>
+                        )}
+                      </div>
+                      <div className="text-xs font-black text-white truncate mt-0.5">
+                        {r.title}
+                      </div>
                     </div>
-                    <div className="text-[9.5px] text-slate-400 mt-0.5">
-                      {r.category} · 목표 {r.goalHours}h · {r.memberCount}/{r.capacity}명 · 출석{" "}
-                      {r.attendancePct}%
-                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isJoined) {
+                          setIsAddSlideActive(false);
+                          setActiveRoomId(r.id);
+                          setGroupTab("home");
+                        } else {
+                          setWizardState({
+                            open: true,
+                            mode: "join",
+                            studyType: r.studyType,
+                            targetRoomId: r.id,
+                          });
+                        }
+                      }}
+                      className={`px-2.5 py-1 rounded-lg text-[10px] font-black shrink-0 ${
+                        isSelected
+                          ? "bg-emerald-500/20 text-emerald-300"
+                          : isJoined
+                            ? "bg-white/[0.08] text-white"
+                            : "bg-[#FF5A36] hover:bg-[#ff6d4d] text-white"
+                      }`}
+                    >
+                      {isSelected ? "입장중" : isJoined ? "이동" : "가입하기"}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!isJoined) {
-                        setJoinedRoomIds((p) => [...p, r.id]);
-                      }
-                      setActiveRoomId(r.id);
-                      setGroupTab("home");
-                    }}
-                    className={`px-2.5 py-1 rounded-lg text-[10px] font-black shrink-0 ${
-                      isSelected
-                        ? "bg-emerald-500/20 text-emerald-300"
-                        : isJoined
-                          ? "bg-white/[0.08] text-white"
-                          : "bg-[#FF5A36] text-white"
-                    }`}
-                  >
-                    {isSelected ? "입장중" : isJoined ? "이동" : "가입·입장"}
-                  </button>
+
+                  <div className="text-[10px] text-slate-400">
+                    목표 {r.goalHours}시간 · 인원 {r.memberCount}/{r.capacity}명 · 그룹장{" "}
+                    {r.leaderName} · 출석 {r.attendancePct}% · {r.createdLabel}
+                  </div>
+                  <div className="text-[10.5px] text-slate-300 truncate">{r.notice}</div>
                 </div>
               );
             })}
           </div>
+
+          {/* 레퍼런스 5: 우하단 주황 + 플로팅 확장 버튼 (캠 스터디 / 일반 스터디) */}
+          <div className="absolute right-3 bottom-3 z-20 flex flex-col items-end gap-2">
+            {isFabMenuOpen && (
+              <div className="flex flex-col items-end gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsFabMenuOpen(false);
+                    setWizardState({ open: true, mode: "create", studyType: "cam" });
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-white text-slate-950 text-[11px] font-black shadow-xl hover:scale-105 transition"
+                >
+                  <span>캠 스터디</span>
+                  <Camera className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsFabMenuOpen(false);
+                    setWizardState({ open: true, mode: "create", studyType: "general" });
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-white text-slate-950 text-[11px] font-black shadow-xl hover:scale-105 transition"
+                >
+                  <span>일반 스터디</span>
+                  <LampDesk className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsFabMenuOpen((prev) => !prev)}
+              className="w-10 h-10 rounded-full bg-[#FF5A36] hover:bg-[#ff6d4d] text-white shadow-xl flex items-center justify-center transition"
+              title="새 스터디방 만들기"
+            >
+              {isFabMenuOpen ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
       )}
 
-      {/* 5. 그룹 열공 응원 채팅 — 레퍼런스 이미지 7 하단 '채팅' */}
-      {groupTab === "chat" && (
+      {/* 5. 그룹 응원 채팅 */}
+      {groupTab === "chat" && activeRoom && (
         <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-2.5">
           <div className="flex items-center justify-between text-[11px] font-black text-white">
-            <span>실시간 열공 응원 채팅</span>
+            <span className="truncate">{activeRoom.title} · 응원 채팅</span>
             <button
               type="button"
               onClick={handleCopyInvite}
-              className="px-2 py-0.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-[10px] text-sky-300 flex items-center gap-1"
+              className="px-2 py-0.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-[10px] text-sky-300 flex items-center gap-1 shrink-0"
             >
               {copiedInvite ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-              <span>{copiedInvite ? "복사됨" : "그룹 초대"}</span>
+              <span>{copiedInvite ? "복사됨" : "초대"}</span>
             </button>
           </div>
 
@@ -690,14 +975,14 @@ export function YptGroupGrid({
         </div>
       )}
 
-      {/* 그룹 하단 5탭 네비게이션 (레퍼런스 이미지 4, 5, 7: 홈 · 출석부 · 랭킹 · 찾기/초대 · 채팅) */}
+      {/* 그룹 하단 5탭 네비게이션 */}
       <div className="grid grid-cols-5 gap-1 p-1 rounded-2xl bg-[#121218] border border-white/[0.06] text-[10px] font-bold">
         {(
           [
-            { id: "home", label: "홈", icon: Home },
+            { id: "home", label: `홈(${joinedRooms.length})`, icon: Home },
             { id: "attendance", label: "출석부", icon: CalendarDays },
             { id: "ranking", label: "랭킹", icon: Trophy },
-            { id: "browse", label: "그룹·초대", icon: Users },
+            { id: "browse", label: "방찾기·개설", icon: Users },
             { id: "chat", label: "채팅", icon: MessageSquare },
           ] as const
         ).map((tab) => {
@@ -719,8 +1004,8 @@ export function YptGroupGrid({
         })}
       </div>
 
-      {/* 그룹 정보/설정 모달 (레퍼런스 이미지 6) */}
-      {showGroupInfoModal && (
+      {/* 그룹 정보/설정 모달 */}
+      {showGroupInfoModal && activeRoom && (
         <div
           className="fixed inset-0 z-[75] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3"
           onClick={() => setShowGroupInfoModal(false)}
@@ -744,6 +1029,25 @@ export function YptGroupGrid({
             </div>
 
             <div className="space-y-2 text-xs">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGroupInfoModal(false);
+                  setWizardState({
+                    open: true,
+                    mode: "profile",
+                    studyType: activeRoom.studyType,
+                    targetRoomId: activeRoom.id,
+                  });
+                }}
+                className="w-full p-3 rounded-2xl bg-[#101016] hover:bg-white/[0.06] flex items-center justify-between transition"
+              >
+                <span className="font-bold text-white">내 그룹 프로필 (닉네임·스터디콘)</span>
+                <span className="text-[11px] font-black text-[#FF8A6B]">
+                  {effectiveMyProfile.coneEmoji} {effectiveMyProfile.nickname} ▸
+                </span>
+              </button>
+
               <div className="p-3 rounded-2xl bg-[#101016] space-y-2">
                 <div className="text-[10px] font-bold text-slate-500">그룹 정보</div>
                 <div className="flex justify-between">
@@ -755,8 +1059,10 @@ export function YptGroupGrid({
                   <span className="font-bold text-white">{activeRoom.leaderName}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-300">카테고리</span>
-                  <span className="font-bold text-sky-300">{activeRoom.category}</span>
+                  <span className="text-slate-300">가입방식</span>
+                  <span className="font-bold text-sky-300">
+                    {activeRoom.joinMethod === "approval" ? "승인 후 가입" : "바로가입"}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-300">목표시간</span>
@@ -790,9 +1096,7 @@ export function YptGroupGrid({
                 <button
                   type="button"
                   onClick={() => {
-                    setJoinedRoomIds((p) => p.filter((id) => id !== activeRoom.id));
-                    const nextRoom = rooms.find((r) => r.id !== activeRoom.id);
-                    if (nextRoom) setActiveRoomId(nextRoom.id);
+                    leaveRoom(activeRoom.id);
                     setShowGroupInfoModal(false);
                   }}
                   className="px-4 py-2.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 text-xs font-black"
@@ -805,70 +1109,34 @@ export function YptGroupGrid({
         </div>
       )}
 
-      {/* 새 그룹 방 만들기 모달 */}
-      {showCreateModal && (
-        <div
-          className="fixed inset-0 z-[75] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
-          onClick={() => setShowCreateModal(false)}
-        >
-          <div
-            className="w-full max-w-[380px] rounded-3xl bg-[#16161D] border border-white/[0.12] p-4 space-y-3 text-white shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-black">새 열공 스터디방 만들기</span>
-              <button
-                type="button"
-                onClick={() => setShowCreateModal(false)}
-                className="p-1 text-slate-400 hover:text-white"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <input
-              type="text"
-              value={newRoomTitle}
-              onChange={(e) => setNewRoomTitle(e.target.value)}
-              placeholder="방 이름 (예: 주택관리사 새벽 5시 기상방)"
-              className="w-full px-3 py-2 rounded-xl bg-[#0D0D12] border border-white/[0.1] text-xs text-white"
-            />
-            <input
-              type="text"
-              value={newRoomNotice}
-              onChange={(e) => setNewRoomNotice(e.target.value)}
-              placeholder="공지·규칙 (예: 매일 4시간 이상 출석!)"
-              className="w-full px-3 py-2 rounded-xl bg-[#0D0D12] border border-white/[0.1] text-xs text-white"
-            />
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-slate-400 font-bold">하루 목표시간</span>
-              <div className="flex items-center gap-1">
-                {[2, 4, 6, 8].map((h) => (
-                  <button
-                    key={h}
-                    type="button"
-                    onClick={() => setNewRoomGoal(h)}
-                    className={`px-2.5 py-1 rounded-lg font-black ${
-                      newRoomGoal === h
-                        ? "bg-[#FF5A36] text-white"
-                        : "bg-white/[0.06] text-slate-300"
-                    }`}
-                  >
-                    {h}h
-                  </button>
-                ))}
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleCreateRoom}
-              disabled={!newRoomTitle.trim()}
-              className="w-full py-2.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] disabled:opacity-40 text-white text-xs font-black"
-            >
-              스터디방 개설 및 입장
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 다단계 그룹 만들기 / 방 가입 프로필 설정 위저드 (레퍼런스 6~9) */}
+      <StudyGroupCreateWizard
+        isOpen={wizardState.open}
+        mode={wizardState.mode}
+        initialStudyType={wizardState.studyType}
+        targetRoomTitle={wizardTargetRoom?.title}
+        targetRoomNicknameRule={wizardTargetRoom?.nicknameRule}
+        targetRoomPassword={wizardTargetRoom?.password}
+        defaultNickname={effectiveMyProfile.nickname}
+        defaultConeEmoji={effectiveMyProfile.coneEmoji}
+        onClose={() => setWizardState((prev) => ({ ...prev, open: false }))}
+        onCreateComplete={(input) => {
+          createAndJoinRoom(input);
+          setIsAddSlideActive(false);
+          setGroupTab("home");
+        }}
+        onProfileComplete={(profile) => {
+          const targetId = wizardState.targetRoomId || activeRoom?.id;
+          if (!targetId) return;
+          if (wizardState.mode === "join") {
+            joinRoomWithProfile(targetId, profile);
+          } else {
+            updateRoomProfile(targetId, profile);
+          }
+          setIsAddSlideActive(false);
+          setGroupTab("home");
+        }}
+      />
     </div>
   );
 }

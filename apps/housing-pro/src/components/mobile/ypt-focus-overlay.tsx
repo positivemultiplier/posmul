@@ -93,8 +93,8 @@ export function YptFocusOverlay({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  // 레퍼런스 2 <-> 3 전환: 단독 집중 화면 vs 그룹 열공방 화면
-  const [displayMode, setDisplayMode] = useState<"focus" | "group">("focus");
+  // 레퍼런스 3 <-> 2 전환: 스터디그룹 타이머(기본) <-> 개인 집중 타이머
+  const [displayMode, setDisplayMode] = useState<"focus" | "group">("group");
 
   // 레퍼런스 1: 우상단 ⊞ 플로팅 기능 메뉴 & 하위 도구 모달
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -194,10 +194,11 @@ export function YptFocusOverlay({
     return () => clearInterval(timer);
   }, [isOpen, isPaused, showVerifyModal]);
 
-  // 열릴 때 세션 초기화
+  // 열릴 때 세션 초기화 (그룹 열공방 타이머를 기본으로 먼저 표시)
   useEffect(() => {
     if (isOpen) {
       startedAtRef.current = Date.now();
+      setDisplayMode("group");
       setElapsedSeconds(0);
       setIsPaused(false);
       setIsMenuOpen(false);
@@ -762,7 +763,7 @@ export function YptFocusOverlay({
             </div>
           </section>
 
-          {/* 4열 책상 열공 그리드 + 출석부 + 랭킹 + 그룹탐색 + 채팅 */}
+          {/* 4열 책상 열공 그리드 + 좌우 스와이프 + 출석부 + 랭킹 + 그룹개설/가입 + 채팅 */}
           <YptGroupGrid
             myStudySeconds={todayTotalLive}
             myConeEmoji={coneEmoji}
@@ -771,6 +772,7 @@ export function YptFocusOverlay({
             isMeStudying={!isPaused}
             hideOthers={hideOthers}
             accentHex={activeTheme.accentHex}
+            isTimerRunning={!isPaused}
           />
         </main>
       )}
