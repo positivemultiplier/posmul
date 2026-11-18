@@ -305,10 +305,14 @@ export default function HousingProStudentTimerPage() {
     return map;
   }, [subjects, matrixLogs, timetablesByDate, todayISO, sessionExtraSeconds]);
 
+  const rawTodayStudySeconds = useMemo(
+    () => Object.values(subjectSecondsMap).reduce((acc, s) => acc + s, 0),
+    [subjectSecondsMap]
+  );
+
   const totalStudySeconds = useMemo(() => {
-    const sum = Object.values(subjectSecondsMap).reduce((acc, s) => acc + s, 0);
-    return sum > 0 ? sum : 7200;
-  }, [subjectSecondsMap]);
+    return rawTodayStudySeconds > 0 ? rawTodayStudySeconds : 7200;
+  }, [rawTodayStudySeconds]);
 
   const targetSeconds = 21600;
   const goalPct = Math.min(100, Math.round((totalStudySeconds / targetSeconds) * 100));
@@ -769,8 +773,13 @@ export default function HousingProStudentTimerPage() {
 
         {activeSubTab === "group" && (
           <YptGroupGrid
-            myStudySeconds={totalStudySeconds}
+            myStudySeconds={rawTodayStudySeconds}
             myConeEmoji={currentConeSpec.badgeEmoji}
+            myNickname={isLoggedIn ? profile.displayName : "posmul"}
+            currentSubjectLabel={
+              activeFocusMeta?.subject.shortTitle || "주택관리 관계법규"
+            }
+            isMeStudying={Boolean(focusTopicId)}
           />
         )}
 
@@ -813,7 +822,7 @@ export default function HousingProStudentTimerPage() {
         )}
       </div>
 
-      {/* 집중 타이머 오버레이 */}
+      {/* 집중 타이머 오버레이 (레퍼런스 1~9 기반 Housing-Pro 스튜디오) */}
       <YptFocusOverlay
         isOpen={Boolean(focusTopicId)}
         subjectTitle={
@@ -824,6 +833,18 @@ export default function HousingProStudentTimerPage() {
         subjectColor={activeFocusMeta?.subject.color || "#FF5A36"}
         coneEmoji={currentConeSpec.badgeEmoji}
         coneLevel={equippedCone.currentLevel}
+        coneName={currentConeSpec.name}
+        dDayLabel={
+          dDayToExam >= 0 ? `D-${dDayToExam} 제29회` : `D+${Math.abs(dDayToExam)}`
+        }
+        subjectElapsedBaseSeconds={
+          activeFocusMeta ? subjectSecondsMap[activeFocusMeta.subject.id] || 0 : 0
+        }
+        todayTotalBaseSeconds={rawTodayStudySeconds}
+        myNickname={isLoggedIn ? profile.displayName : "posmul"}
+        subjects={subjects}
+        todaySlots={timetablesByDate[todayISO] || {}}
+        onSwitchTopic={(nextTopicId) => setFocusTopicId(nextTopicId)}
         onConfirmValidTime={handleConfirmValidFocusTime}
         onCancel={() => setFocusTopicId(null)}
       />
