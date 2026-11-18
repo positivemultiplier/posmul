@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Flame,
@@ -20,7 +20,11 @@ interface YptFocusOverlayProps {
   subjectColor: string;
   coneEmoji: string;
   coneLevel: number;
-  onConfirmValidTime: (elapsedSeconds: number, completionMode?: "done" | "partial") => void;
+  onConfirmValidTime: (
+    elapsedSeconds: number,
+    completionMode?: "done" | "partial",
+    startedAtMs?: number
+  ) => void;
   onCancel: () => void;
 }
 
@@ -46,6 +50,7 @@ export function YptFocusOverlay({
   const [quizIndex, setQuizIndex] = useState(0);
   const [quizCorrectCount, setQuizCorrectCount] = useState(0);
   const [quizFeedback, setQuizFeedback] = useState<string | null>(null);
+  const startedAtRef = useRef<number>(Date.now());
 
   // 1초 타이머 구동
   useEffect(() => {
@@ -59,6 +64,7 @@ export function YptFocusOverlay({
   // 열릴 때 초기화
   useEffect(() => {
     if (isOpen) {
+      startedAtRef.current = Date.now();
       setElapsedSeconds(0);
       setShowVerifyModal(false);
       setCompletionMode("done");
@@ -89,7 +95,11 @@ export function YptFocusOverlay({
       setQuizFeedback(null);
       if (quizIndex + 1 >= quickCards.length) {
         // 3문항 완료 시 유효시간 즉시 확정
-        onConfirmValidTime(Math.max(elapsedSeconds, 60), completionMode);
+        onConfirmValidTime(
+          Math.max(elapsedSeconds, 60),
+          completionMode,
+          startedAtRef.current
+        );
       } else {
         setQuizIndex((prev) => prev + 1);
       }

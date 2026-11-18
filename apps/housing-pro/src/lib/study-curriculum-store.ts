@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   TEXTBOOK_CATALOG,
   DEFAULT_SUBJECT_CATEGORIES,
@@ -12,6 +12,9 @@ import {
   addDaysISO,
   computeLogicalTodayISO,
   findTopicMetaInSubjects,
+  getTimetableSlotPlan,
+  getTimetableSlotActual,
+  setTimetableSlotLayer,
 } from "@/data/study-textbooks";
 import {
   fetchStudyMatrixSyncAction,
@@ -204,14 +207,120 @@ function readStoredState(todayISO: string): CurriculumPersistedState {
   }
 }
 
-function persistState(next: CurriculumPersistedState): void {
+function persistState(
+  next: CurriculumPersistedState,
+  sourceInstanceId?: string
+): void {
   if (typeof globalThis === "undefined" || !("localStorage" in globalThis)) return;
   try {
     globalThis.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-    globalThis.dispatchEvent(new globalThis.Event(SYNC_EVENT));
+    queueMicrotask(() => {
+      if (typeof globalThis !== "undefined" && "dispatchEvent" in globalThis) {
+        globalThis.dispatchEvent(
+          new globalThis.CustomEvent(SYNC_EVENT, {
+            detail: { sourceInstanceId },
+          })
+        );
+      }
+    });
   } catch {
     // 스토리지 용량 초과 등 예외 무시
   }
+}
+
+/** 날짜별·슬롯별 타임테이블 깊은 병합 (로컬 우선, plan/actual 레이어 모두 보존) */
+function mergeTimetableMaps(
+  remoteMap?: Record<string, Record<string, TimetableSlotLog>>,
+  localMap?: Record<string, Record<string, TimetableSlotLog>>
+): Record<string, Record<string, TimetableSlotLog>> {
+  const merged: Record<string, Record<string, TimetableSlotLog>> = {};
+  const allDates = new Set([
+    ...Object.keys(remoteMap || {}),
+    ...Object.keys(localMap || {}),
+  ]);
+
+  for (const dateISO of allDates) {
+    const rDay = remoteMap?.[dateISO] || {};
+    const lDay = localMap?.[dateISO] || {};
+    const allSlots = new Set([...Object.keys(rDay), ...Object.keys(lDay)]);
+    const mergedDay: Record<string, TimetableSlotLog> = {};
+
+    for (const slotKey of allSlots) {
+      const rSlot = rDay[slotKey];
+      const lSlot = lDay[slotKey];
+      if (!rSlot) {
+        mergedDay[slotKey] = lSlot;
+      } else if (!lSlot) {
+        mergedDay[slotKey] = rSlot;
+      } else {
+        const plan = getTimetableSlotPlan(lSlot) || getTimetableSlotPlan(rSlot);
+        const actual = getTimetableSlotActual(lSlot) || getTimetableSlotActual(rSlot);
+        const primary = actual || plan || lSlot;
+        mergedDay[slotKey] = {
+          color: primary.color,
+          label: primary.label,
+          ...(primary.topicId ? { topicId: primary.topicId } : {}),
+          ...(plan ? { plan } : {}),
+          ...(actual ? { actual } : {}),
+        };
+      }
+    }
+
+    merged[dateISO] = mergedDay;
+  }
+
+  return merged;
+}
+
+/** 슬롯 색상을 과목/단원 커스텀 색상과 동기화 (plan/actual 레이어 포함) */
+function recolorSlotByTopicSet(
+  slot: TimetableSlotLog,
+  topicIds: Set<string>,
+  nextColor: string
+): TimetableSlotLog {
+  const matchTopLevel = Boolean(slot.topicId && topicIds.has(slot.topicId));
+  const matchPlan = Boolean(slot.plan?.topicId && topicIds.has(slot.plan.topicId));
+  const matchActual = Boolean(slot.actual?.topicId && topicIds.has(slot.actual.topicId));
+  if (!matchTopLevel && !matchPlan && !matchActual) return slot;
+
+  return {
+    ...slot,
+    color: matchTopLevel || matchActual || matchPlan ? nextColor : slot.color,
+    ...(slot.plan
+      ? { plan: matchPlan ? { ...slot.plan, color: nextColor } : slot.plan }
+      : {}),
+    ...(slot.actual
+      ? { actual: matchActual ? { ...slot.actual, color: nextColor } : slot.actual }
+      : {}),
+  };
+}
+
+/** 날짜 타임테이블에서 topicId별 plan / actual 슬롯 개수 집계 */
+function countLayerSlotsByTopic(
+  dayMap: Record<string, TimetableSlotLog>,
+  layer: "plan" | "actual"
+): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const slot of Object.values(dayMap)) {
+    const entry = layer === "plan" ? getTimetableSlotPlan(slot) : getTimetableSlotActual(slot);
+    if (entry?.topicId) {
+      counts.set(entry.topicId, (counts.get(entry.topicId) ?? 0) + 1);
+    }
+  }
+  return counts;
+}
+
+/** 다중 교재 환경에서 셀 키가 속한 교재 버킷 탐색 */
+function resolveBookIdForCell(
+  logsByBook: Record<string, Record<string, MatrixCellLog>>,
+  fallbackBookId: string,
+  activeIds: string[] | undefined,
+  cellKey: string
+): string {
+  for (const bId of [fallbackBookId, ...(activeIds || [])]) {
+    if (logsByBook[bId]?.[cellKey]) return bId;
+  }
+  return fallbackBookId;
 }
 
 /**
@@ -227,6 +336,12 @@ export function useStudyCurriculum() {
   const [isHydrated, setIsHydrated] = useState(false);
   const [dbMatrixCells, setDbMatrixCells] = useState<Record<string, MatrixCellLog>>({});
   const [chapterTotals, setChapterTotals] = useState<Record<string, ChapterProgressSummary>>({});
+
+  const instanceIdRef = useRef<string>(
+    `curr-${Math.random().toString(36).slice(2, 10)}`
+  );
+  const isSelfPersistingRef = useRef<boolean>(false);
+  const hasMergedRemoteRef = useRef<string | null>(null);
 
   const dayResetHour = state.dayResetHour ?? 4;
   const todayISO = useMemo(
@@ -253,12 +368,48 @@ export function useStudyCurriculum() {
     }
   }, [effectiveOwnerKey]);
 
-  // 로그인 시 서버 study_user_profiles 의 planner_state / examDate 병합
+  // 1. 로컬스토리지 우선 로드 (hydration 완료 후 서버 병합 허용)
   useEffect(() => {
-    if (!isLoggedIn || !profile.userId) return;
+    setState(readStoredState(initialTodayISO));
+    setIsHydrated(true);
+    refreshDbSync();
+
+    const handleSync = (event: Event) => {
+      const detail = (event as CustomEvent<{ sourceInstanceId?: string }>).detail;
+      if (
+        isSelfPersistingRef.current ||
+        detail?.sourceInstanceId === instanceIdRef.current
+      ) {
+        isSelfPersistingRef.current = false;
+        return;
+      }
+      setState(readStoredState(initialTodayISO));
+      refreshDbSync();
+    };
+    const handleFocus = () => {
+      setMinuteTick((prev) => prev + 1);
+      refreshDbSync();
+    };
+
+    if (typeof globalThis !== "undefined" && "addEventListener" in globalThis) {
+      globalThis.addEventListener(SYNC_EVENT, handleSync);
+      globalThis.addEventListener("focus", handleFocus);
+      return () => {
+        globalThis.removeEventListener(SYNC_EVENT, handleSync);
+        globalThis.removeEventListener("focus", handleFocus);
+      };
+    }
+    return undefined;
+  }, [initialTodayISO, refreshDbSync]);
+
+  // 2. 로그인 시 서버 study_user_profiles 의 planner_state / examDate 병합 (hydration 이후 사용자당 1회)
+  useEffect(() => {
+    if (!isHydrated || !isLoggedIn || !profile.userId) return;
+    if (hasMergedRemoteRef.current === profile.userId) return;
     const remote = profile.plannerState as Partial<CurriculumPersistedState> | undefined;
     if (!remote && !profile.examDate) return;
 
+    hasMergedRemoteRef.current = profile.userId;
     setState((prev) => {
       const mergedLogs: Record<string, Record<string, MatrixCellLog>> = {
         ...prev.logsByBook,
@@ -302,10 +453,10 @@ export function useStudyCurriculum() {
           ])
         ),
         dayResetHour: prev.dayResetHour ?? remote?.dayResetHour ?? 4,
-        timetablesByDate: {
-          ...(remote?.timetablesByDate || {}),
-          ...(prev.timetablesByDate || {}),
-        },
+        timetablesByDate: mergeTimetableMaps(
+          remote?.timetablesByDate,
+          prev.timetablesByDate
+        ),
         examDate: profile.examDate || remote?.examDate || prev.examDate,
         logsByBook: mergedLogs,
         todosByBook: remote?.todosByBook
@@ -315,35 +466,11 @@ export function useStudyCurriculum() {
           ? { ...remote.customTopicsByBook, ...prev.customTopicsByBook }
           : prev.customTopicsByBook,
       };
-      persistState(next);
+      isSelfPersistingRef.current = true;
+      persistState(next, instanceIdRef.current);
       return next;
     });
-  }, [isLoggedIn, profile.userId, profile.examDate, profile.plannerState]);
-
-  useEffect(() => {
-    setState(readStoredState(initialTodayISO));
-    setIsHydrated(true);
-    refreshDbSync();
-
-    const handleSync = () => {
-      setState(readStoredState(initialTodayISO));
-      refreshDbSync();
-    };
-    const handleFocus = () => {
-      setMinuteTick((prev) => prev + 1);
-      refreshDbSync();
-    };
-
-    if (typeof globalThis !== "undefined" && "addEventListener" in globalThis) {
-      globalThis.addEventListener(SYNC_EVENT, handleSync);
-      globalThis.addEventListener("focus", handleFocus);
-      return () => {
-        globalThis.removeEventListener(SYNC_EVENT, handleSync);
-        globalThis.removeEventListener("focus", handleFocus);
-      };
-    }
-    return undefined;
-  }, [initialTodayISO, refreshDbSync]);
+  }, [isHydrated, isLoggedIn, profile.userId, profile.examDate, profile.plannerState]);
 
   const updateState = useCallback(
     (
@@ -352,7 +479,8 @@ export function useStudyCurriculum() {
     ) => {
       setState((prev) => {
         const next = updater(prev);
-        persistState(next);
+        isSelfPersistingRef.current = true;
+        persistState(next, instanceIdRef.current);
         if (isLoggedIn) {
           void syncPlannerStateToDbAction({
             examDate: next.examDate,
@@ -857,11 +985,7 @@ export function useStudyCurriculum() {
           for (const [dISO, slots] of Object.entries(prev.timetablesByDate)) {
             const nextDay: Record<string, TimetableSlotLog> = {};
             for (const [sKey, sVal] of Object.entries(slots)) {
-              if (sVal.topicId && subjectTopicIds.has(sVal.topicId)) {
-                nextDay[sKey] = { ...sVal, color: patch.color };
-              } else {
-                nextDay[sKey] = sVal;
-              }
+              nextDay[sKey] = recolorSlotByTopicSet(sVal, subjectTopicIds, patch.color);
             }
             updatedMap[dISO] = nextDay;
           }
@@ -953,7 +1077,7 @@ export function useStudyCurriculum() {
     [updateState]
   );
 
-  /** 날짜별 타임테이블 슬롯 일괄 업데이트 */
+  /** 날짜별 타임테이블 슬롯 일괄 업데이트 (plan/actual 슬롯 변동 시 단원 예상/실행 시간 자동 연동) */
   const setTimetableSlots = useCallback(
     (
       dateISO: string,
@@ -963,8 +1087,65 @@ export function useStudyCurriculum() {
         const prevMap = prev.timetablesByDate || {};
         const currentDay = prevMap[dateISO] || {};
         const nextDay = updater(currentDay);
+
+        const prevPlanCounts = countLayerSlotsByTopic(currentDay, "plan");
+        const nextPlanCounts = countLayerSlotsByTopic(nextDay, "plan");
+        const prevActualCounts = countLayerSlotsByTopic(currentDay, "actual");
+        const nextActualCounts = countLayerSlotsByTopic(nextDay, "actual");
+
+        const affectedTopicIds = new Set<string>([
+          ...prevPlanCounts.keys(),
+          ...nextPlanCounts.keys(),
+          ...prevActualCounts.keys(),
+          ...nextActualCounts.keys(),
+        ]);
+
+        let nextLogsByBook = prev.logsByBook;
+        for (const topicId of affectedTopicIds) {
+          const prevP = prevPlanCounts.get(topicId) ?? 0;
+          const nextP = nextPlanCounts.get(topicId) ?? 0;
+          const prevA = prevActualCounts.get(topicId) ?? 0;
+          const nextA = nextActualCounts.get(topicId) ?? 0;
+          if (prevP === nextP && prevA === nextA) continue;
+
+          const cellKey = makeMatrixKey(topicId, dateISO);
+          const targetBookId = resolveBookIdForCell(
+            nextLogsByBook,
+            activeBook.id,
+            prev.activeBookIds,
+            cellKey
+          );
+          const bookLogs = {
+            ...(nextLogsByBook[targetBookId] ??
+              (targetBookId === activeBook.id ? buildSeedLogs(activeBook, todayISO) : {})),
+          };
+          const existing = bookLogs[cellKey];
+          const meta = findTopicMetaInSubjects(subjects, topicId);
+
+          if (!existing && nextP === 0 && nextA === 0) continue;
+
+          bookLogs[cellKey] = {
+            keyword: existing?.keyword || meta?.topic.defaultKeyword || "학습계획",
+            status: existing?.status || "plan",
+            minutes: prevP !== nextP ? nextP * 10 : existing?.minutes ?? meta?.topic.estimatedMinutes ?? 30,
+            ...(prevA !== nextA
+              ? { actualMinutes: nextA * 10 }
+              : existing?.actualMinutes !== undefined
+                ? { actualMinutes: existing.actualMinutes }
+                : {}),
+            updatedAt: todayISO,
+            ...(existing?.customColor ? { customColor: existing.customColor } : {}),
+          };
+
+          nextLogsByBook = {
+            ...nextLogsByBook,
+            [targetBookId]: bookLogs,
+          };
+        }
+
         return {
           ...prev,
+          logsByBook: nextLogsByBook,
           timetablesByDate: {
             ...prevMap,
             [dateISO]: nextDay,
@@ -972,7 +1153,7 @@ export function useStudyCurriculum() {
         };
       });
     },
-    [updateState]
+    [activeBook, subjects, todayISO, updateState]
   );
 
   /** 시험일(D-Day) 변경 */
@@ -992,10 +1173,10 @@ export function useStudyCurriculum() {
         let nextTimetables = prev.timetablesByDate;
         if (cell.customColor && prev.timetablesByDate?.[dateISO]) {
           const daySlots = prev.timetablesByDate[dateISO];
+          const targetSet = new Set([topicId]);
           const nextDaySlots: Record<string, TimetableSlotLog> = {};
           for (const [sKey, sVal] of Object.entries(daySlots)) {
-            nextDaySlots[sKey] =
-              sVal.topicId === topicId ? { ...sVal, color: cell.customColor } : sVal;
+            nextDaySlots[sKey] = recolorSlotByTopicSet(sVal, targetSet, cell.customColor);
           }
           nextTimetables = {
             ...prev.timetablesByDate,
@@ -1150,10 +1331,14 @@ export function useStudyCurriculum() {
         const nextKey = makeMatrixKey(topicId, nextDateISO);
         const resolvedColor = customColor || bookLogs[currentKey]?.customColor;
 
+        const existingCurrent = bookLogs[currentKey];
         bookLogs[currentKey] = {
           keyword: cleanKeyword.slice(0, 14),
           status: "partial",
           minutes: todayMinutes,
+          ...(existingCurrent?.actualMinutes !== undefined
+            ? { actualMinutes: existingCurrent.actualMinutes }
+            : {}),
           updatedAt: todayISO,
           ...(resolvedColor ? { customColor: resolvedColor } : {}),
         };
@@ -1181,24 +1366,35 @@ export function useStudyCurriculum() {
     [activeBook, todayISO, updateState]
   );
 
-  /** 타이머 완료 시 오늘 날짜 매트릭스 셀에 자동 색칠(완료 또는 진행중+내일이월) 및 시간 누적 */
+  /** 타이머 완료 시 오늘 날짜 매트릭스 셀에 실제 실행 시간(actualMinutes) 및 타임테이블 실행(actual) 슬롯 자동 기록 */
   const recordStudySession = useCallback(
     (
       topicId: string,
       elapsedSeconds: number,
       customKeyword?: string,
-      completionMode: "done" | "partial" = "done"
+      completionMode: "done" | "partial" = "done",
+      startedAtMs?: number
     ) => {
       const addedMinutes = Math.max(1, Math.round(elapsedSeconds / 60));
       const meta = findTopicMetaInSubjects(subjects, topicId);
 
       updateState((prev) => {
-        const bookLogs = {
-          ...(prev.logsByBook[activeBook.id] ?? buildSeedLogs(activeBook, todayISO)),
-        };
         const key = makeMatrixKey(topicId, todayISO);
+        const targetBookId = resolveBookIdForCell(
+          prev.logsByBook,
+          activeBook.id,
+          prev.activeBookIds,
+          key
+        );
+        const bookLogs = {
+          ...(prev.logsByBook[targetBookId] ??
+            (targetBookId === activeBook.id ? buildSeedLogs(activeBook, todayISO) : {})),
+        };
         const existing = bookLogs[key];
+        const resolvedColor = existing?.customColor || meta?.subject.color || "#FF5A36";
+        const resolvedLabel = meta?.topic.title || existing?.keyword || "집중학습";
 
+        // 예상 시간(minutes)은 보존하고 실제 실행 시간(actualMinutes)만 누적
         bookLogs[key] = {
           keyword:
             customKeyword?.trim() ||
@@ -1206,7 +1402,8 @@ export function useStudyCurriculum() {
             meta?.topic.defaultKeyword ||
             (completionMode === "partial" ? "진행중" : "집중학습"),
           status: completionMode,
-          minutes: (existing?.minutes || 0) + addedMinutes,
+          minutes: existing?.minutes ?? meta?.topic.estimatedMinutes ?? 30,
+          actualMinutes: (existing?.actualMinutes ?? 0) + addedMinutes,
           updatedAt: todayISO,
           ...(existing?.customColor ? { customColor: existing.customColor } : {}),
         };
@@ -1226,11 +1423,48 @@ export function useStudyCurriculum() {
           }
         }
 
+        // 타임테이블 actual 레이어에 시작 시각 ~ 종료 시각 10분 단위 자동 기록
+        const endMs = Date.now();
+        const startMs =
+          typeof startedAtMs === "number" && startedAtMs > 0
+            ? startedAtMs
+            : endMs - Math.max(60, elapsedSeconds) * 1000;
+        const startDt = new Date(startMs);
+        let curHour = startDt.getHours();
+        let curSlot = Math.floor(startDt.getMinutes() / 10);
+        const slotCount = Math.max(1, Math.ceil(addedMinutes / 10));
+
+        const prevTimetables = prev.timetablesByDate || {};
+        const nextDaySlots: Record<string, TimetableSlotLog> = {
+          ...(prevTimetables[todayISO] || {}),
+        };
+
+        for (let i = 0; i < slotCount; i += 1) {
+          const sKey = `${curHour}-${curSlot}`;
+          const updatedSlot = setTimetableSlotLayer(nextDaySlots[sKey], "actual", {
+            color: resolvedColor,
+            label: resolvedLabel,
+            topicId,
+          });
+          if (updatedSlot) {
+            nextDaySlots[sKey] = updatedSlot;
+          }
+          curSlot += 1;
+          if (curSlot >= 6) {
+            curSlot = 0;
+            curHour = (curHour + 1) % 24;
+          }
+        }
+
         return {
           ...prev,
           logsByBook: {
             ...prev.logsByBook,
-            [activeBook.id]: bookLogs,
+            [targetBookId]: bookLogs,
+          },
+          timetablesByDate: {
+            ...prevTimetables,
+            [todayISO]: nextDaySlots,
           },
         };
       }, Math.max(0, Math.round(elapsedSeconds)));

@@ -18,8 +18,6 @@ import {
   X,
   FileCheck2,
   ArrowRight,
-  CalendarPlus,
-  ListTodo,
   MoreVertical,
   Plus,
   Pencil,
@@ -33,6 +31,7 @@ import {
   Check,
   Tag,
   Library,
+  Target,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
@@ -42,6 +41,9 @@ import {
   diffDaysISO,
   getHoursFromReset,
   getRoundColorStyle,
+  getTimetableSlotActual,
+  getTimetableSlotPlan,
+  setTimetableSlotLayer,
   type MatrixCellLog,
   type MatrixCellStatus,
   type StudySubjectNode,
@@ -148,7 +150,7 @@ export default function StudyPlannerMatrixPage() {
   const [viewMode, setViewMode] = useState<"matrix" | "diary">("matrix");
   const [diaryScope, setDiaryScope] = useState<"day" | "week">("day");
   const [selectedDiaryDate, setSelectedDiaryDate] = useState<string>(todayISO);
-  const [showCompletedInDay, setShowCompletedInDay] = useState<boolean>(false);
+  const [ttLayerMode, setTtLayerMode] = useState<"plan" | "actual">("plan");
   const prevTodayRef = useRef<string>(todayISO);
 
   // ③ 확장형 분류(Category) 필터
@@ -404,24 +406,6 @@ export default function StudyPlannerMatrixPage() {
     [selectedDayItems]
   );
 
-  const selectedDayDoneItems = useMemo(
-    () => selectedDayItems.filter((i) => i.cell.status === "done"),
-    [selectedDayItems]
-  );
-
-  const visibleDayCards = showCompletedInDay
-    ? selectedDayItems
-    : selectedDayPlannedItems;
-
-  const selectedDayTotalGoalMinutes = useMemo(
-    () =>
-      selectedDayPlannedItems.reduce(
-        (sum, item) => sum + (item.cell.minutes ?? item.topic.estimatedMinutes),
-        0
-      ),
-    [selectedDayPlannedItems]
-  );
-
   const weekDates = useMemo(
     () => getMondayStartWeekDates(selectedDiaryDate),
     [selectedDiaryDate]
@@ -455,10 +439,79 @@ export default function StudyPlannerMatrixPage() {
     [dayResetHour]
   );
 
-  const totalDiaryMinutes = useMemo(
-    () => Object.keys(dayTimetableGrid).length * 10,
-    [dayTimetableGrid]
-  );
+  const topicMetaMap = useMemo(() => {
+    const map = new Map<
+      string,
+      { subject: StudySubjectNode; unitTitle: string; topic: StudyTopicNode }
+    >();
+    for (const entry of allActiveTopicEntries) {
+      map.set(entry.topic.id, entry);
+    }
+    return map;
+  }, [allActiveTopicEntries]);
+
+  /** 타임테이블 예상(plan) vs 실행(actual) 시간 및 일치도 통계 */
+  const timetableStats = useMemo(() => {
+    let planSlotsCount = 0;
+    let actualSlotsCount = 0;
+    let matchedSlotsCount = 0;
+    const planByTopic = new Map<string, number>();
+    const actualByTopic = new Map<string, number>();
+    const matchedByTopic = new Map<string, number>();
+
+    for (const slot of Object.values(dayTimetableGrid)) {
+      const plan = getTimetableSlotPlan(slot);
+      const actual = getTimetableSlotActual(slot);
+
+      if (plan) {
+        planSlotsCount += 1;
+        if (plan.topicId) {
+          planByTopic.set(plan.topicId, (planByTopic.get(plan.topicId) ?? 0) + 10);
+        }
+      }
+      if (actual) {
+        actualSlotsCount += 1;
+        if (actual.topicId) {
+          actualByTopic.set(actual.topicId, (actualByTopic.get(actual.topicId) ?? 0) + 10);
+        }
+      }
+      if (plan && actual) {
+        const isMatched =
+          plan.topicId && actual.topicId
+            ? plan.topicId === actual.topicId
+            : plan.color === actual.color;
+        if (isMatched) {
+          matchedSlotsCount += 1;
+          if (plan.topicId) {
+            matchedByTopic.set(
+              plan.topicId,
+              (matchedByTopic.get(plan.topicId) ?? 0) + 10
+            );
+          }
+        }
+      }
+    }
+
+    const planMinutes = planSlotsCount * 10;
+    const actualMinutes = actualSlotsCount * 10;
+    const timeAchievementPct =
+      planMinutes > 0 ? Math.round((actualMinutes / planMinutes) * 100) : 0;
+    const slotMatchPct =
+      planSlotsCount > 0 ? Math.round((matchedSlotsCount / planSlotsCount) * 100) : 0;
+
+    return {
+      planSlotsCount,
+      actualSlotsCount,
+      matchedSlotsCount,
+      planMinutes,
+      actualMinutes,
+      timeAchievementPct,
+      slotMatchPct,
+      planByTopic,
+      actualByTopic,
+      matchedByTopic,
+    };
+  }, [dayTimetableGrid]);
 
   const plannedTopicPalette = useMemo(() => {
     const seen = new Set<string>();
@@ -467,19 +520,50 @@ export default function StudyPlannerMatrixPage() {
       subject: StudySubjectNode;
       topic: StudyTopicNode;
       color: string;
+      cell?: MatrixCellLog;
+      plannedMin: number;
+      actualMin: number;
+      matchedMin: number;
     }> = [];
-    for (const item of selectedDayPlannedItems) {
+
+    for (const item of selectedDayItems) {
       if (seen.has(item.topic.id)) continue;
       seen.add(item.topic.id);
+      const ttPlanMin = timetableStats.planByTopic.get(item.topic.id) ?? 0;
+      const ttActualMin = timetableStats.actualByTopic.get(item.topic.id) ?? 0;
+      const ttMatchedMin = timetableStats.matchedByTopic.get(item.topic.id) ?? 0;
       list.push({
         topicId: item.topic.id,
         subject: item.subject,
         topic: item.topic,
         color: item.cell.customColor || item.subject.color,
+        cell: item.cell,
+        plannedMin: ttPlanMin > 0 ? ttPlanMin : item.cell.minutes ?? 0,
+        actualMin: item.cell.actualMinutes ?? ttActualMin,
+        matchedMin: ttMatchedMin,
       });
     }
+
+    for (const slot of Object.values(dayTimetableGrid)) {
+      for (const entry of [getTimetableSlotPlan(slot), getTimetableSlotActual(slot)]) {
+        if (!entry?.topicId || seen.has(entry.topicId)) continue;
+        const meta = topicMetaMap.get(entry.topicId);
+        if (!meta) continue;
+        seen.add(entry.topicId);
+        list.push({
+          topicId: entry.topicId,
+          subject: meta.subject,
+          topic: meta.topic,
+          color: entry.color || meta.subject.color,
+          plannedMin: timetableStats.planByTopic.get(entry.topicId) ?? 0,
+          actualMin: timetableStats.actualByTopic.get(entry.topicId) ?? 0,
+          matchedMin: timetableStats.matchedByTopic.get(entry.topicId) ?? 0,
+        });
+      }
+    }
+
     return list;
-  }, [selectedDayPlannedItems]);
+  }, [selectedDayItems, dayTimetableGrid, timetableStats, topicMetaMap]);
 
   const activePaletteItem = useMemo(() => {
     if (plannedTopicPalette.length === 0) return null;
@@ -510,17 +594,6 @@ export default function StudyPlannerMatrixPage() {
       topicId: undefined,
     };
   }, [useCustomTimetableColor, timetableBrushColor, activePaletteItem]);
-
-  const topicMetaMap = useMemo(() => {
-    const map = new Map<
-      string,
-      { subject: StudySubjectNode; unitTitle: string; topic: StudyTopicNode }
-    >();
-    for (const entry of allActiveTopicEntries) {
-      map.set(entry.topic.id, entry);
-    }
-    return map;
-  }, [allActiveTopicEntries]);
 
   // 매트릭스 드래그 시작/연장/커밋
   const startMatrixDrag = useCallback((cellKey: string) => {
@@ -611,19 +684,46 @@ export default function StudyPlannerMatrixPage() {
     (slotKey: string, action: "paint" | "erase") => {
       setTimetableSlots(selectedDiaryDate, (prev) => {
         const copy = { ...prev };
-        if (action === "erase") {
-          delete copy[slotKey];
+        const updatedSlot = setTimetableSlotLayer(
+          copy[slotKey],
+          ttLayerMode,
+          action === "erase"
+            ? null
+            : {
+                color: activeTimetableBrush.color,
+                label: activeTimetableBrush.label,
+                ...(activeTimetableBrush.topicId
+                  ? { topicId: activeTimetableBrush.topicId }
+                  : {}),
+              }
+        );
+        if (updatedSlot) {
+          copy[slotKey] = updatedSlot;
         } else {
-          copy[slotKey] = {
-            color: activeTimetableBrush.color,
-            label: activeTimetableBrush.label,
-            topicId: activeTimetableBrush.topicId,
-          };
+          delete copy[slotKey];
         }
         return copy;
       });
     },
-    [selectedDiaryDate, setTimetableSlots, activeTimetableBrush]
+    [selectedDiaryDate, setTimetableSlots, ttLayerMode, activeTimetableBrush]
+  );
+
+  /** 해당 날짜의 예상(plan) 슬롯을 실제 실행(actual) 슬롯으로 채우기 */
+  const handleFillActualFromPlan = useCallback(
+    (topicId?: string) => {
+      setTimetableSlots(selectedDiaryDate, (prev) => {
+        const copy = { ...prev };
+        for (const [sKey, sVal] of Object.entries(prev)) {
+          const plan = getTimetableSlotPlan(sVal);
+          if (!plan) continue;
+          if (topicId && plan.topicId !== topicId) continue;
+          const updated = setTimetableSlotLayer(copy[sKey], "actual", plan);
+          if (updated) copy[sKey] = updated;
+        }
+        return copy;
+      });
+    },
+    [selectedDiaryDate, setTimetableSlots]
   );
 
   const getTopicDoneCount = (topicId: string) => {
@@ -726,22 +826,6 @@ export default function StudyPlannerMatrixPage() {
     setEditingCell(null);
   };
 
-  const handleMoveScheduleItemDate = (item: ScheduleTopicItem, newDateISO: string) => {
-    if (!newDateISO || newDateISO === item.dateISO) return;
-    deleteMatrixCell(item.topic.id, item.dateISO);
-    upsertMatrixCell(item.topic.id, newDateISO, {
-      ...item.cell,
-    });
-  };
-
-  const handleAdjustItemMinutes = (item: ScheduleTopicItem, nextMinutes: number) => {
-    const clamped = Math.max(10, Math.min(360, nextMinutes));
-    upsertMatrixCell(item.topic.id, item.dateISO, {
-      ...item.cell,
-      minutes: clamped,
-    });
-  };
-
   const handleQuickAddPlanForDate = (targetDateISO: string, topicId: string) => {
     const meta = topicMetaMap.get(topicId);
     if (!meta) return;
@@ -751,6 +835,9 @@ export default function StudyPlannerMatrixPage() {
       minutes: meta.topic.estimatedMinutes,
       ...(brushColor ? { customColor: brushColor } : {}),
     });
+    if (targetDateISO === selectedDiaryDate) {
+      setSelectedPaletteTopicId(topicId);
+    }
   };
 
   const handleOpenEditSubject = (subj: StudySubjectNode) => {
@@ -1805,7 +1892,7 @@ export default function StudyPlannerMatrixPage() {
                     {formatShortMMDDWithDay(selectedDiaryDate, todayISO)}
                   </div>
                   <div className="text-sky-300 font-bold">
-                    목표 {selectedDayTotalGoalMinutes}분 · 배분 {totalDiaryMinutes}분
+                    예상 {timetableStats.planMinutes}분 · 실행 {timetableStats.actualMinutes}분
                   </div>
                 </div>
               </div>
@@ -1852,297 +1939,305 @@ export default function StudyPlannerMatrixPage() {
           </div>
 
           {diaryScope === "day" ? (
-            <>
-              <div className="p-3 rounded-2xl bg-[#16161C] border border-white/[0.06] space-y-2.5">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 text-xs font-black text-white">
-                    <ListTodo className="w-4 h-4 text-[#FF5A36]" />
-                    <span>
-                      {selectedDiaryDate === todayISO ? "오늘" : selectedDiaryDate} 학습계획 (
-                      {selectedDayPlannedItems.length}건)
-                    </span>
-                  </div>
-                  {selectedDayDoneItems.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setShowCompletedInDay((prev) => !prev)}
-                      className="px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-[10px] font-black text-emerald-300"
-                    >
-                      {showCompletedInDay
-                        ? `완료 ${selectedDayDoneItems.length}건 숨기기`
-                        : `완료 ${selectedDayDoneItems.length}건 보기`}
-                    </button>
-                  )}
-                </div>
-
-                {allActiveTopicEntries.length > 0 && (
-                  <div className="flex items-center gap-1.5">
-                    <select
-                      value={quickAddTopicId}
-                      onChange={(e) => setQuickAddTopicId(e.target.value)}
-                      className="flex-1 min-w-0 px-2.5 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[10.5px] font-bold text-white"
-                    >
-                      {allActiveTopicEntries.map(({ subject, topic }) => (
-                        <option key={topic.id} value={topic.id}>
-                          [{subject.shortTitle}] {topic.topicNo ? `${topic.topicNo}. ` : ""}
-                          {topic.title}
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleQuickAddPlanForDate(selectedDiaryDate, quickAddTopicId)
-                      }
-                      className="px-2.5 py-1.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-[10.5px] font-black shrink-0 flex items-center gap-1"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                      <span>이날 계획 추가</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {visibleDayCards.length === 0 ? (
-                <div className="p-6 rounded-2xl bg-[#1A1A21] border border-dashed border-white/[0.14] text-center space-y-3">
-                  <CalendarPlus className="w-8 h-8 text-slate-500 mx-auto" />
-                  <div className="space-y-1">
-                    <p className="text-xs font-black text-white">
-                      {selectedDiaryDate}에 등록된 학습계획이 없습니다.
-                    </p>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                      목차 매트릭스에서 학습계획으로 선택하거나, 위에서 단원을 골라{" "}
-                      <strong>이날 계획 추가</strong>를 눌러주세요.
-                    </p>
-                  </div>
+            <div className="space-y-3">
+              {/* 슬림 1줄 단원 계획 추가 바 */}
+              {allActiveTopicEntries.length > 0 && (
+                <div className="flex items-center gap-1.5 p-2 rounded-xl bg-[#16161C] border border-white/[0.06]">
+                  <select
+                    value={quickAddTopicId}
+                    onChange={(e) => setQuickAddTopicId(e.target.value)}
+                    className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-[#0E0E12] border border-white/[0.1] text-[10.5px] font-bold text-white"
+                  >
+                    {allActiveTopicEntries.map(({ subject, topic }) => (
+                      <option key={topic.id} value={topic.id}>
+                        [{subject.shortTitle}] {topic.topicNo ? `${topic.topicNo}. ` : ""}
+                        {topic.title}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     type="button"
-                    onClick={() => setViewMode("matrix")}
-                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-xs font-black transition"
+                    onClick={() =>
+                      handleQuickAddPlanForDate(selectedDiaryDate, quickAddTopicId)
+                    }
+                    className="px-2.5 py-1.5 rounded-lg bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-[10.5px] font-black shrink-0 flex items-center gap-1 transition"
                   >
-                    <span>목차 매트릭스에서 계획 선택하기</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
+                    <Plus className="w-3.5 h-3.5" />
+                    <span>계획 추가</span>
                   </button>
                 </div>
-              ) : (
-                <div className="space-y-2">
-                  {visibleDayCards.map((item) => {
-                    const isPartial = item.cell.status === "partial";
-                    const isDone = item.cell.status === "done";
-                    const estMinutes = item.cell.minutes ?? item.topic.estimatedMinutes;
-                    const itemColor = item.cell.customColor || item.subject.color;
-                    const roundNum = topicDoneOrderMap.get(item.key) || getTopicDoneCount(item.topic.id);
-                    const roundShade = getRoundColorStyle(itemColor, Math.max(1, roundNum));
+              )}
 
-                    return (
+              {/* 선택된 날짜 전용 10분 단위 예상 vs 실행 타임테이블 */}
+              <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-3 shadow-xl">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs font-black text-white">
+                    <Sparkles className="w-4 h-4 text-[#FF5A36]" />
+                    <span>
+                      {selectedDiaryDate === todayISO ? "오늘" : selectedDiaryDate.slice(5)} 타임테이블 (예상 vs 실행)
+                    </span>
+                  </div>
+                  <span className="font-mono text-[11px] font-black text-[#FF7A59]">
+                    예상 {String(Math.floor(timetableStats.planMinutes / 60)).padStart(2, "0")}:
+                    {String(timetableStats.planMinutes % 60).padStart(2, "0")} · 실행{" "}
+                    {String(Math.floor(timetableStats.actualMinutes / 60)).padStart(2, "0")}:
+                    {String(timetableStats.actualMinutes % 60).padStart(2, "0")}
+                  </span>
+                </div>
+
+                {/* 예상 vs 실행 일치도 분석 요약 카드 */}
+                <div className="p-2.5 rounded-xl bg-[#121218] border border-white/[0.06] space-y-2">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="px-2 py-1 rounded-lg bg-[#181820] border border-white/[0.05]">
+                      <div className="text-[9.5px] text-slate-400 font-bold">예상 계획</div>
+                      <div className="font-mono text-xs font-black text-sky-300">
+                        {timetableStats.planMinutes}분
+                        <span className="text-[9.5px] text-slate-400 font-normal ml-1">
+                          ({timetableStats.planSlotsCount}칸)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="px-2 py-1 rounded-lg bg-[#181820] border border-white/[0.05]">
+                      <div className="text-[9.5px] text-slate-400 font-bold">실행 기록</div>
+                      <div className="font-mono text-xs font-black text-[#FF7A59]">
+                        {timetableStats.actualMinutes}분
+                        <span className="text-[9.5px] text-slate-400 font-normal ml-1">
+                          ({timetableStats.actualSlotsCount}칸)
+                        </span>
+                      </div>
+                    </div>
+                    <div className="px-2 py-1 rounded-lg bg-[#181820] border border-white/[0.05]">
+                      <div className="text-[9.5px] text-slate-400 font-bold flex items-center justify-center gap-1">
+                        <Target className="w-3 h-3 text-emerald-400" />
+                        <span>시간대 일치율</span>
+                      </div>
+                      <div className="font-mono text-xs font-black text-emerald-300">
+                        {timetableStats.planSlotsCount > 0
+                          ? `${timetableStats.slotMatchPct}%`
+                          : "—"}
+                        <span className="text-[9.5px] text-slate-400 font-normal ml-1">
+                          ({timetableStats.matchedSlotsCount}/{timetableStats.planSlotsCount})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[9.5px] font-bold">
+                      <span className="text-slate-400">
+                        계획 대비 시간 달성률{" "}
+                        <strong className="font-mono text-white">
+                          {timetableStats.planMinutes > 0
+                            ? `${timetableStats.timeAchievementPct}%`
+                            : "—"}
+                        </strong>
+                      </span>
+                      <span className="text-emerald-300 font-mono">
+                        {timetableStats.planSlotsCount === 0
+                          ? "예상 블록을 먼저 칠해보세요"
+                          : timetableStats.slotMatchPct >= 80
+                            ? "예상·실행 높은 일치!"
+                            : timetableStats.slotMatchPct >= 40
+                              ? "계획과 실행 병행 중"
+                              : "실행 기록과 비교 중"}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-[#09090D] overflow-hidden border border-white/[0.05]">
                       <div
-                        key={item.key}
-                        className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-2.5"
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 space-y-1 flex-1">
-                            <div className="flex items-center gap-1.5 flex-wrap">
+                        className="h-full rounded-full bg-gradient-to-r from-sky-400 via-[#FF5A36] to-emerald-400 transition-all duration-300"
+                        style={{
+                          width: `${Math.min(100, timetableStats.slotMatchPct)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* 입력 레이어 전환 토글: 예상 계획 vs 실행 기록 */}
+                <div className="grid grid-cols-2 gap-1.5 p-1 rounded-xl bg-[#0E0E13] border border-white/[0.08]">
+                  <button
+                    type="button"
+                    onClick={() => setTtLayerMode("plan")}
+                    className={`py-1.5 px-2 rounded-lg text-[10.5px] font-black transition flex items-center justify-center gap-1.5 ${
+                      ttLayerMode === "plan"
+                        ? "bg-sky-500 text-white shadow"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>예상 계획 칠하기</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTtLayerMode("actual")}
+                    className={`py-1.5 px-2 rounded-lg text-[10.5px] font-black transition flex items-center justify-center gap-1.5 ${
+                      ttLayerMode === "actual"
+                        ? "bg-[#FF5A36] text-white shadow"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>실행 기록 칠하기</span>
+                  </button>
+                </div>
+
+                {/* 단원 팔레트 칩 + 선택 단원 1줄 컴팩트 액션 바 */}
+                <div className="space-y-2">
+                  {plannedTopicPalette.length > 0 ? (
+                    <>
+                      <div className="flex flex-wrap gap-1.5">
+                        {plannedTopicPalette.map((p) => {
+                          const isSelected =
+                            !useCustomTimetableColor && activePaletteItem?.topicId === p.topicId;
+                          const isDone = p.cell?.status === "done";
+                          return (
+                            <button
+                              key={p.topicId}
+                              type="button"
+                              onClick={() => {
+                                setUseCustomTimetableColor(false);
+                                setSelectedPaletteTopicId(p.topicId);
+                              }}
+                              className={`px-2 py-1 rounded-lg text-[10px] font-black border flex items-center gap-1.5 transition ${
+                                isSelected
+                                  ? "text-white border-white shadow"
+                                  : "bg-[#111116] text-slate-300 border-white/[0.08] hover:border-white/25"
+                              }`}
+                              style={isSelected ? { backgroundColor: p.color } : undefined}
+                            >
                               <span
-                                className="px-1.5 py-0.5 rounded text-[9.5px] font-black text-white"
-                                style={{ backgroundColor: itemColor }}
-                              >
-                                {item.subject.category || item.subject.examStage} ·{" "}
-                                {item.subject.shortTitle}
+                                className="w-2 h-2 rounded-full shrink-0"
+                                style={{ backgroundColor: isSelected ? "#FFFFFF" : p.color }}
+                              />
+                              <span className="truncate max-w-[130px]">
+                                {p.topic.topicNo ? `${p.topic.topicNo}. ` : ""}
+                                {p.topic.title}
                               </span>
                               <span
-                                className={`px-1.5 py-0.5 rounded text-[9.5px] font-black ${
-                                  isDone
-                                    ? ""
-                                    : isPartial
-                                      ? "bg-amber-500/20 text-amber-300 border border-amber-500/40"
-                                      : "bg-sky-500/15 text-sky-300 border border-sky-500/30"
+                                className={`font-mono text-[9px] px-1 rounded ${
+                                  isSelected
+                                    ? "bg-black/25 text-white"
+                                    : "bg-white/[0.06] text-slate-300"
                                 }`}
-                                style={
-                                  isDone
-                                    ? {
-                                        backgroundColor: roundShade.backgroundColor,
-                                        border: `1px solid ${roundShade.borderColor}`,
-                                        color: roundShade.textColor,
-                                      }
-                                    : undefined
-                                }
                               >
-                                {isDone
-                                  ? `${roundNum}R 완료`
-                                  : isPartial
-                                    ? "◐ 진행중"
-                                    : "학습계획"}{" "}
-                                · {item.cell.keyword}
+                                예{p.plannedMin}·실{p.actualMin}
                               </span>
-
-                              <label
-                                className="w-4 h-4 rounded-full border border-white/30 cursor-pointer relative overflow-hidden shrink-0"
-                                style={{ backgroundColor: itemColor }}
-                                title="색상 커스텀 변경 (타임테이블 연동)"
-                              >
-                                <input
-                                  type="color"
-                                  value={itemColor}
-                                  onChange={(e) =>
-                                    upsertMatrixCell(item.topic.id, item.dateISO, {
-                                      ...item.cell,
-                                      customColor: e.target.value,
-                                    })
-                                  }
-                                  className="opacity-0 absolute inset-0 cursor-pointer"
-                                />
-                              </label>
-                            </div>
-
-                            <div className="text-xs font-black text-white flex items-center gap-1 truncate">
-                              {item.topic.topicNo && (
-                                <span
-                                  className="font-mono shrink-0"
-                                  style={{ color: itemColor }}
-                                >
-                                  {item.topic.topicNo}.
+                              {isDone && (
+                                <span className="text-[8.5px] px-1 rounded bg-emerald-500/25 text-emerald-200">
+                                  완료
                                 </span>
                               )}
-                              <span className="truncate">{item.topic.title}</span>
-                            </div>
-                            <div className="text-[10px] text-slate-400 truncate">
-                              {item.unitTitle} · 누적 {getTopicDoneCount(item.topic.id)}R
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/[0.06] text-[10px]">
-                          <div className="flex items-center gap-1">
-                            <span className="text-slate-400 font-bold">날짜:</span>
-                            <input
-                              type="date"
-                              value={item.dateISO}
-                              onChange={(e) => handleMoveScheduleItemDate(item, e.target.value)}
-                              className="px-1.5 py-0.5 rounded bg-[#101015] border border-white/[0.1] font-mono text-white text-[10px]"
-                            />
-                          </div>
-
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleAdjustItemMinutes(item, estMinutes - 10)}
-                              className="px-1.5 py-0.5 rounded bg-[#101015] border border-white/[0.08] text-slate-300 hover:text-white font-mono"
-                            >
-                              -10m
                             </button>
-                            <span className="px-2 py-0.5 rounded bg-[#101015] font-mono font-black text-amber-300">
-                              {estMinutes}분
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => handleAdjustItemMinutes(item, estMinutes + 10)}
-                              className="px-1.5 py-0.5 rounded bg-[#101015] border border-white/[0.08] text-slate-300 hover:text-white font-mono"
-                            >
-                              +10m
-                            </button>
-                          </div>
-                        </div>
+                          );
+                        })}
+                      </div>
 
-                        <div className="grid grid-cols-4 gap-1.5">
+                      {activePaletteItem && (
+                        <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-xl bg-[#121218] border border-white/[0.06] text-[10px]">
                           <Link
-                            href={`/?topic=${item.topic.id}`}
-                            className="py-1.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-[10px] font-black flex items-center justify-center gap-1 transition"
+                            href={`/?topic=${activePaletteItem.topicId}`}
+                            className="px-2.5 py-1 rounded-lg bg-[#FF5A36] hover:bg-[#ff6d4d] text-white font-black flex items-center gap-1 transition"
                           >
                             <Play className="w-3 h-3 fill-white" />
                             <span>타이머</span>
                           </Link>
                           <button
                             type="button"
+                            onClick={() => handleFillActualFromPlan(activePaletteItem.topicId)}
+                            disabled={
+                              (timetableStats.planByTopic.get(activePaletteItem.topicId) ?? 0) === 0
+                            }
+                            className="px-2 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 disabled:opacity-40 border border-sky-500/35 text-sky-200 font-black transition"
+                            title="이 단원의 예상 계획 블록을 실행 기록으로 채우기"
+                          >
+                            ✓ 예상대로 실행 채우기
+                          </button>
+                          <button
+                            type="button"
                             onClick={() =>
                               carryOverTopicToNextDay(
-                                item.topic.id,
-                                item.dateISO,
-                                item.cell.keyword,
-                                estMinutes,
-                                item.cell.customColor
+                                activePaletteItem.topicId,
+                                selectedDiaryDate,
+                                activePaletteItem.cell?.keyword ||
+                                  activePaletteItem.topic.defaultKeyword,
+                                activePaletteItem.plannedMin ||
+                                  activePaletteItem.topic.estimatedMinutes,
+                                activePaletteItem.cell?.customColor
                               )
                             }
-                            className="py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 text-[10px] font-black transition"
+                            className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 font-black transition"
                           >
                             내일이월
                           </button>
                           <button
                             type="button"
                             onClick={() =>
-                              upsertMatrixCell(item.topic.id, item.dateISO, {
-                                ...item.cell,
+                              upsertMatrixCell(activePaletteItem.topicId, selectedDiaryDate, {
+                                keyword:
+                                  activePaletteItem.cell?.keyword ||
+                                  activePaletteItem.topic.defaultKeyword,
                                 status: "done",
-                                minutes: estMinutes,
+                                minutes:
+                                  activePaletteItem.plannedMin ||
+                                  activePaletteItem.topic.estimatedMinutes,
+                                ...(activePaletteItem.actualMin > 0
+                                  ? { actualMinutes: activePaletteItem.actualMin }
+                                  : {}),
+                                ...(activePaletteItem.cell?.customColor
+                                  ? { customColor: activePaletteItem.cell.customColor }
+                                  : {}),
                               })
                             }
-                            className="py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 text-[10px] font-black transition"
+                            className="px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 font-black transition"
                           >
                             완료(1R)
                           </button>
                           <button
                             type="button"
-                            onClick={() => deleteMatrixCell(item.topic.id, item.dateISO)}
-                            className="py-1.5 rounded-xl bg-white/[0.05] hover:bg-rose-950/60 border border-white/[0.08] text-slate-300 hover:text-rose-300 text-[10px] font-bold transition"
+                            onClick={() => {
+                              const targetId = activePaletteItem.topicId;
+                              deleteMatrixCell(targetId, selectedDiaryDate);
+                              setTimetableSlots(selectedDiaryDate, (prev) => {
+                                const copy = { ...prev };
+                                for (const [sKey, sVal] of Object.entries(prev)) {
+                                  const plan = getTimetableSlotPlan(sVal);
+                                  if (plan?.topicId === targetId) {
+                                    const updated = setTimetableSlotLayer(
+                                      copy[sKey],
+                                      "plan",
+                                      null
+                                    );
+                                    if (updated) copy[sKey] = updated;
+                                    else delete copy[sKey];
+                                  }
+                                }
+                                return copy;
+                              });
+                            }}
+                            className="px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-rose-950/60 border border-white/[0.08] text-slate-300 hover:text-rose-300 font-bold ml-auto transition"
                           >
                             해제
                           </button>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-
-              {/* 선택된 날짜 전용 10분 단위 타임테이블 */}
-              <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-3 shadow-xl">
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 text-xs font-black text-white">
-                    <Sparkles className="w-4 h-4 text-[#FF5A36]" />
-                    <span>
-                      {selectedDiaryDate === todayISO ? "오늘" : selectedDiaryDate.slice(5)} 타임테이블 (드래그 연속 입력)
-                    </span>
-                  </div>
-                  <span className="font-mono text-xs font-black text-[#FF7A59]">
-                    {String(Math.floor(totalDiaryMinutes / 60)).padStart(2, "0")}H{" "}
-                    {String(totalDiaryMinutes % 60).padStart(2, "0")}M
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  {plannedTopicPalette.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {plannedTopicPalette.map((p) => {
-                        const isSelected =
-                          !useCustomTimetableColor && activePaletteItem?.topicId === p.topicId;
-                        return (
-                          <button
-                            key={p.topicId}
-                            type="button"
-                            onClick={() => {
-                              setUseCustomTimetableColor(false);
-                              setSelectedPaletteTopicId(p.topicId);
-                            }}
-                            className={`px-2 py-1 rounded-lg text-[10px] font-black border flex items-center gap-1.5 transition ${
-                              isSelected
-                                ? "text-white border-white shadow"
-                                : "bg-[#111116] text-slate-300 border-white/[0.08] hover:border-white/25"
-                            }`}
-                            style={isSelected ? { backgroundColor: p.color } : undefined}
-                          >
-                            <span
-                              className="w-2 h-2 rounded-full shrink-0"
-                              style={{ backgroundColor: isSelected ? "#FFFFFF" : p.color }}
-                            />
-                            <span className="truncate max-w-[150px]">
-                              {p.topic.topicNo ? `${p.topic.topicNo}. ` : ""}
-                              {p.topic.title}
-                            </span>
-                          </button>
-                        );
-                      })}
+                      )}
+                    </>
+                  ) : (
+                    <div className="px-3 py-2 rounded-xl bg-[#121218] border border-dashed border-white/[0.1] flex flex-wrap items-center justify-between gap-2 text-[10.5px] text-slate-400">
+                      <span>
+                        위에서 단원을 추가하거나{" "}
+                        <button
+                          type="button"
+                          onClick={() => setViewMode("matrix")}
+                          className="text-[#FF7A59] font-black underline"
+                        >
+                          목차 매트릭스
+                        </button>
+                        에서 계획을 선택하면 단원별로 예상/실행을 비교할 수 있습니다.
+                      </span>
                     </div>
                   )}
 
+                  {/* 브러시 색상 + 2단 슬롯 범례 */}
                   <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[10px]">
                     <span className="text-slate-400 font-bold flex items-center gap-1">
                       <Palette className="w-3 h-3 text-amber-300" />
@@ -2180,8 +2275,9 @@ export default function StudyPlannerMatrixPage() {
                         className="opacity-0 absolute inset-0 cursor-pointer"
                       />
                     </label>
-                    <span className="text-[9.5px] text-slate-500 ml-auto">
-                      누른 채 드래그=연속 색칠/지움
+                    <span className="text-[9.5px] text-slate-400 ml-auto">
+                      위:예상 · 아래:실행 ·{" "}
+                      <span className="text-emerald-300 font-bold">테두리:일치</span>
                     </span>
                   </div>
                 </div>
@@ -2224,6 +2320,16 @@ export default function StudyPlannerMatrixPage() {
                         {[0, 1, 2, 3, 4, 5].map((slot) => {
                           const key = `${hour}-${slot}`;
                           const cell = dayTimetableGrid[key];
+                          const planEntry = getTimetableSlotPlan(cell);
+                          const actualEntry = getTimetableSlotActual(cell);
+                          const isMatched = Boolean(
+                            planEntry &&
+                              actualEntry &&
+                              (planEntry.topicId && actualEntry.topicId
+                                ? planEntry.topicId === actualEntry.topicId
+                                : planEntry.color === actualEntry.color)
+                          );
+
                           return (
                             <button
                               key={slot}
@@ -2231,8 +2337,12 @@ export default function StudyPlannerMatrixPage() {
                               data-tt-slot={key}
                               onPointerDown={(e) => {
                                 e.preventDefault();
+                                const activeLayerEntry =
+                                  ttLayerMode === "plan" ? planEntry : actualEntry;
                                 const isSamePaint =
-                                  cell && cell.color === activeTimetableBrush.color;
+                                  activeLayerEntry &&
+                                  activeLayerEntry.color === activeTimetableBrush.color &&
+                                  activeLayerEntry.topicId === activeTimetableBrush.topicId;
                                 const action: "paint" | "erase" = isSamePaint
                                   ? "erase"
                                   : "paint";
@@ -2244,14 +2354,34 @@ export default function StudyPlannerMatrixPage() {
                                   applyTimetableSlotAction(key, ttDragAction);
                                 }
                               }}
-                              title={cell ? cell.label : activeTimetableBrush.label}
-                              className={`h-4 rounded-[3px] transition ${
-                                cell
-                                  ? "opacity-95 hover:opacity-100"
-                                  : "bg-[#111115] border border-white/[0.04] hover:border-white/[0.15]"
+                              title={`예상: ${planEntry?.label || "없음"} / 실행: ${actualEntry?.label || "없음"}`}
+                              className={`h-6 p-[2px] rounded-[4px] flex flex-col gap-[2px] transition ${
+                                isMatched
+                                  ? "bg-emerald-500/15 ring-1 ring-emerald-400/80"
+                                  : planEntry || actualEntry
+                                    ? "bg-[#171720] border border-white/[0.08]"
+                                    : "bg-[#111115] border border-white/[0.04] hover:border-white/[0.15]"
                               }`}
-                              style={cell ? { backgroundColor: cell.color } : undefined}
-                            />
+                            >
+                              <span
+                                className={`w-full h-1/2 rounded-[2px] ${
+                                  planEntry ? "opacity-85" : "bg-white/[0.03]"
+                                }`}
+                                style={
+                                  planEntry ? { backgroundColor: planEntry.color } : undefined
+                                }
+                              />
+                              <span
+                                className={`w-full h-1/2 rounded-[2px] ${
+                                  actualEntry ? "opacity-100" : "bg-white/[0.03]"
+                                }`}
+                                style={
+                                  actualEntry
+                                    ? { backgroundColor: actualEntry.color }
+                                    : undefined
+                                }
+                              />
+                            </button>
                           );
                         })}
                       </div>
@@ -2259,7 +2389,7 @@ export default function StudyPlannerMatrixPage() {
                   ))}
                 </div>
               </div>
-            </>
+            </div>
           ) : (
             <div className="space-y-2.5">
               {weekDates.map((dateISO) => {

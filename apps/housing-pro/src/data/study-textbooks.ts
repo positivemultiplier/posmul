@@ -72,16 +72,71 @@ export type MatrixCellStatus = "done" | "plan" | "partial";
 export interface MatrixCellLog {
   keyword: string;
   status: MatrixCellStatus;
+  /** 계획/예상 학습 시간(분) */
   minutes?: number;
+  /** 실제 타이머 실행 누적 시간(분) */
+  actualMinutes?: number;
   updatedAt?: string;
   source?: "db" | "manual";
   customColor?: string;
+}
+
+export interface TimetableSlotEntry {
+  color: string;
+  label: string;
+  topicId?: string;
 }
 
 export interface TimetableSlotLog {
   color: string;
   label: string;
   topicId?: string;
+  /** 미리 계획한 예상(Plan) 기록 */
+  plan?: TimetableSlotEntry;
+  /** 타이머 완료 또는 수동 체크한 실제 실행(Actual) 기록 */
+  actual?: TimetableSlotEntry;
+}
+
+/** 타임테이블 슬롯에서 예상(Plan) 기록을 추출 (레거시 단일 슬롯 하위 호환 포함) */
+export function getTimetableSlotPlan(slot?: TimetableSlotLog): TimetableSlotEntry | null {
+  if (!slot) return null;
+  if (slot.plan) return slot.plan;
+  if (!slot.actual && slot.color) {
+    return {
+      color: slot.color,
+      label: slot.label,
+      topicId: slot.topicId,
+    };
+  }
+  return null;
+}
+
+/** 타임테이블 슬롯에서 실제 실행(Actual) 기록을 추출 */
+export function getTimetableSlotActual(slot?: TimetableSlotLog): TimetableSlotEntry | null {
+  return slot?.actual ?? null;
+}
+
+/** 타임테이블 슬롯의 plan 또는 actual 레이어를 갱신하고 하위 호환 필드를 유지 */
+export function setTimetableSlotLayer(
+  existing: TimetableSlotLog | undefined,
+  layer: "plan" | "actual",
+  entry: TimetableSlotEntry | null
+): TimetableSlotLog | undefined {
+  const prevPlan = getTimetableSlotPlan(existing);
+  const prevActual = getTimetableSlotActual(existing);
+  const nextPlan = layer === "plan" ? entry : prevPlan;
+  const nextActual = layer === "actual" ? entry : prevActual;
+
+  const primary = nextActual || nextPlan;
+  if (!primary) return undefined;
+
+  return {
+    color: primary.color,
+    label: primary.label,
+    ...(primary.topicId ? { topicId: primary.topicId } : {}),
+    ...(nextPlan ? { plan: nextPlan } : {}),
+    ...(nextActual ? { actual: nextActual } : {}),
+  };
 }
 
 export interface StudyTodoItem {

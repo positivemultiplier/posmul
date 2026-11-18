@@ -38,6 +38,7 @@ import {
   addDaysISO,
   diffDaysISO,
   findTopicMetaInSubjects,
+  getTimetableSlotActual,
   type MatrixCellStatus,
   type StudySubjectNode,
   type StudyTopicNode,
@@ -68,6 +69,7 @@ export default function HousingProStudentTimerPage() {
     activeBooks,
     subjects,
     matrixLogs,
+    timetablesByDate,
     recordStudySession,
   } = useStudyCurriculum();
 
@@ -259,26 +261,49 @@ export default function HousingProStudentTimerPage() {
   }, [router, subjects, profile.userId]);
 
   const subjectSecondsMap = useMemo(() => {
+    const todaySlots = timetablesByDate[todayISO] || {};
+    const actualSlotMinByTopic = new Map<string, number>();
+    for (const slot of Object.values(todaySlots)) {
+      const actual = getTimetableSlotActual(slot);
+      if (actual?.topicId) {
+        actualSlotMinByTopic.set(
+          actual.topicId,
+          (actualSlotMinByTopic.get(actual.topicId) ?? 0) + 10
+        );
+      }
+    }
+
     const map: Record<string, number> = {};
     for (const subj of subjects) {
       let totalSec = 0;
       for (const unit of subj.units) {
         for (const topic of unit.topics) {
           const todayLog = matrixLogs[makeMatrixKey(topic.id, todayISO)];
-          if (
+          const slotMinutes = actualSlotMinByTopic.get(topic.id) ?? 0;
+          let recordedMinutes = 0;
+
+          if (todayLog?.actualMinutes !== undefined) {
+            recordedMinutes = todayLog.actualMinutes;
+          } else if (
             todayLog &&
             (todayLog.status === "done" || todayLog.status === "partial") &&
             todayLog.minutes
           ) {
-            totalSec += todayLog.minutes * 60;
+            recordedMinutes = todayLog.minutes;
           }
-          totalSec += sessionExtraSeconds[topic.id] || 0;
+
+          const effectiveMinutes = Math.max(recordedMinutes, slotMinutes);
+          if (effectiveMinutes > 0) {
+            totalSec += effectiveMinutes * 60;
+          } else {
+            totalSec += sessionExtraSeconds[topic.id] || 0;
+          }
         }
       }
       map[subj.id] = totalSec;
     }
     return map;
-  }, [subjects, matrixLogs, todayISO, sessionExtraSeconds]);
+  }, [subjects, matrixLogs, timetablesByDate, todayISO, sessionExtraSeconds]);
 
   const totalStudySeconds = useMemo(() => {
     const sum = Object.values(subjectSecondsMap).reduce((acc, s) => acc + s, 0);
@@ -306,14 +331,15 @@ export default function HousingProStudentTimerPage() {
 
   const handleConfirmValidFocusTime = (
     elapsedSeconds: number,
-    completionMode: "done" | "partial" = "done"
+    completionMode: "done" | "partial" = "done",
+    startedAtMs?: number
   ) => {
     if (!focusTopicId) return;
     setSessionExtraSeconds((prev) => ({
       ...prev,
       [focusTopicId]: (prev[focusTopicId] || 0) + elapsedSeconds,
     }));
-    recordStudySession(focusTopicId, elapsedSeconds, undefined, completionMode);
+    recordStudySession(focusTopicId, elapsedSeconds, undefined, completionMode, startedAtMs);
 
     if (isLoggedIn) {
       void grantAppStudyPmpAction({ kind: "FOCUS" }).then((rewardRes) => {
