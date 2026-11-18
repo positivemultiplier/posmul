@@ -30,6 +30,7 @@ import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import {
   computePeriodPlanActualGap,
+  computeStudyRhythmAnalytics,
   formatGapMinutesKo,
   formatMinutesKo,
 } from "@/lib/study-plan-analytics";
@@ -44,7 +45,8 @@ import {
   type StudyAnalyticsResult,
 } from "@/app/actions/exam-study.actions";
 
-type StatsTab = "predict" | "frequency" | "progress" | "matrix" | "gap";
+type StatsTab = "gap" | "matrix" | "exam";
+type ExamSubTab = "predict" | "frequency" | "progress";
 type GapPeriod = "today" | "week" | "30d" | "all";
 
 function getMondayStartWeekISOs(anchorISO: string): string[] {
@@ -77,7 +79,8 @@ export default function StudyStatisticsPage() {
     upsertMatrixCell,
   } = useStudyCurriculum();
 
-  const [activeTab, setActiveTab] = useState<StatsTab>("predict");
+  const [activeTab, setActiveTab] = useState<StatsTab>("gap");
+  const [examSubTab, setExamSubTab] = useState<ExamSubTab>("predict");
   const [gapPeriod, setGapPeriod] = useState<GapPeriod>("week");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
@@ -85,21 +88,18 @@ export default function StudyStatisticsPage() {
     if (typeof globalThis !== "undefined" && "location" in globalThis) {
       const params = new globalThis.URLSearchParams(globalThis.location.search);
       const tab = params.get("tab");
-      if (
-        tab === "predict" ||
-        tab === "frequency" ||
-        tab === "progress" ||
-        tab === "matrix" ||
-        tab === "gap"
-      ) {
+      if (tab === "gap" || tab === "matrix" || tab === "exam") {
         setActiveTab(tab);
+      } else if (tab === "predict" || tab === "frequency" || tab === "progress") {
+        setActiveTab("exam");
+        setExamSubTab(tab);
       }
     }
   }, []);
 
-  // DB 실시간 분석 데이터 상태
+  // DB 실시간 기출 분석 데이터 상태 (exam 탭 진입 시에만 지연 로딩하여 0ms 초기 진입 보장)
   const [analyticsData, setAnalyticsData] = useState<StudyAnalyticsResult | null>(null);
-  const [loadingDb, setLoadingDb] = useState<boolean>(true);
+  const [loadingDb, setLoadingDb] = useState<boolean>(false);
   const [subjectFilter, setSubjectFilter] = useState<string>("ALL");
   const [freqSortBy, setFreqSortBy] = useState<"order" | "count" | "trend">("count");
   const [progressFilter, setProgressFilter] = useState<"ALL" | "UNSOLVED" | "WEAK">("ALL");
@@ -114,9 +114,9 @@ export default function StudyStatisticsPage() {
   };
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || activeTab !== "exam" || analyticsData) return;
     void loadAnalytics();
-  }, [authLoading, effectiveOwnerKey]);
+  }, [authLoading, activeTab, analyticsData, effectiveOwnerKey]);
 
   // 플래너에서 커스텀 변경한 과목 색상과 일관되게 동기화하는 조회 맵
   const customColorLookup = useMemo(() => {
@@ -289,6 +289,19 @@ export default function StudyStatisticsPage() {
     [gapDateISOs, subjects, matrixLogs, timetablesByDate, activeBookIds]
   );
 
+  const studyRhythm = useMemo(
+    () =>
+      computeStudyRhythmAnalytics({
+        dateISOs: gapDateISOs,
+        todayISO,
+        subjects,
+        matrixLogs,
+        timetablesByDate,
+        activeBookIds,
+      }),
+    [gapDateISOs, todayISO, subjects, matrixLogs, timetablesByDate, activeBookIds]
+  );
+
   // 출제빈도 탭 필터링 & 정렬
   const filteredFrequencyTopics = useMemo(() => {
     if (!analyticsData) return [];
@@ -380,15 +393,17 @@ export default function StudyStatisticsPage() {
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={loadAnalytics}
-              disabled={loadingDb}
-              className="p-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 border border-white/[0.08]"
-              title="최신 DB 통계 새로고침"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loadingDb ? "animate-spin" : ""}`} />
-            </button>
+            {activeTab === "exam" && (
+              <button
+                type="button"
+                onClick={loadAnalytics}
+                disabled={loadingDb}
+                className="p-1.5 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 border border-white/[0.08]"
+                title="최신 기출 DB 통계 새로고침"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${loadingDb ? "animate-spin" : ""}`} />
+              </button>
+            )}
             <Link
               href="/study/planner"
               className="px-2.5 py-1.5 rounded-xl bg-[#FF5A36]/15 border border-[#FF5A36]/40 text-[#FF7A59] text-[10.5px] font-black flex items-center gap-1 shrink-0"
@@ -399,20 +414,18 @@ export default function StudyStatisticsPage() {
           </div>
         </div>
 
-        {/* 5대 분석 서브탭 */}
-        <div className="grid grid-cols-5 gap-1 p-1 rounded-xl bg-[#0E0E12] border border-white/[0.06]">
+        {/* 초고속 3대 핵심 분석 탭 (계획·실행 우선) */}
+        <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-[#0E0E12] border border-white/[0.06]">
           {[
-            { id: "predict" as const, label: "🎯 예측" },
-            { id: "frequency" as const, label: "📊 빈도" },
-            { id: "progress" as const, label: "📈 진도" },
-            { id: "matrix" as const, label: "🗓️ 회독" },
-            { id: "gap" as const, label: "⏱️ 계획·실행" },
+            { id: "gap" as const, label: "⏱️ 계획 · 실행" },
+            { id: "matrix" as const, label: "🗓️ 회독 · 구멍" },
+            { id: "exam" as const, label: "🎯 기출 · 빈출" },
           ].map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`py-1.5 px-0.5 rounded-lg text-[10px] font-black transition truncate ${
+              className={`py-2 px-1 rounded-lg text-[11px] font-black transition truncate ${
                 activeTab === tab.id
                   ? "bg-[#FF5A36] text-white shadow"
                   : "text-slate-400 hover:text-white"
@@ -432,19 +445,47 @@ export default function StudyStatisticsPage() {
       )}
 
       <div className="px-4 py-4 space-y-4">
-        {loadingDb && !analyticsData && activeTab !== "matrix" && activeTab !== "gap" ? (
-          <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-slate-400">
-            <Loader2 className="w-6 h-6 animate-spin text-[#FF5A36]" />
-            <p className="text-xs font-bold">
-              기출 1,400제 출제 데이터 및 풀이 이력 분석 중...
-            </p>
+        {/* ============================================================ */}
+        {/* TAB 3: 🎯 기출 실력 · 출제 빈도 · 진도 (지연 로딩 통합)       */}
+        {/* ============================================================ */}
+        {activeTab === "exam" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-[#1A1A21] border border-white/[0.08] text-[10.5px] font-black">
+              {[
+                { id: "predict" as const, label: "🎯 합격 예측" },
+                { id: "frequency" as const, label: "📊 출제 빈도" },
+                { id: "progress" as const, label: "📈 기출 진도" },
+              ].map((sub) => (
+                <button
+                  key={sub.id}
+                  type="button"
+                  onClick={() => setExamSubTab(sub.id)}
+                  className={`py-1.5 rounded-lg transition ${
+                    examSubTab === sub.id
+                      ? "bg-white/[0.12] text-white"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {sub.label}
+                </button>
+              ))}
+            </div>
+
+            {loadingDb && !analyticsData && (
+              <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-slate-400">
+                <Loader2 className="w-6 h-6 animate-spin text-[#FF5A36]" />
+                <p className="text-xs font-bold">
+                  기출 1,400제 출제 데이터 및 풀이 이력 불러오는 중...
+                </p>
+              </div>
+            )}
           </div>
-        ) : null}
+        )}
 
         {/* ============================================================ */}
-        {/* TAB 1: 🎯 합격 예측 & 과목별 예상 점수                       */}
+        {/* TAB 3-1: 🎯 합격 예측 & 과목별 예상 점수                     */}
         {/* ============================================================ */}
-        {activeTab === "predict" && analyticsData && (
+        {activeTab === "exam" && examSubTab === "predict" && analyticsData && (
           <div className="space-y-4">
             {/* 1차 · 2차 예상 합격률 카드 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -789,7 +830,7 @@ export default function StudyStatisticsPage() {
         {/* ============================================================ */}
         {/* TAB 2: 📊 7개년 출제빈도 빅데이터 (1,400제)                  */}
         {/* ============================================================ */}
-        {activeTab === "frequency" && analyticsData && (
+        {activeTab === "exam" && examSubTab === "frequency" && analyticsData && (
           <div className="space-y-4">
             {/* 과목 필터 & 정렬 */}
             <div className="space-y-2">
@@ -1024,7 +1065,7 @@ export default function StudyStatisticsPage() {
         {/* ============================================================ */}
         {/* TAB 3: 📈 학습진도 & 선지 O/★/X 숙련도                        */}
         {/* ============================================================ */}
-        {activeTab === "progress" && analyticsData && (
+        {activeTab === "exam" && examSubTab === "progress" && analyticsData && (
           <div className="space-y-4">
             {/* 전체 진도 · 정답률 · 지문 이해도 KPI */}
             <div className="grid grid-cols-3 gap-2">
@@ -1510,14 +1551,20 @@ export default function StudyStatisticsPage() {
                 ))}
               </div>
 
-              <Link
-                href="/study/planner?tab=diary"
-                className="text-[10.5px] font-black text-sky-300 hover:text-sky-200 flex items-center gap-1"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>일정표 시각화 보기</span>
-                <ArrowRight className="w-3 h-3" />
-              </Link>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="px-2 py-1 rounded-lg bg-[#FF5A36]/15 border border-[#FF5A36]/35 text-[10px] font-black text-[#FF8A6B] flex items-center gap-1">
+                  <Flame className="w-3 h-3" />
+                  <span>{studyRhythm.streakDays}일 연속 실행</span>
+                </span>
+                <Link
+                  href="/study/planner?tab=diary"
+                  className="text-[10.5px] font-black text-sky-300 hover:text-sky-200 flex items-center gap-1"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>일정표</span>
+                  <ArrowRight className="w-3 h-3" />
+                </Link>
+              </div>
             </div>
 
             {/* 4대 수치 KPI */}
@@ -1575,6 +1622,135 @@ export default function StudyStatisticsPage() {
                   {planActualGap.matchedSlots}/{planActualGap.totalPlanSlots}칸 시간 일치
                 </div>
               </div>
+            </div>
+
+            {/* 집중 골든타임 리듬 & 과목 밸런스 진단 */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* 시간대별 집중 골든타임 */}
+              <section className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-xs font-black text-white flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-amber-400" />
+                    <span>시간대별 집중 리듬</span>
+                  </h2>
+                  {studyRhythm.goldenBand ? (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/35 text-[10px] font-black text-amber-200">
+                      골든타임: {studyRhythm.goldenBand.label} ({studyRhythm.goldenBand.rangeLabel})
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-500 font-bold">기록 대기</span>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  {(() => {
+                    const maxBandMin = Math.max(
+                      30,
+                      ...studyRhythm.timeBands.map((b) =>
+                        Math.max(b.planMinutes, b.actualMinutes)
+                      )
+                    );
+                    return studyRhythm.timeBands.map((band) => {
+                      const planPct = Math.round((band.planMinutes / maxBandMin) * 100);
+                      const actualPct = Math.round((band.actualMinutes / maxBandMin) * 100);
+                      const isGolden = studyRhythm.goldenBand?.id === band.id;
+                      return (
+                        <div key={band.id} className="space-y-1">
+                          <div className="flex items-center justify-between text-[10.5px]">
+                            <span
+                              className={`font-black ${
+                                isGolden ? "text-amber-300" : "text-slate-200"
+                              }`}
+                            >
+                              {band.label}{" "}
+                              <span className="text-[9.5px] font-mono text-slate-400">
+                                ({band.rangeLabel})
+                              </span>
+                            </span>
+                            <span className="font-mono text-[10px] text-slate-300">
+                              <strong className="text-sky-300">예 {band.planMinutes}m</strong>
+                              {" / "}
+                              <strong className="text-[#FF7A59]">실 {band.actualMinutes}m</strong>
+                            </span>
+                          </div>
+                          <div className="h-2 rounded-full bg-[#101015] border border-white/[0.04] overflow-hidden relative">
+                            <div
+                              className="absolute inset-y-0 left-0 bg-sky-400/35 rounded-full"
+                              style={{ width: `${planPct}%` }}
+                            />
+                            <div
+                              className="absolute inset-y-0 left-0 bg-[#FF5A36] rounded-full transition-all duration-300"
+                              style={{ width: `${actualPct}%` }}
+                            />
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </section>
+
+              {/* 과목 밸런스 / 편식 진단 */}
+              <section className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-3">
+                <div className="flex items-center justify-between gap-2">
+                  <h2 className="text-xs font-black text-white flex items-center gap-1.5">
+                    <Layers className="w-4 h-4 text-sky-400" />
+                    <span>과목 밸런스 · 편식 진단</span>
+                  </h2>
+                  {studyRhythm.underStudiedSubjects.length > 0 && (
+                    <span className="px-2 py-0.5 rounded-full bg-rose-500/15 border border-rose-500/35 text-[10px] font-black text-rose-300">
+                      {studyRhythm.underStudiedSubjects.length}과목 보강 필요
+                    </span>
+                  )}
+                </div>
+
+                {studyRhythm.subjectShareRows.length === 0 ? (
+                  <div className="p-4 rounded-xl bg-[#111116] text-center text-xs text-slate-400">
+                    활성화된 과목이 없습니다. 플래너에서 책·과목을 추가해 보세요.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {studyRhythm.subjectShareRows.map((row) => (
+                      <div key={row.subject.id} className="space-y-1">
+                        <div className="flex items-center justify-between text-[10.5px]">
+                          <span className="font-extrabold text-white flex items-center gap-1.5 truncate">
+                            <span
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: row.subject.color }}
+                            />
+                            <span className="truncate">{row.subject.shortTitle}</span>
+                          </span>
+                          <span className="font-mono text-[10px] shrink-0">
+                            <strong className="text-white">{row.sharePct}%</strong>
+                            <span className="text-slate-400 ml-1">
+                              ({formatMinutesKo(row.actualMinutes)})
+                            </span>
+                          </span>
+                        </div>
+                        <div className="h-2 rounded-full bg-[#101015] border border-white/[0.04] overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-300"
+                            style={{
+                              width: `${row.sharePct}%`,
+                              backgroundColor: row.subject.color,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                    {studyRhythm.underStudiedSubjects.length > 0 && (
+                      <div className="p-2 rounded-xl bg-rose-950/35 border border-rose-500/25 text-[10px] text-rose-200 font-bold">
+                        💡 부족 과목:{" "}
+                        {studyRhythm.underStudiedSubjects
+                          .slice(0, 3)
+                          .map((s) => s.shortTitle)
+                          .join(", ")}{" "}
+                        비중을 조금 늘려 과락 위험을 줄여보세요.
+                      </div>
+                    )}
+                  </div>
+                )}
+              </section>
             </div>
 
             {/* 과목별 계획 vs 실행 Gap 상세 수치 Table */}

@@ -349,3 +349,176 @@ export function computePeriodPlanActualGap(params: {
     shortfallTopics,
   };
 }
+
+export interface TimeBandSummary {
+  id: string;
+  label: string;
+  rangeLabel: string;
+  planMinutes: number;
+  actualMinutes: number;
+  matchedMinutes: number;
+  achievementPct: number;
+}
+
+export interface StudyRhythmSummary {
+  timeBands: TimeBandSummary[];
+  goldenBand: TimeBandSummary | null;
+  subjectShareRows: Array<{
+    subject: StudySubjectNode;
+    actualMinutes: number;
+    planMinutes: number;
+    sharePct: number;
+  }>;
+  underStudiedSubjects: StudySubjectNode[];
+  streakDays: number;
+}
+
+const TIME_BAND_SPECS: Array<{
+  id: string;
+  label: string;
+  rangeLabel: string;
+  hours: number[];
+}> = [
+  { id: "dawn", label: "새벽", rangeLabel: "05~08시", hours: [5, 6, 7, 8] },
+  { id: "morning", label: "오전", rangeLabel: "09~11시", hours: [9, 10, 11] },
+  { id: "afternoon", label: "낮", rangeLabel: "12~16시", hours: [12, 13, 14, 15, 16] },
+  { id: "evening", label: "저녁", rangeLabel: "17~20시", hours: [17, 18, 19, 20] },
+  { id: "night", label: "심야", rangeLabel: "21~24시", hours: [21, 22, 23, 0, 1, 2, 3, 4] },
+];
+
+/**
+ * 시간대별 집중 골든타임 · 과목 편식 · 연속 실행 스트릭 계산 (로컬 0ms)
+ */
+export function computeStudyRhythmAnalytics(params: {
+  dateISOs: string[];
+  todayISO: string;
+  subjects: StudySubjectNode[];
+  matrixLogs: Record<string, MatrixCellLog>;
+  timetablesByDate: Record<string, Record<string, TimetableSlotLog>>;
+  activeBookIds?: string[];
+}): StudyRhythmSummary {
+  const { dateISOs, todayISO, subjects, matrixLogs, timetablesByDate, activeBookIds } = params;
+
+  const activeTopicIds = new Set<string>();
+  for (const s of subjects) {
+    for (const u of s.units) {
+      for (const t of u.topics) {
+        activeTopicIds.add(t.id);
+      }
+    }
+  }
+
+  const bandMap = new Map<string, TimeBandSummary>(
+    TIME_BAND_SPECS.map((b) => [
+      b.id,
+      {
+        id: b.id,
+        label: b.label,
+        rangeLabel: b.rangeLabel,
+        planMinutes: 0,
+        actualMinutes: 0,
+        matchedMinutes: 0,
+        achievementPct: 0,
+      },
+    ])
+  );
+
+  const hourToBandId = new Map<number, string>();
+  for (const spec of TIME_BAND_SPECS) {
+    for (const h of spec.hours) hourToBandId.set(h, spec.id);
+  }
+
+  for (const dateISO of dateISOs) {
+    const daySlots = timetablesByDate[dateISO] || {};
+    for (const [slotKey, rawSlot] of Object.entries(daySlots)) {
+      const hourPart = Number(slotKey.split("-")[0]);
+      if (Number.isNaN(hourPart)) continue;
+      const bandId = hourToBandId.get(hourPart) || "night";
+      const band = bandMap.get(bandId);
+      if (!band) continue;
+
+      const rawPlan = getTimetableSlotPlan(rawSlot);
+      const plan = isPlanSlotVisibleForBooks(rawPlan, activeBookIds, activeTopicIds)
+        ? rawPlan
+        : null;
+      const actual = getTimetableSlotActual(rawSlot);
+
+      if (plan) band.planMinutes += 10;
+      if (actual) band.actualMinutes += 10;
+      if (plan && actual) {
+        const matched =
+          plan.topicId && actual.topicId
+            ? plan.topicId === actual.topicId
+            : plan.color === actual.color;
+        if (matched) band.matchedMinutes += 10;
+      }
+    }
+  }
+
+  const timeBands = Array.from(bandMap.values()).map((b) => ({
+    ...b,
+    achievementPct:
+      b.planMinutes > 0
+        ? Math.round((b.actualMinutes / b.planMinutes) * 100)
+        : b.actualMinutes > 0
+          ? 100
+          : 0,
+  }));
+
+  const activeBands = timeBands.filter((b) => b.actualMinutes > 0);
+  const goldenBand =
+    activeBands.length > 0
+      ? [...activeBands].sort((a, b) => b.actualMinutes - a.actualMinutes)[0]
+      : null;
+
+  // 과목 편식 분석
+  const periodGap = computePeriodPlanActualGap({
+    dateISOs,
+    subjects,
+    matrixLogs,
+    timetablesByDate,
+    activeBookIds,
+  });
+  const totalSubjectActual = periodGap.subjectRows.reduce(
+    (sum, r) => sum + r.actualMinutes,
+    0
+  );
+  const subjectShareRows = periodGap.subjectRows
+    .map((r) => ({
+      subject: r.subject,
+      actualMinutes: r.actualMinutes,
+      planMinutes: r.planMinutes,
+      sharePct:
+        totalSubjectActual > 0
+          ? Math.round((r.actualMinutes / totalSubjectActual) * 100)
+          : 0,
+    }))
+    .sort((a, b) => b.actualMinutes - a.actualMinutes);
+
+  const underStudiedSubjects = subjectShareRows
+    .filter((r) => r.actualMinutes === 0 || (totalSubjectActual >= 60 && r.sharePct < 10))
+    .map((r) => r.subject);
+
+  // 오늘 기준 연속 실행 일수 계산 (최근 dateISOs 내역 기준)
+  const descDates = [...dateISOs].filter((d) => d <= todayISO).sort((a, b) => b.localeCompare(a));
+  let streakDays = 0;
+  for (const d of descDates) {
+    const dayRow = periodGap.dailyRows.find((r) => r.dateISO === d);
+    const hasDoneMatrix = Object.entries(matrixLogs).some(
+      ([k, v]) => k.endsWith(`::${d}`) && (v.status === "done" || (v.actualMinutes ?? 0) > 0)
+    );
+    if ((dayRow && dayRow.actualMinutes > 0) || hasDoneMatrix) {
+      streakDays += 1;
+    } else if (d !== todayISO) {
+      break;
+    }
+  }
+
+  return {
+    timeBands,
+    goldenBand,
+    subjectShareRows,
+    underStudiedSubjects,
+    streakDays,
+  };
+}

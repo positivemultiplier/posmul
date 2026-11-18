@@ -1993,3 +1993,152 @@ export async function fetchTheoryBundleAction(params: {
     };
   }
 }
+
+export interface KeywordMatchedOption extends ChapterKeyPointOption {
+  subject: string;
+  chapterCode: string | null;
+  chapterTitle: string | null;
+}
+
+export interface KeywordMatchedOptionsResult {
+  success: boolean;
+  keywordsUsed: string[];
+  options: KeywordMatchedOption[];
+  error?: string;
+}
+
+/**
+ * 커스텀 책·단원 제목이나 자유 키워드로 관련 기출 O/X 지문을 빠르게 검색합니다.
+ */
+export async function searchStudyOptionsByKeywordsAction(
+  rawQuery: string,
+  subjectHint?: string
+): Promise<KeywordMatchedOptionsResult> {
+  try {
+    // 번호·특수문자 제거 후 2글자 이상 핵심 토큰 최대 3개 추출
+    const cleaned = rawQuery
+      .replace(/^\s*(?:\d+\.|PART\s*\d+|제\s*\d+\s*[편장절])\s*/gi, "")
+      .replace(/[^\p{L}\p{N}\s]/gu, " ")
+      .trim();
+
+    const stopWords = new Set(["총칙", "개요", "기본", "목차", "이론", "기출", "문제", "단원"]);
+    const tokens = cleaned
+      .split(/\s+/)
+      .map((t) => t.trim())
+      .filter((t) => t.length >= 2 && !stopWords.has(t));
+
+    const keywordsUsed =
+      tokens.length > 0 ? tokens.slice(0, 3) : cleaned.length >= 2 ? [cleaned] : [];
+
+    if (keywordsUsed.length === 0) {
+      return { success: true, keywordsUsed: [], options: [] };
+    }
+
+    const orFilters = keywordsUsed
+      .flatMap((kw) => [
+        `option_text.ilike.%${kw}%`,
+        `trap_summary.ilike.%${kw}%`,
+        `legal_citation.ilike.%${kw}%`,
+      ])
+      .join(",");
+
+    const { data: optRows, error: optErr } = await supabaseAdmin
+      .schema("vertical_housing")
+      .from("exam_options")
+      .select(
+        "id, question_id, option_text, is_correct, legal_citation, trap_summary, repeat_count, is_amended, amended_note"
+      )
+      .or(orFilters)
+      .order("repeat_count", { ascending: false })
+      .limit(24);
+
+    if (optErr) {
+      return {
+        success: false,
+        keywordsUsed,
+        options: [],
+        error: optErr.message,
+      };
+    }
+
+    const rawOpts = (optRows ?? []) as Array<{
+      id: string;
+      question_id: string;
+      option_text: string;
+      is_correct: boolean;
+      legal_citation: string | null;
+      trap_summary: string | null;
+      repeat_count: number | null;
+      is_amended: boolean | null;
+      amended_note: string | null;
+    }>;
+
+    if (rawOpts.length === 0) {
+      return { success: true, keywordsUsed, options: [] };
+    }
+
+    const qIds = Array.from(new Set(rawOpts.map((o) => o.question_id)));
+    const { data: qRows } = await supabaseAdmin
+      .schema("vertical_housing")
+      .from("exam_questions")
+      .select("id, subject, chapter_code, chapter_title, exam_year, question_number, law_status")
+      .in("id", qIds)
+      .neq("law_status", "DEPRECATED");
+
+    const qMap = new Map(
+      ((qRows ?? []) as Array<{
+        id: string;
+        subject: string;
+        chapter_code: string | null;
+        chapter_title: string | null;
+        exam_year: number;
+        question_number: number;
+      }>).map((q) => [q.id, q])
+    );
+
+    const seenTexts = new Set<string>();
+    const options: KeywordMatchedOption[] = [];
+
+    for (const o of rawOpts) {
+      const q = qMap.get(o.question_id);
+      if (!q) continue;
+      if (
+        subjectHint &&
+        subjectHint !== "ALL" &&
+        !q.subject.includes(subjectHint.replace("주택관리", "").replace("공동주택", ""))
+      ) {
+        // 과목 힌트가 명시되어도 완전히 다른 과목만 제외하고, 유사하면 허용
+      }
+      const normText = o.option_text.trim();
+      if (seenTexts.has(normText)) continue;
+      seenTexts.add(normText);
+
+      options.push({
+        id: o.id,
+        statement: normText,
+        isCorrect: o.is_correct,
+        citation: o.legal_citation,
+        trapSummary: o.trap_summary,
+        repeatCount: o.repeat_count ?? 1,
+        isAmended: Boolean(o.is_amended),
+        amendedNote: o.amended_note,
+        examYear: q.exam_year,
+        questionNumber: q.question_number,
+        subject: q.subject,
+        chapterCode: q.chapter_code,
+        chapterTitle: q.chapter_title,
+      });
+
+      if (options.length >= 10) break;
+    }
+
+    return { success: true, keywordsUsed, options };
+  } catch (err) {
+    return {
+      success: false,
+      keywordsUsed: [],
+      options: [],
+      error: err instanceof Error ? err.message : "키워드 기출 검색 실패",
+    };
+  }
+}
