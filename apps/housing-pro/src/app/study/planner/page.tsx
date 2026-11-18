@@ -1905,185 +1905,7 @@ export default function StudyPlannerMatrixPage() {
                 </div>
               )}
 
-              {/* 오늘(선택일) 단원별 계획 vs 타이머 실행 카드 */}
-              {dayPlanActualSummary.items.length > 0 && (
-                <div className="p-3 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-2.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-black text-white flex items-center gap-1.5">
-                      <Timer className="w-3.5 h-3.5 text-[#FF7A59]" />
-                      <span>단원별 계획 · 타이머 실행 현황</span>
-                    </span>
-                    <Link
-                      href="/study/stats?tab=gap"
-                      className="text-[10px] font-black text-sky-300 hover:text-sky-200 flex items-center gap-1"
-                    >
-                      <BarChart3 className="w-3 h-3" />
-                      <span>통계 Gap 상세 →</span>
-                    </Link>
-                  </div>
-
-                  <div className="space-y-2">
-                    {dayPlanActualSummary.items.map((item) => {
-                      const pct =
-                        item.planMinutes > 0
-                          ? Math.min(
-                              100,
-                              Math.round((item.actualMinutes / item.planMinutes) * 100)
-                            )
-                          : item.actualMinutes > 0
-                            ? 100
-                            : 0;
-                      const isDone = item.cell?.status === "done";
-                      const isSelectedBrush =
-                        !useCustomTimetableColor &&
-                        activePaletteItem?.topicId === item.topicId;
-
-                      return (
-                        <div
-                          key={item.topicId}
-                          onClick={() => {
-                            setUseCustomTimetableColor(false);
-                            setSelectedPaletteTopicId(item.topicId);
-                          }}
-                          className={`p-2.5 rounded-xl border transition cursor-pointer space-y-1.5 ${
-                            isSelectedBrush
-                              ? "bg-[#22222C] border-white/40"
-                              : "bg-[#111116] border-white/[0.06] hover:border-white/[0.15]"
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex items-center gap-1.5 min-w-0">
-                              <span
-                                className="w-2.5 h-2.5 rounded-full shrink-0"
-                                style={{ backgroundColor: item.color }}
-                              />
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-black bg-white/[0.06] text-slate-300 shrink-0">
-                                {item.subject.shortTitle}
-                              </span>
-                              <span className="text-[11.5px] font-extrabold text-white truncate">
-                                {item.topic.topicNo ? `${item.topic.topicNo}. ` : ""}
-                                {item.topic.title}
-                              </span>
-                              {isDone && (
-                                <span className="px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 text-[9px] font-black shrink-0">
-                                  완료
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0 font-mono text-[10px]">
-                              <span className="text-sky-300 font-bold">
-                                예 {item.planMinutes}m
-                              </span>
-                              <span className="text-slate-600">/</span>
-                              <span className="text-[#FF7A59] font-black">
-                                실 {item.actualMinutes}m
-                              </span>
-                              <span
-                                className={`px-1 rounded text-[9px] font-black ${
-                                  item.gapMinutes >= 0
-                                    ? "bg-emerald-500/15 text-emerald-300"
-                                    : "bg-rose-500/15 text-rose-300"
-                                }`}
-                              >
-                                {formatGapMinutesKo(item.gapMinutes)}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* 예상 대비 타이머 실행 시각화 바 */}
-                          <div className="h-1.5 rounded-full bg-[#09090D] overflow-hidden border border-white/[0.04]">
-                            <div
-                              className="h-full rounded-full transition-all duration-300"
-                              style={{
-                                width: `${pct}%`,
-                                backgroundColor: item.color,
-                              }}
-                            />
-                          </div>
-
-                          <div
-                            className="flex flex-wrap items-center gap-1.5 pt-0.5 text-[9.5px]"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <Link
-                              href={`/?topic=${item.topicId}`}
-                              className="px-2 py-0.5 rounded-lg bg-[#FF5A36] hover:bg-[#ff6d4d] text-white font-black flex items-center gap-1 transition"
-                            >
-                              <Play className="w-2.5 h-2.5 fill-white" />
-                              <span>타이머 시작</span>
-                            </Link>
-                            {!isDone && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  upsertMatrixCell(item.topicId, selectedDiaryDate, {
-                                    keyword:
-                                      item.cell?.keyword || item.topic.defaultKeyword,
-                                    status: "done",
-                                    minutes: item.planMinutes || item.topic.estimatedMinutes,
-                                    ...(item.actualMinutes > 0
-                                      ? { actualMinutes: item.actualMinutes }
-                                      : {}),
-                                    ...(item.cell?.customColor
-                                      ? { customColor: item.cell.customColor }
-                                      : {}),
-                                  })
-                                }
-                                className="px-2 py-0.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-300 font-black transition"
-                              >
-                                완료(1R)
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() =>
-                                carryOverTopicToNextDay(
-                                  item.topicId,
-                                  selectedDiaryDate,
-                                  item.cell?.keyword || item.topic.defaultKeyword,
-                                  item.planMinutes || item.topic.estimatedMinutes,
-                                  item.cell?.customColor
-                                )
-                              }
-                              className="px-2 py-0.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 font-black transition"
-                            >
-                              내일이월
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                deleteMatrixCell(item.topicId, selectedDiaryDate);
-                                setTimetableSlots(selectedDiaryDate, (prev) => {
-                                  const copy = { ...prev };
-                                  for (const [sKey, sVal] of Object.entries(prev)) {
-                                    const plan = getTimetableSlotPlan(sVal);
-                                    if (plan?.topicId === item.topicId) {
-                                      const updated = setTimetableSlotLayer(
-                                        copy[sKey],
-                                        "plan",
-                                        null
-                                      );
-                                      if (updated) copy[sKey] = updated;
-                                      else delete copy[sKey];
-                                    }
-                                  }
-                                  return copy;
-                                });
-                              }}
-                              className="px-2 py-0.5 rounded-lg bg-white/[0.05] hover:bg-rose-950/60 border border-white/[0.08] text-slate-400 hover:text-rose-300 font-bold ml-auto transition"
-                            >
-                              해제
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* 1일 시각화 일정표 Table: 예상(좌) | 타이머 실행(우) 나란히 */}
+              {/* 1일 시각화 일정표 Table: 10분 단위 X축(10~60분) × Y축(시), 한 칸에 [예상 | 실행] 동시 표시 */}
               <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-3 shadow-xl">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
@@ -2094,7 +1916,7 @@ export default function StudyPlannerMatrixPage() {
                       </span>
                     </div>
                     <p className="text-[10px] text-slate-400 mt-0.5">
-                      왼쪽에 예상 계획을 칠하면, 오른쪽에 타이머 실행 시간이 나란히 채워집니다.
+                      한 칸의 왼쪽은 예상 계획(드래그 입력), 오른쪽은 타이머 실행 시간이 채워집니다.
                     </p>
                   </div>
 
@@ -2188,24 +2010,33 @@ export default function StudyPlannerMatrixPage() {
                         style={{ backgroundColor: hex }}
                       />
                     ))}
-                    <span className="text-[9.5px] text-slate-400 ml-auto">
-                      초록 테두리 = 계획 시간 적중
-                    </span>
                   </div>
                 </div>
 
-                {/* 나란히 비교 Table: 시각 | 예상 계획 (60분) | 실행 기록 (타이머) */}
-                <div className="rounded-xl border border-white/[0.08] overflow-hidden bg-[#111116]">
-                  <div className="grid grid-cols-[34px_1fr_1fr] gap-2 px-2 py-1.5 bg-[#16161E] border-b border-white/[0.08] text-[10px] font-black text-slate-300">
+                {/* 범례 */}
+                <div className="flex flex-wrap items-center gap-3 px-2.5 py-1.5 rounded-xl bg-[#121218] border border-white/[0.06] text-[10px] font-bold">
+                  <span className="flex items-center gap-1.5 text-sky-300">
+                    <span className="w-3 h-3 rounded-sm bg-sky-400/55 border border-sky-300/80 inline-block" />
+                    <span>칸 왼쪽: 예상 계획</span>
+                  </span>
+                  <span className="flex items-center gap-1.5 text-[#FF7A59]">
+                    <span className="w-3 h-3 rounded-sm bg-[#FF5A36] inline-block" />
+                    <span>칸 오른쪽: 타이머 실행</span>
+                  </span>
+                  <span className="text-emerald-300 ml-auto text-[9.5px]">
+                    초록 테두리 = 계획 적중
+                  </span>
+                </div>
+
+                {/* 1일 통합 시각화 Table: Y축(시) × X축(10분~60분), 한 칸에 [예상 | 실행] */}
+                <div className="rounded-xl border border-white/[0.08] overflow-hidden bg-[#101015]">
+                  <div className="grid grid-cols-[36px_repeat(6,minmax(0,1fr))] gap-1 px-2 py-2 bg-[#16161E] border-b border-white/[0.08] text-[9.5px] font-mono font-black text-slate-300">
                     <div className="text-center text-slate-400">시</div>
-                    <div className="flex items-center justify-between px-1">
-                      <span className="text-sky-300">예상 계획 (드래그)</span>
-                      <span className="font-mono text-[9px] text-slate-500">10~60m</span>
-                    </div>
-                    <div className="flex items-center justify-between px-1 border-l border-white/[0.06] pl-2">
-                      <span className="text-[#FF7A59]">실행 (타이머)</span>
-                      <span className="font-mono text-[9px] text-slate-500">자동 채움</span>
-                    </div>
+                    {[10, 20, 30, 40, 50, 60].map((minLabel) => (
+                      <div key={minLabel} className="text-center">
+                        {minLabel}분
+                      </div>
+                    ))}
                   </div>
 
                   <div
@@ -2228,128 +2059,91 @@ export default function StudyPlannerMatrixPage() {
                     {visibleDayHours.map((hour) => (
                       <div
                         key={hour}
-                        className="grid grid-cols-[34px_1fr_1fr] gap-2 px-2 py-1 items-center"
+                        className="grid grid-cols-[36px_repeat(6,minmax(0,1fr))] gap-1 px-2 py-1 items-center"
                       >
-                        <div className="font-mono text-[10.5px] font-bold text-slate-400 text-center">
+                        <div className="font-mono text-[10px] font-bold text-slate-400 text-center bg-[#13131A] rounded py-1 border border-white/[0.04]">
                           {String(hour).padStart(2, "0")}
                         </div>
 
-                        {/* 왼쪽 열: 예상 계획 (10분 x 6칸 드래그 입력) */}
-                        <div className="grid grid-cols-6 gap-0.5 touch-none">
-                          {[0, 1, 2, 3, 4, 5].map((slot) => {
-                            const key = `${hour}-${slot}`;
-                            const cell = dayTimetableGrid[key];
-                            const rawPlan = getTimetableSlotPlan(cell);
-                            const planEntry = isPlanSlotVisibleForBooks(
-                              rawPlan,
-                              activeBookIds,
-                              activeTopicIdSet
-                            )
-                              ? rawPlan
-                              : null;
-                            const actualEntry = getTimetableSlotActual(cell);
-                            const isMatched = Boolean(
-                              planEntry &&
-                                actualEntry &&
-                                (planEntry.topicId && actualEntry.topicId
-                                  ? planEntry.topicId === actualEntry.topicId
-                                  : planEntry.color === actualEntry.color)
-                            );
+                        {[0, 1, 2, 3, 4, 5].map((slot) => {
+                          const key = `${hour}-${slot}`;
+                          const cell = dayTimetableGrid[key];
+                          const rawPlan = getTimetableSlotPlan(cell);
+                          const planEntry = isPlanSlotVisibleForBooks(
+                            rawPlan,
+                            activeBookIds,
+                            activeTopicIdSet
+                          )
+                            ? rawPlan
+                            : null;
+                          const actualEntry = getTimetableSlotActual(cell);
+                          const isMatched = Boolean(
+                            planEntry &&
+                              actualEntry &&
+                              (planEntry.topicId && actualEntry.topicId
+                                ? planEntry.topicId === actualEntry.topicId
+                                : planEntry.color === actualEntry.color)
+                          );
+                          const rangeLabel = `${String(hour).padStart(2, "0")}:${String(
+                            slot * 10
+                          ).padStart(2, "0")}~${String(slot * 10 + 10).padStart(2, "0")}`;
 
-                            return (
-                              <button
-                                key={slot}
-                                type="button"
-                                data-tt-plan-slot={key}
-                                onPointerDown={(e) => {
-                                  e.preventDefault();
-                                  const isSamePaint =
-                                    planEntry &&
-                                    planEntry.color === activeTimetableBrush.color &&
-                                    planEntry.topicId === activeTimetableBrush.topicId;
-                                  const action: "paint" | "erase" = isSamePaint
-                                    ? "erase"
-                                    : "paint";
-                                  setTtDragAction(action);
-                                  applyTimetableSlotAction(key, action);
-                                }}
-                                onPointerEnter={() => {
-                                  if (ttDragAction) {
-                                    applyTimetableSlotAction(key, ttDragAction);
-                                  }
-                                }}
-                                title={`예상 ${String(hour).padStart(2, "0")}:${String(
-                                  slot * 10
-                                ).padStart(2, "0")} · ${planEntry?.label || "비어 있음"}`}
-                                className={`h-5 rounded-[3px] transition ${
-                                  isMatched
-                                    ? "ring-1 ring-emerald-400/90"
-                                    : planEntry
-                                      ? "border border-white/20"
-                                      : "bg-white/[0.03] border border-white/[0.04] hover:border-sky-400/40"
-                                }`}
-                                style={
-                                  planEntry
-                                    ? {
-                                        backgroundColor: `${planEntry.color}B3`,
-                                      }
-                                    : undefined
+                          return (
+                            <button
+                              key={slot}
+                              type="button"
+                              data-tt-plan-slot={key}
+                              onPointerDown={(e) => {
+                                e.preventDefault();
+                                const isSamePaint =
+                                  planEntry &&
+                                  planEntry.color === activeTimetableBrush.color &&
+                                  planEntry.topicId === activeTimetableBrush.topicId;
+                                const action: "paint" | "erase" = isSamePaint
+                                  ? "erase"
+                                  : "paint";
+                                setTtDragAction(action);
+                                applyTimetableSlotAction(key, action);
+                              }}
+                              onPointerEnter={() => {
+                                if (ttDragAction) {
+                                  applyTimetableSlotAction(key, ttDragAction);
                                 }
-                              />
-                            );
-                          })}
-                        </div>
+                              }}
+                              title={`${rangeLabel} · 예상: ${
+                                planEntry?.label || "없음"
+                              } / 타이머 실행: ${actualEntry?.label || "없음"}`}
+                              className={`h-6 rounded-[4px] bg-[#16161D] overflow-hidden grid grid-cols-2 gap-[1px] p-[1px] touch-none transition ${
+                                isMatched
+                                  ? "ring-1 ring-emerald-400/90"
+                                  : "border border-white/[0.06] hover:border-sky-400/50"
+                              }`}
+                            >
+                              {/* 칸 왼쪽: 예상 계획 */}
+                              <span className="h-full rounded-[2px] bg-white/[0.02] overflow-hidden flex">
+                                {planEntry && (
+                                  <span
+                                    className="w-full h-full rounded-[2px]"
+                                    style={{
+                                      backgroundColor: `${planEntry.color}99`,
+                                      borderTop: `1.5px solid ${planEntry.color}`,
+                                    }}
+                                  />
+                                )}
+                              </span>
 
-                        {/* 오른쪽 열: 타이머 실제 실행 기록 (나란히 시각화) */}
-                        <div className="grid grid-cols-6 gap-0.5 border-l border-white/[0.06] pl-2">
-                          {[0, 1, 2, 3, 4, 5].map((slot) => {
-                            const key = `${hour}-${slot}`;
-                            const cell = dayTimetableGrid[key];
-                            const rawPlan = getTimetableSlotPlan(cell);
-                            const planEntry = isPlanSlotVisibleForBooks(
-                              rawPlan,
-                              activeBookIds,
-                              activeTopicIdSet
-                            )
-                              ? rawPlan
-                              : null;
-                            const actualEntry = getTimetableSlotActual(cell);
-                            const isMatched = Boolean(
-                              planEntry &&
-                                actualEntry &&
-                                (planEntry.topicId && actualEntry.topicId
-                                  ? planEntry.topicId === actualEntry.topicId
-                                  : planEntry.color === actualEntry.color)
-                            );
-
-                            return (
-                              <div
-                                key={slot}
-                                title={
-                                  actualEntry
-                                    ? `타이머 실행 ${String(hour).padStart(2, "0")}:${String(
-                                        slot * 10
-                                      ).padStart(2, "0")} · ${actualEntry.label}`
-                                    : `${String(hour).padStart(2, "0")}:${String(
-                                        slot * 10
-                                      ).padStart(2, "0")} 실행 없음`
-                                }
-                                className={`h-5 rounded-[3px] transition ${
-                                  isMatched
-                                    ? "ring-1 ring-emerald-400/90"
-                                    : actualEntry
-                                      ? "border border-white/25"
-                                      : "bg-white/[0.02] border border-dashed border-white/[0.05]"
-                                }`}
-                                style={
-                                  actualEntry
-                                    ? { backgroundColor: actualEntry.color }
-                                    : undefined
-                                }
-                              />
-                            );
-                          })}
-                        </div>
+                              {/* 칸 오른쪽: 타이머 실행 */}
+                              <span className="h-full rounded-[2px] bg-white/[0.02] overflow-hidden flex">
+                                {actualEntry && (
+                                  <span
+                                    className="w-full h-full rounded-[2px]"
+                                    style={{ backgroundColor: actualEntry.color }}
+                                  />
+                                )}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     ))}
                   </div>
