@@ -7,6 +7,7 @@ import {
   Check,
   ChevronRight,
   FolderPlus,
+  GripVertical,
   Layers,
   Loader2,
   Plus,
@@ -22,8 +23,16 @@ import {
 import type { CustomBookSubjectInput } from "@/lib/study-curriculum-store";
 import type { LookedUpBook } from "@/app/api/books/lookup/route";
 import type { ParsedTocSubject } from "@/app/api/books/parse-toc/route";
+import {
+  TocDragBuilder,
+  createDraftNode,
+  draftNodesToSubjectInputs,
+  parseRawLinesToDraftNodes,
+  subjectsToDraftNodes,
+  type TocDraftNode,
+} from "@/components/study/toc-drag-builder";
 
-export type CurriculumAddStep = "book" | "subject" | "topic";
+export type CurriculumAddStep = "book" | "subject" | "topic" | "organize";
 
 interface CurriculumAddModalProps {
   isOpen: boolean;
@@ -56,6 +65,29 @@ interface CurriculumAddModalProps {
     topicTitles?: string[];
   }) => { subjectId: string; unitId: string } | null;
   onAddTopicsBulk: (unitId: string, titles: string[], estimatedMinutes?: number) => void;
+  onReplaceBookStructure?: (
+    bookId: string,
+    subjects: CustomBookSubjectInput[],
+    category?: string
+  ) => void;
+}
+
+function parsedSubjectsToDraftNodes(parsed: ParsedTocSubject[]): TocDraftNode[] {
+  const list: TocDraftNode[] = [];
+  for (const s of parsed) {
+    list.push(createDraftNode(0, s.title, { color: s.color }));
+    for (const u of s.units) {
+      if (u.title && u.title !== "기본 목차") {
+        list.push(createDraftNode(1, u.title));
+      }
+      for (const t of u.topics) {
+        list.push(
+          createDraftNode(2, t.title, { estimatedMinutes: t.estimatedMinutes })
+        );
+      }
+    }
+  }
+  return list;
 }
 
 export function CurriculumAddModal({
@@ -70,11 +102,12 @@ export function CurriculumAddModal({
   onAddBook,
   onAddSubject,
   onAddTopicsBulk,
+  onReplaceBookStructure,
 }: CurriculumAddModalProps) {
   const [step, setStep] = useState<CurriculumAddStep>(initialStep);
 
   // ==========================================================
-  // STEP 1: 책 추가 (ISBN 검색 + 수동/AI 목차)
+  // STEP 1: 책 추가 (ISBN 검색 + 드래그&드롭 목차 빌더)
   // ==========================================================
   const [isbnQuery, setIsbnQuery] = useState("");
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -94,10 +127,10 @@ export function CurriculumAddModal({
   const [bookCoverUrl, setBookCoverUrl] = useState("");
 
   const [defaultSubjForBook, setDefaultSubjForBook] = useState("");
+  const [showPasteBox, setShowPasteBox] = useState(false);
   const [rawTocText, setRawTocText] = useState("");
   const [tocParsing, setTocParsing] = useState(false);
-  const [parsedSubjects, setParsedSubjects] = useState<ParsedTocSubject[] | null>(null);
-  const [tocEngineUsed, setTocEngineUsed] = useState<"gemini" | "rule" | null>(null);
+  const [bookDraftNodes, setBookDraftNodes] = useState<TocDraftNode[]>([]);
   const tocImageInputRef = useRef<HTMLInputElement | null>(null);
 
   // ==========================================================
@@ -127,6 +160,17 @@ export function CurriculumAddModal({
   const [targetUnitIdForTopic, setTargetUnitIdForTopic] = useState<string>("");
   const [newTopicsRaw, setNewTopicsRaw] = useState("");
   const [newTopicEstMinutes, setNewTopicEstMinutes] = useState<number>(35);
+
+  // ==========================================================
+  // STEP 4: 기존 커스텀 책 목차 구조 드래그&드롭 재편집
+  // ==========================================================
+  const customBooks = useMemo(
+    () => catalog.filter((b) => b.id.startsWith("custom-book-")),
+    [catalog]
+  );
+  const [organizeBookId, setOrganizeBookId] = useState<string>("");
+  const [organizeNodes, setOrganizeNodes] = useState<TocDraftNode[]>([]);
+
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
   // 모달 열릴 때 초기 상태 동기화
@@ -141,9 +185,26 @@ export function CurriculumAddModal({
     if (initialSubjectId) {
       setTargetSubjectIdForTopic(initialSubjectId);
     }
-  }, [isOpen, initialStep, initialBookId, initialSubjectId, catalog]);
 
-  // 선택된 책에 속한 과목들 (활성 과목 + 카탈로그 내 해당 책 과목 병합)
+    const defaultCustomBook =
+      (initialBookId && initialBookId.startsWith("custom-book-")
+        ? initialBookId
+        : customBooks[0]?.id) || "";
+    setOrganizeBookId(defaultCustomBook);
+  }, [isOpen, initialStep, initialBookId, initialSubjectId, catalog, customBooks]);
+
+  // organizeBookId가 바뀔 때 해당 책의 현재 과목·대단원·단원을 블록 리스트로 로드
+  useEffect(() => {
+    if (!isOpen || step !== "organize" || !organizeBookId) return;
+    const book = catalog.find((b) => b.id === organizeBookId);
+    if (!book) {
+      setOrganizeNodes([]);
+      return;
+    }
+    setOrganizeNodes(subjectsToDraftNodes(book.subjects));
+  }, [isOpen, step, organizeBookId, catalog]);
+
+  // 선택된 책에 속한 과목들
   const subjectsInSelectedBook = useMemo(() => {
     const activeMatched = subjects.filter((s) => s.bookId === targetBookIdForTopic);
     if (activeMatched.length > 0) return activeMatched;
@@ -151,7 +212,6 @@ export function CurriculumAddModal({
     return book?.subjects || [];
   }, [subjects, catalog, targetBookIdForTopic]);
 
-  // 책 변경 시 과목 자동 선택
   useEffect(() => {
     if (subjectsInSelectedBook.length === 0) {
       setTargetSubjectIdForTopic("");
@@ -163,7 +223,6 @@ export function CurriculumAddModal({
     }
   }, [subjectsInSelectedBook, targetSubjectIdForTopic]);
 
-  // 선택된 과목의 대단원 목록
   const unitsInSelectedSubject = useMemo(() => {
     const subj = subjectsInSelectedBook.find((s) => s.id === targetSubjectIdForTopic);
     return subj?.units || [];
@@ -218,6 +277,7 @@ export function CurriculumAddModal({
         }
         if (data.tocText) {
           setRawTocText(data.tocText);
+          setBookDraftNodes(parseRawLinesToDraftNodes(data.tocText));
         }
         setLookupNotice(data.tocNotice || "도서 정보를 불러왔습니다.");
       }
@@ -228,7 +288,7 @@ export function CurriculumAddModal({
     }
   };
 
-  const handleParseTocText = async () => {
+  const handleParseTocTextToBuilder = async () => {
     if (!rawTocText.trim()) return;
     setTocParsing(true);
     setLookupError(null);
@@ -239,7 +299,7 @@ export function CurriculumAddModal({
         body: JSON.stringify({
           rawText: rawTocText,
           bookTitle,
-          defaultSubjectTitle: defaultSubjForBook.trim() || "공통 과목",
+          defaultSubjectTitle: defaultSubjForBook.trim() || "기본 과목",
         }),
       });
       const data = (await res.json()) as {
@@ -249,13 +309,15 @@ export function CurriculumAddModal({
         error?: string;
       };
       if (data.success && data.subjects && data.subjects.length > 0) {
-        setParsedSubjects(data.subjects);
-        setTocEngineUsed(data.engine || "rule");
+        setBookDraftNodes(parsedSubjectsToDraftNodes(data.subjects));
+        setShowPasteBox(false);
       } else {
-        setLookupError(data.error || "목차를 분석하지 못했습니다. 한 줄씩 입력해 주세요.");
+        setBookDraftNodes(parseRawLinesToDraftNodes(rawTocText));
+        setShowPasteBox(false);
       }
     } catch {
-      setLookupError("목차 정리 중 오류가 발생했습니다.");
+      setBookDraftNodes(parseRawLinesToDraftNodes(rawTocText));
+      setShowPasteBox(false);
     } finally {
       setTocParsing(false);
     }
@@ -283,27 +345,23 @@ export function CurriculumAddModal({
           imageBase64: base64,
           mimeType: file.type || "image/jpeg",
           bookTitle,
-          defaultSubjectTitle: defaultSubjForBook.trim() || "공통 과목",
+          defaultSubjectTitle: defaultSubjForBook.trim() || "기본 과목",
         }),
       });
       const data = (await res.json()) as {
         success: boolean;
         subjects?: ParsedTocSubject[];
-        engine?: "gemini" | "rule";
         error?: string;
       };
       if (data.success && data.subjects && data.subjects.length > 0) {
-        setParsedSubjects(data.subjects);
-        setTocEngineUsed(data.engine || "gemini");
+        const converted = parsedSubjectsToDraftNodes(data.subjects);
+        setBookDraftNodes(converted);
         setLookupNotice(
-          `목차 사진에서 ${data.subjects.length}개 과목 · ${data.subjects.reduce(
-            (acc, s) => acc + s.units.reduce((uAcc, u) => uAcc + u.topics.length, 0),
-            0
-          )}개 단원을 추출했습니다.`
+          `목차 사진에서 ${converted.length}개 블록을 추출했습니다. 드래그하여 순서·단계를 자유롭게 다듬어 보세요.`
         );
       } else {
         setLookupError(
-          data.error || "목차 사진에서 단원을 추출하지 못했습니다. 직접 입력해 주세요."
+          data.error || "목차 사진에서 단원을 추출하지 못했습니다. 직접 줄을 추가해 주세요."
         );
       }
     } catch {
@@ -316,44 +374,23 @@ export function CurriculumAddModal({
   const handleSubmitBook = async () => {
     if (!bookTitle.trim()) return;
 
+    const effectiveNodes =
+      bookDraftNodes.length > 0
+        ? bookDraftNodes
+        : rawTocText.trim()
+          ? parseRawLinesToDraftNodes(rawTocText)
+          : [];
+
     let finalSubjects: CustomBookSubjectInput[] | undefined;
 
-    if (parsedSubjects && parsedSubjects.length > 0) {
-      finalSubjects = parsedSubjects.map((s) => ({
-        title: s.title,
-        color: s.color,
-        examStage: bookCategory.includes("1차") ? "1차" : "2차",
+    if (effectiveNodes.length > 0) {
+      finalSubjects = draftNodesToSubjectInputs({
+        nodes: effectiveNodes,
+        defaultSubjectTitle: defaultSubjForBook.trim() || "기본 과목",
+        defaultColor: bookColor,
         category: bookCategory,
-        units: s.units,
-      }));
-    } else if (rawTocText.trim()) {
-      // 파싱 버튼을 안 눌렀어도 텍스트가 있으면 규칙 파싱으로 즉시 변환
-      const lines = rawTocText
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter(Boolean);
-      if (lines.length > 0) {
-        const subjName = defaultSubjForBook.trim() || "본문 목차";
-        finalSubjects = [
-          {
-            title: subjName,
-            color: bookColor,
-            examStage: bookCategory.includes("1차") ? "1차" : "2차",
-            category: bookCategory,
-            units: [
-              {
-                title: "기본 목차",
-                topics: lines.map((line) => ({
-                  title: line.replace(/^[-•*]\s*/, ""),
-                  estimatedMinutes: 35,
-                })),
-              },
-            ],
-          },
-        ];
-      }
+      });
     } else if (defaultSubjForBook.trim()) {
-      // 목차는 없지만 사용자가 과목명만 적은 경우 과목만 빈 단원으로 생성
       finalSubjects = [
         {
           title: defaultSubjForBook.trim(),
@@ -384,7 +421,6 @@ export function CurriculumAddModal({
         0
       ) ?? 0;
 
-    // 폼 초기화
     const savedBookTitle = bookTitle.trim();
     setBookTitle("");
     setBookBadge("");
@@ -394,7 +430,7 @@ export function CurriculumAddModal({
     setBookCoverUrl("");
     setDefaultSubjForBook("");
     setRawTocText("");
-    setParsedSubjects(null);
+    setBookDraftNodes([]);
     setCandidates([]);
     setLookupNotice(null);
 
@@ -403,13 +439,13 @@ export function CurriculumAddModal({
       return;
     }
 
-    // 목차 없이 책만 추가한 경우: 방금 추가한 책에 과목/단원 추가 단계로 자연스럽게 이동!
     if (createdBookId) {
       setTargetBookIdForSubj(createdBookId);
       setTargetBookIdForTopic(createdBookId);
+      setOrganizeBookId(createdBookId);
     }
     setFeedbackMsg(
-      `「${savedBookTitle}」 책이 추가되었습니다! 이어서 과목과 단원을 구성해 보세요.`
+      `「${savedBookTitle}」 책이 추가되었습니다! 이어서 과목·단원을 구성해 보세요.`
     );
     setStep(finalSubjects && finalSubjects.length > 0 ? "topic" : "subject");
   };
@@ -460,15 +496,23 @@ export function CurriculumAddModal({
     onClose();
   };
 
-  const parsedTopicTotal =
-    parsedSubjects?.reduce(
-      (acc, s) => acc + s.units.reduce((uAcc, u) => uAcc + u.topics.length, 0),
-      0
-    ) ?? 0;
+  const handleSaveOrganize = () => {
+    if (!organizeBookId || !onReplaceBookStructure) return;
+    const book = catalog.find((b) => b.id === organizeBookId);
+    const firstCat = book?.subjects[0]?.category || categories[1] || "주택관리사 2차";
+    const built = draftNodesToSubjectInputs({
+      nodes: organizeNodes,
+      defaultSubjectTitle: "기본 과목",
+      defaultColor: book?.coverColor || "#FF5A36",
+      category: firstCat,
+    });
+    onReplaceBookStructure(organizeBookId, built, firstCat);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3">
-      <div className="w-full max-w-[460px] max-h-[90vh] overflow-y-auto rounded-3xl bg-[#0D0D11] border border-white/[0.12] p-4 space-y-4 shadow-2xl">
+      <div className="w-full max-w-[470px] max-h-[92vh] overflow-y-auto rounded-3xl bg-[#0D0D11] border border-white/[0.12] p-4 space-y-4 shadow-2xl">
         {/* 헤더 */}
         <div className="flex items-center justify-between pb-2.5 border-b border-white/[0.08]">
           <div>
@@ -477,7 +521,7 @@ export function CurriculumAddModal({
               <span>교재 · 과목 · 단원 구성</span>
             </h2>
             <p className="text-[10px] text-slate-400 mt-0.5">
-              책 추가(ISBN 검색) ➔ 과목 연결 ➔ 단원 등록 순서로 깔끔하게 관리됩니다.
+              드래그&amp;드롭으로 과목·대단원·단원 구조를 모바일처럼 손쉽게 잡을 수 있습니다.
             </p>
           </div>
           <button
@@ -489,45 +533,58 @@ export function CurriculumAddModal({
           </button>
         </div>
 
-        {/* 3단계 계층 탭 */}
-        <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center gap-1 p-1 rounded-xl bg-[#16161C] border border-white/[0.06] text-[10.5px] font-black">
+        {/* 4단계 탭 (책 추가 → 과목 추가 → 단원 추가 | 목차 구조잡기) */}
+        <div className="grid grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] items-center gap-0.5 p-1 rounded-xl bg-[#16161C] border border-white/[0.06] text-[10px] font-black">
           <button
             type="button"
             onClick={() => setStep("book")}
-            className={`py-1.5 px-2 rounded-lg transition flex items-center justify-center gap-1 ${
+            className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1 ${
               step === "book"
                 ? "bg-[#FF5A36] text-white shadow"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            <BookOpen className="w-3 h-3" />
-            <span>1. 책 추가</span>
+            <BookOpen className="w-3 h-3 shrink-0" />
+            <span className="truncate">1.책추가</span>
           </button>
-          <ChevronRight className="w-3 h-3 text-slate-600" />
+          <ChevronRight className="w-2.5 h-2.5 text-slate-600" />
           <button
             type="button"
             onClick={() => setStep("subject")}
-            className={`py-1.5 px-2 rounded-lg transition flex items-center justify-center gap-1 ${
+            className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1 ${
               step === "subject"
                 ? "bg-sky-500 text-white shadow"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            <FolderPlus className="w-3 h-3" />
-            <span>2. 과목 추가</span>
+            <FolderPlus className="w-3 h-3 shrink-0" />
+            <span className="truncate">2.과목</span>
           </button>
-          <ChevronRight className="w-3 h-3 text-slate-600" />
+          <ChevronRight className="w-2.5 h-2.5 text-slate-600" />
           <button
             type="button"
             onClick={() => setStep("topic")}
-            className={`py-1.5 px-2 rounded-lg transition flex items-center justify-center gap-1 ${
+            className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1 ${
               step === "topic"
                 ? "bg-emerald-500 text-white shadow"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            <Layers className="w-3 h-3" />
-            <span>3. 단원 추가</span>
+            <Layers className="w-3 h-3 shrink-0" />
+            <span className="truncate">3.단원</span>
+          </button>
+          <span className="w-[1px] h-4 bg-white/[0.08] mx-0.5" />
+          <button
+            type="button"
+            onClick={() => setStep("organize")}
+            className={`py-1.5 px-1 rounded-lg transition flex items-center justify-center gap-1 ${
+              step === "organize"
+                ? "bg-amber-500 text-slate-950 shadow"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <GripVertical className="w-3 h-3 shrink-0" />
+            <span className="truncate">구조잡기</span>
           </button>
         </div>
 
@@ -539,7 +596,7 @@ export function CurriculumAddModal({
         )}
 
         {/* ========================================================== */}
-        {/* STEP 1: 책 추가 (ISBN 검색 + 목차 수동/AI 스캔) */}
+        {/* STEP 1: 책 추가 (ISBN 검색 + 드래그&드롭 목차 빌더) */}
         {/* ========================================================== */}
         {step === "book" && (
           <div className="space-y-3">
@@ -703,13 +760,20 @@ export function CurriculumAddModal({
               </div>
             </div>
 
-            {/* 목차 입력 (수동 / 붙여넣기 / 사진 AI 스캔) */}
+            {/* 목차 구조 잡기 (드래그&드롭 빌더 + 붙여넣기/사진스캔) */}
             <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-2.5">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-1.5">
                 <span className="text-[11px] font-black text-white">
-                  목차 입력 (선택 · 없으면 나중에 추가)
+                  목차 구조 잡기 (선택 · 나중에 편집 가능)
                 </span>
                 <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setShowPasteBox((prev) => !prev)}
+                    className="px-2 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 text-[10px] font-black transition"
+                  >
+                    {showPasteBox ? "붙여넣기 닫기" : "텍스트 붙여넣기"}
+                  </button>
                   <input
                     ref={tocImageInputRef}
                     type="file"
@@ -727,76 +791,55 @@ export function CurriculumAddModal({
                     disabled={tocParsing}
                     className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-200 text-[10px] font-black flex items-center gap-1 transition"
                   >
-                    <Camera className="w-3 h-3" />
+                    {tocParsing ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Camera className="w-3 h-3" />
+                    )}
                     <span>목차 사진 스캔</span>
                   </button>
                 </div>
               </div>
 
-              <input
-                type="text"
-                value={defaultSubjForBook}
-                onChange={(e) => setDefaultSubjForBook(e.target.value)}
-                placeholder="기본 과목명 (예: 주택관리관계법규 · 여러 과목이면 아래에 # 과목명)"
-                className="w-full px-3 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[11px] text-white"
-              />
-
-              <textarea
-                rows={4}
-                value={rawTocText}
-                onChange={(e) => {
-                  setRawTocText(e.target.value);
-                  setParsedSubjects(null);
-                }}
-                placeholder={`예시 (서점 목차 붙여넣기 또는 한 줄씩 입력):\n# 주택관리관계법규\n01. 주택법 총칙\n02. 공동주택관리법\n# 공동주택관리실무\n01. 행정관리`}
-                className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[11px] text-white font-mono leading-relaxed"
-              />
-
-              {rawTocText.trim().length > 0 && (
-                <div className="flex items-center justify-between gap-2">
-                  <button
-                    type="button"
-                    onClick={handleParseTocText}
-                    disabled={tocParsing}
-                    className="px-2.5 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 text-[10px] font-black flex items-center gap-1 transition"
-                  >
-                    {tocParsing ? (
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                    ) : (
-                      <Sparkles className="w-3 h-3" />
-                    )}
-                    <span>스마트 목차 정리 미리보기</span>
-                  </button>
-                  {parsedSubjects && (
-                    <span className="text-[10px] font-mono text-emerald-300 font-bold">
-                      {tocEngineUsed === "gemini" ? "AI 정리" : "규칙 정리"}:{" "}
-                      {parsedSubjects.length}과목 · {parsedTopicTotal}단원
-                    </span>
-                  )}
+              {showPasteBox && (
+                <div className="p-2.5 rounded-xl bg-[#0E0E12] border border-sky-500/30 space-y-2">
+                  <input
+                    type="text"
+                    value={defaultSubjForBook}
+                    onChange={(e) => setDefaultSubjForBook(e.target.value)}
+                    placeholder="기본 과목명 (선택 · 예: 주택관리관계법규)"
+                    className="w-full px-2.5 py-1.5 rounded-lg bg-[#16161D] border border-white/[0.1] text-[10.5px] text-white"
+                  />
+                  <textarea
+                    rows={4}
+                    value={rawTocText}
+                    onChange={(e) => setRawTocText(e.target.value)}
+                    placeholder={`서점 목차를 복사해 붙여넣거나 한 줄씩 입력한 뒤 [블록으로 변환]을 누르세요.\n예:\n주택관리관계법규\nPART 01 주택법\n01. 총칙`}
+                    className="w-full px-2.5 py-2 rounded-lg bg-[#16161D] border border-white/[0.1] text-[10.5px] text-white font-mono"
+                  />
+                  <div className="flex justify-end gap-1.5">
+                    <button
+                      type="button"
+                      disabled={!rawTocText.trim() || tocParsing}
+                      onClick={handleParseTocTextToBuilder}
+                      className="px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 disabled:opacity-40 text-white text-[10.5px] font-black flex items-center gap-1"
+                    >
+                      {tocParsing ? (
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                      ) : (
+                        <Sparkles className="w-3 h-3" />
+                      )}
+                      <span>드래그 블록으로 변환</span>
+                    </button>
+                  </div>
                 </div>
               )}
 
-              {parsedSubjects && parsedSubjects.length > 0 && (
-                <div className="p-2.5 rounded-xl bg-[#0D0D12] border border-emerald-500/30 max-h-36 overflow-y-auto space-y-1.5">
-                  {parsedSubjects.map((s, idx) => (
-                    <div key={`${s.title}-${idx}`} className="space-y-0.5">
-                      <div className="text-[10.5px] font-black text-emerald-300">
-                        {s.title}
-                      </div>
-                      <div className="pl-2 flex flex-wrap gap-1">
-                        {s.units.flatMap((u) => u.topics).map((t, tIdx) => (
-                          <span
-                            key={`${t.title}-${tIdx}`}
-                            className="px-1.5 py-0.5 rounded bg-white/[0.06] text-[9.5px] text-slate-200"
-                          >
-                            {t.title}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <TocDragBuilder
+                nodes={bookDraftNodes}
+                onChange={setBookDraftNodes}
+                defaultSubjectTitle={defaultSubjForBook.trim() || "기본 과목"}
+              />
             </div>
 
             <div className="flex justify-end gap-2 pt-1">
@@ -813,7 +856,7 @@ export function CurriculumAddModal({
                 onClick={() => void handleSubmitBook()}
                 className="px-4 py-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] disabled:opacity-40 text-xs font-black text-white transition"
               >
-                {parsedSubjects || rawTocText.trim()
+                {bookDraftNodes.length > 0 || rawTocText.trim()
                   ? "책 + 목차 함께 추가"
                   : "책 추가 → 과목/단원 설정"}
               </button>
@@ -1069,6 +1112,73 @@ export function CurriculumAddModal({
                 단원 추가 완료
               </button>
             </div>
+          </div>
+        )}
+
+        {/* ========================================================== */}
+        {/* STEP 4: 기존 커스텀 책 목차 구조 드래그&드롭 재편집 */}
+        {/* ========================================================== */}
+        {step === "organize" && (
+          <div className="space-y-3">
+            {customBooks.length === 0 ? (
+              <div className="p-5 rounded-2xl bg-[#16161D] border border-white/[0.08] text-center space-y-2">
+                <p className="text-xs font-bold text-slate-300">
+                  직접 추가한 커스텀 책이 아직 없습니다. 먼저 책을 추가해 보세요!
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setStep("book")}
+                  className="px-3.5 py-2 rounded-xl bg-[#FF5A36] text-xs font-black text-white"
+                >
+                  1. 책 추가하러 가기
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-2.5">
+                  <div className="space-y-1">
+                    <label className="text-[10.5px] font-black text-amber-300">
+                      목차 구조를 재편집할 커스텀 책 선택
+                    </label>
+                    <select
+                      value={organizeBookId}
+                      onChange={(e) => setOrganizeBookId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.12] text-xs font-bold text-white"
+                    >
+                      {customBooks.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          [{b.badge}] {b.title}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <TocDragBuilder
+                    nodes={organizeNodes}
+                    onChange={setOrganizeNodes}
+                    defaultSubjectTitle="기본 과목"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="px-3 py-2 rounded-xl bg-white/[0.06] text-xs font-bold text-slate-300"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!organizeBookId || !onReplaceBookStructure}
+                    onClick={handleSaveOrganize}
+                    className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-xs font-black text-slate-950 transition"
+                  >
+                    목차 구조 저장 (기록 보존)
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

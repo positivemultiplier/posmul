@@ -44,14 +44,81 @@ export interface CustomBookSubjectInput {
   color?: string;
   examStage?: "1차" | "2차";
   category?: string;
+  sourceSubjectId?: string;
   units: Array<{
     title: string;
+    sourceUnitId?: string;
     topics: Array<{
       title: string;
       defaultKeyword?: string;
       estimatedMinutes?: number;
+      sourceTopicId?: string;
     }>;
   }>;
+}
+
+function buildStudySubjectsForBook(params: {
+  bookId: string;
+  bookTitle: string;
+  bookBadge: string;
+  defaultColor: string;
+  defaultCategory: string;
+  inputs: CustomBookSubjectInput[];
+  seedTimestamp: number;
+}): StudySubjectNode[] {
+  const {
+    bookId,
+    bookTitle,
+    bookBadge,
+    defaultColor,
+    defaultCategory,
+    inputs,
+    seedTimestamp,
+  } = params;
+  const stageFallback: "1차" | "2차" = defaultCategory.includes("1차") ? "1차" : "2차";
+  const built: StudySubjectNode[] = [];
+
+  inputs.forEach((subjInput, sIdx) => {
+    const cleanSubjTitle = subjInput.title.trim();
+    if (!cleanSubjTitle) return;
+    const subjId = subjInput.sourceSubjectId || `custom-subj-${seedTimestamp}-${sIdx}`;
+    const subjStage = subjInput.examStage || stageFallback;
+    const subjCategory = subjInput.category?.trim() || defaultCategory;
+    const subjColor = subjInput.color || defaultColor || "#FF5A36";
+    const units =
+      subjInput.units.length > 0
+        ? subjInput.units
+        : [{ title: "기본 목차", topics: [] }];
+
+    built.push({
+      id: subjId,
+      examStage: subjStage,
+      category: subjCategory,
+      title: cleanSubjTitle,
+      shortTitle: cleanSubjTitle.slice(0, 6),
+      color: subjColor,
+      bookId,
+      bookTitle,
+      bookBadge,
+      isCustom: true,
+      units: units.map((u, uIdx) => ({
+        id: u.sourceUnitId || `custom-unit-${seedTimestamp}-${sIdx}-${uIdx}`,
+        unitNo: String(uIdx + 1),
+        title: u.title.trim() || "기본 편제",
+        topics: u.topics
+          .filter((t) => t.title.trim().length > 0)
+          .map((t, tIdx) => ({
+            id: t.sourceTopicId || `custom-top-${seedTimestamp}-${sIdx}-${uIdx}-${tIdx}`,
+            topicNo: String(tIdx + 1).padStart(2, "0"),
+            title: t.title.trim(),
+            defaultKeyword: t.defaultKeyword?.trim() || t.title.trim().slice(0, 6),
+            estimatedMinutes: t.estimatedMinutes ?? 35,
+          })),
+      })),
+    });
+  });
+
+  return built;
 }
 
 export interface SubjectOverrideItem {
@@ -838,75 +905,35 @@ export function useStudyCurriculum() {
           : {}),
       };
 
-      const createdSubjects: StudySubjectNode[] = [];
-      if (params.subjects && params.subjects.length > 0) {
-        params.subjects.forEach((subjInput, sIdx) => {
-          const cleanSubjTitle = subjInput.title.trim();
-          if (!cleanSubjTitle) return;
-          const subjId = `custom-subj-${now}-${sIdx}`;
-          const subjStage = subjInput.examStage || stage;
-          const subjCategory = subjInput.category?.trim() || category;
-          const subjColor = subjInput.color || params.coverColor || "#FF5A36";
-          const units =
-            subjInput.units.length > 0
-              ? subjInput.units
-              : [{ title: "기본 목차", topics: [] }];
-
-          createdSubjects.push({
-            id: subjId,
-            examStage: subjStage,
-            category: subjCategory,
-            title: cleanSubjTitle,
-            shortTitle: cleanSubjTitle.slice(0, 6),
-            color: subjColor,
-            bookId,
-            bookTitle: trimmedTitle,
-            bookBadge: newBook.badge,
-            isCustom: true,
-            units: units.map((u, uIdx) => ({
-              id: `custom-unit-${now}-${sIdx}-${uIdx}`,
-              unitNo: String(uIdx + 1),
-              title: u.title.trim() || "기본 편제",
-              topics: u.topics
-                .filter((t) => t.title.trim().length > 0)
-                .map((t, tIdx) => ({
-                  id: `custom-top-${now}-${sIdx}-${uIdx}-${tIdx}`,
-                  topicNo: String(tIdx + 1).padStart(2, "0"),
-                  title: t.title.trim(),
-                  defaultKeyword:
-                    t.defaultKeyword?.trim() || t.title.trim().slice(0, 6),
-                  estimatedMinutes: t.estimatedMinutes ?? 35,
-                })),
-            })),
-          });
-        });
-      } else if (
-        params.firstSubjectTitle &&
-        params.firstSubjectTitle.trim() &&
-        params.firstSubjectTitle.trim() !== trimmedTitle
-      ) {
-        const cleanSubjTitle = params.firstSubjectTitle.trim();
-        createdSubjects.push({
-          id: `custom-subj-${now}`,
-          examStage: stage,
-          category,
-          title: cleanSubjTitle,
-          shortTitle: cleanSubjTitle.slice(0, 6),
-          color: params.coverColor || "#FF5A36",
-          bookId,
-          bookTitle: trimmedTitle,
-          bookBadge: newBook.badge,
-          isCustom: true,
-          units: [
-            {
-              id: `custom-unit-${now}`,
-              unitNo: "Ⅰ",
-              title: "기본 목차",
-              topics: [],
-            },
-          ],
-        });
-      }
+      const createdSubjects: StudySubjectNode[] =
+        params.subjects && params.subjects.length > 0
+          ? buildStudySubjectsForBook({
+              bookId,
+              bookTitle: trimmedTitle,
+              bookBadge: newBook.badge,
+              defaultColor: params.coverColor || "#FF5A36",
+              defaultCategory: category,
+              inputs: params.subjects,
+              seedTimestamp: now,
+            })
+          : params.firstSubjectTitle &&
+              params.firstSubjectTitle.trim() &&
+              params.firstSubjectTitle.trim() !== trimmedTitle
+            ? buildStudySubjectsForBook({
+                bookId,
+                bookTitle: trimmedTitle,
+                bookBadge: newBook.badge,
+                defaultColor: params.coverColor || "#FF5A36",
+                defaultCategory: category,
+                inputs: [
+                  {
+                    title: params.firstSubjectTitle.trim(),
+                    units: [{ title: "기본 목차", topics: [] }],
+                  },
+                ],
+                seedTimestamp: now,
+              })
+            : [];
 
       updateState((prev) => {
         const prevIds = prev.activeBookIds ?? [prev.activeBookId];
@@ -929,6 +956,37 @@ export function useStudyCurriculum() {
       return bookId;
     },
     [updateState]
+  );
+
+  /** 커스텀 교재의 과목·대단원·단원 목차 구조를 드래그&드롭 결과로 재구성 (기존 topicId 보존) */
+  const replaceCustomBookStructure = useCallback(
+    (bookId: string, inputs: CustomBookSubjectInput[], category = "주택관리사 2차") => {
+      const targetBook = allCatalogBooks.find((b) => b.id === bookId);
+      if (!targetBook) return;
+
+      const now = Date.now();
+      const rebuilt = buildStudySubjectsForBook({
+        bookId,
+        bookTitle: targetBook.title,
+        bookBadge: targetBook.badge,
+        defaultColor: targetBook.coverColor,
+        defaultCategory: category,
+        inputs,
+        seedTimestamp: now,
+      });
+
+      updateState((prev) => {
+        const others = (prev.customSubjects || []).filter((s) => s.bookId !== bookId);
+        const nextTopicsByBook = { ...prev.customTopicsByBook };
+        delete nextTopicsByBook[bookId];
+        return {
+          ...prev,
+          customSubjects: [...others, ...rebuilt],
+          customTopicsByBook: nextTopicsByBook,
+        };
+      });
+    },
+    [allCatalogBooks, updateState]
   );
 
   /** 커스텀 교재 삭제 */
@@ -1827,6 +1885,7 @@ export function useStudyCurriculum() {
     toggleBookActive,
     removeBookFromPlanner,
     addCustomBook,
+    replaceCustomBookStructure,
     deleteCustomBook,
     addCustomSubject,
     updateSubjectCustomization,

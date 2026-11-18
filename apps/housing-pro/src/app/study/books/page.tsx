@@ -66,6 +66,7 @@ export default function AppStandaloneStudyCenterPage() {
     setExamDate,
     toggleBookActive,
     addCustomBook,
+    replaceCustomBookStructure,
     deleteCustomBook,
     addCustomSubject,
     updateSubjectCustomization,
@@ -865,6 +866,15 @@ export default function AppStandaloneStudyCenterPage() {
                       >
                         + 단원
                       </button>
+                      {isCustomBook && (
+                        <button
+                          type="button"
+                          onClick={() => openAddModal("organize", book.id)}
+                          className="px-2 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-[10px] font-black text-amber-200 hover:bg-amber-500/25"
+                        >
+                          구조잡기
+                        </button>
+                      )}
                     </div>
 
                     <button
@@ -1055,6 +1065,10 @@ export default function AppStandaloneStudyCenterPage() {
         onAddTopicsBulk={(unitId, titles, estMin) => {
           addCustomTopicsBulk(unitId, titles, estMin);
           showToast(`${titles.length}개 단원이 목차에 추가되었습니다.`);
+        }}
+        onReplaceBookStructure={(bookId, nextSubjects, cat) => {
+          replaceCustomBookStructure(bookId, nextSubjects, cat);
+          showToast("드래그&드롭으로 편집한 목차 구조가 저장되었습니다.");
         }}
       />
 

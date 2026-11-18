@@ -139,6 +139,7 @@ export default function StudyPlannerMatrixPage() {
     toggleBookActive,
     removeBookFromPlanner,
     addCustomBook,
+    replaceCustomBookStructure,
     deleteCustomBook,
     addCustomSubject,
     updateSubjectCustomization,
@@ -1132,6 +1133,15 @@ export default function StudyPlannerMatrixPage() {
               >
                 + 단원 추가
               </button>
+              {selectedShelfBook.id.startsWith("custom-book-") && (
+                <button
+                  type="button"
+                  onClick={() => openAddModal("organize", selectedShelfBook.id)}
+                  className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 font-black"
+                >
+                  목차 구조잡기
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => {
@@ -3325,6 +3335,7 @@ export default function StudyPlannerMatrixPage() {
         onAddBook={addCustomBook}
         onAddSubject={addCustomSubject}
         onAddTopicsBulk={addCustomTopicsBulk}
+        onReplaceBookStructure={replaceCustomBookStructure}
       />
     </MobileAppShell>
   );
