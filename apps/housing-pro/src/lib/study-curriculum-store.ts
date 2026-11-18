@@ -33,6 +33,25 @@ export interface CustomBookItem {
   subtitle: string;
   badge: string;
   coverColor: string;
+  isbn?: string;
+  author?: string;
+  publisher?: string;
+  coverImageUrl?: string;
+}
+
+export interface CustomBookSubjectInput {
+  title: string;
+  color?: string;
+  examStage?: "1차" | "2차";
+  category?: string;
+  units: Array<{
+    title: string;
+    topics: Array<{
+      title: string;
+      defaultKeyword?: string;
+      estimatedMinutes?: number;
+    }>;
+  }>;
 }
 
 export interface SubjectOverrideItem {
@@ -500,10 +519,13 @@ export function useStudyCurriculum() {
       id: cb.id,
       title: cb.title,
       subtitle: cb.subtitle || "사용자 커스텀 교재 · 자유 목차 구성",
-      author: "내 커스텀",
-      edition: "커스텀 교재",
+      author: cb.author || "내 커스텀",
+      edition: cb.publisher || "커스텀 교재",
       badge: cb.badge || cb.title.slice(0, 6),
       coverColor: cb.coverColor || "#FF5A36",
+      ...(cb.isbn ? { isbn: cb.isbn } : {}),
+      ...(cb.publisher ? { publisher: cb.publisher } : {}),
+      ...(cb.coverImageUrl ? { coverImageUrl: cb.coverImageUrl } : {}),
       requiresSerial: false,
       defaultExamDate: state.examDate || "2026-12-12",
       subjects: (state.customSubjects || []).filter((s) => s.bookId === cb.id),
@@ -762,25 +784,26 @@ export function useStudyCurriculum() {
     [updateState]
   );
 
-  /** 사용자 커스텀 교재 추가 (초기 과목 1개 자동 연결) */
+  /** 사용자 커스텀 교재 추가 (ISBN/표지 메타데이터 및 파싱된 과목·목차 지원) */
   const addCustomBook = useCallback(
     (params: {
       title: string;
       subtitle?: string;
       badge?: string;
       coverColor: string;
+      isbn?: string;
+      author?: string;
+      publisher?: string;
+      coverImageUrl?: string;
       firstSubjectTitle?: string;
       examStage?: "1차" | "2차";
       category?: string;
-    }) => {
+      subjects?: CustomBookSubjectInput[];
+    }): string => {
       const trimmedTitle = params.title.trim();
-      if (!trimmedTitle) return;
+      if (!trimmedTitle) return "";
       const now = Date.now();
       const bookId = `custom-book-${now}`;
-      const subjId = `custom-subj-${now}`;
-      const unitId = `custom-unit-${now}`;
-      const topicId = `custom-top-${now}`;
-      const subjTitle = (params.firstSubjectTitle || trimmedTitle).trim();
       const stage = params.examStage || "2차";
       const category =
         params.category?.trim() ||
@@ -789,47 +812,97 @@ export function useStudyCurriculum() {
       const newBook: CustomBookItem = {
         id: bookId,
         title: trimmedTitle,
-        subtitle: params.subtitle?.trim() || "사용자 커스텀 교재 · 자유 목차",
+        subtitle:
+          params.subtitle?.trim() ||
+          [params.author, params.publisher].filter(Boolean).join(" · ") ||
+          "사용자 커스텀 교재 · 자유 목차",
         badge: params.badge?.trim() || trimmedTitle.slice(0, 6),
         coverColor: params.coverColor || "#FF5A36",
+        ...(params.isbn?.trim() ? { isbn: params.isbn.trim() } : {}),
+        ...(params.author?.trim() ? { author: params.author.trim() } : {}),
+        ...(params.publisher?.trim() ? { publisher: params.publisher.trim() } : {}),
+        ...(params.coverImageUrl?.trim()
+          ? { coverImageUrl: params.coverImageUrl.trim() }
+          : {}),
       };
 
-      const initialSubject: StudySubjectNode = {
-        id: subjId,
-        examStage: stage,
-        category,
-        title: subjTitle,
-        shortTitle: subjTitle.slice(0, 6),
-        color: params.coverColor || "#FF5A36",
-        bookId,
-        bookTitle: trimmedTitle,
-        bookBadge: newBook.badge,
-        isCustom: true,
-        units: [
-          {
-            id: unitId,
-            unitNo: "Ⅰ",
-            title: "기본 편제",
-            topics: [
-              {
-                id: topicId,
-                topicNo: "01",
-                title: `${subjTitle} 1단원`,
-                defaultKeyword: subjTitle.slice(0, 5),
-                estimatedMinutes: 40,
-              },
-            ],
-          },
-        ],
-      };
+      const createdSubjects: StudySubjectNode[] = [];
+      if (params.subjects && params.subjects.length > 0) {
+        params.subjects.forEach((subjInput, sIdx) => {
+          const cleanSubjTitle = subjInput.title.trim();
+          if (!cleanSubjTitle) return;
+          const subjId = `custom-subj-${now}-${sIdx}`;
+          const subjStage = subjInput.examStage || stage;
+          const subjCategory = subjInput.category?.trim() || category;
+          const subjColor = subjInput.color || params.coverColor || "#FF5A36";
+          const units =
+            subjInput.units.length > 0
+              ? subjInput.units
+              : [{ title: "기본 목차", topics: [] }];
+
+          createdSubjects.push({
+            id: subjId,
+            examStage: subjStage,
+            category: subjCategory,
+            title: cleanSubjTitle,
+            shortTitle: cleanSubjTitle.slice(0, 6),
+            color: subjColor,
+            bookId,
+            bookTitle: trimmedTitle,
+            bookBadge: newBook.badge,
+            isCustom: true,
+            units: units.map((u, uIdx) => ({
+              id: `custom-unit-${now}-${sIdx}-${uIdx}`,
+              unitNo: String(uIdx + 1),
+              title: u.title.trim() || "기본 편제",
+              topics: u.topics
+                .filter((t) => t.title.trim().length > 0)
+                .map((t, tIdx) => ({
+                  id: `custom-top-${now}-${sIdx}-${uIdx}-${tIdx}`,
+                  topicNo: String(tIdx + 1).padStart(2, "0"),
+                  title: t.title.trim(),
+                  defaultKeyword:
+                    t.defaultKeyword?.trim() || t.title.trim().slice(0, 6),
+                  estimatedMinutes: t.estimatedMinutes ?? 35,
+                })),
+            })),
+          });
+        });
+      } else if (
+        params.firstSubjectTitle &&
+        params.firstSubjectTitle.trim() &&
+        params.firstSubjectTitle.trim() !== trimmedTitle
+      ) {
+        const cleanSubjTitle = params.firstSubjectTitle.trim();
+        createdSubjects.push({
+          id: `custom-subj-${now}`,
+          examStage: stage,
+          category,
+          title: cleanSubjTitle,
+          shortTitle: cleanSubjTitle.slice(0, 6),
+          color: params.coverColor || "#FF5A36",
+          bookId,
+          bookTitle: trimmedTitle,
+          bookBadge: newBook.badge,
+          isCustom: true,
+          units: [
+            {
+              id: `custom-unit-${now}`,
+              unitNo: "Ⅰ",
+              title: "기본 목차",
+              topics: [],
+            },
+          ],
+        });
+      }
 
       updateState((prev) => {
         const prevIds = prev.activeBookIds ?? [prev.activeBookId];
         return {
           ...prev,
-          activeBookIds: [...prevIds, bookId],
+          activeBookIds: prevIds.includes(bookId) ? prevIds : [...prevIds, bookId],
           customBooks: [...(prev.customBooks || []), newBook],
-          customSubjects: [...(prev.customSubjects || []), initialSubject],
+          customSubjects: [...(prev.customSubjects || []), ...createdSubjects],
           logsByBook: {
             ...prev.logsByBook,
             [bookId]: {},
@@ -840,6 +913,8 @@ export function useStudyCurriculum() {
           },
         };
       });
+
+      return bookId;
     },
     [updateState]
   );
@@ -889,7 +964,7 @@ export function useStudyCurriculum() {
     [updateState]
   );
 
-  /** 새 커스텀 과목 추가 */
+  /** 새 커스텀 과목 추가 (반드시 소속 교재 bookId와 연결, 책이 비활성이면 자동 활성화) */
   const addCustomSubject = useCallback(
     (params: {
       title: string;
@@ -899,18 +974,16 @@ export function useStudyCurriculum() {
       bookId?: string;
       unitTitle?: string;
       topicTitles?: string[];
-    }) => {
+    }): { subjectId: string; unitId: string } | null => {
       const trimmed = params.title.trim();
-      if (!trimmed) return;
+      if (!trimmed) return null;
       const now = Date.now();
       const subjId = `custom-subj-${now}`;
       const unitId = `custom-unit-${now}`;
-      const rawTopics = (params.topicTitles || []).map((t) => t.trim()).filter(Boolean);
-      const topicNames = rawTopics.length > 0 ? rawTopics : [`${trimmed} 1단원`];
+      const topicNames = (params.topicTitles || []).map((t) => t.trim()).filter(Boolean);
 
-      const linkedBook = params.bookId
-        ? allCatalogBooks.find((b) => b.id === params.bookId)
-        : undefined;
+      const resolvedBookId = params.bookId || activeBook.id;
+      const linkedBook = allCatalogBooks.find((b) => b.id === resolvedBookId);
       const stage = params.examStage || "2차";
       const category =
         params.category?.trim() ||
@@ -923,7 +996,7 @@ export function useStudyCurriculum() {
         title: trimmed,
         shortTitle: trimmed.slice(0, 6),
         color: params.color || "#FF5A36",
-        bookId: params.bookId,
+        bookId: resolvedBookId,
         bookTitle: linkedBook?.title,
         bookBadge: linkedBook?.badge,
         isCustom: true,
@@ -931,7 +1004,7 @@ export function useStudyCurriculum() {
           {
             id: unitId,
             unitNo: "Ⅰ",
-            title: params.unitTitle?.trim() || "커스텀 목차",
+            title: params.unitTitle?.trim() || "기본 목차",
             topics: topicNames.map((tTitle, idx) => ({
               id: `custom-topic-${now}-${idx}`,
               topicNo: String(idx + 1).padStart(2, "0"),
@@ -943,12 +1016,22 @@ export function useStudyCurriculum() {
         ],
       };
 
-      updateState((prev) => ({
-        ...prev,
-        customSubjects: [...(prev.customSubjects || []), newSubject],
-      }));
+      updateState((prev) => {
+        const prevIds = prev.activeBookIds ?? [prev.activeBookId];
+        const nextIds =
+          resolvedBookId && !prevIds.includes(resolvedBookId)
+            ? [...prevIds, resolvedBookId]
+            : prevIds;
+        return {
+          ...prev,
+          activeBookIds: nextIds,
+          customSubjects: [...(prev.customSubjects || []), newSubject],
+        };
+      });
+
+      return { subjectId: subjId, unitId };
     },
-    [allCatalogBooks, updateState]
+    [activeBook.id, allCatalogBooks, updateState]
   );
 
   /** 과목 이름/차수/분류/색상 수정 (타임테이블 슬롯 색상 자동 동기화) */
@@ -1499,19 +1582,59 @@ export function useStudyCurriculum() {
     [subjects, updateState]
   );
 
+  /** 커스텀 목차 일괄 추가 (unitId가 속한 교재에 정확히 귀속) */
+  const addCustomTopicsBulk = useCallback(
+    (unitId: string, titles: string[], estimatedMinutes = 30) => {
+      const cleanList = titles.map((t) => t.trim()).filter(Boolean);
+      if (cleanList.length === 0) return;
+
+      const ownerSubject = allMergedSubjects.find((s) =>
+        s.units.some((u) => u.id === unitId)
+      );
+      const targetBookId = ownerSubject?.bookId || activeBook.id;
+      const now = Date.now();
+
+      updateState((prev) => {
+        const bookCustom = prev.customTopicsByBook[targetBookId] || {};
+        const unitExtra = bookCustom[unitId] || [];
+        const newEntries = cleanList.map((tTitle, idx) => ({
+          id: `custom-topic-${now}-${idx}`,
+          title: tTitle,
+          defaultKeyword: tTitle.slice(0, 6),
+          estimatedMinutes,
+        }));
+        return {
+          ...prev,
+          customTopicsByBook: {
+            ...prev.customTopicsByBook,
+            [targetBookId]: {
+              ...bookCustom,
+              [unitId]: [...unitExtra, ...newEntries],
+            },
+          },
+        };
+      });
+    },
+    [activeBook.id, allMergedSubjects, updateState]
+  );
+
   /** 커스텀 목차 추가 */
   const addCustomTopic = useCallback(
     (unitId: string, title: string, defaultKeyword: string, estimatedMinutes = 30) => {
       const trimmed = title.trim();
       if (!trimmed) return;
+      const ownerSubject = allMergedSubjects.find((s) =>
+        s.units.some((u) => u.id === unitId)
+      );
+      const targetBookId = ownerSubject?.bookId || activeBook.id;
       updateState((prev) => {
-        const bookCustom = prev.customTopicsByBook[activeBook.id] || {};
+        const bookCustom = prev.customTopicsByBook[targetBookId] || {};
         const unitExtra = bookCustom[unitId] || [];
         return {
           ...prev,
           customTopicsByBook: {
             ...prev.customTopicsByBook,
-            [activeBook.id]: {
+            [targetBookId]: {
               ...bookCustom,
               [unitId]: [
                 ...unitExtra,
@@ -1527,7 +1650,7 @@ export function useStudyCurriculum() {
         };
       });
     },
-    [activeBook.id, updateState]
+    [activeBook.id, allMergedSubjects, updateState]
   );
 
   /** 개별 단원 플래너에서 빼기 (기록 유지, 언제든 복원 가능) */
@@ -1705,6 +1828,7 @@ export function useStudyCurriculum() {
     toggleSubjectCollapse,
     setAllSubjectsCollapsed,
     addCustomTopic,
+    addCustomTopicsBulk,
     deleteCustomTopic,
     hideTopic,
     restoreHiddenTopic,

@@ -37,13 +37,16 @@ import {
   type TheorySheetTarget,
 } from "@/components/study/theory-bottom-sheet";
 import {
+  CurriculumAddModal,
+  type CurriculumAddStep,
+} from "@/components/study/curriculum-add-modal";
+import {
   fetchChapterStudyPacketAction,
   type ChapterStudyPacketResult,
 } from "@/app/actions/exam-study.actions";
 import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
 import { getChapterConceptNote } from "@/data/study-concept-notes";
 import {
-  CUSTOM_SUBJECT_COLOR_PALETTE,
   type StudySubjectNode,
   type StudyTopicNode,
 } from "@/data/study-textbooks";
@@ -68,7 +71,7 @@ export default function AppStandaloneStudyCenterPage() {
     updateSubjectCustomization,
     archiveSubject,
     restoreSubject,
-    addCustomTopic,
+    addCustomTopicsBulk,
     chapterTotals,
   } = useStudyCurriculum();
   const { isLoggedIn, effectiveOwnerKey, adjustLocalPmpBalance, setLocalPmpBalance } =
@@ -91,32 +94,30 @@ export default function AppStandaloneStudyCenterPage() {
 
   // 기존 교재 설정/시리얼/커스텀 과목 보조 상태
   const [previewBookId, setPreviewBookId] = useState<string | null>(activeBook.id);
-  const [selectedUnitId, setSelectedUnitId] = useState<string>("");
-  const [newTopicTitle, setNewTopicTitle] = useState("");
-  const [newTopicKeyword, setNewTopicKeyword] = useState("");
-  const [newCustomBookTitle, setNewCustomBookTitle] = useState("");
-  const [newCustomBookBadge, setNewCustomBookBadge] = useState("");
-  const [newCustomBookColor, setNewCustomBookColor] = useState<string>("#FF5A36");
-  const [newCustomSubjTitle, setNewCustomSubjTitle] = useState("");
-  const [newCustomSubjColor, setNewCustomSubjColor] = useState<string>(
-    CUSTOM_SUBJECT_COLOR_PALETTE[0]
-  );
+  const [addModalState, setAddModalState] = useState<{
+    open: boolean;
+    step: CurriculumAddStep;
+    bookId?: string;
+    subjectId?: string;
+  }>({ open: false, step: "book" });
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [isSerialVerified, setIsSerialVerified] = useState(false);
   const [isSerialModalOpen, setIsSerialModalOpen] = useState(false);
+
+  const openAddModal = (step: CurriculumAddStep, bookId?: string, subjectId?: string) => {
+    setAddModalState({
+      open: true,
+      step,
+      bookId: bookId || activeBooks[0]?.id || catalog[0]?.id,
+      subjectId,
+    });
+  };
 
   useEffect(() => {
     void getUserSerialStatusAction().then((res) => {
       if (res.isRegistered) setIsSerialVerified(true);
     });
   }, []);
-
-  useEffect(() => {
-    const firstUnit = subjects[0]?.units[0];
-    if (firstUnit && !subjects.some((s) => s.units.some((u) => u.id === selectedUnitId))) {
-      setSelectedUnitId(firstUnit.id);
-    }
-  }, [subjects, selectedUnitId]);
 
   const showToast = (msg: string) => {
     setToastMsg(msg);
@@ -204,38 +205,6 @@ export default function AppStandaloneStudyCenterPage() {
         ? `「${title}」을(를) 서재로 뺐습니다 (기록·단원 보존됨).`
         : `「${title}」이(가) 다중 교재에 추가 적용되었습니다!`
     );
-  };
-
-  const handleAddCustomBook = () => {
-    if (!newCustomBookTitle.trim()) return;
-    addCustomBook({
-      title: newCustomBookTitle.trim(),
-      badge: newCustomBookBadge.trim() || newCustomBookTitle.trim().slice(0, 6),
-      coverColor: newCustomBookColor,
-      firstSubjectTitle: newCustomBookTitle.trim(),
-    });
-    showToast(`커스텀 교재 「${newCustomBookTitle.trim()}」이(가) 추가되었습니다.`);
-    setNewCustomBookTitle("");
-    setNewCustomBookBadge("");
-  };
-
-  const handleAddCustomSubject = () => {
-    if (!newCustomSubjTitle.trim()) return;
-    addCustomSubject({
-      title: newCustomSubjTitle.trim(),
-      color: newCustomSubjColor,
-      examStage: "2차",
-    });
-    showToast(`커스텀 과목 「${newCustomSubjTitle.trim()}」이(가) 추가되었습니다.`);
-    setNewCustomSubjTitle("");
-  };
-
-  const handleAddTopic = () => {
-    if (!selectedUnitId || !newTopicTitle.trim()) return;
-    addCustomTopic(selectedUnitId, newTopicTitle, newTopicKeyword);
-    setNewTopicTitle("");
-    setNewTopicKeyword("");
-    showToast("커스텀 단원이 내 목차에 추가되었습니다.");
   };
 
   return (
@@ -769,42 +738,42 @@ export default function AppStandaloneStudyCenterPage() {
               </span>
             </div>
 
-            {/* 커스텀 교재 추가 카드 */}
-            <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-2">
-              <div className="text-[11px] font-black text-white flex items-center gap-1.5">
-                <Plus className="w-3.5 h-3.5 text-[#FF5A36]" />
-                <span>새 커스텀 교재 직접 추가</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-[1fr_110px_auto] gap-2">
-                <input
-                  type="text"
-                  value={newCustomBookTitle}
-                  onChange={(e) => setNewCustomBookTitle(e.target.value)}
-                  placeholder="교재명 (예: 나만의 파이널 모의고사)"
-                  className="px-3 py-2 rounded-xl bg-[#101015] border border-white/[0.1] text-xs text-white"
-                />
-                <input
-                  type="text"
-                  value={newCustomBookBadge}
-                  onChange={(e) => setNewCustomBookBadge(e.target.value)}
-                  placeholder="배지 (예: 파이널)"
-                  className="px-3 py-2 rounded-xl bg-[#101015] border border-white/[0.1] text-xs text-white"
-                />
-                <div className="flex items-center gap-1.5">
-                  <input
-                    type="color"
-                    value={newCustomBookColor}
-                    onChange={(e) => setNewCustomBookColor(e.target.value)}
-                    className="w-8 h-8 rounded bg-transparent cursor-pointer"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddCustomBook}
-                    className="px-3 py-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-xs font-black shrink-0"
-                  >
-                    추가
-                  </button>
+            {/* 계층형 책 · 과목 · 단원 추가 바 */}
+            <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="text-[11px] font-black text-white flex items-center gap-1.5">
+                  <Search className="w-3.5 h-3.5 text-[#FF5A36]" />
+                  <span>ISBN 책 검색 · 계층형 목차 추가</span>
                 </div>
+                <span className="text-[10px] text-slate-400 font-bold">
+                  책 → 과목 → 단원
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => openAddModal("book")}
+                  className="py-2.5 px-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-[11px] font-black flex items-center justify-center gap-1 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>책 추가(ISBN)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openAddModal("subject")}
+                  className="py-2.5 px-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>과목 추가</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openAddModal("topic")}
+                  className="py-2.5 px-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>단원 추가</span>
+                </button>
               </div>
             </div>
 
@@ -826,47 +795,77 @@ export default function AppStandaloneStudyCenterPage() {
                       : "bg-[#1A1A21] border-white/[0.06]"
                   }`}
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span
-                          className="px-2 py-0.5 rounded-md text-[9.5px] font-black text-white"
-                          style={{ backgroundColor: book.coverColor }}
-                        >
-                          {book.badge}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-400">
-                          {book.subjects.length}과목 · {topicCount}세부목차
-                        </span>
+                  <div className="flex items-start gap-3">
+                    {book.coverImageUrl && (
+                      <img
+                        src={book.coverImageUrl}
+                        alt={book.title}
+                        className="w-11 h-15 object-cover rounded-lg border border-white/15 shrink-0"
+                      />
+                    )}
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className="px-2 py-0.5 rounded-md text-[9.5px] font-black text-white"
+                            style={{ backgroundColor: book.coverColor }}
+                          >
+                            {book.badge}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-400">
+                            {book.subjects.length}과목 · {topicCount}세부목차
+                          </span>
+                          {book.isbn && (
+                            <span className="text-[9.5px] font-mono text-slate-500">
+                              ISBN {book.isbn}
+                            </span>
+                          )}
+                        </div>
+                        {isCustomBook && (
+                          <button
+                            type="button"
+                            onClick={() => deleteCustomBook(book.id)}
+                            className="p-1 rounded-lg text-slate-500 hover:text-rose-400"
+                            title="커스텀 교재 삭제"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
-                      {isCustomBook && (
-                        <button
-                          type="button"
-                          onClick={() => deleteCustomBook(book.id)}
-                          className="p-1 rounded-lg text-slate-500 hover:text-rose-400"
-                          title="커스텀 교재 삭제"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
+                      <h4 className="text-xs font-black text-white">{book.title}</h4>
+                      <p className="text-[11px] text-slate-400 leading-snug">{book.subtitle}</p>
                     </div>
-                    <h4 className="text-xs font-black text-white">{book.title}</h4>
-                    <p className="text-[11px] text-slate-400 leading-snug">{book.subtitle}</p>
                   </div>
 
-                  <div className="flex items-center justify-between gap-2 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => setPreviewBookId(isPreviewOpen ? null : book.id)}
-                      className="px-2.5 py-1.5 rounded-xl bg-[#111116] border border-white/[0.08] text-[10.5px] font-bold text-slate-300 hover:text-white flex items-center gap-1"
-                    >
-                      {isPreviewOpen ? (
-                        <ChevronDown className="w-3.5 h-3.5" />
-                      ) : (
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      )}
-                      <span>목차 미리보기</span>
-                    </button>
+                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setPreviewBookId(isPreviewOpen ? null : book.id)}
+                        className="px-2.5 py-1.5 rounded-xl bg-[#111116] border border-white/[0.08] text-[10.5px] font-bold text-slate-300 hover:text-white flex items-center gap-1"
+                      >
+                        {isPreviewOpen ? (
+                          <ChevronDown className="w-3.5 h-3.5" />
+                        ) : (
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        )}
+                        <span>목차</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openAddModal("subject", book.id)}
+                        className="px-2 py-1.5 rounded-xl bg-sky-500/15 border border-sky-500/30 text-[10px] font-black text-sky-200 hover:bg-sky-500/25"
+                      >
+                        + 과목
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => openAddModal("topic", book.id)}
+                        className="px-2 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-black text-emerald-200 hover:bg-emerald-500/25"
+                      >
+                        + 단원
+                      </button>
+                    </div>
 
                     <button
                       type="button"
@@ -986,26 +985,22 @@ export default function AppStandaloneStudyCenterPage() {
               ))}
             </div>
 
-            <div className="flex items-center gap-2 pt-1">
-              <input
-                type="text"
-                value={newCustomSubjTitle}
-                onChange={(e) => setNewCustomSubjTitle(e.target.value)}
-                placeholder="새 커스텀 과목명 (예: 파이널 정리)"
-                className="flex-1 px-3 py-2 rounded-xl bg-[#101015] border border-white/[0.1] text-xs text-white"
-              />
-              <input
-                type="color"
-                value={newCustomSubjColor}
-                onChange={(e) => setNewCustomSubjColor(e.target.value)}
-                className="w-8 h-8 bg-transparent cursor-pointer shrink-0"
-              />
+            <div className="pt-1 flex items-center gap-2">
               <button
                 type="button"
-                onClick={handleAddCustomSubject}
-                className="px-3 py-2 rounded-xl bg-[#FF5A36] text-white text-xs font-black shrink-0"
+                onClick={() => openAddModal("subject")}
+                className="flex-1 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 text-xs font-black flex items-center justify-center gap-1 transition"
               >
-                과목추가
+                <Plus className="w-3.5 h-3.5" />
+                <span>책에 과목 추가</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => openAddModal("topic")}
+                className="flex-1 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-200 text-xs font-black flex items-center justify-center gap-1 transition"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>과목에 단원 추가</span>
               </button>
             </div>
 
@@ -1035,54 +1030,33 @@ export default function AppStandaloneStudyCenterPage() {
               </div>
             )}
           </section>
-
-          <section className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-3">
-            <div className="flex items-center gap-1.5 text-xs font-black text-white">
-              <Plus className="w-4 h-4 text-[#FF5A36]" />
-              <span>나만의 커스텀 단원 추가</span>
-            </div>
-
-            <select
-              value={selectedUnitId}
-              onChange={(e) => setSelectedUnitId(e.target.value)}
-              className="w-full px-3 py-2 rounded-xl bg-[#101015] border border-white/[0.1] text-xs font-bold text-white"
-            >
-              {subjects.map((subj) =>
-                subj.units.map((unit) => (
-                  <option key={unit.id} value={unit.id}>
-                    [{subj.examStage}] {subj.title} &gt; {unit.title}
-                  </option>
-                ))
-              )}
-            </select>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input
-                type="text"
-                value={newTopicTitle}
-                onChange={(e) => setNewTopicTitle(e.target.value)}
-                placeholder="세부 단원명 (예: 모의고사 1회 오답)"
-                className="px-3 py-2 rounded-xl bg-[#101015] border border-white/[0.1] text-xs text-white"
-              />
-              <input
-                type="text"
-                value={newTopicKeyword}
-                onChange={(e) => setNewTopicKeyword(e.target.value)}
-                placeholder="매트릭스 키워드 (예: 모고1회)"
-                className="px-3 py-2 rounded-xl bg-[#101015] border border-white/[0.1] text-xs text-white"
-              />
-            </div>
-
-            <button
-              type="button"
-              onClick={handleAddTopic}
-              className="w-full py-2.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-white text-xs font-black transition"
-            >
-              목차 트리에 추가하기
-            </button>
-          </section>
         </div>
       )}
+
+      <CurriculumAddModal
+        isOpen={addModalState.open}
+        initialStep={addModalState.step}
+        initialBookId={addModalState.bookId}
+        initialSubjectId={addModalState.subjectId}
+        onClose={() => setAddModalState((prev) => ({ ...prev, open: false }))}
+        catalog={catalog}
+        subjects={subjects}
+        categories={categories}
+        onAddBook={(params) => {
+          const newId = addCustomBook(params);
+          showToast(`교재 「${params.title}」이(가) 추가되었습니다.`);
+          return newId;
+        }}
+        onAddSubject={(params) => {
+          const res = addCustomSubject(params);
+          showToast(`과목 「${params.title}」이(가) 책에 연결되었습니다.`);
+          return res;
+        }}
+        onAddTopicsBulk={(unitId, titles, estMin) => {
+          addCustomTopicsBulk(unitId, titles, estMin);
+          showToast(`${titles.length}개 단원이 목차에 추가되었습니다.`);
+        }}
+      />
 
       <SerialRegisterModal
         isOpen={isSerialModalOpen}

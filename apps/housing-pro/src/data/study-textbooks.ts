@@ -157,6 +157,9 @@ export interface TextbookCatalogItem {
   edition: string;
   badge: string;
   coverColor: string;
+  isbn?: string;
+  publisher?: string;
+  coverImageUrl?: string;
   requiresSerial: boolean;
   defaultExamDate: string; // YYYY-MM-DD
   subjects: StudySubjectNode[];

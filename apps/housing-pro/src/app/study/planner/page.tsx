@@ -35,6 +35,10 @@ import {
   Timer,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
+import {
+  CurriculumAddModal,
+  type CurriculumAddStep,
+} from "@/components/study/curriculum-add-modal";
 import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
 import {
   computeDayPlanActualSummary,
@@ -141,6 +145,7 @@ export default function StudyPlannerMatrixPage() {
     restoreSubject,
     deleteSubject,
     addCustomTopic,
+    addCustomTopicsBulk,
     deleteCustomTopic,
     hideTopic,
     restoreHiddenTopic,
@@ -175,8 +180,25 @@ export default function StudyPlannerMatrixPage() {
   // ③ 책 표지 선택 팝오버 / 상세 액션
   const [selectedShelfBookId, setSelectedShelfBookId] = useState<string | null>(null);
 
-  // ① 매트릭스 하단 인라인 책 추가 / 과목 추가 폼
-  const [bottomInlineMode, setBottomInlineMode] = useState<"none" | "book" | "subject">("none");
+  // 계층형 책 · 과목 · 단원 추가 모달 (ISBN 검색 + 목차 구성 통합)
+  const [addModalState, setAddModalState] = useState<{
+    open: boolean;
+    step: CurriculumAddStep;
+    bookId?: string;
+    subjectId?: string;
+  }>({ open: false, step: "book" });
+
+  const openAddModal = useCallback(
+    (step: CurriculumAddStep, bookId?: string, subjectId?: string) => {
+      setAddModalState({
+        open: true,
+        step,
+        bookId: bookId || selectedShelfBookId || activeBooks[0]?.id || catalog[0]?.id,
+        subjectId,
+      });
+    },
+    [selectedShelfBookId, activeBooks, catalog]
+  );
 
   // 드래그 연속 입력 & 커스텀 색상 브러시 상태 (매트릭스)
   const [dragMode, setDragMode] = useState<MatrixDragMode>("tap");
@@ -195,17 +217,6 @@ export default function StudyPlannerMatrixPage() {
   const [openMenuSubjectId, setOpenMenuSubjectId] = useState<string | null>(null);
   const [editingSubjectForm, setEditingSubjectForm] =
     useState<EditingSubjectFormState | null>(null);
-  const [isAddingSubject, setIsAddingSubject] = useState<boolean>(false);
-  const [newSubjTitle, setNewSubjTitle] = useState<string>("");
-  const [newSubjCategory, setNewSubjCategory] = useState<string>("주택관리사 2차");
-  const [newSubjColor, setNewSubjColor] = useState<string>(CUSTOM_SUBJECT_COLOR_PALETTE[0]);
-  const [newSubjTopicsText, setNewSubjTopicsText] = useState<string>("");
-
-  const [isAddingBook, setIsAddingBook] = useState<boolean>(false);
-  const [newBookTitle, setNewBookTitle] = useState<string>("");
-  const [newBookBadge, setNewBookBadge] = useState<string>("");
-  const [newBookCategory, setNewBookCategory] = useState<string>("주택관리사 2차");
-  const [newBookColor, setNewBookColor] = useState<string>("#FF5A36");
 
   // todayISO 동적 동기화
   useEffect(() => {
@@ -850,41 +861,6 @@ export default function StudyPlannerMatrixPage() {
     setEditingSubjectForm(null);
   };
 
-  const handleCreateCustomSubject = () => {
-    if (!newSubjTitle.trim()) return;
-    const topics = newSubjTopicsText
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    addCustomSubject({
-      title: newSubjTitle.trim(),
-      examStage: newSubjCategory.includes("1차") ? "1차" : "2차",
-      category: newSubjCategory,
-      color: newSubjColor,
-      topicTitles: topics,
-    });
-    setNewSubjTitle("");
-    setNewSubjTopicsText("");
-    setIsAddingSubject(false);
-    setBottomInlineMode("none");
-  };
-
-  const handleCreateCustomBook = () => {
-    if (!newBookTitle.trim()) return;
-    addCustomBook({
-      title: newBookTitle.trim(),
-      badge: newBookBadge.trim() || newBookTitle.trim().slice(0, 6),
-      coverColor: newBookColor,
-      firstSubjectTitle: newBookTitle.trim(),
-      examStage: newBookCategory.includes("1차") ? "1차" : "2차",
-      category: newBookCategory,
-    });
-    setNewBookTitle("");
-    setNewBookBadge("");
-    setIsAddingBook(false);
-    setBottomInlineMode("none");
-  };
-
   const handleAddCategorySubmit = () => {
     const trimmed = newCategoryName.trim();
     if (!trimmed) return;
@@ -1041,11 +1017,7 @@ export default function StudyPlannerMatrixPage() {
           {/* 책 표지 끝: + 책 추가 미니 표지 카드 */}
           <button
             type="button"
-            onClick={() => {
-              setBottomInlineMode("book");
-              setIsManagerModalOpen(true);
-              setIsAddingBook(true);
-            }}
+            onClick={() => openAddModal("book")}
             className="shrink-0 w-[84px] rounded-xl border border-dashed border-white/[0.2] hover:border-[#FF5A36] bg-[#111116] hover:bg-[#191922] p-2 flex flex-col items-center justify-center gap-1 text-slate-300 hover:text-white transition"
           >
             <Plus className="w-4 h-4 text-[#FF7A59]" />
@@ -1083,7 +1055,21 @@ export default function StudyPlannerMatrixPage() {
                 (빼도 기록 보존)
               </span>
             </div>
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex items-center gap-1.5 shrink-0 flex-wrap">
+              <button
+                type="button"
+                onClick={() => openAddModal("subject", selectedShelfBook.id)}
+                className="px-2 py-1 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 font-black"
+              >
+                + 과목 추가
+              </button>
+              <button
+                type="button"
+                onClick={() => openAddModal("topic", selectedShelfBook.id)}
+                className="px-2 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-200 font-black"
+              >
+                + 단원 추가
+              </button>
               <button
                 type="button"
                 onClick={() => {
@@ -1092,7 +1078,7 @@ export default function StudyPlannerMatrixPage() {
                 }}
                 className="px-2 py-1 rounded-lg bg-white/[0.08] hover:bg-white/[0.14] text-white font-bold"
               >
-                과목·단원 편집
+                상세 편집
               </button>
               <button
                 type="button"
@@ -1528,7 +1514,7 @@ export default function StudyPlannerMatrixPage() {
                   );
                 })}
 
-                {/* ① 매트릭스 하단: + 책 추가 / + 과목 추가 / 서재·보관함 복원 */}
+                {/* ① 매트릭스 하단: 책 추가(ISBN) -> 과목 추가 -> 단원 추가 계층 액션 */}
                 <tr className="border-t border-white/[0.1] bg-[#121218]">
                   <td
                     colSpan={dateColumns.length + 1}
@@ -1537,36 +1523,29 @@ export default function StudyPlannerMatrixPage() {
                     <div className="flex flex-wrap items-center gap-2">
                       <button
                         type="button"
-                        onClick={() =>
-                          setBottomInlineMode((prev) =>
-                            prev === "book" ? "none" : "book"
-                          )
-                        }
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-black flex items-center gap-1.5 transition ${
-                          bottomInlineMode === "book"
-                            ? "bg-[#FF5A36] border-[#FF5A36] text-white"
-                            : "bg-[#1A1A23] border-dashed border-white/[0.2] text-white hover:border-[#FF5A36]"
-                        }`}
+                        onClick={() => openAddModal("book")}
+                        className="px-3 py-1.5 rounded-xl border border-dashed border-white/[0.25] hover:border-[#FF5A36] bg-[#1A1A23] text-xs font-black text-white flex items-center gap-1.5 transition"
                       >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>책 추가</span>
+                        <Plus className="w-3.5 h-3.5 text-[#FF7A59]" />
+                        <span>책 추가 (ISBN·목차)</span>
                       </button>
 
                       <button
                         type="button"
-                        onClick={() =>
-                          setBottomInlineMode((prev) =>
-                            prev === "subject" ? "none" : "subject"
-                          )
-                        }
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-black flex items-center gap-1.5 transition ${
-                          bottomInlineMode === "subject"
-                            ? "bg-sky-500 border-sky-400 text-white"
-                            : "bg-[#1A1A23] border-white/[0.12] text-slate-200 hover:border-sky-400"
-                        }`}
+                        onClick={() => openAddModal("subject")}
+                        className="px-3 py-1.5 rounded-xl border border-white/[0.12] hover:border-sky-400 bg-[#1A1A23] text-xs font-black text-sky-200 flex items-center gap-1.5 transition"
                       >
-                        <Plus className="w-3.5 h-3.5" />
+                        <Plus className="w-3.5 h-3.5 text-sky-400" />
                         <span>과목 추가</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => openAddModal("topic")}
+                        className="px-3 py-1.5 rounded-xl border border-white/[0.12] hover:border-emerald-400 bg-[#1A1A23] text-xs font-black text-emerald-200 flex items-center gap-1.5 transition"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                        <span>단원 추가</span>
                       </button>
 
                       {inactiveShelfBooks.length > 0 && (
@@ -1620,158 +1599,6 @@ export default function StudyPlannerMatrixPage() {
                         </button>
                       )}
                     </div>
-
-                    {/* 인라인 새 책 추가 폼 */}
-                    {bottomInlineMode === "book" && (
-                      <div className="mt-3 p-3.5 rounded-2xl bg-[#181822] border border-[#FF5A36]/45 max-w-md space-y-2.5">
-                        <div className="text-xs font-black text-white">
-                          새 책(교재) 추가하기
-                        </div>
-                        <input
-                          type="text"
-                          value={newBookTitle}
-                          onChange={(e) => setNewBookTitle(e.target.value)}
-                          placeholder="책 제목 (예: 수학의 정석, 토익 보카, 동형 모고)"
-                          className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
-                        />
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            type="text"
-                            value={newBookBadge}
-                            onChange={(e) => setNewBookBadge(e.target.value)}
-                            placeholder="짧은 배지 (예: 수1, 토익)"
-                            className="px-3 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[11px] text-white"
-                          />
-                          <select
-                            value={newBookCategory}
-                            onChange={(e) => setNewBookCategory(e.target.value)}
-                            className="px-2.5 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[11px] font-bold text-white"
-                          >
-                            {categories.map((cat) => (
-                              <option key={cat} value={cat}>
-                                {cat}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-[10px] font-bold text-slate-400">
-                            표지 색:
-                          </span>
-                          {CUSTOM_SUBJECT_COLOR_PALETTE.slice(0, 8).map((hex) => (
-                            <button
-                              key={hex}
-                              type="button"
-                              onClick={() => setNewBookColor(hex)}
-                              className={`w-4 h-4 rounded-full border ${
-                                newBookColor === hex
-                                  ? "border-white scale-110 ring-1 ring-white"
-                                  : "border-white/20"
-                              }`}
-                              style={{ backgroundColor: hex }}
-                            />
-                          ))}
-                          <input
-                            type="color"
-                            value={newBookColor}
-                            onChange={(e) => setNewBookColor(e.target.value)}
-                            className="w-6 h-5 bg-transparent cursor-pointer"
-                          />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setBottomInlineMode("none")}
-                            className="px-3 py-1.5 rounded-xl bg-white/[0.06] text-xs font-bold text-slate-300"
-                          >
-                            취소
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleCreateCustomBook}
-                            className="px-3.5 py-1.5 rounded-xl bg-[#FF5A36] text-xs font-black text-white"
-                          >
-                            책 추가 &amp; 플래너 적용
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 인라인 새 과목 추가 폼 */}
-                    {bottomInlineMode === "subject" && (
-                      <div className="mt-3 p-3.5 rounded-2xl bg-[#181822] border border-sky-500/45 max-w-md space-y-2.5">
-                        <div className="text-xs font-black text-white">
-                          새 과목 추가하기
-                        </div>
-                        <div className="grid grid-cols-[1fr_auto] gap-2">
-                          <input
-                            type="text"
-                            value={newSubjTitle}
-                            onChange={(e) => setNewSubjTitle(e.target.value)}
-                            placeholder="과목명 (예: 미적분, 영문법, 물리)"
-                            className="px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
-                          />
-                          <select
-                            value={newSubjCategory}
-                            onChange={(e) => setNewSubjCategory(e.target.value)}
-                            className="px-2.5 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
-                          >
-                            {categories.map((cat) => (
-                              <option key={cat} value={cat}>
-                                {cat}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                        <input
-                          type="text"
-                          value={newSubjTopicsText}
-                          onChange={(e) => setNewSubjTopicsText(e.target.value)}
-                          placeholder="초기 단원 (쉼표 구분, 예: 1단원, 2단원, 3단원)"
-                          className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
-                        />
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-[10px] font-bold text-slate-400">
-                            과목 색:
-                          </span>
-                          {CUSTOM_SUBJECT_COLOR_PALETTE.slice(0, 8).map((hex) => (
-                            <button
-                              key={hex}
-                              type="button"
-                              onClick={() => setNewSubjColor(hex)}
-                              className={`w-4 h-4 rounded-full border ${
-                                newSubjColor === hex
-                                  ? "border-white scale-110 ring-1 ring-white"
-                                  : "border-white/20"
-                              }`}
-                              style={{ backgroundColor: hex }}
-                            />
-                          ))}
-                          <input
-                            type="color"
-                            value={newSubjColor}
-                            onChange={(e) => setNewSubjColor(e.target.value)}
-                            className="w-6 h-5 bg-transparent cursor-pointer"
-                          />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setBottomInlineMode("none")}
-                            className="px-3 py-1.5 rounded-xl bg-white/[0.06] text-xs font-bold text-slate-300"
-                          >
-                            취소
-                          </button>
-                          <button
-                            type="button"
-                            onClick={handleCreateCustomSubject}
-                            className="px-3.5 py-1.5 rounded-xl bg-sky-500 text-xs font-black text-white"
-                          >
-                            과목 생성
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </td>
                 </tr>
               </tbody>
@@ -2799,72 +2626,16 @@ export default function StudyPlannerMatrixPage() {
                 <span>적용 책 선택 ({activeBookIds.length}권 · 빼도 기록 보존)</span>
                 <button
                   type="button"
-                  onClick={() => setIsAddingBook((prev) => !prev)}
+                  onClick={() => {
+                    setIsManagerModalOpen(false);
+                    openAddModal("book");
+                  }}
                   className="text-[#FF7A59] font-black flex items-center gap-0.5"
                 >
                   <Plus className="w-3 h-3" />
-                  <span>새 책 추가</span>
+                  <span>새 책 추가 (ISBN)</span>
                 </button>
               </div>
-
-              {isAddingBook && (
-                <div className="p-3 rounded-2xl bg-[#16161D] border border-[#FF5A36]/40 space-y-2">
-                  <input
-                    type="text"
-                    value={newBookTitle}
-                    onChange={(e) => setNewBookTitle(e.target.value)}
-                    placeholder="책 제목 (예: 수학의 정석, 토익 보카)"
-                    className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
-                  />
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      type="text"
-                      value={newBookBadge}
-                      onChange={(e) => setNewBookBadge(e.target.value)}
-                      placeholder="짧은 배지"
-                      className="px-3 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[11px] text-white"
-                    />
-                    <select
-                      value={newBookCategory}
-                      onChange={(e) => setNewBookCategory(e.target.value)}
-                      className="px-2 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[11px] font-bold text-white"
-                    >
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[10px] text-slate-400">표지색</span>
-                      <input
-                        type="color"
-                        value={newBookColor}
-                        onChange={(e) => setNewBookColor(e.target.value)}
-                        className="w-6 h-6 bg-transparent cursor-pointer"
-                      />
-                    </div>
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingBook(false)}
-                        className="px-3 py-1.5 rounded-xl bg-white/[0.06] text-[10.5px] font-bold text-slate-300"
-                      >
-                        취소
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleCreateCustomBook}
-                        className="px-3 py-1.5 rounded-xl bg-[#FF5A36] text-[10.5px] font-black text-white"
-                      >
-                        책 추가 &amp; 적용
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
 
               <div className="space-y-1.5">
                 {catalog.map((book) => {
@@ -2994,86 +2765,18 @@ export default function StudyPlannerMatrixPage() {
 
               <button
                 type="button"
-                onClick={() => setIsAddingSubject((prev) => !prev)}
+                onClick={() => {
+                  setIsManagerModalOpen(false);
+                  openAddModal("subject");
+                }}
                 className="w-full px-4 py-3 flex items-center gap-3 text-left hover:bg-white/[0.03] transition"
               >
                 <span className="w-6 h-6 rounded-full bg-white/[0.12] text-white flex items-center justify-center">
                   <Plus className="w-3.5 h-3.5" />
                 </span>
-                <span className="text-xs font-extrabold text-white">과목추가</span>
+                <span className="text-xs font-extrabold text-white">과목추가 (책 연결)</span>
               </button>
             </div>
-
-            {isAddingSubject && (
-              <div className="p-3.5 rounded-2xl bg-[#181822] border border-[#FF5A36]/45 space-y-2.5">
-                <div className="text-xs font-black text-white">새 커스텀 과목 추가</div>
-                <div className="grid grid-cols-[1fr_auto] gap-2">
-                  <input
-                    type="text"
-                    value={newSubjTitle}
-                    onChange={(e) => setNewSubjTitle(e.target.value)}
-                    placeholder="과목명 (예: 미적분, 영단어)"
-                    className="px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
-                  />
-                  <select
-                    value={newSubjCategory}
-                    onChange={(e) => setNewSubjCategory(e.target.value)}
-                    className="px-2.5 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <input
-                  type="text"
-                  value={newSubjTopicsText}
-                  onChange={(e) => setNewSubjTopicsText(e.target.value)}
-                  placeholder="초기 단원 (쉼표 구분, 예: 1단원, 2단원)"
-                  className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
-                />
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-slate-400">색상:</span>
-                  {CUSTOM_SUBJECT_COLOR_PALETTE.map((hex) => (
-                    <button
-                      key={hex}
-                      type="button"
-                      onClick={() => setNewSubjColor(hex)}
-                      className={`w-4 h-4 rounded-full border ${
-                        newSubjColor === hex
-                          ? "border-white scale-110 ring-1 ring-white"
-                          : "border-white/20"
-                      }`}
-                      style={{ backgroundColor: hex }}
-                    />
-                  ))}
-                  <input
-                    type="color"
-                    value={newSubjColor}
-                    onChange={(e) => setNewSubjColor(e.target.value)}
-                    className="w-6 h-5 bg-transparent cursor-pointer"
-                  />
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddingSubject(false)}
-                    className="px-3 py-1.5 rounded-xl bg-white/[0.06] text-xs font-bold text-slate-300"
-                  >
-                    취소
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleCreateCustomSubject}
-                    className="px-3.5 py-1.5 rounded-xl bg-[#FF5A36] text-xs font-black text-white"
-                  >
-                    과목 생성
-                  </button>
-                </div>
-              </div>
-            )}
 
             {editingSubjectForm && (
               <div className="p-3.5 rounded-2xl bg-[#1B1B25] border border-sky-500/40 space-y-2.5">
@@ -3515,6 +3218,20 @@ export default function StudyPlannerMatrixPage() {
           </div>
         </div>
       )}
+
+      <CurriculumAddModal
+        isOpen={addModalState.open}
+        initialStep={addModalState.step}
+        initialBookId={addModalState.bookId}
+        initialSubjectId={addModalState.subjectId}
+        onClose={() => setAddModalState((prev) => ({ ...prev, open: false }))}
+        catalog={catalog}
+        subjects={subjects}
+        categories={categories}
+        onAddBook={addCustomBook}
+        onAddSubject={addCustomSubject}
+        onAddTopicsBulk={addCustomTopicsBulk}
+      />
     </MobileAppShell>
   );
 }
@@ -3748,6 +3465,24 @@ function SubjectRowsGroup({
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
+          </td>
+        </tr>
+      )}
+
+      {!isCollapsed && subjectTopicCount === 0 && !isAddingTopic && defaultUnitId && (
+        <tr className="border-b border-white/[0.06] bg-[#121218]">
+          <td
+            colSpan={dateColumns.length + 1}
+            className="px-4 py-2 text-[10.5px] text-slate-400"
+          >
+            <span>아직 등록된 단원이 없습니다. </span>
+            <button
+              type="button"
+              onClick={() => setIsAddingTopic(true)}
+              className="text-[#FF7A59] font-black hover:underline ml-1"
+            >
+              + 이 과목에 첫 단원 추가하기
+            </button>
           </td>
         </tr>
       )}
