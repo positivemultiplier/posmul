@@ -347,9 +347,16 @@ export function TocDragBuilder({
       changed = true;
     }
 
-    // 2. 세로(위/아래) 드래그로 목록 순서 실시간 재배치
+    // 2. 세로(위/아래) 드래그로 목록 순서 실시간 재배치 + 자동 스크롤
     const container = listRef.current;
     if (container) {
+      const cRect = container.getBoundingClientRect();
+      if (e.clientY < cRect.top + 28) {
+        container.scrollTop -= 12;
+      } else if (e.clientY > cRect.bottom - 28) {
+        container.scrollTop += 12;
+      }
+
       const rowEls = Array.from(
         container.querySelectorAll<HTMLElement>("[data-toc-row-id]")
       );
@@ -384,38 +391,45 @@ export function TocDragBuilder({
     setDraggingId(null);
   };
 
+  const draggingNode = draggingId ? nodes.find((n) => n.id === draggingId) : null;
+
   return (
     <div className="space-y-2.5">
       {/* 상단 드래그 & 계층 가이드 바 */}
       <div className="p-2.5 rounded-xl bg-[#111118] border border-white/[0.08] space-y-1.5">
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[10.5px] font-black text-sky-300 flex items-center gap-1.5">
-            <GripVertical className="w-3.5 h-3.5 text-[#FF7A59]" />
-            <span>모바일 스타일 드래그 &amp; 드롭 구조 잡기</span>
+          <div className="text-[10.5px] font-black text-sky-300 flex items-center gap-1.5 min-w-0">
+            <GripVertical className="w-3.5 h-3.5 text-[#FF7A59] shrink-0" />
+            {draggingNode ? (
+              <span className="truncate text-amber-300">
+                이동 중: [{LEVEL_META[draggingNode.level].label}]{" "}
+                {draggingNode.title || "(제목 없음)"} · 좌우로 단계 조절
+              </span>
+            ) : (
+              <span className="truncate">드래그 &amp; 드롭 목차 구조 잡기</span>
+            )}
           </div>
           <button
             type="button"
             onClick={() => setShowGuideTip((prev) => !prev)}
-            className="text-[9.5px] font-bold text-slate-400 hover:text-white flex items-center gap-0.5"
+            className="text-[9.5px] font-bold text-slate-400 hover:text-white flex items-center gap-0.5 shrink-0"
           >
             <HelpCircle className="w-3 h-3" />
-            <span>{showGuideTip ? "가이드 접기" : "가이드 보기"}</span>
+            <span>{showGuideTip ? "접기" : "사용법"}</span>
           </button>
         </div>
 
         {showGuideTip && (
-          <div className="text-[10px] text-slate-300 leading-relaxed space-y-1">
+          <div className="text-[10px] text-slate-300 leading-relaxed space-y-0.5 pt-0.5 border-t border-white/[0.06]">
             <div>
-              • <strong className="text-white">위·아래 드래그(≡)</strong>: 목차 순서를 자유롭게 바꿉니다.
-            </div>
-            <div>
-              • <strong className="text-white">좌·우 드래그(≡) 또는 배지 탭(◀ ▶)</strong>:{" "}
-              <span className="text-[#FF7A59] font-bold">과목</span> ▸{" "}
-              <span className="text-sky-300 font-bold">대단원</span> ▸{" "}
-              <span className="text-emerald-300 font-bold">단원</span> 단계를 바꿉니다.
+              • <strong className="text-white">≡ 위·아래 드래그</strong>: 순서 변경 &nbsp;|&nbsp;{" "}
+              <strong className="text-white">≡ 좌·우 드래그(또는 배지 탭)</strong>:{" "}
+              <span className="text-[#FF7A59] font-bold">과목</span>▸
+              <span className="text-sky-300 font-bold">대단원</span>▸
+              <span className="text-emerald-300 font-bold">단원</span> 전환
             </div>
             <div className="text-[9.5px] text-slate-400">
-              ※ 과목·대단원 구분이 어려우면 모두 <strong>[단원]</strong>으로 두셔도 자동으로 묶여 저장됩니다.
+              ※ 구분이 애매하면 모두 <strong>[단원]</strong>으로 두셔도 자동으로 과목 아래로 묶입니다.
             </div>
           </div>
         )}
@@ -557,38 +571,55 @@ export function TocDragBuilder({
         </div>
       )}
 
-      {/* 새 블록 1줄 바로 추가 */}
-      <div className="flex items-center gap-1.5 pt-0.5">
-        <select
-          value={newLineLevel}
-          onChange={(e) => setNewLineLevel(Number(e.target.value) as TocLevel)}
-          className="px-2 py-1.5 rounded-lg bg-[#0E0E12] border border-white/[0.12] text-[10.5px] font-black text-white shrink-0"
-        >
-          <option value={0}>과목</option>
-          <option value={1}>대단원</option>
-          <option value={2}>단원</option>
-        </select>
-        <input
-          type="text"
-          value={newLineTitle}
-          onChange={(e) => setNewLineTitle(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              handleAddSingleLine();
-            }
-          }}
-          placeholder={`${LEVEL_META[newLineLevel].label} 이름 입력 후 Enter`}
-          className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-[#0E0E12] border border-white/[0.1] text-[11px] text-white"
-        />
-        <button
-          type="button"
-          onClick={handleAddSingleLine}
-          className="px-2.5 py-1.5 rounded-lg bg-white/[0.1] hover:bg-[#FF5A36] text-[10.5px] font-black text-white shrink-0 flex items-center gap-1 transition"
-        >
-          <Plus className="w-3 h-3" />
-          <span>줄 추가</span>
-        </button>
+      {/* 새 블록 1줄 바로 추가 (모바일 친화적 3단 레벨 선택 + 입력) */}
+      <div className="space-y-1.5 pt-0.5">
+        <div className="flex items-center gap-1">
+          {([0, 1, 2] as TocLevel[]).map((lvl) => {
+            const active = newLineLevel === lvl;
+            return (
+              <button
+                key={lvl}
+                type="button"
+                onClick={() => setNewLineLevel(lvl)}
+                className={`px-2 py-1 rounded-md border text-[10px] font-black transition ${
+                  active
+                    ? LEVEL_META[lvl].badgeClass
+                    : "bg-[#0E0E12] border-white/[0.08] text-slate-400 hover:text-white"
+                }`}
+              >
+                + {LEVEL_META[lvl].label}
+              </button>
+            );
+          })}
+          <span className="text-[9.5px] text-slate-500 pl-1 truncate">
+            {LEVEL_META[newLineLevel].guide}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <input
+            type="text"
+            value={newLineTitle}
+            onChange={(e) => setNewLineTitle(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleAddSingleLine();
+              }
+            }}
+            placeholder={LEVEL_META[newLineLevel].placeholder}
+            className="flex-1 min-w-0 px-2.5 py-1.5 rounded-lg bg-[#0E0E12] border border-white/[0.1] text-[11px] text-white placeholder:text-slate-500 focus:outline-none focus:border-[#FF5A36]"
+          />
+          <button
+            type="button"
+            onClick={handleAddSingleLine}
+            disabled={!newLineTitle.trim()}
+            className="px-3 py-1.5 rounded-lg bg-[#FF5A36] hover:bg-[#ff6d4d] disabled:opacity-40 text-[10.5px] font-black text-white shrink-0 flex items-center gap-1 transition"
+          >
+            <Plus className="w-3 h-3" />
+            <span>추가</span>
+          </button>
+        </div>
       </div>
 
       {/* 실시간 자동 구조 계산 요약 */}

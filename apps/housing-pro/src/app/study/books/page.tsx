@@ -26,6 +26,7 @@ import {
   Archive,
   ArchiveRestore,
   Palette,
+  GripVertical,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
@@ -739,41 +740,49 @@ export default function AppStandaloneStudyCenterPage() {
               </span>
             </div>
 
-            {/* 계층형 책 · 과목 · 단원 추가 바 */}
+            {/* 계층형 책 · 과목 · 단원 수동 추가 바 */}
             <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-2.5">
               <div className="flex items-center justify-between">
                 <div className="text-[11px] font-black text-white flex items-center gap-1.5">
-                  <Search className="w-3.5 h-3.5 text-[#FF5A36]" />
-                  <span>ISBN 책 검색 · 계층형 목차 추가</span>
+                  <BookOpen className="w-3.5 h-3.5 text-[#FF5A36]" />
+                  <span>교재 · 과목 · 단원 수동 구성</span>
                 </div>
                 <span className="text-[10px] text-slate-400 font-bold">
-                  책 → 과목 → 단원
+                  드래그&amp;드롭 구조잡기 지원
                 </span>
               </div>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-1.5">
                 <button
                   type="button"
                   onClick={() => openAddModal("book")}
-                  className="py-2.5 px-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-[11px] font-black flex items-center justify-center gap-1 transition"
+                  className="py-2.5 px-1.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-[11px] font-black flex items-center justify-center gap-1 transition"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>책 추가(ISBN)</span>
+                  <Plus className="w-3.5 h-3.5 shrink-0" />
+                  <span>책 추가</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => openAddModal("subject")}
-                  className="py-2.5 px-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
+                  className="py-2.5 px-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>과목 추가</span>
+                  <Plus className="w-3.5 h-3.5 shrink-0" />
+                  <span>과목</span>
                 </button>
                 <button
                   type="button"
                   onClick={() => openAddModal("topic")}
-                  className="py-2.5 px-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
+                  className="py-2.5 px-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
                 >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>단원 추가</span>
+                  <Plus className="w-3.5 h-3.5 shrink-0" />
+                  <span>단원</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openAddModal("organize")}
+                  className="py-2.5 px-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
+                >
+                  <GripVertical className="w-3.5 h-3.5 shrink-0" />
+                  <span>구조잡기</span>
                 </button>
               </div>
             </div>

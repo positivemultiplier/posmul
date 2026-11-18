@@ -33,6 +33,7 @@ import {
   Library,
   BarChart3,
   Timer,
+  GripVertical,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import {
@@ -179,10 +180,11 @@ export default function StudyPlannerMatrixPage() {
   const [selectedPaletteTopicId, setSelectedPaletteTopicId] = useState<string | null>(null);
   const [quickAddTopicId, setQuickAddTopicId] = useState<string>("");
 
-  // ③ 책 표지 선택 팝오버 / 상세 액션
+  // ③ 책 표지 선택 팝오버 / 상세 액션 / 하단 보관함 접기 토글
   const [selectedShelfBookId, setSelectedShelfBookId] = useState<string | null>(null);
+  const [showMatrixArchiveBar, setShowMatrixArchiveBar] = useState<boolean>(false);
 
-  // 계층형 책 · 과목 · 단원 추가 모달 (ISBN 검색 + 목차 구성 통합)
+  // 계층형 책 · 과목 · 단원 추가 모달 (수동 생성 + 드래그&드롭 목차 구조 통합)
   const [addModalState, setAddModalState] = useState<{
     open: boolean;
     step: CurriculumAddStep;
@@ -1586,95 +1588,138 @@ export default function StudyPlannerMatrixPage() {
                   );
                 })}
 
-                {/* ① 매트릭스 하단: 책 추가(ISBN) -> 과목 추가 -> 단원 추가 계층 액션 */}
-                <tr className="border-t border-white/[0.1] bg-[#121218]">
-                  <td
-                    colSpan={dateColumns.length + 1}
-                    className="px-3 py-3"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => openAddModal("book")}
-                        className="px-3 py-1.5 rounded-xl border border-dashed border-white/[0.25] hover:border-[#FF5A36] bg-[#1A1A23] text-xs font-black text-white flex items-center gap-1.5 transition"
-                      >
-                        <Plus className="w-3.5 h-3.5 text-[#FF7A59]" />
-                        <span>책 추가 (ISBN·목차)</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => openAddModal("subject")}
-                        className="px-3 py-1.5 rounded-xl border border-white/[0.12] hover:border-sky-400 bg-[#1A1A23] text-xs font-black text-sky-200 flex items-center gap-1.5 transition"
-                      >
-                        <Plus className="w-3.5 h-3.5 text-sky-400" />
-                        <span>과목 추가</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => openAddModal("topic")}
-                        className="px-3 py-1.5 rounded-xl border border-white/[0.12] hover:border-emerald-400 bg-[#1A1A23] text-xs font-black text-emerald-200 flex items-center gap-1.5 transition"
-                      >
-                        <Plus className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>단원 추가</span>
-                      </button>
-
-                      {inactiveShelfBooks.length > 0 && (
-                        <div className="flex items-center gap-1.5 flex-wrap pl-1">
-                          <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
-                            <Library className="w-3 h-3 text-amber-300" />
-                            <span>빼둔 책(기록보존):</span>
-                          </span>
-                          {inactiveShelfBooks.map((book) => (
-                            <button
-                              key={book.id}
-                              type="button"
-                              onClick={() => toggleBookActive(book.id)}
-                              className="px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.12] border border-white/[0.1] text-[10px] font-bold text-slate-200 flex items-center gap-1"
-                            >
-                              <Plus className="w-2.5 h-2.5 text-emerald-400" />
-                              <span>{book.badge}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {archivedSubjects.length > 0 && (
-                        <div className="flex items-center gap-1.5 flex-wrap pl-1">
-                          <span className="text-[10px] font-bold text-slate-400">
-                            빼둔 과목:
-                          </span>
-                          {archivedSubjects.map((subj) => (
-                            <button
-                              key={subj.id}
-                              type="button"
-                              onClick={() => restoreSubject(subj.id)}
-                              className="px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.12] border border-white/[0.1] text-[10px] font-bold text-slate-200 flex items-center gap-1"
-                              title="클릭하여 다시 꺼내기"
-                            >
-                              <ArchiveRestore className="w-2.5 h-2.5 text-sky-300" />
-                              <span>{subj.title}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {hiddenTopicIds.length > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => restoreHiddenTopic()}
-                          className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-[10px] font-bold text-amber-200 flex items-center gap-1"
-                        >
-                          <ArchiveRestore className="w-2.5 h-2.5" />
-                          <span>빼둔 단원 {hiddenTopicIds.length}개 복원</span>
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
               </tbody>
             </table>
+          </div>
+
+          {/* ① 매트릭스 하단 심플 액션 바 (가로 스크롤 바깥 고정 · 보관함 기본 접힘) */}
+          <div className="border-t border-white/[0.08] bg-[#111117] px-3 py-2.5 space-y-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => openAddModal("book")}
+                  className="px-2.5 py-1.5 rounded-lg bg-[#FF5A36]/15 hover:bg-[#FF5A36]/25 border border-[#FF5A36]/40 text-[11px] font-black text-[#FF8A70] flex items-center gap-1 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>책 추가</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openAddModal("subject")}
+                  className="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/[0.08] text-[11px] font-bold text-slate-200 flex items-center gap-1 transition"
+                >
+                  <Plus className="w-3 h-3 text-sky-400" />
+                  <span>과목</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openAddModal("topic")}
+                  className="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/[0.08] text-[11px] font-bold text-slate-200 flex items-center gap-1 transition"
+                >
+                  <Plus className="w-3 h-3 text-emerald-400" />
+                  <span>단원</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => openAddModal("organize")}
+                  className="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-amber-500/15 border border-white/[0.08] hover:border-amber-500/35 text-[11px] font-bold text-amber-200/90 flex items-center gap-1 transition"
+                  title="드래그 & 드롭으로 과목·대단원·단원 구조 잡기"
+                >
+                  <GripVertical className="w-3 h-3 text-amber-300" />
+                  <span>구조잡기</span>
+                </button>
+              </div>
+
+              {(inactiveShelfBooks.length > 0 ||
+                archivedSubjects.length > 0 ||
+                hiddenTopicIds.length > 0) && (
+                <button
+                  type="button"
+                  onClick={() => setShowMatrixArchiveBar((prev) => !prev)}
+                  className="px-2.5 py-1.5 rounded-lg bg-white/[0.04] hover:bg-white/[0.09] border border-white/[0.08] text-[10.5px] font-bold text-slate-300 flex items-center gap-1 transition shrink-0"
+                >
+                  <Library className="w-3 h-3 text-amber-300" />
+                  <span>
+                    보관함 (
+                    {inactiveShelfBooks.length +
+                      archivedSubjects.length +
+                      hiddenTopicIds.length}
+                    )
+                  </span>
+                  <ChevronDown
+                    className={`w-3 h-3 transition-transform ${
+                      showMatrixArchiveBar ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+              )}
+            </div>
+
+            {showMatrixArchiveBar &&
+              (inactiveShelfBooks.length > 0 ||
+                archivedSubjects.length > 0 ||
+                hiddenTopicIds.length > 0) && (
+                <div className="pt-2 border-t border-white/[0.06] space-y-2">
+                  {inactiveShelfBooks.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-bold text-slate-500 w-14 shrink-0">
+                        빼둔 책
+                      </span>
+                      {inactiveShelfBooks.map((book) => (
+                        <button
+                          key={book.id}
+                          type="button"
+                          onClick={() => toggleBookActive(book.id)}
+                          className="px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] text-[10px] font-bold text-slate-300 flex items-center gap-1 transition"
+                        >
+                          <Plus className="w-2.5 h-2.5 text-emerald-400" />
+                          <span className="max-w-[110px] truncate">{book.badge}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {archivedSubjects.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-bold text-slate-500 w-14 shrink-0">
+                        빼둔 과목
+                      </span>
+                      {archivedSubjects.map((subj) => (
+                        <button
+                          key={subj.id}
+                          type="button"
+                          onClick={() => restoreSubject(subj.id)}
+                          className="px-2 py-0.5 rounded-md bg-white/[0.04] hover:bg-white/[0.1] border border-white/[0.08] text-[10px] font-bold text-slate-300 flex items-center gap-1 transition"
+                          title="클릭하여 다시 꺼내기"
+                        >
+                          <ArchiveRestore className="w-2.5 h-2.5 text-sky-300" />
+                          <span>{subj.title}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {hiddenTopicIds.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-bold text-slate-500 w-14 shrink-0">
+                        숨긴 단원
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => restoreHiddenTopic()}
+                        className="px-2 py-0.5 rounded-md bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-[10px] font-bold text-amber-200 flex items-center gap-1 transition"
+                      >
+                        <ArchiveRestore className="w-2.5 h-2.5" />
+                        <span>{hiddenTopicIds.length}개 전체 복원</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
           </div>
         </div>
       ) : (
@@ -2737,7 +2782,7 @@ export default function StudyPlannerMatrixPage() {
                   className="text-[#FF7A59] font-black flex items-center gap-0.5"
                 >
                   <Plus className="w-3 h-3" />
-                  <span>새 책 추가 (ISBN)</span>
+                  <span>새 책 추가</span>
                 </button>
               </div>
 

@@ -11,7 +11,6 @@ import {
   Layers,
   Loader2,
   Plus,
-  Search,
   Sparkles,
   X,
 } from "lucide-react";
@@ -21,7 +20,6 @@ import {
   type TextbookCatalogItem,
 } from "@/data/study-textbooks";
 import type { CustomBookSubjectInput } from "@/lib/study-curriculum-store";
-import type { LookedUpBook } from "@/app/api/books/lookup/route";
 import type { ParsedTocSubject } from "@/app/api/books/parse-toc/route";
 import {
   TocDragBuilder,
@@ -107,13 +105,10 @@ export function CurriculumAddModal({
   const [step, setStep] = useState<CurriculumAddStep>(initialStep);
 
   // ==========================================================
-  // STEP 1: 책 추가 (ISBN 검색 + 드래그&드롭 목차 빌더)
+  // STEP 1: 책 추가 (수동 책 생성 기본 + 드래그&드롭 목차 빌더)
   // ==========================================================
-  const [isbnQuery, setIsbnQuery] = useState("");
-  const [lookupLoading, setLookupLoading] = useState(false);
-  const [lookupNotice, setLookupNotice] = useState<string | null>(null);
-  const [lookupError, setLookupError] = useState<string | null>(null);
-  const [candidates, setCandidates] = useState<LookedUpBook[]>([]);
+  const [tocNotice, setTocNotice] = useState<string | null>(null);
+  const [tocError, setTocError] = useState<string | null>(null);
 
   const [bookTitle, setBookTitle] = useState("");
   const [bookBadge, setBookBadge] = useState("");
@@ -121,10 +116,6 @@ export function CurriculumAddModal({
     categories[1] || categories[0] || "주택관리사 2차"
   );
   const [bookColor, setBookColor] = useState<string>("#FF5A36");
-  const [bookIsbn, setBookIsbn] = useState("");
-  const [bookAuthor, setBookAuthor] = useState("");
-  const [bookPublisher, setBookPublisher] = useState("");
-  const [bookCoverUrl, setBookCoverUrl] = useState("");
 
   const [defaultSubjForBook, setDefaultSubjForBook] = useState("");
   const [showPasteBox, setShowPasteBox] = useState(false);
@@ -178,7 +169,8 @@ export function CurriculumAddModal({
     if (!isOpen) return;
     setStep(initialStep);
     setFeedbackMsg(null);
-    setLookupError(null);
+    setTocError(null);
+    setTocNotice(null);
     const defaultBook = initialBookId || catalog[0]?.id || "";
     setTargetBookIdForSubj(defaultBook);
     setTargetBookIdForTopic(defaultBook);
@@ -240,58 +232,11 @@ export function CurriculumAddModal({
 
   if (!isOpen) return null;
 
-  const applyCandidateBook = (b: LookedUpBook) => {
-    setBookTitle(b.title);
-    setBookBadge(b.suggestedBadge || b.title.slice(0, 6));
-    setBookIsbn(b.isbn);
-    setBookAuthor(b.author);
-    setBookPublisher(b.publisher);
-    setBookCoverUrl(b.coverImageUrl);
-  };
-
-  const handleLookupBook = async () => {
-    const q = isbnQuery.trim();
-    if (!q) return;
-    setLookupLoading(true);
-    setLookupError(null);
-    setLookupNotice(null);
-    setCandidates([]);
-    try {
-      const res = await fetch(`/api/books/lookup?isbn=${encodeURIComponent(q)}`);
-      const data = (await res.json()) as {
-        found: boolean;
-        book?: LookedUpBook;
-        candidates?: LookedUpBook[];
-        tocText?: string | null;
-        tocNotice?: string;
-        error?: string;
-      };
-      if (!data.found || !data.book) {
-        setLookupError(
-          data.tocNotice || data.error || "도서를 찾지 못했습니다. 직접 입력해 주세요."
-        );
-      } else {
-        applyCandidateBook(data.book);
-        if (data.candidates && data.candidates.length > 1) {
-          setCandidates(data.candidates);
-        }
-        if (data.tocText) {
-          setRawTocText(data.tocText);
-          setBookDraftNodes(parseRawLinesToDraftNodes(data.tocText));
-        }
-        setLookupNotice(data.tocNotice || "도서 정보를 불러왔습니다.");
-      }
-    } catch {
-      setLookupError("도서 조회 중 네트워크 오류가 발생했습니다.");
-    } finally {
-      setLookupLoading(false);
-    }
-  };
-
   const handleParseTocTextToBuilder = async () => {
     if (!rawTocText.trim()) return;
     setTocParsing(true);
-    setLookupError(null);
+    setTocError(null);
+    setTocNotice(null);
     try {
       const res = await fetch("/api/books/parse-toc", {
         method: "POST",
@@ -325,7 +270,8 @@ export function CurriculumAddModal({
 
   const handleTocImageUpload = async (file: File) => {
     setTocParsing(true);
-    setLookupError(null);
+    setTocError(null);
+    setTocNotice(null);
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader();
@@ -356,16 +302,16 @@ export function CurriculumAddModal({
       if (data.success && data.subjects && data.subjects.length > 0) {
         const converted = parsedSubjectsToDraftNodes(data.subjects);
         setBookDraftNodes(converted);
-        setLookupNotice(
+        setTocNotice(
           `목차 사진에서 ${converted.length}개 블록을 추출했습니다. 드래그하여 순서·단계를 자유롭게 다듬어 보세요.`
         );
       } else {
-        setLookupError(
+        setTocError(
           data.error || "목차 사진에서 단원을 추출하지 못했습니다. 직접 줄을 추가해 주세요."
         );
       }
     } catch {
-      setLookupError("목차 이미지 처리 중 오류가 발생했습니다.");
+      setTocError("목차 이미지 처리 중 오류가 발생했습니다.");
     } finally {
       setTocParsing(false);
     }
@@ -406,10 +352,6 @@ export function CurriculumAddModal({
       title: bookTitle.trim(),
       badge: bookBadge.trim() || bookTitle.trim().slice(0, 6),
       coverColor: bookColor,
-      isbn: bookIsbn.trim() || undefined,
-      author: bookAuthor.trim() || undefined,
-      publisher: bookPublisher.trim() || undefined,
-      coverImageUrl: bookCoverUrl.trim() || undefined,
       examStage: bookCategory.includes("1차") ? "1차" : "2차",
       category: bookCategory,
       subjects: finalSubjects,
@@ -424,15 +366,11 @@ export function CurriculumAddModal({
     const savedBookTitle = bookTitle.trim();
     setBookTitle("");
     setBookBadge("");
-    setBookIsbn("");
-    setBookAuthor("");
-    setBookPublisher("");
-    setBookCoverUrl("");
     setDefaultSubjForBook("");
     setRawTocText("");
     setBookDraftNodes([]);
-    setCandidates([]);
-    setLookupNotice(null);
+    setTocNotice(null);
+    setTocError(null);
 
     if (addedTopicCount > 0) {
       onClose();
@@ -521,7 +459,7 @@ export function CurriculumAddModal({
               <span>교재 · 과목 · 단원 구성</span>
             </h2>
             <p className="text-[10px] text-slate-400 mt-0.5">
-              드래그&amp;드롭으로 과목·대단원·단원 구조를 모바일처럼 손쉽게 잡을 수 있습니다.
+              책을 직접 만들고, 드래그&amp;드롭으로 과목·대단원·단원 구조를 자유롭게 잡으세요.
             </p>
           </div>
           <button
@@ -596,131 +534,33 @@ export function CurriculumAddModal({
         )}
 
         {/* ========================================================== */}
-        {/* STEP 1: 책 추가 (ISBN 검색 + 드래그&드롭 목차 빌더) */}
+        {/* STEP 1: 책 추가 (수동 입력 기본 + 드래그&드롭 목차 빌더) */}
         {/* ========================================================== */}
         {step === "book" && (
           <div className="space-y-3">
-            {/* ISBN / 도서명 검색 */}
-            <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-2">
-              <div className="text-[11px] font-black text-white flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Search className="w-3.5 h-3.5 text-sky-400" />
-                  <span>ISBN 또는 책 제목으로 자동 검색</span>
-                </span>
-                <span className="text-[9.5px] text-slate-400 font-mono">
-                  예: 979-11-360-3969-9
-                </span>
-              </div>
-
-              <div className="flex gap-1.5">
-                <input
-                  type="text"
-                  value={isbnQuery}
-                  onChange={(e) => setIsbnQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      void handleLookupBook();
-                    }
-                  }}
-                  placeholder="ISBN 13자리 또는 도서명 입력"
-                  className="flex-1 min-w-0 px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white focus:outline-none focus:border-sky-400"
-                />
-                <button
-                  type="button"
-                  onClick={handleLookupBook}
-                  disabled={lookupLoading || !isbnQuery.trim()}
-                  className="px-3 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 disabled:opacity-50 text-white text-xs font-black shrink-0 flex items-center gap-1 transition"
-                >
-                  {lookupLoading ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Search className="w-3.5 h-3.5" />
-                  )}
-                  <span>검색</span>
-                </button>
-              </div>
-
-              {candidates.length > 1 && (
-                <div className="space-y-1 pt-1">
-                  <div className="text-[10px] text-slate-400 font-bold">
-                    검색 결과 중 선택하세요:
-                  </div>
-                  <div className="max-h-32 overflow-y-auto space-y-1">
-                    {candidates.map((c, idx) => (
-                      <button
-                        key={`${c.isbn}-${idx}`}
-                        type="button"
-                        onClick={() => applyCandidateBook(c)}
-                        className="w-full p-2 rounded-lg bg-[#0E0E12] hover:bg-white/[0.06] border border-white/[0.08] text-left flex items-center gap-2 transition"
-                      >
-                        {c.coverImageUrl && (
-                          <img
-                            src={c.coverImageUrl}
-                            alt={c.title}
-                            className="w-7 h-10 object-cover rounded shrink-0"
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <div className="text-[11px] font-bold text-white truncate">
-                            {c.title}
-                          </div>
-                          <div className="text-[9.5px] text-slate-400 truncate">
-                            {c.author} · {c.publisher} {c.isbn ? `· ${c.isbn}` : ""}
-                          </div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {lookupNotice && (
-                <div className="p-2 rounded-xl bg-sky-950/50 border border-sky-500/30 text-[10px] text-sky-200 leading-relaxed">
-                  {lookupNotice}
-                </div>
-              )}
-              {lookupError && (
-                <div className="p-2 rounded-xl bg-rose-950/50 border border-rose-500/30 text-[10px] text-rose-200 leading-relaxed">
-                  {lookupError}
-                </div>
-              )}
-            </div>
-
-            {/* 책 메타데이터 폼 */}
+            {/* 책 기본 정보 (수동 생성 기본) */}
             <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-2.5">
-              <div className="flex items-start gap-2.5">
-                {bookCoverUrl && (
-                  <img
-                    src={bookCoverUrl}
-                    alt={bookTitle || "표지"}
-                    className="w-12 h-16 object-cover rounded-lg border border-white/15 shrink-0"
-                  />
-                )}
-                <div className="flex-1 min-w-0 space-y-2">
-                  <input
-                    type="text"
-                    value={bookTitle}
-                    onChange={(e) => setBookTitle(e.target.value)}
-                    placeholder="책 제목 (예: 2026 에듀윌 주택관리사 2차 기출문제집)"
-                    className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
-                  />
-                  {(bookAuthor || bookPublisher || bookIsbn) && (
-                    <div className="text-[10px] text-slate-400 truncate">
-                      {[bookAuthor, bookPublisher, bookIsbn ? `ISBN ${bookIsbn}` : ""]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </div>
-                  )}
-                </div>
+              <div className="text-[11px] font-black text-white flex items-center justify-between">
+                <span>책 기본 정보</span>
+                <span className="text-[9.5px] font-bold text-slate-400">
+                  제목만 입력해도 바로 추가 가능
+                </span>
               </div>
+
+              <input
+                type="text"
+                value={bookTitle}
+                onChange={(e) => setBookTitle(e.target.value)}
+                placeholder="책 제목 (예: 2026 에듀윌 주택관리사 2차 기출문제집)"
+                className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white focus:outline-none focus:border-[#FF5A36]"
+              />
 
               <div className="grid grid-cols-2 gap-2">
                 <input
                   type="text"
                   value={bookBadge}
                   onChange={(e) => setBookBadge(e.target.value)}
-                  placeholder="짧은 배지 (예: 에듀윌2차)"
+                  placeholder="짧은 이름 (예: 에듀윌2차)"
                   className="px-3 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-[11px] text-white"
                 />
                 <select
@@ -800,6 +640,17 @@ export function CurriculumAddModal({
                   </button>
                 </div>
               </div>
+
+              {tocNotice && (
+                <div className="p-2 rounded-xl bg-sky-950/50 border border-sky-500/30 text-[10px] text-sky-200 leading-relaxed">
+                  {tocNotice}
+                </div>
+              )}
+              {tocError && (
+                <div className="p-2 rounded-xl bg-rose-950/50 border border-rose-500/30 text-[10px] text-rose-200 leading-relaxed">
+                  {tocError}
+                </div>
+              )}
 
               {showPasteBox && (
                 <div className="p-2.5 rounded-xl bg-[#0E0E12] border border-sky-500/30 space-y-2">
