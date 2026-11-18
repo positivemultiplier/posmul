@@ -54,6 +54,8 @@ export interface CurriculumPersistedState {
   subjectOverrides?: Record<string, SubjectOverrideItem>;
   /** 보관함에 넣은 과목 ID 목록 */
   archivedSubjectIds?: string[];
+  /** 플래너에서 뺀(숨긴) 개별 단원 ID 목록 */
+  hiddenTopicIds?: string[];
   /** 날짜 변경 기준 시각 (0~6시, 기본 4시) */
   dayResetHour?: number;
   /** 날짜별 타임테이블 슬롯 기록 (YYYY-MM-DD -> slotKey -> TimetableSlotLog) */
@@ -120,6 +122,7 @@ function createDefaultState(todayISO: string): CurriculumPersistedState {
     customCategories: [],
     subjectOverrides: {},
     archivedSubjectIds: [],
+    hiddenTopicIds: [],
     dayResetHour: 4,
     timetablesByDate: {},
     examDate: defaultBook.defaultExamDate,
@@ -166,11 +169,9 @@ function readStoredState(todayISO: string): CurriculumPersistedState {
     const validBookId = parsed.activeBookId && allBookIds.has(parsed.activeBookId)
       ? parsed.activeBookId
       : fallback.activeBookId;
-    const rawActiveBookIds = Array.isArray(parsed.activeBookIds)
+    const activeBookIds = Array.isArray(parsed.activeBookIds)
       ? parsed.activeBookIds.filter((id) => allBookIds.has(id))
-      : [];
-    const activeBookIds =
-      rawActiveBookIds.length > 0 ? rawActiveBookIds : [validBookId];
+      : [validBookId];
 
     return {
       activeBookId: validBookId,
@@ -182,6 +183,7 @@ function readStoredState(todayISO: string): CurriculumPersistedState {
       archivedSubjectIds: Array.isArray(parsed.archivedSubjectIds)
         ? parsed.archivedSubjectIds
         : [],
+      hiddenTopicIds: Array.isArray(parsed.hiddenTopicIds) ? parsed.hiddenTopicIds : [],
       dayResetHour:
         typeof parsed.dayResetHour === "number" &&
         parsed.dayResetHour >= 0 &&
@@ -268,10 +270,9 @@ export function useStudyCurriculum() {
       }
       const next: CurriculumPersistedState = {
         ...prev,
-        activeBookIds:
-          prev.activeBookIds && prev.activeBookIds.length > 0
-            ? prev.activeBookIds
-            : remote?.activeBookIds,
+        activeBookIds: Array.isArray(prev.activeBookIds)
+          ? prev.activeBookIds
+          : remote?.activeBookIds,
         customBooks:
           (prev.customBooks?.length ?? 0) > 0 ? prev.customBooks : remote?.customBooks,
         customSubjects:
@@ -292,6 +293,12 @@ export function useStudyCurriculum() {
           new Set([
             ...(remote?.archivedSubjectIds || []),
             ...(prev.archivedSubjectIds || []),
+          ])
+        ),
+        hiddenTopicIds: Array.from(
+          new Set([
+            ...(remote?.hiddenTopicIds || []),
+            ...(prev.hiddenTopicIds || []),
           ])
         ),
         dayResetHour: prev.dayResetHour ?? remote?.dayResetHour ?? 4,
@@ -380,8 +387,9 @@ export function useStudyCurriculum() {
 
   const activeBookIds = useMemo(() => {
     const validSet = new Set(allCatalogBooks.map((b) => b.id));
-    const filtered = (state.activeBookIds || []).filter((id) => validSet.has(id));
-    if (filtered.length > 0) return filtered;
+    if (Array.isArray(state.activeBookIds)) {
+      return state.activeBookIds.filter((id) => validSet.has(id));
+    }
     return [validSet.has(state.activeBookId) ? state.activeBookId : TEXTBOOK_CATALOG[0].id];
   }, [allCatalogBooks, state.activeBookIds, state.activeBookId]);
 
@@ -455,6 +463,7 @@ export function useStudyCurriculum() {
 
     const overrides = state.subjectOverrides || {};
     const archivedSet = new Set(state.archivedSubjectIds || []);
+    const hiddenTopicSet = new Set(state.hiddenTopicIds || []);
 
     return rawSubjects.map((subject) => {
       const ov = overrides[subject.id];
@@ -471,9 +480,11 @@ export function useStudyCurriculum() {
         isArchived: archivedSet.has(subject.id),
         units: subject.units.map((unit) => {
           const extra = mergedUnitTopics[unit.id] || [];
-          return extra.length > 0
-            ? { ...unit, topics: [...unit.topics, ...extra] }
-            : unit;
+          const combined = extra.length > 0 ? [...unit.topics, ...extra] : unit.topics;
+          return {
+            ...unit,
+            topics: combined.filter((t) => !hiddenTopicSet.has(t.id)),
+          };
         }),
       };
     });
@@ -485,6 +496,7 @@ export function useStudyCurriculum() {
     state.customTopicsByBook,
     state.subjectOverrides,
     state.archivedSubjectIds,
+    state.hiddenTopicIds,
   ]);
 
   /** 확장형 분류 목록 (기본 프리셋 + 사용자 커스텀 분류 + 사용 중 분류) */
@@ -568,26 +580,22 @@ export function useStudyCurriculum() {
     [allCatalogBooks, todayISO, updateState]
   );
 
-  /** 다중 교재 활성/비활성 토글 (최소 1권 유지) */
+  /** 다중 교재 활성/비활성 토글 (0권까지 모두 해제 가능, 데이터는 영구 보존) */
   const toggleBookActive = useCallback(
     (bookId: string) => {
       const targetBook = allCatalogBooks.find((b) => b.id === bookId);
       if (!targetBook) return;
 
       updateState((prev) => {
-        const prevIds =
-          prev.activeBookIds && prev.activeBookIds.length > 0
-            ? prev.activeBookIds
-            : [prev.activeBookId];
+        const prevIds = prev.activeBookIds ?? [prev.activeBookId];
         const exists = prevIds.includes(bookId);
-        if (exists && prevIds.length <= 1) {
-          return prev;
-        }
         const nextIds = exists
           ? prevIds.filter((id) => id !== bookId)
           : [...prevIds, bookId];
         const nextPrimaryId =
-          prev.activeBookId === bookId && exists ? nextIds[0] : prev.activeBookId || nextIds[0];
+          prev.activeBookId === bookId && exists
+            ? nextIds[0] || prev.activeBookId
+            : prev.activeBookId || nextIds[0] || bookId;
 
         return {
           ...prev,
@@ -605,6 +613,25 @@ export function useStudyCurriculum() {
       });
     },
     [allCatalogBooks, todayISO, updateState]
+  );
+
+  /** 플래너에서 책 즉시 빼기 (기록·커스텀 단원 데이터는 서재에 100% 보존) */
+  const removeBookFromPlanner = useCallback(
+    (bookId: string) => {
+      updateState((prev) => {
+        const prevIds = prev.activeBookIds ?? [prev.activeBookId];
+        const nextIds = prevIds.filter((id) => id !== bookId);
+        return {
+          ...prev,
+          activeBookId:
+            prev.activeBookId === bookId
+              ? nextIds[0] || prev.activeBookId
+              : prev.activeBookId,
+          activeBookIds: nextIds,
+        };
+      });
+    },
+    [updateState]
   );
 
   /** 사용자 커스텀 교재 추가 (초기 과목 1개 자동 연결) */
@@ -669,10 +696,7 @@ export function useStudyCurriculum() {
       };
 
       updateState((prev) => {
-        const prevIds =
-          prev.activeBookIds && prev.activeBookIds.length > 0
-            ? prev.activeBookIds
-            : [prev.activeBookId];
+        const prevIds = prev.activeBookIds ?? [prev.activeBookId];
         return {
           ...prev,
           activeBookIds: [...prevIds, bookId],
@@ -1272,6 +1296,34 @@ export function useStudyCurriculum() {
     [activeBook.id, updateState]
   );
 
+  /** 개별 단원 플래너에서 빼기 (기록 유지, 언제든 복원 가능) */
+  const hideTopic = useCallback(
+    (topicId: string) => {
+      updateState((prev) => {
+        const current = prev.hiddenTopicIds || [];
+        if (current.includes(topicId)) return prev;
+        return {
+          ...prev,
+          hiddenTopicIds: [...current, topicId],
+        };
+      });
+    },
+    [updateState]
+  );
+
+  /** 빼둔 단원 일괄 또는 개별 복원 */
+  const restoreHiddenTopic = useCallback(
+    (topicId?: string) => {
+      updateState((prev) => ({
+        ...prev,
+        hiddenTopicIds: topicId
+          ? (prev.hiddenTopicIds || []).filter((id) => id !== topicId)
+          : [],
+      }));
+    },
+    [updateState]
+  );
+
   /** 커스텀 목차 삭제 */
   const deleteCustomTopic = useCallback(
     (unitId: string, topicId: string) => {
@@ -1389,6 +1441,7 @@ export function useStudyCurriculum() {
     catalog: allCatalogBooks,
     subjects,
     archivedSubjects,
+    hiddenTopicIds: state.hiddenTopicIds || [],
     categories,
     addCustomCategory,
     matrixLogs,
@@ -1400,6 +1453,7 @@ export function useStudyCurriculum() {
     collapsedSubjectIds: state.collapsedSubjectIds,
     selectTextbook,
     toggleBookActive,
+    removeBookFromPlanner,
     addCustomBook,
     deleteCustomBook,
     addCustomSubject,
@@ -1418,6 +1472,8 @@ export function useStudyCurriculum() {
     setAllSubjectsCollapsed,
     addCustomTopic,
     deleteCustomTopic,
+    hideTopic,
+    restoreHiddenTopic,
     toggleTodo,
     addTodo,
     deleteTodo,

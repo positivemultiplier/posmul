@@ -197,15 +197,11 @@ export default function AppStandaloneStudyCenterPage() {
 
   const handleToggleBook = (bookId: string, title: string) => {
     const isCurrentlyActive = activeBookIds.includes(bookId);
-    if (isCurrentlyActive && activeBookIds.length <= 1) {
-      showToast("최소 1권 이상의 교재가 선택되어야 합니다.");
-      return;
-    }
     toggleBookActive(bookId);
     setPreviewBookId(bookId);
     showToast(
       isCurrentlyActive
-        ? `「${title}」을(를) 활성 교재에서 해제했습니다.`
+        ? `「${title}」을(를) 서재로 뺐습니다 (기록·단원 보존됨).`
         : `「${title}」이(가) 다중 교재에 추가 적용되었습니다!`
     );
   };

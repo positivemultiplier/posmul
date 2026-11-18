@@ -109,10 +109,12 @@ export default function StudyPlannerMatrixPage() {
     dayResetHour,
     setDayResetHour,
     examDate,
+    activeBooks,
     activeBookIds,
     catalog,
     subjects,
     archivedSubjects,
+    hiddenTopicIds,
     categories,
     addCustomCategory,
     matrixLogs,
@@ -121,6 +123,7 @@ export default function StudyPlannerMatrixPage() {
     chapterTotals,
     collapsedSubjectIds,
     toggleBookActive,
+    removeBookFromPlanner,
     addCustomBook,
     deleteCustomBook,
     addCustomSubject,
@@ -130,6 +133,8 @@ export default function StudyPlannerMatrixPage() {
     deleteSubject,
     addCustomTopic,
     deleteCustomTopic,
+    hideTopic,
+    restoreHiddenTopic,
     upsertMatrixCell,
     upsertMatrixCellsBulk,
     deleteMatrixCell,
@@ -897,10 +902,9 @@ export default function StudyPlannerMatrixPage() {
           </div>
         </div>
 
-        {/* ③ 책 표지(Book Cover) 이미지 가로 나열 책장 */}
+        {/* ③ 책 표지(Book Cover) 이미지 가로 나열 책장 (활성 책만 표시, 우상단 ✕로 즉시 빼기) */}
         <div className="flex items-stretch gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {catalog.map((book) => {
-            const isActive = activeBookIds.includes(book.id);
+          {activeBooks.map((book) => {
             const isSelectedShelf = selectedShelfBookId === book.id;
             const topicCount = book.subjects.reduce(
               (acc, s) => acc + s.units.reduce((uAcc, u) => uAcc + u.topics.length, 0),
@@ -910,35 +914,25 @@ export default function StudyPlannerMatrixPage() {
             return (
               <div
                 key={book.id}
-                className={`relative shrink-0 w-[108px] rounded-xl overflow-hidden border transition cursor-pointer select-none flex flex-col justify-between ${
+                className={`relative shrink-0 w-[112px] rounded-xl overflow-hidden border transition cursor-pointer select-none flex flex-col justify-between ${
                   isSelectedShelf
                     ? "ring-2 ring-white border-white"
-                    : isActive
-                      ? "border-[#FF5A36]/70 shadow-lg"
-                      : "border-white/[0.08] opacity-65 hover:opacity-100"
+                    : "border-[#FF5A36]/70 shadow-lg"
                 }`}
                 style={{
                   background: `linear-gradient(145deg, ${book.coverColor}33 0%, #121218 85%)`,
                 }}
                 onClick={() => {
-                  if (!isActive) {
-                    toggleBookActive(book.id);
-                  } else {
-                    setSelectedShelfBookId(isSelectedShelf ? null : book.id);
-                  }
+                  setSelectedShelfBookId(isSelectedShelf ? null : book.id);
                 }}
-                title={
-                  isActive
-                    ? `${book.title} (클릭하여 단원추가·편집·서재로 빼기)`
-                    : `${book.title} (서재에서 꺼내 플래너에 추가 — 이전 기록 보존됨)`
-                }
+                title={`${book.title} (클릭: 편집 · ✕ 버튼: 플래너에서 빼기)`}
               >
                 {/* 책등 입체 바 */}
                 <div
                   className="absolute left-0 top-0 bottom-0 w-1.5"
                   style={{ backgroundColor: book.coverColor }}
                 />
-                <div className="pl-2.5 pr-2 pt-2 pb-1.5 space-y-1">
+                <div className="pl-2.5 pr-1.5 pt-2 pb-1.5 space-y-1">
                   <div className="flex items-center justify-between gap-1">
                     <span
                       className="px-1.5 py-0.2 rounded text-[8.5px] font-black text-white truncate max-w-[64px]"
@@ -946,29 +940,39 @@ export default function StudyPlannerMatrixPage() {
                     >
                       {book.badge}
                     </span>
-                    <span
-                      className={`w-3.5 h-3.5 rounded-full flex items-center justify-center text-[8px] font-black shrink-0 ${
-                        isActive
-                          ? "bg-emerald-500 text-white"
-                          : "bg-white/10 text-slate-300"
-                      }`}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeBookFromPlanner(book.id);
+                        if (selectedShelfBookId === book.id) {
+                          setSelectedShelfBookId(null);
+                        }
+                      }}
+                      className="w-4 h-4 rounded-full bg-black/50 hover:bg-rose-500 text-slate-200 hover:text-white flex items-center justify-center transition shrink-0"
+                      title={`${book.title} 플래너에서 빼기 (기록 보존)`}
+                      aria-label={`${book.title} 빼기`}
                     >
-                      {isActive ? "✓" : "+"}
-                    </span>
+                      <X className="w-2.5 h-2.5" />
+                    </button>
                   </div>
                   <div className="text-[10px] font-black text-white line-clamp-2 leading-tight min-h-[24px]">
                     {book.title}
                   </div>
                   <div className="text-[8.5px] font-mono text-slate-300 flex items-center justify-between">
                     <span>{topicCount}단원</span>
-                    <span className={isActive ? "text-emerald-300" : "text-slate-400"}>
-                      {isActive ? "적용중" : "서재"}
-                    </span>
+                    <span className="text-emerald-300">적용중</span>
                   </div>
                 </div>
               </div>
             );
           })}
+
+          {activeBooks.length === 0 && (
+            <div className="shrink-0 px-3 py-2 rounded-xl bg-[#111116] border border-white/[0.08] flex items-center text-[10.5px] text-slate-400">
+              선택된 책이 없습니다. 책을 추가하거나 서재에서 꺼내세요.
+            </div>
+          )}
 
           {/* 책 표지 끝: + 책 추가 미니 표지 카드 */}
           <button
@@ -983,6 +987,21 @@ export default function StudyPlannerMatrixPage() {
             <Plus className="w-4 h-4 text-[#FF7A59]" />
             <span className="text-[10px] font-black">책 추가</span>
           </button>
+
+          {/* 서재(빼둔 책) 빠른 꺼내기 카드 */}
+          {inactiveShelfBooks.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsManagerModalOpen(true)}
+              className="shrink-0 w-[88px] rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 p-2 flex flex-col items-center justify-center gap-1 text-amber-200 transition"
+              title="서재에 빼둔 책 다시 넣기"
+            >
+              <Library className="w-4 h-4 text-amber-300" />
+              <span className="text-[10px] font-black">
+                서재 ({inactiveShelfBooks.length})
+              </span>
+            </button>
+          )}
         </div>
 
         {/* 책 표지 클릭 시 나타나는 빠른 책 관리 액션 바 */}
@@ -1011,18 +1030,16 @@ export default function StudyPlannerMatrixPage() {
               >
                 과목·단원 편집
               </button>
-              {activeBookIds.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    toggleBookActive(selectedShelfBook.id);
-                    setSelectedShelfBookId(null);
-                  }}
-                  className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 font-black"
-                >
-                  서재로 빼기(데이터유지)
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  removeBookFromPlanner(selectedShelfBook.id);
+                  setSelectedShelfBookId(null);
+                }}
+                className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 font-black"
+              >
+                서재로 빼기(데이터유지)
+              </button>
               <button
                 type="button"
                 onClick={() => setSelectedShelfBookId(null)}
@@ -1441,11 +1458,13 @@ export default function StudyPlannerMatrixPage() {
                       onDeleteCustomTopic={(unitId, topicId) =>
                         deleteCustomTopic(unitId, topicId)
                       }
+                      onArchiveSubject={() => archiveSubject(subject.id)}
+                      onHideTopic={(topicId) => hideTopic(topicId)}
                     />
                   );
                 })}
 
-                {/* ① 매트릭스 하단: + 책 추가 / + 과목 추가 / 서재 책 다시 넣기 */}
+                {/* ① 매트릭스 하단: + 책 추가 / + 과목 추가 / 서재·보관함 복원 */}
                 <tr className="border-t border-white/[0.1] bg-[#121218]">
                   <td
                     colSpan={dateColumns.length + 1}
@@ -1490,7 +1509,7 @@ export default function StudyPlannerMatrixPage() {
                         <div className="flex items-center gap-1.5 flex-wrap pl-1">
                           <span className="text-[10px] font-bold text-slate-400 flex items-center gap-1">
                             <Library className="w-3 h-3 text-amber-300" />
-                            <span>서재(기록보존):</span>
+                            <span>빼둔 책(기록보존):</span>
                           </span>
                           {inactiveShelfBooks.map((book) => (
                             <button
@@ -1504,6 +1523,37 @@ export default function StudyPlannerMatrixPage() {
                             </button>
                           ))}
                         </div>
+                      )}
+
+                      {archivedSubjects.length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap pl-1">
+                          <span className="text-[10px] font-bold text-slate-400">
+                            빼둔 과목:
+                          </span>
+                          {archivedSubjects.map((subj) => (
+                            <button
+                              key={subj.id}
+                              type="button"
+                              onClick={() => restoreSubject(subj.id)}
+                              className="px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.12] border border-white/[0.1] text-[10px] font-bold text-slate-200 flex items-center gap-1"
+                              title="클릭하여 다시 꺼내기"
+                            >
+                              <ArchiveRestore className="w-2.5 h-2.5 text-sky-300" />
+                              <span>{subj.title}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {hiddenTopicIds.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => restoreHiddenTopic()}
+                          className="px-2 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-[10px] font-bold text-amber-200 flex items-center gap-1"
+                        >
+                          <ArchiveRestore className="w-2.5 h-2.5" />
+                          <span>빼둔 단원 {hiddenTopicIds.length}개 복원</span>
+                        </button>
                       )}
                     </div>
 
@@ -3123,6 +3173,8 @@ interface SubjectRowsGroupProps {
   onCellPointerEnter: (matrixKey: string) => void;
   onAddInlineTopic: (unitId: string, title: string, keyword: string) => void;
   onDeleteCustomTopic: (unitId: string, topicId: string) => void;
+  onArchiveSubject: () => void;
+  onHideTopic: (topicId: string) => void;
 }
 
 function SubjectRowsGroup({
@@ -3144,6 +3196,8 @@ function SubjectRowsGroup({
   onCellPointerEnter,
   onAddInlineTopic,
   onDeleteCustomTopic,
+  onArchiveSubject,
+  onHideTopic,
 }: SubjectRowsGroupProps) {
   const [isAddingTopic, setIsAddingTopic] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -3200,6 +3254,15 @@ function SubjectRowsGroup({
                   <span>단원</span>
                 </button>
               )}
+              <button
+                type="button"
+                onClick={onArchiveSubject}
+                className="p-0.5 rounded bg-white/[0.06] hover:bg-rose-500/80 text-slate-400 hover:text-white transition"
+                title={`${subject.title} 이 자리에서 빼기 (보관함에 보존)`}
+                aria-label={`${subject.title} 빼기`}
+              >
+                <X className="w-3 h-3" />
+              </button>
               <span className="text-[9.5px] font-mono font-bold text-slate-400">
                 {isCollapsed ? `${subjectTopicCount}·` : ""}
                 <strong style={{ color: subject.color }}>{subjectTotalDone}R</strong>
@@ -3353,16 +3416,22 @@ function SubjectRowsGroup({
                         <span className="text-[10.5px] font-bold text-slate-200 truncate leading-tight">
                           {topic.title}
                         </span>
-                        {isCustomTopic && (
-                          <button
-                            type="button"
-                            onClick={() => onDeleteCustomTopic(unit.id, topic.id)}
-                            className="text-slate-600 hover:text-rose-400 shrink-0"
-                            title="커스텀 단원 삭제"
-                          >
-                            <X className="w-2.5 h-2.5" />
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            isCustomTopic
+                              ? onDeleteCustomTopic(unit.id, topic.id)
+                              : onHideTopic(topic.id)
+                          }
+                          className="text-slate-600 hover:text-rose-400 shrink-0"
+                          title={
+                            isCustomTopic
+                              ? "커스텀 단원 삭제"
+                              : "이 단원 플래너에서 빼기 (언제든 복원 가능)"
+                          }
+                        >
+                          <X className="w-2.5 h-2.5" />
+                        </button>
                       </div>
                       {typeof topic.questionCount === "number" && (
                         <div className="text-[8.5px] font-mono text-slate-400 leading-tight mt-0.5">
