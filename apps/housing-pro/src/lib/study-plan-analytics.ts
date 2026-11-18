@@ -2,10 +2,27 @@ import {
   type MatrixCellLog,
   type StudySubjectNode,
   type StudyTopicNode,
+  type TimetableSlotEntry,
   type TimetableSlotLog,
   getTimetableSlotActual,
   getTimetableSlotPlan,
 } from "@/data/study-textbooks";
+
+/** 현재 활성화된 책·과목·단원 기준으로 타임테이블 예상(plan) 슬롯 표시 여부를 판별 */
+export function isPlanSlotVisibleForBooks(
+  plan: TimetableSlotEntry | null,
+  activeBookIds?: string[],
+  activeTopicIds?: Set<string>
+): boolean {
+  if (!plan) return false;
+  if (plan.bookId && activeBookIds && !activeBookIds.includes(plan.bookId)) {
+    return false;
+  }
+  if (plan.topicId && activeTopicIds && !activeTopicIds.has(plan.topicId)) {
+    return false;
+  }
+  return true;
+}
 
 export interface TopicPlanActualItem {
   topicId: string;
@@ -88,8 +105,18 @@ export function computeDayPlanActualSummary(params: {
   subjects: StudySubjectNode[];
   matrixLogs: Record<string, MatrixCellLog>;
   daySlots: Record<string, TimetableSlotLog>;
+  activeBookIds?: string[];
 }): DayPlanActualSummary {
-  const { dateISO, subjects, matrixLogs, daySlots } = params;
+  const { dateISO, subjects, matrixLogs, daySlots, activeBookIds } = params;
+
+  const activeTopicIds = new Set<string>();
+  for (const s of subjects) {
+    for (const u of s.units) {
+      for (const t of u.topics) {
+        activeTopicIds.add(t.id);
+      }
+    }
+  }
 
   const ttPlanByTopic = new Map<string, number>();
   const ttActualByTopic = new Map<string, number>();
@@ -102,7 +129,10 @@ export function computeDayPlanActualSummary(params: {
   let customActualMinutes = 0;
 
   for (const slot of Object.values(daySlots)) {
-    const plan = getTimetableSlotPlan(slot);
+    const rawPlan = getTimetableSlotPlan(slot);
+    const plan = isPlanSlotVisibleForBooks(rawPlan, activeBookIds, activeTopicIds)
+      ? rawPlan
+      : null;
     const actual = getTimetableSlotActual(slot);
 
     if (plan) {
@@ -187,10 +217,7 @@ export function computeDayPlanActualSummary(params: {
     }
   }
 
-  // 비활성/삭제된 단원 ID로만 타임테이블에 남아 있는 슬롯이 있으면 합산 보존
-  for (const [topicId, min] of ttPlanByTopic.entries()) {
-    if (!seenTopics.has(topicId)) totalTopicPlanMinutes += min;
-  }
+  // 실행(actual)은 타이머로 실제 공부한 시간이므로 비활성 단원 기록도 일별 실제 공부시간에 보존
   for (const [topicId, min] of ttActualByTopic.entries()) {
     if (!seenTopics.has(topicId)) totalTopicActualMinutes += min;
   }
@@ -223,8 +250,9 @@ export function computePeriodPlanActualGap(params: {
   subjects: StudySubjectNode[];
   matrixLogs: Record<string, MatrixCellLog>;
   timetablesByDate: Record<string, Record<string, TimetableSlotLog>>;
+  activeBookIds?: string[];
 }): PeriodPlanActualGapSummary {
-  const { dateISOs, subjects, matrixLogs, timetablesByDate } = params;
+  const { dateISOs, subjects, matrixLogs, timetablesByDate, activeBookIds } = params;
 
   let totalPlanMinutes = 0;
   let totalActualMinutes = 0;
@@ -254,6 +282,7 @@ export function computePeriodPlanActualGap(params: {
       subjects,
       matrixLogs,
       daySlots: timetablesByDate[dateISO] || {},
+      activeBookIds,
     });
 
     totalPlanMinutes += daySummary.planMinutes;

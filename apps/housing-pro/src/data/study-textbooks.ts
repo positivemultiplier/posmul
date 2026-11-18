@@ -85,12 +85,14 @@ export interface TimetableSlotEntry {
   color: string;
   label: string;
   topicId?: string;
+  bookId?: string;
 }
 
 export interface TimetableSlotLog {
   color: string;
   label: string;
   topicId?: string;
+  bookId?: string;
   /** 미리 계획한 예상(Plan) 기록 */
   plan?: TimetableSlotEntry;
   /** 타이머 완료 또는 수동 체크한 실제 실행(Actual) 기록 */
@@ -106,6 +108,7 @@ export function getTimetableSlotPlan(slot?: TimetableSlotLog): TimetableSlotEntr
       color: slot.color,
       label: slot.label,
       topicId: slot.topicId,
+      ...(slot.bookId ? { bookId: slot.bookId } : {}),
     };
   }
   return null;
@@ -134,6 +137,7 @@ export function setTimetableSlotLayer(
     color: primary.color,
     label: primary.label,
     ...(primary.topicId ? { topicId: primary.topicId } : {}),
+    ...(primary.bookId ? { bookId: primary.bookId } : {}),
     ...(nextPlan ? { plan: nextPlan } : {}),
     ...(nextActual ? { actual: nextActual } : {}),
   };

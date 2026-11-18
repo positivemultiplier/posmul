@@ -45,6 +45,7 @@ import {
   computePeriodPlanActualGap,
   formatMinutesKo,
   formatGapMinutesKo,
+  isPlanSlotVisibleForBooks,
 } from "@/lib/study-plan-analytics";
 import {
   CUSTOM_SUBJECT_COLOR_PALETTE,
@@ -422,6 +423,14 @@ export default function StudyPlannerMatrixPage() {
     [selectedDiaryDate]
   );
 
+  const activeTopicIdSet = useMemo(() => {
+    const set = new Set<string>();
+    for (const entry of allActiveTopicEntries) {
+      set.add(entry.topic.id);
+    }
+    return set;
+  }, [allActiveTopicEntries]);
+
   const weekPlanActualGap = useMemo(
     () =>
       computePeriodPlanActualGap({
@@ -429,8 +438,9 @@ export default function StudyPlannerMatrixPage() {
         subjects,
         matrixLogs,
         timetablesByDate,
+        activeBookIds,
       }),
-    [weekDates, subjects, matrixLogs, timetablesByDate]
+    [weekDates, subjects, matrixLogs, timetablesByDate, activeBookIds]
   );
 
   const weekSummary = useMemo(() => {
@@ -498,8 +508,9 @@ export default function StudyPlannerMatrixPage() {
         subjects,
         matrixLogs,
         daySlots: dayTimetableGrid,
+        activeBookIds,
       }),
-    [selectedDiaryDate, subjects, matrixLogs, dayTimetableGrid]
+    [selectedDiaryDate, subjects, matrixLogs, dayTimetableGrid, activeBookIds]
   );
 
   const timetableStats = useMemo(() => {
@@ -551,7 +562,11 @@ export default function StudyPlannerMatrixPage() {
     }
 
     for (const slot of Object.values(dayTimetableGrid)) {
-      for (const entry of [getTimetableSlotPlan(slot), getTimetableSlotActual(slot)]) {
+      const rawPlan = getTimetableSlotPlan(slot);
+      const visiblePlan = isPlanSlotVisibleForBooks(rawPlan, activeBookIds, activeTopicIdSet)
+        ? rawPlan
+        : null;
+      for (const entry of [visiblePlan, getTimetableSlotActual(slot)]) {
         if (!entry?.topicId || seen.has(entry.topicId)) continue;
         const meta = topicMetaMap.get(entry.topicId);
         if (!meta) continue;
@@ -569,7 +584,14 @@ export default function StudyPlannerMatrixPage() {
     }
 
     return list;
-  }, [dayPlanActualSummary.items, dayTimetableGrid, timetableStats, topicMetaMap]);
+  }, [
+    dayPlanActualSummary.items,
+    dayTimetableGrid,
+    timetableStats,
+    topicMetaMap,
+    activeBookIds,
+    activeTopicIdSet,
+  ]);
 
   const activePaletteItem = useMemo(() => {
     if (plannedTopicPalette.length === 0) return null;
@@ -580,11 +602,13 @@ export default function StudyPlannerMatrixPage() {
   }, [plannedTopicPalette, selectedPaletteTopicId]);
 
   const activeTimetableBrush = useMemo(() => {
+    const fallbackBookId = selectedShelfBookId || activeBooks[0]?.id;
     if (useCustomTimetableColor) {
       return {
         color: timetableBrushColor,
         label: activePaletteItem?.topic.title || "커스텀 집중",
         topicId: activePaletteItem?.topicId,
+        bookId: activePaletteItem?.subject.bookId || fallbackBookId,
       };
     }
     if (activePaletteItem) {
@@ -592,14 +616,22 @@ export default function StudyPlannerMatrixPage() {
         color: activePaletteItem.color,
         label: activePaletteItem.topic.title,
         topicId: activePaletteItem.topicId,
+        bookId: activePaletteItem.subject.bookId || fallbackBookId,
       };
     }
     return {
       color: timetableBrushColor,
       label: "직접 계획",
       topicId: undefined,
+      bookId: fallbackBookId,
     };
-  }, [useCustomTimetableColor, timetableBrushColor, activePaletteItem]);
+  }, [
+    useCustomTimetableColor,
+    timetableBrushColor,
+    activePaletteItem,
+    selectedShelfBookId,
+    activeBooks,
+  ]);
 
   // 매트릭스 드래그 시작/연장/커밋
   const startMatrixDrag = useCallback((cellKey: string) => {
@@ -701,6 +733,9 @@ export default function StudyPlannerMatrixPage() {
                 ...(activeTimetableBrush.topicId
                   ? { topicId: activeTimetableBrush.topicId }
                   : {}),
+                ...(activeTimetableBrush.bookId
+                  ? { bookId: activeTimetableBrush.bookId }
+                  : {}),
               }
         );
         if (updatedSlot) {
@@ -713,6 +748,20 @@ export default function StudyPlannerMatrixPage() {
     },
     [selectedDiaryDate, setTimetableSlots, activeTimetableBrush]
   );
+
+  /** 선택된 날짜의 예상(plan) 타임테이블 슬롯 일괄 비우기 (타이머 실행 기록은 보존) */
+  const handleClearDayPlanSlots = useCallback(() => {
+    setTimetableSlots(selectedDiaryDate, (prev) => {
+      const next: Record<string, TimetableSlotLog> = {};
+      for (const [sKey, sVal] of Object.entries(prev)) {
+        const updated = setTimetableSlotLayer(sVal, "plan", null);
+        if (updated) {
+          next[sKey] = updated;
+        }
+      }
+      return next;
+    });
+  }, [selectedDiaryDate, setTimetableSlots]);
 
   const getTopicDoneCount = (topicId: string) => {
     let count = 0;
@@ -954,7 +1003,9 @@ export default function StudyPlannerMatrixPage() {
             return (
               <div
                 key={book.id}
-                className={`relative shrink-0 w-[112px] rounded-xl overflow-hidden border transition cursor-pointer select-none flex flex-col justify-between ${
+                className={`relative shrink-0 rounded-xl overflow-hidden border transition cursor-pointer select-none flex ${
+                  book.coverImageUrl ? "w-[156px]" : "w-[116px]"
+                } ${
                   isSelectedShelf
                     ? "ring-2 ring-white border-white"
                     : "border-[#FF5A36]/70 shadow-lg"
@@ -969,39 +1020,50 @@ export default function StudyPlannerMatrixPage() {
               >
                 {/* 책등 입체 바 */}
                 <div
-                  className="absolute left-0 top-0 bottom-0 w-1.5"
+                  className="absolute left-0 top-0 bottom-0 w-1.5 z-10"
                   style={{ backgroundColor: book.coverColor }}
                 />
-                <div className="pl-2.5 pr-1.5 pt-2 pb-1.5 space-y-1">
-                  <div className="flex items-center justify-between gap-1">
-                    <span
-                      className="px-1.5 py-0.2 rounded text-[8.5px] font-black text-white truncate max-w-[64px]"
-                      style={{ backgroundColor: book.coverColor }}
-                    >
-                      {book.badge}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeBookFromPlanner(book.id);
-                        if (selectedShelfBookId === book.id) {
-                          setSelectedShelfBookId(null);
-                        }
-                      }}
-                      className="w-4 h-4 rounded-full bg-black/50 hover:bg-rose-500 text-slate-200 hover:text-white flex items-center justify-center transition shrink-0"
-                      title={`${book.title} 플래너에서 빼기 (기록 보존)`}
-                      aria-label={`${book.title} 빼기`}
-                    >
-                      <X className="w-2.5 h-2.5" />
-                    </button>
-                  </div>
-                  <div className="text-[10px] font-black text-white line-clamp-2 leading-tight min-h-[24px]">
-                    {book.title}
-                  </div>
-                  <div className="text-[8.5px] font-mono text-slate-300 flex items-center justify-between">
-                    <span>{topicCount}단원</span>
-                    <span className="text-emerald-300">적용중</span>
+
+                <div className="pl-2.5 pr-1.5 py-2 flex items-center gap-2 w-full min-w-0">
+                  {book.coverImageUrl && (
+                    <img
+                      src={book.coverImageUrl}
+                      alt={book.title}
+                      className="w-10 h-14 object-cover rounded-md border border-white/20 shadow-md shrink-0 bg-[#0D0D11]"
+                    />
+                  )}
+
+                  <div className="flex-1 min-w-0 flex flex-col justify-between gap-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <span
+                        className="px-1.5 py-0.2 rounded text-[8.5px] font-black text-white truncate max-w-[64px]"
+                        style={{ backgroundColor: book.coverColor }}
+                      >
+                        {book.badge}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeBookFromPlanner(book.id);
+                          if (selectedShelfBookId === book.id) {
+                            setSelectedShelfBookId(null);
+                          }
+                        }}
+                        className="w-4 h-4 rounded-full bg-black/50 hover:bg-rose-500 text-slate-200 hover:text-white flex items-center justify-center transition shrink-0"
+                        title={`${book.title} 플래너에서 빼기 (기록 보존)`}
+                        aria-label={`${book.title} 빼기`}
+                      >
+                        <X className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                    <div className="text-[10px] font-black text-white line-clamp-2 leading-tight min-h-[24px]">
+                      {book.title}
+                    </div>
+                    <div className="text-[8.5px] font-mono text-slate-300 flex items-center justify-between">
+                      <span>{topicCount}단원</span>
+                      <span className="text-emerald-300">적용중</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1701,7 +1763,7 @@ export default function StudyPlannerMatrixPage() {
                   </button>
                 </div>
 
-                <div className="text-right text-[10px] font-mono">
+                <div className="text-right text-[10px] font-mono shrink-0 whitespace-nowrap">
                   <div className="text-white font-black">
                     {formatShortMMDDWithDay(selectedDiaryDate, todayISO)}
                   </div>
@@ -1981,13 +2043,24 @@ export default function StudyPlannerMatrixPage() {
                     </p>
                   </div>
 
-                  <Link
-                    href="/study/stats?tab=gap"
-                    className="px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-500/35 text-[10px] font-black text-sky-200 hover:bg-sky-500/25 flex items-center gap-1 transition"
-                  >
-                    <BarChart3 className="w-3 h-3" />
-                    <span>Gap 수치 분석</span>
-                  </Link>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      onClick={handleClearDayPlanSlots}
+                      className="px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-rose-950/60 border border-white/[0.08] text-[10px] font-bold text-slate-300 hover:text-rose-200 flex items-center gap-1 transition"
+                      title="오늘 예상 계획 슬롯만 비우기 (타이머 실행 기록은 보존)"
+                    >
+                      <Eraser className="w-3 h-3" />
+                      <span>예상 비우기</span>
+                    </button>
+                    <Link
+                      href="/study/stats?tab=gap"
+                      className="px-2.5 py-1 rounded-lg bg-sky-500/15 border border-sky-500/35 text-[10px] font-black text-sky-200 hover:bg-sky-500/25 flex items-center gap-1 transition"
+                    >
+                      <BarChart3 className="w-3 h-3" />
+                      <span>Gap 수치</span>
+                    </Link>
+                  </div>
                 </div>
 
                 {/* 예상 계획 브러시 선택 바 (드래그용) */}
@@ -2111,7 +2184,14 @@ export default function StudyPlannerMatrixPage() {
                           {[0, 1, 2, 3, 4, 5].map((slot) => {
                             const key = `${hour}-${slot}`;
                             const cell = dayTimetableGrid[key];
-                            const planEntry = getTimetableSlotPlan(cell);
+                            const rawPlan = getTimetableSlotPlan(cell);
+                            const planEntry = isPlanSlotVisibleForBooks(
+                              rawPlan,
+                              activeBookIds,
+                              activeTopicIdSet
+                            )
+                              ? rawPlan
+                              : null;
                             const actualEntry = getTimetableSlotActual(cell);
                             const isMatched = Boolean(
                               planEntry &&
@@ -2170,7 +2250,14 @@ export default function StudyPlannerMatrixPage() {
                           {[0, 1, 2, 3, 4, 5].map((slot) => {
                             const key = `${hour}-${slot}`;
                             const cell = dayTimetableGrid[key];
-                            const planEntry = getTimetableSlotPlan(cell);
+                            const rawPlan = getTimetableSlotPlan(cell);
+                            const planEntry = isPlanSlotVisibleForBooks(
+                              rawPlan,
+                              activeBookIds,
+                              activeTopicIdSet
+                            )
+                              ? rawPlan
+                              : null;
                             const actualEntry = getTimetableSlotActual(cell);
                             const isMatched = Boolean(
                               planEntry &&
@@ -2330,7 +2417,14 @@ export default function StudyPlannerMatrixPage() {
 
                             for (let s = 0; s < 6; s += 1) {
                               const slot = dayGrid[`${hour}-${s}`];
-                              const p = getTimetableSlotPlan(slot);
+                              const rawP = getTimetableSlotPlan(slot);
+                              const p = isPlanSlotVisibleForBooks(
+                                rawP,
+                                activeBookIds,
+                                activeTopicIdSet
+                              )
+                                ? rawP
+                                : null;
                               const a = getTimetableSlotActual(slot);
                               if (p) {
                                 planCount += 1;

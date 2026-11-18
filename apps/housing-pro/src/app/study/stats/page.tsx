@@ -70,6 +70,7 @@ export default function StudyStatisticsPage() {
   const {
     todayISO,
     activeBook,
+    activeBookIds,
     subjects,
     matrixLogs,
     timetablesByDate,
@@ -283,8 +284,9 @@ export default function StudyStatisticsPage() {
         subjects,
         matrixLogs,
         timetablesByDate,
+        activeBookIds,
       }),
-    [gapDateISOs, subjects, matrixLogs, timetablesByDate]
+    [gapDateISOs, subjects, matrixLogs, timetablesByDate, activeBookIds]
   );
 
   // 출제빈도 탭 필터링 & 정렬

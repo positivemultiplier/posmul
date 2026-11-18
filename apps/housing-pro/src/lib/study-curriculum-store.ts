@@ -515,25 +515,37 @@ export function useStudyCurriculum() {
   );
 
   const allCatalogBooks: TextbookCatalogItem[] = useMemo(() => {
-    const customAsCatalog: TextbookCatalogItem[] = (state.customBooks || []).map((cb) => ({
-      id: cb.id,
-      title: cb.title,
-      subtitle: cb.subtitle || "사용자 커스텀 교재 · 자유 목차 구성",
-      author: cb.author || "내 커스텀",
-      edition: cb.publisher || "커스텀 교재",
-      badge: cb.badge || cb.title.slice(0, 6),
-      coverColor: cb.coverColor || "#FF5A36",
-      ...(cb.isbn ? { isbn: cb.isbn } : {}),
-      ...(cb.publisher ? { publisher: cb.publisher } : {}),
-      ...(cb.coverImageUrl ? { coverImageUrl: cb.coverImageUrl } : {}),
-      requiresSerial: false,
-      defaultExamDate: state.examDate || "2026-12-12",
-      subjects: (state.customSubjects || []).filter((s) => s.bookId === cb.id),
-      seedOffsets: [],
-      seedTodos: [],
-    }));
+    const customAsCatalog: TextbookCatalogItem[] = (state.customBooks || []).map((cb) => {
+      const bookTopicMap = state.customTopicsByBook[cb.id] || {};
+      const bookSubjects = (state.customSubjects || [])
+        .filter((s) => s.bookId === cb.id)
+        .map((s) => ({
+          ...s,
+          units: s.units.map((u) => {
+            const extra = bookTopicMap[u.id] || [];
+            return extra.length > 0 ? { ...u, topics: [...u.topics, ...extra] } : u;
+          }),
+        }));
+      return {
+        id: cb.id,
+        title: cb.title,
+        subtitle: cb.subtitle || "사용자 커스텀 교재 · 자유 목차 구성",
+        author: cb.author || "내 커스텀",
+        edition: cb.publisher || "커스텀 교재",
+        badge: cb.badge || cb.title.slice(0, 6),
+        coverColor: cb.coverColor || "#FF5A36",
+        ...(cb.isbn ? { isbn: cb.isbn } : {}),
+        ...(cb.publisher ? { publisher: cb.publisher } : {}),
+        ...(cb.coverImageUrl ? { coverImageUrl: cb.coverImageUrl } : {}),
+        requiresSerial: false,
+        defaultExamDate: state.examDate || "2026-12-12",
+        subjects: bookSubjects,
+        seedOffsets: [],
+        seedTodos: [],
+      };
+    });
     return [...TEXTBOOK_CATALOG, ...customAsCatalog];
-  }, [state.customBooks, state.customSubjects, state.examDate]);
+  }, [state.customBooks, state.customSubjects, state.customTopicsByBook, state.examDate]);
 
   const activeBookIds = useMemo(() => {
     const validSet = new Set(allCatalogBooks.map((b) => b.id));
@@ -1528,6 +1540,9 @@ export function useStudyCurriculum() {
             color: resolvedColor,
             label: resolvedLabel,
             topicId,
+            ...(meta?.subject.bookId || activeBook.id
+              ? { bookId: meta?.subject.bookId || activeBook.id }
+              : {}),
           });
           if (updatedSlot) {
             nextDaySlots[sKey] = updatedSlot;
