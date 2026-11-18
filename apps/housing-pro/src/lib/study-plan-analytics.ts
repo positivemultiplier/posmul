@@ -206,7 +206,7 @@ export function computeDayPlanActualSummary(params: {
           subject,
           unitTitle: unit.title,
           topic,
-          color: cell?.customColor || subject.color,
+          color: cell?.customColor || topic.color || subject.color,
           cell,
           planMinutes,
           actualMinutes,

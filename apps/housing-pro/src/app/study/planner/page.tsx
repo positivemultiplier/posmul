@@ -90,6 +90,16 @@ interface EditingSubjectFormState {
   newTopicTitle: string;
 }
 
+interface EditingTopicFormState {
+  topicId: string;
+  subjectTitle: string;
+  subjectColor: string;
+  title: string;
+  defaultKeyword: string;
+  estimatedMinutes: number;
+  color: string; // "" 이면 과목 기본색 사용
+}
+
 interface ScheduleTopicItem {
   key: string;
   dateISO: string;
@@ -144,6 +154,7 @@ export default function StudyPlannerMatrixPage() {
     deleteCustomBook,
     addCustomSubject,
     updateSubjectCustomization,
+    updateTopicCustomization,
     archiveSubject,
     restoreSubject,
     deleteSubject,
@@ -221,6 +232,8 @@ export default function StudyPlannerMatrixPage() {
   const [openMenuSubjectId, setOpenMenuSubjectId] = useState<string | null>(null);
   const [editingSubjectForm, setEditingSubjectForm] =
     useState<EditingSubjectFormState | null>(null);
+  const [editingTopicForm, setEditingTopicForm] =
+    useState<EditingTopicFormState | null>(null);
 
   // todayISO 동적 동기화
   useEffect(() => {
@@ -578,7 +591,7 @@ export default function StudyPlannerMatrixPage() {
           topicId: entry.topicId,
           subject: meta.subject,
           topic: meta.topic,
-          color: entry.color || meta.subject.color,
+          color: entry.color || meta.topic.color || meta.subject.color,
           plannedMin: timetableStats.planByTopic.get(entry.topicId) ?? 0,
           actualMin: timetableStats.actualByTopic.get(entry.topicId) ?? 0,
           matchedMin: 0,
@@ -824,7 +837,7 @@ export default function StudyPlannerMatrixPage() {
       minutes: existing?.minutes ?? topic.estimatedMinutes,
       planSpanDays: 1,
       carryOverTomorrow: true,
-      customColor: existing?.customColor,
+      customColor: existing?.customColor || topic.color,
     });
   };
 
@@ -911,6 +924,29 @@ export default function StudyPlannerMatrixPage() {
       );
     }
     setEditingSubjectForm(null);
+  };
+
+  const handleOpenEditTopic = (subj: StudySubjectNode, topic: StudyTopicNode) => {
+    setEditingTopicForm({
+      topicId: topic.id,
+      subjectTitle: subj.title,
+      subjectColor: subj.color,
+      title: topic.title,
+      defaultKeyword: topic.defaultKeyword,
+      estimatedMinutes: topic.estimatedMinutes,
+      color: topic.color || "",
+    });
+  };
+
+  const handleSaveTopicForm = () => {
+    if (!editingTopicForm) return;
+    updateTopicCustomization(editingTopicForm.topicId, {
+      title: editingTopicForm.title.trim() || undefined,
+      defaultKeyword: editingTopicForm.defaultKeyword.trim() || undefined,
+      estimatedMinutes: Math.max(5, Math.min(240, editingTopicForm.estimatedMinutes || 30)),
+      color: editingTopicForm.color,
+    });
+    setEditingTopicForm(null);
   };
 
   const handleAddCategorySubmit = () => {
@@ -1582,6 +1618,8 @@ export default function StudyPlannerMatrixPage() {
                       onDeleteCustomTopic={(unitId, topicId) =>
                         deleteCustomTopic(unitId, topicId)
                       }
+                      onEditSubject={() => handleOpenEditSubject(subject)}
+                      onEditTopic={(topic) => handleOpenEditTopic(subject, topic)}
                       onArchiveSubject={() => archiveSubject(subject.id)}
                       onHideTopic={(topicId) => hideTopic(topicId)}
                     />
@@ -2721,100 +2759,6 @@ export default function StudyPlannerMatrixPage() {
               </button>
             </div>
 
-            {editingSubjectForm && (
-              <div className="p-3.5 rounded-2xl bg-[#1B1B25] border border-sky-500/40 space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-white">과목 정보 · 분류 · 색상 수정</span>
-                  <button
-                    type="button"
-                    onClick={() => setEditingSubjectForm(null)}
-                    className="text-slate-400 hover:text-white"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-                <div className="grid grid-cols-[1fr_auto] gap-2">
-                  <input
-                    type="text"
-                    value={editingSubjectForm.title}
-                    onChange={(e) =>
-                      setEditingSubjectForm({
-                        ...editingSubjectForm,
-                        title: e.target.value,
-                      })
-                    }
-                    className="px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
-                  />
-                  <select
-                    value={editingSubjectForm.category}
-                    onChange={(e) =>
-                      setEditingSubjectForm({
-                        ...editingSubjectForm,
-                        category: e.target.value,
-                      })
-                    }
-                    className="px-2.5 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
-                  >
-                    {categories.map((cat) => (
-                      <option key={cat} value={cat}>
-                        {cat}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <span className="text-[10px] font-bold text-slate-400">색상:</span>
-                  {CUSTOM_SUBJECT_COLOR_PALETTE.map((hex) => (
-                    <button
-                      key={hex}
-                      type="button"
-                      onClick={() =>
-                        setEditingSubjectForm({ ...editingSubjectForm, color: hex })
-                      }
-                      className={`w-4 h-4 rounded-full border ${
-                        editingSubjectForm.color === hex
-                          ? "border-white scale-110 ring-1 ring-white"
-                          : "border-white/20"
-                      }`}
-                      style={{ backgroundColor: hex }}
-                    />
-                  ))}
-                  <input
-                    type="color"
-                    value={editingSubjectForm.color}
-                    onChange={(e) =>
-                      setEditingSubjectForm({
-                        ...editingSubjectForm,
-                        color: e.target.value,
-                      })
-                    }
-                    className="w-6 h-5 bg-transparent cursor-pointer"
-                  />
-                </div>
-                {editingSubjectForm.firstUnitId && (
-                  <input
-                    type="text"
-                    value={editingSubjectForm.newTopicTitle}
-                    onChange={(e) =>
-                      setEditingSubjectForm({
-                        ...editingSubjectForm,
-                        newTopicTitle: e.target.value,
-                      })
-                    }
-                    placeholder="이 과목에 새 단원 추가 (선택 입력)"
-                    className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
-                  />
-                )}
-                <button
-                  type="button"
-                  onClick={handleSaveSubjectForm}
-                  className="w-full py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-black"
-                >
-                  변경 사항 저장 (일정표·통계 색상 동시 반영)
-                </button>
-              </div>
-            )}
-
             {/* 3. 보관함 N */}
             <div className="space-y-2 pt-1">
               <div className="text-xs font-black text-slate-300 px-1">
@@ -3176,6 +3120,271 @@ export default function StudyPlannerMatrixPage() {
         onAddTopicsBulk={addCustomTopicsBulk}
         onReplaceBookStructure={replaceCustomBookStructure}
       />
+
+      {/* 독립 과목 수정 모달 (매트릭스 칸 & 과목관리 공용) */}
+      {editingSubjectForm && (
+        <div
+          className="fixed inset-0 z-[65] bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-3"
+          onClick={() => setEditingSubjectForm(null)}
+        >
+          <div
+            className="w-full max-w-[420px] rounded-3xl bg-[#181820] border border-sky-500/40 p-5 space-y-3.5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-black text-white flex items-center gap-1.5">
+                <Pencil className="w-3.5 h-3.5 text-sky-400" />
+                <span>과목 정보 · 분류 · 색상 수정</span>
+              </span>
+              <button
+                type="button"
+                onClick={() => setEditingSubjectForm(null)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <input
+                type="text"
+                value={editingSubjectForm.title}
+                onChange={(e) =>
+                  setEditingSubjectForm({
+                    ...editingSubjectForm,
+                    title: e.target.value,
+                  })
+                }
+                placeholder="과목명"
+                className="px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
+              />
+              <select
+                value={editingSubjectForm.category}
+                onChange={(e) =>
+                  setEditingSubjectForm({
+                    ...editingSubjectForm,
+                    category: e.target.value,
+                  })
+                }
+                className="px-2.5 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
+              >
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-bold text-slate-400">
+                과목 기본 색상 (일정표·매트릭스 동시 반영)
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {CUSTOM_SUBJECT_COLOR_PALETTE.map((hex) => (
+                  <button
+                    key={hex}
+                    type="button"
+                    onClick={() =>
+                      setEditingSubjectForm({ ...editingSubjectForm, color: hex })
+                    }
+                    className={`w-5 h-5 rounded-full border ${
+                      editingSubjectForm.color === hex
+                        ? "border-white scale-110 ring-1 ring-white"
+                        : "border-white/20"
+                    }`}
+                    style={{ backgroundColor: hex }}
+                  />
+                ))}
+                <input
+                  type="color"
+                  value={editingSubjectForm.color}
+                  onChange={(e) =>
+                    setEditingSubjectForm({
+                      ...editingSubjectForm,
+                      color: e.target.value,
+                    })
+                  }
+                  className="w-7 h-5 bg-transparent cursor-pointer"
+                />
+              </div>
+            </div>
+            {editingSubjectForm.firstUnitId && (
+              <input
+                type="text"
+                value={editingSubjectForm.newTopicTitle}
+                onChange={(e) =>
+                  setEditingSubjectForm({
+                    ...editingSubjectForm,
+                    newTopicTitle: e.target.value,
+                  })
+                }
+                placeholder="이 과목에 새 단원 바로 추가 (선택 입력)"
+                className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
+              />
+            )}
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setEditingSubjectForm(null)}
+                className="px-4 py-2.5 rounded-xl bg-white/[0.06] text-xs font-bold text-slate-300"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveSubjectForm}
+                className="flex-1 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-white text-xs font-black"
+              >
+                과목 수정 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 단원별 수정 & 개별 컬러 조정 모달 */}
+      {editingTopicForm && (
+        <div
+          className="fixed inset-0 z-[65] bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-3"
+          onClick={() => setEditingTopicForm(null)}
+        >
+          <div
+            className="w-full max-w-[420px] rounded-3xl bg-[#181820] border border-[#FF5A36]/45 p-5 space-y-3.5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <div className="min-w-0">
+                <div className="text-[10px] font-bold text-slate-400 truncate">
+                  {editingTopicForm.subjectTitle}
+                </div>
+                <h3 className="text-xs font-black text-white flex items-center gap-1.5 mt-0.5">
+                  <Pencil className="w-3.5 h-3.5 text-[#FF7A59]" />
+                  <span>단원 이름 · 예상분 · 개별 컬러 수정</span>
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingTopicForm(null)}
+                className="p-1 text-slate-400 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={editingTopicForm.title}
+                onChange={(e) =>
+                  setEditingTopicForm({ ...editingTopicForm, title: e.target.value })
+                }
+                placeholder="단원명"
+                className="w-full px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs font-bold text-white"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={editingTopicForm.defaultKeyword}
+                  onChange={(e) =>
+                    setEditingTopicForm({
+                      ...editingTopicForm,
+                      defaultKeyword: e.target.value,
+                    })
+                  }
+                  placeholder="짧은 키워드"
+                  className="px-3 py-2 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs text-white"
+                />
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0E0E12] border border-white/[0.1] text-xs">
+                  <span className="text-slate-400 text-[10.5px] shrink-0">예상</span>
+                  <input
+                    type="number"
+                    min={5}
+                    max={240}
+                    step={5}
+                    value={editingTopicForm.estimatedMinutes}
+                    onChange={(e) =>
+                      setEditingTopicForm({
+                        ...editingTopicForm,
+                        estimatedMinutes: Number(e.target.value) || 30,
+                      })
+                    }
+                    className="w-full bg-transparent text-right font-mono font-bold text-white focus:outline-none"
+                  />
+                  <span className="text-slate-400 text-[10.5px] shrink-0">분</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-[10px]">
+                <span className="font-bold text-slate-400">
+                  단원 개별 컬러 (일정표·매트릭스 구분용)
+                </span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEditingTopicForm({ ...editingTopicForm, color: "" })
+                  }
+                  className={`font-black ${
+                    editingTopicForm.color === ""
+                      ? "text-emerald-300"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  과목색({editingTopicForm.subjectColor}) 따르기
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {CUSTOM_SUBJECT_COLOR_PALETTE.map((hex) => {
+                  const selected = editingTopicForm.color === hex;
+                  return (
+                    <button
+                      key={hex}
+                      type="button"
+                      onClick={() =>
+                        setEditingTopicForm({ ...editingTopicForm, color: hex })
+                      }
+                      className={`w-5 h-5 rounded-full border ${
+                        selected
+                          ? "border-white scale-110 ring-1 ring-white"
+                          : "border-white/20"
+                      }`}
+                      style={{ backgroundColor: hex }}
+                    />
+                  );
+                })}
+                <input
+                  type="color"
+                  value={editingTopicForm.color || editingTopicForm.subjectColor}
+                  onChange={(e) =>
+                    setEditingTopicForm({
+                      ...editingTopicForm,
+                      color: e.target.value,
+                    })
+                  }
+                  className="w-7 h-5 bg-transparent cursor-pointer"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setEditingTopicForm(null)}
+                className="px-4 py-2.5 rounded-xl bg-white/[0.06] text-xs font-bold text-slate-300"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveTopicForm}
+                className="flex-1 py-2.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-xs font-black"
+              >
+                단원 수정 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MobileAppShell>
   );
 }
@@ -3207,6 +3416,8 @@ interface SubjectRowsGroupProps {
   onCellPointerEnter: (matrixKey: string) => void;
   onAddInlineTopic: (unitId: string, title: string, keyword: string) => void;
   onDeleteCustomTopic: (unitId: string, topicId: string) => void;
+  onEditSubject: () => void;
+  onEditTopic: (topic: StudyTopicNode) => void;
   onArchiveSubject: () => void;
   onHideTopic: (topicId: string) => void;
 }
@@ -3230,6 +3441,8 @@ function SubjectRowsGroup({
   onCellPointerEnter,
   onAddInlineTopic,
   onDeleteCustomTopic,
+  onEditSubject,
+  onEditTopic,
   onArchiveSubject,
   onHideTopic,
 }: SubjectRowsGroupProps) {
@@ -3277,17 +3490,15 @@ function SubjectRowsGroup({
             </button>
 
             <div className="flex items-center gap-1 shrink-0">
-              {defaultUnitId && (
-                <button
-                  type="button"
-                  onClick={() => setIsAddingTopic((prev) => !prev)}
-                  className="px-1.5 py-0.5 rounded bg-white/[0.07] hover:bg-[#FF5A36] text-[9px] font-black text-slate-200 hover:text-white flex items-center gap-0.5 transition"
-                  title={`${subject.title}에 단원 추가`}
-                >
-                  <Plus className="w-2.5 h-2.5" />
-                  <span>단원</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={onEditSubject}
+                className="px-1.5 py-0.5 rounded bg-white/[0.07] hover:bg-sky-500 text-[9px] font-black text-slate-200 hover:text-white flex items-center gap-0.5 transition"
+                title={`${subject.title} 과목명·색상 수정`}
+              >
+                <Pencil className="w-2.5 h-2.5" />
+                <span>수정</span>
+              </button>
               <button
                 type="button"
                 onClick={onArchiveSubject}
@@ -3435,7 +3646,8 @@ function SubjectRowsGroup({
         subject.units.map((unit) =>
           unit.topics.map((topic, tIdx) => {
             const doneCount = getTopicDoneCount(topic.id);
-            const roundBadgeShade = getRoundColorStyle(subject.color, doneCount);
+            const topicColor = topic.color || subject.color;
+            const roundBadgeShade = getRoundColorStyle(topicColor, doneCount);
             const chapterStat = topic.chapterCode ? chapterTotals[topic.chapterCode] : undefined;
             const solvedCount = chapterStat?.solvedCount ?? 0;
             const isCustomTopic = topic.id.startsWith("custom-topic-");
@@ -3447,7 +3659,7 @@ function SubjectRowsGroup({
               >
                 <td
                   className="sticky left-0 z-10 bg-[#111116] border-r border-white/[0.12] px-2.5 py-1.5"
-                  style={{ boxShadow: `inset 4px 0 0 ${subject.color}88` }}
+                  style={{ boxShadow: `inset 4px 0 0 ${topicColor}` }}
                 >
                   <div className="flex items-center justify-between gap-1.5">
                     <div className="min-w-0">
@@ -3457,10 +3669,14 @@ function SubjectRowsGroup({
                         </div>
                       )}
                       <div className="flex items-center gap-1 min-w-0">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ backgroundColor: topicColor }}
+                        />
                         {topic.topicNo && (
                           <span
                             className="text-[9.5px] font-mono font-black shrink-0"
-                            style={{ color: subject.color }}
+                            style={{ color: topicColor }}
                           >
                             {topic.topicNo}.
                           </span>
@@ -3468,6 +3684,14 @@ function SubjectRowsGroup({
                         <span className="text-[10.5px] font-bold text-slate-200 truncate leading-tight">
                           {topic.title}
                         </span>
+                        <button
+                          type="button"
+                          onClick={() => onEditTopic(topic)}
+                          className="p-0.5 text-slate-500 hover:text-sky-300 shrink-0 transition"
+                          title="단원 이름·예상분·컬러 수정"
+                        >
+                          <Pencil className="w-2.5 h-2.5" />
+                        </button>
                         <button
                           type="button"
                           onClick={() =>
@@ -3513,7 +3737,7 @@ function SubjectRowsGroup({
                   const mKey = makeMatrixKey(topic.id, col.dateISO);
                   const cell = matrixLogs[mKey];
                   const isDragSelected = dragKeySet.has(mKey);
-                  const resolvedColor = cell?.customColor || subject.color;
+                  const resolvedColor = cell?.customColor || topicColor;
                   const cellRound = topicDoneOrderMap.get(mKey) || 1;
                   const doneShade = getRoundColorStyle(resolvedColor, cellRound);
 

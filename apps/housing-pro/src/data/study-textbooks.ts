@@ -14,6 +14,8 @@ export interface StudyTopicNode {
   title: string;
   defaultKeyword: string;
   estimatedMinutes: number;
+  /** 단원별 사용자 지정 컬러 (미지정 시 소속 과목 컬러 사용) */
+  color?: string;
 }
 
 export interface StudyUnitNode {
@@ -37,20 +39,32 @@ export const DEFAULT_SUBJECT_CATEGORIES = [
   "오답·정리",
 ] as const;
 
+export const DEFAULT_BASE_SUBJECT_COLOR = "#FF5A36";
+
 export const CUSTOM_SUBJECT_COLOR_PALETTE = [
-  "#C4E538",
-  "#EC4899",
-  "#A855F7",
-  "#7C3AED",
-  "#F97316",
   "#FF5A36",
   "#3B82F6",
   "#10B981",
-  "#06B6D4",
   "#F59E0B",
+  "#EC4899",
+  "#A855F7",
+  "#06B6D4",
+  "#C4E538",
+  "#F97316",
+  "#7C3AED",
   "#F43F5E",
   "#64748B",
 ] as const;
+
+/** 기본과목은 통일색을 유지하고, 개별 과목은 인덱스에 따라 서로 다른 기본값을 반환 */
+export function getDistinctSubjectColor(index: number, title?: string): string {
+  const cleanTitle = (title || "").trim();
+  if (cleanTitle === "기본 과목" || cleanTitle === "기본과목") {
+    return DEFAULT_BASE_SUBJECT_COLOR;
+  }
+  const nonBasePalette = CUSTOM_SUBJECT_COLOR_PALETTE.slice(1); // 기본과목(#FF5A36)과 다른 색 위주
+  return nonBasePalette[Math.abs(index) % nonBasePalette.length] || CUSTOM_SUBJECT_COLOR_PALETTE[0];
+}
 
 export interface StudySubjectNode {
   id: string;

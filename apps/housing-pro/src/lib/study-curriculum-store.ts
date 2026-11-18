@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   TEXTBOOK_CATALOG,
   DEFAULT_SUBJECT_CATEGORIES,
+  DEFAULT_BASE_SUBJECT_COLOR,
+  getDistinctSubjectColor,
   type TextbookCatalogItem,
   type StudySubjectNode,
   type MatrixCellLog,
@@ -84,7 +86,11 @@ function buildStudySubjectsForBook(params: {
     const subjId = subjInput.sourceSubjectId || `custom-subj-${seedTimestamp}-${sIdx}`;
     const subjStage = subjInput.examStage || stageFallback;
     const subjCategory = subjInput.category?.trim() || defaultCategory;
-    const subjColor = subjInput.color || defaultColor || "#FF5A36";
+    const subjColor =
+      subjInput.color ||
+      getDistinctSubjectColor(sIdx, cleanSubjTitle) ||
+      defaultColor ||
+      DEFAULT_BASE_SUBJECT_COLOR;
     const units =
       subjInput.units.length > 0
         ? subjInput.units
@@ -129,6 +135,13 @@ export interface SubjectOverrideItem {
   category?: string;
 }
 
+export interface TopicOverrideItem {
+  title?: string;
+  defaultKeyword?: string;
+  estimatedMinutes?: number;
+  color?: string; // 빈 문자열 전달 시 과목 기본색으로 초기화
+}
+
 export interface CurriculumPersistedState {
   activeBookId: string;
   /** 다중 선택된 교재 ID 목록 */
@@ -141,6 +154,8 @@ export interface CurriculumPersistedState {
   customCategories?: string[];
   /** 과목별 이름/색상/차수/분류 커스텀 오버라이드 */
   subjectOverrides?: Record<string, SubjectOverrideItem>;
+  /** 단원별 이름/키워드/예상분/개별컬러 커스텀 오버라이드 */
+  topicOverrides?: Record<string, TopicOverrideItem>;
   /** 보관함에 넣은 과목 ID 목록 */
   archivedSubjectIds?: string[];
   /** 플래너에서 뺀(숨긴) 개별 단원 ID 목록 */
@@ -210,6 +225,7 @@ function createDefaultState(todayISO: string): CurriculumPersistedState {
     customSubjects: [],
     customCategories: [],
     subjectOverrides: {},
+    topicOverrides: {},
     archivedSubjectIds: [],
     hiddenTopicIds: [],
     dayResetHour: 4,
@@ -269,6 +285,7 @@ function readStoredState(todayISO: string): CurriculumPersistedState {
       customSubjects: Array.isArray(parsed.customSubjects) ? parsed.customSubjects : [],
       customCategories: Array.isArray(parsed.customCategories) ? parsed.customCategories : [],
       subjectOverrides: parsed.subjectOverrides || {},
+      topicOverrides: parsed.topicOverrides || {},
       archivedSubjectIds: Array.isArray(parsed.archivedSubjectIds)
         ? parsed.archivedSubjectIds
         : [],
@@ -526,6 +543,10 @@ export function useStudyCurriculum() {
           ...(remote?.subjectOverrides || {}),
           ...(prev.subjectOverrides || {}),
         },
+        topicOverrides: {
+          ...(remote?.topicOverrides || {}),
+          ...(prev.topicOverrides || {}),
+        },
         archivedSubjectIds: Array.from(
           new Set([
             ...(remote?.archivedSubjectIds || []),
@@ -676,6 +697,7 @@ export function useStudyCurriculum() {
         title: string;
         defaultKeyword: string;
         estimatedMinutes: number;
+        color?: string;
       }>
     > = {};
     for (const bookId of Object.keys(state.customTopicsByBook)) {
@@ -691,6 +713,7 @@ export function useStudyCurriculum() {
     }
 
     const overrides = state.subjectOverrides || {};
+    const topicOvMap = state.topicOverrides || {};
     const archivedSet = new Set(state.archivedSubjectIds || []);
     const hiddenTopicSet = new Set(state.hiddenTopicIds || []);
 
@@ -712,7 +735,20 @@ export function useStudyCurriculum() {
           const combined = extra.length > 0 ? [...unit.topics, ...extra] : unit.topics;
           return {
             ...unit,
-            topics: combined.filter((t) => !hiddenTopicSet.has(t.id)),
+            topics: combined
+              .filter((t) => !hiddenTopicSet.has(t.id))
+              .map((t) => {
+                const tOv = topicOvMap[t.id];
+                const existingColor = "color" in t ? t.color : undefined;
+                if (!tOv) return t;
+                return {
+                  ...t,
+                  title: tOv.title ?? t.title,
+                  defaultKeyword: tOv.defaultKeyword ?? t.defaultKeyword,
+                  estimatedMinutes: tOv.estimatedMinutes ?? t.estimatedMinutes,
+                  color: tOv.color === "" ? undefined : tOv.color ?? existingColor,
+                };
+              }),
           };
         }),
       };
@@ -724,6 +760,7 @@ export function useStudyCurriculum() {
     state.customSubjects,
     state.customTopicsByBook,
     state.subjectOverrides,
+    state.topicOverrides,
     state.archivedSubjectIds,
     state.hiddenTopicIds,
   ]);
@@ -1163,6 +1200,111 @@ export function useStudyCurriculum() {
     [allMergedSubjects, updateState]
   );
 
+  /** 단원별 이름/키워드/예상분/개별컬러 수정 (타임테이블 슬롯 색상 자동 동기화) */
+  const updateTopicCustomization = useCallback(
+    (topicId: string, patch: TopicOverrideItem) => {
+      const meta = findTopicMetaInSubjects(allMergedSubjects, topicId);
+      const nextColorForSlots =
+        patch.color !== undefined
+          ? patch.color === ""
+            ? meta?.subject.color || "#FF5A36"
+            : patch.color
+          : undefined;
+
+      updateState((prev) => {
+        const prevOv = prev.topicOverrides?.[topicId] || {};
+        const nextTitle = patch.title?.trim() || prevOv.title;
+        const nextKeyword = patch.defaultKeyword?.trim() || prevOv.defaultKeyword;
+
+        // 커스텀 과목 내부에 있는 토픽도 title 동기화
+        const nextCustomSubjects = (prev.customSubjects || []).map((subj) => ({
+          ...subj,
+          units: subj.units.map((u) => ({
+            ...u,
+            topics: u.topics.map((t) => {
+              if (t.id !== topicId) return t;
+              return {
+                ...t,
+                title: patch.title?.trim() || t.title,
+                defaultKeyword: patch.defaultKeyword?.trim() || t.defaultKeyword,
+                estimatedMinutes: patch.estimatedMinutes ?? t.estimatedMinutes,
+                color:
+                  patch.color !== undefined
+                    ? patch.color === ""
+                      ? undefined
+                      : patch.color
+                    : t.color,
+              };
+            }),
+          })),
+        }));
+
+        // 커스텀 추가된 토픽(customTopicsByBook)도 동기화
+        const nextCustomTopicsByBook: CurriculumPersistedState["customTopicsByBook"] = {};
+        for (const [bId, unitMap] of Object.entries(prev.customTopicsByBook || {})) {
+          const updatedUnitMap: Record<
+            string,
+            Array<{
+              id: string;
+              title: string;
+              defaultKeyword: string;
+              estimatedMinutes: number;
+            }>
+          > = {};
+          for (const [uId, list] of Object.entries(unitMap)) {
+            updatedUnitMap[uId] = list.map((t) =>
+              t.id === topicId
+                ? {
+                    ...t,
+                    title: patch.title?.trim() || t.title,
+                    defaultKeyword: patch.defaultKeyword?.trim() || t.defaultKeyword,
+                    estimatedMinutes: patch.estimatedMinutes ?? t.estimatedMinutes,
+                  }
+                : t
+            );
+          }
+          nextCustomTopicsByBook[bId] = updatedUnitMap;
+        }
+
+        // 색상 변경 시 타임테이블 슬롯 색상 동기화
+        let nextTimetables = prev.timetablesByDate;
+        if (nextColorForSlots && prev.timetablesByDate) {
+          const singleTopicSet = new Set([topicId]);
+          const updatedMap: Record<string, Record<string, TimetableSlotLog>> = {};
+          for (const [dISO, slots] of Object.entries(prev.timetablesByDate)) {
+            const nextDay: Record<string, TimetableSlotLog> = {};
+            for (const [sKey, sVal] of Object.entries(slots)) {
+              nextDay[sKey] = recolorSlotByTopicSet(
+                sVal,
+                singleTopicSet,
+                nextColorForSlots
+              );
+            }
+            updatedMap[dISO] = nextDay;
+          }
+          nextTimetables = updatedMap;
+        }
+
+        return {
+          ...prev,
+          customSubjects: nextCustomSubjects,
+          customTopicsByBook: nextCustomTopicsByBook,
+          timetablesByDate: nextTimetables,
+          topicOverrides: {
+            ...(prev.topicOverrides || {}),
+            [topicId]: {
+              ...prevOv,
+              ...patch,
+              ...(nextTitle ? { title: nextTitle } : {}),
+              ...(nextKeyword ? { defaultKeyword: nextKeyword } : {}),
+            },
+          },
+        };
+      });
+    },
+    [allMergedSubjects, updateState]
+  );
+
   /** 과목 보관함에 넣기 */
   const archiveSubject = useCallback(
     (subjectId: string) => {
@@ -1544,7 +1686,8 @@ export function useStudyCurriculum() {
             (targetBookId === activeBook.id ? buildSeedLogs(activeBook, todayISO) : {})),
         };
         const existing = bookLogs[key];
-        const resolvedColor = existing?.customColor || meta?.subject.color || "#FF5A36";
+        const resolvedColor =
+          existing?.customColor || meta?.topic.color || meta?.subject.color || "#FF5A36";
         const resolvedLabel = meta?.topic.title || existing?.keyword || "집중학습";
 
         // 예상 시간(minutes)은 보존하고 실제 실행 시간(actualMinutes)만 누적
@@ -1889,6 +2032,7 @@ export function useStudyCurriculum() {
     deleteCustomBook,
     addCustomSubject,
     updateSubjectCustomization,
+    updateTopicCustomization,
     archiveSubject,
     restoreSubject,
     deleteSubject,

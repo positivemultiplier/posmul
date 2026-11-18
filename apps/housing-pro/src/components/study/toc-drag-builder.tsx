@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import {
   CUSTOM_SUBJECT_COLOR_PALETTE,
+  DEFAULT_BASE_SUBJECT_COLOR,
+  getDistinctSubjectColor,
   type StudySubjectNode,
 } from "@/data/study-textbooks";
 import type { CustomBookSubjectInput } from "@/lib/study-curriculum-store";
@@ -182,12 +184,16 @@ export function draftNodesToSubjectInputs(params: {
 
   const ensureSubj = (title?: string, color?: string, sourceSubjectId?: string) => {
     const subjTitle = (title || defaultSubjectTitle || "기본 과목").trim();
+    const resolvedColor =
+      color ||
+      (subjTitle === "기본 과목" || subjTitle === "기본과목"
+        ? DEFAULT_BASE_SUBJECT_COLOR
+        : getDistinctSubjectColor(result.length, subjTitle) ||
+          CUSTOM_SUBJECT_COLOR_PALETTE[result.length % CUSTOM_SUBJECT_COLOR_PALETTE.length] ||
+          defaultColor);
     curSubj = {
       title: subjTitle,
-      color:
-        color ||
-        CUSTOM_SUBJECT_COLOR_PALETTE[result.length % CUSTOM_SUBJECT_COLOR_PALETTE.length] ||
-        defaultColor,
+      color: resolvedColor,
       examStage,
       category,
       ...(sourceSubjectId ? { sourceSubjectId } : {}),
