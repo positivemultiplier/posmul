@@ -22,10 +22,17 @@ import {
   ShieldAlert,
   Sparkles,
   Play,
+  Timer,
+  Calendar,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
+import {
+  computePeriodPlanActualGap,
+  formatGapMinutesKo,
+  formatMinutesKo,
+} from "@/lib/study-plan-analytics";
 import {
   addDaysISO,
   diffDaysISO,
@@ -37,7 +44,17 @@ import {
   type StudyAnalyticsResult,
 } from "@/app/actions/exam-study.actions";
 
-type StatsTab = "predict" | "frequency" | "progress" | "matrix";
+type StatsTab = "predict" | "frequency" | "progress" | "matrix" | "gap";
+type GapPeriod = "today" | "week" | "30d" | "all";
+
+function getMondayStartWeekISOs(anchorISO: string): string[] {
+  const [y, m, d] = anchorISO.split("-").map(Number);
+  const dt = new Date(y, (m || 1) - 1, d || 1);
+  const day = dt.getDay();
+  const diffToMon = day === 0 ? -6 : 1 - day;
+  const mondayISO = addDaysISO(anchorISO, diffToMon);
+  return Array.from({ length: 7 }, (_, i) => addDaysISO(mondayISO, i));
+}
 
 const SUBJECT_FILTER_OPTIONS = [
   "ALL",
@@ -55,11 +72,29 @@ export default function StudyStatisticsPage() {
     activeBook,
     subjects,
     matrixLogs,
+    timetablesByDate,
     upsertMatrixCell,
   } = useStudyCurriculum();
 
   const [activeTab, setActiveTab] = useState<StatsTab>("predict");
+  const [gapPeriod, setGapPeriod] = useState<GapPeriod>("week");
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof globalThis !== "undefined" && "location" in globalThis) {
+      const params = new globalThis.URLSearchParams(globalThis.location.search);
+      const tab = params.get("tab");
+      if (
+        tab === "predict" ||
+        tab === "frequency" ||
+        tab === "progress" ||
+        tab === "matrix" ||
+        tab === "gap"
+      ) {
+        setActiveTab(tab);
+      }
+    }
+  }, []);
 
   // DB 실시간 분석 데이터 상태
   const [analyticsData, setAnalyticsData] = useState<StudyAnalyticsResult | null>(null);
@@ -220,6 +255,38 @@ export default function StudyStatisticsPage() {
     };
   }, [subjects, matrixLogs, todayISO]);
 
+  // 계획 vs 실행(타이머) Gap 상세 수치 계산
+  const gapDateISOs = useMemo(() => {
+    if (gapPeriod === "today") return [todayISO];
+    if (gapPeriod === "week") return getMondayStartWeekISOs(todayISO);
+    if (gapPeriod === "30d") {
+      return Array.from({ length: 30 }, (_, idx) => addDaysISO(todayISO, -(29 - idx)));
+    }
+    const dateSet = new Set<string>([todayISO]);
+    for (const key of Object.keys(matrixLogs)) {
+      const sepIdx = key.indexOf("::");
+      if (sepIdx !== -1) {
+        const dISO = key.slice(sepIdx + 2);
+        if (dISO) dateSet.add(dISO);
+      }
+    }
+    for (const dISO of Object.keys(timetablesByDate)) {
+      if (dISO) dateSet.add(dISO);
+    }
+    return Array.from(dateSet).sort();
+  }, [gapPeriod, todayISO, matrixLogs, timetablesByDate]);
+
+  const planActualGap = useMemo(
+    () =>
+      computePeriodPlanActualGap({
+        dateISOs: gapDateISOs,
+        subjects,
+        matrixLogs,
+        timetablesByDate,
+      }),
+    [gapDateISOs, subjects, matrixLogs, timetablesByDate]
+  );
+
   // 출제빈도 탭 필터링 & 정렬
   const filteredFrequencyTopics = useMemo(() => {
     if (!analyticsData) return [];
@@ -330,19 +397,20 @@ export default function StudyStatisticsPage() {
           </div>
         </div>
 
-        {/* 4대 분석 서브탭 */}
-        <div className="grid grid-cols-4 gap-1 p-1 rounded-xl bg-[#0E0E12] border border-white/[0.06]">
+        {/* 5대 분석 서브탭 */}
+        <div className="grid grid-cols-5 gap-1 p-1 rounded-xl bg-[#0E0E12] border border-white/[0.06]">
           {[
-            { id: "predict" as const, label: "🎯 합격예측" },
-            { id: "frequency" as const, label: "📊 출제빈도" },
-            { id: "progress" as const, label: "📈 학습진도" },
-            { id: "matrix" as const, label: "🗓️ 회독·구멍" },
+            { id: "predict" as const, label: "🎯 예측" },
+            { id: "frequency" as const, label: "📊 빈도" },
+            { id: "progress" as const, label: "📈 진도" },
+            { id: "matrix" as const, label: "🗓️ 회독" },
+            { id: "gap" as const, label: "⏱️ 계획·실행" },
           ].map((tab) => (
             <button
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`py-1.5 rounded-lg text-[10.5px] font-black transition ${
+              className={`py-1.5 px-0.5 rounded-lg text-[10px] font-black transition truncate ${
                 activeTab === tab.id
                   ? "bg-[#FF5A36] text-white shadow"
                   : "text-slate-400 hover:text-white"
@@ -362,7 +430,7 @@ export default function StudyStatisticsPage() {
       )}
 
       <div className="px-4 py-4 space-y-4">
-        {loadingDb && !analyticsData && activeTab !== "matrix" ? (
+        {loadingDb && !analyticsData && activeTab !== "matrix" && activeTab !== "gap" ? (
           <div className="py-16 flex flex-col items-center justify-center gap-2.5 text-slate-400">
             <Loader2 className="w-6 h-6 animate-spin text-[#FF5A36]" />
             <p className="text-xs font-bold">
@@ -1407,6 +1475,307 @@ export default function StudyStatisticsPage() {
                   <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
+            </section>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB 5: ⏱️ 계획 vs 타이머 실행 Gap 상세 수치 분석             */}
+        {/* ============================================================ */}
+        {activeTab === "gap" && (
+          <div className="space-y-4">
+            {/* 기간 선택 바 + 일정표 바로가기 */}
+            <div className="p-3 rounded-2xl bg-[#1A1A21] border border-white/[0.06] flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-1 bg-[#0E0E12] p-1 rounded-xl border border-white/[0.06] text-[10.5px] font-black">
+                {[
+                  { id: "today" as const, label: "오늘" },
+                  { id: "week" as const, label: "이번 주" },
+                  { id: "30d" as const, label: "최근 30일" },
+                  { id: "all" as const, label: "전체" },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setGapPeriod(p.id)}
+                    className={`px-2.5 py-1 rounded-lg transition ${
+                      gapPeriod === p.id
+                        ? "bg-[#FF5A36] text-white"
+                        : "text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              <Link
+                href="/study/planner?tab=diary"
+                className="text-[10.5px] font-black text-sky-300 hover:text-sky-200 flex items-center gap-1"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span>일정표 시각화 보기</span>
+                <ArrowRight className="w-3 h-3" />
+              </Link>
+            </div>
+
+            {/* 4대 수치 KPI */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-sky-500/25 space-y-1">
+                <div className="text-[10px] font-bold text-slate-400">총 예상 계획</div>
+                <div className="font-mono text-lg font-black text-sky-300">
+                  {formatMinutesKo(planActualGap.totalPlanMinutes)}
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono">
+                  {planActualGap.totalPlanMinutes}분 ({planActualGap.totalPlanSlots}슬롯)
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-[#FF5A36]/35 space-y-1">
+                <div className="text-[10px] font-bold text-slate-400">타이머 실제 실행</div>
+                <div className="font-mono text-lg font-black text-[#FF7A59]">
+                  {formatMinutesKo(planActualGap.totalActualMinutes)}
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono">
+                  {planActualGap.totalActualMinutes}분 · 달성률 {planActualGap.achievementPct}%
+                </div>
+              </div>
+
+              <div
+                className={`p-3.5 rounded-2xl bg-[#1A1A21] border space-y-1 ${
+                  planActualGap.totalGapMinutes >= 0
+                    ? "border-emerald-500/35"
+                    : "border-rose-500/35"
+                }`}
+              >
+                <div className="text-[10px] font-bold text-slate-400">계획 vs 실행 Gap</div>
+                <div
+                  className={`font-mono text-lg font-black ${
+                    planActualGap.totalGapMinutes >= 0
+                      ? "text-emerald-300"
+                      : "text-rose-400"
+                  }`}
+                >
+                  {formatGapMinutesKo(planActualGap.totalGapMinutes)}
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono">
+                  {planActualGap.totalGapMinutes >= 0 ? "계획 초과 달성" : "계획 대비 부족"}
+                </div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-1">
+                <div className="text-[10px] font-bold text-slate-400">계획 시간대 적중률</div>
+                <div className="font-mono text-lg font-black text-emerald-300">
+                  {planActualGap.totalPlanSlots > 0
+                    ? `${planActualGap.slotMatchPct}%`
+                    : "—"}
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono">
+                  {planActualGap.matchedSlots}/{planActualGap.totalPlanSlots}칸 시간 일치
+                </div>
+              </div>
+            </div>
+
+            {/* 과목별 계획 vs 실행 Gap 상세 수치 Table */}
+            <section className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-black text-white flex items-center gap-1.5">
+                  <Timer className="w-4 h-4 text-[#FF5A36]" />
+                  <span>과목별 계획 vs 타이머 실행 Gap</span>
+                </h2>
+                <span className="text-[10px] text-slate-400 font-mono">단위: 분</span>
+              </div>
+
+              <div className="overflow-x-auto rounded-xl border border-white/[0.06] bg-[#111116]">
+                <table className="w-full text-[11px] border-collapse">
+                  <thead>
+                    <tr className="bg-[#16161E] border-b border-white/[0.06] text-[10px] text-slate-400 font-bold">
+                      <th className="py-2 px-3 text-left">과목</th>
+                      <th className="py-2 px-2 text-right">계획</th>
+                      <th className="py-2 px-2 text-right">타이머</th>
+                      <th className="py-2 px-2 text-right">Gap</th>
+                      <th className="py-2 px-3 text-right">달성률</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {planActualGap.subjectRows.map((row) => (
+                      <tr key={row.subject.id}>
+                        <td className="py-2 px-3">
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className="w-2 h-2 rounded-full shrink-0"
+                              style={{ backgroundColor: row.subject.color }}
+                            />
+                            <span className="font-extrabold text-white truncate max-w-[110px]">
+                              {row.subject.shortTitle}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-sky-300 font-bold">
+                          {row.planMinutes}분
+                        </td>
+                        <td className="py-2 px-2 text-right font-mono text-[#FF7A59] font-black">
+                          {row.actualMinutes}분
+                        </td>
+                        <td
+                          className={`py-2 px-2 text-right font-mono font-black ${
+                            row.gapMinutes > 0
+                              ? "text-emerald-300"
+                              : row.gapMinutes < 0
+                                ? "text-rose-400"
+                                : "text-slate-400"
+                          }`}
+                        >
+                          {row.gapMinutes > 0 ? `+${row.gapMinutes}분` : `${row.gapMinutes}분`}
+                        </td>
+                        <td className="py-2 px-3 text-right font-mono font-black text-slate-200">
+                          {row.planMinutes > 0 ? `${row.achievementPct}%` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* 일별 계획 vs 실행 Gap 상세 수치 Table */}
+            <section className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-black text-white flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4 text-sky-400" />
+                  <span>일별 계획 vs 실행 상세 내역</span>
+                </h2>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  {planActualGap.dailyRows.length}일 기준
+                </span>
+              </div>
+
+              <div className="overflow-x-auto max-h-[280px] overflow-y-auto rounded-xl border border-white/[0.06] bg-[#111116]">
+                <table className="w-full text-[11px] border-collapse">
+                  <thead className="sticky top-0 bg-[#16161E] border-b border-white/[0.06] text-[10px] text-slate-400 font-bold">
+                    <tr>
+                      <th className="py-2 px-3 text-left">날짜</th>
+                      <th className="py-2 px-2 text-right">계획</th>
+                      <th className="py-2 px-2 text-right">타이머</th>
+                      <th className="py-2 px-2 text-right">Gap</th>
+                      <th className="py-2 px-3 text-right">달성</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.04]">
+                    {[...planActualGap.dailyRows]
+                      .filter(
+                        (r) =>
+                          r.planMinutes > 0 || r.actualMinutes > 0 || r.dateISO === todayISO
+                      )
+                      .reverse()
+                      .map((row) => (
+                        <tr
+                          key={row.dateISO}
+                          className={row.dateISO === todayISO ? "bg-[#FF5A36]/[0.08]" : ""}
+                        >
+                          <td className="py-2 px-3 font-mono font-bold text-white">
+                            {row.dateISO === todayISO
+                              ? `오늘 (${row.dateISO.slice(5)})`
+                              : row.dateISO.slice(5)}
+                          </td>
+                          <td className="py-2 px-2 text-right font-mono text-sky-300 font-bold">
+                            {row.planMinutes}분
+                          </td>
+                          <td className="py-2 px-2 text-right font-mono text-[#FF7A59] font-black">
+                            {row.actualMinutes}분
+                          </td>
+                          <td
+                            className={`py-2 px-2 text-right font-mono font-black ${
+                              row.gapMinutes > 0
+                                ? "text-emerald-300"
+                                : row.gapMinutes < 0
+                                  ? "text-rose-400"
+                                  : "text-slate-400"
+                            }`}
+                          >
+                            {row.gapMinutes > 0
+                              ? `+${row.gapMinutes}분`
+                              : `${row.gapMinutes}분`}
+                          </td>
+                          <td className="py-2 px-3 text-right font-mono text-slate-200 font-black">
+                            {row.planMinutes > 0 ? `${row.achievementPct}%` : "—"}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            {/* 계획 대비 타이머 실행 부족 단원 TOP */}
+            <section className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xs font-black text-white flex items-center gap-1.5">
+                  <AlertTriangle className="w-4 h-4 text-rose-400" />
+                  <span>계획 미달 단원 Gap TOP (보강 필요)</span>
+                </h2>
+                <span className="text-[10px] text-slate-400 font-bold">Gap 큰 순</span>
+              </div>
+
+              {planActualGap.shortfallTopics.length === 0 ? (
+                <div className="p-4 rounded-xl bg-[#111116] border border-white/[0.05] text-center text-xs text-emerald-300 font-bold">
+                  선택한 기간에 계획 대비 부족한 단원이 없습니다!
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {planActualGap.shortfallTopics.slice(0, 8).map((item) => (
+                    <div
+                      key={`${item.topicId}-${item.dateISO}`}
+                      className="p-3 rounded-xl bg-[#111116] border border-white/[0.06] flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {item.dateISO.slice(5)} · {item.subject.shortTitle}
+                          </span>
+                          <span className="px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-300 font-mono text-[9px] font-black">
+                            Gap {item.gapMinutes}분
+                          </span>
+                        </div>
+                        <div className="text-xs font-extrabold text-white truncate">
+                          {item.topic.topicNo ? `${item.topic.topicNo}. ` : ""}
+                          {item.topic.title}
+                        </div>
+                        <div className="text-[10px] font-mono text-slate-400">
+                          계획 <strong className="text-sky-300">{item.planMinutes}분</strong> ·
+                          타이머 <strong className="text-[#FF7A59]">{item.actualMinutes}분</strong>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Link
+                          href={`/?topic=${item.topicId}`}
+                          className="px-2 py-1.5 rounded-lg bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-[10px] font-black flex items-center gap-1 transition"
+                        >
+                          <Play className="w-3 h-3 fill-white" />
+                          <span>타이머</span>
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleScheduleTomorrow(
+                              item.topicId,
+                              item.topic.defaultKeyword,
+                              Math.abs(item.gapMinutes)
+                            )
+                          }
+                          className="px-2 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-slate-200 text-[10px] font-bold transition"
+                        >
+                          내일 보강
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           </div>
         )}
