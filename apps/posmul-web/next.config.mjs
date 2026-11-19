@@ -6,9 +6,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   transpilePackages: [
-    "@posmul/shared-types",
     "@posmul/auth-economy-sdk",
-    "@posmul/study-cycle-core",
   ],
   serverExternalPackages: ["@supabase/supabase-js"],
   webpack: (config) => {

@@ -1,8 +1,8 @@
-/** @type {import('next').NextConfig} */
 import typescriptEslintParser from "@typescript-eslint/parser";
 import typescriptEslintPlugin from "@typescript-eslint/eslint-plugin";
 import nextPlugin from "@next/eslint-plugin-next";
 
+/** @type {import('eslint').Linter.FlatConfig[]} */
 export default [
   {
     ignores: [
@@ -18,44 +18,13 @@ export default [
     ],
   },
   {
-    files: ["**/*.js", "**/*.jsx"],
-    languageOptions: {
-      ecmaVersion: "latest",
-      sourceType: "module",
-      parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
-      },
-    },
-    rules: {
-      // 기본 품질 규칙
-      "no-console": "warn",
-      "no-debugger": "error",
-      "prefer-const": "error",
-      "no-var": "error",
-      "no-unused-vars": ["warn", {
-        argsIgnorePattern: "^_",
-        varsIgnorePattern: "^_"
-      }],
-
-      // 복잡도 제한
-      "complexity": ["warn", { max: 15 }],
-
-      // React 규칙
-      "react/jsx-no-comment-textnodes": "off", // 임시로 비활성화
-    },
-  },
-  {
     files: ["**/*.ts", "**/*.tsx"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
       parser: typescriptEslintParser,
       parserOptions: {
-        ecmaFeatures: {
-          jsx: true,
-        },
+        ecmaFeatures: { jsx: true },
       },
     },
     plugins: {
@@ -63,30 +32,62 @@ export default [
       "@next/next": nextPlugin,
     },
     rules: {
-      // 기본 품질 규칙
       "no-console": "warn",
       "no-debugger": "error",
       "prefer-const": "error",
       "no-var": "error",
-      "no-unused-vars": "off", // TypeScript가 처리
-      "@typescript-eslint/no-unused-vars": ["warn", {
-        argsIgnorePattern: "^_",
-        varsIgnorePattern: "^_"
-      }],
-
-      // 복잡도 제한
-      "complexity": ["warn", { max: 15 }],
-
-      // React 규칙
-      "react/jsx-no-comment-textnodes": "off", // 임시로 비활성화
+      "no-unused-vars": "off",
+      "@typescript-eslint/no-explicit-any": "warn",
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+      complexity: ["warn", { max: 15 }],
     },
   },
+  // Clean Architecture 기계적 가드레일 1: Domain 계층은 외부 인프라/Supabase/Next/React 금지
   {
-    files: ["**/*.test.js", "**/*.test.ts", "**/*.test.jsx", "**/*.test.tsx"],
+    files: ["src/bounded-contexts/*/domain/**/*.ts"],
     rules: {
-      // 테스트 파일에서는 더 관대한 규칙 적용
-      "no-console": "off",
-      "complexity": "off",
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: [
+                "@supabase/*",
+                "@/lib/supabase/*",
+                "**/infrastructure/**",
+                "**/presentation/**",
+                "next/*",
+                "react",
+                "react-*",
+                "**/shared/mcp*",
+              ],
+              message:
+                "Clean Architecture 위반: Domain 계층은 외부 인프라/Supabase/Presentation을 import할 수 없습니다.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // Clean Architecture 기계적 가드레일 2: Shared 계층에서 Bounded Context 역참조 금지
+  {
+    files: ["src/shared/**/*.ts", "src/shared/**/*.tsx"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["@/bounded-contexts/**", "**/bounded-contexts/**"],
+              message:
+                "Clean Architecture 위반: shared/ 계층은 bounded-contexts/를 역참조할 수 없습니다.",
+            },
+          ],
+        },
+      ],
     },
   },
 ];

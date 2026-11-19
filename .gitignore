@@ -92,3 +92,7 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# Windows installer/executables
+*.exe
+

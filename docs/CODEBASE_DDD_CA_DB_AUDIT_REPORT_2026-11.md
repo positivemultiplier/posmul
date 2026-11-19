@@ -3,11 +3,48 @@
 > **감사 일시**: 2026-11-19  
 > **대상 브랜치 / 환경**: `develop` (`c:\G\posmul`) + 라이브 Supabase 프로젝트 `posmul` (`fabyagohqqnusmnwekuc`, PostgreSQL 17.4.1.064, `ap-northeast-2`)  
 > **기준 문서**: [POSMUL_WHITEPAPER.md](file:///c:/G/posmul/docs/POSMUL_WHITEPAPER.md) (v3.0), [DOMAIN_FLOW_AND_DECISIONS.md](file:///c:/G/posmul/docs/DOMAIN_FLOW_AND_DECISIONS.md), [Posmul_projectrule.md](file:///c:/G/posmul/.agent/rules/Posmul_projectrule.md), [Posmul_tdd-rules.md](file:///c:/G/posmul/.agent/rules/Posmul_tdd-rules.md)  
-> **감사 범위**: 전수 조사 (스킵 없음) — `apps/posmul-web` (697파일), `apps/housing-pro` (69파일), `packages/auth-economy-sdk` (24파일), `supabase/` (로컬 2 Edge Function + 6 Migration), 원격 Supabase DB (179 테이블, 87 함수, 175 마이그레이션, 3 Edge Function, RLS/성능 어드바이저, pg_cron)
+> **감사 범위**: 전수 조사 (스킵 없음) — `apps/posmul-web` (697파일), `apps/housing-pro` (69파일), `packages/auth-economy-sdk` (24파일), `supabase/` (로컬 2 Edge Function + 6 Migration), 원격 Supabase DB (179 테이블, 87 함수, 175 마이그레이션, 3 Edge Function, RLS/성능 어드바이저, pg_cron)  
+> **시정 상태**: **`.agent` v3.1 재정비 + Phase 0 ~ Phase 3 전 항목 완료 및 검증 완료 (2026-11-19, `develop` 브랜치)**
+
+---
+
+## 0. Phase 0 ~ Phase 3 시정 조치 완료 현황 (2026-11-19 실측)
+
+본 보고서에서 도출된 핵심 결함에 대해 `.agent` 에이전트 지침 전면 재정비 및 **Phase 0(긴급 보안·RLS 핫픽스) → Phase 1(금융 원장 원자화·계약 복구·Edge Function 동기화) → Phase 2(DDD/CA 순환 의존 절단·Dead 파일 청산·SDK 재정비) → Phase 3(DB 성능 인덱스·테스트/린트/설정 위생 정리)**를 순차 완료하고, 라이브 Supabase MCP 어드바이저·타입체크·Jest·양대 앱 프로덕션 빌드로 실측 검증을 마쳤습니다.
+
+### Before → After 정량 지표 비교
+
+| 항목 | 감사 시점 (Before) | Phase 0~3 완료 (After) | 비고 |
+| --- | :---: | :---: | --- |
+| **RLS 미활성 앱 테이블 (`rls_disabled_in_public`)** | 7건 (public 3 + 비공개 4) | **0건** | 전 테이블 RLS 활성화 완료 (`20261119123000`) |
+| **무조건 허용 RLS (`rls_policy_always_true`)** | 다수 치명적 구멍 | **0건** | 공짜 베팅·예측 사후 조작·시리얼 유출 전면 차단 |
+| **`anon` 호출 가능 `SECURITY DEFINER` RPC** | **40건** | **3건** | 공개 읽기 3종(`calculate_current_odds`, `get_active_games`, `get_economy_stats`)만 허용 |
+| **`authenticated` 호출 가능 `SECURITY DEFINER` RPC** | **40건+** | **6건** | 공개/인증 읽기 5종 + `auth.uid()` 검증 베팅 1종만 허용 |
+| **`function_search_path_mutable` 경고** | 1건 | **0건** | `touch_user_prediction_stats_updated_at` 고정 완료 |
+| **중복 인덱스 (`duplicate_index`)** | 4건 | **0건** | `donation` 1건 + `study_cycle` 3건 제거 (`20261119133000`) |
+| **미인덱싱 외래키 (`unindexed_foreign_keys`)** | 21건 | **6건** | 핵심 FK 15건 커버링 인덱스 생성 완료 |
+| **유령/무인증 Edge Function** | `auto-settle-games`(유령), `auto-settle`(미동기), `moneywave` v3 불일치 | **전량 동기화 + `verify_jwt: true`** | `auto-settle-games` 410 비활성화, `moneywave` v4 원격·로컬 일치 |
+| **원장 원자화 & 무단 민팅 차단** | 비원자 read-modify-write + 신규 계정 1,000 PMC 무단 지급 | **원자 RPC + `0 PMC` 시작** | `grant_forum_pmp_capped`, `grant_vertical_pmp_capped`, `execute_ledger_transaction` 교정 |
+| **DDD/CA 순환 의존 & 역참조** | `feed↔prediction`, `shared→BC`, `BC→app`, `forum→prediction` | **0건 (기계적 ESLint 가드레일 도입)** | `shared/domain/region`, `shared/infrastructure/llm` 승격 + `no-restricted-imports` |
+| **Dead/쓰레기 파일 & 가짜 테스트** | Dead 파일 7개 + 껍데기 테스트 8개 | **15개 전량 삭제 + 실질 테스트 2개 신설** | `DeletePredictionGameUseCase` 권한 테스트 + SDK 경제 유틸 테스트 추가 |
+| **`@posmul/auth-economy-sdk` 타입 엄격성** | `strict` 미설정 + 6개월 전 타입 + `PmpAmount` 오타 | **`strict: true` 0 error + 2026-11-19 최신 DB 타입** | 크로스 런타임 `crypto.randomUUID()` 순수화 + 환율 `10:1` 통일 |
+| **Gate 1 검증 (`type-check` · Jest · `next build`)** | 가짜 테스트 포함 45 suites | **3개 패키지 `tsc` 0 error · 39 suites / 431 tests PASS · 양대 앱 `next build` PASS** | `posmul-web`(106p) + `housing-pro`(23p) 프로덕션 빌드 통과 |
+
+### 적용된 DB 마이그레이션 (원격 적용 & 로컬 Git 동기화 완료)
+1. [20261119123000_phase0_security_rls_and_rpc_hardening.sql](file:///c:/G/posmul/supabase/migrations/20261119123000_phase0_security_rls_and_rpc_hardening.sql) — Phase 0 RLS·RPC 보안 하드닝
+2. [20261119130000_phase1_atomic_ledger_and_settlement_fixes.sql](file:///c:/G/posmul/supabase/migrations/20261119130000_phase1_atomic_ledger_and_settlement_fixes.sql) — Phase 1 원장 원자화·KST 일일 상한·정산/이의제기·트리거 정리
+3. [20261119133000_phase3_db_performance_and_hygiene.sql](file:///c:/G/posmul/supabase/migrations/20261119133000_phase3_db_performance_and_hygiene.sql) — Phase 3 중복 인덱스 제거·핵심 FK 15건 인덱싱
+
+### 후속 중장기 과제 (운영/인프라 단계)
+- Supabase 대시보드에서 **Postgres 17.4.1 보안 패치 업그레이드** 및 **Auth Leaked Password Protection(HaveIBeenPwned)** 활성화
+- `apps/posmul-web/tsconfig.json`의 `"strict": true` 점진적 전환 및 잔존 `any` 축소
+- 원격 DB 175개 과거 마이그레이션의 베이스라인 스키마 덤프(`supabase db dump`)를 통한 로컬 재현성 100% 확보
+- `economy.pmp_pmc_accounts` 고아 계정 101건의 비즈니스 정산/정리 여부 정책 결정 후 일괄 아카이빙
 
 ---
 
 ## 목차
+0. [Phase 0 ~ Phase 3 시정 조치 완료 현황 (2026-11-19 실측)](#0-phase-0--phase-3-시정-조치-완료-현황-2026-11-19-실측)
 1. [총괄 요약 (Executive Summary & 종합 성적표)](#1-총괄-요약-executive-summary--종합-성적표)
 2. [코드베이스 전수 정량 메트릭](#2-코드베이스-전수-정량-메트릭)
 3. [긴급(P0) 보안 · 금전 원장 · DB 취약점 전수 목록](#3-긴급p0-보안--금전-원장--db-취약점-전수-목록)
