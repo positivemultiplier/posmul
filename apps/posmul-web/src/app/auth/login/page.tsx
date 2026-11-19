@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, Suspense } from "react";
+import { useState, useEffect, FormEvent, Suspense } from "react";
 import { createClient } from "../../../lib/supabase/client";
 import { FadeIn, HoverLift } from "../../../shared/ui/components/animations";
 import { Chrome, Loader2, Sparkles, Mail, Lock, ArrowRight } from "lucide-react";
@@ -19,11 +19,33 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const redirectTarget =
+  const queryRedirect =
     searchParams.get("redirectTo") ||
     searchParams.get("redirect") ||
-    searchParams.get("next") ||
-    "/dashboard";
+    searchParams.get("next");
+
+  const [fallbackReturnPath, setFallbackReturnPath] = useState<string>("/");
+
+  // 쿼리에 next가 없더라도 같은 사이트 내 이전 페이지(document.referrer)를 감지해 로그인 후 그 자리로 복귀
+  useEffect(() => {
+    if (queryRedirect) return;
+    try {
+      if (document.referrer) {
+        const refUrl = new URL(document.referrer);
+        if (
+          refUrl.origin === window.location.origin &&
+          !refUrl.pathname.startsWith("/auth") &&
+          !refUrl.pathname.startsWith("/gate")
+        ) {
+          setFallbackReturnPath(`${refUrl.pathname}${refUrl.search}${refUrl.hash}`);
+        }
+      }
+    } catch {
+      // ignore invalid referrer
+    }
+  }, [queryRedirect]);
+
+  const redirectTarget = queryRedirect || fallbackReturnPath || "/";
 
   // 1. 구글 소셜 로그인 (서버 Route Handler 기반 PKCE + HttpOnly 백업 쿠키)
   const handleGoogleLogin = () => {
@@ -67,23 +89,7 @@ function LoginForm() {
 
       if (error) throw error;
 
-      let targetRoute = redirectTarget;
-      if (targetRoute === "/dashboard") {
-        try {
-          const profRes = await fetch("/api/user/profile");
-          const profJson = await profRes.json();
-          if (profJson?.success) {
-            if (!profJson.onboardingCompleted) {
-              targetRoute = "/dashboard?onboarding=1";
-            } else if (profJson.personalization?.defaultLanding) {
-              targetRoute = profJson.personalization.defaultLanding;
-            }
-          }
-        } catch {
-          // 기본 이동
-        }
-      }
-
+      const targetRoute = redirectTarget || "/";
       if (targetRoute.startsWith("http://") || targetRoute.startsWith("https://")) {
         window.location.href = targetRoute;
         return;

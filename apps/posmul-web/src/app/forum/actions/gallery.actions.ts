@@ -212,31 +212,34 @@ export async function getGalleryPostDetailAction(
   postId: string
 ): Promise<{ success: boolean; post?: GalleryPostDTO; comments: GalleryCommentDTO[]; error?: string }> {
   try {
-    // 1. 조회수 1 증가 (비동기)
-    try {
-      await supabaseAdmin.rpc("increment_post_view_count", { post_id: postId });
-    } catch {}
+    // 1. 조회수 1 증가 (본문 응답을 블로킹하지 않도록 fire-and-forget 실행)
+    void Promise.resolve(
+      supabaseAdmin.rpc("increment_post_view_count", { post_id: postId })
+    ).catch(() => {});
 
-    // 2. 게시글 본문 조회
-    const { data: post, error } = await supabaseAdmin
-      .schema("forum")
-      .from("forum_posts")
-      .select("*")
-      .eq("id", postId)
-      .single();
+    // 2. 게시글 본문 + 댓글 목록을 병렬 조회 (직렬 3단계 -> 1단계로 단축)
+    const [postRes, commentsRes] = await Promise.all([
+      supabaseAdmin
+        .schema("forum")
+        .from("forum_posts")
+        .select("*")
+        .eq("id", postId)
+        .single(),
+      supabaseAdmin
+        .schema("forum")
+        .from("forum_comments")
+        .select("id, post_id, author_id, content, like_count, pmp_earned, metadata, created_at")
+        .eq("post_id", postId)
+        .eq("status", "published")
+        .order("created_at", { ascending: true }),
+    ]);
+
+    const { data: post, error } = postRes;
+    const rawComments = commentsRes.data;
 
     if (error || !post) {
       return { success: false, comments: [], error: "게시글을 찾을 수 없습니다." };
     }
-
-    // 3. 댓글 목록 조회
-    const { data: rawComments } = await supabaseAdmin
-      .schema("forum")
-      .from("forum_comments")
-      .select("id, post_id, author_id, content, like_count, pmp_earned, metadata, created_at")
-      .eq("post_id", postId)
-      .eq("status", "published")
-      .order("created_at", { ascending: true });
 
     // 작성자 이름 조회
     const authorIds = Array.from(new Set([post.author_id, ...(rawComments || []).map((c) => c.author_id)]));

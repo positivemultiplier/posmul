@@ -118,7 +118,12 @@ export async function middleware(request: NextRequest) {
   if (hasAccess) {
     const response = NextResponse.next({ request });
     response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive");
-    if (pathname.startsWith("/api/")) {
+    // API 요청 및 Next.js 라우터 프리페치 요청에서는 원격 Auth RTT 생략 (상세 페이지 전환 속도 향상)
+    const isPrefetch =
+      request.headers.get("next-router-prefetch") === "1" ||
+      request.headers.get("purpose") === "prefetch" ||
+      (request.headers.get("sec-purpose") || "").includes("prefetch");
+    if (pathname.startsWith("/api/") || isPrefetch) {
       return response;
     }
     return refreshPosmulSessionCookie(request, response);

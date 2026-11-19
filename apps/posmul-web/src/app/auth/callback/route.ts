@@ -128,15 +128,11 @@ async function completeCustomOAuthLogin(params: {
     console.warn(`[${provider}] metadata update non-fatal error:`, metaErr);
   }
 
-  // 4. PosMul 프로필 및 10,000 PMP + 1,000 PMC 환영 보너스 계좌 생성 보장
-  let resolvedPath = nextPath || "/dashboard";
+  // 4. PosMul 프로필 및 환영 보너스 계좌 생성 보장 (로그인 전 보던 페이지로 그대로 복귀)
+  const resolvedPath = nextPath || "/";
   try {
-    const profileMeta = await ensureUserProfile(adminSupabase, targetUser);
+    await ensureUserProfile(adminSupabase, targetUser);
     await ensureEconomyAccount(adminSupabase, targetUser.id);
-
-    if (resolvedPath === "/dashboard" && !profileMeta.onboardingCompleted) {
-      resolvedPath = "/dashboard?onboarding=1";
-    }
   } catch (err) {
     console.warn(`[${provider}] profile/economy init non-fatal error:`, err);
   }
@@ -185,7 +181,7 @@ export async function GET(request: NextRequest) {
 
   const cookieProvider = request.cookies.get("posmul_oauth_provider")?.value;
   const cookieNext = request.cookies.get("posmul_oauth_next")?.value;
-  const nextParam = requestUrl.searchParams.get("next") || cookieNext || "/dashboard";
+  const nextParam = requestUrl.searchParams.get("next") || cookieNext || "/";
   const callbackUrl = `${redirectOrigin}/auth/callback`;
 
   // ============================================================================
@@ -383,16 +379,10 @@ export async function GET(request: NextRequest) {
     const user = data.user;
     if (user) {
       const adminSupabase = createAdminSupabaseClient();
-      const profileMeta = await ensureUserProfile(adminSupabase, user);
-      await ensureEconomyAccount(adminSupabase, user.id);
-
-      if (!requestUrl.searchParams.get("next") && !cookieNext) {
-        if (!profileMeta.onboardingCompleted) {
-          resolvedPath = "/dashboard?onboarding=1";
-        } else if (profileMeta.defaultLanding) {
-          resolvedPath = profileMeta.defaultLanding;
-        }
-      }
+      await Promise.all([
+        ensureUserProfile(adminSupabase, user),
+        ensureEconomyAccount(adminSupabase, user.id),
+      ]);
     }
   } catch {
     // 프로필/보너스 초기화 오류 시에도 로그인 세션은 정상 유지

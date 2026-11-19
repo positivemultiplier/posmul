@@ -4,7 +4,6 @@ import {
   getPredictionGameBySlug,
   getPredictionGameStats,
 } from "../../../bounded-contexts/prediction/infrastructure/repositories/prediction-query.repository";
-import { getUserBalance, getUserBets } from "../sports/soccer/[slug]/actions";
 import { getGameHistory } from "../../../bounded-contexts/prediction/infrastructure/repositories/get-game-history";
 import {
   attachHourlyGamePoolsToRows,
@@ -73,24 +72,47 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
   slug: string;
 } | null> {
   const decodedSlug = decodeURIComponent(slug);
-  const dbGame = await getPredictionGameBySlug(decodedSlug);
+  const supabase = await createClient();
+
+  // 1단계: 게임 기본 정보와 유저 인증 세션을 병렬 조회 (직렬 2 RTT -> 1 RTT)
+  const [dbGame, userAuthRes] = await Promise.all([
+    getPredictionGameBySlug(decodedSlug),
+    supabase.auth.getUser(),
+  ]);
   if (!dbGame) return null;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = userAuthRes.data?.user ?? null;
+  const initialOptionsForHistory = mapGameOptions(dbGame.game_options, dbGame.game_id);
+  const roomLookupKeys = Array.from(
+    new Set([dbGame.slug, dbGame.game_id].filter((v): v is string => Boolean(v)))
+  );
 
-  // 통계, 잔액, 유저 참여내역, 3단계 MoneyWave 부스트 풀, 옵션별 실제 참여 볼륨, 영구 학습 프로필 병렬 조회
-  const [stats, balanceResult, userBets, boostedRows, betsRes, userStatsRes] = await Promise.all([
+  // 2단계: 모든 부가 데이터(통계·잔액·풀·베팅·학습프로필·차트·꼬리예측·LIVE방)를 단일 Promise.all로 병렬 조회
+  const [
+    stats,
+    balanceRes,
+    boostedRows,
+    betsRes,
+    userStatsRes,
+    initialChartData,
+    tailChallenges,
+    liveMsgRes,
+    liveChallengeRes,
+  ] = await Promise.all([
     getPredictionGameStats(dbGame.game_id),
-    getUserBalance(),
-    getUserBets(dbGame.game_id),
+    user
+      ? supabase
+          .schema("economy")
+          .from("pmp_pmc_accounts")
+          .select("pmp_balance, pmc_balance")
+          .eq("user_id", user.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
     attachHourlyGamePoolsToRows(supabase, [dbGame as PredictionGameRow]),
     supabase
       .schema("prediction")
       .from("predictions")
-      .select("user_id, bet_amount, confidence_level, prediction_data, created_at")
+      .select("prediction_id, user_id, bet_amount, confidence_level, prediction_data, created_at")
       .eq("game_id", dbGame.game_id)
       .eq("is_active", true)
       .order("created_at", { ascending: true }),
@@ -104,7 +126,49 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
           .eq("user_id", user.id)
           .maybeSingle()
       : Promise.resolve({ data: null, error: null }),
+    getGameHistory(
+      dbGame.game_id,
+      initialOptionsForHistory.map((opt) => ({ id: opt.id }))
+    ),
+    getTailChallengesForGameAction(dbGame.game_id, dbGame.slug || decodedSlug),
+    supabase
+      .schema("forum")
+      .from("live_room_messages")
+      .select("id", { count: "exact", head: true })
+      .in("room_id", roomLookupKeys),
+    supabase
+      .schema("prediction")
+      .from("user_challenges")
+      .select("id", { count: "exact", head: true })
+      .eq("linked_game_id", dbGame.game_id)
+      .like("title", "[LIVE]%"),
   ]);
+
+  const balanceAccount = Array.isArray(balanceRes.data)
+    ? balanceRes.data[0]
+    : balanceRes.data;
+  const balanceResult =
+    user && !balanceRes.error && balanceAccount
+      ? {
+          pmp: balanceAccount.pmp_balance != null ? Number(balanceAccount.pmp_balance) : 0,
+          pmc: balanceAccount.pmc_balance != null ? Number(balanceAccount.pmc_balance) : 0,
+        }
+      : null;
+
+  // 이미 가져온 활성 베팅 목록에서 현재 유저의 베팅을 메모리 필터링 (중복 DB + Auth 왕복 제거)
+  const userBets = user
+    ? (betsRes.data || [])
+        .filter((pred) => pred.user_id === user.id)
+        .reverse()
+        .map((pred) => ({
+          betId: pred.prediction_id,
+          selectedOption:
+            (pred.prediction_data as { selectedOptionId?: string } | null)?.selectedOptionId || "",
+          betAmount: Number(pred.bet_amount) || 0,
+          status: "PENDING",
+          createdAt: pred.created_at,
+        }))
+    : [];
 
   // 로그인 유저의 Brier · Calibration 지속 학습 프로필 로드 (DB 영구 프로필 우선, 미적재 시 fallback 계산)
   let userLearningProfile: UserLearningProfileSummary | undefined;
@@ -304,31 +368,6 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     | "binary"
     | "wdl"
     | "ranking";
-
-  const roomLookupKeys = Array.from(
-    new Set([dbGame.slug, dbGame.game_id].filter((v): v is string => Boolean(v)))
-  );
-
-  // 차트 초기 데이터, 꼬리 예측, 실제 개설된 LIVE 응원톡 활동 여부 병렬 조회
-  const [initialChartData, tailChallenges, liveMsgRes, liveChallengeRes] =
-    await Promise.all([
-      getGameHistory(
-        dbGame.game_id,
-        parsedOptions.map((opt) => ({ id: opt.id }))
-      ),
-      getTailChallengesForGameAction(dbGame.game_id, dbGame.slug || decodedSlug),
-      supabase
-        .schema("forum")
-        .from("live_room_messages")
-        .select("id", { count: "exact", head: true })
-        .in("room_id", roomLookupKeys),
-      supabase
-        .schema("prediction")
-        .from("user_challenges")
-        .select("id", { count: "exact", head: true })
-        .eq("linked_game_id", dbGame.game_id)
-        .like("title", "[LIVE]%"),
-    ]);
 
   const liveMsgCount = liveMsgRes.count ?? 0;
   const liveChallengeCount = liveChallengeRes.count ?? 0;

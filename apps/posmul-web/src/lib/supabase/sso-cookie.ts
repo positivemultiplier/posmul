@@ -8,7 +8,7 @@ export function resolveCrossSubdomainCookieDomain(hostOrHostname?: string | null
 }
 
 export function resolveTrustedRedirectUrl(redirectOrigin: string, rawNext?: string | null): string {
-  const candidate = (rawNext || "/dashboard").trim();
+  const candidate = (rawNext || "/").trim();
   if (candidate.startsWith("/") && !candidate.startsWith("//")) {
     return `${redirectOrigin}${candidate}`;
   }
@@ -23,5 +23,5 @@ export function resolveTrustedRedirectUrl(redirectOrigin: string, rawNext?: stri
   } catch {
     // fallback below
   }
-  return `${redirectOrigin}/dashboard`;
+  return `${redirectOrigin}/`;
 }

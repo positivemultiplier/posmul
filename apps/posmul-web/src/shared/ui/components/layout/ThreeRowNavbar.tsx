@@ -727,6 +727,32 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
     }
   };
 
+  const handleOpenHealingRoom = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    const popup = window.open(
+      "/healing-room",
+      "PosMulHealingRoom",
+      "width=1280,height=860,left=100,top=60,resizable=yes,scrollbars=yes"
+    );
+    if (!popup) {
+      window.open("/healing-room", "_blank", "noopener,noreferrer");
+    } else {
+      popup.focus();
+    }
+  };
+
+  // 로그인/회원가입 후 현재 보던 페이지로 복귀하기 위한 return URL
+  const currentReturnPath =
+    pathname && !pathname.startsWith("/auth") && !pathname.startsWith("/gate")
+      ? `${pathname}${searchParamsString ? `?${searchParamsString}` : ""}`
+      : null;
+  const loginHref = currentReturnPath
+    ? `/auth/login?next=${encodeURIComponent(currentReturnPath)}`
+    : "/auth/login";
+  const signupHref = currentReturnPath
+    ? `/auth/signup?next=${encodeURIComponent(currentReturnPath)}`
+    : "/auth/signup";
+
   if (hideNav || pathname.startsWith("/healing-room")) return null;
 
   const currentDomainMeta = DOMAIN_PHILOSOPHY_MAP[selectedDomain];
@@ -886,8 +912,19 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
             </nav>
           </div>
 
-          {/* 우측: 로그인 시 프로필 버튼 하나 / 비로그인 시 로그인·회원가입 */}
-          <div className="hidden md:flex items-center gap-2 shrink-0">
+          {/* 우측: 힐링룸 + 프로필(로그인 시) / 로그인·회원가입(비로그인 시) */}
+          <div className="hidden md:flex items-center gap-2.5 shrink-0">
+            <a
+              href="/healing-room"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={handleOpenHealingRoom}
+              className="px-3 py-1.5 bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 hover:from-sky-500/30 hover:to-purple-500/30 text-sky-200 rounded-xl transition-all duration-200 border border-sky-400/40 text-xs font-semibold flex items-center gap-1 whitespace-nowrap shrink-0"
+            >
+              <span>🏡</span>
+              <span>힐링룸</span>
+            </a>
+
             {user ? (
               <div ref={profileMenuRef} className="relative">
                 <button
@@ -1012,13 +1049,13 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
             ) : (
               <>
                 <Link
-                  href="/auth/login"
+                  href={loginHref}
                   className="px-3.5 py-1.5 text-slate-300 hover:text-white transition-colors text-xs font-semibold whitespace-nowrap shrink-0"
                 >
                   로그인
                 </Link>
                 <Link
-                  href="/auth/signup"
+                  href={signupHref}
                   className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap shrink-0 ${currentDomainMeta.tones.primaryButton}`}
                 >
                   회원가입
@@ -1186,6 +1223,18 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
 
             {/* Mobile: 프로필 / 인증 */}
             <div className="pt-2 border-t border-slate-800 space-y-2">
+              <a
+                href="/healing-room"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => {
+                  setMobileOpen(false);
+                  handleOpenHealingRoom(event);
+                }}
+                className="block w-full px-4 py-2 bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 border border-sky-400/40 text-sky-200 rounded-xl text-center text-xs font-bold"
+              >
+                🏡 PosMul 힐링룸 (새 창)
+              </a>
               {user ? (
                 <div className="space-y-2">
                   <div className="px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-400/30 text-xs font-bold text-emerald-200 flex items-center gap-2">
@@ -1224,14 +1273,14 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   <Link
-                    href="/auth/login"
+                    href={loginHref}
                     onClick={() => setMobileOpen(false)}
                     className="block px-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-center text-xs font-semibold text-slate-200"
                   >
                     로그인
                   </Link>
                   <Link
-                    href="/auth/signup"
+                    href={signupHref}
                     onClick={() => setMobileOpen(false)}
                     className={`block px-4 py-2 rounded-xl text-center text-xs font-bold ${currentDomainMeta.tones.primaryButton}`}
                   >
