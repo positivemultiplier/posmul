@@ -17,6 +17,7 @@
 ## 2. 개발 스펙 & 운영 가이드
 
 - **[v2/](file:///c:/G/posmul/docs/v2)**: v2 개발자 온보딩, DB/API 스펙, 백로그 (`01`~`05_*_V2.md`) *(v3.0 변경점에 맞춰 추후 동기화 예정)*
+- **[CODEBASE_DDD_CA_DB_AUDIT_REPORT_2026-11.md](file:///c:/G/posmul/docs/CODEBASE_DDD_CA_DB_AUDIT_REPORT_2026-11.md)**: **모노레포 전수 아키텍처·DDD·Clean Architecture·Supabase DB 정밀 감사 보고서** (2026-11-19 실측)
 - **[PREDICTION_AND_LIVE_GENERATION_PRINCIPLES.md](file:///c:/G/posmul/docs/PREDICTION_AND_LIVE_GENERATION_PRINCIPLES.md)**: 예측/라이브 게임 생성 원칙
 - **[COLLABORATION_GUIDE.md](file:///c:/G/posmul/docs/COLLABORATION_GUIDE.md)** / **[GIT_STRATEGY.md](file:///c:/G/posmul/docs/GIT_STRATEGY.md)**: 협업 및 Git 브랜치 전략
 

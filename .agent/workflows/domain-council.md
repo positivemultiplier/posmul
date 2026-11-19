@@ -16,6 +16,7 @@ description: Swarm 없이 도메인 참모들과 먼저 상의하고 대표님 �
 4. **[posmul-consume](file:///c:/G/posmul/.agent/skills/posmul-consume/SKILL.md)** — 광고 2트랙(현금 `EAT` vs 직접의뢰 `Social IFRS S1`) · 소상공인 Phase 3 잠금
 5. **[posmul-donation](file:///c:/G/posmul/.agent/skills/posmul-donation/SKILL.md)** — 2단계 가치 배분 훈련(Phase 1 기관·K-물품 vs Phase 2 팔로잉·미래꿈 투표)
 6. **[posmul-ranking](file:///c:/G/posmul/.agent/skills/posmul-ranking/SKILL.md)** — 읍면동 풀뿌리 랭킹 · 직업군 명예의 전당 · `Brier Score` 실력 평판
+7. **[posmul-housing-pro](file:///c:/G/posmul/.agent/skills/posmul-housing-pro/SKILL.md)** — 전문직 버티컬 1호(주택관리사 수험·소장 실무) · 버티컬 일일 300 PMP 통제
 
 ---
 
@@ -28,11 +29,12 @@ description: Swarm 없이 도메인 참모들과 먼저 상의하고 대표님 �
 
 ### Step 2. 도메인 참모 소환 & 상의 (코드 수정 금지)
 - 관련 도메인 참모의 `SKILL.md`를 읽는다. (도메인 간 충돌 우려가 큰 경우 읽기 전용 `invoke_subagent` 로 교차 검토)
-- 각 참모 관점에서 아래 **4가지 질문**에 답을 뽑는다:
+- 각 참모 관점에서 아래 **5가지 질문**에 답을 뽑는다:
   1. **철학 부합 여부**: 이 도메인의 존재 이유에 맞는가?
   2. **금지선 / 불변식 충돌 여부**: `PMC` 누수, `EBIT` 오용, Phase 2/3 조기 개방, 원장 미연동 등을 건드리지 않는가?
   3. **타 도메인 입출력 영향**: 앞/뒤 도메인 계약(`PMP`/`PMC`/`EAT`/`Ranking` 점수)이 어긋나지 않는가?
-  4. **현 코드 현황**: 지금 실제 코드/DB와 어떤 차이가 있는가?
+  4. **보안 & Clean Architecture 경계**: 서버 인증(`getUser()`/`requireAdminApi`), RLS/`SECURITY DEFINER` 최소권한, 원자적 원장 RPC, BC 우회/순환 금지 규칙을 지키는가?
+  5. **현 코드 현황**: 지금 실제 코드/DB와 어떤 차이가 있는가?
 
 ### Step 3. 대표님 컨펌 브리핑 (Decision Gate)
 - 아래 형식으로 **짧고 명확한 상의 결과**를 보고하고 대표님의 컨펌을 기다린다:

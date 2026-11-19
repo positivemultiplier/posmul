@@ -24,7 +24,9 @@ description: PosMul 소비·광고(Consume) 도메인 참모. 일반 네트워�
 
 ## 3. 금지선 & 자주 생기는 함정
 - ❌ 광고 시청/결제/펀딩 API에서 유저에게 **`PMC`를 직접 적립하는 코드 금지** (`v3.0` 폐기 규칙).
-- ❌ `supabase.rpc('increment_pmp')` 처럼 존재하지 않는 RPC나 잘못된 인자로 적립이 누락되는 패턴 금지 (`time/view/[id]/route.ts` 수정본 유지).
+- ❌ `supabase.rpc('increment_pmp')` 처럼 존재하지 않는 RPC나 잘못된 인자로 적립이 누락되는 패턴 금지.
+- ❌ **광고 시청 시간 서버 미검증 및 중복 적립 금지**: `ad_views.started_at` 기준 실제 경과 시간을 서버에서 검증하고, 완료 처리 시 반드시 `WHERE id = $1 AND ended_at IS NULL` 조건부 원자 갱신으로 병렬 PATCH 중복 적립을 차단한다.
+- ❌ **프론트엔드 거짓 성공(Fake Success) UI 금지**: API가 `403 PHASE_3_LOCKED` 또는 에러를 반환했을 때 `catch`/`else`에서 에러를 삼키고 `"결제/적립 완료"` 모달을 띄우지 않는다. API 응답 스키마(`data` 래핑, camelCase)와 UI 파싱 계약을 일치시킨다.
 - ❌ Phase 1에서 소상공인 오프라인 가맹점 결제 기능을 성급히 열어 코어 루프 집중도를 떨어뜨리는 것 금지.
 
 ## 4. 타 도메인 계약 (Input / Output)

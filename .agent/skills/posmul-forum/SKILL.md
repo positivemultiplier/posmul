@@ -22,8 +22,11 @@ description: PosMul 광장(Forum) 도메인 참모. 트래픽과 체류시간 �
 4. **어뷰징 방어**: 자추(자기 글 추천) 및 동일 유저 중복 추천을 서버/DB에서 차단한다.
 
 ## 3. 금지선 & 자주 생기는 함정
-- ❌ 일일 상한 없이 글/댓글 무한 작성으로 `PMP`를 찍어내게 두는 설계 금지.
-- ❌ 미존재 RPC(`reward_pmp_to_user` 등)를 `try/catch`로 감싸 조용히 실패하게 두는 패턴 금지 — 반드시 `forum-pmp-ledger.ts` 의 `grantForumPmpWithDailyCap` 경유.
+- ❌ 일일 상한 없이 글/댓글 무한 작성으로 `PMP`를 찍어내게 두는 설계 금지. (일일 리셋 기준은 반드시 **KST `Asia/Seoul`** 자정 기준, UTC `setHours(0)` 금지)
+- ❌ JS Read-Modify-Write로 일일 상한 체크 및 잔액 가산 금지 — 반드시 **단일 원자적 DB RPC**로 일일 상한 + `pmp_pmc_accounts` + `pmp_pmc_transactions`를 한 트랜잭션에 처리.
+- ❌ Clean Architecture 역참조 금지: `bounded-contexts/forum/infrastructure/*`에서 `src/app/forum/*` 파일을 import하지 말고, 공통 포럼 원장 서비스는 `bounded-contexts/forum/infrastructure/` 또는 `shared/economy-kernel`에 둔다.
+- ❌ `user.email?.includes("admin")` 같은 문자열 권한 판별 금지 — 반드시 `requireAdminApi` / `requireAdmin` 사용.
+- ❌ 비로그인 `DEMO_FALLBACK_USER_ID`로 글/댓글/투표 쓰기 허용 및 무인증 파일 업로드 금지.
 - ❌ 예측 도박성 유도 글이나 선동 글이 무분별하게 보상을 쓸어가는 구조 경계.
 
 ## 4. 타 도메인 계약 (Input / Output)

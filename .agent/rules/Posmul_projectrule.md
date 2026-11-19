@@ -2,523 +2,115 @@
 trigger: always_on
 ---
 
-# PosMul 프로젝트 규칙
+# PosMul 프로젝트 핵심 규칙 (v3.1 Constitution)
 
-> AI 및 개발자가 프로젝트를 올바르게 이해하고 일관된 방식으로 개발하기 위한 핵심 규칙
-
----
-
-## ⚠️ 절대 원칙 (위반 시 코드 거부)
-
-1. **Schema-per-Bounded-Context**: 각 도메인은 독립 DB 스키마 (economy.*, prediction.*, user.* 등)
-2. **Supabase CLI 절대 금지(DDL/DML)**: 데이터베이스 **변경**은 MCP 도구만 사용 (예: `mcp_supabase_execute_sql`, `mcp_supabase_apply_migration`)
-3. **TypeScript Strict Mode**: any 사용 금지, 모든 타입 명시 필수
-4. **한글 우선**: 모든 응답, 주석, 문서는 한국어
-5. **UI 개발 원칙(Local First)**: `shared/ui`는 **프리미티브(버튼/인풋/모달 shell/레이아웃 shell)** 중심으로 유지하고, **도메인 조합 UI(카드/섹션/페이지 구성요소)**는 각 `bounded-contexts/{domain}/presentation`에 둔다. (공유 승격은 안정성/변경주기 기준 충족 시에만)
-
-```mermaid
-flowchart TD
-  A[Change Request] --> B{DB change?}
-  B -- Yes --> C[MCP only: apply_migration / execute_sql]
-  B -- No --> D{UI change?}
-  D -- Yes --> E{Primitive-only UI?}
-  E -- Yes --> F[Use shared/ui primitives]
-  E -- No --> G[Local First: domain presentation]
-  D -- No --> F[Follow DDD boundaries + TS strict]
-```
-
-## 🚫 금지사항
-
-- ❌ Supabase CLI 사용 (supabase db push, migrate 등)
-- ❌ TypeScript any 타입
-- ❌ 도메인 간 직접 의존 (반드시 이벤트 또는 Application Layer 경유)
-- ❌ Infrastructure 코드를 Domain에 import
-- ❌ public 스키마와 domain 스키마 혼용
-
-
-## 📊 프로젝트 현황 (2025-12-25)
-
-- **Monorepo**: pnpm 10.12.4 + Turborepo 2.0.4
-- **주요 앱**: posmul-web (Next.js 15.3.4 + React 19)
-- **타입 시스템**: TypeScript strict 활성 (root tsconfig 기준)
-- **빌드/테스트 지표**: 정량 수치는 로컬/CI에서 최신 측정 후 갱신 권장
-
-```mermaid
-pie title "Project Focus"
-  "Type safety" : 25
-  "DDD boundaries" : 25
-  "MCP DB ops" : 25
-  "UI reuse" : 25
-```
+> **목적**: 에이전트와 개발자가 PosMul의 **v3.0 경제 헌법 · Clean Architecture/DDD 경계 · 보안/원장 불변식 · DB 동기화**를 일관되게 준수하기 위한 단일 진실 규칙입니다.  
+> **정본 기획 문서**: [POSMUL_WHITEPAPER.md](file:///c:/G/posmul/docs/POSMUL_WHITEPAPER.md) · [DOMAIN_FLOW_AND_DECISIONS.md](file:///c:/G/posmul/docs/DOMAIN_FLOW_AND_DECISIONS.md)
 
 ---
 
-## 1. 아키텍처 원칙
+## 1. 절대 불변 원칙 (위반 시 작업 거부)
 
-### 1.1 DDD (Domain-Driven Design)
+### ① 언어 및 환경
+- 모든 대화, 생각 과정, 문서, 코드 주석, 커밋 메시지는 **한국어** 기본.
+- Windows 환경 터미널 명령은 **PowerShell** 사용 (`pnpm`, `turbo` 전용 — `npm`/`yarn` 금지).
 
-**핵심 원칙**
-- Schema-per-Bounded-Context: 각 도메인은 독립 DB 스키마
-- Ubiquitous Language: 도메인 전문가와 개발자 간 동일 용어
-- Bounded Context 격리: 각 컨텍스트 독립 진화
+### ② v3.0 경제 헌법 (Economy Invariants)
+- **입구 단일화**: `Forum`, `Consume`, 버티컬 앱(`Housing-Pro` 등)의 모든 유저 활동 보상은 **오직 `PMP`만 지급**한다. (`PMC` 직접 지급 전면 금지)
+- **`PMC` 단일 생성**: `PMC`는 **오직 `Prediction` 예측 성공 보상**으로만 유일하게 발행된다. (가입 보너스·출석·일일 보너스·광고·결제에서 `PMC` 직접 지급 금지)
+- **승자독식 & `EAT` 상한**: 예측 실패 `PMP`는 소멸되며, `MoneyWave` 상금 풀은 매출/`EBIT`가 아닌 **세후 순이익(`EAT`)** 한도 내에서만 배분한다.
+- **일일 획득 상한(Hard Cap)**: `Forum` 일일 최대 **1,000 PMP**, 버티컬(`Housing-Pro`) 일일 최대 **300 PMP**를 서버/DB 레벨에서 엄격 통제한다.
+- **단계 잠금 준수**: `Donation`은 Phase 1(`기관기부`·`K-물품기부`)만 오픈(`opinion-leader`·`미래꿈기부` 잠금), `Consume` 소상공인/크라우드펀딩은 Phase 3 잠금 유지.
 
-**Bounded Contexts (코드 기준 9개)**
-
-> 기준: `apps/posmul-web/src/bounded-contexts/` 디렉토리
-
+### ③ Clean Architecture & DDD 경계 (Dependency Rule)
+```text
+Presentation / Next.js App (app/, presentation/)
+        │
+        ▼
+Application (bounded-contexts/{domain}/application/use-cases/)
+        │
+        ▼
+Domain (bounded-contexts/{domain}/domain/)  ◄── 외부 의존성 0 (순수 TS)
+        ▲
+        │ (implements Port)
+Infrastructure (bounded-contexts/{domain}/infrastructure/)
 ```
-auth
-consume
-demographic-data
-donation
-economy
-feed
-forum
-prediction
-ranking
-```
+- **API Route / Server Action 우회 금지**: 신규 기능 및 리팩토링 대상은 `app/api/`·Server Action에서 `supabaseAdmin`으로 DB에 직접 DML 하지 않고, 반드시 **`bounded-contexts/{domain}/application` UseCase(또는 정식 도메인 서비스)**를 경유한다.
+- **의존성 역전 엄수**:
+  - ❌ `domain/` → `application/`, `infrastructure/`, `presentation/`, `@supabase/*`, `next/*`, `react`, `lib/supabase/*`, `zod` 등 외부 인프라 import 금지.
+  - ❌ `application/` → `infrastructure/` 구체 클래스·`@supabase/*`·`@/lib/supabase/admin` 직접 import 금지 (반드시 Domain Port 인터페이스 주입).
+  - ❌ `infrastructure/` → `src/app/` 역방향 import 금지.
+  - ❌ `shared/` → `bounded-contexts/` 역방향 import 금지.
+  - ❌ **Cross-BC 직접 import 및 순환 의존 금지**: 여러 BC가 공유해야 하는 타입/어댑터(LLM 클라이언트, 지역 계층, 경제 원장 인터페이스 등)는 `shared/` 또는 `packages/auth-economy-sdk`로 승격한다.
+- **유령 도메인 금지**: 새 비즈니스 도메인을 `app/` 아래에 임의로 추가하지 말고 [domain-add.md](file:///c:/G/posmul/.agent/workflows/domain-add.md) 절차로 BC 또는 소속 BC 하위에 편입한다.
 
-```mermaid
-graph TD
-  BC[Bounded Contexts] --> auth
-  BC --> consume
-  BC --> demographic_data[demographic-data]
-  BC --> donation
-  BC --> economy
-  BC --> feed
-  BC --> forum
-  BC --> prediction
-  BC --> ranking
-```
+### ④ Supabase MCP vs 앱 런타임 엄격 분리 (핵심 교정)
+- **Supabase MCP (`apply_migration`, `execute_sql`, `get_advisors`, `generate_typescript_types`)**:
+  - **AI 에이전트가 개발/운영 시점에 DB 스키마·데이터를 점검/변경할 때만 사용**한다. (개발자/에이전트의 Supabase CLI DB 변경 금지)
+- **Next.js 앱 런타임 코드**:
+  - ❌ **앱 소스코드 안에서 `MCP*Repository` 작성 및 `mcp_supabase_*` 호출 절대 금지!** (Next.js 런타임에 존재하지 않아 크래시함)
+  - ✅ 앱 Repository 구현체는 반드시 `@supabase/ssr`(사용자 세션) 또는 `supabaseAdmin`(서버 전용)을 사용하는 `Supabase*Repository`로 작성한다.
+- **Schema-per-Bounded-Context & 로컬 Git 동기화 의무**:
+  - 모든 도메인 테이블은 독립 스키마(`economy`, `prediction`, `forum`, `donation`, `consume`, `feed`, `user`, `ranking`, `vertical_housing`)에 생성한다. **`public` 스키마에 도메인 테이블 생성 절대 금지.**
+  - Supabase 쿼리는 반드시 `.schema("<schema>").from("<table>")` 형식 사용 (`.from("schema.table")` 문법 오류 금지).
+  - **`apply_migration` 실행 시 반드시 동일 SQL을 `supabase/migrations/YYYYMMDDHHMMSS_<name>.sql`로 로컬 저장**하고, 직후 **`get_advisors(type="security")`**를 실행해 신규 `ERROR`/`WARN`이 0건인지 확인한다.
 
-**도메인 계층**
-```
-Domain → Application → Infrastructure → Presentation
-```
+### ⑤ 보안 & 금융 원장 불변식 (P0 Security Invariants)
+- **인증/인가 필수 (Fail-Closed)**:
+  - 모든 쓰기 API Route(`POST`/`PUT`/`PATCH`/`DELETE`)와 Server Action(`"use server"`)은 진입 즉시 `supabase.auth.getUser()` 또는 `requireAdminApi()`/`requireCronOrAdmin()`으로 서버 인증을 수행한다.
+  - ❌ 클라이언트 파라미터 `params.userId` 신뢰(IDOR), 비로그인 시 `DEMO_USER_ID` 폴백, `user.email?.includes("admin")` 같은 문자열 권한 판별 **절대 금지**.
+- **`SECURITY DEFINER` RPC 권한 격리 필수**:
+  - 모든 `SECURITY DEFINER` DB 함수는 반드시 `SET search_path = <명시 스키마>`를 선언하고, **생성 직후 `REVOKE ALL ON FUNCTION ... FROM PUBLIC, anon, authenticated;`**를 적용한다. 서버 전용 금전·관리자 함수는 `service_role`에만 `GRANT EXECUTE`한다.
+- **RLS 기본 원칙**:
+  - 모든 신규 테이블에 `ENABLE ROW LEVEL SECURITY` 필수.
+  - 쓰기(`INSERT`/`UPDATE`/`DELETE`/`ALL`) 정책에 `USING (true)` / `WITH CHECK (true)` 금지.
+  - RLS 정책 내 `auth.uid()`는 성능 최적화를 위해 `(select auth.uid())` 형태로 작성한다.
+- **금융 원장 원자성 (No Read-Modify-Write)**:
+  - `PMP`/`PMC` 잔액 증감·이체·차감·환불·일일 상한 체크는 JS에서 `SELECT` 후 `UPDATE`하는 Read-Modify-Write를 **절대 금지**한다.
+  - 반드시 **단일 원자적 PostgreSQL RPC**(`FOR UPDATE` 또는 `WHERE balance >= amount`, `WHERE is_active = true`, `WHERE ended_at IS NULL` 등 조건부 갱신)로 잔액 변경 + `economy.pmp_pmc_transactions` 원장 기록을 한 트랜잭션에 처리한다.
+  - 원장 부호 규약: 지급/적립은 양수(`+`), 차감/소모/소각은 일관된 규약을 준수하며 실패 시 절대값 덮어쓰기 롤백 금지.
+- **업로드 & 외부 AI API 보호**:
+  - 파일 업로드 API는 인증 + MIME/확장자 화이트리스트 + 용량 상한(예: 5MB) 필수.
+  - 유료 LLM/Vision API 호출 라우트는 인증 + 입력 크기 제한 + Rate Limit 필수.
 
-**핵심 패턴**
-- Aggregate Root, Value Object, Domain Events, Repository Pattern
-
-### 1.2 Clean Architecture
-
-**의존성 규칙**
-```
-Infrastructure → Application → Domain
-Presentation  → Application → Domain
-```
-
-**계층별 책임**
-- Domain: 비즈니스 로직, 외부 의존성 제로
-- Application: Use Cases, DTO 변환
-- Infrastructure: 외부 시스템 연동 (Supabase, MCP)
-- Presentation: UI, API Routes
-
-**Port & Adapter**
-- Port: Domain 인터페이스
-- Adapter: Infrastructure 구현
+### ⑥ TypeScript Strict · 코드 위생 · UI 원칙
+- **TypeScript Strict**: `any`, `as any`, `@ts-ignore`, 빈 `catch {}`(에러 삼키기) 및 서버 에러 시 가짜 성공 UI 출력 금지.
+- **God File 금지**: 단일 컴포넌트/액션/스토어 파일이 **500줄을 초과하지 않도록** 책임별로 분리한다 (`apps/housing-pro` 포함).
+- **Local First UI**: `shared/ui`는 도메인 무관 순수 프리미티브(Button, Input, Modal shell 등)만 유지. 도메인 조합 UI 및 데이터 패칭 컴포넌트는 해당 도메인 `presentation/`에 둔다.
 
 ---
 
-## 2. 프로젝트 구조
+## 2. 현행 모노레포 구조
 
-### Monorepo
-```
-posmul/
-├── apps/posmul-web/
-│   ├── src/
-│   │   ├── app/                    # Next.js App Router
-│   │   ├── bounded-contexts/       # DDD Contexts
-│   │   ├── shared/                 # 공유 코드
-│   │   └── lib/                    # 라이브러리 설정
-│   └── tests/                      # E2E
-├── packages/auth-economy-sdk/       # 통합 SDK
-└── docs/                           # 문서
-```
-
-### Bounded Context 구조
-```
-prediction/
-├── domain/         # entities, value-objects, repositories(interface)
-├── application/    # use-cases, dto
-├── infrastructure/ # repositories(impl), adapters
-└── presentation/   # components, hooks
+```text
+c:\G\posmul\
+├── apps/
+│   ├── posmul-web/                 # 메인 웹 앱 (Next.js 15, React 19)
+│   │   └── src/
+│   │       ├── app/                # Next.js App Router (얇은 진입점/라우팅)
+│   │       ├── bounded-contexts/   # DDD Bounded Contexts (auth, consume, demographic-data,
+│   │       │                       # donation, economy, feed, forum, prediction, ranking)
+│   │       ├── shared/             # 도메인 무관 UI 프리미티브, Economy Kernel, Security
+│   │       └── lib/                # Supabase SSR/Admin 클라이언트
+│   └── housing-pro/                # 버티컬 앱 (주택관리사 수험·실무, vertical_housing 스키마)
+├── packages/
+│   └── auth-economy-sdk/           # 생태계 통합 인증·경제 SDK (단일 타입/원장/SSO 계약)
+├── supabase/
+│   ├── migrations/                 # 원격 DB와 1:1 동기화되는 SQL 마이그레이션
+│   └── functions/                  # Supabase Edge Functions (배포 시 인증·로컬 동기화 필수)
+└── docs/                           # v3.0 정본 백서, 감사 보고서, v2 스펙
 ```
 
 ---
 
-## 3. 기술 스택
-
-**Frontend**: Next.js 15.3.4, React 19.0.0, TypeScript 5.4.5 (Strict), Tailwind CSS 3.4.16, Zustand 5.0.6, Zod 3.25.67
-
-**Backend**: Supabase (PostgreSQL 17.4.1), MCP
-
-**개발 도구**: pnpm 10.12.4, Turborepo 2.0.4, Jest 29.7.0, Playwright 1.44.0
-
----
-
-## 4. Database 스키마
-
-### DDD 스키마
-```sql
--- 각 Context는 독립 스키마
-economy.*        (12개 테이블)
-prediction.*     (5개 테이블)
-investment.*     (4개 테이블)
-forum.*          (7개 테이블)
-donation.*       (4개 테이블)
-user.*           (5개 테이블)
-public.*         (공용 테이블)
-```
-
-### 핵심 테이블
-```sql
--- user_profiles
-id, username, pmp_balance, pmc_balance
-
--- user_economic_balances
-pmp_available, pmp_locked, pmc_available, pmc_locked
-
--- 모든 테이블 RLS 활성화 필수
-```
-
----
-
-## 5. 코딩 규칙
-
-### 5.1 TypeScript
-
-**Strict Mode 필수**
-```json
-{ "strict": true, "noImplicitAny": true }
-```
-
-**타입 정의**
-```typescript
-// ✅ Good
-function calc(a: number): number { return a * 2; }
-
-// ❌ Bad
-function calc(a: any): any { return a * 2; }
-```
-
-**Branded Types**
-```typescript
-type UserId = string & { readonly brand: unique symbol };
-```
-
-**Result Pattern**
-```typescript
-type Result<T, E = Error> = 
-  | { success: true; data: T }
-  | { success: false; error: E };
-```
-
-### 5.2 DDD
-
-**Entity (불변)**
-```typescript
-class Prediction {
-  private constructor(
-    private readonly _id: PredictionId,
-    private _status: PredictionStatus
-  ) {}
-
-  get id() { return this._id; }
-  
-  settle(won: boolean): Prediction {
-    return new Prediction(this._id, won ? 'WON' : 'LOST');
-  }
-
-  static create(id: PredictionId): Prediction {
-    return new Prediction(id, 'PENDING');
-  }
-}
-```
-
-**Value Object**
-```typescript
-class PMP {
-  private constructor(private readonly value: number) {
-    if (value < 0) throw new Error('Invalid');
-  }
-  static create(v: number) { return new PMP(v); }
-  getValue() { return this.value; }
-  add(other: PMP) { return new PMP(this.value + other.value); }
-}
-```
-
-**Repository**
-```typescript
-// Port (Domain)
-interface IPredictionRepository {
-  save(p: Prediction): Promise<Result<void>>;
-  findById(id: PredictionId): Promise<Result<Prediction | null>>;
-}
-
-// Adapter (Infrastructure)
-class MCPPredictionRepository implements IPredictionRepository {
-  async save(p: Prediction): Promise<Result<void>> {
-    // MCP 구현
-  }
-}
-```
-
-### 5.3 네이밍
-
-```
-PascalCase: 컴포넌트, 클래스, 타입 (UserProfile.tsx)
-camelCase: 함수, 변수 (formatCurrency.ts)
-kebab-case: 폴더 (use-cases/)
-UPPER_SNAKE_CASE: 상수 (MAX_PMP_AMOUNT)
-```
-
-### 5.4 Import 순서
-
-```typescript
-// 1. React/Next
-import { useState } from 'react';
-// 2. 외부 라이브러리
-import { z } from 'zod';
-// 3. 내부 모듈 (@)
-import { Button } from '@/shared/components';
-// 4. 상대 경로
-import { Card } from './Card';
-```
-
-### 5.5 컴포넌트 구조
-
-```typescript
-import { useState } from 'react';
-import type { FC } from 'react';
-
-interface Props {
-  title: string;
-}
-
-export const Card: FC<Props> = ({ title }) => {
-  const [state, setState] = useState();
-  
-  const handleClick = () => {};
-  
-  return <div onClick={handleClick}>{title}</div>;
-};
-```
-
----
-
-## 5.6 UI 승격 체크리스트 (Domain → Shared)
-
-> 원칙: **Local First(전략 B)**. 도메인 조합 UI는 기본적으로 도메인에 둔다.
-> 아래 체크리스트를 통과한 경우에만 `shared/ui`로 “승격(promote)”한다.
-
-```mermaid
-flowchart TD
-  A[Want to promote to shared?] --> B{2+ domains use it?}
-  B -- No --> C[Keep local in domain]
-  B -- Yes --> D{No domain meaning?}
-  D -- No --> C
-  D -- Yes --> E{API stable 6+ months?}
-  E -- No --> C
-  E -- Yes --> F[Promote to shared/ui]
-```
-
-**필수(모두 Yes)**
-- [ ] 2개 이상의 도메인에서 실제 사용 중이다(예정/추측 제외)
-- [ ] 도메인 의미(정책/예측/기부 등)가 props/텍스트/구조에 섞여 있지 않다
-- [ ] 변경 주기(cadence)가 도메인에 종속되지 않는다
-- [ ] API(props)가 충분히 안정적이다(최소 6주~수개월 변경이 없었거나, 변경이 아주 드물다)
-- [ ] 접근성/상태처리/에러처리 등 공통 품질 요건을 만족한다
-
-**권장(가능하면 Yes)**
-- [ ] 도메인별 커스터마이징은 `variant`/`className` 정도로 해결 가능하다
-- [ ] 승격 시 중복 제거 효과가 확실하다(코드 2곳 이상 제거)
-- [ ] 승격 후에도 도메인 팀이 변경을 부담 없이 수용할 수 있다
-
----
-
-## 6. 개발 워크플로우
-
-**초기 설정**
-```powershell
-pnpm install
-pnpm generate-types
-pnpm build
-```
-
-**개발**
-```powershell
-pnpm dev                          # 전체(turbo dev)
-pnpm dev:web                      # 웹만(Next dev :3000)
-```
-
-**빌드 & 테스트**
-```powershell
-pnpm build
-pnpm test
-pnpm type-check
-```
-
-**코드 품질**
-```powershell
-pnpm format
-pnpm lint
-pnpm -F @posmul/posmul-web lint:fix
-```
-
-```mermaid
-flowchart LR
-  A[Implement] --> B[pnpm type-check]
-  B --> C[pnpm lint]
-  C --> D[pnpm test]
-  D --> E{UI flow changed?}
-  E -- Yes --> F[pnpm e2e]
-  E -- No --> G[Done]
-  F --> G
-```
-
----
-
-## 7. MCP 활용
-
-**Supabase MCP**
-- SQL 실행(DML): `mcp_supabase_execute_sql`
-- 마이그레이션(DDL): `mcp_supabase_apply_migration`
-- 타입 생성: `mcp_supabase_generate_typescript_types`
-- 보안/성능 검사: `mcp_supabase_get_advisors`
-
-> 참고: 에이전트/런타임 환경에 따라 MCP 함수 prefix가 다를 수 있으나(예: 도구 레지스트리), **프로젝트 코드에서 사용하는 명칭은 `mcp_supabase_*`를 표준**으로 합니다.
-
-**원칙**
-- Supabase CLI 사용 금지, MCP 도구만 사용
-- 스키마 변경 시 자동 타입 업데이트
-- 매 변경 후 보안 advisor 실행
-
-**타입 생성**
-```powershell
-pnpm generate-types
-```
-
-### ⚠️ 현행 불일치(정리 필요)
-
-- 규칙은 “Supabase CLI 절대 금지”지만, 현재 타입 생성 플로우 중 일부는 외부 자동화에서 **read-only 타입 생성**을 위해 CLI 호출을 포함할 수 있습니다.
-- 원칙은 유지하되, 팀 합의로 아래처럼 운영을 명시합니다.
-
-**운영 원칙(권장)**
-- ✅ DB 스키마/데이터 변경: MCP만 허용
-- ✅ 타입 생성: `pnpm generate-types`만 사용(내부 구현 변경 여부는 규칙 위반으로 보지 않도록 합의 필요)
-- ❌ 개발자가 직접 Supabase CLI로 DB를 변경하는 행위는 금지
-
----
-
-## 8. 경제 시스템 (PMP/PMC)
-
-### PMP (Point Major Policy)
-- **용도**: 전국 단위 정책 예측
-- **획득**: 예측 참여, 포럼 기여
-- **사용**: 예측 게임 배팅
-
-**흐름**
-```
-획득 → pmp_available += amount
-사용 → pmp_available -= amount, pmp_locked += amount
-성공 → pmp_locked → pmc_available (변환)
-실패 → pmp_locked → 소각
-```
-
-### PMC (Point Minor Community)
-- **용도**: 지역 단위 커뮤니티 활동
-- **획득**: 예측 성공, MoneyWave
-- **사용**: 지역 기부, 로컬 투자
-
-### MoneyWave (3단계)
-```
-Wave 1: 전체 활성 사용자 - 균등 분배
-Wave 2: 활동 사용자 - 활동 점수 비례
-Wave 3: 핵심 기여자 - 기여도 점수 비례
-```
-
-
-
-
----
-
-## 9. Workflows & Templates (필수 사용)
-
-> 새 기능/도메인/컴포넌트 작업은 아래 워크플로우/템플릿을 **반드시** 사용합니다.
-
-### 9.1 Workflows
-
-- `c:\G\.agent\workflows\domain-add.md`: 새 Bounded Context 추가
-- `c:\G\.agent\workflows\feature-planner.md`: **계획(Plan)** 수립용 (Phase/Quality Gates/승인)
-- `c:\G\.agent\workflows\posmul-feature.md`: **구현(Implement)** 실행용 (DDD 레이어별 작업 순서)
-- `c:\G\.agent\workflows\ui-component.md`: UI 컴포넌트 개발(공용 vs 도메인 구분)
-
-> 정리: `feature-planner`와 `posmul-feature`는 역할이 다릅니다.
-> - `feature-planner`: “무엇을 어떤 단계로 만들지”를 문서로 합의/관리
-> - `posmul-feature`: “합의된 계획을 DDD 구조로 어떻게 구현할지” 실행 체크리스트
-
-```mermaid
-flowchart TD
-  A[Start Work] --> B{Work type?}
-  B -- New domain --> C[domain-add]
-  B -- UI component/page --> D[ui-component]
-  B -- Feature in a domain --> E{Trivial change?}
-  E -- Yes --> F[posmul-feature ]
-  E -- No --> G[feature-planner ]
-  G --> F
-```
-
-### 9.2 Templates
-
-- `c:\G\.agent\templates\plan-template.ko.md`: Implementation Plan 생성용 템플릿(한국어 우선)
-- `c:\G\.agent\templates\plan-template.md`: (레거시) 영어 템플릿. 특별한 이유가 없으면 ko 템플릿 사용
-
-**권장 산출물 경로**
-- `posmul/docs/plans/PLAN_<feature-name>.md` (없으면 생성)
-
-```mermaid
-sequenceDiagram
-  participant You as Developer
-  participant Template as plan-template.md
-  participant Plan as docs/plans/PLAN_*.md
-
-  You->>Template: Copy structure
-  Template-->>Plan: Create new plan doc
-  You->>Plan: Fill phases + quality gates
-```
-
----
-
-## 10. 현재 규칙의 미흡/개선 포인트(내가 보기엔)
-
-1. **승격 체크리스트 부재**: 도메인 컴포넌트를 shared로 “승격(promote)”할 때의 기준(안정성/변경주기/2+ 도메인 공통성)을 체크리스트로 문서화 필요.
-2. **타입 생성 플로우 문서 불일치**: “MCP-only” 원칙과 실제 타입 생성 스크립트의 구현(외부 자동화/CLI 의존)이 혼재되어 있어, 팀 합의된 단일 경로로 정리 필요.
-3. **상대경로 import 난립**: shared→도메인 이동 시 경로 수정 비용이 커지므로, 가능하면 alias 사용 규칙/리팩터 가이드 보강 필요.
----
-
-## 부록
-
-### 주요 명령어
-```powershell
-pnpm install              # 의존성
-pnpm dev                 # 개발
-pnpm build               # 빌드
-pnpm test                # 테스트
-pnpm type-check          # 타입체크
-pnpm lint                # 린트
-pnpm generate-types      # DB 타입
-pnpm format              # 포맷팅
-```
-
-### 환경 변수
-```bash
-NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-SUPABASE_PROJECT_ID=xxx
-```
-
----
-
-
-**버전**: 1.1 | **업데이트**: 2025-12-24
+## 3. 워크플로우 & 도메인 참모 스킬
+
+작업 성격에 따라 아래 워크플로우와 참모 스킬을 사용한다:
+- **기획·도메인 의사결정 상의**: [domain-council.md](file:///c:/G/posmul/.agent/workflows/domain-council.md) + `.agent/skills/posmul-*/SKILL.md`
+- **복잡한 기능 계획**: [feature-planner.md](file:///c:/G/posmul/.agent/workflows/feature-planner.md)
+- **기능 구현**: [posmul-feature.md](file:///c:/G/posmul/.agent/workflows/posmul-feature.md)
+- **새 Bounded Context 추가**: [domain-add.md](file:///c:/G/posmul/.agent/workflows/domain-add.md)
+- **UI 컴포넌트 개발**: [ui-component.md](file:///c:/G/posmul/.agent/workflows/ui-component.md)
+- **완료 검증 및 배포**: [delivery-pipeline.md](file:///c:/G/posmul/.agent/rules/delivery-pipeline.md) · [Posmul_tdd-rules.md](file:///c:/G/posmul/.agent/rules/Posmul_tdd-rules.md)
+
+**버전**: 3.1 | **업데이트**: 2026-11-19

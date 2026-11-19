@@ -26,8 +26,10 @@ description: PosMul 기부(Donation) 도메인 참모. Phase 1(기관·K-물품�
 3. **전달 & 수혜 인증 지향**: 수혜기관의 물품 요청 → 전달 과정 → 수혜자 인증 기록이 남아야 플랫폼 내부 신뢰가 성립한다.
 
 ## 3. 금지선 & 자주 생기는 함정
-- ❌ Demo/모킹 성공 응답만 리턴하고 실제로 `pmc_balance` 를 깎지 않는 가짜 기부 API 금지.
-- ❌ 준비되지 않은 `오피니언 리더` 개인 후원이나 `미래꿈기부` 투표 UI를 Phase 1 메인에 성급히 노출하는 것 금지 (`opinion-leader` Phase 2 잠금 유지).
+- ❌ Demo/모킹 성공 응답만 리턴하거나, 실제 `pmc_balance`를 차감해 놓고 메모리 Mock 배열만 수정(`donation-v2.actions.ts` 패턴)하는 가짜 기부 금지.
+- ❌ JS `SELECT → UPDATE` 비원자 차감 및 `previousBalance` 절대값 덮어쓰기 롤백 금지 — 반드시 **단일 원자적 DB RPC(`WHERE pmc_balance >= amount`)**로 차감 + 원장 기록을 처리.
+- ❌ UI 카드만 `comingSoon`으로 막고 실제 페이지/API(`/donation/opinion-leader`, `POST /api/donation/opinion-leader/*`)를 열어두는 불완전 잠금 금지 — 반드시 **서버 API 레벨에서도 Phase 2 잠금 가드** 적용.
+- ❌ 위시리스트 승인 등 관리자 Server Action에 인증/관리자 권한 체크 누락 금지, 미사용 `"use server"` 파일 방치 금지.
 - ❌ **"외부 중복 수령 문제(어금니 아빠 리스크)"가 완전히 해결된 것처럼 홍보하거나 설계를 가정하는 것 금지** — 플랫폼 외부 타 단체 중복 수령은 솔직히 미해결 오픈 이슈로 관리하며, 초기에는 개인 사연보다 검증 가능한 기관·물품 중심으로 리스크를 낮춘다.
 
 ## 4. 타 도메인 계약 (Input / Output)

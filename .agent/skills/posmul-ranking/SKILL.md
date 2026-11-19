@@ -27,6 +27,7 @@ description: PosMul 랭킹·명예의 전당(Ranking) 도메인 참모. 동(읍�
 - ❌ 현금/단순 클릭 노가다만으로 명예의 전당 최상위를 도배할 수 있는 점수 공식 금지 (`Forum` 일일 한도 및 `Brier Score` 등 실력·질 가중 존중).
 - ❌ `Consume` 에서 `PMC` 를 버는 것처럼 보이게 하는 옛 UI 단위(`PMC` 표시 in `consume` 랭킹) 방치 주의.
 - ❌ 추후 Phase 2 `오피니언 리더 팔로잉 기부`와 연계될 때 검증 없는 랭커에게 즉시 위임 권한을 여는 것 금지.
+- ❌ 아키텍처·데이터 정합성: 랭킹 산정 로직을 `app/api/ranking/route.ts`에 몰아넣지 말고 `bounded-contexts/ranking` 레이어로 분리하며, 삭제된 `public.user_profiles` 대신 `user.profiles`를 참조하고 `period` 필터와 `limit` 상한을 서버에서 엄격히 적용한다. 데이터 부재 시 가짜 지역/비율 합성 반환 금지.
 
 ## 4. 타 도메인 계약 (Input / Output)
 - **수신(`Input`)**:

@@ -2,106 +2,65 @@
 trigger: always_on
 ---
 
-# TDD 개발 규칙 (PosMul)
+# TDD 및 테스트 품질 규칙 (PosMul v2.0)
 
-> Red → Green → Refactor 사이클 기반 테스트 주도 개발
-
----
-
-## 핵심 원칙
-
-### 1. Red-Green-Refactor 사이클
-
-```mermaid
-flowchart LR
-    R["🔴 Red<br/>실패 테스트 작성"] --> G["🟢 Green<br/>최소 구현"]
-    G --> RF["🔄 Refactor<br/>코드 개선"]
-    RF --> R
-```
-
-### 2. 계층별 테스트 전략
-
-| 계층 | 테스트 유형 | 커버리지 목표 |
-|------|------------|--------------|
-| **Domain** | 단위 테스트 | 80%+ |
-| **Application** | 유스케이스 테스트 | 70%+ |
-| **Infrastructure** | 통합 테스트 | 60%+ |
-| **Presentation** | 컴포넌트 테스트 | 선택 |
-
-### 3. 테스트 파일 위치
-
-```
-bounded-contexts/{domain}/
-├── domain/
-│   └── entities/
-│       └── __tests__/     ← Domain 테스트
-├── application/
-│   └── use-cases/
-│       └── __tests__/     ← Application 테스트
-└── infrastructure/
-    └── repositories/
-        └── __tests__/     ← Infrastructure 테스트
-```
+> 핵심 비즈니스 로직·금융 원장·보안 경계는 반드시 실질적 행위 검증 테스트로 보호한다.
 
 ---
 
-## 테스트 작성 규칙
+## 1. 테스트 작성 절대 규칙
 
-### 네이밍
+### ✅ 필수 준수
+1. **실질적 행위 검증(Behavior Verification)**: 실제 프로덕션 함수·클래스·유스케이스를 import하여 입력에 따른 출력, 상태 전이, 에러/예외 분기를 검증한다.
+2. **금융·보안 경로 최우선 테스트**:
+   - 잔액 차감/적립, 일일 상한(Cap), 중복 요청/Race Condition 방어, 정산 공식, 권한(인증/관리자/IDOR 차단)은 변경 시 반드시 테스트를 추가·갱신한다.
+3. **단위 vs 통합 테스트 파일명 분리**:
+   - 단위 테스트 (DB/네트워크 Mock, 10초 내 종료): `*.test.ts`
+   - 실제 DB 연동 통합 테스트: `*.integration.test.ts` (기본 `pnpm test`에서 자동 제외)
+
+### ❌ 절대 금지 (가짜 테스트 차단)
+- ❌ 프로덕션 코드를 import하지 않고 테스트 파일 안에 Mock 클래스를 선언해 자가 검증하는 테스트 금지.
+- ❌ `expect(Service).toBeDefined()`, `expect(typeof fn).toBe("function")`만 확인하고 메서드를 호출하지 않는 껍데기 테스트 금지.
+- ❌ `expect(typeof result.success).toBe("boolean")`, `expect([200, 404, 500]).toContain(status)`처럼 실패해도 통과하는 무의미한 단언 금지.
+- ❌ 테스트 내부에 `as any` 남용으로 계약 오류를 숨기는 행위 금지.
+
+---
+
+## 2. 계층별 테스트 전략
+
+| 계층 / 대상 | 테스트 유형 | 우선순위 |
+|---|---|---|
+| **Domain (Entity, VO, Domain Service)** | 순수 단위 테스트 (외부 의존 0) | 최우선 (80%+) |
+| **Application (UseCase, 정책, 권한 가드)** | Port Mock 기반 유스케이스 테스트 | 최우선 (70%+) |
+| **API Route / Server Action (금전·인증)** | 인증 실패(401/403)·검증 실패(400)·정상 흐름 테스트 | 높음 |
+| **Infrastructure (Repository / Adapter)** | 쿼리/매핑 단위 테스트 또는 `.integration.test.ts` | 권장 |
+| **Presentation (UI)** | 순수 로직 분리 후 단위 테스트, 핵심 여정은 E2E | 선택 |
+
+---
+
+## 3. 작성 패턴 (Given-When-Then)
+
 ```typescript
-// 파일: {대상}.test.ts
-// describe: 테스트 대상
-// it: 한글로 기대 동작 설명
 describe("PredictionGame Aggregate", () => {
-  it("올바른 데이터로 예측 게임을 생성할 수 있다", () => {
-    // Given - When - Then
+  it("마감된 게임에 참여 시도하면 실패 Result를 반환한다", () => {
+    // Given
+    const game = createClosedTestGame();
+    // When
+    const result = game.participate(userId, optionId, amount);
+    // Then
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.code).toBe("GAME_NOT_ACTIVE");
+    }
   });
 });
 ```
 
-### Given-When-Then 패턴
-```typescript
-it("게임을 활성화할 수 있다", () => {
-  // Given (준비)
-  const game = createTestGame();
-  
-  // When (실행)
-  const result = game.activate();
-  
-  // Then (검증)
-  expect(result.success).toBe(true);
-  expect(game.getStatus()).toBe("ACTIVE");
-});
-```
-
----
-
-## 명령어
+## 4. 명령어
 
 ```powershell
-# 전체 테스트
-pnpm test
-
-# 특정 도메인만
-pnpm -F @posmul/posmul-web test -- --testPathPattern="prediction"
-
-# Watch 모드
-pnpm -F @posmul/posmul-web test -- --watch
-
-# 커버리지
-pnpm -F @posmul/posmul-web test -- --coverage
+pnpm -F @posmul/posmul-web test -- --passWithNoTests --silent
+pnpm -F @posmul/posmul-web test -- --testPathPatterns="prediction"
 ```
 
----
-
-## 커밋 규칙
-
-```
-test(domain): 예측 게임 생성 테스트 추가   ← 테스트 먼저
-feat(domain): 예측 게임 생성 구현          ← 구현 후
-refactor(domain): 예측 게임 코드 정리      ← 리팩터링
-```
-
----
-
-**버전**: 1.0 | **업데이트**: 2026-01-12
+**버전**: 2.0 | **업데이트**: 2026-11-19

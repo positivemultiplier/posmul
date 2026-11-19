@@ -79,12 +79,19 @@ description: PosMul 생태계 최초의 전문직 버티컬 'Housing-Pro(주택�
 
 ### ③ 코어 경제 엔진의 PMP 중앙 통제 가드 (Hard Cap)
 1. **버티컬 일일 획득 총량 상한 (Vertical Daily Cap):**
-   - 유저 1인이 `Housing-Pro` 앱에서 하루에 얻을 수 있는 순수 학습 `PMP` 총합은 **최대 300 PMP**로 `packages/auth-economy-sdk` 코어에서 엄격히 제한합니다. (포럼 일일 상한 1,000 PMP와 독립 운영)
+   - 유저 1인이 `Housing-Pro` 앱에서 하루에 얻을 수 있는 순수 학습 `PMP` 총합은 **최대 300 PMP**로 **서버 원자적 DB RPC + `packages/auth-economy-sdk` 코어**에서 엄격히 제한하며, 모든 지급은 반드시 `economy.pmp_pmc_transactions` 원장에 기록한다.
 2. **현금 연료(`EAT`) 선순환 의무:**
    - Housing-Pro에서 발행되는 PMP의 가치 안정성을 위해, Housing-Pro 자체 수익원(종이책/전자책 판매 마진, 소장용 B2B 보수자재 제휴 광고 등)에서 발생하는 **세후 순이익(`EAT`)의 일정 비율이 중앙 `MoneyWave` 풀로 유입**됩니다.
 3. **절대 침범 불가 규칙:**
    - **`PMC` 직접 지급 절대 금지**: 스캔, 합격, 점검 완료 등 어떤 버티컬 행동으로도 `PMC`를 직접 지급하지 않습니다. `PMC`는 오직 `Prediction` 마켓 성공으로만 획득합니다.
    - **`PMP` 현금 판매 및 `PMC` 환금 금지**: 사행성 규제 회피를 위해 어떠한 현금성 환전도 지원하지 않습니다.
+
+### ④ 아키텍처 · 보안 · DB 규율 (Housing-Pro 필수 가드레일)
+- **스키마 격리**: 모든 Housing-Pro 테이블은 **`vertical_housing` 스키마에만 생성**한다. `public` 스키마에 도메인 테이블 생성 절대 금지. 모든 테이블 RLS 활성화(`theory_sections` 포함), `book_serials` 미등록 시리얼 SELECT 차단, `ai_scan_logs`/`study_cones`/`study_*_logs`에 `ALL (true)` 정책 금지.
+- **서버 인증 & IDOR 절대 금지**: 모든 쓰기 Server Action(`study-economy`, `prediction-widget`, `serial`, `study-cone`, `auth-profile`)은 `supabase.auth.getUser()` 세션을 필수로 요구하며, **`sessionUser?.id || params.userId` 폴백을 절대 금지**한다.
+- **AI/외부 API 보호**: `/api/scan/vision`, `/api/books/parse-toc` 등 유료 Gemini 호출 API는 로그인 인증 + 입력 크기 제한 + Rate Limit을 필수로 적용한다.
+- **시리얼/가입 어뷰징 차단**: 특정 접두사(`HP26-` 등) 자동 통과 백도어 금지, 이메일 미인증(`email_confirm: true`) + 대량 웰컴 보너스 즉시 지급 금지.
+- **God File 금지 & 모듈 분리**: 단일 페이지/액션/스토어 파일은 **500줄 이내**를 목표로 책임별(도메인 계산 로직 / DB 액션 / UI 섹션)로 분리한다. 프로덕션 링크에 `localhost:3000` 하드코딩 금지.
 
 ---
 

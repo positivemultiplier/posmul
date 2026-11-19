@@ -100,15 +100,19 @@ $$\text{DRAFT} \longrightarrow \text{ACTIVE} \longrightarrow \text{CLOSED} \long
 
 ---
 
-## 4. 보안 및 권한 분리 원칙 (Supabase RLS & Admin)
+## 4. 보안, 권한 분리 및 원장 원자성 원칙 (Supabase RLS & Admin)
 
-- **RLS(Row-Level Security) 준수**:
-  - `prediction` 및 `forum` 스키마의 모든 공개 테이블(`prediction_games`, `predictions`, `user_challenges`, `user_challenge_bets` 등)은 RLS가 켜져 있어야 합니다.
-  - 일반 조회는 `anon`, `authenticated` 모두 허용(`USING (true)`).
-  - 베팅 및 참여는 `auth.uid() = user_id` 조건으로 본인 계정만 가능.
-- **클라이언트 사용 구분**:
+- **RLS(Row-Level Security) 엄격 준수**:
+  - `prediction` 스키마의 모든 테이블(`prediction_games`, `predictions`, `scheduler_config`, `user_challenges`, `user_challenge_bets` 등)은 RLS가 켜져 있어야 합니다.
+  - `predictions` 및 `user_challenge_bets`는 클라이언트 직접 `UPDATE`/`INSERT`(PMP 미차감 우회)를 차단하고, 반드시 **서버 인증 + 단일 원자적 DB RPC**(`place_prediction_bet`, `withdraw_prediction_bet`, `deduct_challenge_pmp`)를 통해서만 변경합니다.
+  - `scheduler_config`는 서버(`service_role`) 전용으로 유지합니다.
+- **클라이언트 사용 구분 & 서버 인증 필수**:
   - 사용자 세션 기반 조회: `createClient()` ([server.ts](file:///c:/G/posmul/apps/posmul-web/src/lib/supabase/server.ts) / [client.ts](file:///c:/G/posmul/apps/posmul-web/src/lib/supabase/client.ts))
-  - 정산, 잔고 강제 조작, 관리자 RPC 호출: 반드시 서버 액션/API 라우트 내부에서 `supabaseAdmin` ([admin.ts](file:///c:/G/posmul/apps/posmul-web/src/lib/supabase/admin.ts)) 사용 (Service Role Key로 RLS 우회).
+  - 정산, 철회, 관리자 RPC 호출 시 `supabaseAdmin` ([admin.ts](file:///c:/G/posmul/apps/posmul-web/src/lib/supabase/admin.ts))을 쓰기 전에 **반드시 `supabase.auth.getUser()` 또는 `requireAdminApi()` / `requireCronOrAdmin()`으로 호출자 권한을 먼저 검증**합니다.
+  - 모든 `SECURITY DEFINER` 정산/크론 RPC는 `REVOKE EXECUTE FROM PUBLIC, anon, authenticated` 적용 필수.
+- **원자적 철회 & 중복 방지**:
+  - 예측 철회 시 반드시 `WHERE prediction_id = $1 AND is_active = true` 조건의 단일 원자적 RPC로 이중 환불(Double Refund)을 원천 차단합니다.
+  - DB 로딩 시 `PredictionGame.create()` 대신 `reconstitute()` 패턴을 사용해 유령 이벤트와 ID 덮어쓰기를 방지합니다.
 
 ---
 

@@ -24,9 +24,12 @@ description: PosMul 경제(Economy) 도메인 참모. PMP·PMC 이중 화폐의 
 4. **기부 실차감 연동**: `Donation` 실행 시 유저 `pmc_balance`를 실제로 차감하고, 후속 저장 실패 시 즉시 롤백한다.
 
 ## 3. 금지선 & 자주 생기는 함정
-- ❌ 가입 보너스, 포럼 글쓰기, 광고 시청, 소상공인 결제(Phase 1) 등에서 **`PMC`를 직접 지급하는 로직 금지** (`WELCOME_BONUS_PMC = 0`, `ENABLE_PHASE3_CONSUME_PMC` 잠금 유지).
-- ❌ UI/계산기/문서에서 **`EBIT` 또는 `EBITDA` 기준으로 상금 풀을 계산하거나 표기하는 것 금지** (`EAT` 기준 통일).
-- ❌ 서버 검증 없이 클라이언트 요청액만으로 잔액을 차감·가산하는 행위 금지.
+- ❌ 가입 보너스, 일일 출석/프로필 보너스, 포럼 글쓰기, 광고 시청, 소상공인 결제(Phase 1) 등에서 **`PMC`를 직접 지급하는 로직 금지** (`WELCOME_BONUS_PMC = 0`, `ENABLE_PHASE3_CONSUME_PMC` 잠금 유지).
+- ❌ UI/계산기/문서에서 **`EBIT` 또는 `EBITDA` 기준으로 상금 풀을 계산하거나 표기하는 것 금지** (`EAT` 기준 단일화, 회계식 `(EBIT - Interest) * (1 - TaxRate)` 준수).
+- ❌ JS에서 `SELECT balance → UPDATE balance` Read-Modify-Write 잔액 변경 금지 — 반드시 **단일 원자적 PostgreSQL RPC + `economy.pmp_pmc_transactions` 원장 동시 기록** 필수.
+- ❌ 원장 부호 혼용 금지 (`PMP_SPEND`/`PMP_BURN` 등 거래 유형별 부호 규약 통일).
+- ❌ 금전 `SECURITY DEFINER` RPC(`grant_pmp`, `grant_pmc`, `execute_ledger_transaction` 등)를 `anon`/`authenticated` 롤에 공개 금지 (`service_role` 전용).
+- ❌ 서버 인증 없이 클라이언트 `userId` 파라미터만으로 타인 잔액을 조회/변경하는 IDOR 금지.
 
 ## 4. 타 도메인 계약 (Input / Output)
 - **수신(`Input`)**:
