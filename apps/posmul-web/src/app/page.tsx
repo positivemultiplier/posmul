@@ -1,10 +1,10 @@
 import { createClient } from "../lib/supabase/server";
+import { supabaseAdmin } from "../lib/supabase/admin";
 import {
   attachHourlyGamePoolsToRows,
   mapPredictionGameRowToCardModel,
   type PredictionGameRow,
 } from "./prediction/components/prediction-game-mapper";
-import { getAggregatedPrizePool } from "../bounded-contexts/prediction/application/prediction-pool.service";
 import { ClientPredictionGamesGrid } from "./prediction/components/ClientPredictionGamesGrid";
 import { HeroLandingSection } from "./components/HeroLandingSection";
 
@@ -14,11 +14,14 @@ export default async function Home() {
   const supabase = await createClient();
 
   const [
-    platformTotalPool,
+    donationsResult,
     gamesResult,
     accountsCountResult,
   ] = await Promise.all([
-    getAggregatedPrizePool(supabase).catch(() => 1500000),
+    supabaseAdmin
+      .schema("donation")
+      .from("donations")
+      .select("pmc_amount, amount, status"),
     supabase
       .schema("prediction")
       .from("prediction_games")
@@ -28,7 +31,7 @@ export default async function Home() {
       .eq("status", "ACTIVE")
       .order("created_at", { ascending: false })
       .limit(30),
-    supabase
+    supabaseAdmin
       .schema("economy")
       .from("pmp_pmc_accounts")
       .select("user_id", { count: "exact", head: true }),
@@ -38,14 +41,19 @@ export default async function Home() {
   const gamesWithPools = await attachHourlyGamePoolsToRows(supabase, recentGames);
   const featuredGames = gamesWithPools.map(mapPredictionGameRowToCardModel);
 
-  const totalUsersCount = accountsCountResult.count ?? 85;
+  const totalDonationAmount = (donationsResult.data ?? []).reduce((sum, row) => {
+    if (row.status === "cancelled") return sum;
+    const val = Number(row.pmc_amount ?? row.amount ?? 0);
+    return sum + (Number.isFinite(val) ? val : 0);
+  }, 0);
+  const totalUsersCount = accountsCountResult.count ?? 0;
 
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 selection:bg-blue-500 selection:text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-10">
-        {/* 🌟 1. 메인 브랜드 Hero 랜딩 섹션 */}
+        {/* 🌟 1. 메인 브랜드 Hero 모션그래픽 섹션 */}
         <HeroLandingSection
-          totalPool={platformTotalPool || 66461}
+          totalDonationAmount={totalDonationAmount}
           totalUsers={totalUsersCount}
         />
 
