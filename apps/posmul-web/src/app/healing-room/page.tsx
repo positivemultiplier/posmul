@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 };
 
 interface HealingRoomPageProps {
-  searchParams?: Promise<{ userId?: string }> | { userId?: string };
+  searchParams?: Promise<{ userId?: string }>;
 }
 
 export default async function HealingRoomPage({ searchParams }: HealingRoomPageProps) {

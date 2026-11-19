@@ -39,7 +39,7 @@ describe("DonationApplicationService", () => {
     execute: jest.fn(),
   };
 
-  const makeDonationMock = (overrides = {}) => {
+  const makeDonationMock = (overrides: Record<string, unknown> = {}) => {
     const base = {
       getId: () => ({ getValue: () => "donation-1" }),
       getDonorId: () => "user-123",
@@ -67,7 +67,7 @@ describe("DonationApplicationService", () => {
     return { ...base, ...overrides };
   };
 
-  const paginated = (items, page = 1, pageSize = 10) => ({
+  const paginated = (items: unknown[], page = 1, pageSize = 10) => ({
     success: true,
     data: {
       items,
@@ -80,8 +80,8 @@ describe("DonationApplicationService", () => {
     },
   });
 
-  let service;
-  let mockDonations;
+  let service: any;
+  let mockDonations: any[];
 
   beforeEach(() => {
     jest.clearAllMocks();

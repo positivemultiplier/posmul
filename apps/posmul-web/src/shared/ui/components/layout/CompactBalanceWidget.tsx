@@ -102,7 +102,7 @@ export function CompactBalanceWidget({
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((_event: string, session: { user: User } | null) => {
       const nextUser = session?.user ?? null;
       setInternalUser(nextUser);
       void fetchAccountBalance(nextUser);

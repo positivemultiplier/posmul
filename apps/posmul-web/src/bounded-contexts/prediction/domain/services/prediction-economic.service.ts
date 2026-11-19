@@ -245,7 +245,13 @@ export class PredictionEconomicService {
         ),
       ];
 
-      await this.eventPublisher.publishBatch(events);
+      if (this.eventPublisher.publishBatch) {
+        await this.eventPublisher.publishBatch(events);
+      } else {
+        for (const event of events) {
+          await this.eventPublisher.publish(event);
+        }
+      }
 
       return success(undefined);
     } catch (error) {

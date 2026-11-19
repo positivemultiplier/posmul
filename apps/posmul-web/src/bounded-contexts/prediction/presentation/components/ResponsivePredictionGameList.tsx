@@ -4,8 +4,14 @@ import { useState } from "react";
 import { Button } from "../../../../shared/ui/components/base";
 import { PredictionGameCard } from "./PredictionGameCard";
 import { MobilePredictionCard } from "./mobile/MobilePredictionCard";
-import { MobileGameNavigation } from "./mobile/MobileGameNavigation";
-import { MobileBettingSheet } from "./mobile/MobileBettingSheet";
+import {
+  MobileGameNavigation,
+  type MobileViewMode,
+} from "./mobile/MobileGameNavigation";
+import {
+  MobileBettingSheet,
+  type MobileBetSubmission,
+} from "./mobile/MobileBettingSheet";
 import { useIsMobile } from "../utils/mobileHelpers";
 import { GameStatus, PredictionType } from "../../domain/value-objects/prediction-types";
 
@@ -85,25 +91,27 @@ const mockGames = [
   }
 ];
 
+type ResponsiveGame = (typeof mockGames)[number];
+
 export const PredictionGameList: React.FC<{ userId?: string }> = ({
   userId: _userId,
 }) => {
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
-  const [viewMode, setViewMode] = useState("grid");
-  const [selectedGame, setSelectedGame] = useState(null);
+  const [viewMode, setViewMode] = useState<MobileViewMode>("grid");
+  const [selectedGame, setSelectedGame] = useState<ResponsiveGame | null>(null);
   const [isBettingSheetOpen, setIsBettingSheetOpen] = useState(false);
 
-  const handleBetClick = (game) => {
+  const handleBetClick = (game: ResponsiveGame) => {
     setSelectedGame(game);
     setIsBettingSheetOpen(true);
   };
 
-  const handleDetailsClick = (_game) => {
+  const handleDetailsClick = (_game: ResponsiveGame) => {
     // 상세 페이지로 이동 로직 추가 예정
   };
 
-  const handleSubmitBet = (_betData) => {
+  const handleSubmitBet = (_betData: MobileBetSubmission) => {
     // 베팅 제출 로직 추가 예정
     setIsBettingSheetOpen(false);
   };
@@ -174,8 +182,8 @@ export const PredictionGameList: React.FC<{ userId?: string }> = ({
           <PredictionGameCard
             key={game.id}
             game={game}
-            onBetClick={handleBetClick}
-            onDetailsClick={handleDetailsClick}
+            onBetClick={() => handleBetClick(game)}
+            onDetailsClick={() => handleDetailsClick(game)}
             className={viewMode === 'list' ? 'md:flex md:space-x-4' : ''}
           />
         ))}

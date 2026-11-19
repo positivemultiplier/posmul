@@ -4,6 +4,15 @@ import { motion } from 'framer-motion';
 import { DollarSign, Minus, Plus, Wallet } from 'lucide-react';
 import { Card } from '../../../../../shared/ui/components/base';
 
+export interface StakeAmountInputProps {
+  value: number;
+  onChange: (value: number) => void;
+  minAmount?: number;
+  maxAmount?: number;
+  currentBalance?: number;
+  disabled?: boolean;
+}
+
 export const StakeAmountInput = ({
   value,
   onChange,
@@ -11,20 +20,20 @@ export const StakeAmountInput = ({
   maxAmount = 100000,
   currentBalance = 50000,
   disabled = false
-}) => {
+}: StakeAmountInputProps) => {
   const presetAmounts = [1000, 5000, 10000, 25000, 50000];
 
-  const handleQuickAdjust = (adjustment) => {
+  const handleQuickAdjust = (adjustment: number) => {
     const newValue = Math.max(minAmount, Math.min(maxAmount, value + adjustment));
     onChange(newValue);
   };
 
-  const handlePresetAmount = (amount) => {
+  const handlePresetAmount = (amount: number) => {
     const adjustedAmount = Math.min(amount, Math.min(maxAmount, currentBalance));
     onChange(adjustedAmount);
   };
 
-  const formatCurrency = (amount) => {
+  const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('ko-KR').format(amount);
   };
 

@@ -6,9 +6,19 @@ import {
   ExclamationTriangleIcon,
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
-import useNotifications from '../../hooks/useNotifications';
+import useNotifications, {
+  type NotificationPriority,
+} from '../../hooks/useNotifications';
 
-export default function NotificationSystem({ className = '', maxVisible = 3 }) {
+export interface NotificationSystemProps {
+  className?: string;
+  maxVisible?: number;
+}
+
+export default function NotificationSystem({
+  className = '',
+  maxVisible = 3,
+}: NotificationSystemProps) {
   const {
     notifications,
     markAsRead,
@@ -33,7 +43,7 @@ export default function NotificationSystem({ className = '', maxVisible = 3 }) {
     });
   }, [visibleNotifications, removeNotification]);
 
-  const getPriorityStyles = (priority) => {
+  const getPriorityStyles = (priority: NotificationPriority) => {
     switch (priority) {
       case 'URGENT':
         return 'bg-red-100 border-red-500 text-red-800';
@@ -46,7 +56,7 @@ export default function NotificationSystem({ className = '', maxVisible = 3 }) {
     }
   };
 
-  const getPriorityIcon = (priority) => {
+  const getPriorityIcon = (priority: NotificationPriority) => {
     switch (priority) {
       case 'URGENT':
         return <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />;

@@ -5,6 +5,7 @@ import { PredictionGameCard } from './PredictionGameCard';
 import { PredictionGameFilter } from './filters/PredictionGameFilter';
 import { usePredictionFilters } from '../hooks/usePredictionFilters';
 import { Button } from '../../../../shared/ui/components/base';
+import { GameStatus, PredictionType } from '../../domain/value-objects/prediction-types';
 
 // Mock data with categories added
 const mockGames = [
@@ -13,7 +14,7 @@ const mockGames = [
     title: "2024년 한국 GDP 성장률 예측",
     description: "올해 한국의 실질 GDP 성장률이 몇 %가 될지 예측해보세요.",
     category: "economy",
-    predictionType: "ranking",
+    predictionType: PredictionType.RANKING,
     options: [
       { id: "1", text: "2.0% 미만", currentOdds: 0.25 },
       { id: "2", text: "2.0% - 2.5%", currentOdds: 0.45 },
@@ -27,7 +28,7 @@ const mockGames = [
     maximumStake: 5000,
     maxParticipants: 1000,
     currentParticipants: 234,
-    status: "ACTIVE",
+    status: GameStatus.ACTIVE,
     totalStake: 125000,
     gameImportanceScore: 2.5,
     allocatedPrizePool: 150000,
@@ -38,7 +39,7 @@ const mockGames = [
     title: "프리미어리그 맨시티 vs 아스날 경기 결과",
     description: "오늘 밤 프리미어리그 빅 매치 결과를 예측해보세요!",
     category: "sports",
-    predictionType: "wdl",
+    predictionType: PredictionType.WIN_DRAW_LOSE,
     options: [
       { id: "1", text: "맨시티 승", currentOdds: 0.45 },
       { id: "2", text: "무승부", currentOdds: 0.25 },
@@ -51,7 +52,7 @@ const mockGames = [
     maximumStake: 2000,
     maxParticipants: 500,
     currentParticipants: 387,
-    status: "ACTIVE",
+    status: GameStatus.ACTIVE,
     totalStake: 45000,
     gameImportanceScore: 1.8,
     allocatedPrizePool: 50000,
@@ -62,7 +63,7 @@ const mockGames = [
     title: "2024 대선 후보 지지율 1위 예측",
     description: "다음 대선에서 가장 높은 지지율을 받을 후보를 예측해보세요.",
     category: "politics",
-    predictionType: "ranking",
+    predictionType: PredictionType.RANKING,
     options: [
       { id: "1", text: "후보 A", currentOdds: 0.35 },
       { id: "2", text: "후보 B", currentOdds: 0.30 },
@@ -76,7 +77,7 @@ const mockGames = [
     maximumStake: 10000,
     maxParticipants: 2000,
     currentParticipants: 156,
-    status: "PENDING",
+    status: GameStatus.PENDING,
     totalStake: 85000,
     gameImportanceScore: 3.0,
     allocatedPrizePool: 100000,
@@ -87,7 +88,7 @@ const mockGames = [
     title: "BTS 새 앨범 빌보드 차트 순위",
     description: "BTS의 새 앨범이 빌보드 200에서 몇 위를 기록할지 예측해보세요!",
     category: "entertainment",
-    predictionType: "ranking",
+    predictionType: PredictionType.RANKING,
     options: [
       { id: "1", text: "1위", currentOdds: 0.70 },
       { id: "2", text: "2-5위", currentOdds: 0.20 },
@@ -101,7 +102,7 @@ const mockGames = [
     maximumStake: 1000,
     maxParticipants: 800,
     currentParticipants: 645,
-    status: "ENDED",
+    status: GameStatus.ENDED,
     totalStake: 32000,
     gameImportanceScore: 1.5,
     allocatedPrizePool: 35000,
@@ -109,7 +110,13 @@ const mockGames = [
   }
 ];
 
-export const PredictionGameListWithFilter = ({ userId }) => {
+export interface PredictionGameListWithFilterProps {
+  userId?: string;
+}
+
+export const PredictionGameListWithFilter = ({
+  userId,
+}: PredictionGameListWithFilterProps) => {
   const [sortOption, setSortOption] = useState('latest');
 
   const {

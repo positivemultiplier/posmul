@@ -7,6 +7,33 @@ import { BettingDistributionChart } from './BettingDistributionChart';
 import { ParticipantTimelineChart } from './ParticipantTimelineChart';
 import { TrendingUp, Users, PieChart } from 'lucide-react';
 
+export interface ProbabilityChartPoint {
+  time: string;
+  [key: string]: number | string;
+}
+
+export interface BettingChartPoint {
+  option: string;
+  amount: number;
+  percentage: number;
+  color: string;
+}
+
+export interface ParticipantChartPoint {
+  time: string;
+  count: number;
+  newParticipants: number;
+}
+
+export interface PredictionChartViewProps {
+  gameId?: string;
+  predictionType?: string;
+  probabilityData?: ProbabilityChartPoint[];
+  bettingData?: BettingChartPoint[];
+  participantData?: ParticipantChartPoint[];
+  isLoading?: boolean;
+}
+
 export const PredictionChartView = ({
   gameId: _gameId,
   predictionType = 'BINARY', // BINARY, MULTIPLE_CHOICE, etc.
@@ -14,7 +41,7 @@ export const PredictionChartView = ({
   bettingData = [],
   participantData = [],
   isLoading = false
-}) => {
+}: PredictionChartViewProps) => {
   // Mock data generation based on type
   const generateMockProbabilityData = () => {
     if (predictionType === 'BINARY') {

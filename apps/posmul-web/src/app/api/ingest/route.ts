@@ -17,13 +17,13 @@ export const dynamic = 'force-dynamic'; // static caching 방지
 export const maxDuration = 60; // 60초 타임아웃 (Vercel/Next.js limit check)
 
 // Helper to serialize errors
-function formatError(error: any) {
+function formatError(error: unknown) {
     if (error instanceof Error) {
         return {
+            ...(error as unknown as Record<string, unknown>),
             name: error.name,
             message: error.message,
             stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
-            ...error // capture other properties like 'code'
         };
     }
     return error;

@@ -55,10 +55,10 @@ export default function ForumPostDetailPage() {
   // 세션 유저 및 게시글 상세 로드
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }: { data: { user: { id: string; email?: string; app_metadata?: Record<string, unknown> } | null } }) => {
       if (user) {
         setCurrentUserId(user.id);
-        const adminCheck = user.email?.includes("admin") || user.id === "00000000-0000-0000-0000-000000000001";
+        const adminCheck = user.app_metadata?.role === "admin";
         setIsAdmin(!!adminCheck);
       }
     });

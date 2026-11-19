@@ -1,9 +1,19 @@
 "use client";
 
-import { FixedSizeList as List } from 'react-window';
+import { FixedSizeList as List, type ListChildComponentProps } from 'react-window';
 import InfiniteLoader from 'react-window-infinite-loader';
 import { useState, useCallback, useMemo } from 'react';
-import { PredictionGameRow } from './PredictionGameRow';
+import { PredictionGameRow, type VirtualizedPredictionGame } from './PredictionGameRow';
+
+export interface VirtualizedPredictionListProps {
+  games?: VirtualizedPredictionGame[];
+  hasNextPage?: boolean;
+  isNextPageLoading?: boolean;
+  loadNextPage?: (startIndex: number, stopIndex: number) => Promise<void> | void;
+  itemHeight?: number;
+  height?: number;
+  onGameSelect?: (game: VirtualizedPredictionGame) => void;
+}
 
 export const VirtualizedPredictionList = ({
   games = [],
@@ -13,16 +23,16 @@ export const VirtualizedPredictionList = ({
   itemHeight = 200,
   height = 600,
   onGameSelect
-}) => {
-  const [selectedGameId, setSelectedGameId] = useState(null);
+}: VirtualizedPredictionListProps) => {
+  const [selectedGameId, setSelectedGameId] = useState<string | null>(null);
 
   // 아이템이 로드되었는지 확인하는 함수
-  const isItemLoaded = useCallback((index) => {
+  const isItemLoaded = useCallback((index: number) => {
     return !!games[index];
   }, [games]);
 
   // 더 많은 아이템을 로드하는 함수
-  const loadMoreItems = useCallback(async (startIndex, stopIndex) => {
+  const loadMoreItems = useCallback(async (startIndex: number, stopIndex: number) => {
     if (!isNextPageLoading && hasNextPage && loadNextPage) {
       await loadNextPage(startIndex, stopIndex);
     }
@@ -32,8 +42,8 @@ export const VirtualizedPredictionList = ({
   const itemCount = hasNextPage ? games.length + 1 : games.length;
 
   // 각 행을 렌더링하는 컴포넌트
-  const Row = useCallback(({ index, style }) => {
-    let game;
+  const Row = useCallback(({ index, style }: ListChildComponentProps) => {
+    let game: VirtualizedPredictionGame | null;
     let isLoading = false;
 
     // 로딩 중인 항목인지 확인
@@ -41,7 +51,7 @@ export const VirtualizedPredictionList = ({
       isLoading = true;
       game = null;
     } else {
-      game = games[index];
+      game = games[index] ?? null;
     }
 
     return (
@@ -50,9 +60,9 @@ export const VirtualizedPredictionList = ({
           game={game}
           isLoading={isLoading}
           isSelected={selectedGameId === game?.id}
-          onSelect={(game) => {
-            setSelectedGameId(game?.id);
-            onGameSelect && onGameSelect(game);
+          onSelect={(selectedGame: VirtualizedPredictionGame) => {
+            setSelectedGameId(selectedGame.id);
+            onGameSelect?.(selectedGame);
           }}
         />
       </div>

@@ -1,15 +1,43 @@
 "use client";
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useState } from 'react';
+
+export interface MobileBetSubmission {
+  gameId?: string;
+  optionId: number | string;
+  amount: number;
+  confidence: number;
+}
+
+export interface MobileBettingOption {
+  id: string;
+  text: string;
+  probability?: number;
+  currentOdds?: number;
+  color?: string;
+}
+
+export interface MobileBettingGameData {
+  id: string;
+  title?: string;
+  options?: MobileBettingOption[];
+}
+
+export interface MobileBettingSheetProps {
+  isOpen: boolean;
+  onClose: () => void;
+  gameData: MobileBettingGameData | null;
+  onSubmitBet?: (betData: MobileBetSubmission) => void;
+}
 
 export const MobileBettingSheet = ({
   isOpen,
   onClose,
   gameData,
   onSubmitBet
-}) => {
+}: MobileBettingSheetProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragY, setDragY] = useState(0);
 
@@ -17,7 +45,10 @@ export const MobileBettingSheet = ({
     setIsDragging(true);
   };
 
-  const handleDragEnd = (event, info) => {
+  const handleDragEnd = (
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo
+  ) => {
     setIsDragging(false);
     setDragY(0);
 
@@ -27,7 +58,10 @@ export const MobileBettingSheet = ({
     }
   };
 
-  const handleDrag = (event, info) => {
+  const handleDrag = (
+    _event: MouseEvent | TouchEvent | PointerEvent,
+    info: PanInfo
+  ) => {
     if (info.offset.y > 0) {
       setDragY(info.offset.y);
     }

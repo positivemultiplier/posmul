@@ -337,7 +337,7 @@ export class CreateDonationUseCase {
       donorId,
       amount: amount.getValue(),
       beneficiaryName: request.beneficiaryName,
-      beneficiaryId: request.beneficiaryContact, // 또는 적절한 ID 필드
+      beneficiaryId: request.beneficiaryContact ?? request.beneficiaryName, // 또는 적절한 ID 필드
       category,
       description: description.getValue(),
       frequency,

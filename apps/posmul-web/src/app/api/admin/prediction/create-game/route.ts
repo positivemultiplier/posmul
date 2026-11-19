@@ -195,10 +195,11 @@ export async function POST(req: NextRequest) {
     let briefingGenerated = false;
 
     if (hasOracle) {
+      const safeTitle = (title ?? "").trim();
       const mergedConfig: Record<string, unknown> = {
         ...sourceConfig,
-        title: title.trim(),
-        resolutionCriteria: (description || title).trim(),
+        title: safeTitle,
+        resolutionCriteria: (description || safeTitle).trim(),
         options: structuredOptions,
         optionMapping:
           (sourceConfig.optionMapping as Record<string, string> | undefined) ?? {

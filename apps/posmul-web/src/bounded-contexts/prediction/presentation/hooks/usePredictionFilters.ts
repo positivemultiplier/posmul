@@ -2,8 +2,30 @@
 
 import { useCallback, useMemo, useState } from "react";
 
+export interface FilterablePredictionGame {
+  title: string;
+  description: string;
+  category?: string;
+  status: string;
+  minimumStake: number;
+  endTime: string | Date;
+}
+
+export interface StakeRange {
+  min: number;
+  max: number;
+}
+
+export interface PredictionFilters {
+  search: string;
+  categories: string[];
+  statuses: string[];
+  stakeRange: StakeRange;
+  timeFilter: string;
+}
+
 // 개별 필터 검증 함수들
-const matchesSearchFilter = (game, search) => {
+const matchesSearchFilter = (game: FilterablePredictionGame, search: string) => {
   if (!search) return true;
   const searchLower = search.toLowerCase();
   return (
@@ -12,25 +34,37 @@ const matchesSearchFilter = (game, search) => {
   );
 };
 
-const matchesCategoryFilter = (game, categories) => {
+const matchesCategoryFilter = (
+  game: FilterablePredictionGame,
+  categories: string[]
+) => {
   if (categories.length === 0) return true;
   const gameCategory = game.category || "economy";
   return categories.includes(gameCategory);
 };
 
-const matchesStatusFilter = (game, statuses) => {
+const matchesStatusFilter = (
+  game: FilterablePredictionGame,
+  statuses: string[]
+) => {
   if (statuses.length === 0) return true;
   const gameStatus = game.status.toLowerCase();
   return statuses.includes(gameStatus);
 };
 
-const matchesStakeRangeFilter = (game, stakeRange) => {
+const matchesStakeRangeFilter = (
+  game: FilterablePredictionGame,
+  stakeRange: StakeRange
+) => {
   return (
     game.minimumStake >= stakeRange.min && game.minimumStake <= stakeRange.max
   );
 };
 
-const matchesTimeFilter = (game, timeFilter) => {
+const matchesTimeFilter = (
+  game: FilterablePredictionGame,
+  timeFilter: string
+) => {
   if (timeFilter === "all") return true;
 
   const now = new Date();
@@ -50,8 +84,10 @@ const matchesTimeFilter = (game, timeFilter) => {
 };
 
 // 필터된 게임 리스트를 관리하는 커스텀 훅
-export const usePredictionFilters = (games) => {
-  const [filters, setFilters] = useState({
+export const usePredictionFilters = <T extends FilterablePredictionGame>(
+  games: T[]
+) => {
+  const [filters, setFilters] = useState<PredictionFilters>({
     search: "",
     categories: [],
     statuses: [],
@@ -73,13 +109,13 @@ export const usePredictionFilters = (games) => {
   }, [games, filters]);
 
   // 필터 업데이트 함수
-  const handleFilterChange = useCallback((newFilters) => {
+  const handleFilterChange = useCallback((newFilters: PredictionFilters) => {
     setFilters(newFilters);
   }, []);
 
   // 필터 초기화
   const resetFilters = useCallback(() => {
-    const defaultFilters = {
+    const defaultFilters: PredictionFilters = {
       search: "",
       categories: [],
       statuses: [],

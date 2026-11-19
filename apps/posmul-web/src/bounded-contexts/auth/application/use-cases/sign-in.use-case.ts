@@ -70,9 +70,10 @@ export class SignInUseCase implements ISignInUseCase {
         // 사용자 정보를 찾을 수 없어도 인증 정보로 최소 User를 구성해 진행
       }
 
-      const user: User = userResult.success
-        ? userResult.data
-        : User.create({
+      const user: User =
+        userResult.success && userResult.data
+          ? userResult.data
+          : User.create({
             id: createUserId(authResult.data.user.id),
             email: userEmail,
             displayName: authResult.data.user.displayName,

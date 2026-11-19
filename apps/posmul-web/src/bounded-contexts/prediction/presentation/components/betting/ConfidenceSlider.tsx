@@ -3,21 +3,27 @@
 import { motion } from 'framer-motion';
 import { Target, TrendingUp } from 'lucide-react';
 
+export interface ConfidenceSliderProps {
+  value: number;
+  onChange: (value: number) => void;
+  disabled?: boolean;
+}
+
 export const ConfidenceSlider = ({
   value,
   onChange,
   disabled = false
-}) => {
+}: ConfidenceSliderProps) => {
   const confidencePresets = [10, 25, 50, 75, 90];
 
-  const getConfidenceColor = (confidence) => {
+  const getConfidenceColor = (confidence: number): string => {
     if (confidence <= 25) return '#ef4444'; // red
     if (confidence <= 50) return '#f59e0b'; // orange
     if (confidence <= 75) return '#10b981'; // green
     return '#3b82f6'; // blue
   };
 
-  const getConfidenceLabel = (confidence) => {
+  const getConfidenceLabel = (confidence: number): string => {
     if (confidence <= 25) return '낮은 신뢰도';
     if (confidence <= 50) return '보통 신뢰도';
     if (confidence <= 75) return '높은 신뢰도';

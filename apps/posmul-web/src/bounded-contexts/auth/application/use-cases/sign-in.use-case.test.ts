@@ -35,9 +35,9 @@ describe("SignInUseCase", () => {
     publishEvent: jest.fn(),
   }));
 
-  let useCase;
-  let mockUser;
-  let credentials;
+  let useCase: any;
+  let mockUser: any;
+  let credentials: any;
 
   beforeEach(() => {
     // Reset all mocks

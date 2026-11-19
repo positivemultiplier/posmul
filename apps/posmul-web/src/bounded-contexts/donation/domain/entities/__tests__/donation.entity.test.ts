@@ -287,7 +287,7 @@ describe("Donation Entity", () => {
 
       // Then
       expect(result.success).toBe(true);
-      expect(donation.beneficiary.getName()).toBe("Updated Beneficiary");
+      expect(donation.beneficiary?.getName()).toBe("Updated Beneficiary");
     });
   });
 
@@ -321,7 +321,7 @@ describe("Donation Entity", () => {
 
       // Then
       expect(nextExecutionDate).toBeInstanceOf(Date);
-      expect(nextExecutionDate.getTime()).toBeGreaterThan(new Date().getTime());
+      expect(nextExecutionDate!.getTime()).toBeGreaterThan(new Date().getTime());
     });
 
     it("정기 기부를 일시 중지할 수 있다", () => {

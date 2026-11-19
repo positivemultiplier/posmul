@@ -41,6 +41,8 @@ export const DonationList: React.FC = () => {
                     limit: 12, // Increased limit for grid
                     status: status || undefined,
                     type: type || undefined,
+                    sortBy: "createdAt",
+                    sortOrder: "desc",
                 };
                 const result = await listDonationsAction(request);
                 if (result.success) {

@@ -3,6 +3,18 @@
 import { motion } from 'framer-motion';
 import { CheckCircle, AlertCircle, TrendingUp, Clock, DollarSign } from 'lucide-react';
 import { Card } from '../../../../../shared/ui/components/base';
+import type { BettingOption } from '../../hooks/useBettingModal';
+
+export interface BettingConfirmationProps {
+  selectedOption: BettingOption;
+  stakeAmount: number;
+  confidence: number;
+  expectedReturn: number;
+  gameEndTime: string | Date;
+  onConfirm: () => void;
+  onBack: () => void;
+  isLoading?: boolean;
+}
 
 export const BettingConfirmation = ({
   selectedOption,
@@ -13,12 +25,12 @@ export const BettingConfirmation = ({
   onConfirm,
   onBack,
   isLoading = false
-}) => {
-  const formatCurrency = (amount) => {
+}: BettingConfirmationProps) => {
+  const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('ko-KR').format(amount);
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string | Date): string => {
     return new Date(dateString).toLocaleString('ko-KR', {
       year: 'numeric',
       month: 'long',

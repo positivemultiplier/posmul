@@ -3,14 +3,22 @@
 import { motion } from 'framer-motion';
 import { TrendingUp, Users, DollarSign } from 'lucide-react';
 import { Card } from '../../../../../shared/ui/components/base';
+import type { BettingOption, BettingTrend } from '../../hooks/useBettingModal';
+
+export interface PredictionOptionCardProps {
+  option: BettingOption;
+  isSelected: boolean;
+  onClick: (optionId: string) => void;
+  disabled?: boolean;
+}
 
 export const PredictionOptionCard = ({
   option,
   isSelected,
   onClick,
   disabled = false
-}) => {
-  const formatCurrency = (amount) => {
+}: PredictionOptionCardProps) => {
+  const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('ko-KR', {
       style: 'currency',
       currency: 'KRW',
@@ -18,7 +26,7 @@ export const PredictionOptionCard = ({
     }).format(amount);
   };
 
-  const getTrendIcon = (trend) => {
+  const getTrendIcon = (trend: BettingTrend | string) => {
     switch (trend) {
       case 'up':
         return <TrendingUp className="w-3 h-3 text-green-500" />;
@@ -82,7 +90,7 @@ export const PredictionOptionCard = ({
             <div>
               <span className="text-xs text-gray-500 block">총 참여 PMP</span>
               <span className="font-medium text-gray-900">
-                {formatCurrency(option.totalBets)}
+                {formatCurrency(option.totalBets ?? 0)}
               </span>
             </div>
           </div>

@@ -4,6 +4,17 @@ import { motion } from 'framer-motion';
 import { Search, Filter, SlidersHorizontal, Grid, List } from 'lucide-react';
 import { useState } from 'react';
 
+export type MobileViewMode = 'grid' | 'list';
+
+export interface MobileGameNavigationProps {
+  searchQuery: string;
+  onSearchChange?: (query: string) => void;
+  viewMode?: MobileViewMode;
+  onViewModeChange?: (mode: MobileViewMode) => void;
+  onFilterToggle?: () => void;
+  filterCount?: number;
+}
+
 export const MobileGameNavigation = ({
   searchQuery,
   onSearchChange,
@@ -11,7 +22,7 @@ export const MobileGameNavigation = ({
   onViewModeChange,
   onFilterToggle,
   filterCount = 0
-}) => {
+}: MobileGameNavigationProps) => {
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   return (

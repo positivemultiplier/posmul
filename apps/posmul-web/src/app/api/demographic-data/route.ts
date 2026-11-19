@@ -102,7 +102,7 @@ const parseQuery = (
   }
 
   const month = monthRaw ? Number(monthRaw) : undefined;
-  if (monthRaw && (!Number.isInteger(month) || month < 1 || month > 12)) {
+  if (monthRaw && (month === undefined || !Number.isInteger(month) || month < 1 || month > 12)) {
     return {
       type: "error",
       response: NextResponse.json(

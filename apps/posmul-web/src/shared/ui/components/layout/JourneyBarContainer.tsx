@@ -74,7 +74,7 @@ export function JourneyBarContainer() {
 
         // 인증 상태 변경 감지
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
-            (_event, session) => {
+            (_event: string, session: { user: User } | null) => {
                 setUser(session?.user ?? null);
                 if (!session?.user) {
                     setEconomicData({

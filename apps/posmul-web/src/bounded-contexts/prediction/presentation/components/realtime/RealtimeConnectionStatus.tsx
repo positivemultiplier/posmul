@@ -8,13 +8,21 @@ import {
 } from '@heroicons/react/24/outline';
 import useRealtimeGameData from '../../hooks/useRealtimeGameData';
 
+export interface RealtimeConnectionStatusProps {
+  gameIds?: string[];
+  userId?: string;
+  className?: string;
+  showDetails?: boolean;
+  onConnectionChange?: (isConnected: boolean) => void;
+}
+
 export default function RealtimeConnectionStatus({
   gameIds = [],
   userId,
   className = '',
   showDetails = false,
   onConnectionChange,
-}) {
+}: RealtimeConnectionStatusProps) {
   const {
     isConnected,
     isLoading,

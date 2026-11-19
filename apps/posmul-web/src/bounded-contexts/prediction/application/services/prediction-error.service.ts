@@ -74,10 +74,11 @@ export class PredictionErrorService {
 
     // 게임 상태 확인
     if (game.status !== GameStatus.ACTIVE) {
-      const statusMessages = {
+      const statusMessages: Record<Exclude<GameStatus, GameStatus.ACTIVE>, string> = {
         [GameStatus.PENDING]: "아직 시작되지 않은 게임입니다.",
         [GameStatus.CREATED]: "아직 시작되지 않은 게임입니다.",
         [GameStatus.ENDED]: "이미 종료된 게임입니다.",
+        [GameStatus.SETTLING]: "정산이 진행 중인 게임입니다.",
         [GameStatus.COMPLETED]: "이미 정산이 완료된 게임입니다.",
         [GameStatus.CANCELLED]: "취소된 게임입니다.",
       };

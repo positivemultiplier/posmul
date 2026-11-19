@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, type ChangeEvent } from 'react';
 import { Search, Filter, X, Calendar, DollarSign } from 'lucide-react';
 import { Button, Card, Badge } from '../../../../../shared/ui/components/base';
+import type { FilterOptions, PredictionGameFilterProps } from './types';
 
 const CATEGORIES = [
   { id: 'sports', label: '스포츠', icon: '⚽', color: 'bg-green-100 text-green-800' },
@@ -22,11 +23,15 @@ const TIME_FILTERS = [
   { id: '1hour', label: '1시간 내' },
   { id: 'today', label: '오늘' },
   { id: 'week', label: '이번 주' },
-];
+] as const;
 
-export const PredictionGameFilter = ({ onFilterChange, totalCount, filteredCount }) => {
+export const PredictionGameFilter = ({
+  onFilterChange,
+  totalCount,
+  filteredCount
+}: PredictionGameFilterProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<FilterOptions>({
     search: '',
     categories: [],
     statuses: [],
@@ -34,38 +39,38 @@ export const PredictionGameFilter = ({ onFilterChange, totalCount, filteredCount
     timeFilter: 'all'
   });
 
-  const updateFilters = useCallback((newFilters) => {
-    const updated = { ...filters, ...newFilters };
+  const updateFilters = useCallback((newFilters: Partial<FilterOptions>) => {
+    const updated: FilterOptions = { ...filters, ...newFilters };
     setFilters(updated);
     onFilterChange(updated);
   }, [filters, onFilterChange]);
 
-  const handleSearchChange = (e) => {
+  const handleSearchChange = (e: ChangeEvent<HTMLInputElement>) => {
     updateFilters({ search: e.target.value });
   };
 
-  const toggleCategory = (categoryId) => {
+  const toggleCategory = (categoryId: string) => {
     const categories = filters.categories.includes(categoryId)
       ? filters.categories.filter(id => id !== categoryId)
       : [...filters.categories, categoryId];
     updateFilters({ categories });
   };
 
-  const toggleStatus = (statusId) => {
+  const toggleStatus = (statusId: string) => {
     const statuses = filters.statuses.includes(statusId)
       ? filters.statuses.filter(id => id !== statusId)
       : [...filters.statuses, statusId];
     updateFilters({ statuses });
   };
 
-  const handleStakeRangeChange = (field, value) => {
+  const handleStakeRangeChange = (field: keyof FilterOptions['stakeRange'], value: number) => {
     updateFilters({
       stakeRange: { ...filters.stakeRange, [field]: value }
     });
   };
 
   const clearFilters = () => {
-    const defaultFilters = {
+    const defaultFilters: FilterOptions = {
       search: '',
       categories: [],
       statuses: [],

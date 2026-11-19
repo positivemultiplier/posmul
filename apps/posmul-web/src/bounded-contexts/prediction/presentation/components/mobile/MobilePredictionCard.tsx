@@ -3,12 +3,44 @@
 import { motion } from 'framer-motion';
 import { Clock, Users, TrendingUp, DollarSign, Play } from 'lucide-react';
 
-export const MobilePredictionCard = ({
+export interface MobilePredictionOption {
+  id?: string;
+  text?: string;
+  probability?: number;
+  currentOdds?: number;
+  color?: string;
+  trend?: string;
+}
+
+export interface MobilePredictionGame {
+  id: string;
+  title: string;
+  description?: string;
+  status: string;
+  endTime: string | Date;
+  totalParticipants?: number;
+  currentParticipants?: number;
+  totalPool?: number;
+  totalStake?: number;
+  options?: MobilePredictionOption[];
+}
+
+export interface MobilePredictionCardProps<
+  T extends MobilePredictionGame = MobilePredictionGame,
+> {
+  game: T;
+  onBetClick?: (game: T) => void;
+  onDetailsClick?: (game: T) => void;
+}
+
+export const MobilePredictionCard = <
+  T extends MobilePredictionGame = MobilePredictionGame,
+>({
   game,
   onBetClick,
   onDetailsClick
-}) => {
-  const formatCurrency = (amount) => {
+}: MobilePredictionCardProps<T>) => {
+  const formatCurrency = (amount: number): string => {
     if (amount >= 1000000) {
       return `${(amount / 1000000).toFixed(1)}M`;
     }
@@ -18,7 +50,7 @@ export const MobilePredictionCard = ({
     return amount.toLocaleString();
   };
 
-  const formatTimeRemaining = (endTime) => {
+  const formatTimeRemaining = (endTime: string | Date): string => {
     const now = new Date().getTime();
     const end = new Date(endTime).getTime();
     const diff = end - now;
@@ -36,7 +68,7 @@ export const MobilePredictionCard = ({
     return hours > 0 ? `${hours}시간 남음` : `${minutes}분 남음`;
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string): string => {
     switch (status) {
       case 'active': return '#10b981';
       case 'pending': return '#f59e0b';
@@ -45,8 +77,8 @@ export const MobilePredictionCard = ({
     }
   };
 
-  const topOption = game.options?.[0] || {};
-  const secondOption = game.options?.[1] || {};
+  const topOption: MobilePredictionOption = game.options?.[0] || {};
+  const secondOption: MobilePredictionOption = game.options?.[1] || {};
 
   return (
     <motion.div

@@ -38,9 +38,9 @@ jest.mock("../../../../shared/events", () => ({
 }));
 
 describe("SignUpUseCase", () => {
-  let useCase;
-  let mockUser;
-  let signUpData;
+  let useCase: SignUpUseCase;
+  let mockUser: any;
+  let signUpData: any;
 
   beforeEach(() => {
     // Reset all mocks

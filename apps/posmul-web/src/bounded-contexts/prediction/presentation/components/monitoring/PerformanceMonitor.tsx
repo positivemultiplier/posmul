@@ -1,9 +1,26 @@
+import type { ComponentType, SVGProps } from 'react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChartBarIcon, ClockIcon, CpuChipIcon, ExclamationTriangleIcon, ArrowPathIcon, PlayIcon, StopIcon } from '@heroicons/react/24/outline';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
-import { usePerformanceMetrics } from '../../hooks/usePerformanceMetrics';
+import {
+  usePerformanceMetrics,
+  type PerformanceRecommendation,
+  type RecommendationSeverity,
+} from '../../hooks/usePerformanceMetrics';
+
+interface MetricCardProps {
+  icon: ComponentType<SVGProps<SVGSVGElement>>;
+  title: string;
+  value: string | number;
+  unit?: string;
+  description?: string;
+}
+
+interface RecommendationCardProps {
+  recommendation: PerformanceRecommendation;
+}
 
 export function PerformanceMonitor() {
   const {
@@ -25,14 +42,14 @@ export function PerformanceMonitor() {
   const recommendations = getRecommendations();
 
   // 성능 점수에 따른 색상
-  const getScoreColor = (score) => {
+  const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-green-600';
     if (score >= 70) return 'text-yellow-600';
     return 'text-red-600';
   };
 
   // 메트릭 카드 컴포넌트
-  const MetricCard = ({ icon: Icon, title, value, unit, description }) => (
+  const MetricCard = ({ icon: Icon, title, value, unit, description }: MetricCardProps) => (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -54,8 +71,8 @@ export function PerformanceMonitor() {
   );
 
   // 권장사항 카드
-  const RecommendationCard = ({ recommendation }) => {
-    const severityColors = {
+  const RecommendationCard = ({ recommendation }: RecommendationCardProps) => {
+    const severityColors: Record<RecommendationSeverity, string> = {
       critical: 'border-red-500 bg-red-50',
       high: 'border-orange-500 bg-orange-50',
       medium: 'border-yellow-500 bg-yellow-50',

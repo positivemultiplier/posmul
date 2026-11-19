@@ -51,6 +51,10 @@ export class MCPStatisticRepository implements IStatisticRepository {
         return { success: false, error: new Error(error.message) };
       }
 
+      if (!data) {
+        return { success: true, data: null };
+      }
+
       return { success: true, data: this.mapRowToEntity(data) };
     } catch (e) {
       return { success: false, error: e as Error };
@@ -138,6 +142,10 @@ export class MCPStatisticRepository implements IStatisticRepository {
           return { success: true, data: null };
         }
         return { success: false, error: new Error(error.message) };
+      }
+
+      if (!data) {
+        return { success: true, data: null };
       }
 
       return { success: true, data: this.mapRowToEntity(data) };
@@ -386,6 +394,10 @@ export class MCPDataSourceRepository implements IDataSourceRepository {
         return { success: false, error: new Error(error.message) };
       }
 
+      if (!data) {
+        return { success: true, data: null };
+      }
+
       return { success: true, data: this.mapRowToEntity(data) };
     } catch (e) {
       return { success: false, error: e as Error };
@@ -404,6 +416,10 @@ export class MCPDataSourceRepository implements IDataSourceRepository {
           return { success: true, data: null };
         }
         return { success: false, error: new Error(error.message) };
+      }
+
+      if (!data) {
+        return { success: true, data: null };
       }
 
       return { success: true, data: this.mapRowToEntity(data) };

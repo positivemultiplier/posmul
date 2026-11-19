@@ -10,9 +10,15 @@ import {
   InformationCircleIcon,
 } from '@heroicons/react/24/outline';
 import { BellIcon as BellSolidIcon } from '@heroicons/react/24/solid';
-import useNotifications from '../../hooks/useNotifications';
+import useNotifications, {
+  type NotificationPriority,
+} from '../../hooks/useNotifications';
 
-export default function NotificationPanel({ className = '' }) {
+export interface NotificationPanelProps {
+  className?: string;
+}
+
+export default function NotificationPanel({ className = '' }: NotificationPanelProps) {
   const {
     notifications,
     stats,
@@ -26,13 +32,17 @@ export default function NotificationPanel({ className = '' }) {
 
   const [showPanel, setShowPanel] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [filter, setFilter] = useState('all'); // 'all', 'unread', 'urgent'
-  const panelRef = useRef(null);
+  const [filter, setFilter] = useState<'all' | 'unread' | 'urgent'>('all'); // 'all', 'unread', 'urgent'
+  const panelRef = useRef<HTMLDivElement>(null);
 
   // 외부 클릭시 패널 닫기
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (panelRef.current && !panelRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        panelRef.current &&
+        event.target instanceof Node &&
+        !panelRef.current.contains(event.target)
+      ) {
         setShowPanel(false);
       }
     };
@@ -57,7 +67,7 @@ export default function NotificationPanel({ className = '' }) {
 
   const filteredNotifications = getFilteredNotifications();
 
-  const getPriorityIcon = (priority) => {
+  const getPriorityIcon = (priority: NotificationPriority) => {
     switch (priority) {
       case 'URGENT':
         return <ExclamationTriangleIcon className="w-4 h-4 text-red-600" />;
@@ -68,7 +78,7 @@ export default function NotificationPanel({ className = '' }) {
     }
   };
 
-  const getPriorityColor = (priority) => {
+  const getPriorityColor = (priority: NotificationPriority) => {
     switch (priority) {
       case 'URGENT':
         return 'bg-red-50 border-l-red-500';

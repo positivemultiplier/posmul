@@ -19,7 +19,68 @@ import {
   Legend
 } from 'recharts';
 
-export function ChartWidget(props) {
+export type ChartType = 'probability' | 'betting' | 'participants' | 'timeline';
+
+export type ProbabilityDataPoint = {
+  time: string;
+  timestamp: number;
+  option1: number;
+  option2: number;
+  option3: number;
+  totalParticipants: number;
+};
+
+export type BettingDataPoint = {
+  optionName: string;
+  amount: number;
+  percentage: number;
+  participants: number;
+  color: string;
+};
+
+export type ParticipantDataPoint = {
+  hour: string;
+  participants: number;
+  newUsers: number;
+  returningUsers: number;
+};
+
+export type TimelineDataPoint = {
+  time: string;
+  event: string;
+  type: string;
+  value: number;
+};
+
+export type ChartWidgetDataPoint =
+  | ProbabilityDataPoint
+  | BettingDataPoint
+  | ParticipantDataPoint
+  | TimelineDataPoint;
+
+export interface ChartWidgetProps {
+  gameId: string;
+  type: ChartType;
+  title: string;
+  data?: ChartWidgetDataPoint[];
+  height?: number;
+  className?: string;
+}
+
+const isProbabilityDataPoint = (
+  item: ChartWidgetDataPoint | undefined
+): item is ProbabilityDataPoint =>
+  Boolean(item && 'option1' in item && 'totalParticipants' in item);
+
+const isBettingDataPoint = (
+  item: ChartWidgetDataPoint
+): item is BettingDataPoint => 'amount' in item && 'color' in item;
+
+const isParticipantDataPoint = (
+  item: ChartWidgetDataPoint
+): item is ParticipantDataPoint => 'hour' in item && 'participants' in item;
+
+export function ChartWidget(props: ChartWidgetProps) {
   const {
     gameId,
     type,
@@ -29,8 +90,8 @@ export function ChartWidget(props) {
     className = ''
   } = props;
   const [loading, setLoading] = useState(true);
-  const [error, _setError] = useState(null);
-  const [chartData, setChartData] = useState([]);
+  const [error, _setError] = useState<string | null>(null);
+  const [chartData, setChartData] = useState<ChartWidgetDataPoint[]>([]);
 
   // Mock 데이터 생성 (실제 환경에서는 API 호출)
   useEffect(() => {
@@ -61,9 +122,9 @@ export function ChartWidget(props) {
     generateMockData();
   }, [gameId, type]);
 
-  const generateProbabilityData = () => {
+  const generateProbabilityData = (): ProbabilityDataPoint[] => {
     const dataPoints = 20;
-    const data = [];
+    const data: ProbabilityDataPoint[] = [];
     const baseTime = Date.now() - (dataPoints * 30 * 60 * 1000); // 30분 간격
 
     for (let i = 0; i < dataPoints; i++) {
@@ -81,7 +142,7 @@ export function ChartWidget(props) {
     return data;
   };
 
-  const generateBettingData = () => {
+  const generateBettingData = (): BettingDataPoint[] => {
     return [
       {
         optionName: '승리',
@@ -107,9 +168,9 @@ export function ChartWidget(props) {
     ];
   };
 
-  const generateParticipantData = () => {
+  const generateParticipantData = (): ParticipantDataPoint[] => {
     const hours = 24;
-    const data = [];
+    const data: ParticipantDataPoint[] = [];
 
     for (let i = 0; i < hours; i++) {
       data.push({
@@ -123,7 +184,7 @@ export function ChartWidget(props) {
     return data;
   };
 
-  const generateTimelineData = () => {
+  const generateTimelineData = (): TimelineDataPoint[] => {
     const events = [
       { time: '09:00', event: '게임 시작', type: 'start', value: 100 },
       { time: '10:30', event: '첫 참여 급증', type: 'surge', value: 280 },
@@ -198,7 +259,7 @@ export function ChartWidget(props) {
                 dot={{ fill: '#3b82f6', strokeWidth: 2, r: 4 }}
                 activeDot={{ r: 6, stroke: '#3b82f6', strokeWidth: 2 }}
               />
-              {chartData[0]?.option3 !== undefined && (
+              {isProbabilityDataPoint(chartData[0]) && chartData[0].option3 !== undefined && (
                 <Line
                   type="monotone"
                   dataKey="option3"
@@ -226,7 +287,7 @@ export function ChartWidget(props) {
                 paddingAngle={5}
                 dataKey="amount"
               >
-                {chartData.map((entry, index) => (
+                {chartData.filter(isBettingDataPoint).map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
@@ -328,28 +389,40 @@ export function ChartWidget(props) {
     if (!chartData.length) return null;
 
     switch (type) {
-      case 'probability':
-        const latestProb = chartData[chartData.length - 1];
+      case 'probability': {
+        const latestItem = chartData[chartData.length - 1];
+        const latestProb = isProbabilityDataPoint(latestItem)
+          ? latestItem
+          : undefined;
         return [
           { label: '총 참여자', value: latestProb?.totalParticipants || 0 },
           { label: '최고 확률', value: `${Math.max(latestProb?.option1 || 0, latestProb?.option2 || 0).toFixed(1)}%` }
         ];
+      }
 
-      case 'betting':
-        const totalAmount = chartData.reduce((sum, item) => sum + item.amount, 0);
-        const totalParticipants = chartData.reduce((sum, item) => sum + item.participants, 0);
+      case 'betting': {
+        const bettingItems = chartData.filter(isBettingDataPoint);
+        const totalAmount = bettingItems.reduce((sum, item) => sum + item.amount, 0);
+        const totalParticipants = bettingItems.reduce((sum, item) => sum + item.participants, 0);
         return [
           { label: '총 참여 PMP', value: `${totalAmount.toLocaleString()} PMP` },
           { label: '참여자 수', value: `${totalParticipants}명` }
         ];
+      }
 
-      case 'participants':
-        const maxParticipants = Math.max(...chartData.map(item => item.participants));
-        const avgParticipants = Math.round(chartData.reduce((sum, item) => sum + item.participants, 0) / chartData.length);
+      case 'participants': {
+        const participantItems = chartData.filter(isParticipantDataPoint);
+        if (participantItems.length === 0) return null;
+        const maxParticipants = Math.max(...participantItems.map(item => item.participants));
+        const avgParticipants = Math.round(
+          participantItems.reduce((sum, item) => sum + item.participants, 0) /
+            participantItems.length
+        );
         return [
           { label: '최대 동시 접속', value: `${maxParticipants}명` },
           { label: '평균 참여자', value: `${avgParticipants}명` }
         ];
+      }
 
       default:
         return null;

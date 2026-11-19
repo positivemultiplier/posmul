@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { VirtualizedPredictionList } from './virtualization/VirtualizedPredictionList';
+import type { VirtualizedPredictionGame } from './virtualization/PredictionGameRow';
 import { useVirtualizedList } from '../hooks/useVirtualizedList';
 import { useIsMobile } from '../utils/mobileHelpers';
 import { Search, Filter, Grid, List } from 'lucide-react';
@@ -9,8 +10,8 @@ import { Search, Filter, Grid, List } from 'lucide-react';
 export const PredictionGameListWithVirtualization = () => {
   const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedGame, setSelectedGame] = useState(null);
-  const [viewMode, setViewMode] = useState('grid');
+  const [selectedGame, setSelectedGame] = useState<VirtualizedPredictionGame | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   // 가상화된 리스트 훅 사용
   const {
@@ -30,14 +31,16 @@ export const PredictionGameListWithVirtualization = () => {
     // }
   });
 
-  const handleGameSelect = (game) => {
+  const handleGameSelect = (game: VirtualizedPredictionGame) => {
     setSelectedGame(game);
   };
 
-  const filteredGames = games.filter(game =>
+  const typedGames: VirtualizedPredictionGame[] = games;
+
+  const filteredGames = typedGames.filter(game =>
     !searchQuery ||
     game.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    game.description.toLowerCase().includes(searchQuery.toLowerCase())
+    (game.description ?? '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -109,7 +112,7 @@ export const PredictionGameListWithVirtualization = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {error && (
+        {Boolean(error) && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
             <h3 className="text-red-800 font-medium">데이터 로딩 오류</h3>
             <p className="text-red-600 text-sm mt-1">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type TouchEvent } from "react";
 
 // 모바일 디바이스 감지
 export const useIsMobile = (breakpoint = 768) => {
@@ -103,8 +103,16 @@ export const useViewportHeight = () => {
   return viewportHeight;
 };
 
+export interface UseSwipeGestureOptions {
+  threshold?: number;
+  onSwipeLeft?: () => void;
+  onSwipeRight?: () => void;
+  onSwipeUp?: () => void;
+  onSwipeDown?: () => void;
+}
+
 // 스와이프 제스처 감지
-export const useSwipeGesture = (options) => {
+export const useSwipeGesture = (options?: UseSwipeGestureOptions) => {
   const threshold = options?.threshold || 50;
   const onSwipeLeft = options?.onSwipeLeft;
   const onSwipeRight = options?.onSwipeRight;
@@ -114,18 +122,22 @@ export const useSwipeGesture = (options) => {
   const [touchStart, setTouchStart] = useState({ x: 0, y: 0 });
   const [touchEnd, setTouchEnd] = useState({ x: 0, y: 0 });
 
-  const onTouchStart = (e) => {
+  const onTouchStart = (e: TouchEvent<HTMLElement>) => {
+    const touch = e.targetTouches[0];
+    if (!touch) return;
     setTouchEnd({ x: 0, y: 0 });
     setTouchStart({
-      x: e.targetTouches[0].clientX,
-      y: e.targetTouches[0].clientY,
+      x: touch.clientX,
+      y: touch.clientY,
     });
   };
 
-  const onTouchMove = (e) => {
+  const onTouchMove = (e: TouchEvent<HTMLElement>) => {
+    const touch = e.targetTouches[0];
+    if (!touch) return;
     setTouchEnd({
-      x: e.targetTouches[0].clientX,
-      y: e.targetTouches[0].clientY,
+      x: touch.clientX,
+      y: touch.clientY,
     });
   };
 

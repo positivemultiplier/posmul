@@ -174,7 +174,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
 
         if (error) return this.handleError(error);
 
-        const items = (data || []).map(row =>
+        const items = (data || []).map((row: unknown) =>
             Donation.reconstitute(this.mapDatabaseRowToEntityProps(row))
         );
 
@@ -238,7 +238,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
 
         if (error) return this.handleError(error);
 
-        const total = data.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+        const total = (data || []).reduce((sum: number, row: { amount?: number | string | null }) => sum + (Number(row.amount) || 0), 0);
         return { success: true, data: total };
     }
 
@@ -251,7 +251,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
             .eq('status', 'COMPLETED');
 
         if (error) return this.handleError(error);
-        const total = data.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+        const total = (data || []).reduce((sum: number, row: { amount?: number | string | null }) => sum + (Number(row.amount) || 0), 0);
         return { success: true, data: total };
     }
 
@@ -264,7 +264,7 @@ export class SupabaseDonationRepository implements IDonationRepository {
             .eq('status', 'COMPLETED');
 
         if (error) return this.handleError(error);
-        const total = data.reduce((sum, row) => sum + (Number(row.amount) || 0), 0);
+        const total = (data || []).reduce((sum: number, row: { amount?: number | string | null }) => sum + (Number(row.amount) || 0), 0);
         return { success: true, data: total };
     }
 
@@ -343,8 +343,10 @@ export class SupabaseDonationRepository implements IDonationRepository {
         if (!data || data.length === 0) return DonationCategory.OTHER;
 
         const counts: Record<string, number> = {};
-        data.forEach(row => {
-            counts[row.category] = (counts[row.category] || 0) + 1;
+        data.forEach((row: { category?: string | null }) => {
+            if (row.category) {
+                counts[row.category] = (counts[row.category] || 0) + 1;
+            }
         });
 
         let max = 0;

@@ -236,10 +236,10 @@ export default function LiveRoomPage() {
     });
 
     channel
-      .on("broadcast", { event: "chat_message" }, ({ payload }) => {
+      .on("broadcast", { event: "chat_message" }, ({ payload }: { payload: ChatMessage }) => {
         setMessages((prev) => [...prev.slice(-100), payload]);
       })
-      .on("broadcast", { event: "live_vote" }, ({ payload }) => {
+      .on("broadcast", { event: "live_vote" }, ({ payload }: { payload: { team: "A" | "B" } }) => {
         setVoteStats((prev) => {
           const newA = payload.team === "A" ? prev.countA + 1 : prev.countA;
           const newB = payload.team === "B" ? prev.countB + 1 : prev.countB;
@@ -252,7 +252,7 @@ export default function LiveRoomPage() {
           };
         });
       })
-      .on("broadcast", { event: "live_challenge_drop" }, ({ payload }) => {
+      .on("broadcast", { event: "live_challenge_drop" }, ({ payload }: { payload: any }) => {
         const challengeMsg: ChatMessage = {
           id: `cmsg-${payload.id}-${Date.now()}`,
           sender: payload.hostName,
@@ -266,7 +266,7 @@ export default function LiveRoomPage() {
         setMessages((prev) => [...prev.slice(-100), challengeMsg]);
         setActiveChallenges((prev) => [payload, ...prev.filter((c) => c.id !== payload.id)].slice(0, 5));
       })
-      .on("broadcast", { event: "live_challenge_vote" }, ({ payload }) => {
+      .on("broadcast", { event: "live_challenge_vote" }, ({ payload }: { payload: { challengeId: string; options: any; totalPool: number } }) => {
         // payload: { challengeId, options, totalPool }
         setMessages((prev) =>
           prev.map((m) => {
@@ -296,7 +296,7 @@ export default function LiveRoomPage() {
         const connectedUsers = Object.keys(state).length;
         setOnlineCount(roomData.viewerCount + connectedUsers);
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status: string) => {
         if (status === "SUBSCRIBED") {
           await channel.track({ online_at: new Date().toISOString() });
         }

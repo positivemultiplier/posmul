@@ -9,13 +9,34 @@ import {
 } from '@heroicons/react/24/outline';
 import useRealtimeGameData from '../../hooks/useRealtimeGameData';
 
-export default function RealtimeGameUpdates({ gameId, className = '' }) {
+export interface RealtimeGameUpdatesProps {
+  gameId: string;
+  className?: string;
+}
+
+interface RealtimeActivityItem {
+  id: string;
+  type: 'NEW_BET';
+  message: string;
+  timestamp: string;
+  data: {
+    userId: string;
+    amount: number;
+    option: string;
+    timestamp: string;
+  };
+}
+
+export default function RealtimeGameUpdates({
+  gameId,
+  className = '',
+}: RealtimeGameUpdatesProps) {
   const { gameData, isConnected, getRecentBets, getTotalStaked, getParticipantCount } = useRealtimeGameData({
     gameIds: [gameId],
     autoConnect: true,
   });
 
-  const [recentActivity, setRecentActivity] = useState([]);
+  const [recentActivity, setRecentActivity] = useState<RealtimeActivityItem[]>([]);
   const [showActivity, setShowActivity] = useState(false);
 
   const currentGameData = gameData[gameId];
@@ -26,7 +47,7 @@ export default function RealtimeGameUpdates({ gameId, className = '' }) {
   // 실시간 액티비티 업데이트
   useEffect(() => {
     if (recentBets.length > 0) {
-      const newActivity = recentBets.slice(0, 5).map((bet, index) => ({
+      const newActivity: RealtimeActivityItem[] = recentBets.slice(0, 5).map((bet, index) => ({
         id: `${bet.userId}-${bet.timestamp}-${index}`,
         type: 'NEW_BET',
         message: `새로운 참여: ${bet.option}에 ${bet.amount} PMP`,

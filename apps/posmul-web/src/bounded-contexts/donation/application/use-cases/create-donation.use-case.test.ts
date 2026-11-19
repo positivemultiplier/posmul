@@ -48,8 +48,8 @@ describe("CreateDonationUseCase", () => {
     },
   };
 
-  let useCase;
-  let validRequest;
+  let useCase: any;
+  let validRequest: any;
 
   beforeEach(() => {
     jest.clearAllMocks();

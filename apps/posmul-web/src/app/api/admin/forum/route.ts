@@ -257,9 +257,10 @@ export async function POST(req: NextRequest) {
         !rawIp.includes("관리자") &&
         rawIp !== "기록 없음"
       ) {
-        targetIp = rawIp.split(" ")[0].trim();
+        const banIpAddr = rawIp.split(" ")[0].trim();
+        targetIp = banIpAddr;
         const banRes = await banIp({
-          ip: targetIp,
+          ip: banIpAddr,
           reason: reason || `스팸/악성 게시글 작성으로 영구 차단됨 (글: ${postRecord?.title?.slice(0, 20)})`,
           bannedBy: "ADMIN_SPAM_PURGE",
         });

@@ -3,13 +3,44 @@
 import { motion } from 'framer-motion';
 import { Clock, Users, DollarSign, TrendingUp, Play } from 'lucide-react';
 
+export interface VirtualizedPredictionOption {
+  id?: string;
+  text: string;
+  probability?: number;
+  color?: string;
+  trend?: string;
+  totalBets?: number;
+  participantCount?: number;
+}
+
+export interface VirtualizedPredictionGame {
+  id: string;
+  title: string;
+  description?: string;
+  predictionType?: string;
+  options?: VirtualizedPredictionOption[];
+  endTime?: string | Date;
+  status: string;
+  totalPool?: number;
+  totalParticipants?: number;
+  gameImportanceScore?: number;
+  category?: string;
+}
+
+export interface PredictionGameRowProps {
+  game: VirtualizedPredictionGame | null;
+  isLoading?: boolean;
+  isSelected?: boolean;
+  onSelect?: (game: VirtualizedPredictionGame) => void;
+}
+
 export const PredictionGameRow = ({
   game,
   isLoading = false,
   isSelected = false,
   onSelect
-}) => {
-  const formatCurrency = (amount) => {
+}: PredictionGameRowProps) => {
+  const formatCurrency = (amount: number): string => {
     if (amount >= 1000000) {
       return `${(amount / 1000000).toFixed(1)}M`;
     }
@@ -19,7 +50,7 @@ export const PredictionGameRow = ({
     return amount?.toLocaleString() || '0';
   };
 
-  const formatTimeRemaining = (endTime) => {
+  const formatTimeRemaining = (endTime?: string | Date): string => {
     if (!endTime) return '시간 정보 없음';
 
     const now = new Date().getTime();
@@ -39,7 +70,7 @@ export const PredictionGameRow = ({
     return hours > 0 ? `${hours}시간 남음` : `${minutes}분 남음`;
   };
 
-  const getStatusColor = (status) => {
+  const getStatusColor = (status: string): string => {
     switch (status) {
       case 'active': return '#10b981';
       case 'pending': return '#f59e0b';

@@ -1,15 +1,23 @@
 import { useState } from 'react';
-import { ChartWidget } from './ChartWidget';
+import { ChartWidget, type ChartType } from './ChartWidget';
 
-export function ChartDashboard(props) {
+export interface ChartDashboardProps {
+  gameId: string;
+}
+
+export function ChartDashboard(props: ChartDashboardProps) {
   const gameId = props.gameId;
-  const [selectedCharts, setSelectedCharts] = useState([
+  const [selectedCharts, setSelectedCharts] = useState<ChartType[]>([
     'probability',
     'betting',
     'participants'
   ]);
 
-  const availableCharts = [
+  const availableCharts: Array<{
+    id: ChartType;
+    title: string;
+    description: string;
+  }> = [
     {
       id: 'probability',
       title: '📈 확률 변화 추이',
@@ -32,7 +40,7 @@ export function ChartDashboard(props) {
     }
   ];
 
-  const toggleChart = (chartId) => {
+  const toggleChart = (chartId: ChartType) => {
     setSelectedCharts(prev =>
       prev.includes(chartId)
         ? prev.filter(id => id !== chartId)

@@ -270,7 +270,7 @@ export class DonationApplicationService {
     }
 
     const donation = donationResult.data;
-    const completeResult = donation.complete(receiptUrl);
+    const completeResult = donation.complete(receiptUrl ?? "");
 
     if (!completeResult.success) {
       return {

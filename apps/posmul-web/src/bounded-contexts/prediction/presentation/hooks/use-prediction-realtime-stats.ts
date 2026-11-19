@@ -10,7 +10,18 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import type {
+    RealtimeChannel,
+    RealtimePostgresChangesPayload,
+} from "@supabase/supabase-js";
+
+interface PredictionStatisticsRow {
+    game_id: string;
+    total_participants?: number | null;
+    total_bet_amount?: number | string | null;
+    option_distributions?: Record<string, number> | null;
+    last_updated?: string | null;
+}
 
 export interface ChartDataPoint {
     time: string;
@@ -134,11 +145,11 @@ export function usePredictionRealtimeStats(
                         table: "prediction_statistics",
                         filter: `game_id=eq.${gameId}`,
                     },
-                    (payload) => {
+                    (payload: RealtimePostgresChangesPayload<PredictionStatisticsRow>) => {
                         if (payload.new && typeof payload.new === "object") {
-                            const newData = payload.new as any;
+                            const newData = payload.new as Partial<PredictionStatisticsRow>;
                             const newStats: PredictionStats = {
-                                gameId: newData.game_id,
+                                gameId: newData.game_id ?? gameId,
                                 totalParticipants: newData.total_participants || 0,
                                 totalBetAmount: Number(newData.total_bet_amount) || 0,
                                 optionDistributions: newData.option_distributions || {},
@@ -158,7 +169,7 @@ export function usePredictionRealtimeStats(
                         }
                     }
                 )
-                .subscribe((status) => {
+                .subscribe((status: string) => {
                     setIsConnected(status === "SUBSCRIBED");
                     if (status === "CHANNEL_ERROR") {
                         setError("Realtime connection failed");

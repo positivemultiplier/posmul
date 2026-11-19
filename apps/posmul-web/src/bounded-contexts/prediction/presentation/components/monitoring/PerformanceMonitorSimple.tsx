@@ -23,7 +23,7 @@ export function PerformanceMonitor() {
   const recommendations = getRecommendations();
 
   // 성능 점수에 따른 색상
-  const getScoreColor = (score) => {
+  const getScoreColor = (score: number) => {
     if (score >= 90) return 'text-green-600';
     if (score >= 70) return 'text-yellow-600';
     return 'text-red-600';

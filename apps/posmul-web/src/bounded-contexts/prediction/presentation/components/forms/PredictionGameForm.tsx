@@ -2,6 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { type SubmitHandler, useForm } from "react-hook-form";
+import type { z } from "zod";
 import { Button, Card } from "../../../../../shared/ui/components/base";
 
 import {
@@ -9,6 +10,8 @@ import {
   type UserProposedPredictionGameRequest,
 } from "../../../application/dto/user-proposed-prediction-game.dto";
 import { REGION_LEVEL_OPTIONS } from "../../../domain/value-objects/region-hierarchy";
+
+type PredictionGameFormInput = z.input<typeof userProposedPredictionGameRequestSchema>;
 
 interface PredictionGameFormProps {
   onSubmit: (data: UserProposedPredictionGameRequest) => Promise<void>;
@@ -24,7 +27,7 @@ export default function PredictionGameForm({
     handleSubmit,
     watch,
     formState: { errors },
-  } = useForm<UserProposedPredictionGameRequest>({
+  } = useForm<PredictionGameFormInput, unknown, UserProposedPredictionGameRequest>({
     resolver: zodResolver(userProposedPredictionGameRequestSchema),
     defaultValues: {
       predictionType: "binary",

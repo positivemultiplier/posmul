@@ -30,16 +30,18 @@
 | **`@posmul/auth-economy-sdk` 타입 엄격성** | `strict` 미설정 + 6개월 전 타입 + `PmpAmount` 오타 | **`strict: true` 0 error + 2026-11-19 최신 DB 타입** | 크로스 런타임 `crypto.randomUUID()` 순수화 + 환율 `10:1` 통일 |
 | **Gate 1 검증 (`type-check` · Jest · `next build`)** | 가짜 테스트 포함 45 suites | **3개 패키지 `tsc` 0 error · 39 suites / 431 tests PASS · 양대 앱 `next build` PASS** | `posmul-web`(106p) + `housing-pro`(23p) 프로덕션 빌드 통과 |
 
-### 적용된 DB 마이그레이션 (원격 적용 & 로컬 Git 동기화 완료)
+### 적용된 DB 마이그레이션 및 DR 베이스라인 (원격 적용 & 로컬 Git 동기화 완료)
 1. [20261119123000_phase0_security_rls_and_rpc_hardening.sql](file:///c:/G/posmul/supabase/migrations/20261119123000_phase0_security_rls_and_rpc_hardening.sql) — Phase 0 RLS·RPC 보안 하드닝
 2. [20261119130000_phase1_atomic_ledger_and_settlement_fixes.sql](file:///c:/G/posmul/supabase/migrations/20261119130000_phase1_atomic_ledger_and_settlement_fixes.sql) — Phase 1 원장 원자화·KST 일일 상한·정산/이의제기·트리거 정리
 3. [20261119133000_phase3_db_performance_and_hygiene.sql](file:///c:/G/posmul/supabase/migrations/20261119133000_phase3_db_performance_and_hygiene.sql) — Phase 3 중복 인덱스 제거·핵심 FK 15건 인덱싱
+4. [20261119140000_archive_orphan_economy_accounts.sql](file:///c:/G/posmul/supabase/migrations/20261119140000_archive_orphan_economy_accounts.sql) — 고아 경제 계정 101건(`26,193,600 PMP` / `11,811,190 PMC`)·거래 69건·활동통계 39건을 `economy.archived_orphan_*`(`service_role` 전용)로 무손실 아카이브 이관 완료 (`get_economy_stats()` 실유효 회원 28명 / `2,022,600 PMP` / `1,035,450 PMC` 정상화)
+5. **DR 스키마 베이스라인 스냅샷 확보**: [20261119_schema_baseline.sql](file:///c:/G/posmul/supabase/baseline/20261119_schema_baseline.sql) (293 KB — 14 스키마·129 테이블·423 제약·221 인덱스·57 함수·22 트리거·180 RLS 정책) 및 [remote_migrations_manifest.json](file:///c:/G/posmul/supabase/baseline/remote_migrations_manifest.json) (원격 179개 마이그레이션 매니페스트)
 
-### 후속 중장기 과제 (운영/인프라 단계)
-- Supabase 대시보드에서 **Postgres 17.4.1 보안 패치 업그레이드** 및 **Auth Leaked Password Protection(HaveIBeenPwned)** 활성화
-- `apps/posmul-web/tsconfig.json`의 `"strict": true` 점진적 전환 및 잔존 `any` 축소
-- 원격 DB 175개 과거 마이그레이션의 베이스라인 스키마 덤프(`supabase db dump`)를 통한 로컬 재현성 100% 확보
-- `economy.pmp_pmc_accounts` 고아 계정 101건의 비즈니스 정산/정리 여부 정책 결정 후 일괄 아카이빙
+### 추가 완료된 품질 강화 항목 (2026-11-19)
+- **모노레포 전체 TypeScript `"strict": true` 100% 달성**: [apps/posmul-web/tsconfig.json](file:///c:/G/posmul/apps/posmul-web/tsconfig.json) `"strict": true` 전면 활성화 및 54개 파일 378건 에러 전량 해소 → `auth-economy-sdk`, `posmul-web`, `housing-pro` 3개 패키지 모두 `strict: true` 0 error · Jest 39/39 suites (431 tests) PASS · 양대 앱 프로덕션 빌드 PASS
+
+### 잔여 운영 과제 (Supabase 대시보드 제어면)
+- Supabase 대시보드에서 **Postgres 17.4.1 보안 패치 업그레이드** 및 **Auth Leaked Password Protection(HaveIBeenPwned)** 활성화 진행
 
 ---
 

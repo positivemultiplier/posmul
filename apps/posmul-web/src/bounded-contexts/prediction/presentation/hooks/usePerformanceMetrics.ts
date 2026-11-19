@@ -1,7 +1,53 @@
 import { useCallback, useEffect, useState } from "react";
 
+export interface ApiResponseTime {
+  url: string;
+  responseTime: number;
+  timestamp: number;
+}
+
+export interface PerformanceMetrics {
+  pageLoadTime: number;
+  componentRenderCount: number;
+  apiResponseTimes: ApiResponseTime[];
+  memoryUsage: number;
+  errorCount: number;
+  userInteractions: number;
+  timestamp: number;
+}
+
+export interface WebVitals {
+  FCP: number;
+  LCP: number;
+  TTFB: number;
+  FID: number;
+  CLS: number;
+}
+
+export type RecommendationSeverity = "critical" | "high" | "medium" | "low";
+
+export interface PerformanceRecommendation {
+  type: "performance" | "memory" | "api" | "error" | string;
+  severity: RecommendationSeverity;
+  message: string;
+}
+
+interface LegacyNavigationTiming extends PerformanceEntry {
+  loadEventEnd?: number;
+  navigationStart?: number;
+  responseStart?: number;
+}
+
+interface PerformanceMemoryInfo {
+  usedJSHeapSize: number;
+}
+
+interface PerformanceWithMemory extends Performance {
+  memory?: PerformanceMemoryInfo;
+}
+
 export function usePerformanceMetrics() {
-  const [metrics, setMetrics] = useState({
+  const [metrics, setMetrics] = useState<PerformanceMetrics>({
     pageLoadTime: 0,
     componentRenderCount: 0,
     apiResponseTimes: [],
@@ -12,7 +58,7 @@ export function usePerformanceMetrics() {
   });
 
   const [isRecording, setIsRecording] = useState(false);
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState<PerformanceMetrics[]>([]);
 
   // 페이지 로드 시간 측정
   useEffect(() => {
@@ -20,10 +66,9 @@ export function usePerformanceMetrics() {
       const navigationEntries =
         window.performance.getEntriesByType("navigation");
       if (navigationEntries.length > 0) {
-        const navigationTiming = navigationEntries[0];
-        const timing = navigationTiming;
-        // @ts-ignore
-        const loadTime = timing.loadEventEnd - timing.navigationStart;
+        const timing = navigationEntries[0] as LegacyNavigationTiming;
+        const loadTime =
+          (timing.loadEventEnd ?? 0) - (timing.navigationStart ?? 0);
         setMetrics((prev) => ({ ...prev, pageLoadTime: loadTime || 0 }));
       }
     }
@@ -32,12 +77,11 @@ export function usePerformanceMetrics() {
   // 메모리 사용량 모니터링
   useEffect(() => {
     if (isRecording && typeof window !== "undefined") {
-      const performanceAny = window.performance;
-      // @ts-ignore
-      if (performanceAny?.memory) {
+      const performanceWithMemory = window.performance as PerformanceWithMemory;
+      if (performanceWithMemory?.memory) {
         const interval = setInterval(() => {
-          // @ts-ignore
-          const memoryInfo = performanceAny.memory;
+          const memoryInfo = performanceWithMemory.memory;
+          if (!memoryInfo) return;
           setMetrics((prev) => ({
             ...prev,
             memoryUsage: memoryInfo.usedJSHeapSize / 1024 / 1024, // MB 단위
@@ -58,7 +102,7 @@ export function usePerformanceMetrics() {
   }, []);
 
   // API 응답 시간 추적
-  const trackApiCall = useCallback((url, responseTime) => {
+  const trackApiCall = useCallback((url: string, responseTime: number) => {
     setMetrics((prev) => ({
       ...prev,
       apiResponseTimes: [
@@ -69,20 +113,23 @@ export function usePerformanceMetrics() {
   }, []);
 
   // 에러 추적
-  const trackError = useCallback((_error, _context) => {
-    setMetrics((prev) => ({
-      ...prev,
-      errorCount: prev.errorCount + 1,
-    }));
+  const trackError = useCallback(
+    (_error: unknown, _context?: string | Record<string, unknown>) => {
+      setMetrics((prev) => ({
+        ...prev,
+        errorCount: prev.errorCount + 1,
+      }));
 
-    // 에러 로깅 (실제 환경에서는 외부 서비스로 전송)
-    if (process.env.NODE_ENV === "development") {
-      // Development 환경에서만 로깅
-    }
-  }, []);
+      // 에러 로깅 (실제 환경에서는 외부 서비스로 전송)
+      if (process.env.NODE_ENV === "development") {
+        // Development 환경에서만 로깅
+      }
+    },
+    []
+  );
 
   // 사용자 상호작용 추적
-  const trackInteraction = useCallback((_type, _element) => {
+  const trackInteraction = useCallback((_type: string, _element?: string) => {
     setMetrics((prev) => ({
       ...prev,
       userInteractions: prev.userInteractions + 1,
@@ -119,12 +166,14 @@ export function usePerformanceMetrics() {
   }, []);
 
   // Web Vitals 측정
-  const measureWebVitals = useCallback(() => {
+  const measureWebVitals = useCallback((): WebVitals | null => {
     if (typeof window === "undefined" || !window.performance) {
       return null;
     }
 
-    const navigation = window.performance.getEntriesByType("navigation")[0];
+    const navigation = window.performance.getEntriesByType("navigation")[0] as
+      | LegacyNavigationTiming
+      | undefined;
     const paint = window.performance.getEntriesByType("paint");
 
     const fcp =
@@ -137,8 +186,9 @@ export function usePerformanceMetrics() {
     return {
       FCP: fcp, // First Contentful Paint
       LCP: lcp, // Largest Contentful Paint
-      // @ts-ignore
-      TTFB: navigation?.responseStart - navigation?.navigationStart || 0, // Time to First Byte
+      TTFB:
+        (navigation?.responseStart ?? 0) -
+          (navigation?.navigationStart ?? 0) || 0, // Time to First Byte
       FID: 0, // First Input Delay (requires user interaction)
       CLS: 0, // Cumulative Layout Shift (complex to calculate)
     };
@@ -180,11 +230,11 @@ export function usePerformanceMetrics() {
   }, [metrics, measureWebVitals]);
 
   // 권장사항 생성
-  const getRecommendations = useCallback(() => {
-    const recommendations = [];
+  const getRecommendations = useCallback((): PerformanceRecommendation[] => {
+    const recommendations: PerformanceRecommendation[] = [];
     const vitals = measureWebVitals();
 
-    if (vitals?.FCP > 2500) {
+    if (vitals && vitals.FCP > 2500) {
       recommendations.push({
         type: "performance",
         severity: "high",

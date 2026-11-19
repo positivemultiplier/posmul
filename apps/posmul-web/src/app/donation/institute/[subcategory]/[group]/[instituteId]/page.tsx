@@ -265,7 +265,7 @@ export default async function InstituteDetailPage({ params }: InstituteDetailPag
         createdAt: d.created_at,
         isAnonymous: d.is_anonymous,
       }))}
-      transparencyReports={reportsList.map((r: {
+      transparencyReports={(reportsList as Array<{
         id: string;
         report_period_start: string;
         report_period_end: string;
@@ -275,7 +275,7 @@ export default async function InstituteDetailPage({ params }: InstituteDetailPag
         impact_metrics: Record<string, number> | null;
         report_url: string | null;
         published_at: string | null;
-      }) => ({
+      }>).map((r) => ({
         id: r.id,
         periodStart: r.report_period_start,
         periodEnd: r.report_period_end,

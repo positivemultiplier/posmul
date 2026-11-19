@@ -249,7 +249,7 @@ describeIntegration("Core Business Flow: Prediction -> Economy -> Donation", () 
         // Wait, I need the actual email from beforeAll. Let's retrieve it from user_profiles or just fetch it.
         const { data: userProfile } = await supabaseAdmin.auth.admin.getUserById(testUserIdA);
         const { data: loginData } = await supabaseAdmin.auth.signInWithPassword({
-            email: userProfile.user.email!,
+            email: userProfile.user!.email!,
             password: "password123"
         });
 
@@ -327,6 +327,9 @@ describeIntegration("Core Business Flow: Prediction -> Economy -> Donation", () 
             amount: donateAmount,
             description: "Test donation to environmental organization",
             frequency: DonationFrequency.ONE_TIME,
+            isAnonymous: false,
+            taxDeductible: true,
+            receiptRequired: false,
             message: "For the environment"
         };
 

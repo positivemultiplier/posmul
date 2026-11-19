@@ -2,19 +2,49 @@
 
 import { useCallback, useMemo, useState } from "react";
 
-export const useVirtualizedList = ({
-  initialData = [],
+export interface VirtualizedGameOption {
+  id: string;
+  text: string;
+  probability: number;
+  color: string;
+  totalBets: number;
+  participantCount: number;
+  trend: string;
+}
+
+export interface VirtualizedGame {
+  id: string;
+  title: string;
+  description: string;
+  predictionType: string;
+  options: VirtualizedGameOption[];
+  endTime: string;
+  status: string;
+  totalPool: number;
+  totalParticipants: number;
+  gameImportanceScore: number;
+  category: string;
+}
+
+export interface UseVirtualizedListOptions<T = VirtualizedGame> {
+  initialData?: T[];
+  pageSize?: number;
+  loadData?: ((page: number, pageSize: number) => Promise<T[]>) | null;
+}
+
+export const useVirtualizedList = <T = VirtualizedGame>({
+  initialData = [] as T[],
   pageSize = 10,
   loadData = null,
-}) => {
-  const [games, setGames] = useState(initialData);
+}: UseVirtualizedListOptions<T> = {}) => {
+  const [games, setGames] = useState<T[]>(initialData);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [isNextPageLoading, setIsNextPageLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<Error | null>(null);
 
   // 다음 페이지 로드 함수
   const loadNextPage = useCallback(
-    async (_startIndex, _stopIndex) => {
+    async (_startIndex?: number, _stopIndex?: number) => {
       if (isNextPageLoading || !hasNextPage) return;
 
       setIsNextPageLoading(true);
@@ -43,7 +73,10 @@ export const useVirtualizedList = ({
           const mockData = generateMockGames(nextPage, pageSize);
 
           if (mockData.length > 0) {
-            setGames((prevGames) => [...prevGames, ...mockData]);
+            setGames((prevGames) => [
+              ...prevGames,
+              ...(mockData as unknown as T[]),
+            ]);
           }
 
           // 5페이지 후에는 더 이상 데이터가 없다고 가정
@@ -52,7 +85,7 @@ export const useVirtualizedList = ({
           }
         }
       } catch (err) {
-        setError(err);
+        setError(err instanceof Error ? err : new Error(String(err)));
         // 에러 로깅은 실제 환경에서 적절한 로깅 시스템으로 교체
       } finally {
         setIsNextPageLoading(false);
@@ -86,8 +119,11 @@ export const useVirtualizedList = ({
 };
 
 // Mock 데이터 생성 함수
-const generateMockGames = (page, pageSize) => {
-  const games = [];
+const generateMockGames = (
+  page: number,
+  pageSize: number
+): VirtualizedGame[] => {
+  const games: VirtualizedGame[] = [];
   const categories = ["스포츠", "정치", "경제", "기술", "엔터테인먼트"];
   const statuses = ["active", "pending", "ended"];
 
@@ -116,7 +152,7 @@ const generateMockGames = (page, pageSize) => {
   return games;
 };
 
-const generateMockOptions = (gameIndex) => {
+const generateMockOptions = (gameIndex: number): VirtualizedGameOption[] => {
   const colors = ["#ef4444", "#f59e0b", "#10b981", "#3b82f6", "#8b5cf6"];
   const trends = ["up", "down", "stable"];
 
