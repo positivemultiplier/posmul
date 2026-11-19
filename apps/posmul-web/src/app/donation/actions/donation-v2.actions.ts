@@ -196,80 +196,14 @@ export async function donatePmcAction(params: {
   project?: DonationProjectDTO;
   error?: string;
 }> {
-  try {
-    const { projectId, amountPmc, cheerMessage } = params;
-    if (amountPmc <= 0) {
-      return { success: false, message: "기부할 PMC 금액은 1 이상이어야 합니다." };
-    }
-
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user?.id) {
-      return { success: false, message: "기부에 참여하시려면 먼저 로그인해주세요." };
-    }
-
-    // 1. PMC 잔액 확인
-    const { data: account } = await supabaseAdmin
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .select("pmc_balance")
-      .eq("user_id", user.id)
-      .single();
-
-    const currentPmc = Number(account?.pmc_balance || 0);
-    if (currentPmc < amountPmc) {
-      return { success: false, message: `보유 PMC(${currentPmc.toLocaleString()})가 부족합니다.` };
-    }
-
-    // 2. PMC 차감 (기부 집행)
-    const newBalance = currentPmc - amountPmc;
-    await supabaseAdmin
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .update({ pmc_balance: newBalance })
-      .eq("user_id", user.id);
-
-    // 3. 기부 활동 로그 기록
-    try {
-      await supabaseAdmin
-        .schema("donation")
-        .from("donation_activity_logs")
-        .insert({
-          donation_id: projectId,
-          activity_type: "PMC_DONATION",
-          description: `시민 예산 집행 기부: ${amountPmc.toLocaleString()} PMC (${cheerMessage || "따뜻한 응원"})`,
-          metadata: {
-            donorUserId: user.id,
-            amountPmc,
-            cheerMessage,
-          },
-        });
-    } catch {}
-
-    // 4. 프로젝트 통계 가상 반영 (목업 업데이트)
-    const targetProj = DEFAULT_V2_PROJECTS.find((p) => p.id === projectId);
-    if (targetProj) {
-      targetProj.currentAmount += amountPmc;
-      targetProj.donorCount += 1;
-      if (targetProj.goodsDetail) {
-        targetProj.goodsDetail.currentQuantity = Math.min(
-          targetProj.goodsDetail.targetQuantity,
-          targetProj.goodsDetail.currentQuantity + Math.floor(amountPmc / targetProj.goodsDetail.unitPricePmc)
-        );
-      }
-    }
-
-    revalidatePath("/donation");
-
-    return {
-      success: true,
-      message: `🎉 ${amountPmc.toLocaleString()} PMC 기부가 성공적으로 집행되었습니다! 소셜 임팩트 점수가 상승했습니다.`,
-      newBalance,
-      project: targetProj,
-    };
-  } catch (err: any) {
-    return { success: false, message: err?.message || "기부 처리 중 오류가 발생했습니다." };
-  }
+  void params;
+  // Phase 0 보안/원장 보호: 실제 PMC를 차감한 뒤 메모리 Mock 배열만 수정하던 레거시 액션 차단.
+  // 정식 기부 경로(/api/donation/donate 또는 donateToWishlist)를 사용해야 합니다.
+  return {
+    success: false,
+    error: "LEGACY_MOCK_DONATION_DISABLED",
+    message:
+      "이 데모 기부 경로는 원장 보호를 위해 비활성화되었습니다. 정식 기관기부 또는 K-물품기부 메뉴를 이용해 주세요.",
+  };
 }
 

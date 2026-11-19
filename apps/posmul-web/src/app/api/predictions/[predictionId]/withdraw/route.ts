@@ -6,6 +6,7 @@
  * 철회 시 bet_amount 만큼 PMP 환불
  */
 import { NextRequest, NextResponse } from "next/server";
+import { supabaseAdmin } from "../../../../../lib/supabase/admin";
 import { createClient } from "../../../../../lib/supabase/server";
 
 interface RouteParams {
@@ -101,8 +102,8 @@ async function processWithdrawal(
     withdrawnAt: nowIso,
   };
 
-  // 예측 비활성화 및 철회 플래그 기록 (정산 데이터와 구분)
-  const { error: updateError } = await supabase
+  // 예측 비활성화 및 철회 플래그 기록 (원자적 is_active=true 조건으로 이중 환불 Race Condition 원천 차단)
+  const { data: deactivated, error: updateError } = await supabaseAdmin
     .schema("prediction")
     .from("predictions")
     .update({
@@ -110,23 +111,41 @@ async function processWithdrawal(
       prediction_data: nextPredictionData,
       updated_at: nowIso,
     })
-    .eq("prediction_id", predictionId);
+    .eq("prediction_id", predictionId)
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .select("prediction_id")
+    .maybeSingle();
 
   if (updateError) {
     return { success: false, error: { code: "UPDATE_FAILED", message: "예측 철회에 실패했습니다.", status: 500 } };
   }
 
-  // PMP 환불 (배팅금액이 있는 경우)
+  if (!deactivated) {
+    return { success: false, error: { code: "ALREADY_INACTIVE", message: "이미 철회되거나 정산된 예측입니다.", status: 409 } };
+  }
+
+  // PMP 환불 (배팅금액이 있는 경우 — service_role 전용 원자 원장 RPC 호출)
   if (betAmount > 0) {
-    const { error: refundError } = await supabase.rpc("grant_pmp", {
-      p_user_id: userId,
-      p_amount: betAmount,
-      p_reason: `예측 철회 환불: ${gameTitle}`,
-    });
+    const { error: refundError } = await supabaseAdmin.rpc(
+      "execute_ledger_transaction",
+      {
+        p_user_id: userId,
+        p_transaction_type: "PMP_REFUND",
+        p_pmp_change: betAmount,
+        p_pmc_change: 0,
+        p_description: `예측 철회 환불: ${gameTitle}`,
+        p_metadata: {
+          prediction_id: predictionId,
+          reason: "user_withdrawal",
+          refunded_at: nowIso,
+        },
+      }
+    );
 
     if (refundError) {
       // 환불 실패 시 예측 복구
-      await supabase
+      await supabaseAdmin
         .schema("prediction")
         .from("predictions")
         .update({
@@ -134,7 +153,8 @@ async function processWithdrawal(
           prediction_data: existingPredictionData || {},
           updated_at: new Date().toISOString(),
         })
-        .eq("prediction_id", predictionId);
+        .eq("prediction_id", predictionId)
+        .eq("user_id", userId);
 
       return { success: false, error: { code: "REFUND_FAILED", message: "PMP 환불에 실패했습니다.", status: 500 } };
     }

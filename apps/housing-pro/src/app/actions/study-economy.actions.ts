@@ -36,43 +36,87 @@ const APP_STUDY_REWARD_MAP = {
   FOCUS: 10,
 } as const;
 const MAX_DAILY_SCANS = 5;
+const VERTICAL_DAILY_MAX_PMP = 300;
 
-async function creditUserPosmulPmp(userId: string, amount: number): Promise<number> {
-  const nowIso = new Date().toISOString();
-  const { data: account } = await supabaseAdmin
+function getKstDayStartIso(): string {
+  const now = new Date();
+  const kstMs = now.getTime() + 9 * 60 * 60 * 1000;
+  const kstDate = new Date(kstMs);
+  const startKstUtcMs =
+    Date.UTC(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate()) -
+    9 * 60 * 60 * 1000;
+  return new Date(startKstUtcMs).toISOString();
+}
+
+async function getTodayVerticalEarnedPmp(userId: string): Promise<number> {
+  const dayStartIso = getKstDayStartIso();
+  const { data } = await supabaseAdmin
     .schema("economy")
-    .from("pmp_pmc_accounts")
-    .select("pmp_balance")
+    .from("pmp_pmc_transactions")
+    .select("pmp_amount")
     .eq("user_id", userId)
-    .maybeSingle();
+    .in("transaction_type", ["VERTICAL_HOUSING_STUDY", "VERTICAL_HOUSING_SCAN"])
+    .gte("created_at", dayStartIso);
 
-  const currentPmp = Number(account?.pmp_balance ?? 0);
-  const nextPmp = currentPmp + amount;
+  return (data || []).reduce((sum, row) => sum + Math.max(0, Number(row.pmp_amount ?? 0)), 0);
+}
 
-  if (account) {
-    await supabaseAdmin
+async function creditUserPosmulPmp(
+  userId: string,
+  amount: number,
+  transactionType: "VERTICAL_HOUSING_STUDY" | "VERTICAL_HOUSING_SCAN" = "VERTICAL_HOUSING_STUDY",
+  description = "Housing-Pro 학습 PMP 적립"
+): Promise<{ granted: number; newBalance: number; dailyRemaining: number }> {
+  const earnedToday = await getTodayVerticalEarnedPmp(userId);
+  const remaining = Math.max(0, VERTICAL_DAILY_MAX_PMP - earnedToday);
+  const granted = Math.min(amount, remaining);
+
+  if (granted <= 0) {
+    const { data: account } = await supabaseAdmin
       .schema("economy")
       .from("pmp_pmc_accounts")
-      .update({ pmp_balance: nextPmp, updated_at: nowIso })
-      .eq("user_id", userId);
-  } else {
-    await supabaseAdmin
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .insert({
-        user_id: userId,
-        pmp_balance: nextPmp,
-        pmc_balance: 0,
-        created_at: nowIso,
-        updated_at: nowIso,
-      });
+      .select("pmp_balance")
+      .eq("user_id", userId)
+      .maybeSingle();
+    return {
+      granted: 0,
+      newBalance: Number(account?.pmp_balance ?? 0),
+      dailyRemaining: 0,
+    };
   }
 
-  return nextPmp;
+  // ACID 보장 원자적 원장 RPC로 PMP 가산 + economy.pmp_pmc_transactions 기록 동시 수행
+  const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+    "execute_ledger_transaction",
+    {
+      p_user_id: userId,
+      p_transaction_type: transactionType,
+      p_pmp_change: granted,
+      p_pmc_change: 0,
+      p_description: description,
+      p_metadata: {
+        source: "housing-pro",
+        daily_cap: VERTICAL_DAILY_MAX_PMP,
+        earned_before: earnedToday,
+      },
+    }
+  );
+
+  if (rpcError) {
+    throw new Error(`원장 적립 실패: ${rpcError.message}`);
+  }
+
+  const row = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
+  return {
+    granted,
+    newBalance: Number(row?.new_pmp_balance ?? 0),
+    dailyRemaining: Math.max(0, remaining - granted),
+  };
 }
 
 /**
  * 교재 없이 앱 내 학습(O/X 정답 · 20제 정답 · 집중 타이머 완료) 시 PosMul 코어 계좌에 실제 PMP 적립
+ * (v3.0 헌법: 버티컬 일일 최대 300 PMP Hard Cap + 원장 기록 강제)
  */
 export async function grantAppStudyPmpAction(params: {
   kind: keyof typeof APP_STUDY_REWARD_MAP;
@@ -91,14 +135,29 @@ export async function grantAppStudyPmpAction(params: {
     }
 
     await ensurePosmulUserLinked(user);
-    const newBalance = await creditUserPosmulPmp(user.id, reward);
+    const { granted, newBalance, dailyRemaining } = await creditUserPosmulPmp(
+      user.id,
+      reward,
+      "VERTICAL_HOUSING_STUDY",
+      `Housing-Pro 앱 학습 보상 (${params.kind})`
+    );
+
+    if (granted <= 0) {
+      return {
+        success: true,
+        authenticated: true,
+        earnedPmp: 0,
+        newBalance,
+        message: `오늘의 Housing-Pro 학습 PMP 일일 한도(${VERTICAL_DAILY_MAX_PMP} PMP)에 도달했습니다.`,
+      };
+    }
 
     return {
       success: true,
       authenticated: true,
-      earnedPmp: reward,
+      earnedPmp: granted,
       newBalance,
-      message: `PosMul 계정 적립 완료 (+${reward} PMP)`,
+      message: `PosMul 계정 적립 완료 (+${granted} PMP · 오늘 잔여 ${dailyRemaining} PMP)`,
     };
   } catch (err) {
     return {
@@ -123,7 +182,7 @@ export async function recordAiScanAndRewardPmp(params: {
 
   try {
     const sessionUser = await resolveAuthenticatedUser();
-    const effectiveUserId = sessionUser?.id || params.userId;
+    const effectiveUserId = sessionUser?.id;
 
     if (!effectiveUserId) {
       return {
@@ -182,8 +241,19 @@ export async function recordAiScanAndRewardPmp(params: {
       };
     }
 
-    const effectiveRewardPmp = sessionUser ? SCAN_REWARD_PMP : 0;
-    const newPmp = effectiveRewardPmp > 0 ? await creditUserPosmulPmp(effectiveUserId, effectiveRewardPmp) : 0;
+    const requestedRewardPmp = sessionUser ? SCAN_REWARD_PMP : 0;
+    const creditResult =
+      requestedRewardPmp > 0
+        ? await creditUserPosmulPmp(
+            effectiveUserId,
+            requestedRewardPmp,
+            "VERTICAL_HOUSING_SCAN",
+            `Housing-Pro AI 스캔 마찰 보상 (${bookCode} p.${pageNumber})`
+          )
+        : { granted: 0, newBalance: 0, dailyRemaining: 0 };
+
+    const effectiveRewardPmp = creditResult.granted;
+    const newPmp = creditResult.newBalance;
 
     await supabaseAdmin
       .schema("vertical_housing")
@@ -203,10 +273,12 @@ export async function recordAiScanAndRewardPmp(params: {
       success: true,
       message:
         effectiveRewardPmp > 0
-          ? `AI 스캔 완료! PosMul 계정에 +${SCAN_REWARD_PMP} PMP가 지급되었습니다.`
-          : "AI 스캔 완료! 로그인 시 +40 PMP가 실제 지급됩니다.",
+          ? `AI 스캔 완료! PosMul 계정에 +${effectiveRewardPmp} PMP가 지급되었습니다. (오늘 잔여 ${creditResult.dailyRemaining} PMP)`
+          : sessionUser
+            ? `AI 스캔 완료! 오늘의 일일 PMP 상한(${VERTICAL_DAILY_MAX_PMP} PMP)에 도달했습니다.`
+            : "AI 스캔 완료! 로그인 시 +40 PMP가 실제 지급됩니다.",
       earnedPmp: effectiveRewardPmp,
-      newBalance: effectiveRewardPmp > 0 ? newPmp : undefined,
+      newBalance: sessionUser ? newPmp : undefined,
       dailyScanCount: (dailyScanCount || 0) + 1,
       isSerialVerified,
     };
@@ -246,21 +318,31 @@ export async function recordOxMasteryAndRewardPmp(params: {
 
   try {
     const sessionUser = await resolveAuthenticatedUser();
-    const effectiveUserId = sessionUser?.id || params.userId;
+    const effectiveUserId = sessionUser?.id;
 
     let newBalance: number | undefined;
+    let grantedPmp = 0;
     if (isPromoted && effectiveUserId && sessionUser) {
-      newBalance = await creditUserPosmulPmp(effectiveUserId, rewardPmp);
+      const creditResult = await creditUserPosmulPmp(
+        effectiveUserId,
+        rewardPmp,
+        "VERTICAL_HOUSING_STUDY",
+        "Housing-Pro O/X 3회 연속 정복 보상"
+      );
+      grantedPmp = creditResult.granted;
+      newBalance = creditResult.newBalance;
     }
 
     return {
       success: true,
       message: isPromoted
         ? effectiveUserId && sessionUser
-          ? `축하합니다! 3회 연속 정답 달성 (+${rewardPmp} PMP 적립)`
+          ? grantedPmp > 0
+            ? `축하합니다! 3회 연속 정답 달성 (+${grantedPmp} PMP 적립)`
+            : `축하합니다! 3회 연속 정답 달성 (일일 상한 ${VERTICAL_DAILY_MAX_PMP} PMP 도달)`
           : "축하합니다! 3회 연속 정답 달성 (로그인 시 PMP 실지급)"
         : `정답입니다! (연속 정답 ${nextStreak}/3회)`,
-      earnedPmp: effectiveUserId && sessionUser ? rewardPmp : 0,
+      earnedPmp: grantedPmp,
       promotedToMaster: isPromoted,
       newBalance,
     };

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { REAL_2026_EXAM_QUESTIONS, ExamQuestionMaster } from "@/data/mock-exam-questions";
 import { recordAiScanAndRewardPmp } from "@/app/actions/study-economy.actions";
+import { resolveAuthenticatedUser } from "@/lib/auth-provision";
+
+const MAX_VISION_BASE64_CHARS = 8 * 1024 * 1024; // ~6MB 이미지 상한
 
 export type OptionMarkType = "O" | "STAR" | "X";
 
@@ -126,10 +129,17 @@ async function callGeminiVisionAnalysis(
 
 export async function POST(req: NextRequest) {
   try {
+    const sessionUser = await resolveAuthenticatedUser();
+    if (!sessionUser?.id) {
+      return NextResponse.json(
+        { success: false, message: "AI 비전 스캔을 사용하려면 먼저 로그인해 주세요." },
+        { status: 401 }
+      );
+    }
+
     const body = await req.json();
     const {
       imageBase64,
-      userId = "user-demo-housing-1",
       pageNumber = 1,
       targetQuestionNumbers = [1, 2, 3],
       clientMarkingSheet,
@@ -140,11 +150,19 @@ export async function POST(req: NextRequest) {
       targetQuestionNumbers?: number[];
       clientMarkingSheet?: RawAiQuestionDetection[];
     } = body;
+    const userId = sessionUser.id;
 
     if (!imageBase64) {
       return NextResponse.json(
         { success: false, message: "스캔할 카메라 이미지 데이터가 없습니다." },
         { status: 400 }
+      );
+    }
+
+    if (imageBase64.length > MAX_VISION_BASE64_CHARS) {
+      return NextResponse.json(
+        { success: false, message: "이미지 크기가 허용 한도(6MB)를 초과했습니다." },
+        { status: 413 }
       );
     }
 

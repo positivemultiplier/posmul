@@ -7,6 +7,7 @@
  */
 
 import { revalidatePath } from "next/cache";
+import { supabaseAdmin } from "../../../../lib/supabase/admin";
 import { createClient } from "../../../../lib/supabase/server";
 
 interface WithdrawResult {
@@ -75,20 +76,28 @@ async function processWithdrawalRefund(
   gameId: string,
   refundAmount: number
 ): Promise<{ success: true } | { success: false; error: string }> {
-  // 예측 비활성화
-  const { error: updateError } = await supabase
+  // 예측 비활성화 (원자적 is_active=true 조건으로 이중 환불 Race Condition 원천 차단)
+  const { data: deactivated, error: updateError } = await supabaseAdmin
     .schema("prediction")
     .from("predictions")
-    .update({ is_active: false })
-    .eq("prediction_id", predictionId);
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq("prediction_id", predictionId)
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .select("prediction_id")
+    .maybeSingle();
 
   if (updateError) {
     return { success: false, error: "철회 처리에 실패했습니다." };
   }
 
-  // PMP 환불 (ACID 보장 원장 기록 함수 호출)
+  if (!deactivated) {
+    return { success: false, error: "이미 철회되었거나 처리 중인 예측입니다." };
+  }
+
+  // PMP 환불 (ACID 보장 service_role 전용 원장 RPC 호출)
   if (refundAmount > 0) {
-    const { error: ledgerError } = await supabase.rpc(
+    const { error: ledgerError } = await supabaseAdmin.rpc(
       "execute_ledger_transaction",
       {
         p_user_id: userId,
@@ -107,17 +116,18 @@ async function processWithdrawalRefund(
 
     if (ledgerError) {
       // 롤백
-      await supabase
+      await supabaseAdmin
         .schema("prediction")
         .from("predictions")
-        .update({ is_active: true })
-        .eq("prediction_id", predictionId);
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq("prediction_id", predictionId)
+        .eq("user_id", userId);
       return { success: false, error: `환불 처리에 실패했습니다: ${ledgerError.message}` };
     }
   }
 
   // 게임 통계 업데이트
-  const { data: gameStatsData } = await supabase
+  const { data: gameStatsData } = await supabaseAdmin
     .schema("prediction")
     .from("prediction_games")
     .select("current_participants, total_pool")
@@ -128,7 +138,7 @@ async function processWithdrawalRefund(
   const gameStats = Array.isArray(gameStatsData) ? gameStatsData[0] : gameStatsData;
 
   if (gameStats) {
-    await supabase
+    await supabaseAdmin
       .schema("prediction")
       .from("prediction_games")
       .update({

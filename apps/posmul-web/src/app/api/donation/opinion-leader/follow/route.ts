@@ -89,6 +89,19 @@ async function handleUnfollow(
 }
 
 export async function POST(request: NextRequest) {
+  if (process.env.ENABLE_PHASE2_OPINION_LEADER !== "true") {
+    return NextResponse.json(
+      {
+        success: false,
+        error: {
+          code: "PHASE_2_LOCKED",
+          message: "오피니언 리더 팔로잉 기능은 Phase 2에서 오픈 예정입니다.",
+        },
+      },
+      { status: 403 }
+    );
+  }
+
   try {
     const supabase = await createClient();
 

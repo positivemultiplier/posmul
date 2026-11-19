@@ -40,10 +40,26 @@ Deno.serve(async (req: Request) => {
         return new Response("ok", { headers: corsHeaders });
     }
 
+    // Phase 0 보안: Service Role 또는 CRON_SECRET 인증 필수
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
+    const authHeader = req.headers.get("authorization") ?? "";
+    const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+    const isAuthorized =
+        (serviceRoleKey && bearer === serviceRoleKey) ||
+        (cronSecret && bearer === cronSecret);
+
+    if (!isAuthorized) {
+        return new Response(JSON.stringify({ error: "UNAUTHORIZED" }), {
+            status: 401,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+    }
+
     try {
         const supabase = createClient(
             Deno.env.get("SUPABASE_URL") ?? "",
-            Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+            serviceRoleKey
         );
 
         // 1. 예정된 정산 소스 조회
@@ -96,26 +112,28 @@ Deno.serve(async (req: Request) => {
                     continue;
                 }
 
+                // 공식 정산 RPC 호출 (승자 PMC 지급 + 패자 PMP 소멸 + MoneyWave 이력 + 게임 SETTLED 원자 처리)
+                const { error: settleRpcError } = await supabase.rpc("settle_prediction_game", {
+                    p_game_id: source.game_id,
+                    p_correct_option_id: result.winningOptionId,
+                });
+
+                if (settleRpcError) {
+                    throw new Error(`settle_prediction_game RPC failed: ${settleRpcError.message}`);
+                }
+
                 // 정산 이력 기록
-                await supabase.schema("prediction").from("settlement_history").insert({
+                const { error: historyError } = await supabase.schema("prediction").from("settlement_history").insert({
                     game_id: source.game_id,
                     winning_option_id: result.winningOptionId,
                     settlement_method: "auto",
                     source_data: result.sourceData,
                 });
+                if (historyError) {
+                    console.error(`settlement_history insert error (${source.game_id}):`, historyError.message);
+                }
 
-                // 게임 상태 업데이트
-                await supabase
-                    .schema("prediction")
-                    .from("prediction_games")
-                    .update({
-                        status: "SETTLED",
-                        winning_option_id: result.winningOptionId,
-                        settled_at: new Date().toISOString(),
-                    })
-                    .eq("game_id", source.game_id);
-
-                // 정산 소스 삭제 (처리 완료)
+                // 정산 소스 삭제 (처리 완료 — RPC 성공 후에만 삭제)
                 await supabase.schema("prediction").from("settlement_sources").delete().eq("id", source.id);
 
                 console.log(`Settled game ${source.game_id} with winner: ${result.winningOptionId}`);

@@ -17,6 +17,7 @@ import {
   createPmpAmount,
 } from "@posmul/auth-economy-sdk";
 
+import { supabaseAdmin } from "../../../../../lib/supabase/admin";
 import { createClient } from "../../../../../lib/supabase/server";
 import { getParticipatePredictionUseCase } from "../../../../../bounded-contexts/prediction/di-container";
 
@@ -306,55 +307,63 @@ async function validateWithdrawal(
  * PMP 환불 처리 헬퍼 함수
  */
 async function processRefund(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  _supabase: Awaited<ReturnType<typeof createClient>>,
   userId: string,
   predictionId: string,
   refundAmount: number
 ): Promise<{ success: true; newBalance: number } | { success: false; error: string }> {
-  // 예측 비활성화
-  const { error: updateError } = await supabase
+  const nowIso = new Date().toISOString();
+
+  // 예측 비활성화 (원자적 is_active=true 조건으로 이중 환불 Race Condition 차단)
+  const { data: deactivated, error: updateError } = await supabaseAdmin
     .schema("prediction")
     .from("predictions")
-    .update({ is_active: false })
-    .eq("prediction_id", predictionId);
+    .update({ is_active: false, updated_at: nowIso })
+    .eq("prediction_id", predictionId)
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .select("prediction_id")
+    .maybeSingle();
 
   if (updateError) {
     return { success: false, error: "UPDATE_FAILED" };
   }
 
-  // 현재 잔액 조회 및 환불
-  const { data: accountData } = await supabase
-    .schema("economy")
-    .from("pmp_pmc_accounts")
-    .select("pmp_balance")
-    .eq("user_id", userId)
-    .single();
+  if (!deactivated) {
+    return { success: false, error: "ALREADY_WITHDRAWN" };
+  }
 
-  // 방어적 처리
-  const account = Array.isArray(accountData) ? accountData[0] : accountData;
-
-  const currentBalance = Number(account?.pmp_balance ?? 0);
-  const newBalance = currentBalance + refundAmount;
-
-  const { error: refundError } = await supabase
-    .schema("economy")
-    .from("pmp_pmc_accounts")
-    .update({ pmp_balance: newBalance })
-    .eq("user_id", userId);
-
-  // eslint-disable-next-line no-console
-  console.log("[processRefund] Refund update:", { refundError: refundError?.message });
+  // ACID 보장 원자적 원장 RPC로 PMP 환불 및 원장 기록 동시 수행
+  const { data: rpcResult, error: refundError } = await supabaseAdmin.rpc(
+    "execute_ledger_transaction",
+    {
+      p_user_id: userId,
+      p_transaction_type: "PMP_REFUND",
+      p_pmp_change: refundAmount,
+      p_pmc_change: 0,
+      p_description: `스포츠 예측 철회 환불 (#${predictionId.substring(0, 8)})`,
+      p_metadata: {
+        prediction_id: predictionId,
+        reason: "user_withdrawal",
+        refunded_at: nowIso,
+      },
+    }
+  );
 
   if (refundError) {
     // 롤백: 예측 다시 활성화
-    await supabase
+    await supabaseAdmin
       .schema("prediction")
       .from("predictions")
-      .update({ is_active: true })
-      .eq("prediction_id", predictionId);
+      .update({ is_active: true, updated_at: new Date().toISOString() })
+      .eq("prediction_id", predictionId)
+      .eq("user_id", userId);
 
     return { success: false, error: "REFUND_FAILED" };
   }
+
+  const row = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
+  const newBalance = Number(row?.new_pmp_balance ?? 0);
 
   return { success: true, newBalance };
 }

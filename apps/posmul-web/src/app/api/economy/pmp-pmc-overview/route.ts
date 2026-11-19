@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { createClient } from "@/lib/supabase/server";
+import { resolveAdminUser } from "@/shared/lib/security/admin-auth";
 import { getEconomicBalance } from "../../../../shared/adapters/simple-economy.adapter";
 
 type SystemStats = {
@@ -11,25 +13,49 @@ type SystemStats = {
 
 /**
  * GET /api/economy/pmp-pmc-overview
- * PmpAmount/PmcAmount 경제 시스템 개요 조회 (Auth-Economy SDK 기반)
+ * PmpAmount/PmcAmount 경제 시스템 개요 조회 (본인 또는 관리자 인증 필수)
  */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-    if (!userId) {
+    if (authError || !user) {
       return NextResponse.json(
         {
           success: false,
           error: {
-            code: "MISSING_USER_ID",
-            message: "User ID is required",
+            code: "UNAUTHORIZED",
+            message: "Authentication required",
           },
         },
-        { status: 400 }
+        { status: 401 }
       );
     }
+
+    const { searchParams } = new URL(request.url);
+    const requestedUserId = searchParams.get("userId") || user.id;
+
+    if (requestedUserId !== user.id) {
+      const adminInfo = await resolveAdminUser(user);
+      if (!adminInfo.isAdmin) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "FORBIDDEN",
+              message: "Cannot access another user's economic overview",
+            },
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    const userId = requestedUserId;
 
     // 새로운 SDK 어댑터를 통한 잔액 조회
     const balanceData = await getEconomicBalance(userId);

@@ -32,10 +32,10 @@ const VALID_SAMPLE_SERIALS: Record<string, { bookTitle: string; bookCode: string
 /**
  * 🔑 유저의 POD 정품 시리얼 인증 상태 조회
  */
-export async function getUserSerialStatusAction(userId?: string): Promise<SerialVerificationResult> {
+export async function getUserSerialStatusAction(_userId?: string): Promise<SerialVerificationResult> {
   try {
     const sessionUser = await resolveAuthenticatedUser();
-    const targetUserId = sessionUser?.id || userId;
+    const targetUserId = sessionUser?.id;
     if (!targetUserId) {
       return {
         success: true,
@@ -82,12 +82,19 @@ export async function getUserSerialStatusAction(userId?: string): Promise<Serial
  * 🛡️ POD 종이책 정품 시리얼 검증 및 등록 Server Action
  */
 export async function verifyAndRegisterSerialAction(params: {
-  userId: string;
+  userId?: string;
   serialCode: string;
 }): Promise<SerialVerificationResult> {
   const { serialCode } = params;
   const sessionUser = await resolveAuthenticatedUser();
-  const userId = sessionUser?.id || params.userId;
+  if (!sessionUser?.id) {
+    return {
+      success: false,
+      isRegistered: false,
+      message: "정품 시리얼을 등록하려면 먼저 로그인해 주세요.",
+    };
+  }
+  const userId = sessionUser.id;
   const cleanCode = serialCode.trim().toUpperCase();
 
   if (!cleanCode) {
@@ -122,12 +129,12 @@ export async function verifyAndRegisterSerialAction(params: {
     const bookTitle = existingSerial?.book_title || whiteItem?.bookTitle || "2026 주택관리사 2차 5개년 회독 기출문제집 (POD 정품판)";
     const bookCode = existingSerial?.book_code || whiteItem?.bookCode || "HP-2026-R2";
 
-    // 유효하지 않은 코드인 경우 (화이트리스트에도 없고 DB에도 없거나 패턴 불일치)
-    if (!whiteItem && !existingSerial && !cleanCode.startsWith("HP26-")) {
+    // 유효하지 않은 코드인 경우 (화이트리스트에도 없고 DB book_serials에도 없으면 차단 — 접두사 통과 백도어 금지)
+    if (!whiteItem && !existingSerial) {
       return {
         success: false,
         isRegistered: false,
-        message: "유효하지 않은 시리얼 번호입니다. 'HP26-XXXX-XXXX-XXXX' 형식을 확인해주세요.",
+        message: "등록되지 않은 시리얼 번호입니다. 교재에 인쇄된 정품 시리얼 번호를 확인해 주세요.",
       };
     }
 

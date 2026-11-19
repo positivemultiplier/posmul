@@ -409,14 +409,35 @@ export async function saveLiveMessageBufferAction(params: {
   isReaction?: boolean;
 }): Promise<void> {
   try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return;
+    }
+
+    const sanitizedTeamTag =
+      params.teamTag && params.teamTag.trim().toUpperCase() === "HOST"
+        ? undefined
+        : params.teamTag?.slice(0, 30);
+
+    const safeSender =
+      (user.user_metadata?.nickname as string | undefined) ||
+      (user.user_metadata?.name as string | undefined) ||
+      user.email?.split("@")[0] ||
+      "시민";
+
     await supabaseAdmin
       .schema("forum")
       .from("live_room_messages")
       .insert({
-        room_id: params.roomId,
-        sender: params.sender,
-        team_tag: params.teamTag,
-        team_color: params.teamColor,
+        room_id: params.roomId.slice(0, 120),
+        sender: safeSender.slice(0, 50),
+        team_tag: sanitizedTeamTag,
+        team_color: params.teamColor?.slice(0, 30),
         message: params.message.slice(0, 300), // 최대 300자 제한
         is_reaction: params.isReaction || false,
       });

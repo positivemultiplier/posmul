@@ -321,9 +321,17 @@ export async function POST(request: NextRequest) {
     const supabase = await createClient();
     const {
       data: { user },
+      error: authError,
     } = await supabase.auth.getUser();
 
-    const userId = user?.id || DEMO_USER_ID;
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, error: "로그인이 필요합니다." },
+        { status: 401 }
+      );
+    }
+
+    const userId = user.id;
     const body = await request.json().catch(() => ({}));
     const action = body.action || "claim_bonus";
 
@@ -332,30 +340,29 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = getAdminClient();
-    const BONUS_PMP = 5000;
-    const BONUS_PMC = 500;
+    // v3.0 헌법: PMC는 오직 Prediction 예측 성공 보상으로만 발행 (일일 보너스는 PMP만 지급)
+    const BONUS_PMP = 500;
+    const BONUS_PMC = 0;
 
-    // 1. 보안 감사 및 매크로 어뷰징 방지: 24시간 이내 수령 이력 원장 검사
-    if (user) {
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data: recentBonus } = await admin
-        .schema("economy")
-        .from("pmp_pmc_transactions")
-        .select("transaction_id, created_at")
-        .eq("user_id", userId)
-        .eq("transaction_type", "REWARD_DAILY_BONUS")
-        .gte("created_at", oneDayAgo)
-        .limit(1);
+    // 1. 보안 감사 및 매크로 어뷰징 방지: 24시간 이내 수령 이력 원장 검사 (인증 유저 전원 필수)
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const { data: recentBonus } = await admin
+      .schema("economy")
+      .from("pmp_pmc_transactions")
+      .select("transaction_id, created_at")
+      .eq("user_id", userId)
+      .eq("transaction_type", "REWARD_DAILY_BONUS")
+      .gte("created_at", oneDayAgo)
+      .limit(1);
 
-      if (recentBonus && recentBonus.length > 0) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "오늘의 시민 활동 보너스를 이미 수령하셨습니다. (24시간당 1회 지급)",
-          },
-          { status: 429 }
-        );
-      }
+    if (recentBonus && recentBonus.length > 0) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "오늘의 시민 활동 보너스를 이미 수령하셨습니다. (24시간당 1회 지급)",
+        },
+        { status: 429 }
+      );
     }
 
     // 2. ACID 보장 원자적 원장(Ledger) RPC 호출
@@ -366,7 +373,7 @@ export async function POST(request: NextRequest) {
         p_transaction_type: "REWARD_DAILY_BONUS",
         p_pmp_change: BONUS_PMP,
         p_pmc_change: BONUS_PMC,
-        p_description: "시민 대시보드 일일 활동 응원 보너스",
+        p_description: "시민 대시보드 일일 활동 응원 보너스 (PMP)",
         p_metadata: {
           ip: request.headers.get("x-forwarded-for") || "unknown",
           user_agent: request.headers.get("user-agent") || "unknown",
@@ -383,12 +390,12 @@ export async function POST(request: NextRequest) {
     }
 
     const row = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
-    const newPmp = Number(row?.new_pmp_balance ?? 15000);
-    const newPmc = Number(row?.new_pmc_balance ?? 1500);
+    const newPmp = Number(row?.new_pmp_balance ?? 0);
+    const newPmc = Number(row?.new_pmc_balance ?? 0);
 
     return NextResponse.json({
       success: true,
-      message: `🎁 시민 활동 보너스 +${BONUS_PMP.toLocaleString()} PMP & +${BONUS_PMC.toLocaleString()} PMC가 안전하게 원장에 기록되어 충전되었습니다!`,
+      message: `🎁 시민 활동 보너스 +${BONUS_PMP.toLocaleString()} PMP가 안전하게 원장에 기록되어 충전되었습니다!`,
       pmpBalance: newPmp,
       pmcBalance: newPmc,
       transactionId: row?.transaction_id,

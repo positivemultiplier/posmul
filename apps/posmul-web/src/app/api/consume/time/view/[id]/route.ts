@@ -155,7 +155,7 @@ async function updateAdView(
     pmpEarned: number;
   }
 ) {
-  const { error: updateError } = await supabase
+  const { data: updatedRow, error: updateError } = await supabase
     .schema('consume')
     .from('ad_views')
     .update({
@@ -166,11 +166,18 @@ async function updateAdView(
       survey_completed: params.surveyCompleted,
       pmp_earned: params.pmpEarned,
     })
-    .eq('id', params.viewId);
+    .eq('id', params.viewId)
+    .is('ended_at', null)
+    .select('id')
+    .maybeSingle();
 
   if (updateError) {
     void updateError;
     throw new HttpError(500, '시청 기록을 업데이트하는 데 실패했습니다.');
+  }
+
+  if (!updatedRow) {
+    throw new HttpError(409, '이미 완료 처리된 시청 기록입니다.');
   }
 }
 
@@ -348,16 +355,23 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     assertOwnership(adView, userId);
     assertNotAlreadyEnded(adView);
 
+    // 서버 기준 실제 경과 시간(started_at)으로 클라이언트 시청 시간 상한 클램핑 (시간 조작 차단)
+    const startedAtMs = new Date((adView as { started_at?: string }).started_at ?? Date.now()).getTime();
+    const serverElapsedSeconds = Number.isFinite(startedAtMs)
+      ? Math.max(0, Math.floor((Date.now() - startedAtMs) / 1000) + 2)
+      : 0;
+    const verifiedWatchSeconds = Math.min(watchDurationSeconds, serverElapsedSeconds);
+
     const campaign = await getCampaign(supabase, adView.campaign_id);
     const { completionRate, isCompleted, pmpEarned } = calculateReward({
-      watchDurationSeconds,
+      watchDurationSeconds: verifiedWatchSeconds,
       campaign,
       surveyCompleted,
     });
 
     await updateAdView(supabase, {
       viewId,
-      watchDurationSeconds,
+      watchDurationSeconds: verifiedWatchSeconds,
       completionRate,
       isCompleted,
       surveyCompleted,

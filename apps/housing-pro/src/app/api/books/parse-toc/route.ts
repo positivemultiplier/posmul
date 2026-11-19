@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CUSTOM_SUBJECT_COLOR_PALETTE } from "@/data/study-textbooks";
+import { resolveAuthenticatedUser } from "@/lib/auth-provision";
+
+const MAX_TOC_TEXT_CHARS = 50_000;
+const MAX_TOC_IMAGE_BASE64_CHARS = 8 * 1024 * 1024;
 
 export interface ParsedTocSubject {
   title: string;
@@ -94,6 +98,14 @@ function parseTocByRules(rawText: string, defaultSubjectTitle: string): ParsedTo
 
 export async function POST(req: NextRequest) {
   try {
+    const sessionUser = await resolveAuthenticatedUser();
+    if (!sessionUser?.id) {
+      return NextResponse.json(
+        { success: false, error: "AI 목차 분석을 사용하려면 먼저 로그인해 주세요." },
+        { status: 401 }
+      );
+    }
+
     const body = (await req.json()) as {
       rawText?: string;
       imageBase64?: string;
@@ -112,6 +124,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: "목차 텍스트 또는 이미지를 입력해 주세요." },
         { status: 400 }
+      );
+    }
+
+    if (rawText.length > MAX_TOC_TEXT_CHARS || imageBase64.length > MAX_TOC_IMAGE_BASE64_CHARS) {
+      return NextResponse.json(
+        { success: false, error: "입력 텍스트 또는 이미지 크기가 허용 한도를 초과했습니다." },
+        { status: 413 }
       );
     }
 

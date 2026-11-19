@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { checkIsIpBanned, banIp } from "@/shared/lib/security/ip-ban";
 import { checkTextForBannedWords } from "@/shared/lib/security/banned-words";
+import { resolveAdminUser } from "@/shared/lib/security/admin-auth";
 import {
   FORUM_COMMENT_DAILY_LIMIT,
   FORUM_COMMENT_PMP_REWARD,
@@ -872,7 +873,7 @@ export async function updateGalleryPostAction(params: {
     }
 
     // 어드민 여부 확인
-    const isAdmin = user.email?.includes("admin") || user.id === "00000000-0000-0000-0000-000000000001";
+    const { isAdmin } = await resolveAdminUser(user);
     if (post.author_id !== user.id && !isAdmin) {
       return { success: false, error: "본인이 작성한 글만 수정할 수 있습니다." };
     }
@@ -937,7 +938,7 @@ export async function deleteGalleryPostAction(
       return { success: false, error: "게시글을 찾을 수 없습니다." };
     }
 
-    const isAdmin = user.email?.includes("admin") || user.id === "00000000-0000-0000-0000-000000000001";
+    const { isAdmin } = await resolveAdminUser(user);
     if (post.author_id !== user.id && !isAdmin) {
       return { success: false, error: "본인이 작성한 글만 삭제할 수 있습니다." };
     }
@@ -995,7 +996,7 @@ export async function updateGalleryCommentAction(params: {
       return { success: false, error: "댓글을 찾을 수 없습니다." };
     }
 
-    const isAdmin = user.email?.includes("admin") || user.id === "00000000-0000-0000-0000-000000000001";
+    const { isAdmin } = await resolveAdminUser(user);
     if (comment.author_id !== user.id && !isAdmin) {
       return { success: false, error: "본인이 작성한 댓글만 수정할 수 있습니다." };
     }
@@ -1047,7 +1048,7 @@ export async function deleteGalleryCommentAction(params: {
       return { success: false, error: "댓글을 찾을 수 없습니다." };
     }
 
-    const isAdmin = user.email?.includes("admin") || user.id === "00000000-0000-0000-0000-000000000001";
+    const { isAdmin } = await resolveAdminUser(user);
     if (comment.author_id !== user.id && !isAdmin) {
       return { success: false, error: "본인이 작성한 댓글만 삭제할 수 있습니다." };
     }

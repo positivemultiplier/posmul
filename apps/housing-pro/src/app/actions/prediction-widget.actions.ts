@@ -20,14 +20,21 @@ export interface PredictionParticipationResult {
  * - 버티컬 앱 단독 PMC 발행 불가: 오직 PMP로 예측에 참여하고, 적중 시에만 PMC가 정산됨
  */
 export async function participateHousingPredictionAction(params: {
-  userId: string;
+  userId?: string;
   gameId: string;
   optionId: string;
   pmpAmount: number;
 }): Promise<PredictionParticipationResult> {
   const { gameId, optionId, pmpAmount } = params;
   const sessionUser = await resolveAuthenticatedUser();
-  const userId = sessionUser?.id || params.userId;
+  if (!sessionUser?.id) {
+    return {
+      success: false,
+      message: "예측에 참여하려면 먼저 로그인해 주세요.",
+      stakedPmp: 0,
+    };
+  }
+  const userId = sessionUser.id;
 
   if (pmpAmount <= 0) {
     return {

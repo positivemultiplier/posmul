@@ -1,27 +1,53 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserEconomicBalance } from "../../../../lib/supabase/direct-client";
+import { createClient } from "@/lib/supabase/server";
+import { resolveAdminUser } from "@/shared/lib/security/admin-auth";
 
 /**
  * GET /api/economy/balance?userId=xxx
- * 사용자 경제 상태 조회
+ * 사용자 경제 상태 조회 (본인 또는 관리자만 조회 가능)
  */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get("userId");
+    const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
-    if (!userId) {
+    if (authError || !user) {
       return NextResponse.json(
         {
           success: false,
           error: {
-            code: 'VALIDATION_ERROR',
-            message: 'userId parameter is required'
-          }
+            code: "UNAUTHORIZED",
+            message: "Authentication required",
+          },
         },
-        { status: 400 }
+        { status: 401 }
       );
     }
+
+    const { searchParams } = new URL(request.url);
+    const requestedUserId = searchParams.get("userId") || user.id;
+
+    if (requestedUserId !== user.id) {
+      const adminInfo = await resolveAdminUser(user);
+      if (!adminInfo.isAdmin) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: "FORBIDDEN",
+              message: "Cannot access another user's economic balance",
+            },
+          },
+          { status: 403 }
+        );
+      }
+    }
+
+    const userId = requestedUserId;
 
     const result = await getUserEconomicBalance(userId);
 

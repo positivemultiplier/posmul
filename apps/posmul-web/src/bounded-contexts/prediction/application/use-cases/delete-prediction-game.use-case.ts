@@ -139,19 +139,40 @@ export class DeletePredictionGameUseCase {
   }
 
   /**
-   * 게임 삭제 권한 확인
+   * 게임 삭제 권한 확인 (생성자 본인만 허용)
    */
-  private canDeleteGame(_game: any, _userId: UserId): boolean {
-    // TODO: 실제 구현에서는 게임의 createdBy 프로퍼티와 비교
-    // 또는 관리자 권한 확인 로직 추가
-    return true; // 임시로 모든 사용자에게 권한 부여
+  private canDeleteGame(game: unknown, userId: UserId): boolean {
+    if (!game || !userId) return false;
+    const candidate = game as {
+      creatorId?: string;
+      getCreatorId?: () => string;
+    };
+    const creatorId =
+      typeof candidate.getCreatorId === "function"
+        ? candidate.getCreatorId()
+        : candidate.creatorId;
+    return Boolean(creatorId && creatorId === userId);
   }
 
   /**
    * 게임에 참여자가 있는지 확인
    */
-  private hasParticipants(_game: any): boolean {
-    // TODO: 실제 구현에서는 게임의 predictions 맵 크기 확인
-    return false; // 임시로 참여자 없음으로 처리
+  private hasParticipants(game: unknown): boolean {
+    if (!game) return false;
+    const candidate = game as {
+      predictions?: Map<unknown, unknown> | unknown[];
+      getPredictions?: () => Map<unknown, unknown> | unknown[];
+      getCurrentParticipantCount?: () => number;
+    };
+    if (typeof candidate.getCurrentParticipantCount === "function") {
+      return candidate.getCurrentParticipantCount() > 0;
+    }
+    const preds =
+      typeof candidate.getPredictions === "function"
+        ? candidate.getPredictions()
+        : candidate.predictions;
+    if (preds instanceof Map) return preds.size > 0;
+    if (Array.isArray(preds)) return preds.length > 0;
+    return false;
   }
 }

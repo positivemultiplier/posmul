@@ -30,10 +30,10 @@ const DEFAULT_USER_CONES: UserStudyConeItem[] = [
 /**
  * 🎒 유저의 스터디콘 인벤토리 조회
  */
-export async function getUserStudyConesAction(userId?: string): Promise<StudyConeOperationResult> {
+export async function getUserStudyConesAction(_userId?: string): Promise<StudyConeOperationResult> {
   try {
     const sessionUser = await resolveAuthenticatedUser();
-    const targetUserId = sessionUser?.id || userId;
+    const targetUserId = sessionUser?.id;
     if (!targetUserId) {
       return {
         success: true,
@@ -90,12 +90,19 @@ export async function getUserStudyConesAction(userId?: string): Promise<StudyCon
  * 💳 유료 진화 스터디콘 구매 Action (현금 EAT 재원 창출 선순환)
  */
 export async function purchaseStudyConeAction(params: {
-  userId: string;
+  userId?: string;
   coneType: StudyConeSpec["coneType"];
 }): Promise<StudyConeOperationResult> {
   const { coneType } = params;
   const sessionUser = await resolveAuthenticatedUser();
-  const userId = sessionUser?.id || params.userId;
+  if (!sessionUser?.id) {
+    return {
+      success: false,
+      message: "스터디콘을 구매하려면 먼저 로그인해 주세요.",
+      cones: [],
+    };
+  }
+  const userId = sessionUser.id;
   const spec = STUDY_CONE_CATALOG.find((s) => s.coneType === coneType);
 
   if (!spec) {
@@ -180,12 +187,19 @@ export async function purchaseStudyConeAction(params: {
  * ⚡ 장착 스터디콘 변경 Action
  */
 export async function equipStudyConeAction(params: {
-  userId: string;
+  userId?: string;
   coneType: StudyConeSpec["coneType"];
 }): Promise<StudyConeOperationResult> {
   const { coneType } = params;
   const sessionUser = await resolveAuthenticatedUser();
-  const userId = sessionUser?.id || params.userId;
+  if (!sessionUser?.id) {
+    return {
+      success: false,
+      message: "스터디콘 장착을 변경하려면 먼저 로그인해 주세요.",
+      cones: [],
+    };
+  }
+  const userId = sessionUser.id;
 
   try {
     await supabaseAdmin

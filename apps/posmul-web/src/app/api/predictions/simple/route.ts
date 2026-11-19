@@ -3,6 +3,7 @@ import {
   createPredictionGame, 
   getPredictionGames
 } from "../../../../lib/supabase/direct-client";
+import { blockInProduction, requireAdminApi } from "@/shared/lib/security/admin-auth";
 
 /**
  * GET /api/predictions/simple
@@ -65,6 +66,12 @@ export async function GET(request: NextRequest) {
  * 간단한 예측 게임 생성
  */
 export async function POST(request: NextRequest) {
+  const blocked = blockInProduction();
+  if (blocked) return blocked;
+
+  const auth = await requireAdminApi(request);
+  if (!auth.ok) return auth.response;
+
   try {
     const body = await request.json();
 

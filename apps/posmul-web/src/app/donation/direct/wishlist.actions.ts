@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireAdminSession } from "@/shared/lib/security/admin-auth";
 import { revalidatePath } from "next/cache";
 import {
   deductPmcForDonation,
@@ -27,6 +28,14 @@ export interface WishlistSubmissionData {
 export async function submitWishlistRequest(data: WishlistSubmissionData) {
   try {
     const supabase = await createClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return { success: false, error: "물품 신청을 등록하려면 로그인이 필요합니다." };
+    }
 
     const { data: inserted, error } = await supabase
       .schema("donation")
@@ -66,6 +75,17 @@ export async function submitWishlistRequest(data: WishlistSubmissionData) {
  */
 export async function approveWishlistRequest(requestId: string, adminNotes?: string) {
   try {
+    const adminSession = await requireAdminSession();
+    if (!adminSession.ok) {
+      return {
+        success: false,
+        error:
+          adminSession.reason === "UNAUTHORIZED"
+            ? "관리자 로그인이 필요합니다."
+            : "관리자 권한이 필요합니다.",
+      };
+    }
+
     const supabase = await createClient();
 
     const { data: updated, error } = await supabase

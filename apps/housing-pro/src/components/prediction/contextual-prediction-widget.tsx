@@ -104,7 +104,7 @@ export function ContextualPredictionWidget({
         </div>
 
         <a
-          href="http://localhost:3000/prediction"
+          href={`${process.env.NEXT_PUBLIC_POSMUL_WEB_URL || "https://posmul.com"}/prediction`}
           target="_blank"
           rel="noreferrer"
           className="text-[11px] font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1"
@@ -249,7 +249,7 @@ export function ContextualPredictionWidget({
       <div className="text-[10px] text-slate-400 flex items-center justify-between">
         <span>📜 오라클: {currentGame.oracleSource}</span>
         <a
-          href={`http://localhost:3000/prediction/${currentGame.slug}/analysis`}
+          href={`${process.env.NEXT_PUBLIC_POSMUL_WEB_URL || "https://posmul.com"}/prediction/${currentGame.slug}/analysis`}
           target="_blank"
           rel="noreferrer"
           className="text-indigo-400 hover:underline flex items-center gap-0.5"
