@@ -131,17 +131,17 @@ export function CompactBalanceWidget({
     activeAssetType === "PMC" || activeAssetType === "PMP_TO_PMC";
 
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-2 whitespace-nowrap shrink-0 ${className}`}>
       {/* PMP (무위험 참여 자산) */}
       <div
         title="PMP (무위험 시민 참여 자산 · 포럼/소비에서 획득하여 예측에 사용)"
-        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-300 ${
+        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-300 whitespace-nowrap shrink-0 ${
           highlightPmp
             ? "bg-emerald-950/60 border-emerald-500/40 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
             : "bg-slate-900/60 border-slate-800 opacity-75"
         }`}
       >
-        <Coins className="w-3.5 h-3.5 text-emerald-400" />
+        <Coins className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
         <span className="text-[10px] font-medium text-emerald-400/80">PMP</span>
         <span className="text-xs font-bold text-emerald-200">
           {formatBalance(pmpBalance)}
@@ -151,13 +151,13 @@ export function CompactBalanceWidget({
       {/* PMC (사회적 가치·기부 자산) */}
       <div
         title="PMC (사회적 가치 자산 · 예측 적중/지역소비로 획득하여 기부에 직접 집행)"
-        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-300 ${
+        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-300 whitespace-nowrap shrink-0 ${
           highlightPmc
             ? "bg-purple-950/60 border-purple-500/40 shadow-[0_0_10px_rgba(168,85,247,0.15)]"
             : "bg-slate-900/60 border-slate-800 opacity-75"
         }`}
       >
-        <TrendingUp className="w-3.5 h-3.5 text-purple-400" />
+        <TrendingUp className="w-3.5 h-3.5 text-purple-400 shrink-0" />
         <span className="text-[10px] font-medium text-purple-400/80">PMC</span>
         <span className="text-xs font-bold text-purple-200">
           {formatBalance(pmcBalance)}

@@ -50,6 +50,10 @@ export default async function PredictionPage({ searchParams }: PageProps) {
       .limit(50),
   ]);
 
+  if (recentGamesResult.error) {
+    console.error("[PredictionPage] prediction_games 조회 실패:", recentGamesResult.error);
+  }
+
   const user = userResult.data?.user ?? null;
   const recentGameRows = (recentGamesResult.data ?? []) as PredictionGameRow[];
 
@@ -142,6 +146,7 @@ export default async function PredictionPage({ searchParams }: PageProps) {
             showCategoryFilter={false}
             showSortToolbar={true}
             initialSort={initialSort}
+            platformTotalPool={platformTotalPool}
           />
         </FadeIn>
       </div>

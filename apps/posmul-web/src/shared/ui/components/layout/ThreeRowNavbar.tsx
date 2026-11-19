@@ -1,15 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { Suspense, useState, useEffect } from "react";
-import { Menu, X } from "lucide-react";
+import { Suspense, useState, useEffect, useRef } from "react";
+import {
+  Menu,
+  X,
+  ChevronDown,
+  LayoutDashboard,
+  User as UserIcon,
+  Settings,
+  LogOut,
+  Gift,
+  FileSpreadsheet,
+  HelpCircle,
+} from "lucide-react";
 import { createClient } from "../../../../lib/supabase/client";
 import { User } from "@supabase/supabase-js";
 import { usePathname, useSearchParams } from "next/navigation";
 import { CompactBalanceWidget } from "./CompactBalanceWidget";
 import {
   DOMAIN_PHILOSOPHY_MAP,
-  ORDERED_DOMAIN_KEYS,
   type PosMulDomainKey,
 } from "../../tokens/domain-tones";
 
@@ -526,11 +536,97 @@ function checkSubcategoryActive(
   return pathname === subBase || pathname.startsWith(`${subBase}/`);
 }
 
+// Row 1 핵심 도메인 (예측 · 기부 · 포럼)
+const PRIMARY_DOMAIN_KEYS: PosMulDomainKey[] = ["prediction", "donation", "forum"];
+
+// '기타 ▼' 드롭다운에 통합된 보조 도메인 및 서비스
+const MORE_MENU_GROUPS = [
+  {
+    label: "확장 도메인",
+    items: [
+      {
+        title: "소비",
+        desc: "광고 · 상점 · 클라우드 펀딩",
+        href: "/consume",
+        icon: "💳",
+        badge: "+PMP·PMC",
+      },
+      {
+        title: "랭킹",
+        desc: "전국·지역 시민 명예의 전당",
+        href: "/ranking",
+        icon: "🏆",
+        badge: "명예",
+      },
+    ],
+  },
+  {
+    label: "실시간 · 커뮤니티",
+    items: [
+      {
+        title: "LIVE 응원톡",
+        desc: "실시간 이슈 라이브 중계·응원",
+        href: "/live",
+        icon: "🔴",
+        badge: "LIVE",
+      },
+      {
+        title: "맞짱 챌린지",
+        desc: "1:1 예측 승부 및 커스텀 내기",
+        href: "/challenge",
+        icon: "🥊",
+        badge: "대결",
+      },
+      {
+        title: "프렌즈 도감",
+        desc: "포스멀 캐릭터 유니버스",
+        href: "/characters",
+        icon: "🐾",
+        badge: "도감",
+      },
+    ],
+  },
+  {
+    label: "기타 서비스",
+    items: [
+      {
+        title: "Gift Aid (세액공제)",
+        desc: "기부 영수증 및 공제 계산",
+        href: "/other/gift-aid",
+        icon: "🎁",
+      },
+      {
+        title: "세무 · 회계",
+        desc: "거래 내역 및 수익 명세서",
+        href: "/other/tax",
+        icon: "📊",
+      },
+      {
+        title: "고객지원 · 가이드",
+        desc: "FAQ · 1:1 문의 · 이용 안내",
+        href: "/other/support",
+        icon: "💬",
+      },
+      {
+        title: "기타 서비스 전체",
+        desc: "전체 부가 기능 모아보기",
+        href: "/other",
+        icon: "⚙️",
+      },
+    ],
+  },
+];
+
 function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
   const [user, setUser] = useState<User | null>(null);
   const [authResolved, setAuthResolved] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+
+  const moreMenuRef = useRef<HTMLDivElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
 
   const pathname = usePathname() || "/";
   const searchParams = useSearchParams();
@@ -542,6 +638,40 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  // 경로 변경 시 열려있는 드롭다운 자동 닫기
+  useEffect(() => {
+    setMoreMenuOpen(false);
+    setProfileMenuOpen(false);
+    setMobileOpen(false);
+  }, [pathname, searchParamsString]);
+
+  // 외부 클릭 또는 ESC 키로 드롭다운 닫기
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      const target = event.target as Node;
+      if (moreMenuRef.current && !moreMenuRef.current.contains(target)) {
+        setMoreMenuOpen(false);
+      }
+      if (profileMenuRef.current && !profileMenuRef.current.contains(target)) {
+        setProfileMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setMoreMenuOpen(false);
+        setProfileMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   useEffect(() => {
@@ -583,24 +713,17 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
         "시민")
     : null;
 
+  const resolvedAvatarUrl = user
+    ? ((user.user_metadata?.avatar_url as string | undefined) ||
+        (user.user_metadata?.picture as string | undefined) ||
+        null)
+    : null;
+
   const handleSignOut = async () => {
+    setProfileMenuOpen(false);
     await supabase.auth.signOut();
     if (mounted) {
       window.location.href = "/";
-    }
-  };
-
-  const handleOpenHealingRoom = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    const popup = window.open(
-      "/healing-room",
-      "PosMulHealingRoom",
-      "width=1280,height=860,left=100,top=60,resizable=yes,scrollbars=yes"
-    );
-    if (!popup) {
-      window.open("/healing-room", "_blank", "noopener,noreferrer");
-    } else {
-      popup.focus();
     }
   };
 
@@ -611,6 +734,26 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
   const currentSubcategories =
     currentCategories[selectedCategory]?.subcategories ?? [];
 
+  const isMoreActive =
+    selectedDomain === "consume" ||
+    selectedDomain === "ranking" ||
+    selectedDomain === "other" ||
+    pathname.startsWith("/live") ||
+    pathname.startsWith("/challenge") ||
+    pathname.startsWith("/characters");
+
+  const activeMoreTitle = pathname.startsWith("/live")
+    ? "LIVE"
+    : pathname.startsWith("/challenge")
+      ? "맞짱"
+      : pathname.startsWith("/characters")
+        ? "프렌즈"
+        : selectedDomain === "consume"
+          ? "소비"
+          : selectedDomain === "ranking"
+            ? "랭킹"
+            : null;
+
   return (
     <header className="fixed top-0 w-full z-50 bg-[#090b12]/90 backdrop-blur-2xl border-b border-white/[0.07] shadow-[0_6px_30px_rgba(0,0,0,0.6)]">
       {/* 상단 도메인 앰비언트 라이트 라인 (Tone-on-Tone) */}
@@ -619,147 +762,264 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
       />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* ==================== Row 1: Logo + Citizen Flywheel Domains + Balance/Auth ==================== */}
-        <div className="flex justify-between items-center h-[60px] border-b border-white/[0.05]">
-          {/* Brand Logo */}
-          <div className="flex items-center gap-5">
+        {/* ==================== Row 1: Logo + 핵심 도메인(예측·기부·포럼·기타▼) + 프로필 ==================== */}
+        <div className="flex justify-between items-center h-[58px] border-b border-white/[0.05] gap-4">
+          {/* 좌측: 브랜드 로고 + 핵심 3도메인 + 기타 드롭다운 */}
+          <div className="flex items-center gap-6 min-w-0">
             <Link
               href="/"
-              className="flex items-center gap-2 group focus:outline-none"
+              className="flex items-center gap-2 group focus:outline-none whitespace-nowrap shrink-0"
             >
               <span className="text-2xl font-black bg-gradient-to-r from-sky-300 via-indigo-300 to-purple-300 bg-clip-text text-transparent tracking-tight">
                 PosMul
               </span>
             </Link>
 
-            {/* Desktop: Row 1 메인 도메인 (시민 선순환 순서: 포럼 ➔ 소비 ➔ 예측 ➔ 기부 ➔ 랭킹 | 기타) */}
+            {/* Desktop: Row 1 핵심 네비게이션 (예측 · 기부 · 포럼 · 기타▼) */}
             <nav
               aria-label="주요 도메인 네비게이션"
-              className="hidden md:flex items-center gap-1"
+              className="hidden md:flex items-center gap-1.5"
             >
-              {ORDERED_DOMAIN_KEYS.map((domainKey, idx) => {
+              {PRIMARY_DOMAIN_KEYS.map((domainKey) => {
                 const data = navigationData[domainKey];
                 const meta = DOMAIN_PHILOSOPHY_MAP[domainKey];
-                const isSelected = selectedDomain === domainKey;
-                const showCycleArrow = idx < 4; // 포럼 ➔ 소비 ➔ 예측 ➔ 기부 ➔ 랭킹 흐름 표시
+                const isSelected = !isMoreActive && selectedDomain === domainKey;
 
                 return (
-                  <div key={domainKey} className="flex items-center">
-                    {domainKey === "other" && (
-                      <div className="h-4 w-px bg-white/10 mx-1.5" />
-                    )}
-                    <Link
-                      href={data.href}
-                      prefetch={true}
-                      className={`px-3 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-1.5 ${
-                        isSelected
-                          ? meta.tones.row1Active
-                          : "text-slate-400 hover:text-slate-100 hover:bg-white/[0.04] border border-transparent"
-                      }`}
-                    >
-                      <span className="text-xs font-bold tracking-tight">
-                        {data.title}
-                      </span>
-                    </Link>
-                  </div>
+                  <Link
+                    key={domainKey}
+                    href={data.href}
+                    prefetch={true}
+                    className={`px-3.5 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
+                      isSelected
+                        ? meta.tones.row1Active
+                        : "text-slate-300 hover:text-white hover:bg-white/[0.05] border border-transparent"
+                    }`}
+                  >
+                    <span className="text-sm font-bold tracking-tight">
+                      {data.title}
+                    </span>
+                  </Link>
                 );
               })}
 
-              {/* 🔴 LIVE (응원톡) 눈에 띄는 화려한 뱃지 */}
-              <Link
-                href="/live"
-                className="ml-2 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-orange-500 hover:from-red-500 hover:to-orange-400 text-white text-xs font-black shadow-lg shadow-red-500/25 border border-red-400/40 hover:scale-105 transition-all animate-pulse"
-              >
-                <span className="w-2 h-2 rounded-full bg-white" />
-                <span>LIVE</span>
-              </Link>
+              {/* 기타 ▼ 통합 드롭다운 (소비·랭킹·LIVE·맞짱·프렌즈·기타 서비스) */}
+              <div ref={moreMenuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMoreMenuOpen((prev) => !prev);
+                    setProfileMenuOpen(false);
+                  }}
+                  aria-expanded={moreMenuOpen}
+                  aria-haspopup="menu"
+                  className={`px-3.5 py-1.5 rounded-xl transition-all duration-200 flex items-center gap-1 whitespace-nowrap shrink-0 text-sm font-bold tracking-tight ${
+                    isMoreActive
+                      ? currentDomainMeta.tones.row1Active
+                      : moreMenuOpen
+                        ? "bg-white/[0.08] text-white border border-white/[0.12]"
+                        : "text-slate-300 hover:text-white hover:bg-white/[0.05] border border-transparent"
+                  }`}
+                >
+                  <span>{activeMoreTitle ? `기타 · ${activeMoreTitle}` : "기타"}</span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                      moreMenuOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
 
-              {/* 🥊 맞짱 내기 챌린지 뱃지 */}
-              <Link
-                href="/challenge"
-                className="ml-1.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-slate-950 text-xs font-black shadow-lg shadow-amber-500/20 border border-amber-400/40 hover:scale-105 transition-all"
-              >
-                <span>🥊</span>
-                <span>맞짱</span>
-              </Link>
-
-              {/* 🐾 포스멀 프렌즈 도감 */}
-              <Link
-                href="/characters"
-                className="ml-1 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-violet-500/15 hover:bg-violet-500/25 text-violet-200 text-xs font-bold border border-violet-400/35 hover:scale-105 transition-all"
-              >
-                <span>🐾</span>
-                <span>프렌즈</span>
-              </Link>
+                {moreMenuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute left-0 top-full mt-2 w-[320px] rounded-2xl bg-[#0e1320]/98 backdrop-blur-2xl border border-white/[0.1] shadow-[0_18px_45px_rgba(0,0,0,0.75)] p-3 z-50 space-y-3"
+                  >
+                    {MORE_MENU_GROUPS.map((group) => (
+                      <div key={group.label}>
+                        <div className="px-2.5 pb-1.5 text-[10.5px] font-bold uppercase tracking-wider text-slate-500">
+                          {group.label}
+                        </div>
+                        <div className="space-y-0.5">
+                          {group.items.map((item) => {
+                            const active =
+                              pathname === item.href ||
+                              (item.href !== "/other" && pathname.startsWith(`${item.href}/`));
+                            return (
+                              <Link
+                                key={item.href}
+                                href={item.href}
+                                prefetch={true}
+                                onClick={() => setMoreMenuOpen(false)}
+                                className={`flex items-center justify-between gap-3 px-2.5 py-2 rounded-xl transition-colors ${
+                                  active
+                                    ? "bg-sky-500/15 border border-sky-400/30 text-white"
+                                    : "hover:bg-white/[0.05] text-slate-200 border border-transparent"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <span className="text-base leading-none shrink-0">
+                                    {item.icon}
+                                  </span>
+                                  <div className="min-w-0">
+                                    <div className="text-xs font-bold text-slate-100 truncate">
+                                      {item.title}
+                                    </div>
+                                    <div className="text-[11px] text-slate-400 truncate">
+                                      {item.desc}
+                                    </div>
+                                  </div>
+                                </div>
+                                {"badge" in item && item.badge && (
+                                  <span className="px-1.5 py-0.5 rounded-md bg-white/[0.06] text-[10px] font-bold text-slate-300 whitespace-nowrap shrink-0">
+                                    {item.badge}
+                                  </span>
+                                )}
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </nav>
           </div>
 
-          {/* Desktop: Balance Widget + Auth */}
-          <div className="hidden md:flex items-center gap-2.5">
-            <CompactBalanceWidget
-              activeAssetType={currentDomainMeta.assetType}
-              user={user}
-              authResolved={authResolved}
-            />
-
+          {/* 우측: 로그인 시 프로필 버튼 하나 / 비로그인 시 로그인·회원가입 */}
+          <div className="hidden md:flex items-center gap-2 shrink-0">
             {user ? (
-              <>
-                <a
-                  href="/healing-room"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={handleOpenHealingRoom}
-                  className="px-3 py-1.5 bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 hover:from-sky-500/30 hover:to-purple-500/30 text-sky-200 rounded-xl transition-all duration-200 border border-sky-400/40 text-xs font-semibold flex items-center gap-1"
-                >
-                  <span>🏡 힐링룸</span>
-                </a>
-                <Link
-                  href="/dashboard"
-                  className="px-3 py-1.5 bg-slate-900/90 hover:bg-slate-800 text-slate-200 rounded-xl transition-all duration-200 border border-slate-700/60 text-xs font-semibold flex items-center gap-1"
-                >
-                  <span>📊 내 대시보드</span>
-                </Link>
-                <Link
-                  href="/dashboard?onboarding=1"
-                  title={`로그인 계정: ${user.email ?? resolvedUserLabel ?? ""}`}
-                  className="px-2.5 py-1.5 rounded-full bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-400/40 flex items-center gap-1.5 text-xs font-bold text-emerald-200 transition-colors max-w-[140px]"
-                >
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                  <span className="truncate">{resolvedUserLabel} 님</span>
-                </Link>
+              <div ref={profileMenuRef} className="relative">
                 <button
-                  onClick={handleSignOut}
-                  className="px-2.5 py-1.5 bg-rose-950/30 hover:bg-rose-900/50 text-rose-300 rounded-xl transition-all duration-200 border border-rose-800/30 text-xs font-medium"
+                  type="button"
+                  onClick={() => {
+                    setProfileMenuOpen((prev) => !prev);
+                    setMoreMenuOpen(false);
+                  }}
+                  aria-expanded={profileMenuOpen}
+                  aria-haspopup="menu"
+                  title={`로그인 계정: ${user.email ?? resolvedUserLabel ?? ""}`}
+                  className={`flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full border transition-all duration-200 whitespace-nowrap shrink-0 ${
+                    profileMenuOpen
+                      ? "bg-slate-800/95 border-sky-400/50 text-white shadow-lg shadow-sky-500/10"
+                      : "bg-slate-900/90 hover:bg-slate-800/90 border-white/[0.1] text-slate-100"
+                  }`}
                 >
-                  로그아웃
+                  {resolvedAvatarUrl ? (
+                    <img
+                      src={resolvedAvatarUrl}
+                      alt={resolvedUserLabel ?? "프로필"}
+                      className="w-6 h-6 rounded-full object-cover ring-1 ring-emerald-400/50 shrink-0"
+                    />
+                  ) : (
+                    <span className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-emerald-300 shrink-0">
+                      <UserIcon className="w-3.5 h-3.5" />
+                    </span>
+                  )}
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                  <span className="text-xs font-bold max-w-[130px] truncate">
+                    {resolvedUserLabel}
+                  </span>
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${
+                      profileMenuOpen ? "rotate-180 text-sky-300" : ""
+                    }`}
+                  />
                 </button>
-              </>
+
+                {profileMenuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-full mt-2 w-64 rounded-2xl bg-[#0e1320]/98 backdrop-blur-2xl border border-white/[0.1] shadow-[0_18px_45px_rgba(0,0,0,0.75)] p-2 z-50"
+                  >
+                    {/* 계정 요약 헤더 */}
+                    <div className="px-3 py-2.5 border-b border-white/[0.07] mb-1.5">
+                      <div className="text-xs font-extrabold text-white truncate">
+                        {resolvedUserLabel} 님
+                      </div>
+                      {user.email && (
+                        <div className="text-[11px] text-slate-400 truncate mt-0.5">
+                          {user.email}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 개인 메뉴 (내 대시보드 · 프로필 설정 · 세무/기부 내역) */}
+                    <div className="space-y-0.5">
+                      <Link
+                        href="/dashboard"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-sky-400 shrink-0" />
+                        <span>내 대시보드</span>
+                      </Link>
+                      <Link
+                        href="/dashboard?onboarding=1"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      >
+                        <UserIcon className="w-4 h-4 text-emerald-400 shrink-0" />
+                        <span>프로필 · 관심사 설정</span>
+                      </Link>
+                      <Link
+                        href="/other/settings"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      >
+                        <Settings className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>계정 · 알림 · 보안 설정</span>
+                      </Link>
+                      <Link
+                        href="/other/gift-aid"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      >
+                        <Gift className="w-4 h-4 text-amber-400 shrink-0" />
+                        <span>내 기부 · Gift Aid</span>
+                      </Link>
+                      <Link
+                        href="/other/tax"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 text-indigo-400 shrink-0" />
+                        <span>거래 내역 · 세무 자료</span>
+                      </Link>
+                      <Link
+                        href="/other/support"
+                        onClick={() => setProfileMenuOpen(false)}
+                        className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-slate-200 hover:text-white hover:bg-white/[0.06] transition-colors"
+                      >
+                        <HelpCircle className="w-4 h-4 text-slate-400 shrink-0" />
+                        <span>고객지원 · FAQ</span>
+                      </Link>
+                    </div>
+
+                    <div className="my-1.5 border-t border-white/[0.07]" />
+
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-300 hover:text-rose-200 hover:bg-rose-500/10 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4 shrink-0" />
+                      <span>로그아웃</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <>
-                <a
-                  href="/healing-room"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={handleOpenHealingRoom}
-                  className="px-2.5 py-1.5 bg-gradient-to-r from-sky-500/15 to-indigo-500/20 hover:from-sky-500/25 hover:to-indigo-500/30 text-sky-200 rounded-xl border border-sky-400/35 transition-colors text-xs font-semibold"
-                >
-                  🏡 힐링룸
-                </a>
-                <Link
-                  href="/dashboard"
-                  className="px-2.5 py-1.5 bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white rounded-xl border border-slate-800 transition-colors text-xs font-semibold"
-                >
-                  📊 MY
-                </Link>
                 <Link
                   href="/auth/login"
-                  className="px-3 py-1.5 text-slate-300 hover:text-white transition-colors text-xs font-semibold"
+                  className="px-3.5 py-1.5 text-slate-300 hover:text-white transition-colors text-xs font-semibold whitespace-nowrap shrink-0"
                 >
                   로그인
                 </Link>
                 <Link
                   href="/auth/signup"
-                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${currentDomainMeta.tones.primaryButton}`}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 whitespace-nowrap shrink-0 ${currentDomainMeta.tones.primaryButton}`}
                 >
                   회원가입
                 </Link>
@@ -771,15 +1031,15 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
             aria-label="모바일 메뉴 열기"
-            className="md:hidden text-slate-300 p-2 rounded-xl bg-slate-900 border border-slate-800"
+            className="md:hidden text-slate-300 p-2 rounded-xl bg-slate-900 border border-slate-800 shrink-0"
           >
             {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
 
-        {/* ==================== Row 2: 도메인 중분류 카테고리 (Tone-on-Tone Mid Layer) ==================== */}
-        <div className="hidden md:flex items-center justify-between h-[42px] border-b border-white/[0.04]">
-          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+        {/* ==================== Row 2: 도메인 중분류 카테고리 + 우측 PMP/PMC 잔액 ==================== */}
+        <div className="hidden md:flex items-center justify-between h-[42px] border-b border-white/[0.04] gap-3">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar min-w-0">
             {Object.entries(currentCategories).map(([categoryKey, category]) => {
               const isSelected = selectedCategory === categoryKey;
               return (
@@ -787,7 +1047,7 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                   key={categoryKey}
                   href={category.href}
                   prefetch={true}
-                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all duration-200 whitespace-nowrap border ${
+                  className={`px-3 py-1 text-xs font-semibold rounded-lg transition-all duration-200 whitespace-nowrap shrink-0 border ${
                     isSelected
                       ? currentDomainMeta.tones.row2Active
                       : `text-slate-400 border-transparent ${currentDomainMeta.tones.row2Hover}`
@@ -798,6 +1058,14 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
               );
             })}
           </div>
+
+          {/* PMP / PMC 잔액 위젯 (Row 2 우측에 여유롭게 배치) */}
+          <CompactBalanceWidget
+            activeAssetType={currentDomainMeta.assetType}
+            user={user}
+            authResolved={authResolved}
+            className="shrink-0 pl-3 border-l border-white/[0.06]"
+          />
         </div>
 
         {/* ==================== Row 3: 소분류 필터 칩 (Tone-on-Tone Soft Layer) ==================== */}
@@ -815,7 +1083,7 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                   key={`${subcategory.path}-${index}`}
                   href={subcategory.path}
                   prefetch={true}
-                  className={`px-2.5 py-0.5 text-[11px] rounded-md transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap border ${
+                  className={`px-2.5 py-0.5 text-[11px] rounded-md transition-all duration-200 flex items-center gap-1.5 whitespace-nowrap shrink-0 border ${
                     active
                       ? currentDomainMeta.tones.row3Active
                       : `text-slate-400 border-transparent ${currentDomainMeta.tones.row3Hover}`
@@ -838,14 +1106,25 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
 
       {/* ==================== Mobile Menu ==================== */}
       {mobileOpen && (
-        <div className="md:hidden bg-[#090b12]/98 backdrop-blur-2xl border-t border-white/10">
-          <div className="px-4 py-4 space-y-3">
-            {/* Mobile: Domains & Categories */}
+        <div className="md:hidden bg-[#090b12]/98 backdrop-blur-2xl border-t border-white/10 max-h-[82vh] overflow-y-auto">
+          <div className="px-4 py-4 space-y-4">
+            {/* Mobile: PMP / PMC 잔액 */}
+            {user && (
+              <div className="pb-2 border-b border-slate-800/80">
+                <CompactBalanceWidget
+                  activeAssetType={currentDomainMeta.assetType}
+                  user={user}
+                  authResolved={authResolved}
+                />
+              </div>
+            )}
+
+            {/* Mobile: 핵심 도메인 (예측 · 기부 · 포럼) */}
             <div className="space-y-2">
-              {ORDERED_DOMAIN_KEYS.map((domainKey) => {
+              {PRIMARY_DOMAIN_KEYS.map((domainKey) => {
                 const data = navigationData[domainKey];
                 const meta = DOMAIN_PHILOSOPHY_MAP[domainKey];
-                const isSelected = selectedDomain === domainKey;
+                const isSelected = !isMoreActive && selectedDomain === domainKey;
                 return (
                   <div key={domainKey} className="space-y-1">
                     <Link
@@ -887,25 +1166,33 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
               })}
             </div>
 
-            {/* Mobile: Auth */}
+            {/* Mobile: 기타 메뉴 (소비 · 랭킹 · LIVE · 맞짱 · 프렌즈 · 기타 서비스) */}
             <div className="pt-2 border-t border-slate-800 space-y-2">
-              <a
-                href="/healing-room"
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(event) => {
-                  setMobileOpen(false);
-                  handleOpenHealingRoom(event);
-                }}
-                className="mb-2 block w-full px-4 py-2 bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 border border-sky-400/40 text-sky-200 rounded-xl text-center text-xs font-bold"
-              >
-                🏡 PosMul 힐링룸 미니홈피 (새 창)
-              </a>
+              <div className="px-1 text-[11px] font-bold text-slate-500">기타 메뉴</div>
+              <div className="grid grid-cols-2 gap-1.5">
+                {MORE_MENU_GROUPS.flatMap((group) => group.items).map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900/80 border border-white/[0.06] text-xs font-semibold text-slate-200 hover:bg-slate-800"
+                  >
+                    <span>{item.icon}</span>
+                    <span className="truncate">{item.title}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            {/* Mobile: 프로필 / 인증 */}
+            <div className="pt-2 border-t border-slate-800 space-y-2">
               {user ? (
                 <div className="space-y-2">
-                  <div className="px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-400/30 text-xs font-bold text-emerald-200 flex items-center gap-2">
+                  <div className="px-3 py-2 rounded-xl bg-emerald-500/10 border border-emerald-400/30 text-xs font-bold text-emerald-200 flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
-                    <span className="truncate">로그인됨: {resolvedUserLabel} 님 ({user.email})</span>
+                    <span className="truncate">
+                      {resolvedUserLabel} 님 {user.email ? `(${user.email})` : ""}
+                    </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Link
@@ -913,18 +1200,26 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                       onClick={() => setMobileOpen(false)}
                       className="block px-4 py-2 bg-slate-800 text-slate-200 rounded-xl text-center text-xs font-semibold"
                     >
-                      대시보드
+                      📊 내 대시보드
                     </Link>
-                    <button
-                      onClick={() => {
-                        handleSignOut();
-                        setMobileOpen(false);
-                      }}
-                      className="block w-full px-4 py-2 bg-rose-950/50 text-rose-300 rounded-xl text-center text-xs font-semibold"
+                    <Link
+                      href="/other/settings"
+                      onClick={() => setMobileOpen(false)}
+                      className="block px-4 py-2 bg-slate-900 border border-slate-800 text-slate-200 rounded-xl text-center text-xs font-semibold"
                     >
-                      로그아웃
-                    </button>
+                      ⚙️ 프로필 설정
+                    </Link>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      void handleSignOut();
+                      setMobileOpen(false);
+                    }}
+                    className="block w-full px-4 py-2 bg-rose-950/50 text-rose-300 rounded-xl text-center text-xs font-semibold"
+                  >
+                    로그아웃
+                  </button>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-2">

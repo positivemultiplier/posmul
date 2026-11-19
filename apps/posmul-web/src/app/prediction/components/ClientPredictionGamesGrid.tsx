@@ -80,6 +80,8 @@ export interface ClientPredictionGamesGridProps {
   initialSort?: SortOption;
   /** 서브마켓 필터 슬롯 */
   extraFilters?: React.ReactNode;
+  /** 서버에서 집계한 실시간 플랫폼 MoneyWave 상금풀 */
+  platformTotalPool?: number;
 }
 
 interface CategoryChipItem {
@@ -182,6 +184,7 @@ export function ClientPredictionGamesGrid({
   showSortToolbar = true,
   initialSort = "latest",
   extraFilters,
+  platformTotalPool,
 }: ClientPredictionGamesGridProps) {
   const [selectedCategory, setSelectedCategory] = useState<string>("ALL");
   const [selectedRegionLevel, setSelectedRegionLevel] = useState<string>("ALL");
@@ -305,7 +308,7 @@ export function ClientPredictionGamesGrid({
     spotlightCandidates.length > 0 ? spotlightIndex % spotlightCandidates.length : 0;
   const featuredGame = spotlightCandidates[safeSpotlightIdx];
   const prevSpotlightGame =
-    spotlightCandidates.length > 1
+    spotlightCandidates.length > 2
       ? spotlightCandidates[
           (safeSpotlightIdx - 1 + spotlightCandidates.length) % spotlightCandidates.length
         ]
@@ -329,8 +332,12 @@ export function ClientPredictionGamesGrid({
   }, [games]);
 
   const totalActivePrizePool = useMemo(() => {
-    return games.reduce((acc, g) => acc + Math.round(g.allocatedPrizePool || 1200), 0);
-  }, [games]);
+    const gamesSum = games.reduce((acc, g) => acc + Math.round(g.allocatedPrizePool || 1200), 0);
+    if (typeof platformTotalPool === "number" && platformTotalPool > 0) {
+      return Math.round(platformTotalPool);
+    }
+    return gamesSum;
+  }, [games, platformTotalPool]);
 
   return (
     <div className="space-y-8">
@@ -757,7 +764,7 @@ export function ClientPredictionGamesGrid({
             <MoneyWaveWaterfallCard totalPrizePool={totalActivePrizePool} />
 
             {/* 하단 Hot topics TOP 5 랭킹 보드 */}
-            <div className="rounded-2xl bg-[#121621] border border-white/[0.08] p-4 flex-1 flex flex-col justify-between">
+            <div className="rounded-2xl bg-[#121621] border border-white/[0.08] p-4 flex-1 flex flex-col justify-start">
               <div className="flex items-center justify-between mb-2.5">
                 <div className="flex items-center gap-1.5 text-sm font-extrabold text-white">
                   <span>Hot topics</span>
