@@ -15,6 +15,7 @@ export default async function Home() {
 
   const [
     donationsResult,
+    predictionsCountResult,
     gamesResult,
     accountsCountResult,
   ] = await Promise.all([
@@ -22,6 +23,10 @@ export default async function Home() {
       .schema("donation")
       .from("donations")
       .select("pmc_amount, amount, status"),
+    supabaseAdmin
+      .schema("prediction")
+      .from("predictions")
+      .select("prediction_id", { count: "exact", head: true }),
     supabase
       .schema("prediction")
       .from("prediction_games")
@@ -41,6 +46,7 @@ export default async function Home() {
   const gamesWithPools = await attachHourlyGamePoolsToRows(supabase, recentGames);
   const featuredGames = gamesWithPools.map(mapPredictionGameRowToCardModel);
 
+  const totalPredictionsCount = predictionsCountResult.count ?? 0;
   const totalDonationAmount = (donationsResult.data ?? []).reduce((sum, row) => {
     if (row.status === "cancelled") return sum;
     const val = Number(row.pmc_amount ?? row.amount ?? 0);
@@ -53,6 +59,7 @@ export default async function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-10">
         {/* 🌟 1. 메인 브랜드 Hero 모션그래픽 섹션 */}
         <HeroLandingSection
+          totalPredictions={totalPredictionsCount}
           totalDonationAmount={totalDonationAmount}
           totalUsers={totalUsersCount}
         />

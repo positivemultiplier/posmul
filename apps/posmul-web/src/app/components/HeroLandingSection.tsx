@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 interface HeroLandingSectionProps {
+  totalPredictions: number;
   totalDonationAmount: number;
   totalUsers: number;
 }
@@ -38,7 +39,7 @@ const MODE_CONTENT: Record<FocusMode, ModeMeta> = {
     headlineTop: "다양한 정보 속에서",
     headlineAccent: "나만의 기준을 세우다.",
     line1: "세상의 정보는 다양한 출처만큼 저마다의 편향을 품고 있습니다.",
-    line2: "여러 정보를 확률로 가려내며 역선택을 넘어, 흔들리지 않는 나만의 판단 기준을 훈련합니다.",
+    line2: "여러 정보를 확률로 가려내 역선택을 넘고, 나만의 판단 기준을 훈련합니다.",
     accentGradient: "from-cyan-200 via-sky-300 to-blue-200",
     dotColor: "#38bdf8",
   },
@@ -48,7 +49,7 @@ const MODE_CONTENT: Record<FocusMode, ModeMeta> = {
     headlineTop: "닫힌 정기후원을 넘어",
     headlineAccent: "선호로 자원을 배분하다.",
     line1: "정답이 없는 가치의 문제에는 다양한 방식과 투명한 신뢰가 필요합니다.",
-    line2: "콩도르세·보르다 투표처럼 나의 선호를 반영해, 희소한 자원을 가장 필요한 곳에 배분합니다.",
+    line2: "콩도르세·보르다 선호 투표로, 희소한 자원을 필요한 곳에 투명하게 배분합니다.",
     accentGradient: "from-violet-200 via-fuchsia-200 to-amber-200",
     dotColor: "#c084fc",
   },
@@ -443,6 +444,7 @@ function GenerativeLightCanvas({ focusMode }: { focusMode: FocusMode }) {
 }
 
 export function HeroLandingSection({
+  totalPredictions,
   totalDonationAmount,
   totalUsers,
 }: HeroLandingSectionProps) {
@@ -490,26 +492,34 @@ export function HeroLandingSection({
           <span>{current.eyebrow}</span>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-4 text-[11px] sm:text-xs text-slate-300/90 bg-white/[0.04] backdrop-blur-md border border-white/[0.08] rounded-full px-4 py-1.5">
+        <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[11px] sm:text-xs text-slate-300/90 bg-white/[0.04] backdrop-blur-md border border-white/[0.08] rounded-full px-4 py-1.5">
+          <span className="flex items-center gap-1.5 whitespace-nowrap">
+            <span className="w-1.5 h-1.5 rounded-full bg-sky-400" />
+            <span className="text-slate-400">누적 예측</span>
+            <strong className="text-sky-200 font-extrabold font-mono">
+              {totalPredictions.toLocaleString()}
+            </strong>
+          </span>
+          <span className="text-white/15">|</span>
           <span className="flex items-center gap-1.5 whitespace-nowrap">
             <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
-            <span className="text-slate-400">누적 기부금액</span>
+            <span className="text-slate-400">누적 기부</span>
             <strong className="text-violet-200 font-extrabold font-mono">
-              {Math.round(totalDonationAmount).toLocaleString()} PMC
+              {Math.round(totalDonationAmount).toLocaleString()}
             </strong>
           </span>
           <span className="text-white/15">|</span>
           <span className="flex items-center gap-1.5 whitespace-nowrap">
             <span className="text-slate-400">누적 사용자</span>
             <strong className="text-white font-extrabold font-mono">
-              {totalUsers.toLocaleString()}명
+              {totalUsers.toLocaleString()}
             </strong>
           </span>
         </div>
       </div>
 
       {/* ==================== 중단: 여백과 가독성에 집중한 에디토리얼 카피 ==================== */}
-      <div className="relative z-10 px-6 py-10 sm:px-10 sm:py-12 max-w-2xl">
+      <div className="relative z-10 px-6 py-10 sm:px-10 sm:py-12 max-w-3xl">
         <div className="min-h-[160px] sm:min-h-[180px] flex flex-col justify-center">
           <AnimatePresence mode="wait">
             <motion.div
@@ -529,7 +539,7 @@ export function HeroLandingSection({
                 </span>
               </h1>
 
-              <div className="space-y-1.5 text-[13.5px] sm:text-[15.5px] text-slate-200/85 leading-[1.7] font-normal max-w-xl break-keep">
+              <div className="space-y-1.5 text-[13.5px] sm:text-[15px] text-slate-200/85 leading-[1.7] font-normal max-w-2xl break-keep">
                 <p>{current.line1}</p>
                 <p className="text-slate-300/85">{current.line2}</p>
               </div>
