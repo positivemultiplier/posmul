@@ -1,14 +1,20 @@
 /**
  * Domain Events for Auth-Economy SDK
+ * 크로스 런타임(Node/Browser/Edge) 호환 순수 도메인 이벤트 정의
  */
-
-import { randomUUID } from 'crypto';
 
 // Type-only import to avoid runtime circular deps; Result is re-exported from index.ts
 import type { Result } from './index';
 
 // Error types used in Result wrapping
 import { PublishError, HandlerError } from '../errors';
+
+function generateEventId(): string {
+  if (typeof globalThis.crypto !== 'undefined' && typeof globalThis.crypto.randomUUID === 'function') {
+    return globalThis.crypto.randomUUID();
+  }
+  return `evt-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+}
 
 // === 기본 도메인 이벤트 인터페이스 ===
 export interface DomainEvent {
@@ -35,7 +41,7 @@ export abstract class BaseDomainEvent implements DomainEvent {
     data: Record<string, unknown>,
     version: number = 1
   ) {
-    this.id = randomUUID();
+    this.id = generateEventId();
     this.type = type;
     this.aggregateId = aggregateId;
     this.data = data;

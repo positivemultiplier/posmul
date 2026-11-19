@@ -1,7 +1,7 @@
 /**
  * PosMul AI 언론사(뉴스룸) 도메인 타입 및 광주 5개구 실험실 지역 매핑 유틸리티
  */
-import { resolveNormalizedRegion } from "../../../prediction/domain/value-objects/region-hierarchy";
+import { resolveNormalizedRegion } from "@/shared/domain/region/region-hierarchy";
 
 export type NewsSectionCategory = "gwangju" | "ai" | "economy" | "sports";
 

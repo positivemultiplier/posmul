@@ -9,7 +9,8 @@ import {
 } from "@posmul/auth-economy-sdk";
 import { createEmail } from "@posmul/auth-economy-sdk";
 
-import { UserLoggedInEvent, publishEvent } from "../../../../shared/events";
+import { publishEvent } from "../../../../shared/events";
+import { UserLoggedInEvent } from "../../domain/events/user-events";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {
   AuthResult,

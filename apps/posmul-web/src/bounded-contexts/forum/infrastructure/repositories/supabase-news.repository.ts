@@ -1,5 +1,4 @@
 import { supabaseAdmin } from "../../../../lib/supabase/admin";
-import { grantForumPmpWithDailyCap } from "../../../../app/forum/forum-pmp-ledger";
 import type { ComposedNewsArticle } from "../../../feed/infrastructure/adapters/ai-newsroom-desk.adapter";
 import {
   getNewsCategoryMeta,
@@ -598,21 +597,34 @@ export class SupabaseNewsRepository {
         ? Math.max(5, Math.round(meta.pmpReward * (correctCount / meta.quiz.length)))
         : 0;
 
-    const grantRes = await grantForumPmpWithDailyCap({
-      supabase: supabaseAdmin,
-      userId,
-      activityType: "news_quiz_completed",
-      requestedPmp,
-      description: `뉴스 이해도 퀴즈 완료: ${String(row.title).slice(0, 40)}`,
-      ledgerDescription: `AI 뉴스 퀴즈 보상 (${correctCount}/${meta.quiz.length} 정답)`,
-      postId: articleId,
-      metadata: {
-        newsCategory: meta.newsCategory,
-        regionCode: meta.regionCode,
-        correctCount,
-        totalQuestions: meta.quiz.length,
-      },
-    });
+    const { data: grantRpc, error: grantErr } = await supabaseAdmin
+      .schema("economy")
+      .rpc("grant_forum_pmp_capped", {
+        p_user_id: userId,
+        p_requested_pmp: requestedPmp,
+        p_daily_cap: 1000,
+        p_activity_type: "news_quiz_completed",
+        p_description: `뉴스 이해도 퀴즈 완료: ${String(row.title).slice(0, 40)}`,
+        p_ledger_description: `AI 뉴스 퀴즈 보상 (${correctCount}/${meta.quiz.length} 정답)`,
+        p_post_id: articleId,
+        p_comment_id: null,
+        p_metadata: {
+          newsCategory: meta.newsCategory,
+          regionCode: meta.regionCode,
+          correctCount,
+          totalQuestions: meta.quiz.length,
+        },
+      });
+
+    if (grantErr) {
+      console.error("[submitNewsQuiz] grant_forum_pmp_capped error:", grantErr.message);
+    }
+
+    const grantRow = Array.isArray(grantRpc) ? grantRpc[0] : grantRpc;
+    const grantRes = {
+      awardedPmp: Number(grantRow?.awarded_pmp ?? 0),
+      dailyRemaining: Number(grantRow?.daily_remaining ?? 0),
+    };
 
     return {
       success: true,

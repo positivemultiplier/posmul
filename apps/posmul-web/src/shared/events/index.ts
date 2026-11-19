@@ -58,39 +58,8 @@ export {
   MoneyWaveEventUtils,
 } from "../economy-kernel/events/money-wave-events";
 
-// Prediction Events
-export {
-  MoneyWaveDistributionCompletedEvent,
-  MoneyWaveDistributionStartedEvent,
-  PmcEarnedFromPredictionEvent,
-  PmpSpentForPredictionEvent,
-  PredictionGameCreatedEvent,
-  PredictionGameEndedEvent,
-  PredictionGameEventTypes,
-  PredictionGameSettledEvent,
-  PredictionGameStartedEvent,
-  PredictionParticipatedEvent,
-} from "../../bounded-contexts/prediction/domain/events/prediction-game-events";
-
-// Event Handlers
-export {
-  EconomicEventHandler,
-  MoneyWaveDistributionCompletedEventHandler,
-  PmcEarnedFromPredictionEventHandler,
-  PmpSpentForPredictionEventHandler,
-  PredictionGameSettledEventHandler,
-  PredictionParticipatedEventHandler,
-  createPredictionEventHandlers,
-  registerPredictionEventHandlers,
-} from "../../bounded-contexts/prediction/application/event-handlers/prediction-event-handlers";
-
-// User Events (Auth Domain)
-export {
-  UserCreatedEvent,
-  UserDeactivatedEvent,
-  UserLoggedInEvent,
-  UserProfileUpdatedEvent,
-} from "../../bounded-contexts/auth/domain/events/user-events";
+// Note: Clean Architecture 경계 준수 — shared/events에서 bounded-contexts 역참조 제거 완료.
+// 도메인별 이벤트는 각 bounded-contexts/{domain}/domain/events 에서 직접 import 합니다.
 
 /**
  * Domain Events System 초기화 헬퍼

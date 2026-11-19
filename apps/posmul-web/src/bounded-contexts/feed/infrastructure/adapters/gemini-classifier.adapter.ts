@@ -6,7 +6,7 @@ import {
   ILlmClassifierService,
 } from "../../domain/services/llm-classifier.service";
 import { ContentClassification } from "../../domain/value-objects/feed-types";
-import { resolveNormalizedRegion } from "../../../prediction/domain/value-objects/region-hierarchy";
+import { resolveNormalizedRegion } from "@/shared/domain/region/region-hierarchy";
 import { validateGeneratedDraft } from "./draft-quality-gate";
 import { ExaoneClient } from "./exaone-client";
 import {

@@ -270,13 +270,14 @@ export class SupabaseEconomyService implements EconomyService {
     }
   }
 
-  // 📊 트랜잭션 기록 조회
+  // 📊 트랜잭션 기록 조회 (정식 멀티스키마 economy.pmp_pmc_transactions 사용)
   async getTransactionHistory(userId: UserId): Promise<Result<TransactionResult[], EconomyError>> {
     try {
       const { data, error } = await this.supabase
-        .from('economic_transactions')
+        .schema('economy')
+        .from('pmp_pmc_transactions')
         .select('*')
-        .or(`from_user_id.eq.${userId},to_user_id.eq.${userId}`)
+        .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(100);
 
@@ -284,15 +285,20 @@ export class SupabaseEconomyService implements EconomyService {
         return { success: false, error: new EconomyError(`트랜잭션 기록 조회 실패: ${error.message}`) };
       }
 
-      const transactions: TransactionResult[] = data.map(row => ({
-        id: row.id as TransactionId,
-        fromUserId: row.from_user_id as UserId,
-        toUserId: row.to_user_id as UserId,
-        amount: row.amount as PmpAmount | PmcAmount,
-        type: row.currency_type as 'PmpAmount' | 'PmcAmount',
-        status: row.status as 'pending' | 'completed' | 'failed',
-        createdAt: new Date(row.created_at)
-      }));
+      const transactions: TransactionResult[] = (data || []).map((row: Record<string, unknown>) => {
+        const pmpVal = Number(row.pmp_amount ?? 0);
+        const pmcVal = Number(row.pmc_amount ?? 0);
+        const isPmc = Math.abs(pmcVal) > 0 && Math.abs(pmpVal) === 0;
+        return {
+          id: String(row.transaction_id ?? row.id ?? '') as TransactionId,
+          fromUserId: String(row.user_id ?? userId) as UserId,
+          toUserId: String(row.user_id ?? userId) as UserId,
+          amount: (isPmc ? pmcVal : pmpVal) as PmpAmount | PmcAmount,
+          type: (isPmc ? 'PmcAmount' : 'PmpAmount') as 'PmpAmount' | 'PmcAmount',
+          status: 'completed' as const,
+          createdAt: new Date(String(row.created_at ?? new Date().toISOString()))
+        };
+      });
 
       return { success: true, data: transactions };
     } catch (error) {
@@ -306,11 +312,13 @@ export class SupabaseEconomyService implements EconomyService {
   // 🎯 예측 게임에 PmpAmount 스테이킹
   async stakePmpAmountOnPrediction(userId: UserId, predictionId: string, amount: PmpAmount): Promise<Result<TransactionResult, EconomyError>> {
     try {
-      const { data, error } = await this.supabase.rpc('stake_pmp_on_prediction', {
-        user_id: userId,
-        prediction_id: predictionId,
-        stake_amount: amount
-      });
+      const { data, error } = await this.supabase
+        .schema('economy')
+        .rpc('stake_pmp_on_prediction', {
+          user_id: userId,
+          prediction_id: predictionId,
+          stake_amount: amount
+        });
 
       if (error) {
         return { success: false, error: new EconomyError(`예측 스테이킹 실패: ${error.message}`) };

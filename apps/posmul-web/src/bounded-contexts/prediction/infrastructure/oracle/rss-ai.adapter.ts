@@ -1,5 +1,5 @@
-import { ExaoneClient } from "@/bounded-contexts/feed/infrastructure/adapters/exaone-client";
-import { GeminiClient } from "@/bounded-contexts/feed/infrastructure/adapters/gemini-client";
+import { ExaoneClient } from "@/shared/infrastructure/llm/exaone-client";
+import { GeminiClient } from "@/shared/infrastructure/llm/gemini-client";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 
 import { IOracleProvider } from "../../domain/services/oracle/oracle.interface";

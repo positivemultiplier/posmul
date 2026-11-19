@@ -1,13 +1,13 @@
 import {
   ExaoneClient,
-} from "@/bounded-contexts/feed/infrastructure/adapters/exaone-client";
+} from "@/shared/infrastructure/llm/exaone-client";
 import {
   GeminiClient,
   invokeLlmProviderJson,
   LlmProvider,
   resolveLlmOrder,
-} from "@/bounded-contexts/feed/infrastructure/adapters/gemini-client";
-import { OpenRouterClient } from "@/bounded-contexts/feed/infrastructure/adapters/openrouter-client";
+} from "@/shared/infrastructure/llm/gemini-client";
+import { OpenRouterClient } from "@/shared/infrastructure/llm/openrouter-client";
 import type {
   BalancedBriefingDTO,
   BriefingMode,

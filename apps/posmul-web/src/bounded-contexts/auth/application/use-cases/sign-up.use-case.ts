@@ -4,7 +4,8 @@
 import { AuthError, Result, isFailure } from "@posmul/auth-economy-sdk";
 import { createEmail } from "@posmul/auth-economy-sdk";
 
-import { UserCreatedEvent, publishEvent } from "../../../../shared/events";
+import { publishEvent } from "../../../../shared/events";
+import { UserCreatedEvent } from "../../domain/events/user-events";
 import { IUserRepository } from "../../domain/repositories/user.repository";
 import {
   AuthResult,

@@ -11,7 +11,7 @@ import {
   schedulerConfigService,
 } from "@/bounded-contexts/prediction/application/services/scheduler-config.service";
 import type { SettlementSourceType } from "@/bounded-contexts/prediction/domain/value-objects/settlement-types";
-import { resolveNormalizedRegion } from "@/bounded-contexts/prediction/domain/value-objects/region-hierarchy";
+import { resolveNormalizedRegion } from "@/shared/domain/region/region-hierarchy";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { balancedBriefingService } from "../../../prediction/application/services/balanced-briefing.service";
 
