@@ -1,0 +1,735 @@
+{
+  "generated_at": "2026-11-19",
+  "project_id": "fabyagohqqnusmnwekuc",
+  "postgres_version": "17.4.1.064",
+  "counts": {
+    "schemas": 14,
+    "tables": 129,
+    "enums": 5,
+    "constraints": 423,
+    "indexes": 221,
+    "views": 3,
+    "functions": 57,
+    "triggers": 22,
+    "rls_policies": 180,
+    "remote_migrations": 179
+  },
+  "migrations": [
+    {
+      "version": "20250620024446",
+      "name": "001_pmp_pmc_accounts"
+    },
+    {
+      "version": "20250620024538",
+      "name": "002_money_wave_system"
+    },
+    {
+      "version": "20250620024642",
+      "name": "003_utility_functions"
+    },
+    {
+      "version": "20250620024731",
+      "name": "004_economic_analytics"
+    },
+    {
+      "version": "20250620030443",
+      "name": "003_utility_functions_complete"
+    },
+    {
+      "version": "20250620120112",
+      "name": "005_prediction_domain_tables"
+    },
+    {
+      "version": "20250620120235",
+      "name": "006_prediction_business_logic"
+    },
+    {
+      "version": "20250622014249",
+      "name": "create_investment_tables"
+    },
+    {
+      "version": "20250622024120",
+      "name": "fix_rls_security_issues"
+    },
+    {
+      "version": "20250622050613",
+      "name": "fix_critical_rls_policies"
+    },
+    {
+      "version": "20250622050646",
+      "name": "fix_critical_function_security"
+    },
+    {
+      "version": "20250622050819",
+      "name": "drop_and_recreate_functions_security"
+    },
+    {
+      "version": "20250622051555",
+      "name": "fix_remaining_search_path_issues"
+    },
+    {
+      "version": "20250622051805",
+      "name": "remove_all_duplicate_functions"
+    },
+    {
+      "version": "20250622051837",
+      "name": "create_secure_functions_final"
+    },
+    {
+      "version": "20250622052651",
+      "name": "emergency_auth_security_patch"
+    },
+    {
+      "version": "20250622053003",
+      "name": "optimize_auth_rls_performance"
+    },
+    {
+      "version": "20250622053024",
+      "name": "optimize_all_rls_performance_batch1"
+    },
+    {
+      "version": "20250622053624",
+      "name": "optimize_money_wave_rls_corrected"
+    },
+    {
+      "version": "20250622054246",
+      "name": "fix_prediction_payment_trigger"
+    },
+    {
+      "version": "20250622054330",
+      "name": "fix_prediction_payment_trigger_correct_columns"
+    },
+    {
+      "version": "20250622054721",
+      "name": "fix_prediction_payment_trigger_transaction_type"
+    },
+    {
+      "version": "20250622054823",
+      "name": "temporarily_disable_problematic_triggers"
+    },
+    {
+      "version": "20250622064637",
+      "name": "fix_critical_user_rls_policy"
+    },
+    {
+      "version": "20250622064858",
+      "name": "optimize_rls_policies_performance"
+    },
+    {
+      "version": "20250622065010",
+      "name": "cleanup_redundant_rls_policies"
+    },
+    {
+      "version": "20250622065025",
+      "name": "cleanup_redundant_rls_policies_for_prediction_games"
+    },
+    {
+      "version": "20250622065107",
+      "name": "cleanup_redundant_rls_policies_for_predictions"
+    },
+    {
+      "version": "20250622065118",
+      "name": "cleanup_redundant_rls_policies_for_predictions"
+    },
+    {
+      "version": "20250622065210",
+      "name": "cleanup_redundant_rls_for_behavioral_profiles"
+    },
+    {
+      "version": "20250622065218",
+      "name": "cleanup_rls_for_behavioral_profiles"
+    },
+    {
+      "version": "20250622065241",
+      "name": "cleanup_rls_for_utility_parameters"
+    },
+    {
+      "version": "20250622065304",
+      "name": "cleanup_rls_for_utility_inputs"
+    },
+    {
+      "version": "20250622065326",
+      "name": "cleanup_rls_for_utility_predictions"
+    },
+    {
+      "version": "20250622065357",
+      "name": "cleanup_rls_for_social_welfare_parameters"
+    },
+    {
+      "version": "20250622065432",
+      "name": "add_indexes_to_foreign_keys"
+    },
+    {
+      "version": "20250622065456",
+      "name": "add_indexes_to_foreign_keys"
+    },
+    {
+      "version": "20250623023856",
+      "name": "create_donation_tables"
+    },
+    {
+      "version": "20250623024135",
+      "name": "create_forum_tables_fixed"
+    },
+    {
+      "version": "20250624113614",
+      "name": "create_domain_schemas"
+    },
+    {
+      "version": "20250624113905",
+      "name": "cleanup_unexpected_economy_tables_cascade"
+    },
+    {
+      "version": "20250624113919",
+      "name": "move_tables_to_domain_schemas_retry"
+    },
+    {
+      "version": "20250624113955",
+      "name": "update_database_search_path"
+    },
+    {
+      "version": "20250624114007",
+      "name": "update_roles_search_path"
+    },
+    {
+      "version": "20250624114046",
+      "name": "grant_schema_usage_permissions"
+    },
+    {
+      "version": "20250624114059",
+      "name": "set_default_table_privileges"
+    },
+    {
+      "version": "20250624114115",
+      "name": "grant_existing_table_privileges"
+    },
+    {
+      "version": "20250625074835",
+      "name": "create_study_cycle_mvp_schema"
+    },
+    {
+      "version": "20250625092122",
+      "name": "refactor_move_sc_tables_to_schema"
+    },
+    {
+      "version": "20250626020532",
+      "name": "sc_001_remove_duplicate_indexes"
+    },
+    {
+      "version": "20250626020907",
+      "name": "sc_002_rls_performance_optimization"
+    },
+    {
+      "version": "20250626021618",
+      "name": "sc_003_auth_security_enhancement"
+    },
+    {
+      "version": "20250626022006",
+      "name": "sc_004_advisor_warnings_resolution"
+    },
+    {
+      "version": "20250626110554",
+      "name": "add_fk_indexes_for_study_cycle_schema"
+    },
+    {
+      "version": "20250627082720",
+      "name": "create_sc_readings_table_v2"
+    },
+    {
+      "version": "20250628073029",
+      "name": "create_assessment_schema"
+    },
+    {
+      "version": "20250628073043",
+      "name": "create_assessment_tables_in_schema"
+    },
+    {
+      "version": "20250629051400",
+      "name": "create_monorepo_migration_status"
+    },
+    {
+      "version": "20250629081224",
+      "name": "set_default_search_path"
+    },
+    {
+      "version": "20250629083739",
+      "name": "phase4_studycycle_indexes_and_searchpath"
+    },
+    {
+      "version": "20250706121824",
+      "name": "create_posmul_user_domain_tables_fixed"
+    },
+    {
+      "version": "20250706121852",
+      "name": "create_posmul_user_rls_and_triggers"
+    },
+    {
+      "version": "20251120125135",
+      "name": "create_get_economy_stats_rpc"
+    },
+    {
+      "version": "20251120125505",
+      "name": "create_stake_pmp_on_prediction_rpc"
+    },
+    {
+      "version": "20251120125648",
+      "name": "create_participate_in_prediction_game_rpc"
+    },
+    {
+      "version": "20251120130943",
+      "name": "move_get_economy_stats_to_public"
+    },
+    {
+      "version": "20251120134533",
+      "name": "create_auto_onboarding_trigger"
+    },
+    {
+      "version": "20251120134612",
+      "name": "create_sample_prediction_games"
+    },
+    {
+      "version": "20251121115015",
+      "name": "001_pmp_pmc_accounts"
+    },
+    {
+      "version": "20251121115121",
+      "name": "002_money_wave_system"
+    },
+    {
+      "version": "20251121115150",
+      "name": "003_utility_functions"
+    },
+    {
+      "version": "20251121115233",
+      "name": "001_prediction_games"
+    },
+    {
+      "version": "20251121115235",
+      "name": "002_predictions"
+    },
+    {
+      "version": "20251121115335",
+      "name": "003_add_category_to_prediction_games"
+    },
+    {
+      "version": "20251121115416",
+      "name": "004_add_tags_to_prediction_games"
+    },
+    {
+      "version": "20251124115736",
+      "name": "add_slug_to_prediction_games"
+    },
+    {
+      "version": "20251124125253",
+      "name": "remove_public_duplicate_tables"
+    },
+    {
+      "version": "20251124133009",
+      "name": "remove_public_user_duplicate_tables"
+    },
+    {
+      "version": "20251126151940",
+      "name": "fix_process_prediction_payment_trigger"
+    },
+    {
+      "version": "20251126152856",
+      "name": "fix_all_prediction_triggers_schema"
+    },
+    {
+      "version": "20251126152937",
+      "name": "fix_record_prediction_trend_columns"
+    },
+    {
+      "version": "20251126155244",
+      "name": "sync_user_profiles_on_prediction_payment"
+    },
+    {
+      "version": "20251126155818",
+      "name": "fix_calculate_reward_and_settlement_trigger"
+    },
+    {
+      "version": "20251126155922",
+      "name": "fix_remaining_economy_functions"
+    },
+    {
+      "version": "20251126160205",
+      "name": "add_missing_transaction_types"
+    },
+    {
+      "version": "20251126161414",
+      "name": "fix_function_search_paths"
+    },
+    {
+      "version": "20251126220607",
+      "name": "fix_participate_sync_user_profiles"
+    },
+    {
+      "version": "20251126221101",
+      "name": "create_user_profiles_table"
+    },
+    {
+      "version": "20251126221349",
+      "name": "remove_balance_from_user_profiles_and_update_functions"
+    },
+    {
+      "version": "20251126221912",
+      "name": "drop_public_user_profiles"
+    },
+    {
+      "version": "20251127114735",
+      "name": "fix_auth_triggers_for_ddd_migration"
+    },
+    {
+      "version": "20251127134617",
+      "name": "create_opinion_leaders"
+    },
+    {
+      "version": "20251127152121",
+      "name": "add_category_to_opinion_leaders"
+    },
+    {
+      "version": "20251127154915",
+      "name": "create_direct_donation_tables"
+    },
+    {
+      "version": "20251128140711",
+      "name": "investment_to_consume_migration"
+    },
+    {
+      "version": "20251128140742",
+      "name": "add_time_consume_ad_tables"
+    },
+    {
+      "version": "20251128142449",
+      "name": "add_money_consume_tables"
+    },
+    {
+      "version": "20251128143639",
+      "name": "add_cloud_consume_missing_columns"
+    },
+    {
+      "version": "20251128144205",
+      "name": "add_unified_ranking_tables"
+    },
+    {
+      "version": "20251129130235",
+      "name": "add_forum_regions_and_demographic_link"
+    },
+    {
+      "version": "20251129130308",
+      "name": "create_demographic_data_schema"
+    },
+    {
+      "version": "20251224024708",
+      "name": "move_reputation_table_to_user_schema"
+    },
+    {
+      "version": "20251224025143",
+      "name": "create_oauth_provider_schema"
+    },
+    {
+      "version": "20251224025331",
+      "name": "create_oauth_tokens_table"
+    },
+    {
+      "version": "20251224084745",
+      "name": "drop_public_monorepo_migration_status"
+    },
+    {
+      "version": "20251224090111",
+      "name": "implement_prediction_categories_and_seed_data"
+    },
+    {
+      "version": "20251224090454",
+      "name": "simplify_prediction_hierarchy_rollback_and_flat"
+    },
+    {
+      "version": "20251225082252",
+      "name": "economy_money_wave_daily_snapshots"
+    },
+    {
+      "version": "20251225082559",
+      "name": "prediction_place_prediction_bet_rpc_v2"
+    },
+    {
+      "version": "20251225083821",
+      "name": "economy_money_wave_config_and_ventures"
+    },
+    {
+      "version": "20251225084415",
+      "name": "economy_account_activity_stats_from_transactions"
+    },
+    {
+      "version": "20251225085059",
+      "name": "move_user_profiles_with_balance_view_to_economy"
+    },
+    {
+      "version": "20251225093011",
+      "name": "moneywave_prediction_social_multiplier_and_hourly_cron"
+    },
+    {
+      "version": "20251225093105",
+      "name": "fix_compute_prediction_hourly_category_allocations_cte_scope"
+    },
+    {
+      "version": "20251225110006",
+      "name": "moneywave_hourly_game_pools_v2"
+    },
+    {
+      "version": "20251225114451",
+      "name": "moneywave_kst_hour_start_and_harden_prediction_allocators"
+    },
+    {
+      "version": "20251226054915",
+      "name": "grant_anon_select_on_opinion_leaders"
+    },
+    {
+      "version": "20251226055217",
+      "name": "grant_anon_select_on_all_donation_tables"
+    },
+    {
+      "version": "20251230124900",
+      "name": "reset_and_seed_games_v3"
+    },
+    {
+      "version": "20251230142633",
+      "name": "drop_unique_active_prediction_constraint"
+    },
+    {
+      "version": "20251230143000",
+      "name": "create_update_prediction_statistics_trigger_v2"
+    },
+    {
+      "version": "20251230143655",
+      "name": "enable_realtime_prediction_statistics"
+    },
+    {
+      "version": "20251231013521",
+      "name": "add_predictions_public_select_for_stats"
+    },
+    {
+      "version": "20251231023809",
+      "name": "create_money_wave_hourly_tables"
+    },
+    {
+      "version": "20251231030212",
+      "name": "create_settlement_tables"
+    },
+    {
+      "version": "20251231030558",
+      "name": "add_winning_option_columns"
+    },
+    {
+      "version": "20251231032506",
+      "name": "setup_auto_settle_cron"
+    },
+    {
+      "version": "20260113021041",
+      "name": "add_settling_status_to_game_status"
+    },
+    {
+      "version": "20260113083537",
+      "name": "add_economy_to_prediction_category"
+    },
+    {
+      "version": "20260119070233",
+      "name": "create_feed_schema"
+    },
+    {
+      "version": "20260119075628",
+      "name": "create_feed_schema"
+    },
+    {
+      "version": "20260222070018",
+      "name": "fix_settle_prediction_public_user_profiles"
+    },
+    {
+      "version": "20260222070326",
+      "name": "fix_place_prediction_bet_double_charge"
+    },
+    {
+      "version": "20260222070749",
+      "name": "fix_prediction_place_prediction_bet_double_charge"
+    },
+    {
+      "version": "20260222070759",
+      "name": "drop_public_place_prediction_bet"
+    },
+    {
+      "version": "20260222072119",
+      "name": "add_rls_insert_policy_donation_institutes"
+    },
+    {
+      "version": "20260222073152",
+      "name": "add_rls_policies_donations_table"
+    },
+    {
+      "version": "20260222082133",
+      "name": "add_auto_settle_cron"
+    },
+    {
+      "version": "20260222085049",
+      "name": "create_game_snapshots_table"
+    },
+    {
+      "version": "20260922071315",
+      "name": "init_housing_management_schema"
+    },
+    {
+      "version": "20260922071329",
+      "name": "seed_housing_management_data"
+    },
+    {
+      "version": "20260922072517",
+      "name": "create_live_study_tables"
+    },
+    {
+      "version": "20260922082736",
+      "name": "add_past_exams_and_wrong_notes"
+    },
+    {
+      "version": "20261105101859",
+      "name": "fix_prediction_lifecycle_close_settle_void"
+    },
+    {
+      "version": "20261105131950",
+      "name": "upgrade_moneywave_social_learning_and_settlement"
+    },
+    {
+      "version": "20261105132140",
+      "name": "cap_daily_moneywave_to_100k_pmc"
+    },
+    {
+      "version": "20261110235732",
+      "name": "fix_security_advisor_rls_and_views"
+    },
+    {
+      "version": "20261111082541",
+      "name": "add_profile_role_and_escalation_guard"
+    },
+    {
+      "version": "20261111084346",
+      "name": "grant_anon_usage_on_forum_schema"
+    },
+    {
+      "version": "20261111091454",
+      "name": "create_user_prediction_stats_and_ranking_metrics"
+    },
+    {
+      "version": "20261112151600",
+      "name": "fix_prediction_settlement_v3_moneywave_pure"
+    },
+    {
+      "version": "20261112161355",
+      "name": "user_challenge_pmp_escrow"
+    },
+    {
+      "version": "20261112164210",
+      "name": "user_challenge_auto_cron"
+    },
+    {
+      "version": "20261112164253",
+      "name": "user_challenge_auto_cron_escrow_guard"
+    },
+    {
+      "version": "20261113092255",
+      "name": "create_vertical_housing_schema"
+    },
+    {
+      "version": "20261114015806",
+      "name": "create_prediction_scheduler_config_and_sync"
+    },
+    {
+      "version": "20261114025503",
+      "name": "add_feed_lifecycle_and_open_sample_live_rooms"
+    },
+    {
+      "version": "20261114055655",
+      "name": "expand_forum_regions_to_dong_hierarchy"
+    },
+    {
+      "version": "20261114115947",
+      "name": "create_healing_room_minihompy_tables"
+    },
+    {
+      "version": "20261114132526",
+      "name": "create_healing_room_bgm_tracks_and_bucket"
+    },
+    {
+      "version": "20261115061105",
+      "name": "extend_exam_questions_for_stage_subjective_and_chapters"
+    },
+    {
+      "version": "20261115061621",
+      "name": "expose_vertical_housing_schema_and_grants"
+    },
+    {
+      "version": "20261115062303",
+      "name": "add_law_amendment_tracking_columns"
+    },
+    {
+      "version": "20261115070418",
+      "name": "add_option_amendment_and_clustering_support"
+    },
+    {
+      "version": "20261115072802",
+      "name": "add_interactive_solve_and_option_marks"
+    },
+    {
+      "version": "20261115074158",
+      "name": "add_box_marks_to_study_question_logs"
+    },
+    {
+      "version": "20261115084457",
+      "name": "add_detail_curriculum_columns_to_exam_questions"
+    },
+    {
+      "version": "20261115145740",
+      "name": "add_news_quiz_activity_type_and_jeonnam_region"
+    },
+    {
+      "version": "20261115145745",
+      "name": "seed_ai_newsroom_rss_sources"
+    },
+    {
+      "version": "20261115150846",
+      "name": "replace_403_hankyung_with_gnews_economy"
+    },
+    {
+      "version": "20261115154328",
+      "name": "switch_feed_sources_to_track_b_primary"
+    },
+    {
+      "version": "20261115154905",
+      "name": "update_track_b_sources_to_integrated_city_and_namgu_board"
+    },
+    {
+      "version": "20261116013321",
+      "name": "add_housing_pro_user_auth_and_study_profiles"
+    },
+    {
+      "version": "20261116022045",
+      "name": "add_theory_sections_and_option_mapping"
+    },
+    {
+      "version": "20261116042100",
+      "name": "add_healing_room_creator_universe"
+    },
+    {
+      "version": "20261119123225",
+      "name": "phase0_security_rls_and_rpc_hardening"
+    },
+    {
+      "version": "20261119124745",
+      "name": "phase1_atomic_ledger_and_settlement_fixes"
+    },
+    {
+      "version": "20261119125324",
+      "name": "phase3_db_performance_and_hygiene"
+    },
+    {
+      "version": "20261119132005",
+      "name": "20261119140000_archive_orphan_economy_accounts"
+    }
+  ]
+}
