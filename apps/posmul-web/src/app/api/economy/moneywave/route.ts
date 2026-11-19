@@ -39,15 +39,26 @@ export async function GET() {
         entrepreneur_count,
         total_investment_pool
       `)
-      .eq("status", "completed")
+      .in("status", ["COMPLETED", "completed"])
       .order("execution_date", { ascending: false })
       .limit(20);
 
     const waves = Array.isArray(waveHistory) ? waveHistory : [];
 
-    const wave1Data = waves.filter((w) => w.wave_type === "wave1");
-    const wave2Data = waves.filter((w) => w.wave_type === "wave2");
-    const wave3Data = waves.filter((w) => w.wave_type === "wave3");
+    const normalizeWaveType = (raw: string | null | undefined) =>
+      String(raw ?? "").toUpperCase();
+    const wave1Data = waves.filter((w) => {
+      const t = normalizeWaveType(w.wave_type);
+      return t === "MONEY_WAVE_1" || t === "WAVE1";
+    });
+    const wave2Data = waves.filter((w) => {
+      const t = normalizeWaveType(w.wave_type);
+      return t === "MONEY_WAVE_2" || t === "WAVE2";
+    });
+    const wave3Data = waves.filter((w) => {
+      const t = normalizeWaveType(w.wave_type);
+      return t === "MONEY_WAVE_3" || t === "WAVE3";
+    });
 
     // 3. 내 수령 내역 조회 (실제 DB 컬럼명 및 거래 기록과 정합성 보장)
     const myRewards = { wave1: 0, wave2: 0, wave3: 0, total: 0 };

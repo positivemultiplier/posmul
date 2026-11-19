@@ -68,10 +68,23 @@ Deno.serve(async (req: Request) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  const cronSecret = Deno.env.get("CRON_SECRET") ?? "";
 
   if (!supabaseUrl || !serviceRoleKey) {
     return new Response(JSON.stringify({ error: "missing_supabase_env" }), {
       status: 500,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
+  // Phase 1 보안: 일반 authenticated JWT 호출 차단 (service_role 또는 CRON_SECRET만 허용)
+  const authHeader = req.headers.get("authorization") ?? "";
+  const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+  const isAuthorized =
+    bearer === serviceRoleKey || (Boolean(cronSecret) && bearer === cronSecret);
+  if (!isAuthorized) {
+    return new Response(JSON.stringify({ error: "forbidden_service_role_required" }), {
+      status: 403,
       headers: { "content-type": "application/json" },
     });
   }
@@ -135,14 +148,15 @@ Deno.serve(async (req: Request) => {
   const interestRate = toNumber(config.interest_rate) ?? 0;
   const dormantDays = typeof config.mw2_dormant_days === "number" ? config.mw2_dormant_days : 30;
 
-  if (annualEbitda === null) {
-    return new Response(JSON.stringify({ error: "invalid_config_annual_ebitda" }), {
+  if (annualEbitda === null || annualEbitda < 0 || taxRate < 0 || taxRate >= 1 || interestRate < 0 || interestRate >= 1) {
+    return new Response(JSON.stringify({ error: "invalid_config_financial_params" }), {
       status: 500,
       headers: { "content-type": "application/json" },
     });
   }
 
-  const netAnnual = annualEbitda * (1 - taxRate - interestRate);
+  // 회계적 EAT 근사: 이자 차감 후 법인세 차감 (annualBase * (1 - interestRate) * (1 - taxRate))
+  const netAnnual = Math.max(0, annualEbitda * (1 - interestRate) * (1 - taxRate));
   const dailyTotal = netAnnual / 365;
 
   // Signals

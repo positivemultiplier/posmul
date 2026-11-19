@@ -70,7 +70,8 @@ export async function POST(request: NextRequest) {
         };
 
         const { data: game, error: insertError } = await supabase
-            .from("prediction.games")
+            .schema("prediction")
+            .from("prediction_games")
             .insert(gameData)
             .select()
             .single();
@@ -110,7 +111,8 @@ export async function GET(request: NextRequest) {
         const limit = parseInt(url.searchParams.get("limit") || "50");
 
         let query = supabase
-            .from("prediction.games")
+            .schema("prediction")
+            .from("prediction_games")
             .select("*")
             .order("created_at", { ascending: false })
             .limit(limit);

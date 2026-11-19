@@ -65,11 +65,13 @@ export class AutoSettleByBillUseCase {
         logs.push("Starting Auto-Settlement by Assembly Bills...");
 
         try {
-            // 1. 처리 결과가 나온 의안들 조회 (proc_result 또는 rgs_conf_rslt가 존재하는 것)
+            // 1. 처리 결과가 나온 의안들 조회 (풀스캔 방지 LIMIT 200)
             const { data: bills, error: billError } = await supabaseAdmin
                 .schema("feed")
                 .from("bills")
-                .select("*");
+                .select("*")
+                .order("updated_at", { ascending: false })
+                .limit(200);
 
             if (billError || !bills) {
                 return failure(new UseCaseError(`Failed to fetch bills: ${billError?.message}`));
@@ -113,7 +115,22 @@ export class AutoSettleByBillUseCase {
                 });
 
                 for (const game of matchingGames) {
-                    const options = (game.game_options as any)?.options || [];
+                    const rawOptions = game.game_options as unknown;
+                    const parsedOptions =
+                        typeof rawOptions === "string"
+                            ? (() => {
+                                  try {
+                                      return JSON.parse(rawOptions);
+                                  } catch {
+                                      return [];
+                                  }
+                              })()
+                            : rawOptions;
+                    const options = Array.isArray(parsedOptions)
+                        ? parsedOptions
+                        : Array.isArray((parsedOptions as { options?: unknown[] } | null)?.options)
+                          ? ((parsedOptions as { options: unknown[] }).options)
+                          : [];
                     if (options.length < 2) continue;
 
                     // 승리 옵션 판정:

@@ -73,13 +73,22 @@ export async function GET(request: NextRequest) {
       `네이버시민_${naverId.substring(0, 4)}`;
     const avatarUrl = naverUser.profile_image || null;
 
-    // 3. Supabase Admin을 통한 유저 보장
+    // 3. Supabase Admin을 통한 유저 보장 (50명 기본 한도 해소 페이지네이션)
     const adminSupabase = createAdminSupabaseClient();
-    const { data: userList } = await adminSupabase.auth.admin.listUsers();
-    const allUsers = (userList?.users as User[]) || [];
-    let targetUser: User | undefined = allUsers.find(
-      (u) => u.email === email || u.user_metadata?.naver_id === naverId
-    );
+    let targetUser: User | undefined;
+    for (let page = 1; page <= 20; page += 1) {
+      const { data: userList } = await adminSupabase.auth.admin.listUsers({
+        page,
+        perPage: 200,
+      });
+      const batch = (userList?.users as User[]) || [];
+      targetUser = batch.find(
+        (u) =>
+          u.user_metadata?.naver_id === naverId ||
+          (Boolean(naverUser.email) && u.email?.toLowerCase() === email.toLowerCase())
+      );
+      if (targetUser || batch.length < 200) break;
+    }
 
     if (!targetUser) {
       const { data: newUser, error: createError } = await adminSupabase.auth.admin.createUser({

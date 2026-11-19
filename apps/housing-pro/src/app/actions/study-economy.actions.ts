@@ -38,69 +38,23 @@ const APP_STUDY_REWARD_MAP = {
 const MAX_DAILY_SCANS = 5;
 const VERTICAL_DAILY_MAX_PMP = 300;
 
-function getKstDayStartIso(): string {
-  const now = new Date();
-  const kstMs = now.getTime() + 9 * 60 * 60 * 1000;
-  const kstDate = new Date(kstMs);
-  const startKstUtcMs =
-    Date.UTC(kstDate.getUTCFullYear(), kstDate.getUTCMonth(), kstDate.getUTCDate()) -
-    9 * 60 * 60 * 1000;
-  return new Date(startKstUtcMs).toISOString();
-}
-
-async function getTodayVerticalEarnedPmp(userId: string): Promise<number> {
-  const dayStartIso = getKstDayStartIso();
-  const { data } = await supabaseAdmin
-    .schema("economy")
-    .from("pmp_pmc_transactions")
-    .select("pmp_amount")
-    .eq("user_id", userId)
-    .in("transaction_type", ["VERTICAL_HOUSING_STUDY", "VERTICAL_HOUSING_SCAN"])
-    .gte("created_at", dayStartIso);
-
-  return (data || []).reduce((sum, row) => sum + Math.max(0, Number(row.pmp_amount ?? 0)), 0);
-}
-
 async function creditUserPosmulPmp(
   userId: string,
   amount: number,
   transactionType: "VERTICAL_HOUSING_STUDY" | "VERTICAL_HOUSING_SCAN" = "VERTICAL_HOUSING_STUDY",
   description = "Housing-Pro 학습 PMP 적립"
 ): Promise<{ granted: number; newBalance: number; dailyRemaining: number }> {
-  const earnedToday = await getTodayVerticalEarnedPmp(userId);
-  const remaining = Math.max(0, VERTICAL_DAILY_MAX_PMP - earnedToday);
-  const granted = Math.min(amount, remaining);
-
-  if (granted <= 0) {
-    const { data: account } = await supabaseAdmin
-      .schema("economy")
-      .from("pmp_pmc_accounts")
-      .select("pmp_balance")
-      .eq("user_id", userId)
-      .maybeSingle();
-    return {
-      granted: 0,
-      newBalance: Number(account?.pmp_balance ?? 0),
-      dailyRemaining: 0,
-    };
-  }
-
-  // ACID 보장 원자적 원장 RPC로 PMP 가산 + economy.pmp_pmc_transactions 기록 동시 수행
-  const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
-    "execute_ledger_transaction",
-    {
+  // Advisory Lock + KST 자정 기준 300 PMP 일일 상한 + 원장 기록을 단일 DB 트랜잭션으로 처리
+  const { data: rpcResult, error: rpcError } = await supabaseAdmin
+    .schema("economy")
+    .rpc("grant_vertical_pmp_capped", {
       p_user_id: userId,
-      p_transaction_type: transactionType,
-      p_pmp_change: granted,
-      p_pmc_change: 0,
+      p_requested_pmp: Math.max(0, Math.floor(amount)),
+      p_daily_cap: VERTICAL_DAILY_MAX_PMP,
+      p_tx_type: transactionType,
       p_description: description,
-      p_metadata: {
-        source: "housing-pro",
-        daily_cap: VERTICAL_DAILY_MAX_PMP,
-        earned_before: earnedToday,
-      },
-    }
-  );
+      p_metadata: { source: "housing-pro" },
+    });
 
   if (rpcError) {
     throw new Error(`원장 적립 실패: ${rpcError.message}`);
@@ -108,9 +62,9 @@ async function creditUserPosmulPmp(
 
   const row = Array.isArray(rpcResult) ? rpcResult[0] : rpcResult;
   return {
-    granted,
+    granted: Number(row?.granted_pmp ?? 0),
     newBalance: Number(row?.new_pmp_balance ?? 0),
-    dailyRemaining: Math.max(0, remaining - granted),
+    dailyRemaining: Number(row?.daily_remaining ?? 0),
   };
 }
 

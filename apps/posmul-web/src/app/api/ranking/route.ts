@@ -199,7 +199,8 @@ export async function GET(request: NextRequest) {
     
     const category = (searchParams.get('category') ?? 'overall') as RankingCategory;
     const period = (searchParams.get('period') ?? 'all') as RankingPeriod;
-    const limit = parseInt(searchParams.get('limit') ?? '30');
+    const parsedLimit = parseInt(searchParams.get('limit') ?? '30', 10);
+    const limit = Number.isFinite(parsedLimit) ? Math.min(100, Math.max(1, parsedLimit)) : 30;
 
     // 지역 및 직업군 필터 파라미터
     const sido = searchParams.get('sido');
@@ -250,9 +251,10 @@ export async function GET(request: NextRequest) {
     const profileMap = new Map<string, UserProfile>();
 
     if (userIds.length > 0) {
-      // 1. user_profiles 조회
+      // 1. user.profiles 조회 (삭제된 public.user_profiles 대신 정식 스키마 사용)
       const { data: profiles } = await supabaseAdmin
-        .from('user_profiles')
+        .schema('user')
+        .from('profiles')
         .select('id, username, display_name')
         .in('id', userIds);
 

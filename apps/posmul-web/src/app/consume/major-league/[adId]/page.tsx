@@ -121,12 +121,13 @@ export default function MajorLeagueDetailPage() {
             });
             if (res.ok) {
                 const data = await res.json();
-                if (data.adView?.id) {
-                    setAdViewId(String(data.adView.id));
+                const resolvedViewId = data.data?.viewId ?? data.adView?.id;
+                if (resolvedViewId) {
+                    setAdViewId(String(resolvedViewId));
                 }
             }
         } catch {
-            // Continue local playback simulation even if campaign isn't seeded in DB
+            // 네트워크 일시 오류 시 시청 상태 유지
         }
     };
 
@@ -135,28 +136,28 @@ export default function MajorLeagueDetailPage() {
         setClaiming(true);
 
         try {
-            if (adViewId) {
-                const res = await fetch(`/api/consume/time/view/${adViewId}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        watchDurationSeconds: ad.durationSeconds,
-                        surveyCompleted: false,
-                    }),
-                });
-                const data = await res.json();
-                if (res.ok && data.success) {
-                    setRewardMessage(data.message || `+${data.pmpEarned ?? ad.rewardPmpAmount} PMP가 지급되었습니다!`);
-                } else {
-                    setRewardMessage(`+${ad.rewardPmpAmount} PMP 획득 처리 완료`);
-                }
-            } else {
-                setRewardMessage(`+${ad.rewardPmpAmount} PMP 획득 완료!`);
+            if (!adViewId) {
+                setRewardMessage("시청 세션이 등록되지 않았습니다. 로그인 후 다시 시도해 주세요.");
+                return;
             }
-            setRewardClaimed(true);
+            const res = await fetch(`/api/consume/time/view/${adViewId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    watchDurationSeconds: ad.durationSeconds,
+                    surveyCompleted: false,
+                }),
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                const earned = data.data?.pmpEarned ?? data.pmpEarned ?? ad.rewardPmpAmount;
+                setRewardMessage(data.message || `+${earned} PMP가 지급되었습니다!`);
+                setRewardClaimed(true);
+            } else {
+                setRewardMessage(data.error?.message || data.error || "보상 지급 처리에 실패했습니다.");
+            }
         } catch {
-            setRewardClaimed(true);
-            setRewardMessage(`+${ad.rewardPmpAmount} PMP 획득 완료!`);
+            setRewardMessage("네트워크 오류로 보상 지급을 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.");
         } finally {
             setClaiming(false);
         }

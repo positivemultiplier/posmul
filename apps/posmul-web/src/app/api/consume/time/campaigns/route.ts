@@ -10,46 +10,29 @@ export async function GET() {
   try {
     const supabase = await createClient();
     
-    // 활성 광고 캠페인 조회
+    // 활성 광고 캠페인 조회 (존재하지 않는 raw RPC 호출 제거)
     const { data: campaigns, error } = await supabase
       .schema('consume')
       .from('ad_campaigns')
       .select('*')
       .eq('status', 'ACTIVE')
-      .lt('used_budget', supabase.rpc('raw', { sql: 'total_budget' }))
       .order('created_at', { ascending: false });
 
     if (error) {
-      // RPC가 없을 경우 일반 쿼리 시도
-      const { data: fallbackCampaigns, error: fallbackError } = await supabase
-        .schema('consume')
-        .from('ad_campaigns')
-        .select('*')
-        .eq('status', 'ACTIVE')
-        .order('created_at', { ascending: false });
-
-      if (fallbackError) {
-        void fallbackError;
-        return NextResponse.json(
-          { error: '광고 캠페인을 불러오는 데 실패했습니다.' },
-          { status: 500 }
-        );
-      }
-
-      // 클라이언트에서 예산 필터링
-      const activeCampaigns = (fallbackCampaigns ?? []).filter(
-        (c: { used_budget: number; total_budget: number }) => c.used_budget < c.total_budget
+      void error;
+      return NextResponse.json(
+        { error: '광고 캠페인을 불러오는 데 실패했습니다.' },
+        { status: 500 }
       );
-
-      return NextResponse.json({
-        success: true,
-        data: activeCampaigns.map(formatCampaign),
-      });
     }
+
+    const activeCampaigns = (campaigns ?? []).filter(
+      (c: { used_budget: number; total_budget: number }) => c.used_budget < c.total_budget
+    );
 
     return NextResponse.json({
       success: true,
-      data: (campaigns ?? []).map(formatCampaign),
+      data: activeCampaigns.map(formatCampaign),
     });
   } catch (error) {
     void error;

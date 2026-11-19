@@ -130,11 +130,11 @@ export async function POST(
       );
     }
 
-    // 기본 검증
+    // 기본 검증 (confidence=0도 유효 숫자로 허용)
     if (
       !body.selectedOptionId ||
       !body.stakeAmount ||
-      !body.confidence
+      typeof body.confidence !== "number"
     ) {
       return NextResponse.json(
         {
@@ -149,24 +149,11 @@ export async function POST(
       );
     }
 
-    // Repository 및 서비스 초기화
-    const gameRepository = new SupabasePredictionGameRepository(
-      process.env.SUPABASE_PROJECT_ID!
+    // DI Container 경유 (EconomyKernel Repository 자동 초기화 보장)
+    const { getParticipatePredictionUseCase } = await import(
+      "../../../../../../bounded-contexts/prediction/di-container"
     );
-    const eventPublisher = new InMemoryEventPublisher();
-
-    // EventPublisher 어댑터 생성 (타입 변환 처리)
-    const eventPublisherAdapter = new EventPublisherAdapter(eventPublisher);
-
-    const economicService = new PredictionEconomicService(
-      eventPublisherAdapter
-    );
-
-    // UseCase 초기화
-    const useCase = new ParticipatePredictionUseCase(
-      gameRepository,
-      economicService
-    );
+    const useCase = getParticipatePredictionUseCase();
 
     // 요청 DTO 생성 (세션 user.id 사용)
     const participationRequest = {

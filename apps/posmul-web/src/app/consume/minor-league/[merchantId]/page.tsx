@@ -113,24 +113,22 @@ export default function MinorLeagueDetailPage() {
             const data = await res.json();
             if (res.ok && data.success) {
                 setPaymentResult({
-                    pmcEarned: Number(data.pmcEarned ?? Math.floor((finalAmount * merchant.rewardRate) / 100)),
-                    receiptNumber: String(data.payment?.receiptNumber ?? `PMT-${Date.now()}`),
+                    pmcEarned: Number(data.data?.pmcEarned ?? data.pmcEarned ?? 0),
+                    receiptNumber: String(data.data?.payment?.receiptNumber ?? data.payment?.receiptNumber ?? `PMT-${Date.now()}`),
                     message: data.message || "QR 결제가 완료되었습니다!",
                 });
             } else {
-                const estimatedPmc = Math.floor((finalAmount * merchant.rewardRate) / 100);
                 setPaymentResult({
-                    pmcEarned: estimatedPmc,
-                    receiptNumber: `PMT-${Date.now()}`,
-                    message: `${finalAmount.toLocaleString()}원 결제 완료! +${estimatedPmc} PMC 적립`,
+                    pmcEarned: 0,
+                    receiptNumber: "-",
+                    message: data.error?.message || data.error || "현재 Phase 3 준비 중으로 결제를 진행할 수 없습니다.",
                 });
             }
         } catch {
-            const estimatedPmc = Math.floor((finalAmount * merchant.rewardRate) / 100);
             setPaymentResult({
-                pmcEarned: estimatedPmc,
-                receiptNumber: `PMT-${Date.now()}`,
-                message: `${finalAmount.toLocaleString()}원 결제 완료! +${estimatedPmc} PMC 적립`,
+                pmcEarned: 0,
+                receiptNumber: "-",
+                message: "네트워크 오류로 결제 요청을 처리하지 못했습니다.",
             });
         } finally {
             setIsPaying(false);

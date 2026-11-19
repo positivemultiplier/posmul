@@ -73,6 +73,12 @@ class SimpleDomainEventPublisher implements IDomainEventPublisher {
     return { success: true, data: undefined };
   }
 
+  async publishBatch<T extends DomainEvent>(
+    events: T[]
+  ): Promise<Result<void, PublishError>> {
+    return this.publishMany(events);
+  }
+
   subscribe(
     eventType: string,
     handler: (event: DomainEvent) => Promise<void>

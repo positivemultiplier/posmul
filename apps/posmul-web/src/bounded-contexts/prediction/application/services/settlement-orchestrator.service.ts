@@ -292,38 +292,16 @@ export class SettlementOrchestratorService {
       adminUserId: SYSTEM_SETTLEMENT_ADMIN_ID,
     });
 
-    let rewardDistributed = 0;
-    if (settleRes.success) {
-      rewardDistributed = settleRes.data.totalRewardDistributed;
-    } else {
-      // UseCase 검증 실패 시에도 DB RPC(settle_prediction_game)를 직접 호출하여 승자 PMC 보상 지급 및 PMP 소각 보장
-      const { data: rpcData, error: rpcErr } = await supabaseAdmin.rpc(
-        "settle_prediction_game",
-        {
-          p_game_id: source.gameId,
-          p_correct_option_id: result.winningOptionId,
-        }
-      );
-
-      if (!rpcErr && rpcData) {
-        rewardDistributed = Number(
-          (rpcData as any).total_reward_distributed ?? 0
-        );
-        try {
-          await predictionLearningStatsService.syncLearningStatsForGame(source.gameId);
-        } catch (statsError) {
-          void statsError;
-        }
-      } else {
-        return {
-          success: false,
-          error:
-            rpcErr?.message ||
-            (settleRes as any).error?.message ||
-            "정산 RPC 실행 실패",
-        };
-      }
+    if (!settleRes.success) {
+      return {
+        success: false,
+        error:
+          (settleRes as { error?: { message?: string } }).error?.message ||
+          "정산 UseCase 검증 또는 RPC 실행 실패",
+      };
     }
+
+    const rewardDistributed = settleRes.data.totalRewardDistributed;
 
     // 3. 정산 이력 기록
     await this.recordSettlementHistory(

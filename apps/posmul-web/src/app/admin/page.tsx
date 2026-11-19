@@ -55,11 +55,11 @@ export default async function AdminMainPage() {
       .eq("is_active", true),
     supabaseAdmin
       .schema("feed")
-      .from("feed_items")
+      .from("items")
       .select("*", { count: "exact", head: true }),
     supabaseAdmin
       .schema("feed")
-      .from("assembly_bills")
+      .from("bills")
       .select("*", { count: "exact", head: true }),
     supabaseAdmin
       .schema("forum")

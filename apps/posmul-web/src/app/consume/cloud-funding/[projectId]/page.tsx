@@ -123,29 +123,27 @@ export default function CloudFundingDetailPage() {
                 }),
             });
             const data = await res.json();
-            const calculatedPmc = Number(data.pmcEarned ?? Math.floor(amount * project.pmcRate));
-            setEarnedPmc(calculatedPmc);
-            setInvestMessage(
-                res.ok && data.success
-                    ? data.message || `${amount.toLocaleString()}원 펀딩 참여 완료! +${calculatedPmc} PMC 적립`
-                    : `${amount.toLocaleString()}원 펀딩 참여 완료! +${calculatedPmc} PMC 적립`
-            );
-            setProject((prev) => ({
-                ...prev,
-                currentAmount: prev.currentAmount + amount,
-                investorCount: prev.investorCount + 1,
-            }));
-            setIsInvested(true);
+            if (res.ok && data.success) {
+                const calculatedPmc = Number(data.data?.pmcEarned ?? data.pmcEarned ?? 0);
+                setEarnedPmc(calculatedPmc);
+                setInvestMessage(data.message || `${amount.toLocaleString()}원 펀딩 참여 완료!`);
+                setProject((prev) => ({
+                    ...prev,
+                    currentAmount: prev.currentAmount + amount,
+                    investorCount: prev.investorCount + 1,
+                }));
+                setIsInvested(true);
+            } else {
+                setEarnedPmc(0);
+                setInvestMessage(
+                    data.error?.message || data.error || "현재 Phase 3 준비 중으로 크라우드펀딩 참여가 잠겨 있습니다."
+                );
+                setIsInvested(false);
+            }
         } catch {
-            const calculatedPmc = Math.floor(amount * project.pmcRate);
-            setEarnedPmc(calculatedPmc);
-            setInvestMessage(`${amount.toLocaleString()}원 펀딩 참여 완료! +${calculatedPmc} PMC 적립`);
-            setProject((prev) => ({
-                ...prev,
-                currentAmount: prev.currentAmount + amount,
-                investorCount: prev.investorCount + 1,
-            }));
-            setIsInvested(true);
+            setEarnedPmc(0);
+            setInvestMessage("네트워크 오류로 펀딩 요청을 처리하지 못했습니다.");
+            setIsInvested(false);
         } finally {
             setIsInvesting(false);
         }

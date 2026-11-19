@@ -7,8 +7,8 @@ import { PosMulCharacterCompanion } from "@/shared/characters/PosMulCharacterCom
 export default async function EconomyPage() {
     const supabase = await createClient();
 
-    // Get global economy stats
-    const { data: stats } = await supabase.rpc("get_global_economy_stats");
+    // Get global economy stats (DB 실제 RPC: get_economy_stats)
+    const { data: stats } = await supabase.rpc("get_economy_stats");
 
     // Calculate Money Wave info (mock for now)
     const nextWaveHours = 12;

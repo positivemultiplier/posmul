@@ -144,7 +144,8 @@ export async function GET(request: NextRequest) {
     const userProfiles: Record<string, string> = {};
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
-        .from("user_profiles")
+        .schema("user")
+        .from("profiles")
         .select("id, username")
         .in("id", userIds);
 
