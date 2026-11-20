@@ -192,23 +192,23 @@ export function StudyGroupCreateWizard({
                 </button>
               </div>
 
-              {/* 그룹명 & 비밀번호 */}
+              {/* 그룹명 & 비밀번호 (iOS 자동 줌 방지 text-sm) */}
               <div className="rounded-2xl bg-[#16161D] border border-white/[0.08] divide-y divide-white/[0.06] overflow-hidden">
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="그룹명을 적어주세요. (예: 주택관리사 29회 합격반)"
-                  className="w-full px-3.5 py-3 bg-transparent text-xs font-bold text-white placeholder:text-slate-500 focus:outline-none"
+                  className="w-full min-h-[46px] px-3.5 py-3 bg-transparent text-sm font-bold text-white placeholder:text-slate-500 focus:outline-none"
                 />
                 <div className="flex items-center px-3.5">
-                  <Lock className="w-3.5 h-3.5 text-slate-500 mr-2 shrink-0" />
+                  <Lock className="w-4 h-4 text-slate-500 mr-2 shrink-0" />
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="비밀번호 (선택사항 · 비워두면 공개방)"
-                    className="w-full py-2.5 bg-transparent text-xs text-white placeholder:text-slate-500 focus:outline-none"
+                    placeholder="비밀번호 (선택 · 비워두면 공개방)"
+                    className="w-full min-h-[44px] py-2.5 bg-transparent text-sm text-white placeholder:text-slate-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -445,7 +445,7 @@ export function StudyGroupCreateWizard({
                   value={myNickname}
                   onChange={(e) => setMyNickname(e.target.value)}
                   placeholder="이 방에서 표시할 닉네임 (예: posmul)"
-                  className="w-full px-3.5 py-3 rounded-2xl bg-[#16161D] border border-[#FF5A36]/50 text-xs font-bold text-white focus:outline-none focus:border-[#FF5A36]"
+                  className="w-full min-h-[46px] px-3.5 py-3 rounded-2xl bg-[#16161D] border border-[#FF5A36]/50 text-sm font-bold text-white focus:outline-none focus:border-[#FF5A36]"
                 />
               </div>
 
@@ -500,14 +500,14 @@ export function StudyGroupCreateWizard({
           )}
         </div>
 
-        {/* 하단 주황색 다음 / 완료 버튼 (레퍼런스 6, 7, 8, 9) */}
+        {/* 하단 주황색 다음 / 완료 버튼 (48px 터치 영역) */}
         <div className="p-4 border-t border-white/[0.08] bg-[#0D0D11]">
           {mode === "create" && step < 4 ? (
             <button
               type="button"
               disabled={step === 1 && !title.trim()}
               onClick={() => setStep((s) => (s + 1) as 1 | 2 | 3 | 4)}
-              className="w-full py-3.5 rounded-2xl bg-[#FF5A36] hover:bg-[#ff6d4d] disabled:opacity-40 text-white text-xs font-black flex items-center justify-center gap-1 transition"
+              className="w-full min-h-[48px] rounded-2xl bg-[#FF5A36] hover:bg-[#ff6d4d] disabled:opacity-40 text-white text-sm font-black flex items-center justify-center gap-1 transition"
             >
               <span>다음 {step}/4</span>
               <ChevronRight className="w-4 h-4" />
@@ -517,7 +517,7 @@ export function StudyGroupCreateWizard({
               type="button"
               disabled={!myNickname.trim()}
               onClick={handleFinish}
-              className="w-full py-3.5 rounded-2xl bg-[#FF5A36] hover:bg-[#ff6d4d] disabled:opacity-40 text-white text-xs font-black transition"
+              className="w-full min-h-[48px] rounded-2xl bg-[#FF5A36] hover:bg-[#ff6d4d] disabled:opacity-40 text-white text-sm font-black transition"
             >
               완료
             </button>

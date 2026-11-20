@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ElementRef } from "react";
+import Link from "next/link";
 import {
   BookOpen,
   CheckCircle2,
@@ -21,6 +22,8 @@ import {
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { PracticeHubTabs } from "@/components/study/practice-hub-tabs";
+import { useStudyAuth } from "@/components/auth/study-auth-provider";
+import { saveSingleQuestionSolveAction } from "@/app/actions/exam-study.actions";
 import {
   DEMO_GRAPH_QUESTIONS,
   KNOWLEDGE_CONCEPT_NODES,
@@ -37,12 +40,26 @@ import {
   fetchChapterGraphQuestionsAction,
   fetchGraphChapterSummaryAction,
   type GraphChapterSummary,
+  type GraphDifficultyFilter,
   type LiveGraphQuestionItem,
 } from "@/app/actions/concept-graph.actions";
 
 const OPTION_CIRCLES = ["①", "②", "③", "④", "⑤"] as const;
 const GRAPH_BATCH_SIZE = 5;
 const LIST_INITIAL_COUNT = 12;
+
+type GraphRoundPresetId = "1R" | "2R" | "3R";
+
+const GRAPH_ROUND_PRESETS: Array<{
+  id: GraphRoundPresetId;
+  label: string;
+  difficulty: GraphDifficultyFilter;
+  defaultMax: number | null;
+}> = [
+  { id: "1R", label: "1R 핵심(5제)", difficulty: "SA", defaultMax: 5 },
+  { id: "2R", label: "2R 표준(10제)", difficulty: "SAB", defaultMax: 10 },
+  { id: "3R", label: "3R+ 전체", difficulty: "ALL", defaultMax: null },
+];
 
 type GraphSectionTab = "quiz" | "axes" | "nodes";
 type QuizSourceMode = "chapter_db" | "curated";
@@ -65,15 +82,39 @@ function getVaultFolderLabel(node: KnowledgeConceptNode): string {
 }
 
 export default function KnowledgeGraphStudyPage() {
+  const { effectiveOwnerKey } = useStudyAuth();
+
   // 1-Viewport 집중 3세그먼트: 단원별 기출 | 대조표(17) | 개념·암기(90)
   const [sectionTab, setSectionTab] = useState<GraphSectionTab>("quiz");
 
-  // 단원별 기출 모드 (5문항 초고속 로드 + 보는 동안 다음 5문항 백그라운드 프리페치)
+  // 단원별 기출 모드 (회독 난이도·문제량 조절 + 5문항 점진적 프리페치)
   const [quizSourceMode, setQuizSourceMode] = useState<QuizSourceMode>("chapter_db");
   const [liveSubject, setLiveSubject] = useState<LiveSubjectFilter>("ALL");
+  const [roundPreset, setRoundPreset] = useState<GraphRoundPresetId>("2R");
+  const [difficultyFilter, setDifficultyFilter] = useState<GraphDifficultyFilter>("SAB");
+  const [maxQuestionCap, setMaxQuestionCap] = useState<number | null>(10);
+  const [savedNotice, setSavedNotice] = useState<"idle" | "saving" | "saved_right" | "saved_weak">("idle");
+
   const [chapters, setChapters] = useState<GraphChapterSummary[]>([]);
   const [loadingChapters, setLoadingChapters] = useState<boolean>(true);
   const [selectedChapterCode, setSelectedChapterCode] = useState<string | null>(null);
+
+  // URL ?chapter=LAW_02 등으로 진입 시 해당 단원 자동 선택
+  useEffect(() => {
+    if (typeof globalThis !== "undefined" && "location" in globalThis) {
+      const params = new globalThis.URLSearchParams(globalThis.location.search);
+      const ch = params.get("chapter");
+      if (ch) setSelectedChapterCode(ch);
+    }
+  }, []);
+
+  const handleSelectGraphRound = (presetId: GraphRoundPresetId) => {
+    const preset = GRAPH_ROUND_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    setRoundPreset(preset.id);
+    setDifficultyFilter(preset.difficulty);
+    setMaxQuestionCap(preset.defaultMax);
+  };
 
   const [chapterQuestions, setChapterQuestions] = useState<LiveGraphQuestionItem[]>([]);
   const [totalChapterQuestions, setTotalChapterQuestions] = useState<number>(0);
@@ -116,23 +157,32 @@ export default function KnowledgeGraphStudyPage() {
     };
   }, [liveSubject]);
 
-  // 2) 선택 단원(또는 과목 전체) 첫 5문항 초고속 로드
+  // 2) 선택 단원(또는 과목 전체) 첫 5문항 초고속 로드 (회독 난이도 + 문제량 반영)
   const loadInitialChapterBatch = useCallback(
-    async (subject: LiveSubjectFilter, detailCode: string | null) => {
+    async (
+      subject: LiveSubjectFilter,
+      detailCode: string | null,
+      diff: GraphDifficultyFilter,
+      maxCap: number | null
+    ) => {
       const version = ++queryVersionRef.current;
       prefetchLockRef.current = false;
       setLoadingLive(true);
       setLiveError(null);
       setPickedOption(null);
+      setSavedNotice("idle");
       setQuestionIdx(0);
       setChapterQuestions([]);
       setHasMoreQuestions(false);
 
+      const initialLimit = maxCap ? Math.min(GRAPH_BATCH_SIZE, maxCap) : GRAPH_BATCH_SIZE;
       const res = await fetchChapterGraphQuestionsAction({
         subject,
         detailCode,
         offset: 0,
-        limit: GRAPH_BATCH_SIZE,
+        limit: initialLimit,
+        difficultyFilter: diff,
+        maxQuestions: maxCap,
       });
 
       if (queryVersionRef.current !== version) return;
@@ -153,8 +203,8 @@ export default function KnowledgeGraphStudyPage() {
   );
 
   useEffect(() => {
-    void loadInitialChapterBatch(liveSubject, selectedChapterCode);
-  }, [liveSubject, selectedChapterCode, loadInitialChapterBatch]);
+    void loadInitialChapterBatch(liveSubject, selectedChapterCode, difficultyFilter, maxQuestionCap);
+  }, [liveSubject, selectedChapterCode, difficultyFilter, maxQuestionCap, loadInitialChapterBatch]);
 
   // 3) 백그라운드 다음 5문항 자동 프리페치
   const prefetchNextBatch = useCallback(async () => {
@@ -169,6 +219,8 @@ export default function KnowledgeGraphStudyPage() {
         detailCode: selectedChapterCode,
         offset: chapterQuestions.length,
         limit: GRAPH_BATCH_SIZE,
+        difficultyFilter,
+        maxQuestions: maxQuestionCap,
       });
       if (queryVersionRef.current !== version) return;
       if (res.success && res.questions.length > 0) {
@@ -186,7 +238,14 @@ export default function KnowledgeGraphStudyPage() {
       prefetchLockRef.current = false;
       setPrefetchingMore(false);
     }
-  }, [hasMoreQuestions, liveSubject, selectedChapterCode, chapterQuestions.length]);
+  }, [
+    hasMoreQuestions,
+    liveSubject,
+    selectedChapterCode,
+    chapterQuestions.length,
+    difficultyFilter,
+    maxQuestionCap,
+  ]);
 
   // 사용자가 현재 배치를 보다가 끝에서 3문항 이내에 도달하면 조용히 다음 5문항 자동 프리페치!
   useEffect(() => {
@@ -220,40 +279,39 @@ export default function KnowledgeGraphStudyPage() {
   const activeQuestion =
     quizSourceMode === "chapter_db" && currentLiveQ
       ? {
-          examLabel: `${currentLiveQ.examYear}년 제${currentLiveQ.examRound}회 · ${currentLiveQ.questionNumber}번${
-            currentLiveQ.chapterTitle ? ` (${currentLiveQ.chapterTitle})` : ""
+        examLabel: `${currentLiveQ.examYear}년 제${currentLiveQ.examRound}회 · ${currentLiveQ.questionNumber}번${currentLiveQ.chapterTitle ? ` (${currentLiveQ.chapterTitle})` : ""
           }`,
-          subject: currentLiveQ.subject,
-          questionText: currentLiveQ.questionText,
-          boxContent: currentLiveQ.boxContent,
-          options: currentLiveQ.options.map((o) => ({
-            number: o.number,
-            text: o.text,
-            trapSummary: o.trapSummary,
-          })),
-          correctOptions: currentLiveQ.correctOptions,
-          explanation:
-            currentLiveQ.options
-              .filter((o) => o.trapSummary)
-              .map((o) => `${OPTION_CIRCLES[o.number - 1]} ${o.trapSummary}`)
-              .join(" / ") ||
-            "문장 속 하늘 점선(개념어)과 주황 점선(대조어)을 눌러 핵심 특징·기출 함정·인기 암기법을 꼬리물기로 확인해 보세요!",
-          matchedBadge: `🔗 개념 ${currentLiveQ.matchedConceptCount} · ⚡대조 ${currentLiveQ.matchedContrastCount}`,
-        }
+        subject: currentLiveQ.subject,
+        questionText: currentLiveQ.questionText,
+        boxContent: currentLiveQ.boxContent,
+        options: currentLiveQ.options.map((o) => ({
+          number: o.number,
+          text: o.text,
+          trapSummary: o.trapSummary,
+        })),
+        correctOptions: currentLiveQ.correctOptions,
+        explanation:
+          currentLiveQ.options
+            .filter((o) => o.trapSummary)
+            .map((o) => `${OPTION_CIRCLES[o.number - 1]} ${o.trapSummary}`)
+            .join(" / ") ||
+          "문장 속 하늘 점선(개념어)과 주황 점선(대조어)을 눌러 핵심 특징·기출 함정·인기 암기법을 꼬리물기로 확인해 보세요!",
+        matchedBadge: `🔗 개념 ${currentLiveQ.matchedConceptCount} · ⚡대조 ${currentLiveQ.matchedContrastCount}`,
+      }
       : {
-          examLabel: demoQ.examLabel,
-          subject: demoQ.subject,
-          questionText: demoQ.questionText,
-          boxContent: null,
-          options: demoQ.options.map((o) => ({
-            number: o.number,
-            text: o.text,
-            trapSummary: null as string | null,
-          })),
-          correctOptions: [demoQ.correctOption],
-          explanation: demoQ.explanation,
-          matchedBadge: null as string | null,
-        };
+        examLabel: demoQ.examLabel,
+        subject: demoQ.subject,
+        questionText: demoQ.questionText,
+        boxContent: null,
+        options: demoQ.options.map((o) => ({
+          number: o.number,
+          text: o.text,
+          trapSummary: null as string | null,
+        })),
+        correctOptions: [demoQ.correctOption],
+        explanation: demoQ.explanation,
+        matchedBadge: null as string | null,
+      };
 
   const isRight =
     isAnswered && pickedOption !== null && activeQuestion.correctOptions.includes(pickedOption);
@@ -400,7 +458,44 @@ export default function KnowledgeGraphStudyPage() {
       await prefetchNextBatch();
     }
     setPickedOption(null);
+    setSavedNotice("idle");
     setQuestionIdx(nextIdx);
+  };
+
+  /**
+   * User Journey 4단계(저장) + 5단계(통계) + 6단계(틀린 문제 O/X 자동 편입)
+   * 단원별 지식맵에서 답안을 고르는 즉시 DB에 저장하고, 오답 선지는 약점 O/X로 연결합니다!
+   */
+  const handlePickAnswerOption = async (optionNumber: number) => {
+    setPickedOption(optionNumber);
+    if (quizSourceMode !== "chapter_db" || !currentLiveQ || !effectiveOwnerKey) return;
+
+    const isRightChoice = currentLiveQ.correctOptions.includes(optionNumber);
+    const optionMarks: Array<{ optionId: string; markStatus: "O" | "STAR" | "X" }> = [];
+    if (!isRightChoice) {
+      for (const opt of currentLiveQ.options) {
+        if (opt.id && (opt.number === optionNumber || currentLiveQ.correctOptions.includes(opt.number))) {
+          optionMarks.push({ optionId: opt.id, markStatus: "STAR" });
+        }
+      }
+    }
+
+    setSavedNotice("saving");
+    const res = await saveSingleQuestionSolveAction({
+      clientKey: effectiveOwnerKey,
+      setKey: `GRAPH::${currentLiveQ.subject}::${currentLiveQ.detailCode || "ALL"}`,
+      questionId: currentLiveQ.id,
+      selectedOption: optionNumber,
+      subjectiveInput: null,
+      isCorrect: isRightChoice,
+      questionMark: isRightChoice ? "O" : "X",
+      optionMarks,
+    });
+    if (res.success) {
+      setSavedNotice(isRightChoice ? "saved_right" : "saved_weak");
+    } else {
+      setSavedNotice("idle");
+    }
   };
 
   return (
@@ -451,11 +546,10 @@ export default function KnowledgeGraphStudyPage() {
                 key={tab.key}
                 type="button"
                 onClick={() => setSectionTab(tab.key)}
-                className={`min-h-[42px] px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition ${
-                  active
-                    ? "bg-[#FF5A36] text-white shadow-sm"
-                    : "text-slate-400 hover:text-white"
-                }`}
+                className={`min-h-[42px] px-2 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition ${active
+                  ? "bg-[#FF5A36] text-white shadow-sm"
+                  : "text-slate-400 hover:text-white"
+                  }`}
               >
                 <Icon className="w-3.5 h-3.5 shrink-0" />
                 <span className="truncate">{tab.label}</span>
@@ -477,11 +571,10 @@ export default function KnowledgeGraphStudyPage() {
                     setQuizSourceMode("chapter_db");
                     setPickedOption(null);
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition ${
-                    quizSourceMode === "chapter_db"
-                      ? "bg-[#FF5A36] text-white"
-                      : "text-slate-400 hover:text-white"
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition ${quizSourceMode === "chapter_db"
+                    ? "bg-[#FF5A36] text-white"
+                    : "text-slate-400 hover:text-white"
+                    }`}
                 >
                   단원별 실제 기출 {totalChapterQuestions > 0 ? `(${totalChapterQuestions})` : ""}
                 </button>
@@ -491,11 +584,10 @@ export default function KnowledgeGraphStudyPage() {
                     setQuizSourceMode("curated");
                     setPickedOption(null);
                   }}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition ${
-                    quizSourceMode === "curated"
-                      ? "bg-sky-600 text-white"
-                      : "text-slate-400 hover:text-white"
-                  }`}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-black transition ${quizSourceMode === "curated"
+                    ? "bg-sky-600 text-white"
+                    : "text-slate-400 hover:text-white"
+                    }`}
                 >
                   핵심 패턴 5선
                 </button>
@@ -504,11 +596,10 @@ export default function KnowledgeGraphStudyPage() {
               <button
                 type="button"
                 onClick={() => setForceLinksOn((prev) => !prev)}
-                className={`px-3 py-1.5 rounded-xl border text-xs font-black transition ${
-                  linksEnabled
-                    ? "bg-sky-500/20 border-sky-400/50 text-sky-200"
-                    : "bg-white/[0.05] border-white/[0.1] text-slate-400"
-                }`}
+                className={`px-3 py-1.5 rounded-xl border text-xs font-black transition ${linksEnabled
+                  ? "bg-sky-500/20 border-sky-400/50 text-sky-200"
+                  : "bg-white/[0.05] border-white/[0.1] text-slate-400"
+                  }`}
               >
                 {linksEnabled ? "🔗 링크 ON" : "시험모드"}
               </button>
@@ -516,6 +607,45 @@ export default function KnowledgeGraphStudyPage() {
 
             {quizSourceMode === "chapter_db" ? (
               <div className="space-y-2.5">
+                {/* 0단계: 회독별 난이도 & 문제량 조절 바 */}
+                <div className="p-2 rounded-2xl bg-[#0F1018] border border-white/[0.08] space-y-1.5">
+                  <div className="grid grid-cols-3 gap-1">
+                    {GRAPH_ROUND_PRESETS.map((p) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => handleSelectGraphRound(p.id)}
+                        className={`min-h-[32px] px-2 rounded-xl text-[11px] font-black border transition ${
+                          roundPreset === p.id
+                            ? "bg-[#FF5A36]/20 border-[#FF5A36] text-white"
+                            : "bg-[#151621] border-white/[0.06] text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between gap-2 px-1">
+                    <span className="text-[10.5px] font-bold text-slate-400">문제량</span>
+                    <div className="flex items-center gap-1">
+                      {([5, 10, 15, null] as const).map((cap) => (
+                        <button
+                          key={cap ?? "all"}
+                          type="button"
+                          onClick={() => setMaxQuestionCap(cap)}
+                          className={`px-2 py-0.5 rounded-lg text-[10.5px] font-mono font-black border transition ${
+                            maxQuestionCap === cap
+                              ? "bg-white text-slate-950 border-white"
+                              : "bg-[#151621] text-slate-400 border-white/[0.08]"
+                          }`}
+                        >
+                          {cap ? `${cap}제` : "전체"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 {/* 1단계: 과목 선택 */}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-1.5">
@@ -533,11 +663,10 @@ export default function KnowledgeGraphStudyPage() {
                           setLiveSubject(item.key);
                           setSelectedChapterCode(null);
                         }}
-                        className={`min-h-[34px] px-3 rounded-xl border text-xs font-black transition ${
-                          liveSubject === item.key
-                            ? "bg-white/[0.15] border-white/30 text-white"
-                            : "bg-[#11121A] border-white/[0.08] text-slate-400 hover:text-white"
-                        }`}
+                        className={`min-h-[34px] px-3 rounded-xl border text-xs font-black transition ${liveSubject === item.key
+                          ? "bg-white/[0.15] border-white/30 text-white"
+                          : "bg-[#11121A] border-white/[0.08] text-slate-400 hover:text-white"
+                          }`}
                       >
                         {item.label}
                       </button>
@@ -565,11 +694,10 @@ export default function KnowledgeGraphStudyPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedChapterCode(null)}
-                    className={`min-h-[34px] px-3 rounded-xl border text-xs font-black shrink-0 transition ${
-                      selectedChapterCode === null
-                        ? "bg-sky-500/25 border-sky-400/60 text-sky-100"
-                        : "bg-[#10111A] border-white/[0.08] text-slate-400 hover:text-white"
-                    }`}
+                    className={`min-h-[34px] px-3 rounded-xl border text-xs font-black shrink-0 transition ${selectedChapterCode === null
+                      ? "bg-sky-500/25 border-sky-400/60 text-sky-100"
+                      : "bg-[#10111A] border-white/[0.08] text-slate-400 hover:text-white"
+                      }`}
                   >
                     전체 단원
                   </button>
@@ -586,11 +714,10 @@ export default function KnowledgeGraphStudyPage() {
                           key={`${ch.subject}-${ch.code}`}
                           type="button"
                           onClick={() => setSelectedChapterCode(ch.code)}
-                          className={`min-h-[34px] px-3 rounded-xl border text-xs font-bold shrink-0 flex items-center gap-1.5 transition ${
-                            active
-                              ? "bg-sky-500/25 border-sky-400/60 text-sky-100 font-black"
-                              : "bg-[#10111A] border-white/[0.08] text-slate-300 hover:text-white"
-                          }`}
+                          className={`min-h-[34px] px-3 rounded-xl border text-xs font-bold shrink-0 flex items-center gap-1.5 transition ${active
+                            ? "bg-sky-500/25 border-sky-400/60 text-sky-100 font-black"
+                            : "bg-[#10111A] border-white/[0.08] text-slate-300 hover:text-white"
+                            }`}
                         >
                           <span>
                             {ch.topicNo ? `${ch.topicNo}. ` : ""}
@@ -615,11 +742,10 @@ export default function KnowledgeGraphStudyPage() {
                       setSelectedDemoIdx(idx);
                       setPickedOption(null);
                     }}
-                    className={`min-h-[36px] px-3 rounded-xl border text-xs font-black shrink-0 transition ${
-                      selectedDemoIdx === idx
-                        ? "bg-sky-600 border-sky-500 text-white"
-                        : "bg-[#11121A] border-white/[0.08] text-slate-400 hover:text-white"
-                    }`}
+                    className={`min-h-[36px] px-3 rounded-xl border text-xs font-black shrink-0 transition ${selectedDemoIdx === idx
+                      ? "bg-sky-600 border-sky-500 text-white"
+                      : "bg-[#11121A] border-white/[0.08] text-slate-400 hover:text-white"
+                      }`}
                   >
                     {q.shortTabLabel}
                   </button>
@@ -646,7 +772,14 @@ export default function KnowledgeGraphStudyPage() {
                 <span>{liveError}</span>
                 <button
                   type="button"
-                  onClick={() => void loadInitialChapterBatch(liveSubject, selectedChapterCode)}
+                  onClick={() =>
+                    void loadInitialChapterBatch(
+                      liveSubject,
+                      selectedChapterCode,
+                      difficultyFilter,
+                      maxQuestionCap
+                    )
+                  }
                   className="px-3 py-1.5 rounded-xl bg-white/10 text-white text-xs font-black shrink-0"
                 >
                   재시도
@@ -706,11 +839,13 @@ export default function KnowledgeGraphStudyPage() {
                     return (
                       <div
                         key={opt.number}
-                        onClick={() => setPickedOption(opt.number)}
+                        onClick={() => void handlePickAnswerOption(opt.number)}
                         role="button"
                         tabIndex={0}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") setPickedOption(opt.number);
+                          if (e.key === "Enter" || e.key === " ") {
+                            void handlePickAnswerOption(opt.number);
+                          }
                         }}
                         className={`w-full px-3.5 py-3 rounded-2xl border text-[14px] font-bold flex items-start justify-between gap-2.5 transition cursor-pointer ${rowStyle}`}
                       >
@@ -739,18 +874,35 @@ export default function KnowledgeGraphStudyPage() {
 
                 {isAnswered && (
                   <div
-                    className={`p-3.5 rounded-2xl border text-[13px] leading-relaxed space-y-2 ${
-                      isRight
-                        ? "bg-emerald-950/35 border-emerald-500/45 text-emerald-100"
-                        : "bg-rose-950/35 border-rose-500/45 text-rose-100"
-                    }`}
+                    className={`p-3.5 rounded-2xl border text-[13px] leading-relaxed space-y-2 ${isRight
+                      ? "bg-emerald-950/35 border-emerald-500/45 text-emerald-100"
+                      : "bg-rose-950/35 border-rose-500/45 text-rose-100"
+                      }`}
                   >
-                    <div className="font-black text-sm">
-                      {isRight
-                        ? "✅ 정답입니다!"
-                        : `❌ 오답입니다 (정답: ${activeQuestion.correctOptions
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="font-black text-sm">
+                        {isRight
+                          ? "✅ 정답입니다!"
+                          : `❌ 오답입니다 (정답: ${activeQuestion.correctOptions
                             .map((n) => OPTION_CIRCLES[n - 1] ?? n)
                             .join(", ")})`}
+                      </span>
+                      {savedNotice === "saving" && (
+                        <span className="text-[11px] text-slate-300 font-bold">저장 중...</span>
+                      )}
+                      {savedNotice === "saved_right" && (
+                        <span className="text-[11px] text-emerald-300 font-black">
+                          💾 통계 자동 반영됨
+                        </span>
+                      )}
+                      {savedNotice === "saved_weak" && (
+                        <Link
+                          href="/study/ox?mode=weak"
+                          className="px-2 py-0.5 rounded-lg bg-[#FF5A36]/25 border border-[#FF5A36]/50 text-[11px] text-[#FF9B82] font-black"
+                        >
+                          ⚡ 약점 O/X 자동 편입 →
+                        </Link>
+                      )}
                     </div>
                     <p className="text-slate-100">{activeQuestion.explanation}</p>
                   </div>
@@ -803,11 +955,10 @@ export default function KnowledgeGraphStudyPage() {
                     key={tab.key}
                     type="button"
                     onClick={() => setVaultFilter(tab.key)}
-                    className={`min-h-[38px] px-3.5 rounded-xl border text-xs font-black shrink-0 transition ${
-                      active
-                        ? "bg-[#FF5A36] border-[#FF5A36] text-white"
-                        : "bg-[#171824] border-white/[0.08] text-slate-300"
-                    }`}
+                    className={`min-h-[38px] px-3.5 rounded-xl border text-xs font-black shrink-0 transition ${active
+                      ? "bg-[#FF5A36] border-[#FF5A36] text-white"
+                      : "bg-[#171824] border-white/[0.08] text-slate-300"
+                      }`}
                   >
                     {tab.label}
                   </button>
@@ -873,17 +1024,15 @@ export default function KnowledgeGraphStudyPage() {
                     key={tab.key}
                     type="button"
                     onClick={() => setVaultFilter(tab.key)}
-                    className={`min-h-[38px] px-3 rounded-xl border text-xs font-black shrink-0 flex items-center gap-1.5 transition ${
-                      active
-                        ? "bg-[#FF5A36] border-[#FF5A36] text-white"
-                        : "bg-[#171824] border-white/[0.08] text-slate-300"
-                    }`}
+                    className={`min-h-[38px] px-3 rounded-xl border text-xs font-black shrink-0 flex items-center gap-1.5 transition ${active
+                      ? "bg-[#FF5A36] border-[#FF5A36] text-white"
+                      : "bg-[#171824] border-white/[0.08] text-slate-300"
+                      }`}
                   >
                     <span>{tab.label}</span>
                     <span
-                      className={`text-[11px] font-mono px-1.5 rounded-full ${
-                        active ? "bg-black/25 text-white" : "bg-white/[0.07] text-slate-400"
-                      }`}
+                      className={`text-[11px] font-mono px-1.5 rounded-full ${active ? "bg-black/25 text-white" : "bg-white/[0.07] text-slate-400"
+                        }`}
                     >
                       {tab.count}
                     </span>
@@ -911,11 +1060,10 @@ export default function KnowledgeGraphStudyPage() {
                 <button
                   type="button"
                   onClick={() => setNodeViewMode("grouped")}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-black flex items-center gap-1 transition ${
-                    nodeViewMode === "grouped"
-                      ? "bg-sky-500/20 text-sky-200"
-                      : "text-slate-400 hover:text-white"
-                  }`}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-black flex items-center gap-1 transition ${nodeViewMode === "grouped"
+                    ? "bg-sky-500/20 text-sky-200"
+                    : "text-slate-400 hover:text-white"
+                    }`}
                 >
                   <FolderTree className="w-3.5 h-3.5" />
                   <span>단원</span>
@@ -923,11 +1071,10 @@ export default function KnowledgeGraphStudyPage() {
                 <button
                   type="button"
                   onClick={() => setNodeViewMode("frequency")}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-black flex items-center gap-1 transition ${
-                    nodeViewMode === "frequency"
-                      ? "bg-[#FF5A36]/20 text-[#FF8A70]"
-                      : "text-slate-400 hover:text-white"
-                  }`}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-black flex items-center gap-1 transition ${nodeViewMode === "frequency"
+                    ? "bg-[#FF5A36]/20 text-[#FF8A70]"
+                    : "text-slate-400 hover:text-white"
+                    }`}
                 >
                   <Flame className="w-3.5 h-3.5" />
                   <span>빈출</span>

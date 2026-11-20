@@ -11,7 +11,6 @@ import {
   ShieldCheck,
   Sparkles,
   Target,
-  UserCircle2,
   Users,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
@@ -38,7 +37,7 @@ export default function StudyMyHubPage() {
     setLocalPmpBalance,
     signOut,
   } = useStudyAuth();
-  const { todayISO, activeBook, subjects, matrixLogs, timetablesByDate } =
+  const { todayISO, subjects, matrixLogs, timetablesByDate } =
     useStudyCurriculum();
 
   const [activeTab, setActiveTab] = useState<MyTab>("group");
@@ -123,20 +122,8 @@ export default function StudyMyHubPage() {
 
   return (
     <MobileAppShell>
-      {/* 마이 허브 헤더 + 3대 세그먼트 (내 서재 · 스터디 그룹 · PosMul 지갑) */}
-      <header className="px-4 py-3 bg-[#16161C] border-b border-white/[0.06] space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <UserCircle2 className="w-4 h-4 text-[#FF5A36] shrink-0" />
-            <h1 className="text-sm font-black text-white truncate">
-              마이 · 서재 · 그룹 · 지갑
-            </h1>
-          </div>
-          <span className="text-[10px] font-bold text-slate-400 truncate max-w-[140px]">
-            {activeBook.badge}
-          </span>
-        </div>
-
+      {/* 슬림 3대 세그먼트 (AppBar 중복 타이틀 제거 -> 열공방 첫 화면 즉시 노출) */}
+      <header className="px-3.5 py-2.5 bg-[#16161C] border-b border-white/[0.06]">
         <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[#0E0E12] border border-white/[0.06] text-xs font-black">
           <button
             type="button"

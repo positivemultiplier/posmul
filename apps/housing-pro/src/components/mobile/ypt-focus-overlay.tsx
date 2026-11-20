@@ -787,6 +787,7 @@ export function YptFocusOverlay({
             hideOthers={hideOthers}
             accentHex={activeTheme.accentHex}
             isTimerRunning={!isPaused}
+            inOverlay
           />
         </main>
       )}

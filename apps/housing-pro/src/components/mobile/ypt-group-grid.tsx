@@ -44,6 +44,8 @@ interface YptGroupGridProps {
   hideOthers?: boolean;
   accentHex?: string;
   isTimerRunning?: boolean;
+  /** 풀스크린 타이머 오버레이 내부에 삽입될 때 이중 스크롤을 방지 */
+  inOverlay?: boolean;
 }
 
 function formatHHMMSS(totalSec: number): string {
@@ -72,6 +74,7 @@ export function YptGroupGrid({
   hideOthers = false,
   accentHex = "#FF5A36",
   isTimerRunning = false,
+  inOverlay = false,
 }: YptGroupGridProps) {
   const {
     rooms,
@@ -386,64 +389,72 @@ export function YptGroupGrid({
               </div>
             </div>
           ) : (
-            /* 가입된 스터디방 실시간 4열 책상 타일 */
+            /* 가입된 스터디방 실시간 3열(모바일)/4열 책상 타일 */
             <>
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
+              <div className="space-y-2">
+                {/* 1줄: 방 제목 풀폭 + 설정 버튼 (좁은 모바일에서도 제목 잘림 최소화) */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <button
                       type="button"
                       onClick={() => setGroupTab("browse")}
-                      className="text-sm font-black text-white truncate hover:text-[#FF8A6B] transition text-left"
+                      className="text-[15px] font-black text-white truncate hover:text-[#FF8A6B] transition text-left"
                     >
                       {activeRoom.title}
                     </button>
                     {activeRoom.studyType === "cam" && (
-                      <span className="px-1.5 py-0.2 rounded bg-sky-500/20 text-sky-300 text-[9px] font-black shrink-0">
+                      <span className="px-1.5 py-0.5 rounded-md bg-sky-500/20 text-sky-300 text-[10px] font-black shrink-0">
                         캠
                       </span>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 text-[10.5px] text-slate-400 mt-0.5">
-                    <span className="font-bold flex items-center gap-1" style={{ color: accentHex }}>
-                      <Flame className="w-3 h-3 fill-current" />
-                      <span>{displayStudyingCount}명 공부중</span>
-                    </span>
-                    <span>·</span>
-                    <span className="text-amber-300 font-bold">
-                      내 순위 {myRank}위
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-1 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => goToSlide(currentJoinedIndex - 1)}
-                    className="w-9 h-9 rounded-xl bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 hover:text-white flex items-center justify-center transition"
-                    title="이전 스터디방 (좌로 스와이프)"
-                    aria-label="이전 스터디방"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => goToSlide(currentJoinedIndex + 1)}
-                    className="w-9 h-9 rounded-xl bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 hover:text-white flex items-center justify-center transition"
-                    title="다음 스터디방 (우로 스와이프)"
-                    aria-label="다음 스터디방"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
                   <button
                     type="button"
                     onClick={() => setShowGroupInfoModal(true)}
-                    className="w-9 h-9 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 flex items-center justify-center transition"
+                    className="w-9 h-9 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 flex items-center justify-center shrink-0 transition"
                     title="그룹 정보 · 설정"
                     aria-label="그룹 정보 설정"
                   >
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
+                </div>
+
+                {/* 2줄: 실시간 열공 상태 + 방 좌우 전환 컴팩트 컨트롤 */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-xs text-slate-400 min-w-0">
+                    <span className="font-black flex items-center gap-1 shrink-0" style={{ color: accentHex }}>
+                      <Flame className="w-3.5 h-3.5 fill-current" />
+                      <span>{displayStudyingCount}명 열공중</span>
+                    </span>
+                    <span className="text-slate-600">·</span>
+                    <span className="text-amber-300 font-black shrink-0">
+                      내 순위 {myRank}위
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => goToSlide(currentJoinedIndex - 1)}
+                      className="w-8 h-8 rounded-lg bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 hover:text-white flex items-center justify-center transition"
+                      title="이전 스터디방 (좌로 스와이프)"
+                      aria-label="이전 스터디방"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <span className="text-[11px] font-mono font-bold text-slate-400 px-1 tabular-nums">
+                      {currentJoinedIndex + 1}/{joinedRooms.length}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => goToSlide(currentJoinedIndex + 1)}
+                      className="w-8 h-8 rounded-lg bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 hover:text-white flex items-center justify-center transition"
+                      title="다음 스터디방 (우로 스와이프)"
+                      aria-label="다음 스터디방"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -466,11 +477,11 @@ export function YptGroupGrid({
                           });
                         }
                       }}
-                      className={`rounded-2xl px-2 py-3 flex flex-col items-center text-center transition relative min-w-0 ${
+                      className={`rounded-2xl px-2 py-2.5 flex flex-col items-center text-center transition relative min-w-0 ${
                         member.isMe
-                          ? "bg-[#1C1617] border cursor-pointer"
+                          ? "bg-[#1E1618] border cursor-pointer"
                           : studying
-                            ? "bg-[#18171E] border border-white/[0.07]"
+                            ? "bg-[#181822] border border-white/[0.08]"
                             : "bg-[#111116] border border-white/[0.05] opacity-80"
                       }`}
                       style={
@@ -483,14 +494,22 @@ export function YptGroupGrid({
                       }
                       title={member.isMe ? "탭하여 이 방의 닉네임·스터디콘 변경" : undefined}
                     >
-                      <div className="h-11 flex items-center justify-center relative">
+                      {/* 라이브 열공 상태 도트 */}
+                      {studying && (
+                        <span
+                          className="absolute top-2 right-2 w-2 h-2 rounded-full animate-pulse"
+                          style={{ backgroundColor: accentHex }}
+                        />
+                      )}
+
+                      <div className="h-10 flex items-center justify-center relative">
                         {studying ? (
                           <div className="relative flex flex-col items-center">
                             <span className="text-2xl leading-none drop-shadow">
                               {member.emoji}
                             </span>
                             <div
-                              className="w-8 h-1 rounded-full mt-1.5"
+                              className="w-7 h-1 rounded-full mt-1"
                               style={{ backgroundColor: accentHex }}
                             />
                           </div>
@@ -499,13 +518,13 @@ export function YptGroupGrid({
                             {member.todaySeconds > 0 && !isMasked ? (
                               <Clock className="w-3 h-3 text-slate-400 mb-0.5" />
                             ) : null}
-                            <LampDesk className="w-6 h-6 stroke-[1.5]" />
+                            <LampDesk className="w-5 h-5 stroke-[1.5]" />
                           </div>
                         )}
                       </div>
 
                       <div
-                        className={`text-[11.5px] font-extrabold truncate w-full mt-1.5 ${
+                        className={`text-[12px] font-extrabold truncate w-full mt-1 ${
                           member.isMe
                             ? "text-white"
                             : studying
@@ -524,6 +543,12 @@ export function YptGroupGrid({
                       >
                         {isMasked ? "••:••:••" : formatHHMMSS(member.todaySeconds)}
                       </div>
+
+                      {studying && member.subject && (
+                        <div className="mt-1 px-1.5 py-0.5 rounded-md bg-white/[0.06] text-[9.5px] font-bold text-slate-300 truncate max-w-full">
+                          {member.subject}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -599,7 +624,7 @@ export function YptGroupGrid({
             </span>
           </div>
 
-          <div className="space-y-2.5 max-h-[52dvh] overflow-y-auto pr-0.5">
+          <div className={inOverlay ? "space-y-2.5" : "space-y-2.5 max-h-[52dvh] overflow-y-auto pr-0.5"}>
             {rankedMembers.slice(0, 7).map((m) => {
               const weekTotal = m.weeklySeconds.reduce((s, v) => s + v, 0);
               const attendedDays = m.weeklySeconds.filter((s) => s > 0).length;
@@ -682,7 +707,7 @@ export function YptGroupGrid({
             </div>
           </div>
 
-          <div className="space-y-2 max-h-[52dvh] overflow-y-auto pr-0.5">
+          <div className={inOverlay ? "space-y-2" : "space-y-2 max-h-[52dvh] overflow-y-auto pr-0.5"}>
             {rankedMembers.map((m, idx) => {
               const valSec =
                 rankPeriod === "day"
@@ -832,7 +857,7 @@ export function YptGroupGrid({
           </div>
 
           {/* 그룹 카드 목록 */}
-          <div className="space-y-2.5 max-h-[52dvh] overflow-y-auto pr-0.5">
+          <div className={inOverlay ? "space-y-2.5" : "space-y-2.5 max-h-[52dvh] overflow-y-auto pr-0.5"}>
             {browseRooms.map((r) => {
               const isJoined = joinedRoomIds.includes(r.id);
               const isSelected = !isAddSlideActive && r.id === activeRoom?.id;
@@ -994,14 +1019,14 @@ export function YptGroupGrid({
         })}
       </div>
 
-      {/* 그룹 정보/설정 모달 */}
+      {/* 그룹 정보/설정 모달 (모바일 Safe Area + 스크롤 안전) */}
       {showGroupInfoModal && activeRoom && (
         <div
-          className="fixed inset-0 z-[75] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-3"
+          className="fixed inset-0 z-[75] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-3"
           onClick={() => setShowGroupInfoModal(false)}
         >
           <div
-            className="w-full max-w-[400px] rounded-3xl bg-[#16161D] border border-white/[0.12] p-4 space-y-3 text-white shadow-2xl"
+            className="w-full max-w-[440px] max-h-[85dvh] overflow-y-auto rounded-t-3xl sm:rounded-3xl bg-[#16161D] border border-white/[0.12] p-4 pb-safe space-y-3 text-white shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">

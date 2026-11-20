@@ -186,29 +186,30 @@ export function TimerToolModal({
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-3"
+      className="fixed inset-0 z-[70] bg-black/75 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-3"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[430px] max-h-[82vh] rounded-3xl bg-[#16161D] border border-white/[0.12] text-white shadow-2xl flex flex-col overflow-hidden"
+        className="w-full max-w-[440px] max-h-[86dvh] rounded-t-3xl sm:rounded-3xl bg-[#16161D] border border-white/[0.12] text-white shadow-2xl flex flex-col overflow-hidden pb-safe"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 모달 헤더 */}
-        <div className="px-4 py-3 border-b border-white/[0.08] flex items-center justify-between bg-[#1B1B24]">
-          <h3 className="text-xs font-black text-white flex items-center gap-1.5">
-            {activeTool === "dictionary" && <BookOpen className="w-4 h-4 text-[#FF7A59]" />}
-            {activeTool === "calculator" && <Calculator className="w-4 h-4 text-sky-400" />}
-            {activeTool === "sound" && <Volume2 className="w-4 h-4 text-emerald-400" />}
-            {activeTool === "theme" && <Palette className="w-4 h-4 text-amber-400" />}
+        <div className="px-4 py-3.5 border-b border-white/[0.08] flex items-center justify-between bg-[#1B1B24] shrink-0">
+          <h3 className="text-sm font-black text-white flex items-center gap-1.5 truncate">
+            {activeTool === "dictionary" && <BookOpen className="w-4 h-4 text-[#FF7A59] shrink-0" />}
+            {activeTool === "calculator" && <Calculator className="w-4 h-4 text-sky-400 shrink-0" />}
+            {activeTool === "sound" && <Volume2 className="w-4 h-4 text-emerald-400 shrink-0" />}
+            {activeTool === "theme" && <Palette className="w-4 h-4 text-amber-400 shrink-0" />}
             {(activeTool === "timeline" || activeTool === "schedule") && (
-              <CalendarClock className="w-4 h-4 text-[#FF7A59]" />
+              <CalendarClock className="w-4 h-4 text-[#FF7A59] shrink-0" />
             )}
-            <span>{titleMap[activeTool]}</span>
+            <span className="truncate">{titleMap[activeTool]}</span>
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-white/[0.08]"
+            className="w-9 h-9 rounded-xl text-slate-300 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] flex items-center justify-center shrink-0"
+            aria-label="닫기"
           >
             <X className="w-4 h-4" />
           </button>

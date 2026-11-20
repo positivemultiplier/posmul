@@ -12,12 +12,14 @@ import {
   ChevronRight,
   ChevronDown,
   BookOpen,
+  Brain,
   TableProperties,
   ListChecks,
   CalendarPlus,
   ArrowRight,
   Camera,
   CheckSquare,
+  GitCompareArrows,
   Plus,
   Sparkles,
 } from "lucide-react";
@@ -27,6 +29,8 @@ import { StudyConeStoreModal } from "@/components/study/study-cone-store-modal";
 import { UserStudyConeItem, STUDY_CONE_CATALOG } from "@/data/mock-study-cones";
 import { getUserStudyConesAction } from "@/app/actions/study-cone.actions";
 import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
+import { fetchWeakOptionCountAction } from "@/app/actions/exam-study.actions";
+import { computeForgettingCurveReminders } from "@/lib/forgetting-curve";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
 import {
@@ -55,6 +59,7 @@ export default function HousingProStudentTimerPage() {
   const {
     isLoggedIn,
     profile,
+    effectiveOwnerKey,
     pmpBalance,
     setLocalPmpBalance,
     adjustLocalPmpBalance,
@@ -70,6 +75,7 @@ export default function HousingProStudentTimerPage() {
     todos,
     toggleTodo,
     addTodo,
+    upsertMatrixCell,
     recordStudySession,
   } = useStudyCurriculum();
 
@@ -77,6 +83,7 @@ export default function HousingProStudentTimerPage() {
   const [expandedSubjectIds, setExpandedSubjectIds] = useState<string[]>([]);
   const [quickStartTopicId, setQuickStartTopicId] = useState<string>("");
   const [quickTodoTitle, setQuickTodoTitle] = useState<string>("");
+  const [weakOxCount, setWeakOxCount] = useState<number>(0);
 
   // 보유 PMP (로그인 시 PosMul 원장 연동, 게스트 시 0)
   const [guestPmpBalance, setGuestPmpBalance] = useState<number>(0);
@@ -253,6 +260,34 @@ export default function HousingProStudentTimerPage() {
       }
     });
   }, [router, subjects, profile.userId]);
+
+  // 틀린 지문(약점 O/X) 대기 건수 초경량 조회
+  useEffect(() => {
+    if (!effectiveOwnerKey) return;
+    void fetchWeakOptionCountAction(effectiveOwnerKey).then((cnt) => setWeakOxCount(cnt));
+  }, [effectiveOwnerKey]);
+
+  // 7단계 User Journey: 에빙하우스 망각곡선(1·3·7·14·30일) 자동 리마인드 산출
+  const forgettingSummary = useMemo(
+    () =>
+      computeForgettingCurveReminders({
+        todayISO,
+        subjects,
+        matrixLogs,
+        maxItems: 4,
+      }),
+    [todayISO, subjects, matrixLogs]
+  );
+
+  const handleAddRemindToTodayPlan = (topicId: string, keyword: string, minutes: number) => {
+    upsertMatrixCell(topicId, todayISO, {
+      status: "plan",
+      keyword: `망각복습·${keyword}`,
+      minutes,
+    });
+    setToastMsg("🧠 망각곡선 복습 단원을 오늘 계획에 바로 추가했습니다!");
+    globalThis.setTimeout(() => setToastMsg(null), 3500);
+  };
 
   const subjectSecondsMap = useMemo(() => {
     const todaySlots = timetablesByDate[todayISO] || {};
@@ -469,10 +504,14 @@ export default function HousingProStudentTimerPage() {
               📝 기출 20제
             </Link>
             <Link
-              href="/study/more?tab=wallet"
+              href={
+                lastCompletedTopic.chapterCode
+                  ? `/study/graph?chapter=${encodeURIComponent(lastCompletedTopic.chapterCode)}`
+                  : "/study/graph"
+              }
               className="py-1.5 px-2 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-300 text-center hover:bg-amber-500/25 transition"
             >
-              🎯 예측·PMP
+              🔗 지식맵
             </Link>
           </div>
         </div>
@@ -533,6 +572,168 @@ export default function HousingProStudentTimerPage() {
               />
             </div>
           </div>
+        </section>
+
+        {/* 1.5. 에빙하우스 망각곡선 오늘의 리마인드 (User Journey 6·7단계) */}
+        <section className="p-3.5 rounded-2xl bg-[#181924] border border-violet-500/25 space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-xs font-black text-white min-w-0">
+              <Brain className="w-4 h-4 text-violet-400 shrink-0" />
+              <span className="truncate">망각곡선 오늘의 리마인드</span>
+              {(forgettingSummary.overdueCount > 0 || forgettingSummary.dueTodayCount > 0) && (
+                <span className="px-1.5 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-mono font-black shrink-0">
+                  {forgettingSummary.overdueCount + forgettingSummary.dueTodayCount}건
+                </span>
+              )}
+            </div>
+            <span className="text-[10px] font-mono font-bold text-slate-400 shrink-0">
+              1·3·7·14·30일
+            </span>
+          </div>
+
+          {/* 6단계 틀린 문제 O/X 망각 방어 배너 */}
+          {weakOxCount > 0 && (
+            <Link
+              href="/study/ox?mode=weak"
+              className="w-full p-2.5 rounded-xl bg-[#FF5A36]/15 hover:bg-[#FF5A36]/25 border border-[#FF5A36]/40 flex items-center justify-between gap-2 transition"
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <Zap className="w-4 h-4 text-[#FF7A59] shrink-0" />
+                <div className="min-w-0">
+                  <div className="text-xs font-black text-white truncate">
+                    틀린·헷갈린 지문 {weakOxCount}개 복습 대기중
+                  </div>
+                  <div className="text-[10.5px] text-orange-200/80 truncate">
+                    지금 3초 O/X로 털어내면 약점이 정복(O)으로 승격됩니다
+                  </div>
+                </div>
+              </div>
+              <ArrowRight className="w-4 h-4 text-[#FF8A70] shrink-0" />
+            </Link>
+          )}
+
+          {forgettingSummary.urgentItems.length === 0 ? (
+            <div className="p-3 rounded-xl bg-[#11121A] border border-white/[0.06] text-[11.5px] text-slate-300 leading-relaxed">
+              {forgettingSummary.allTrackedCount === 0 ? (
+                <span>
+                  오늘 첫 단원을 타이머로 완주하면, 에빙하우스 공식에 따라{" "}
+                  <strong className="text-violet-300">내일(+1일) · 3일 · 7일 · 14일 · 30일</strong>{" "}
+                  골든타임에 자동으로 복습 알림이 뜹니다.
+                </span>
+              ) : (
+                <span>
+                  🎉 현재 추적 중인 <strong className="text-emerald-300">{forgettingSummary.allTrackedCount}개 단원</strong> 모두 기억 안정권입니다!
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {forgettingSummary.urgentItems.map((item) => {
+                const isCritical = item.urgency === "OVERDUE" || item.retentionPct <= 50;
+                const barColor = isCritical
+                  ? "bg-rose-500"
+                  : item.urgency === "DUE_TODAY"
+                    ? "bg-amber-400"
+                    : "bg-sky-400";
+                return (
+                  <div
+                    key={item.topicId}
+                    className="p-3 rounded-xl bg-[#11121A] border border-white/[0.07] space-y-2"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            className={`px-1.5 py-0.5 rounded text-[9.5px] font-black ${
+                              item.urgency === "OVERDUE"
+                                ? "bg-rose-500/20 text-rose-300"
+                                : item.urgency === "DUE_TODAY"
+                                  ? "bg-amber-500/20 text-amber-300"
+                                  : "bg-sky-500/15 text-sky-300"
+                            }`}
+                          >
+                            {item.urgencyLabel}
+                          </span>
+                          <span className="text-[10px] font-mono font-bold text-slate-400">
+                            {item.doneRounds}R 완료 · {item.daysSinceLast}일 경과
+                          </span>
+                        </div>
+                        <div className="text-xs font-black text-white truncate">
+                          [{item.subject.shortTitle}] {item.topic.title}
+                        </div>
+                      </div>
+                      <span
+                        className={`text-xs font-mono font-black shrink-0 ${
+                          isCritical ? "text-rose-300" : "text-amber-300"
+                        }`}
+                      >
+                        기억 {item.retentionPct}%
+                      </span>
+                    </div>
+
+                    {/* 기억 잔존율 미니 바 */}
+                    <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${barColor}`}
+                        style={{ width: `${item.retentionPct}%` }}
+                      />
+                    </div>
+
+                    {/* 원클릭 복습 액션 3종 */}
+                    <div className="grid grid-cols-3 gap-1.5 pt-0.5">
+                      <button
+                        type="button"
+                        onClick={() => setFocusTopicId(item.topicId)}
+                        className="min-h-[34px] px-2 rounded-lg bg-[#FF5A36]/20 hover:bg-[#FF5A36]/30 border border-[#FF5A36]/40 text-[#FF9B82] text-[11px] font-black flex items-center justify-center gap-1 transition"
+                      >
+                        <Play className="w-3 h-3 fill-current" />
+                        <span>타이머</span>
+                      </button>
+                      <Link
+                        href={
+                          item.topic.chapterCode
+                            ? `/study/graph?chapter=${encodeURIComponent(item.topic.chapterCode)}`
+                            : "/study/graph"
+                        }
+                        className="min-h-[34px] px-2 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 border border-sky-400/35 text-sky-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
+                      >
+                        <GitCompareArrows className="w-3 h-3" />
+                        <span>지식맵</span>
+                      </Link>
+                      {item.alreadyPlannedToday ? (
+                        <Link
+                          href={
+                            item.topic.chapterCode
+                              ? `/study/ox?chapter=${encodeURIComponent(item.topic.chapterCode)}`
+                              : "/study/ox"
+                          }
+                          className="min-h-[34px] px-2 rounded-lg bg-emerald-500/15 border border-emerald-500/35 text-emerald-300 text-[11px] font-black flex items-center justify-center gap-1"
+                        >
+                          <Zap className="w-3 h-3" />
+                          <span>O/X</span>
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleAddRemindToTodayPlan(
+                              item.topicId,
+                              item.topic.defaultKeyword,
+                              item.topic.estimatedMinutes
+                            )
+                          }
+                          className="min-h-[34px] px-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.1] text-slate-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
+                        >
+                          <CalendarPlus className="w-3 h-3" />
+                          <span>오늘추가</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {/* 2. 오늘 계획 목차 타이머 (파워 J 실행 큐) */}

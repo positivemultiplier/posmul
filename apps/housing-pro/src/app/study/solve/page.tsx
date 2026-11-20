@@ -42,6 +42,7 @@ import {
   type StudySetSummary,
   type SolveQuestionItem,
   type MarkStatus,
+  type SolveDifficultyFilter,
 } from "@/app/actions/exam-study.actions";
 import {
   extractSubjectiveSlots,
@@ -56,6 +57,23 @@ import {
 } from "@/lib/box-items";
 
 const OPTION_CIRCLES = ["①", "②", "③", "④", "⑤"] as const;
+
+type StudyRoundPresetId = "1R" | "2R" | "3R" | "4R";
+
+const ROUND_PRESETS: Array<{
+  id: StudyRoundPresetId;
+  label: string;
+  desc: string;
+  difficulty: SolveDifficultyFilter;
+  defaultCount: number;
+}> = [
+  { id: "1R", label: "1회독 입문", desc: "핵심 S·A급", difficulty: "SA", defaultCount: 5 },
+  { id: "2R", label: "2회독 핵심", desc: "S·A·B급", difficulty: "SAB", defaultCount: 10 },
+  { id: "3R", label: "3회독 실전", desc: "전 등급", difficulty: "ALL", defaultCount: 15 },
+  { id: "4R", label: "4회독+ 전체", desc: "20제 풀세트", difficulty: "ALL", defaultCount: 20 },
+];
+
+const QUESTION_COUNT_OPTIONS = [5, 10, 15, 20] as const;
 
 interface LocalDraftState {
   selectedOption: number | null;
@@ -90,6 +108,20 @@ export default function InteractiveSolvePage() {
   const [chapterFilter, setChapterFilter] = useState<string | null>(null);
   const [visibleSetCount, setVisibleSetCount] = useState<number>(8);
   const setSentinelRef = useRef<ElementRef<"div"> | null>(null);
+
+  // 3단계 User Journey: 회독에 따른 난이도 조절 + 문제량 조절
+  const [roundPreset, setRoundPreset] = useState<StudyRoundPresetId>("2R");
+  const [difficultyFilter, setDifficultyFilter] = useState<SolveDifficultyFilter>("SAB");
+  const [targetQuestionCount, setTargetQuestionCount] = useState<number>(10);
+  const [appliedDifficultyNotice, setAppliedDifficultyNotice] = useState<string | null>(null);
+
+  const handleSelectRoundPreset = (presetId: StudyRoundPresetId) => {
+    const preset = ROUND_PRESETS.find((p) => p.id === presetId);
+    if (!preset) return;
+    setRoundPreset(preset.id);
+    setDifficultyFilter(preset.difficulty);
+    setTargetQuestionCount(preset.defaultCount);
+  };
 
   // 현재 활성화된 세트 풀이 상태 (5문항 점진적 로딩 + 백그라운드 프리페치)
   const [activeSet, setActiveSet] = useState<StudySetSummary | null>(null);
@@ -231,6 +263,8 @@ export default function InteractiveSolvePage() {
         const res = await fetchSolveSetQuestionsAction(effectiveOwnerKey, setKey, {
           offset: currentLoadedCount,
           limit: batchSize,
+          difficultyFilter,
+          maxQuestions: targetQuestionCount,
         });
         if (activeSetKeyRef.current !== setKey) return;
         if (res.success && res.questions.length > 0) {
@@ -253,7 +287,7 @@ export default function InteractiveSolvePage() {
         setPrefetchingMore(false);
       }
     },
-    [effectiveOwnerKey]
+    [effectiveOwnerKey, difficultyFilter, targetQuestionCount]
   );
 
   // 사용자가 현재 배치를 보는 동안 자동으로 다음 5문항 백그라운드 프리페치!
@@ -280,23 +314,30 @@ export default function InteractiveSolvePage() {
     prefetchLockRef.current = false;
     setActiveSet(setSummary);
     setQuestions([]);
-    setTotalInSet(setSummary.questionCount);
+    setTotalInSet(Math.min(setSummary.questionCount, targetQuestionCount));
     setHasMoreQuestions(false);
+    setAppliedDifficultyNotice(null);
     setLoadingQuestions(true);
     setShowSummary(false);
     setExpandedRepeatOptId(null);
     setShowOriginalQ(false);
 
-    // 1단계: 최초 5문항만 초고속 로드 (나머지는 보는 동안 백그라운드 자동 프리페치!)
+    // 1단계: 회독 난이도 + 선택한 문제량 기준으로 최초 최대 5문항 초고속 로드!
+    const initialLimit = Math.min(5, targetQuestionCount);
     const res = await fetchSolveSetQuestionsAction(effectiveOwnerKey, setSummary.setKey, {
       offset: 0,
-      limit: 5,
+      limit: initialLimit,
+      difficultyFilter,
+      maxQuestions: targetQuestionCount,
     });
     if (activeSetKeyRef.current !== setSummary.setKey) return;
     if (res.success) {
       setQuestions(res.questions);
-      setTotalInSet(res.totalInSet || setSummary.questionCount);
+      setTotalInSet(res.totalInSet || Math.min(setSummary.questionCount, targetQuestionCount));
       setHasMoreQuestions(res.hasMore);
+      if (difficultyFilter !== "ALL" && res.appliedDifficulty === "ALL") {
+        setAppliedDifficultyNotice("이 회차는 등급 미분류 문항이 포함되어 전체 등급으로 표시됩니다.");
+      }
       const nextDrafts = buildDraftsFromQuestions(res.questions);
       const firstUnsolvedIdx = res.questions.findIndex((q) => q.savedIsCorrect === null);
       setDrafts(nextDrafts);
@@ -610,9 +651,70 @@ export default function InteractiveSolvePage() {
           </Link>
         </div>
 
-        {/* 세트 선택 화면일 때: 연도별 기출 중심 필터 (+ 단원별 지식맵 바로가기) */}
+        {/* 세트 선택 화면일 때: 회독별 난이도·문제량 조절 + 연도/과목 필터 */}
         {!activeSet && (
-          <div className="space-y-2">
+          <div className="space-y-2.5">
+            {/* 회독 맞춤 난이도 & 문제량 조절 패널 */}
+            <div className="p-2.5 rounded-2xl bg-[#101118] border border-white/[0.08] space-y-2">
+              <div className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="font-black text-slate-200 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5 text-[#FF7A59]" />
+                  <span>회독 맞춤 난이도 · 문제량</span>
+                </span>
+                <span className="font-mono font-black text-sky-300">
+                  {difficultyFilter === "SA"
+                    ? "핵심 S·A급"
+                    : difficultyFilter === "SAB"
+                      ? "핵심+중급 S·A·B"
+                      : "전범위"}{" "}
+                  · {targetQuestionCount}제
+                </span>
+              </div>
+
+              <div className="grid grid-cols-4 gap-1">
+                {ROUND_PRESETS.map((preset) => {
+                  const active = roundPreset === preset.id;
+                  return (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => handleSelectRoundPreset(preset.id)}
+                      className={`py-1.5 px-1 rounded-xl border text-center transition ${
+                        active
+                          ? "bg-[#FF5A36]/20 border-[#FF5A36] text-white"
+                          : "bg-[#161722] border-white/[0.07] text-slate-400 hover:text-white"
+                      }`}
+                    >
+                      <div className="text-[11px] font-black leading-tight">{preset.id}</div>
+                      <div className="text-[9.5px] opacity-80 truncate">{preset.desc}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="flex items-center justify-between gap-2 pt-0.5">
+                <span className="text-[10.5px] font-bold text-slate-400 shrink-0">
+                  1회 풀이 문제량
+                </span>
+                <div className="flex items-center gap-1">
+                  {QUESTION_COUNT_OPTIONS.map((cnt) => (
+                    <button
+                      key={cnt}
+                      type="button"
+                      onClick={() => setTargetQuestionCount(cnt)}
+                      className={`min-h-[28px] px-2.5 rounded-lg text-[11px] font-mono font-black border transition ${
+                        targetQuestionCount === cnt
+                          ? "bg-white text-slate-950 border-white"
+                          : "bg-[#161722] text-slate-300 border-white/[0.08] hover:text-white"
+                      }`}
+                    >
+                      {cnt}제
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* 연도 선택 칩 (연도별 기출 핵심 UX) */}
             {catalogCategory === "ROUND" && availableYears.length > 1 && (
               <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
@@ -621,11 +723,10 @@ export default function InteractiveSolvePage() {
                     key={y}
                     type="button"
                     onClick={() => setYearFilter(y)}
-                    className={`shrink-0 min-h-[34px] px-3 rounded-xl text-xs font-black border transition ${
-                      yearFilter === y
-                        ? "bg-[#FF5A36] text-white border-[#FF5A36]"
-                        : "bg-[#0E0E12] text-slate-300 border-white/[0.08] hover:text-white"
-                    }`}
+                    className={`shrink-0 min-h-[34px] px-3 rounded-xl text-xs font-black border transition ${yearFilter === y
+                      ? "bg-[#FF5A36] text-white border-[#FF5A36]"
+                      : "bg-[#0E0E12] text-slate-300 border-white/[0.08] hover:text-white"
+                      }`}
                   >
                     {y === "ALL" ? "전체 연도" : `${y}년`}
                   </button>
@@ -656,11 +757,10 @@ export default function InteractiveSolvePage() {
                     setCatalogCategory("ROUND");
                     setSubjectFilter(subj);
                   }}
-                  className={`shrink-0 min-h-[32px] px-3 rounded-full text-[11px] font-bold border transition ${
-                    subjectFilter === subj && !chapterFilter
-                      ? "bg-white text-slate-950 border-white"
-                      : "bg-[#0E0E12] text-slate-400 border-white/[0.08]"
-                  }`}
+                  className={`shrink-0 min-h-[32px] px-3 rounded-full text-[11px] font-bold border transition ${subjectFilter === subj && !chapterFilter
+                    ? "bg-white text-slate-950 border-white"
+                    : "bg-[#0E0E12] text-slate-400 border-white/[0.08]"
+                    }`}
                 >
                   {subj === "ALL" ? "전체 과목" : subj}
                 </button>
@@ -677,11 +777,10 @@ export default function InteractiveSolvePage() {
                 <button
                   type="button"
                   onClick={() => setInstantGradeMode((v) => !v)}
-                  className={`px-2 py-1 rounded-lg text-[10.5px] font-black border transition ${
-                    instantGradeMode
-                      ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/35"
-                      : "bg-sky-500/15 text-sky-300 border-sky-500/35"
-                  }`}
+                  className={`px-2 py-1 rounded-lg text-[10.5px] font-black border transition ${instantGradeMode
+                    ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/35"
+                    : "bg-sky-500/15 text-sky-300 border-sky-500/35"
+                    }`}
                 >
                   {instantGradeMode ? "⚡ 즉시 채점" : "📝 일괄 채점"}
                 </button>
@@ -710,6 +809,11 @@ export default function InteractiveSolvePage() {
             </div>
 
             {/* 1~20 미니 번호 스트립 (로드 완료 vs 백그라운드 대기 구분 표시) */}
+            {appliedDifficultyNotice && (
+              <div className="text-[10.5px] font-bold text-amber-300/90">
+                ※ {appliedDifficultyNotice}
+              </div>
+            )}
             <div className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar">
               {Array.from({ length: Math.max(totalInSet, questions.length) }, (_, idx) => {
                 const q = questions[idx];
@@ -732,9 +836,8 @@ export default function InteractiveSolvePage() {
                     key={q ? q.id : `pending-${idx}`}
                     type="button"
                     onClick={() => void handleMoveQuestion(idx)}
-                    className={`w-7 h-7 shrink-0 rounded-lg text-[10.5px] font-mono font-black border transition ${pillClass} ${
-                      isCurrent ? "ring-2 ring-[#FF5A36] text-white" : ""
-                    }`}
+                    className={`w-7 h-7 shrink-0 rounded-lg text-[10.5px] font-mono font-black border transition ${pillClass} ${isCurrent ? "ring-2 ring-[#FF5A36] text-white" : ""
+                      }`}
                   >
                     {idx + 1}
                   </button>
@@ -817,7 +920,9 @@ export default function InteractiveSolvePage() {
               <Sparkles className="w-7 h-7" />
             </div>
             <div className="space-y-1">
-              <h2 className="text-lg font-black text-white">20제 체크 완료!</h2>
+              <h2 className="text-lg font-black text-white">
+                {Math.max(totalInSet, questions.length)}제 체크 완료!
+              </h2>
               <p className="text-xs text-slate-400">{activeSet.title}</p>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -976,11 +1081,10 @@ export default function InteractiveSolvePage() {
                               <button
                                 type="button"
                                 onClick={() => handleToggleBoxItemMark(item.label, "O")}
-                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
-                                  bMark === "O"
-                                    ? "bg-emerald-500 text-slate-950 border-emerald-400"
-                                    : "bg-[#1A1A21] text-slate-400 border-white/[0.08]"
-                                }`}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${bMark === "O"
+                                  ? "bg-emerald-500 text-slate-950 border-emerald-400"
+                                  : "bg-[#1A1A21] text-slate-400 border-white/[0.08]"
+                                  }`}
                                 title="확실히 옳거나 해당됨 (O)"
                               >
                                 <Check className="w-3.5 h-3.5" />
@@ -988,11 +1092,10 @@ export default function InteractiveSolvePage() {
                               <button
                                 type="button"
                                 onClick={() => handleToggleBoxItemMark(item.label, "STAR")}
-                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
-                                  bMark === "STAR"
-                                    ? "bg-amber-400 text-slate-950 border-amber-300"
-                                    : "bg-[#1A1A21] text-slate-400 border-white/[0.08]"
-                                }`}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${bMark === "STAR"
+                                  ? "bg-amber-400 text-slate-950 border-amber-300"
+                                  : "bg-[#1A1A21] text-slate-400 border-white/[0.08]"
+                                  }`}
                                 title="헷갈리는 항목 (★)"
                               >
                                 <Star className="w-3.5 h-3.5" />
@@ -1000,11 +1103,10 @@ export default function InteractiveSolvePage() {
                               <button
                                 type="button"
                                 onClick={() => handleToggleBoxItemMark(item.label, "X")}
-                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
-                                  bMark === "X"
-                                    ? "bg-rose-500 text-white border-rose-400"
-                                    : "bg-[#1A1A21] text-slate-400 border-white/[0.08]"
-                                }`}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${bMark === "X"
+                                  ? "bg-rose-500 text-white border-rose-400"
+                                  : "bg-[#1A1A21] text-slate-400 border-white/[0.08]"
+                                  }`}
                                 title="틀렸거나 해당 안 됨 (X)"
                               >
                                 <X className="w-3.5 h-3.5" />
@@ -1087,9 +1189,8 @@ export default function InteractiveSolvePage() {
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <span
-                                className={`text-sm font-black shrink-0 ${
-                                  isSelected ? "text-[#FF5A36]" : "text-slate-300"
-                                }`}
+                                className={`text-sm font-black shrink-0 ${isSelected ? "text-[#FF5A36]" : "text-slate-300"
+                                  }`}
                               >
                                 {OPTION_CIRCLES[opt.optionNumber - 1] ?? `${opt.optionNumber}.`}
                               </span>
@@ -1157,9 +1258,8 @@ export default function InteractiveSolvePage() {
                               className="flex-1 flex items-start gap-2 text-left"
                             >
                               <span
-                                className={`text-sm font-black shrink-0 mt-0.5 ${
-                                  isSelected ? "text-[#FF5A36]" : "text-slate-300"
-                                }`}
+                                className={`text-sm font-black shrink-0 mt-0.5 ${isSelected ? "text-[#FF5A36]" : "text-slate-300"
+                                  }`}
                               >
                                 {OPTION_CIRCLES[opt.optionNumber - 1] ?? `${opt.optionNumber}.`}
                               </span>
@@ -1178,11 +1278,10 @@ export default function InteractiveSolvePage() {
                               <button
                                 type="button"
                                 onClick={() => handleToggleOptionMark(opt.id, "O")}
-                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
-                                  optMark === "O"
-                                    ? "bg-emerald-500 text-slate-950 border-emerald-400"
-                                    : "bg-[#101015] text-slate-400 border-white/[0.08]"
-                                }`}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${optMark === "O"
+                                  ? "bg-emerald-500 text-slate-950 border-emerald-400"
+                                  : "bg-[#101015] text-slate-400 border-white/[0.08]"
+                                  }`}
                                 title="확실히 아는 지문"
                               >
                                 <Check className="w-3.5 h-3.5" />
@@ -1190,11 +1289,10 @@ export default function InteractiveSolvePage() {
                               <button
                                 type="button"
                                 onClick={() => handleToggleOptionMark(opt.id, "STAR")}
-                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
-                                  optMark === "STAR"
-                                    ? "bg-amber-400 text-slate-950 border-amber-300"
-                                    : "bg-[#101015] text-slate-400 border-white/[0.08]"
-                                }`}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${optMark === "STAR"
+                                  ? "bg-amber-400 text-slate-950 border-amber-300"
+                                  : "bg-[#101015] text-slate-400 border-white/[0.08]"
+                                  }`}
                                 title="헷갈린 지문 (★)"
                               >
                                 <Star className="w-3.5 h-3.5" />
@@ -1202,11 +1300,10 @@ export default function InteractiveSolvePage() {
                               <button
                                 type="button"
                                 onClick={() => handleToggleOptionMark(opt.id, "X")}
-                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${
-                                  optMark === "X"
-                                    ? "bg-rose-500 text-white border-rose-400"
-                                    : "bg-[#101015] text-slate-400 border-white/[0.08]"
-                                }`}
+                                className={`w-7 h-7 rounded-lg text-[10.5px] font-black border flex items-center justify-center transition ${optMark === "X"
+                                  ? "bg-rose-500 text-white border-rose-400"
+                                  : "bg-[#101015] text-slate-400 border-white/[0.08]"
+                                  }`}
                                 title="모르는 지문 (X)"
                               >
                                 <X className="w-3.5 h-3.5" />
@@ -1282,11 +1379,10 @@ export default function InteractiveSolvePage() {
                                 <button
                                   type="button"
                                   onClick={() => setExpandedRepeatOptId(showRepeat ? null : opt.id)}
-                                  className={`px-2 py-0.5 rounded-full text-[9.5px] font-black border flex items-center gap-1 ${
-                                    opt.repeatCount >= 2
-                                      ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
-                                      : "bg-white/[0.05] text-slate-400 border-white/[0.08]"
-                                  }`}
+                                  className={`px-2 py-0.5 rounded-full text-[9.5px] font-black border flex items-center gap-1 ${opt.repeatCount >= 2
+                                    ? "bg-orange-500/20 text-orange-300 border-orange-500/40"
+                                    : "bg-white/[0.05] text-slate-400 border-white/[0.08]"
+                                    }`}
                                 >
                                   {opt.repeatCount >= 2 ? (
                                     <>
@@ -1350,11 +1446,10 @@ export default function InteractiveSolvePage() {
                     </label>
                     {currentDraft.checked && currentDraft.isCorrect !== null && (
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-                          currentDraft.isCorrect
-                            ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
-                            : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
-                        }`}
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-black ${currentDraft.isCorrect
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                          : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
+                          }`}
                       >
                         {currentDraft.isCorrect ? "✅ 정답" : "❌ 오답"}
                       </span>
@@ -1401,9 +1496,8 @@ export default function InteractiveSolvePage() {
                             />
                             {currentDraft.checked && slotOk !== undefined && slotOk !== null && (
                               <span
-                                className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10.5px] font-black ${
-                                  slotOk ? "text-emerald-300" : "text-rose-300"
-                                }`}
+                                className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10.5px] font-black ${slotOk ? "text-emerald-300" : "text-rose-300"
+                                  }`}
                               >
                                 {slotOk ? "✓ 일치" : "✕ 오답"}
                               </span>
@@ -1430,11 +1524,10 @@ export default function InteractiveSolvePage() {
                           onClick={() =>
                             updateCurrentDraft((prev) => ({ ...prev, questionMark: m }))
                           }
-                          className={`px-2.5 py-1 rounded-lg text-xs font-black border ${
-                            currentDraft.questionMark === m
-                              ? "bg-[#FF5A36] text-white border-[#FF5A36]"
-                              : "bg-[#0E0E12] text-slate-400 border-white/[0.08]"
-                          }`}
+                          className={`px-2.5 py-1 rounded-lg text-xs font-black border ${currentDraft.questionMark === m
+                            ? "bg-[#FF5A36] text-white border-[#FF5A36]"
+                            : "bg-[#0E0E12] text-slate-400 border-white/[0.08]"
+                            }`}
                         >
                           {m === "O" ? "O 앎" : m === "STAR" ? "★ 헷갈림" : "X 모름"}
                         </button>
@@ -1487,7 +1580,7 @@ export default function InteractiveSolvePage() {
                     className="py-3 rounded-xl bg-emerald-500 text-slate-950 text-xs font-black flex items-center justify-center gap-1"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>20제 최종 채점·완료</span>
+                    <span>{Math.max(totalInSet, questions.length)}제 최종 채점·완료</span>
                   </button>
                 )}
               </div>

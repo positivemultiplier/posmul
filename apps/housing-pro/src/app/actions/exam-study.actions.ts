@@ -543,73 +543,98 @@ export async function fetchStudySolveSetsAction(clientKey: string): Promise<{
   }
 }
 
+export type SolveDifficultyFilter = "ALL" | "SA" | "SAB";
+
 /**
- * 선택한 20제 세트의 문항·선지·기존 풀이/마킹 이력을 점진적 배치 단위로 로드합니다.
- * 기본 5문항씩 초고속 로드하고, 사용자가 푸는 동안 다음 배치를 백그라운드 프리페치합니다.
+ * 선택한 세트의 문항·선지·기존 풀이/마킹 이력을 점진적 배치 단위로 로드합니다.
+ * - 회독별 난이도 필터(SA: 1회독 입문, SAB: 2회독 핵심, ALL: 3회독+ 전범위)
+ * - 문제량 조절(maxQuestions: 5 / 10 / 15 / 20)
+ * - 기본 5문항씩 초고속 로드하고, 푸는 동안 다음 배치를 백그라운드 프리페치합니다.
  */
 export async function fetchSolveSetQuestionsAction(
   clientKey: string,
   setKey: string,
-  options?: { offset?: number; limit?: number }
+  options?: {
+    offset?: number;
+    limit?: number;
+    difficultyFilter?: SolveDifficultyFilter;
+    maxQuestions?: number;
+  }
 ): Promise<{
   success: boolean;
   questions: SolveQuestionItem[];
   totalInSet: number;
   hasMore: boolean;
   nextOffset: number;
+  appliedDifficulty: SolveDifficultyFilter;
   error?: string;
 }> {
   try {
     const parts = setKey.split("::");
     const kind = parts[0];
+    const requestedDifficulty: SolveDifficultyFilter = options?.difficultyFilter ?? "ALL";
+    const maxQuestions = Math.max(1, Math.min(20, Math.floor(options?.maxQuestions ?? 20)));
 
-    let query = supabaseAdmin
-      .schema("vertical_housing")
-      .from("exam_questions")
-      .select(
-        `
-        id,
-        exam_year,
-        exam_round,
-        exam_stage,
-        subject,
-        detail_code,
-        chapter_title,
-        importance_tier,
-        question_number,
-        question_type,
-        question_text,
-        box_content,
-        correct_options,
-        subjective_answer,
-        law_status,
-        amended_note,
-        original_snapshot,
-        metadata
-      `,
-        { count: "exact" }
-      )
-      .neq("law_status", "DEPRECATED");
+    const buildBaseQuery = (diff: SolveDifficultyFilter) => {
+      let q = supabaseAdmin
+        .schema("vertical_housing")
+        .from("exam_questions")
+        .select(
+          `
+          id,
+          exam_year,
+          exam_round,
+          exam_stage,
+          subject,
+          detail_code,
+          chapter_title,
+          importance_tier,
+          question_number,
+          question_type,
+          question_text,
+          box_content,
+          correct_options,
+          subjective_answer,
+          law_status,
+          amended_note,
+          original_snapshot,
+          metadata
+        `,
+          { count: "exact" }
+        )
+        .neq("law_status", "DEPRECATED");
+
+      if (diff === "SA") {
+        q = q.in("importance_tier", ["S", "A"]);
+      } else if (diff === "SAB") {
+        q = q.in("importance_tier", ["S", "A", "B"]);
+      }
+
+      if (kind === "CHAPTER") {
+        const [, stage, subject, code] = parts;
+        q = q
+          .eq("exam_stage", stage)
+          .eq("subject", subject)
+          .or(`detail_code.eq.${code},chapter_code.eq.${code}`)
+          .order("exam_year", { ascending: false })
+          .order("question_number", { ascending: true });
+      } else if (kind === "ROUND") {
+        const [, yearStr, roundStr, stage, subject] = parts;
+        q = q
+          .eq("exam_year", Number(yearStr))
+          .eq("exam_round", Number(roundStr))
+          .eq("exam_stage", stage)
+          .eq("subject", subject)
+          .order("question_number", { ascending: true });
+      }
+      return q;
+    };
 
     let sliceIndex = 0;
     if (kind === "CHAPTER") {
-      const [, stage, subject, code, idxStr] = parts;
-      sliceIndex = Number(idxStr) || 0;
-      query = query
-        .eq("exam_stage", stage)
-        .eq("subject", subject)
-        .or(`detail_code.eq.${code},chapter_code.eq.${code}`)
-        .order("exam_year", { ascending: false })
-        .order("question_number", { ascending: true });
+      sliceIndex = Number(parts[4]) || 0;
     } else if (kind === "ROUND") {
-      const [, yearStr, roundStr, stage, subject, idxStr] = parts;
-      sliceIndex = Number(idxStr) || 0;
-      query = query
-        .eq("exam_year", Number(yearStr))
-        .eq("exam_round", Number(roundStr))
-        .eq("exam_stage", stage)
-        .eq("subject", subject)
-        .order("question_number", { ascending: true });
+      sliceIndex = Number(parts[5]) || 0;
     } else {
       return {
         success: false,
@@ -617,17 +642,34 @@ export async function fetchSolveSetQuestionsAction(
         totalInSet: 0,
         hasMore: false,
         nextOffset: 0,
+        appliedDifficulty: requestedDifficulty,
         error: "지원하지 않는 세트 키입니다.",
       };
     }
 
     const setBase = sliceIndex * 20;
-    const batchOffset = Math.max(0, Math.min(19, Math.floor(options?.offset ?? 0)));
-    const batchLimit = Math.max(1, Math.min(20 - batchOffset, Math.floor(options?.limit ?? 20)));
+    const batchOffset = Math.max(0, Math.min(maxQuestions - 1, Math.floor(options?.offset ?? 0)));
+    const batchLimit = Math.max(
+      1,
+      Math.min(maxQuestions - batchOffset, Math.floor(options?.limit ?? 5))
+    );
     const from = setBase + batchOffset;
     const to = from + batchLimit - 1;
 
-    const { data: qRows, count: totalMatchedInGroup, error: qErr } = await query.range(from, to);
+    let appliedDifficulty: SolveDifficultyFilter = requestedDifficulty;
+    let { data: qRows, count: totalMatchedInGroup, error: qErr } = await buildBaseQuery(
+      requestedDifficulty
+    ).range(from, to);
+
+    // 선택한 회독 난이도(예: S/A)로 조회 시 해당 세트에 0문항이면 자동으로 전체 등급으로 안전 폴백!
+    if (!qErr && batchOffset === 0 && (!qRows || qRows.length === 0) && requestedDifficulty !== "ALL") {
+      appliedDifficulty = "ALL";
+      const fallback = await buildBaseQuery("ALL").range(from, to);
+      qRows = fallback.data;
+      totalMatchedInGroup = fallback.count;
+      qErr = fallback.error;
+    }
+
     if (qErr) {
       return {
         success: false,
@@ -635,13 +677,14 @@ export async function fetchSolveSetQuestionsAction(
         totalInSet: 0,
         hasMore: false,
         nextOffset: batchOffset,
+        appliedDifficulty,
         error: qErr.message,
       };
     }
 
     const totalInSet = Math.max(
       0,
-      Math.min(20, (totalMatchedInGroup ?? setBase + (qRows?.length ?? 0)) - setBase)
+      Math.min(maxQuestions, (totalMatchedInGroup ?? setBase + (qRows?.length ?? 0)) - setBase)
     );
 
     const rawQuestions = (qRows ?? []) as Array<{
@@ -672,6 +715,7 @@ export async function fetchSolveSetQuestionsAction(
         totalInSet,
         hasMore: false,
         nextOffset: batchOffset,
+        appliedDifficulty,
       };
     }
 
@@ -707,6 +751,7 @@ export async function fetchSolveSetQuestionsAction(
         totalInSet,
         hasMore: false,
         nextOffset: batchOffset,
+        appliedDifficulty,
         error: optErr.message,
       };
     }
@@ -802,6 +847,7 @@ export async function fetchSolveSetQuestionsAction(
       totalInSet,
       hasMore,
       nextOffset,
+      appliedDifficulty,
     };
   } catch (err) {
     return {
@@ -810,6 +856,7 @@ export async function fetchSolveSetQuestionsAction(
       totalInSet: 0,
       hasMore: false,
       nextOffset: 0,
+      appliedDifficulty: "ALL",
       error: err instanceof Error ? err.message : "문항 세트 로드 실패",
     };
   }
@@ -881,6 +928,25 @@ export async function saveSingleQuestionSolveAction(
       success: false,
       error: err instanceof Error ? err.message : "저장 중 오류 발생",
     };
+  }
+}
+
+/**
+ * 타이머 홈 망각곡선 리마인드용: 현재 ★/X 약점 지문 개수만 초경량(head:true) 조회합니다.
+ */
+export async function fetchWeakOptionCountAction(clientKey: string): Promise<number> {
+  try {
+    const { ownerKey } = await resolveOwnerKeyAndUser(clientKey);
+    if (!ownerKey) return 0;
+    const { count } = await supabaseAdmin
+      .schema("vertical_housing")
+      .from("study_option_logs")
+      .select("id", { count: "exact", head: true })
+      .eq("client_key", ownerKey)
+      .in("mark_status", ["STAR", "X"]);
+    return count ?? 0;
+  } catch {
+    return 0;
   }
 }
 

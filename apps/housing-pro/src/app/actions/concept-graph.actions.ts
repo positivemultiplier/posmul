@@ -267,9 +267,11 @@ export interface LiveGraphQuestionItem {
   questionNumber: number;
   detailCode: string | null;
   chapterTitle: string | null;
+  importanceTier?: string | null;
   questionText: string;
   boxContent: string | null;
   options: Array<{
+    id?: string;
     number: number;
     text: string;
     isCorrect: boolean;
@@ -519,52 +521,88 @@ export async function fetchGraphChapterSummaryAction(input?: {
   }
 }
 
+export type GraphDifficultyFilter = "ALL" | "SA" | "SAB";
+
 /**
- * 지식맵 단원별 기출 점진적 배치 로드 (기본 5문항씩 초고속 조회 + 백그라운드 프리페치 대응)
+ * 지식맵 단원별 기출 점진적 배치 로드 (기본 5문항씩 초고속 조회 + 회독 난이도·문제량 조절)
  */
 export async function fetchChapterGraphQuestionsAction(input?: {
   subject?: "ALL" | "주택관리관계법규" | "공동주택관리실무";
   detailCode?: string | null;
   offset?: number;
   limit?: number;
+  difficultyFilter?: GraphDifficultyFilter;
+  maxQuestions?: number | null;
 }): Promise<{
   success: boolean;
   questions: LiveGraphQuestionItem[];
   totalCount: number;
   hasMore: boolean;
   nextOffset: number;
+  appliedDifficulty: GraphDifficultyFilter;
   error?: string;
 }> {
   try {
     const subjectFilter = input?.subject || "ALL";
     const detailCode = input?.detailCode?.trim() || null;
+    const requestedDifficulty: GraphDifficultyFilter = input?.difficultyFilter ?? "ALL";
+    const maxCap = input?.maxQuestions ? Math.max(1, Math.floor(input.maxQuestions)) : null;
     const safeOffset = Math.max(0, Math.floor(input?.offset ?? 0));
-    const safeLimit = Math.max(1, Math.min(15, Math.floor(input?.limit ?? 5)));
+    const remainingByCap = maxCap !== null ? Math.max(0, maxCap - safeOffset) : 15;
+    const safeLimit = Math.max(1, Math.min(15, remainingByCap, Math.floor(input?.limit ?? 5)));
 
-    let query = supabaseAdmin
-      .schema("vertical_housing")
-      .from("exam_questions")
-      .select(
-        "id, exam_year, exam_round, subject, detail_code, chapter_title, detail_title, question_number, question_text, box_content, correct_options",
-        { count: "exact" }
-      )
-      .eq("exam_stage", "2차")
-      .eq("question_type", "OBJECTIVE")
-      .neq("law_status", "DEPRECATED")
-      .order("exam_year", { ascending: false })
-      .order("question_number", { ascending: true });
-
-    if (subjectFilter !== "ALL") {
-      query = query.eq("subject", subjectFilter);
-    }
-    if (detailCode) {
-      query = query.or(`detail_code.eq.${detailCode},chapter_code.eq.${detailCode}`);
+    if (maxCap !== null && safeOffset >= maxCap) {
+      return {
+        success: true,
+        questions: [],
+        totalCount: maxCap,
+        hasMore: false,
+        nextOffset: safeOffset,
+        appliedDifficulty: requestedDifficulty,
+      };
     }
 
-    const { data: qRows, count, error: qErr } = await query.range(
+    const buildQuery = (diff: GraphDifficultyFilter) => {
+      let query = supabaseAdmin
+        .schema("vertical_housing")
+        .from("exam_questions")
+        .select(
+          "id, exam_year, exam_round, subject, detail_code, chapter_title, detail_title, importance_tier, question_number, question_text, box_content, correct_options",
+          { count: "exact" }
+        )
+        .eq("exam_stage", "2차")
+        .eq("question_type", "OBJECTIVE")
+        .neq("law_status", "DEPRECATED")
+        .order("exam_year", { ascending: false })
+        .order("question_number", { ascending: true });
+
+      if (subjectFilter !== "ALL") {
+        query = query.eq("subject", subjectFilter);
+      }
+      if (detailCode) {
+        query = query.or(`detail_code.eq.${detailCode},chapter_code.eq.${detailCode}`);
+      }
+      if (diff === "SA") {
+        query = query.in("importance_tier", ["S", "A"]);
+      } else if (diff === "SAB") {
+        query = query.in("importance_tier", ["S", "A", "B"]);
+      }
+      return query;
+    };
+
+    let appliedDifficulty: GraphDifficultyFilter = requestedDifficulty;
+    let { data: qRows, count, error: qErr } = await buildQuery(requestedDifficulty).range(
       safeOffset,
       safeOffset + safeLimit - 1
     );
+
+    if (!qErr && safeOffset === 0 && (!qRows || qRows.length === 0) && requestedDifficulty !== "ALL") {
+      appliedDifficulty = "ALL";
+      const fallback = await buildQuery("ALL").range(safeOffset, safeOffset + safeLimit - 1);
+      qRows = fallback.data;
+      count = fallback.count;
+      qErr = fallback.error;
+    }
 
     if (qErr) {
       return {
@@ -573,12 +611,14 @@ export async function fetchChapterGraphQuestionsAction(input?: {
         totalCount: 0,
         hasMore: false,
         nextOffset: safeOffset,
+        appliedDifficulty,
         error: qErr.message,
       };
     }
 
     const rows = qRows ?? [];
-    const totalCount = count ?? safeOffset + rows.length;
+    const rawTotalCount = count ?? safeOffset + rows.length;
+    const totalCount = maxCap !== null ? Math.min(maxCap, rawTotalCount) : rawTotalCount;
     if (rows.length === 0) {
       return {
         success: true,
@@ -586,6 +626,7 @@ export async function fetchChapterGraphQuestionsAction(input?: {
         totalCount,
         hasMore: false,
         nextOffset: safeOffset,
+        appliedDifficulty,
       };
     }
 
@@ -593,7 +634,7 @@ export async function fetchChapterGraphQuestionsAction(input?: {
     const { data: optRows, error: optErr } = await supabaseAdmin
       .schema("vertical_housing")
       .from("exam_options")
-      .select("question_id, option_number, option_text, is_correct, trap_summary")
+      .select("id, question_id, option_number, option_text, is_correct, trap_summary")
       .in("question_id", qIds)
       .order("option_number", { ascending: true });
 
@@ -604,17 +645,25 @@ export async function fetchChapterGraphQuestionsAction(input?: {
         totalCount,
         hasMore: false,
         nextOffset: safeOffset,
+        appliedDifficulty,
         error: optErr.message,
       };
     }
 
     const optMap = new Map<
       string,
-      Array<{ number: number; text: string; isCorrect: boolean; trapSummary: string | null }>
+      Array<{
+        id: string;
+        number: number;
+        text: string;
+        isCorrect: boolean;
+        trapSummary: string | null;
+      }>
     >();
     for (const row of optRows || []) {
       const list = optMap.get(row.question_id) || [];
       list.push({
+        id: row.id,
         number: row.option_number,
         text: row.option_text,
         isCorrect: Boolean(row.is_correct),
@@ -651,6 +700,7 @@ export async function fetchChapterGraphQuestionsAction(input?: {
         questionNumber: q.question_number,
         detailCode: code,
         chapterTitle: meta?.title || q.detail_title || q.chapter_title || null,
+        importanceTier: q.importance_tier ?? null,
         questionText: q.question_text,
         boxContent: q.box_content ?? null,
         options: opts,
@@ -669,6 +719,7 @@ export async function fetchChapterGraphQuestionsAction(input?: {
       totalCount,
       hasMore,
       nextOffset,
+      appliedDifficulty,
     };
   } catch (err) {
     return {
@@ -677,6 +728,7 @@ export async function fetchChapterGraphQuestionsAction(input?: {
       totalCount: 0,
       hasMore: false,
       nextOffset: 0,
+      appliedDifficulty: "ALL",
       error: err instanceof Error ? err.message : "단원별 기출 조회 실패",
     };
   }
