@@ -383,7 +383,7 @@ const TIME_BAND_SPECS: Array<{
   { id: "morning", label: "오전", rangeLabel: "09~11시", hours: [9, 10, 11] },
   { id: "afternoon", label: "낮", rangeLabel: "12~16시", hours: [12, 13, 14, 15, 16] },
   { id: "evening", label: "저녁", rangeLabel: "17~20시", hours: [17, 18, 19, 20] },
-  { id: "night", label: "심야", rangeLabel: "21~24시", hours: [21, 22, 23, 0, 1, 2, 3, 4] },
+  { id: "night", label: "심야", rangeLabel: "21~익일 04시", hours: [21, 22, 23, 0, 1, 2, 3, 4] },
 ];
 
 /**

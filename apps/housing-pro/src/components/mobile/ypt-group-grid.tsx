@@ -614,13 +614,16 @@ export function YptGroupGrid({
             </button>
           </div>
 
-          <div className="text-[10.5px] text-slate-400 flex items-center gap-3">
+          <div className="text-[10.5px] text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span>
               목표시간 <strong className="text-white">{activeRoom.goalHours}시간</strong>
             </span>
             <span>
               출석률{" "}
               <strong style={{ color: accentHex }}>{activeRoom.attendancePct}%</strong>
+            </span>
+            <span className="ml-auto px-1.5 py-0.5 rounded bg-amber-500/10 border border-amber-400/25 text-[9.5px] font-bold text-amber-300">
+              매일 05:00 리셋 (KST)
             </span>
           </div>
 
@@ -680,8 +683,12 @@ export function YptGroupGrid({
                   {formatHHMMSS(avgRoomSeconds)}
                 </strong>
               </div>
-              <div className="text-[10px] text-slate-400">
-                내 순위 <strong className="text-amber-300">{myRank}등</strong>
+              <div className="text-[10px] text-slate-400 flex items-center gap-1.5">
+                <span>
+                  내 순위 <strong className="text-amber-300">{myRank}등</strong>
+                </span>
+                <span className="text-slate-600">·</span>
+                <span className="text-amber-300/90 font-bold">매일 05:00 리셋 (KST)</span>
               </div>
             </div>
 

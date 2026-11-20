@@ -23,10 +23,12 @@ import {
   type AmbientSoundTrack,
 } from "@/lib/study-ambient-audio";
 import {
+  STUDY_DAY_RESET_HOUR,
+  getHoursFromReset,
   getTimetableSlotActual,
   getTimetableSlotPlan,
   type StudySubjectNode,
-  type TimetableSlotEntry,
+  type TimetableSlotLog,
 } from "@/data/study-textbooks";
 
 export type ActiveTimerToolId =
@@ -46,7 +48,7 @@ interface TimerToolModalProps {
   onClose: () => void;
   subjects: StudySubjectNode[];
   currentSubjectTitle: string;
-  todaySlots: Record<string, TimetableSlotEntry>;
+  todaySlots: Record<string, TimetableSlotLog>;
   onSwitchTopic?: (topicId: string) => void;
   ambientTrack: AmbientSoundTrack;
   ambientVolume: number;
@@ -98,34 +100,61 @@ export function TimerToolModal({
     });
   }, [dictQuery, dictSubject]);
 
-  // 오늘 시간표 슬롯 요약
+  // 오늘 시간표 슬롯 요약 (전역 공통 05:00~익일 04:59 24시간 기준, 실제 키 `${hour}-${slotIdx}` 기준)
   const slotHours = useMemo(() => {
     const rows: Array<{
       hour: number;
+      isNextDay: boolean;
       planCount: number;
       actualCount: number;
       labels: string[];
+      slots: Array<{
+        hasPlan: boolean;
+        hasActual: boolean;
+        planColor?: string;
+        actualColor?: string;
+      }>;
     }> = [];
-    for (let h = 5; h <= 23; h++) {
+    for (const h of getHoursFromReset(STUDY_DAY_RESET_HOUR)) {
       let planCount = 0;
       let actualCount = 0;
       const labels = new Set<string>();
-      for (let m = 0; m < 60; m += 10) {
-        const key = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-        const slot = todaySlots[key];
+      const slots: Array<{
+        hasPlan: boolean;
+        hasActual: boolean;
+        planColor?: string;
+        actualColor?: string;
+      }> = [];
+
+      for (let slotIdx = 0; slotIdx < 6; slotIdx += 1) {
+        const legacyKey = `${String(h).padStart(2, "0")}:${String(slotIdx * 10).padStart(2, "0")}`;
+        const slot = todaySlots[`${h}-${slotIdx}`] || todaySlots[legacyKey];
         const plan = getTimetableSlotPlan(slot);
         const actual = getTimetableSlotActual(slot);
         if (plan) {
           planCount += 1;
-          labels.add(plan.label);
+          if (plan.label) labels.add(plan.label);
         }
         if (actual) {
           actualCount += 1;
-          labels.add(actual.label);
+          if (actual.label) labels.add(actual.label);
         }
+        slots.push({
+          hasPlan: Boolean(plan),
+          hasActual: Boolean(actual),
+          planColor: plan?.color,
+          actualColor: actual?.color,
+        });
       }
       if (planCount > 0 || actualCount > 0) {
-        rows.push({ hour: h, planCount, actualCount, labels: Array.from(labels) });
+        rows.push({
+          hour: h,
+          isNextDay: h < STUDY_DAY_RESET_HOUR,
+          planCount,
+          actualCount,
+          labels: Array.from(labels),
+          slots,
+        });
       }
     }
     return rows;
@@ -415,8 +444,13 @@ export function TimerToolModal({
           {/* 4. 타임라인 / 시간표 */}
           {(activeTool === "timeline" || activeTool === "schedule") && (
             <div className="space-y-2.5">
-              <div className="p-2.5 rounded-xl bg-[#FF5A36]/10 border border-[#FF5A36]/30 text-[11px] text-[#FF9980] font-bold">
-                현재 공부중: {currentSubjectTitle}
+              <div className="p-2.5 rounded-xl bg-[#FF5A36]/10 border border-[#FF5A36]/30 space-y-0.5">
+                <div className="text-[11px] text-[#FF9980] font-bold">
+                  현재 공부중: {currentSubjectTitle}
+                </div>
+                <div className="text-[10px] text-slate-300 font-mono">
+                  매일 05:00 리셋 (05:00 ~ 익일 04:59 · 24시간 기준)
+                </div>
               </div>
               {slotHours.length === 0 ? (
                 <div className="p-6 rounded-xl bg-[#0E0E14] border border-dashed border-white/[0.1] text-center text-xs text-slate-400">
@@ -429,25 +463,59 @@ export function TimerToolModal({
                   {slotHours.map((row) => (
                     <div
                       key={row.hour}
-                      className="px-3 py-2 rounded-xl bg-[#101016] border border-white/[0.06] flex items-center justify-between gap-2 text-[11px]"
+                      className="px-3 py-2 rounded-xl bg-[#101016] border border-white/[0.06] space-y-1.5 text-[11px]"
                     >
-                      <span className="font-mono font-black text-slate-300 w-12 shrink-0">
-                        {String(row.hour).padStart(2, "0")}:00
-                      </span>
-                      <span className="flex-1 truncate font-bold text-white">
-                        {row.labels.join(", ")}
-                      </span>
-                      <div className="flex items-center gap-1.5 font-mono text-[10px] shrink-0">
-                        {row.planCount > 0 && (
-                          <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300">
-                            예상 {row.planCount * 10}m
-                          </span>
-                        )}
-                        {row.actualCount > 0 && (
-                          <span className="px-1.5 py-0.5 rounded bg-[#FF5A36]/20 text-[#FF8A6B]">
-                            실행 {row.actualCount * 10}m
-                          </span>
-                        )}
+                      <div className="flex items-center justify-between gap-2">
+                        <span
+                          className={`font-mono font-black shrink-0 ${
+                            row.isNextDay ? "text-indigo-300" : "text-slate-300"
+                          }`}
+                        >
+                          {row.isNextDay
+                            ? `익일 ${String(row.hour).padStart(2, "0")}:00`
+                            : `${String(row.hour).padStart(2, "0")}:00`}
+                        </span>
+                        <span className="flex-1 truncate font-bold text-white">
+                          {row.labels.join(", ")}
+                        </span>
+                        <div className="flex items-center gap-1.5 font-mono text-[10px] shrink-0">
+                          {row.planCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded bg-sky-500/15 text-sky-300">
+                              예상 {row.planCount * 10}m
+                            </span>
+                          )}
+                          {row.actualCount > 0 && (
+                            <span className="px-1.5 py-0.5 rounded bg-[#FF5A36]/20 text-[#FF8A6B]">
+                              실행 {row.actualCount * 10}m
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      {/* 10분 × 6칸 미니 바 (좌 예상 / 우 실행) */}
+                      <div className="grid grid-cols-6 gap-1">
+                        {row.slots.map((s, idx) => (
+                          <div
+                            key={idx}
+                            className="h-2 rounded-[3px] bg-white/[0.04] overflow-hidden grid grid-cols-2 gap-[1px]"
+                          >
+                            <span
+                              className="h-full"
+                              style={
+                                s.hasPlan
+                                  ? { backgroundColor: `${s.planColor || "#38bdf8"}99` }
+                                  : undefined
+                              }
+                            />
+                            <span
+                              className="h-full"
+                              style={
+                                s.hasActual
+                                  ? { backgroundColor: s.actualColor || "#FF5A36" }
+                                  : undefined
+                              }
+                            />
+                          </div>
+                        ))}
                       </div>
                     </div>
                   ))}

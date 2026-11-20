@@ -39,6 +39,7 @@ import {
   findTopicMetaInSubjects,
   flattenTopics,
   getTimetableSlotActual,
+  isOvernightExtensionHour,
   type MatrixCellStatus,
   type StudySubjectNode,
   type StudyTopicNode,
@@ -84,6 +85,17 @@ export default function HousingProStudentTimerPage() {
   const [quickStartTopicId, setQuickStartTopicId] = useState<string>("");
   const [quickTodoTitle, setQuickTodoTitle] = useState<string>("");
   const [weakOxCount, setWeakOxCount] = useState<number>(0);
+  // 자정(00:00) ~ 04:59 새벽 연장 학습 구간 표시 여부 (SSR hydration 안전하게 마운트 후 체크)
+  const [isOvernightWindow, setIsOvernightWindow] = useState<boolean>(false);
+
+  useEffect(() => {
+    const syncOvernight = () => {
+      setIsOvernightWindow(isOvernightExtensionHour(new Date()));
+    };
+    syncOvernight();
+    const id = globalThis.setInterval(syncOvernight, 60_000);
+    return () => globalThis.clearInterval(id);
+  }, []);
 
   // 보유 PMP (로그인 시 PosMul 원장 연동, 게스트 시 0)
   const [guestPmpBalance, setGuestPmpBalance] = useState<number>(0);
@@ -434,6 +446,14 @@ export default function HousingProStudentTimerPage() {
           <span className="text-[11px] font-mono font-bold text-slate-300 truncate">
             {todayISO}
           </span>
+          {isOvernightWindow && (
+            <span
+              className="px-1.5 py-0.5 rounded-full bg-indigo-500/20 border border-indigo-400/35 text-[9.5px] font-bold text-indigo-200 shrink-0"
+              title="05:00 리셋 전까지는 어제 시작된 학습일(24h)로 계속 합산됩니다."
+            >
+              새벽연장 · 05시 리셋
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1.5 shrink-0">

@@ -34,7 +34,7 @@ import {
   TIMER_THEME_PRESETS,
   type TimerThemeId,
 } from "@/data/study-timer-tools";
-import type { StudySubjectNode, TimetableSlotEntry } from "@/data/study-textbooks";
+import type { StudySubjectNode, TimetableSlotLog } from "@/data/study-textbooks";
 import { StudyAmbientAudioEngine, type AmbientSoundTrack } from "@/lib/study-ambient-audio";
 import { YptGroupGrid } from "@/components/mobile/ypt-group-grid";
 import {
@@ -55,7 +55,7 @@ interface YptFocusOverlayProps {
   todayTotalBaseSeconds?: number;
   myNickname?: string;
   subjects?: StudySubjectNode[];
-  todaySlots?: Record<string, TimetableSlotEntry>;
+  todaySlots?: Record<string, TimetableSlotLog>;
   onSwitchTopic?: (topicId: string) => void;
   onConfirmValidTime: (
     elapsedSeconds: number,

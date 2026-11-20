@@ -240,8 +240,14 @@ export function formatDateISO(date: Date): string {
   return `${y}-${m}-${d}`;
 }
 
-/** 날짜 변경 기준 시각(예: 새벽 4시)을 반영한 논리적 '오늘' 날짜 계산 */
-export function computeLogicalTodayISO(dayResetHour = 4, now = new Date()): string {
+/** 그룹·랭킹·플래너·타이머 전역 공통 하루 시작 시각 (매일 새벽 05:00 KST 리셋, 05:00~익일 04:59 = 24시간) */
+export const STUDY_DAY_RESET_HOUR = 5;
+
+/** 날짜 변경 기준 시각(전역 공통 새벽 5시)을 반영한 논리적 '오늘' 날짜 계산 */
+export function computeLogicalTodayISO(
+  dayResetHour = STUDY_DAY_RESET_HOUR,
+  now = new Date()
+): string {
   const adjusted = new Date(now.getTime());
   if (adjusted.getHours() < dayResetHour) {
     adjusted.setDate(adjusted.getDate() - 1);
@@ -249,10 +255,18 @@ export function computeLogicalTodayISO(dayResetHour = 4, now = new Date()): stri
   return formatDateISO(adjusted);
 }
 
-/** 날짜 변경 기준 시각부터 24시간 시퀀스 반환 */
-export function getHoursFromReset(dayResetHour = 4): number[] {
+/** 날짜 변경 기준 시각부터 24시간 시퀀스 반환 (05, 06, ..., 23, 0, 1, 2, 3, 4) */
+export function getHoursFromReset(dayResetHour = STUDY_DAY_RESET_HOUR): number[] {
   const normalized = ((Math.floor(dayResetHour) % 24) + 24) % 24;
   return Array.from({ length: 24 }, (_, i) => (normalized + i) % 24);
+}
+
+/** 자정(00:00) 이후 ~ 리셋 시각 직전(04:59)의 새벽 연장 학습 구간인지 여부 */
+export function isOvernightExtensionHour(
+  now = new Date(),
+  dayResetHour = STUDY_DAY_RESET_HOUR
+): boolean {
+  return now.getHours() < dayResetHour;
 }
 
 /** HEX 색상을 RGBA 문자열로 변환 */

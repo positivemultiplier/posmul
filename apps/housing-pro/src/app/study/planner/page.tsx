@@ -51,6 +51,7 @@ import {
 } from "@/lib/study-plan-analytics";
 import {
   CUSTOM_SUBJECT_COLOR_PALETTE,
+  STUDY_DAY_RESET_HOUR,
   addDaysISO,
   diffDaysISO,
   estimateMinutesFromPages,
@@ -60,6 +61,7 @@ import {
   getTimetableSlotActual,
   getTimetableSlotPlan,
   getTopicPageCount,
+  isOvernightExtensionHour,
   setTimetableSlotLayer,
   type MatrixCellLog,
   type MatrixCellStatus,
@@ -142,7 +144,6 @@ export default function StudyPlannerMatrixPage() {
   const {
     todayISO,
     dayResetHour,
-    setDayResetHour,
     examDate,
     activeBooks,
     activeBookIds,
@@ -187,9 +188,33 @@ export default function StudyPlannerMatrixPage() {
   const [diaryScope, setDiaryScope] = useState<"day" | "week">("day");
   const [selectedDiaryDate, setSelectedDiaryDate] = useState<string>(todayISO);
   const [showBookShelf, setShowBookShelf] = useState<boolean>(false);
-  const [showAllTimetableHours, setShowAllTimetableHours] = useState<boolean>(false);
+  // 24시간(05:00~익일 04:59) 기본 전체 표시
+  const [showAllTimetableHours, setShowAllTimetableHours] = useState<boolean>(true);
   const [showWeekDailyDetails, setShowWeekDailyDetails] = useState<boolean>(false);
   const prevTodayRef = useRef<string>(todayISO);
+
+  // 현재 시각 실시간 상태 (SSR hydration mismatch 방지를 위해 마운트 후 갱신)
+  const [nowClock, setNowClock] = useState<{
+    hour: number;
+    minute: number;
+    slot: number;
+    isOvernight: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    const syncClock = () => {
+      const now = new Date();
+      setNowClock({
+        hour: now.getHours(),
+        minute: now.getMinutes(),
+        slot: Math.floor(now.getMinutes() / 10),
+        isOvernight: isOvernightExtensionHour(now, STUDY_DAY_RESET_HOUR),
+      });
+    };
+    syncClock();
+    const id = globalThis.setInterval(syncClock, 60_000);
+    return () => globalThis.clearInterval(id);
+  }, []);
 
   // ③ 확장형 분류(Category) 필터
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
@@ -502,26 +527,28 @@ export default function StudyPlannerMatrixPage() {
     [dayResetHour]
   );
 
-  /** 1일 일정표 표시 시간대 (핵심 06~23시 + 기록된 시간 자동 포함 / 전체 24h 토글) */
+  /** 1일 일정표 표시 시간대 (기본 24h 전체 표시 / 빈 심야 접힘 시 핵심 06~23시 + 현재 시각 + 기록 시간 포함) */
   const visibleDayHours = useMemo(() => {
     if (showAllTimetableHours) return timetableHours;
     return timetableHours.filter((h) => {
       if (h >= 6 && h <= 23) return true;
+      if (nowClock?.hour === h) return true;
       return [0, 1, 2, 3, 4, 5].some((slot) => Boolean(dayTimetableGrid[`${h}-${slot}`]));
     });
-  }, [showAllTimetableHours, timetableHours, dayTimetableGrid]);
+  }, [showAllTimetableHours, timetableHours, dayTimetableGrid, nowClock]);
 
-  /** 1주 일정표 표시 시간대 (핵심 06~23시 + 주간 기록 있는 시간 자동 포함 / 전체 24h 토글) */
+  /** 1주 일정표 표시 시간대 (기본 24h 전체 표시 / 빈 심야 접힘 시 핵심 06~23시 + 현재 시각 + 주간 기록 시간 포함) */
   const visibleWeekHours = useMemo(() => {
     if (showAllTimetableHours) return timetableHours;
     return timetableHours.filter((h) => {
       if (h >= 6 && h <= 23) return true;
+      if (nowClock?.hour === h) return true;
       return weekDates.some((dISO) => {
         const dayGrid = timetablesByDate[dISO] || {};
         return [0, 1, 2, 3, 4, 5].some((slot) => Boolean(dayGrid[`${h}-${slot}`]));
       });
     });
-  }, [showAllTimetableHours, timetableHours, weekDates, timetablesByDate]);
+  }, [showAllTimetableHours, timetableHours, weekDates, timetablesByDate, nowClock]);
 
   const topicMetaMap = useMemo(() => {
     const map = new Map<
@@ -2070,25 +2097,20 @@ export default function StudyPlannerMatrixPage() {
                 <button
                   type="button"
                   onClick={() => setShowAllTimetableHours((prev) => !prev)}
-                  className="px-2 py-1 rounded-lg bg-[#0E0E12] border border-white/[0.12] text-[10px] font-bold text-slate-300 hover:text-white transition"
+                  className={`px-2.5 py-1 rounded-lg border text-[10px] font-bold transition ${
+                    showAllTimetableHours
+                      ? "bg-[#FF5A36]/15 border-[#FF5A36]/45 text-[#FF8A6B]"
+                      : "bg-[#0E0E12] border-white/[0.12] text-slate-300 hover:text-white"
+                  }`}
                 >
-                  {showAllTimetableHours ? "핵심시간(06~23)" : "전체 24h"}
+                  {showAllTimetableHours ? "24h 전체 ✓" : "빈 심야 접힘"}
                 </button>
-                <div className="flex items-center gap-1 text-[10px] font-bold text-slate-300">
-                  <span className="text-slate-400 hidden sm:inline">기준</span>
-                  <select
-                    value={dayResetHour}
-                    onChange={(e) => setDayResetHour(Number(e.target.value))}
-                    className="px-2 py-1 rounded-lg bg-[#0E0E12] border border-white/[0.12] text-[10.5px] font-mono font-black text-amber-300 focus:outline-none focus:border-[#FF5A36]"
-                    title="날짜 변경 기준 시각"
-                  >
-                    {[0, 1, 2, 3, 4, 5, 6].map((h) => (
-                      <option key={h} value={h}>
-                        {String(h).padStart(2, "0")}:00
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <span
+                  className="px-2 py-1 rounded-lg bg-[#0E0E12] border border-amber-400/30 text-[10px] font-mono font-black text-amber-300"
+                  title="모든 그룹 랭킹·출석부 공정성을 위해 매일 05:00~익일 04:59(24시간) 공통 기준이 적용됩니다."
+                >
+                  05:00 리셋
+                </span>
               </div>
             </div>
 
@@ -2230,6 +2252,16 @@ export default function StudyPlannerMatrixPage() {
                     <p className="text-[10px] text-slate-400 mt-0.5">
                       한 칸의 왼쪽은 예상 계획(드래그 입력), 오른쪽은 타이머 실행 시간이 채워집니다.
                     </p>
+                    {selectedDiaryDate === todayISO && nowClock?.isOvernight && (
+                      <div className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-500/15 border border-indigo-400/30 text-[10px] font-bold text-indigo-200">
+                        <span>
+                          🌙 새벽 연장 구간 (현재{" "}
+                          {String(nowClock.hour).padStart(2, "0")}:
+                          {String(nowClock.minute).padStart(2, "0")}) · 05:00 리셋 전까지
+                          오늘({selectedDiaryDate.slice(5)}) 랭킹·시간표에 합산됩니다.
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1.5 shrink-0">
@@ -2342,7 +2374,7 @@ export default function StudyPlannerMatrixPage() {
 
                 {/* 1일 통합 시각화 Table: Y축(시) × X축(10분~60분), 한 칸에 [예상 | 실행] */}
                 <div className="rounded-xl border border-white/[0.08] overflow-hidden bg-[#101015]">
-                  <div className="grid grid-cols-[36px_repeat(6,minmax(0,1fr))] gap-1 px-2 py-2 bg-[#16161E] border-b border-white/[0.08] text-[9.5px] font-mono font-black text-slate-300">
+                  <div className="grid grid-cols-[40px_repeat(6,minmax(0,1fr))] gap-1 px-2 py-2 bg-[#16161E] border-b border-white/[0.08] text-[9.5px] font-mono font-black text-slate-300">
                     <div className="text-center text-slate-400">시</div>
                     {[10, 20, 30, 40, 50, 60].map((minLabel) => (
                       <div key={minLabel} className="text-center">
@@ -2368,96 +2400,130 @@ export default function StudyPlannerMatrixPage() {
                       }
                     }}
                   >
-                    {visibleDayHours.map((hour) => (
-                      <div
-                        key={hour}
-                        className="grid grid-cols-[36px_repeat(6,minmax(0,1fr))] gap-1 px-2 py-1 items-center"
-                      >
-                        <div className="font-mono text-[10px] font-bold text-slate-400 text-center bg-[#13131A] rounded py-1 border border-white/[0.04]">
-                          {String(hour).padStart(2, "0")}
-                        </div>
+                    {visibleDayHours.map((hour) => {
+                      const isNextDayHour = hour < STUDY_DAY_RESET_HOUR;
+                      const isCurrentHour =
+                        selectedDiaryDate === todayISO && nowClock?.hour === hour;
+                      const hourLabel = isNextDayHour
+                        ? `익${String(hour).padStart(2, "0")}`
+                        : String(hour).padStart(2, "0");
 
-                        {[0, 1, 2, 3, 4, 5].map((slot) => {
-                          const key = `${hour}-${slot}`;
-                          const cell = dayTimetableGrid[key];
-                          const rawPlan = getTimetableSlotPlan(cell);
-                          const planEntry = isPlanSlotVisibleForBooks(
-                            rawPlan,
-                            activeBookIds,
-                            activeTopicIdSet
-                          )
-                            ? rawPlan
-                            : null;
-                          const actualEntry = getTimetableSlotActual(cell);
-                          const isMatched = Boolean(
-                            planEntry &&
-                              actualEntry &&
-                              (planEntry.topicId && actualEntry.topicId
-                                ? planEntry.topicId === actualEntry.topicId
-                                : planEntry.color === actualEntry.color)
-                          );
-                          const rangeLabel = `${String(hour).padStart(2, "0")}:${String(
-                            slot * 10
-                          ).padStart(2, "0")}~${String(slot * 10 + 10).padStart(2, "0")}`;
-
-                          return (
-                            <button
-                              key={slot}
-                              type="button"
-                              data-tt-plan-slot={key}
-                              onPointerDown={(e) => {
-                                e.preventDefault();
-                                const isSamePaint =
-                                  planEntry &&
-                                  planEntry.color === activeTimetableBrush.color &&
-                                  planEntry.topicId === activeTimetableBrush.topicId;
-                                const action: "paint" | "erase" = isSamePaint
-                                  ? "erase"
-                                  : "paint";
-                                setTtDragAction(action);
-                                applyTimetableSlotAction(key, action);
-                              }}
-                              onPointerEnter={() => {
-                                if (ttDragAction) {
-                                  applyTimetableSlotAction(key, ttDragAction);
-                                }
-                              }}
-                              title={`${rangeLabel} · 예상: ${
-                                planEntry?.label || "없음"
-                              } / 타이머 실행: ${actualEntry?.label || "없음"}`}
-                              className={`h-6 rounded-[4px] bg-[#16161D] overflow-hidden grid grid-cols-2 gap-[1px] p-[1px] touch-none transition ${
-                                isMatched
-                                  ? "ring-1 ring-emerald-400/90"
-                                  : "border border-white/[0.06] hover:border-sky-400/50"
+                      return (
+                        <Fragment key={hour}>
+                          {hour === 0 && (
+                            <div className="px-2.5 py-1 bg-indigo-950/35 border-y border-indigo-400/20 text-[9.5px] font-bold text-indigo-200 flex items-center justify-between">
+                              <span>🌙 자정 이후 · 익일 새벽 (00:00 ~ 04:59)</span>
+                              <span className="font-mono text-[9px] text-indigo-300/90">
+                                05:00 리셋 전까지 오늘 기록
+                              </span>
+                            </div>
+                          )}
+                          <div
+                            className={`grid grid-cols-[40px_repeat(6,minmax(0,1fr))] gap-1 px-2 py-1 items-center ${
+                              isCurrentHour ? "bg-[#FF5A36]/[0.06]" : ""
+                            }`}
+                          >
+                            <div
+                              className={`font-mono text-[10px] font-bold text-center rounded py-1 border ${
+                                isCurrentHour
+                                  ? "bg-[#FF5A36]/25 border-[#FF5A36] text-[#FF8A6B] font-black"
+                                  : isNextDayHour
+                                    ? "bg-indigo-950/35 border-indigo-400/20 text-indigo-300"
+                                    : "bg-[#13131A] border-white/[0.04] text-slate-400"
                               }`}
                             >
-                              {/* 칸 왼쪽: 예상 계획 */}
-                              <span className="h-full rounded-[2px] bg-white/[0.02] overflow-hidden flex">
-                                {planEntry && (
-                                  <span
-                                    className="w-full h-full rounded-[2px]"
-                                    style={{
-                                      backgroundColor: `${planEntry.color}99`,
-                                      borderTop: `1.5px solid ${planEntry.color}`,
-                                    }}
-                                  />
-                                )}
-                              </span>
+                              {hourLabel}
+                            </div>
 
-                              {/* 칸 오른쪽: 타이머 실행 */}
-                              <span className="h-full rounded-[2px] bg-white/[0.02] overflow-hidden flex">
-                                {actualEntry && (
-                                  <span
-                                    className="w-full h-full rounded-[2px]"
-                                    style={{ backgroundColor: actualEntry.color }}
-                                  />
-                                )}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ))}
+                            {[0, 1, 2, 3, 4, 5].map((slot) => {
+                              const key = `${hour}-${slot}`;
+                              const cell = dayTimetableGrid[key];
+                              const rawPlan = getTimetableSlotPlan(cell);
+                              const planEntry = isPlanSlotVisibleForBooks(
+                                rawPlan,
+                                activeBookIds,
+                                activeTopicIdSet
+                              )
+                                ? rawPlan
+                                : null;
+                              const actualEntry = getTimetableSlotActual(cell);
+                              const isMatched = Boolean(
+                                planEntry &&
+                                  actualEntry &&
+                                  (planEntry.topicId && actualEntry.topicId
+                                    ? planEntry.topicId === actualEntry.topicId
+                                    : planEntry.color === actualEntry.color)
+                              );
+                              const isCurrentSlot = isCurrentHour && nowClock?.slot === slot;
+                              const rangeLabel = `${isNextDayHour ? "익일 " : ""}${String(hour).padStart(
+                                2,
+                                "0"
+                              )}:${String(slot * 10).padStart(2, "0")}~${String(
+                                slot * 10 + 10
+                              ).padStart(2, "0")}${isCurrentSlot ? " [현재 시각]" : ""}`;
+
+                              return (
+                                <button
+                                  key={slot}
+                                  type="button"
+                                  data-tt-plan-slot={key}
+                                  onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    const isSamePaint =
+                                      planEntry &&
+                                      planEntry.color === activeTimetableBrush.color &&
+                                      planEntry.topicId === activeTimetableBrush.topicId;
+                                    const action: "paint" | "erase" = isSamePaint
+                                      ? "erase"
+                                      : "paint";
+                                    setTtDragAction(action);
+                                    applyTimetableSlotAction(key, action);
+                                  }}
+                                  onPointerEnter={() => {
+                                    if (ttDragAction) {
+                                      applyTimetableSlotAction(key, ttDragAction);
+                                    }
+                                  }}
+                                  title={`${rangeLabel} · 예상: ${
+                                    planEntry?.label || "없음"
+                                  } / 타이머 실행: ${actualEntry?.label || "없음"}`}
+                                  className={`h-6 rounded-[4px] overflow-hidden grid grid-cols-2 gap-[1px] p-[1px] touch-none transition ${
+                                    isCurrentSlot
+                                      ? "bg-[#FF5A36]/15 ring-1 ring-[#FF5A36]"
+                                      : isMatched
+                                        ? "bg-[#16161D] ring-1 ring-emerald-400/90"
+                                        : "bg-[#16161D] border border-white/[0.06] hover:border-sky-400/50"
+                                  }`}
+                                >
+                                  {/* 칸 왼쪽: 예상 계획 */}
+                                  <span className="h-full rounded-[2px] bg-white/[0.02] overflow-hidden flex">
+                                    {planEntry && (
+                                      <span
+                                        className="w-full h-full rounded-[2px]"
+                                        style={{
+                                          backgroundColor: `${planEntry.color}99`,
+                                          borderTop: `1.5px solid ${planEntry.color}`,
+                                        }}
+                                      />
+                                    )}
+                                  </span>
+
+                                  {/* 칸 오른쪽: 타이머 실행 */}
+                                  <span className="h-full rounded-[2px] bg-white/[0.02] overflow-hidden flex">
+                                    {actualEntry && (
+                                      <span
+                                        className="w-full h-full rounded-[2px]"
+                                        style={{ backgroundColor: actualEntry.color }}
+                                      />
+                                    )}
+                                  </span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </Fragment>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -2514,7 +2580,7 @@ export default function StudyPlannerMatrixPage() {
                   <table className="w-full min-w-[350px] border-collapse table-fixed">
                     <thead>
                       <tr className="bg-[#16161E] border-b border-white/[0.08]">
-                        <th className="w-[34px] py-2 text-[9.5px] font-mono font-bold text-slate-400 text-center border-r border-white/[0.06]">
+                        <th className="w-[38px] py-2 text-[9.5px] font-mono font-bold text-slate-400 text-center border-r border-white/[0.06]">
                           시
                         </th>
                         {weekDates.map((dateISO) => {
@@ -2562,12 +2628,36 @@ export default function StudyPlannerMatrixPage() {
                     </thead>
 
                     <tbody className="divide-y divide-white/[0.04]">
-                      {visibleWeekHours.map((hour) => (
-                        <tr key={hour}>
-                          <td className="py-1 text-center font-mono text-[9.5px] font-bold text-slate-400 border-r border-white/[0.06] bg-[#13131A]">
-                            {String(hour).padStart(2, "0")}
-                          </td>
-                          {weekDates.map((dateISO) => {
+                      {visibleWeekHours.map((hour) => {
+                        const isNextDayHour = hour < STUDY_DAY_RESET_HOUR;
+                        const isCurrentHour = nowClock?.hour === hour;
+                        return (
+                          <Fragment key={hour}>
+                            {hour === 0 && (
+                              <tr className="bg-indigo-950/35">
+                                <td
+                                  colSpan={8}
+                                  className="py-1 px-2 text-[9px] font-bold text-indigo-200 text-center"
+                                >
+                                  🌙 자정 이후 · 익일 새벽 (00:00 ~ 04:59 · 05:00 리셋 전까지 당일 합산)
+                                </td>
+                              </tr>
+                            )}
+                            <tr className={isCurrentHour ? "bg-[#FF5A36]/[0.05]" : undefined}>
+                              <td
+                                className={`py-1 text-center font-mono text-[9.5px] font-bold border-r border-white/[0.06] ${
+                                  isCurrentHour
+                                    ? "bg-[#FF5A36]/20 text-[#FF8A6B] font-black"
+                                    : isNextDayHour
+                                      ? "bg-indigo-950/35 text-indigo-300"
+                                      : "bg-[#13131A] text-slate-400"
+                                }`}
+                              >
+                                {isNextDayHour
+                                  ? `익${String(hour).padStart(2, "0")}`
+                                  : String(hour).padStart(2, "0")}
+                              </td>
+                              {weekDates.map((dateISO) => {
                             const dayGrid = timetablesByDate[dateISO] || {};
                             let planCount = 0;
                             let actualCount = 0;
@@ -2662,8 +2752,10 @@ export default function StudyPlannerMatrixPage() {
                               </td>
                             );
                           })}
-                        </tr>
-                      ))}
+                            </tr>
+                          </Fragment>
+                        );
+                      })}
                     </tbody>
 
                     {/* 하단 요일별 예상/실행 총합 요약 행 */}

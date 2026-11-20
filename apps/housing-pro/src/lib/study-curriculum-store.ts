@@ -22,6 +22,7 @@ import {
   type StudyTodoItem,
   type TimetableSlotLog,
   addDaysISO,
+  STUDY_DAY_RESET_HOUR,
   computeLogicalTodayISO,
   findTopicMetaInSubjects,
   getTimetableSlotPlan,
@@ -256,7 +257,7 @@ function createDefaultState(todayISO: string): CurriculumPersistedState {
     topicOverrides: {},
     archivedSubjectIds: [],
     hiddenTopicIds: [],
-    dayResetHour: 4,
+    dayResetHour: STUDY_DAY_RESET_HOUR,
     timetablesByDate: {},
     examDate: defaultBook.defaultExamDate,
     logsByBook: {
@@ -318,12 +319,8 @@ function readStoredState(todayISO: string): CurriculumPersistedState {
         ? parsed.archivedSubjectIds
         : [],
       hiddenTopicIds: Array.isArray(parsed.hiddenTopicIds) ? parsed.hiddenTopicIds : [],
-      dayResetHour:
-        typeof parsed.dayResetHour === "number" &&
-        parsed.dayResetHour >= 0 &&
-        parsed.dayResetHour <= 6
-          ? parsed.dayResetHour
-          : 4,
+      // 그룹 랭킹·출석부 공정성을 위해 전역 공통 05:00 기준 강제 정규화
+      dayResetHour: STUDY_DAY_RESET_HOUR,
       timetablesByDate: parsed.timetablesByDate || {},
       examDate: parsed.examDate || fallback.examDate,
       logsByBook: parsed.logsByBook || fallback.logsByBook,
@@ -459,7 +456,7 @@ function resolveBookIdForCell(
  */
 function useStudyCurriculumInternal() {
   const { isLoggedIn, effectiveOwnerKey, profile } = useStudyAuth();
-  const initialTodayISO = useMemo(() => computeLogicalTodayISO(4), []);
+  const initialTodayISO = useMemo(() => computeLogicalTodayISO(STUDY_DAY_RESET_HOUR), []);
   const [state, setState] = useState<CurriculumPersistedState>(() =>
     createDefaultState(initialTodayISO)
   );
@@ -479,7 +476,7 @@ function useStudyCurriculumInternal() {
     addedFocusSeconds: number;
   }>({ persistLocal: false, syncRemote: false, addedFocusSeconds: 0 });
 
-  const dayResetHour = state.dayResetHour ?? 4;
+  const dayResetHour = STUDY_DAY_RESET_HOUR;
   const todayISO = useMemo(
     () => computeLogicalTodayISO(dayResetHour, new Date()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -592,7 +589,7 @@ function useStudyCurriculumInternal() {
             ...(prev.hiddenTopicIds || []),
           ])
         ),
-        dayResetHour: prev.dayResetHour ?? remote?.dayResetHour ?? 4,
+        dayResetHour: STUDY_DAY_RESET_HOUR,
         timetablesByDate: mergeTimetableMaps(
           remote?.timetablesByDate,
           prev.timetablesByDate
@@ -1464,13 +1461,12 @@ function useStudyCurriculumInternal() {
     [updateState]
   );
 
-  /** 날짜 변경 기준 시각 설정 (0~6시) */
+  /** 날짜 변경 기준 시각 설정 (전역 공통 05:00 고정으로 외부 호출 호환만 유지) */
   const setDayResetHour = useCallback(
-    (hour: number) => {
-      const clamped = Math.max(0, Math.min(6, Math.floor(hour)));
+    (_hour: number) => {
       updateState((prev) => ({
         ...prev,
-        dayResetHour: clamped,
+        dayResetHour: STUDY_DAY_RESET_HOUR,
       }));
     },
     [updateState]
@@ -1824,38 +1820,44 @@ function useStudyCurriculumInternal() {
         }
 
         // 타임테이블 actual 레이어에 시작 시각 ~ 종료 시각 10분 단위 자동 기록
+        // (자정 또는 새벽 05:00 리셋 경계를 걸친 집중 세션도 각 슬롯 시각의 논리적 날짜로 정확히 분할 저장)
+        const TEN_MIN_MS = 10 * 60 * 1000;
         const endMs = Date.now();
-        const startMs =
+        const rawStartMs =
           typeof startedAtMs === "number" && startedAtMs > 0
             ? startedAtMs
             : endMs - Math.max(60, elapsedSeconds) * 1000;
-        const startDt = new Date(startMs);
-        let curHour = startDt.getHours();
-        let curSlot = Math.floor(startDt.getMinutes() / 10);
-        const slotCount = Math.max(1, Math.ceil(addedMinutes / 10));
+        const safeStartMs = Math.min(rawStartMs, endMs);
+
+        const startBucketMs = Math.floor(safeStartMs / TEN_MIN_MS) * TEN_MIN_MS;
+        const endBucketMs = Math.floor(endMs / TEN_MIN_MS) * TEN_MIN_MS;
+        const bucketCount = Math.min(
+          144,
+          Math.max(1, Math.floor((endBucketMs - startBucketMs) / TEN_MIN_MS) + 1)
+        );
 
         const prevTimetables = prev.timetablesByDate || {};
-        const nextDaySlots: Record<string, TimetableSlotLog> = {
-          ...(prevTimetables[todayISO] || {}),
+        const nextTimetables: Record<string, Record<string, TimetableSlotLog>> = {
+          ...prevTimetables,
         };
+        const bookIdForSlot = meta?.subject.bookId || activeBook.id;
 
-        for (let i = 0; i < slotCount; i += 1) {
-          const sKey = `${curHour}-${curSlot}`;
-          const updatedSlot = setTimetableSlotLayer(nextDaySlots[sKey], "actual", {
+        for (let i = 0; i < bucketCount; i += 1) {
+          const bucketDt = new Date(startBucketMs + i * TEN_MIN_MS);
+          const slotDateISO = computeLogicalTodayISO(STUDY_DAY_RESET_HOUR, bucketDt);
+          const sKey = `${bucketDt.getHours()}-${Math.floor(bucketDt.getMinutes() / 10)}`;
+          const dayMap: Record<string, TimetableSlotLog> = {
+            ...(nextTimetables[slotDateISO] || {}),
+          };
+          const updatedSlot = setTimetableSlotLayer(dayMap[sKey], "actual", {
             color: resolvedColor,
             label: resolvedLabel,
             topicId,
-            ...(meta?.subject.bookId || activeBook.id
-              ? { bookId: meta?.subject.bookId || activeBook.id }
-              : {}),
+            ...(bookIdForSlot ? { bookId: bookIdForSlot } : {}),
           });
           if (updatedSlot) {
-            nextDaySlots[sKey] = updatedSlot;
-          }
-          curSlot += 1;
-          if (curSlot >= 6) {
-            curSlot = 0;
-            curHour = (curHour + 1) % 24;
+            dayMap[sKey] = updatedSlot;
+            nextTimetables[slotDateISO] = dayMap;
           }
         }
 
@@ -1865,10 +1867,7 @@ function useStudyCurriculumInternal() {
             ...prev.logsByBook,
             [targetBookId]: bookLogs,
           },
-          timetablesByDate: {
-            ...prevTimetables,
-            [todayISO]: nextDaySlots,
-          },
+          timetablesByDate: nextTimetables,
         };
       }, Math.max(0, Math.round(elapsedSeconds)));
     },
