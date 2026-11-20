@@ -1,0 +1,19 @@
+{
+  "name": "Housing-Pro | Power J 스터디 · 기출 지식 그래프",
+  "short_name": "Housing-Pro",
+  "description": "Power J 회독 플래너 · 집중 타이머 · 주택관리사 기출 한정 꼬리물기 지식 그래프 & 현직 소장 Pro Second Brain",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#070709",
+  "theme_color": "#121216",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

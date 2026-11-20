@@ -18,6 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
+import { PracticeHubTabs } from "@/components/study/practice-hub-tabs";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import {
@@ -234,6 +235,7 @@ export default function AppStandaloneStudyCenterPage() {
 
   return (
     <MobileAppShell>
+      <PracticeHubTabs />
       {/* 헤더: 학습 허브 (교재 설정은 마이 > 내 서재로 단일화) */}
       <header className="px-4 py-3 bg-[#16161C] border-b border-white/[0.06] flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">

@@ -1,17 +1,32 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/next";
 import { StudyAuthProvider } from "@/components/auth/study-auth-provider";
 import { StudyCurriculumProvider } from "@/lib/study-curriculum-store";
+import { GlobalUxProvider } from "@/components/mobile/global-ux-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Housing-Pro | 주택관리사 교재없는 올인원 학습·실무 코파일럿",
+  title: "Housing-Pro | Power J 스터디 · 기출 꼬리물기 지식 그래프",
   description:
-    "교재 없이 앱 하나로 69개 단원 개념·1,400제 기출·5,880선지 O/X 완전 정복 및 PosMul 계정 실시간 연동",
+    "Power J 회독 플래너 · 집중 타이머 · 주택관리사 기출 한정 꼬리물기 지식 그래프 & 현직 소장 Pro Second Brain",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Housing-Pro",
+  },
   verification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
     ? { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION }
     : undefined,
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+  themeColor: "#121216",
 };
 
 export default function RootLayout({
@@ -25,7 +40,9 @@ export default function RootLayout({
     <html lang="ko">
       <body className="min-h-screen bg-[#070709] text-slate-100 antialiased">
         <StudyAuthProvider>
-          <StudyCurriculumProvider>{children}</StudyCurriculumProvider>
+          <StudyCurriculumProvider>
+            <GlobalUxProvider>{children}</GlobalUxProvider>
+          </StudyCurriculumProvider>
         </StudyAuthProvider>
         <Analytics />
         {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
@@ -33,4 +50,3 @@ export default function RootLayout({
     </html>
   );
 }
-

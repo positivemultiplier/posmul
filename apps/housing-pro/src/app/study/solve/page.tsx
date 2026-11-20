@@ -24,6 +24,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
+import { PracticeHubTabs } from "@/components/study/practice-hub-tabs";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import {
   TheoryBottomSheet,
@@ -450,6 +451,7 @@ export default function InteractiveSolvePage() {
 
   return (
     <MobileAppShell>
+      {!activeSet && <PracticeHubTabs />}
       {/* 상단 헤더 */}
       <header className="px-4 py-3 bg-[#16161C] border-b border-white/[0.06] space-y-2.5">
         <div className="flex items-center justify-between gap-2">

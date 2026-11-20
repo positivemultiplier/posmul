@@ -196,32 +196,37 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
 
   return (
     <div
-      className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-2 sm:p-3"
+      className="fixed inset-0 z-[85] bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-3"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[460px] max-h-[88vh] flex flex-col rounded-3xl bg-[#101016] border border-white/[0.12] shadow-2xl overflow-hidden"
+        className="w-full max-w-[460px] max-h-[90vh] flex flex-col rounded-t-3xl sm:rounded-3xl bg-[#11121A] border border-white/[0.12] shadow-2xl overflow-hidden pb-safe"
         onClick={(e) => e.stopPropagation()}
       >
+        {/* 네이티브 바텀시트 드래그 핸들 */}
+        <div className="pt-2.5 pb-1 bg-[#171824] flex justify-center sm:hidden shrink-0">
+          <div className="w-10 h-1 rounded-full bg-white/20" />
+        </div>
+
         {/* 상단 브레드크럼 트레일 헤더 (꼬리물기 경로 + 1탭 문제 복귀) */}
-        <div className="px-4 py-3 bg-[#161620] border-b border-white/[0.08] space-y-2 shrink-0">
+        <div className="px-4 py-3 bg-[#171824] border-b border-white/[0.08] space-y-2 shrink-0">
           <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
               {trail.length > 1 && (
                 <button
                   type="button"
                   onClick={() => popToIndex(trail.length - 2)}
-                  className="p-1 rounded-lg bg-white/[0.07] hover:bg-white/[0.14] text-slate-200 shrink-0"
+                  className="w-8 h-8 rounded-xl bg-white/[0.08] hover:bg-white/[0.16] text-slate-100 flex items-center justify-center shrink-0"
                   title="이전 개념으로"
                 >
-                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <ArrowLeft className="w-4 h-4" />
                 </button>
               )}
-              <span className="text-[11px] font-black text-sky-300 flex items-center gap-1 truncate">
-                <GitCompareArrows className="w-3.5 h-3.5 text-[#FF7A59] shrink-0" />
+              <span className="text-xs font-black text-sky-300 flex items-center gap-1.5 truncate">
+                <GitCompareArrows className="w-4 h-4 text-[#FF7A59] shrink-0" />
                 <span>기출 한정 지식 그래프</span>
               </span>
-              <span className="px-1.5 py-0.5 rounded bg-white/[0.06] text-[9.5px] font-mono text-slate-400 shrink-0">
+              <span className="px-2 py-0.5 rounded-md bg-white/[0.08] text-[11px] font-mono text-slate-300 shrink-0">
                 깊이 {trail.length}
               </span>
             </div>
@@ -229,27 +234,27 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
             <button
               type="button"
               onClick={onClose}
-              className="px-2.5 py-1 rounded-lg bg-white/[0.08] hover:bg-[#FF5A36] text-[10.5px] font-black text-white flex items-center gap-1 transition shrink-0"
+              className="px-3 py-1.5 rounded-xl bg-white/[0.09] hover:bg-[#FF5A36] text-xs font-black text-white flex items-center gap-1 transition shrink-0"
             >
               <span>문제로 복귀</span>
-              <X className="w-3 h-3" />
+              <X className="w-3.5 h-3.5" />
             </button>
           </div>
 
           {/* 꼬리물기 브레드크럼 경로 */}
-          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar text-[10px] font-bold">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar text-xs font-bold">
             {trail.map((step, idx) => {
               const isLast = idx === trail.length - 1;
               return (
                 <div key={idx} className="flex items-center gap-1 shrink-0">
-                  {idx > 0 && <ChevronRight className="w-3 h-3 text-slate-600" />}
+                  {idx > 0 && <ChevronRight className="w-3.5 h-3.5 text-slate-600" />}
                   <button
                     type="button"
                     onClick={() => popToIndex(idx)}
-                    className={`px-2 py-0.5 rounded-md transition ${
+                    className={`px-2.5 py-1 rounded-lg transition ${
                       isLast
                         ? "bg-[#FF5A36]/20 text-[#FF8A70] border border-[#FF5A36]/40 font-black"
-                        : "bg-white/[0.04] text-slate-400 hover:text-white"
+                        : "bg-white/[0.05] text-slate-300 hover:text-white"
                     }`}
                   >
                     {getTrailLabel(step)}
@@ -423,19 +428,19 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
                   </div>
                 )}
 
-                {/* 3줄 핵심 특징 */}
-                <ul className="space-y-1.5 pt-1 text-[11.5px] text-slate-100 leading-relaxed">
+                {/* 3줄 핵심 특징 (고가독성 14px) */}
+                <ul className="space-y-2 pt-1.5 text-[13.5px] text-slate-100 leading-[1.6]">
                   {activeConcept.summaryBullets.map((b, i) => (
-                    <li key={i} className="flex items-start gap-1.5">
-                      <span className="text-sky-400 font-black shrink-0">•</span>
+                    <li key={i} className="flex items-start gap-2">
+                      <span className="text-sky-400 font-black shrink-0 mt-0.5">•</span>
                       <span>{b}</span>
                     </li>
                   ))}
                 </ul>
 
                 {/* 함정 주의 */}
-                <div className="p-2.5 rounded-xl bg-rose-950/35 border border-rose-500/35 text-[11px] text-rose-200 leading-relaxed flex items-start gap-1.5">
-                  <AlertTriangle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                <div className="p-3 rounded-xl bg-rose-950/35 border border-rose-500/35 text-[13px] text-rose-100 leading-relaxed flex items-start gap-2">
+                  <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                   <span>
                     <strong className="text-rose-300">기출 함정: </strong>
                     {activeConcept.trapWarning}
@@ -444,8 +449,8 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
 
                 {/* 현직 소장 실무 팁 (수험→실무 연결!) */}
                 {activeConcept.proFieldTip && (
-                  <div className="p-2.5 rounded-xl bg-indigo-950/35 border border-indigo-400/30 text-[10.5px] text-indigo-200 leading-relaxed flex items-start gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-sky-400 shrink-0 mt-0.5" />
+                  <div className="p-3 rounded-xl bg-indigo-950/35 border border-indigo-400/30 text-[12.5px] text-indigo-100 leading-relaxed flex items-start gap-2">
+                    <ShieldCheck className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
                     <span>
                       <strong className="text-sky-300">소장Pro 실무 연결: </strong>
                       {activeConcept.proFieldTip}
