@@ -75,6 +75,7 @@ export interface FetchExamOxCardsInput {
   maxTier?: number;
   onlyRepeated?: boolean;
   onlyAmended?: boolean;
+  offset?: number;
   limit?: number;
 }
 
@@ -119,7 +120,14 @@ interface RawOptionJoinedRow {
  */
 export async function fetchExamOxCardsAction(
   input: FetchExamOxCardsInput = {}
-): Promise<{ success: boolean; cards: ExamOxCardItem[]; totalMatched: number; error?: string }> {
+): Promise<{
+  success: boolean;
+  cards: ExamOxCardItem[];
+  totalMatched: number;
+  hasMore: boolean;
+  nextOffset: number;
+  error?: string;
+}> {
   try {
     const {
       subject = "ALL",
@@ -127,8 +135,12 @@ export async function fetchExamOxCardsAction(
       maxTier = 5,
       onlyRepeated = false,
       onlyAmended = false,
-      limit = 60,
+      offset = 0,
+      limit = 12,
     } = input;
+
+    const safeOffset = Math.max(0, Math.floor(offset));
+    const safeLimit = Math.max(1, Math.min(60, Math.floor(limit)));
 
     let query = supabaseAdmin
       .schema("vertical_housing")
@@ -188,10 +200,18 @@ export async function fetchExamOxCardsAction(
     const { data, count, error } = await query
       .order("repeat_count", { ascending: false })
       .order("mastery_tier", { ascending: true })
-      .limit(limit);
+      .order("id", { ascending: true })
+      .range(safeOffset, safeOffset + safeLimit - 1);
 
     if (error) {
-      return { success: false, cards: [], totalMatched: 0, error: error.message };
+      return {
+        success: false,
+        cards: [],
+        totalMatched: 0,
+        hasMore: false,
+        nextOffset: safeOffset,
+        error: error.message,
+      };
     }
 
     const rows = (data ?? []) as unknown as RawOptionJoinedRow[];
@@ -229,16 +249,24 @@ export async function fetchExamOxCardsAction(
       };
     });
 
+    const totalMatched = count ?? safeOffset + cards.length;
+    const nextOffset = safeOffset + cards.length;
+    const hasMore = cards.length === safeLimit && nextOffset < totalMatched;
+
     return {
       success: true,
       cards,
-      totalMatched: count ?? cards.length,
+      totalMatched,
+      hasMore,
+      nextOffset,
     };
   } catch (err) {
     return {
       success: false,
       cards: [],
       totalMatched: 0,
+      hasMore: false,
+      nextOffset: 0,
       error: err instanceof Error ? err.message : "DB 조회 중 오류가 발생했습니다.",
     };
   }
@@ -516,14 +544,19 @@ export async function fetchStudySolveSetsAction(clientKey: string): Promise<{
 }
 
 /**
- * 선택한 20제 세트의 문항·선지·기존 풀이/마킹 이력을 로드합니다.
+ * 선택한 20제 세트의 문항·선지·기존 풀이/마킹 이력을 점진적 배치 단위로 로드합니다.
+ * 기본 5문항씩 초고속 로드하고, 사용자가 푸는 동안 다음 배치를 백그라운드 프리페치합니다.
  */
 export async function fetchSolveSetQuestionsAction(
   clientKey: string,
-  setKey: string
+  setKey: string,
+  options?: { offset?: number; limit?: number }
 ): Promise<{
   success: boolean;
   questions: SolveQuestionItem[];
+  totalInSet: number;
+  hasMore: boolean;
+  nextOffset: number;
   error?: string;
 }> {
   try {
@@ -553,7 +586,8 @@ export async function fetchSolveSetQuestionsAction(
         amended_note,
         original_snapshot,
         metadata
-      `
+      `,
+        { count: "exact" }
       )
       .neq("law_status", "DEPRECATED");
 
@@ -577,12 +611,38 @@ export async function fetchSolveSetQuestionsAction(
         .eq("subject", subject)
         .order("question_number", { ascending: true });
     } else {
-      return { success: false, questions: [], error: "지원하지 않는 세트 키입니다." };
+      return {
+        success: false,
+        questions: [],
+        totalInSet: 0,
+        hasMore: false,
+        nextOffset: 0,
+        error: "지원하지 않는 세트 키입니다.",
+      };
     }
 
-    const from = sliceIndex * 20;
-    const { data: qRows, error: qErr } = await query.range(from, from + 19);
-    if (qErr) return { success: false, questions: [], error: qErr.message };
+    const setBase = sliceIndex * 20;
+    const batchOffset = Math.max(0, Math.min(19, Math.floor(options?.offset ?? 0)));
+    const batchLimit = Math.max(1, Math.min(20 - batchOffset, Math.floor(options?.limit ?? 20)));
+    const from = setBase + batchOffset;
+    const to = from + batchLimit - 1;
+
+    const { data: qRows, count: totalMatchedInGroup, error: qErr } = await query.range(from, to);
+    if (qErr) {
+      return {
+        success: false,
+        questions: [],
+        totalInSet: 0,
+        hasMore: false,
+        nextOffset: batchOffset,
+        error: qErr.message,
+      };
+    }
+
+    const totalInSet = Math.max(
+      0,
+      Math.min(20, (totalMatchedInGroup ?? setBase + (qRows?.length ?? 0)) - setBase)
+    );
 
     const rawQuestions = (qRows ?? []) as Array<{
       id: string;
@@ -606,7 +666,13 @@ export async function fetchSolveSetQuestionsAction(
     }>;
 
     if (rawQuestions.length === 0) {
-      return { success: true, questions: [] };
+      return {
+        success: true,
+        questions: [],
+        totalInSet,
+        hasMore: false,
+        nextOffset: batchOffset,
+      };
     }
 
     const { ownerKey } = await resolveOwnerKeyAndUser(clientKey);
@@ -634,7 +700,16 @@ export async function fetchSolveSetQuestionsAction(
         .in("question_id", qIds),
     ]);
 
-    if (optErr) return { success: false, questions: [], error: optErr.message };
+    if (optErr) {
+      return {
+        success: false,
+        questions: [],
+        totalInSet,
+        hasMore: false,
+        nextOffset: batchOffset,
+        error: optErr.message,
+      };
+    }
 
     const optsByQ = new Map<string, SolveOptionItem[]>();
     const optMarkMap = new Map<string, MarkStatus>(
@@ -718,11 +793,23 @@ export async function fetchSolveSetQuestionsAction(
       };
     });
 
-    return { success: true, questions: items };
+    const nextOffset = batchOffset + items.length;
+    const hasMore = items.length === batchLimit && nextOffset < totalInSet;
+
+    return {
+      success: true,
+      questions: items,
+      totalInSet,
+      hasMore,
+      nextOffset,
+    };
   } catch (err) {
     return {
       success: false,
       questions: [],
+      totalInSet: 0,
+      hasMore: false,
+      nextOffset: 0,
       error: err instanceof Error ? err.message : "문항 세트 로드 실패",
     };
   }

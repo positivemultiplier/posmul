@@ -41,7 +41,7 @@ export default function StudyMyHubPage() {
   const { todayISO, activeBook, subjects, matrixLogs, timetablesByDate } =
     useStudyCurriculum();
 
-  const [activeTab, setActiveTab] = useState<MyTab>("library");
+  const [activeTab, setActiveTab] = useState<MyTab>("group");
   const [guestPmpBalance, setGuestPmpBalance] = useState<number>(0);
   const [isConeModalOpen, setIsConeModalOpen] = useState(false);
   const [equippedCone, setEquippedCone] = useState<UserStudyConeItem>({
@@ -137,42 +137,42 @@ export default function StudyMyHubPage() {
           </span>
         </div>
 
-        <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[#0E0E12] border border-white/[0.06] text-[11px] font-black">
-          <button
-            type="button"
-            onClick={() => setActiveTab("library")}
-            className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition ${
-              activeTab === "library"
-                ? "bg-[#FF5A36] text-white shadow"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <BookOpen className="w-3.5 h-3.5" />
-            <span>내 서재</span>
-          </button>
+        <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[#0E0E12] border border-white/[0.06] text-xs font-black">
           <button
             type="button"
             onClick={() => setActiveTab("group")}
-            className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition ${
+            className={`min-h-[42px] rounded-xl flex items-center justify-center gap-1.5 transition ${
               activeTab === "group"
                 ? "bg-[#FF5A36] text-white shadow"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            <Users className="w-3.5 h-3.5" />
+            <Users className="w-3.5 h-3.5 shrink-0" />
             <span>스터디 그룹</span>
           </button>
           <button
             type="button"
+            onClick={() => setActiveTab("library")}
+            className={`min-h-[42px] rounded-xl flex items-center justify-center gap-1.5 transition ${
+              activeTab === "library"
+                ? "bg-[#FF5A36] text-white shadow"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <BookOpen className="w-3.5 h-3.5 shrink-0" />
+            <span>내 서재</span>
+          </button>
+          <button
+            type="button"
             onClick={() => setActiveTab("wallet")}
-            className={`py-2 rounded-xl flex items-center justify-center gap-1.5 transition ${
+            className={`min-h-[42px] rounded-xl flex items-center justify-center gap-1.5 transition ${
               activeTab === "wallet"
                 ? "bg-[#FF5A36] text-white shadow"
                 : "text-slate-400 hover:text-white"
             }`}
           >
-            <Target className="w-3.5 h-3.5" />
-            <span>PosMul 지갑</span>
+            <Target className="w-3.5 h-3.5 shrink-0" />
+            <span>지갑·프로</span>
           </button>
         </div>
       </header>

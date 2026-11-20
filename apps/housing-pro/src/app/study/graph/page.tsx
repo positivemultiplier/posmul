@@ -1,15 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ElementRef } from "react";
 import {
   BookOpen,
   CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Database,
   Flame,
   FolderTree,
   GitCompareArrows,
   Loader2,
-  RefreshCw,
   Search,
   ShieldCheck,
   Sparkles,
@@ -18,6 +20,7 @@ import {
   Zap,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
+import { PracticeHubTabs } from "@/components/study/practice-hub-tabs";
 import {
   DEMO_GRAPH_QUESTIONS,
   KNOWLEDGE_CONCEPT_NODES,
@@ -31,14 +34,18 @@ import {
 } from "@/components/study/concept-linked-text";
 import { ConceptTrailDrawer } from "@/components/study/concept-trail-drawer";
 import {
-  fetchLive2ndGraphQuestionAction,
+  fetchChapterGraphQuestionsAction,
+  fetchGraphChapterSummaryAction,
+  type GraphChapterSummary,
   type LiveGraphQuestionItem,
 } from "@/app/actions/concept-graph.actions";
 
 const OPTION_CIRCLES = ["①", "②", "③", "④", "⑤"] as const;
+const GRAPH_BATCH_SIZE = 5;
+const LIST_INITIAL_COUNT = 12;
 
 type GraphSectionTab = "quiz" | "axes" | "nodes";
-type QuizSourceMode = "live_db" | "curated";
+type QuizSourceMode = "chapter_db" | "curated";
 type LiveSubjectFilter = "ALL" | "주택관리관계법규" | "공동주택관리실무";
 
 type VaultFilterKey =
@@ -58,77 +65,180 @@ function getVaultFolderLabel(node: KnowledgeConceptNode): string {
 }
 
 export default function KnowledgeGraphStudyPage() {
-  // 1-Viewport 집중을 위한 3세그먼트 분리: 실전 꼬리물기 | 대조표(17) | 개념·암기(90)
+  // 1-Viewport 집중 3세그먼트: 단원별 기출 | 대조표(17) | 개념·암기(90)
   const [sectionTab, setSectionTab] = useState<GraphSectionTab>("quiz");
 
-  // 실전 꼬리물기 모드 (기본: 라이브 DB 2차 기출 자동 꼬리물기)
-  const [quizSourceMode, setQuizSourceMode] = useState<QuizSourceMode>("live_db");
+  // 단원별 기출 모드 (5문항 초고속 로드 + 보는 동안 다음 5문항 백그라운드 프리페치)
+  const [quizSourceMode, setQuizSourceMode] = useState<QuizSourceMode>("chapter_db");
   const [liveSubject, setLiveSubject] = useState<LiveSubjectFilter>("ALL");
-  const [liveQuestion, setLiveQuestion] = useState<LiveGraphQuestionItem | null>(null);
-  const [livePoolCount, setLivePoolCount] = useState<number>(0);
-  const [loadingLive, setLoadingLive] = useState<boolean>(false);
+  const [chapters, setChapters] = useState<GraphChapterSummary[]>([]);
+  const [loadingChapters, setLoadingChapters] = useState<boolean>(true);
+  const [selectedChapterCode, setSelectedChapterCode] = useState<string | null>(null);
+
+  const [chapterQuestions, setChapterQuestions] = useState<LiveGraphQuestionItem[]>([]);
+  const [totalChapterQuestions, setTotalChapterQuestions] = useState<number>(0);
+  const [hasMoreQuestions, setHasMoreQuestions] = useState<boolean>(false);
+  const [questionIdx, setQuestionIdx] = useState<number>(0);
+  const [loadingLive, setLoadingLive] = useState<boolean>(true);
+  const [prefetchingMore, setPrefetchingMore] = useState<boolean>(false);
   const [liveError, setLiveError] = useState<string | null>(null);
-  const seenLiveIdsRef = useRef<string[]>([]);
+
+  const queryVersionRef = useRef<number>(0);
+  const prefetchLockRef = useRef<boolean>(false);
 
   const [selectedDemoIdx, setSelectedDemoIdx] = useState(0);
   const [pickedOption, setPickedOption] = useState<number | null>(null);
   const [forceLinksOn, setForceLinksOn] = useState(true);
 
+  // 개념·암기 & 대조표 점진적 로딩 상태
   const [vaultFilter, setVaultFilter] = useState<VaultFilterKey>("stage2_all");
   const [nodeViewMode, setNodeViewMode] = useState<NodeViewMode>("grouped");
   const [searchQuery, setSearchQuery] = useState("");
+  const [visibleNodeCount, setVisibleNodeCount] = useState<number>(LIST_INITIAL_COUNT);
+  const [visibleAxisCount, setVisibleAxisCount] = useState<number>(LIST_INITIAL_COUNT);
+  const listSentinelRef = useRef<ElementRef<"div"> | null>(null);
+
   const [activeTarget, setActiveTarget] = useState<KnowledgeTrailTarget | null>(null);
 
-  const loadLiveQuestion = useCallback(async (subject: LiveSubjectFilter) => {
-    setLoadingLive(true);
-    setLiveError(null);
-    setPickedOption(null);
-    const res = await fetchLive2ndGraphQuestionAction({
-      subject,
-      excludeIds: seenLiveIdsRef.current.slice(-20),
-    });
-    setLoadingLive(false);
-    if (res.success && res.question) {
-      setLiveQuestion(res.question);
-      if (typeof res.totalPoolCount === "number") {
-        setLivePoolCount(res.totalPoolCount);
+  // 1) 과목별 단원 목록 초경량 조회
+  useEffect(() => {
+    let cancelled = false;
+    setLoadingChapters(true);
+    void fetchGraphChapterSummaryAction({ subject: liveSubject }).then((res) => {
+      if (cancelled) return;
+      if (res.success) {
+        setChapters(res.chapters);
       }
-      seenLiveIdsRef.current = [...seenLiveIdsRef.current.slice(-19), res.question.id];
-    } else {
-      setLiveError(res.error || "실제 2차 기출을 불러오지 못했습니다.");
-    }
-  }, []);
+      setLoadingChapters(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [liveSubject]);
+
+  // 2) 선택 단원(또는 과목 전체) 첫 5문항 초고속 로드
+  const loadInitialChapterBatch = useCallback(
+    async (subject: LiveSubjectFilter, detailCode: string | null) => {
+      const version = ++queryVersionRef.current;
+      prefetchLockRef.current = false;
+      setLoadingLive(true);
+      setLiveError(null);
+      setPickedOption(null);
+      setQuestionIdx(0);
+      setChapterQuestions([]);
+      setHasMoreQuestions(false);
+
+      const res = await fetchChapterGraphQuestionsAction({
+        subject,
+        detailCode,
+        offset: 0,
+        limit: GRAPH_BATCH_SIZE,
+      });
+
+      if (queryVersionRef.current !== version) return;
+      setLoadingLive(false);
+
+      if (res.success) {
+        setChapterQuestions(res.questions);
+        setTotalChapterQuestions(res.totalCount);
+        setHasMoreQuestions(res.hasMore);
+        if (res.questions.length === 0) {
+          setLiveError("선택한 단원에 연결된 2차 객관식 기출이 없습니다.");
+        }
+      } else {
+        setLiveError(res.error || "단원별 기출을 불러오지 못했습니다.");
+      }
+    },
+    []
+  );
 
   useEffect(() => {
-    void loadLiveQuestion("ALL");
-  }, [loadLiveQuestion]);
+    void loadInitialChapterBatch(liveSubject, selectedChapterCode);
+  }, [liveSubject, selectedChapterCode, loadInitialChapterBatch]);
 
+  // 3) 백그라운드 다음 5문항 자동 프리페치
+  const prefetchNextBatch = useCallback(async () => {
+    if (prefetchLockRef.current || !hasMoreQuestions) return;
+    const version = queryVersionRef.current;
+    prefetchLockRef.current = true;
+    setPrefetchingMore(true);
+
+    try {
+      const res = await fetchChapterGraphQuestionsAction({
+        subject: liveSubject,
+        detailCode: selectedChapterCode,
+        offset: chapterQuestions.length,
+        limit: GRAPH_BATCH_SIZE,
+      });
+      if (queryVersionRef.current !== version) return;
+      if (res.success && res.questions.length > 0) {
+        setChapterQuestions((prev) => {
+          const seen = new Set(prev.map((item) => item.id));
+          const unique = res.questions.filter((item) => !seen.has(item.id));
+          return [...prev, ...unique];
+        });
+        setTotalChapterQuestions(res.totalCount);
+        setHasMoreQuestions(res.hasMore);
+      } else {
+        setHasMoreQuestions(false);
+      }
+    } finally {
+      prefetchLockRef.current = false;
+      setPrefetchingMore(false);
+    }
+  }, [hasMoreQuestions, liveSubject, selectedChapterCode, chapterQuestions.length]);
+
+  // 사용자가 현재 배치를 보다가 끝에서 3문항 이내에 도달하면 조용히 다음 5문항 자동 프리페치!
+  useEffect(() => {
+    if (
+      quizSourceMode !== "chapter_db" ||
+      loadingLive ||
+      !hasMoreQuestions ||
+      prefetchingMore ||
+      chapterQuestions.length === 0
+    ) {
+      return;
+    }
+    if (questionIdx >= chapterQuestions.length - 3) {
+      void prefetchNextBatch();
+    }
+  }, [
+    quizSourceMode,
+    loadingLive,
+    hasMoreQuestions,
+    prefetchingMore,
+    chapterQuestions.length,
+    questionIdx,
+    prefetchNextBatch,
+  ]);
+
+  const currentLiveQ = chapterQuestions[questionIdx] ?? null;
   const demoQ = DEMO_GRAPH_QUESTIONS[selectedDemoIdx];
   const isAnswered = pickedOption !== null;
   const linksEnabled = forceLinksOn || isAnswered;
 
   const activeQuestion =
-    quizSourceMode === "live_db" && liveQuestion
+    quizSourceMode === "chapter_db" && currentLiveQ
       ? {
-          examLabel: `${liveQuestion.examYear}년 제${liveQuestion.examRound}회 · ${liveQuestion.questionNumber}번${
-            liveQuestion.chapterTitle ? ` (${liveQuestion.chapterTitle})` : ""
+          examLabel: `${currentLiveQ.examYear}년 제${currentLiveQ.examRound}회 · ${currentLiveQ.questionNumber}번${
+            currentLiveQ.chapterTitle ? ` (${currentLiveQ.chapterTitle})` : ""
           }`,
-          subject: liveQuestion.subject,
-          questionText: liveQuestion.questionText,
-          boxContent: liveQuestion.boxContent,
-          options: liveQuestion.options.map((o) => ({
+          subject: currentLiveQ.subject,
+          questionText: currentLiveQ.questionText,
+          boxContent: currentLiveQ.boxContent,
+          options: currentLiveQ.options.map((o) => ({
             number: o.number,
             text: o.text,
             trapSummary: o.trapSummary,
           })),
-          correctOptions: liveQuestion.correctOptions,
+          correctOptions: currentLiveQ.correctOptions,
           explanation:
-            liveQuestion.options
+            currentLiveQ.options
               .filter((o) => o.trapSummary)
               .map((o) => `${OPTION_CIRCLES[o.number - 1]} ${o.trapSummary}`)
               .join(" / ") ||
             "문장 속 하늘 점선(개념어)과 주황 점선(대조어)을 눌러 핵심 특징·기출 함정·인기 암기법을 꼬리물기로 확인해 보세요!",
-          matchedBadge: `🔗 개념 ${liveQuestion.matchedConceptCount} · ⚡대조 ${liveQuestion.matchedContrastCount}`,
+          matchedBadge: `🔗 개념 ${currentLiveQ.matchedConceptCount} · ⚡대조 ${currentLiveQ.matchedContrastCount}`,
         }
       : {
           examLabel: demoQ.examLabel,
@@ -221,12 +331,49 @@ export default function KnowledgeGraphStudyPage() {
       .sort((a, b) => b.examCount - a.examCount);
   }, [vaultFilter, searchQuery]);
 
-  const groupedNodes = useMemo(() => {
+  // 필터/검색 변경 시 점진적 표시 개수 초기화
+  useEffect(() => {
+    setVisibleNodeCount(LIST_INITIAL_COUNT);
+    setVisibleAxisCount(LIST_INITIAL_COUNT);
+  }, [vaultFilter, searchQuery, nodeViewMode, sectionTab]);
+
+  // IntersectionObserver: 스크롤 시 대조표/개념 카드 12개씩 점진적 추가 렌더
+  useEffect(() => {
+    if (sectionTab === "quiz") return;
+    const node = listSentinelRef.current;
+    if (!node) return;
+    if (typeof globalThis === "undefined" || !("IntersectionObserver" in globalThis)) return;
+    const observer = new globalThis.IntersectionObserver(
+      (entries) => {
+        if (!entries[0]?.isIntersecting) return;
+        if (sectionTab === "nodes") {
+          setVisibleNodeCount((prev) => Math.min(filteredNodes.length, prev + 12));
+        } else if (sectionTab === "axes") {
+          setVisibleAxisCount((prev) => Math.min(filteredAxes.length, prev + 12));
+        }
+      },
+      { rootMargin: "220px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [sectionTab, filteredNodes.length, filteredAxes.length]);
+
+  const visibleNodes = useMemo(
+    () => filteredNodes.slice(0, visibleNodeCount),
+    [filteredNodes, visibleNodeCount]
+  );
+
+  const visibleAxes = useMemo(
+    () => filteredAxes.slice(0, visibleAxisCount),
+    [filteredAxes, visibleAxisCount]
+  );
+
+  const groupedVisibleNodes = useMemo(() => {
     const map = new Map<
       string,
       { label: string; totalExamCount: number; items: KnowledgeConceptNode[] }
     >();
-    for (const node of filteredNodes) {
+    for (const node of visibleNodes) {
       const label = getVaultFolderLabel(node);
       const existing = map.get(label);
       if (existing) {
@@ -237,7 +384,7 @@ export default function KnowledgeGraphStudyPage() {
       }
     }
     return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "ko"));
-  }, [filteredNodes]);
+  }, [visibleNodes]);
 
   const FILTER_TABS: Array<{ key: VaultFilterKey; label: string; count: number }> = [
     { key: "stage2_all", label: "2차 전체", count: filterCounts.stage2All },
@@ -247,31 +394,43 @@ export default function KnowledgeGraphStudyPage() {
     { key: "stage1_pipe", label: "1차 배관", count: filterCounts.stage1Pipe },
   ];
 
+  const handleMoveChapterQuestion = async (nextIdx: number) => {
+    if (nextIdx < 0) return;
+    if (nextIdx >= chapterQuestions.length && hasMoreQuestions) {
+      await prefetchNextBatch();
+    }
+    setPickedOption(null);
+    setQuestionIdx(nextIdx);
+  };
+
   return (
     <MobileAppShell>
-      <div className="px-4 pt-3.5 pb-4 space-y-4">
+      {/* 문제 탭 통합 3세그먼트: 연도별 기출 | 단원별 지식맵 | 스피드 O/X */}
+      <PracticeHubTabs />
+
+      <div className="px-4 pt-3 pb-4 space-y-3.5">
         {/* 0. 컴팩트 커버리지 요약 바 */}
         <section className="px-3.5 py-2.5 rounded-2xl bg-[#171824] border border-white/[0.08] flex items-center justify-between gap-2">
           <div className="min-w-0 flex items-center gap-2 flex-wrap">
             <span className="px-2 py-0.5 rounded-md bg-[#FF5A36]/20 text-[#FF8A70] text-xs font-black shrink-0">
-              2차 기출 {VAULT_GRAPH_META.stage2CoveragePercent}% 커버
+              단원별 2차 기출 {VAULT_GRAPH_META.stage2CoveragePercent}% 연결
             </span>
             <span className="text-xs text-slate-300 font-bold truncate">
-              {VAULT_GRAPH_META.stage2CoveredQuestions}/{VAULT_GRAPH_META.stage2TotalQuestions}문항 자동연결
+              5문항 즉시 로드 · 백그라운드 자동 준비
             </span>
           </div>
           <span className="text-xs font-mono font-black text-sky-300 flex items-center gap-1 shrink-0">
             <Database className="w-3.5 h-3.5" />
-            <span>{VAULT_GRAPH_META.totalNodes}노드</span>
+            <span>{VAULT_GRAPH_META.totalNodes}개념</span>
           </span>
         </section>
 
-        {/* 1. 1-Viewport 3세그먼트 전환 바 (스크롤 피로도 제거!) */}
+        {/* 1. 지식맵 내부 3세그먼트: 단원별 기출 | 대조표(17) | 개념·암기(90) */}
         <div className="grid grid-cols-3 gap-1 p-1 rounded-2xl bg-[#171822] border border-white/[0.08]">
           {[
             {
               key: "quiz" as const,
-              label: "실전 꼬리물기",
+              label: "단원별 기출",
               icon: Sparkles,
             },
             {
@@ -306,7 +465,7 @@ export default function KnowledgeGraphStudyPage() {
         </div>
 
         {/* ============================================================ */}
-        {/* TAB 1: 🎯 실전 기출 꼬리물기 (실제 DB 2차 기출 전량 자동연결) */}
+        {/* TAB 1: 🎯 단원 기준 실전 기출 꼬리물기 (5문항 점진적 프리페치) */}
         {/* ============================================================ */}
         {sectionTab === "quiz" && (
           <section className="p-4 rounded-3xl bg-gradient-to-b from-[#1A1C28] to-[#13141D] border border-sky-500/30 space-y-3.5 shadow-xl">
@@ -315,16 +474,16 @@ export default function KnowledgeGraphStudyPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    setQuizSourceMode("live_db");
+                    setQuizSourceMode("chapter_db");
                     setPickedOption(null);
                   }}
                   className={`px-3 py-1.5 rounded-lg text-xs font-black transition ${
-                    quizSourceMode === "live_db"
+                    quizSourceMode === "chapter_db"
                       ? "bg-[#FF5A36] text-white"
                       : "text-slate-400 hover:text-white"
                   }`}
                 >
-                  실제 DB 기출 {livePoolCount > 0 ? `(${livePoolCount})` : ""}
+                  단원별 실제 기출 {totalChapterQuestions > 0 ? `(${totalChapterQuestions})` : ""}
                 </button>
                 <button
                   type="button"
@@ -355,43 +514,96 @@ export default function KnowledgeGraphStudyPage() {
               </button>
             </div>
 
-            {quizSourceMode === "live_db" ? (
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <div className="flex items-center gap-1.5">
-                  {(
-                    [
-                      { key: "ALL", label: "2차 전체" },
-                      { key: "주택관리관계법규", label: "법규" },
-                      { key: "공동주택관리실무", label: "실무" },
-                    ] as const
-                  ).map((item) => (
-                    <button
-                      key={item.key}
-                      type="button"
-                      onClick={() => {
-                        setLiveSubject(item.key);
-                        void loadLiveQuestion(item.key);
-                      }}
-                      className={`min-h-[36px] px-3 rounded-xl border text-xs font-black transition ${
-                        liveSubject === item.key
-                          ? "bg-white/[0.14] border-white/30 text-white"
-                          : "bg-[#11121A] border-white/[0.08] text-slate-400 hover:text-white"
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  ))}
+            {quizSourceMode === "chapter_db" ? (
+              <div className="space-y-2.5">
+                {/* 1단계: 과목 선택 */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5">
+                    {(
+                      [
+                        { key: "ALL", label: "2차 전체" },
+                        { key: "주택관리관계법규", label: "법규" },
+                        { key: "공동주택관리실무", label: "실무" },
+                      ] as const
+                    ).map((item) => (
+                      <button
+                        key={item.key}
+                        type="button"
+                        onClick={() => {
+                          setLiveSubject(item.key);
+                          setSelectedChapterCode(null);
+                        }}
+                        className={`min-h-[34px] px-3 rounded-xl border text-xs font-black transition ${
+                          liveSubject === item.key
+                            ? "bg-white/[0.15] border-white/30 text-white"
+                            : "bg-[#11121A] border-white/[0.08] text-slate-400 hover:text-white"
+                        }`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* 점진적 로딩 상태 표시 */}
+                  <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                    {prefetchingMore && (
+                      <span className="text-sky-300 flex items-center gap-1 font-sans font-bold">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        <span>다음 문항 준비중</span>
+                      </span>
+                    )}
+                    {totalChapterQuestions > 0 && (
+                      <span className="px-2 py-0.5 rounded-lg bg-white/[0.06] text-slate-200 font-black">
+                        {Math.min(questionIdx + 1, totalChapterQuestions)}/{totalChapterQuestions}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <button
-                  type="button"
-                  disabled={loadingLive}
-                  onClick={() => void loadLiveQuestion(liveSubject)}
-                  className="min-h-[36px] px-3 rounded-xl bg-[#FF5A36]/20 hover:bg-[#FF5A36]/35 border border-[#FF5A36]/45 text-[#FF9B82] text-xs font-black flex items-center gap-1.5 transition disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${loadingLive ? "animate-spin" : ""}`} />
-                  <span>다른 기출</span>
-                </button>
+                {/* 2단계: 단원 기준 선택 칩 (가로 스크롤) */}
+                <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedChapterCode(null)}
+                    className={`min-h-[34px] px-3 rounded-xl border text-xs font-black shrink-0 transition ${
+                      selectedChapterCode === null
+                        ? "bg-sky-500/25 border-sky-400/60 text-sky-100"
+                        : "bg-[#10111A] border-white/[0.08] text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    전체 단원
+                  </button>
+                  {loadingChapters ? (
+                    <span className="text-xs text-slate-500 px-2 flex items-center gap-1 shrink-0">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      단원 불러오는 중...
+                    </span>
+                  ) : (
+                    chapters.map((ch) => {
+                      const active = selectedChapterCode === ch.code;
+                      return (
+                        <button
+                          key={`${ch.subject}-${ch.code}`}
+                          type="button"
+                          onClick={() => setSelectedChapterCode(ch.code)}
+                          className={`min-h-[34px] px-3 rounded-xl border text-xs font-bold shrink-0 flex items-center gap-1.5 transition ${
+                            active
+                              ? "bg-sky-500/25 border-sky-400/60 text-sky-100 font-black"
+                              : "bg-[#10111A] border-white/[0.08] text-slate-300 hover:text-white"
+                          }`}
+                        >
+                          <span>
+                            {ch.topicNo ? `${ch.topicNo}. ` : ""}
+                            {ch.title}
+                          </span>
+                          <span className="text-[10.5px] font-mono text-slate-400">
+                            {ch.questionCount}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             ) : (
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
@@ -424,17 +636,17 @@ export default function KnowledgeGraphStudyPage() {
               을 눌러 특징 · 출제 통계 · 베스트 암기법을 바로 보세요!
             </div>
 
-            {quizSourceMode === "live_db" && loadingLive ? (
+            {quizSourceMode === "chapter_db" && loadingLive ? (
               <div className="py-12 rounded-2xl bg-[#0E0F15] border border-white/[0.08] flex flex-col items-center justify-center gap-2.5 text-sm text-slate-300">
                 <Loader2 className="w-6 h-6 animate-spin text-[#FF5A36]" />
-                <span>라이브 DB 2차 기출을 불러오는 중...</span>
+                <span>단원 첫 5문항을 빠르게 불러오는 중...</span>
               </div>
-            ) : quizSourceMode === "live_db" && liveError ? (
+            ) : quizSourceMode === "chapter_db" && liveError ? (
               <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-500/30 text-sm text-rose-200 flex items-center justify-between gap-2">
                 <span>{liveError}</span>
                 <button
                   type="button"
-                  onClick={() => void loadLiveQuestion(liveSubject)}
+                  onClick={() => void loadInitialChapterBatch(liveSubject, selectedChapterCode)}
                   className="px-3 py-1.5 rounded-xl bg-white/10 text-white text-xs font-black shrink-0"
                 >
                   재시도
@@ -533,25 +745,44 @@ export default function KnowledgeGraphStudyPage() {
                         : "bg-rose-950/35 border-rose-500/45 text-rose-100"
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-black text-sm">
-                        {isRight
-                          ? "✅ 정답입니다!"
-                          : `❌ 오답입니다 (정답: ${activeQuestion.correctOptions
-                              .map((n) => OPTION_CIRCLES[n - 1] ?? n)
-                              .join(", ")})`}
-                      </span>
-                      {quizSourceMode === "live_db" && (
-                        <button
-                          type="button"
-                          onClick={() => void loadLiveQuestion(liveSubject)}
-                          className="px-3 py-1.5 rounded-xl bg-white/15 hover:bg-white/25 text-xs font-black text-white shrink-0"
-                        >
-                          다음 기출 →
-                        </button>
-                      )}
+                    <div className="font-black text-sm">
+                      {isRight
+                        ? "✅ 정답입니다!"
+                        : `❌ 오답입니다 (정답: ${activeQuestion.correctOptions
+                            .map((n) => OPTION_CIRCLES[n - 1] ?? n)
+                            .join(", ")})`}
                     </div>
                     <p className="text-slate-100">{activeQuestion.explanation}</p>
+                  </div>
+                )}
+
+                {/* 단원별 기출 이전/다음 문항 네비게이션 */}
+                {quizSourceMode === "chapter_db" && chapterQuestions.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <button
+                      type="button"
+                      disabled={questionIdx === 0}
+                      onClick={() => void handleMoveChapterQuestion(questionIdx - 1)}
+                      className="min-h-[44px] rounded-xl bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] text-xs font-black text-slate-200 disabled:opacity-40 flex items-center justify-center gap-1 transition"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                      <span>이전 기출</span>
+                    </button>
+                    <button
+                      type="button"
+                      disabled={
+                        questionIdx + 1 >= totalChapterQuestions &&
+                        questionIdx + 1 >= chapterQuestions.length
+                      }
+                      onClick={() => void handleMoveChapterQuestion(questionIdx + 1)}
+                      className="min-h-[44px] rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-xs font-black text-white disabled:opacity-40 flex items-center justify-center gap-1 transition"
+                    >
+                      <span>
+                        다음 기출 ({Math.min(questionIdx + 2, totalChapterQuestions)}/
+                        {totalChapterQuestions})
+                      </span>
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
                   </div>
                 )}
               </div>
@@ -560,7 +791,7 @@ export default function KnowledgeGraphStudyPage() {
         )}
 
         {/* ============================================================ */}
-        {/* TAB 2: ⚡ 시험 단골 대조표 (A vs B — 17종 전용 뷰)           */}
+        {/* TAB 2: ⚡ 시험 단골 대조표 (A vs B — 점진적 로딩)            */}
         {/* ============================================================ */}
         {sectionTab === "axes" && (
           <section className="space-y-3">
@@ -585,7 +816,7 @@ export default function KnowledgeGraphStudyPage() {
             </div>
 
             <div className="space-y-2.5">
-              {filteredAxes.map((axis) => (
+              {visibleAxes.map((axis) => (
                 <button
                   key={axis.id}
                   type="button"
@@ -607,12 +838,29 @@ export default function KnowledgeGraphStudyPage() {
                   </div>
                 </button>
               ))}
+
+              {visibleAxes.length < filteredAxes.length && (
+                <div ref={listSentinelRef} className="pt-1 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVisibleAxisCount((prev) => Math.min(filteredAxes.length, prev + 12))
+                    }
+                    className="min-h-[40px] px-4 rounded-xl bg-white/[0.06] text-xs font-black text-slate-300 flex items-center gap-1.5"
+                  >
+                    <span>
+                      대조표 더 보기 ({visibleAxes.length}/{filteredAxes.length})
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           </section>
         )}
 
         {/* ============================================================ */}
-        {/* TAB 3: 📚 개념·암기 백과 (90개 Vault 노드 단원별/빈출순)      */}
+        {/* TAB 3: 📚 개념·암기 백과 (90개 Vault 노드 점진적 로딩)       */}
         {/* ============================================================ */}
         {sectionTab === "nodes" && (
           <section className="space-y-3">
@@ -693,7 +941,7 @@ export default function KnowledgeGraphStudyPage() {
               </div>
             ) : nodeViewMode === "grouped" ? (
               <div className="space-y-4">
-                {groupedNodes.map((group) => (
+                {groupedVisibleNodes.map((group) => (
                   <div key={group.label} className="space-y-2">
                     <div className="flex items-center justify-between px-1 text-xs font-black text-sky-300">
                       <span className="truncate flex items-center gap-1.5">
@@ -718,13 +966,30 @@ export default function KnowledgeGraphStudyPage() {
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-2">
-                {filteredNodes.map((node) => (
+                {visibleNodes.map((node) => (
                   <ConceptNodeRow
                     key={node.id}
                     node={node}
                     onSelect={() => setActiveTarget({ kind: "concept", conceptId: node.id })}
                   />
                 ))}
+              </div>
+            )}
+
+            {visibleNodes.length < filteredNodes.length && (
+              <div ref={listSentinelRef} className="pt-1 flex justify-center">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisibleNodeCount((prev) => Math.min(filteredNodes.length, prev + 12))
+                  }
+                  className="min-h-[40px] px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-xs font-black text-slate-300 flex items-center gap-1.5 transition"
+                >
+                  <span>
+                    개념 더 불러오기 ({visibleNodes.length}/{filteredNodes.length})
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
           </section>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type ElementRef } from "react";
 import Link from "next/link";
 import {
   BookOpen,
@@ -11,7 +11,6 @@ import {
   ChevronUp,
   Flame,
   History,
-  ListChecks,
   Loader2,
   Star,
   X,
@@ -85,15 +84,23 @@ export default function InteractiveSolvePage() {
   const [weakOptionCount, setWeakOptionCount] = useState<number>(0);
   const [loadingSets, setLoadingSets] = useState<boolean>(true);
 
-  const [catalogCategory, setCatalogCategory] = useState<"CHAPTER" | "ROUND">("CHAPTER");
+  const [catalogCategory, setCatalogCategory] = useState<"CHAPTER" | "ROUND">("ROUND");
+  const [yearFilter, setYearFilter] = useState<string>("ALL");
   const [subjectFilter, setSubjectFilter] = useState<string>("ALL");
   const [chapterFilter, setChapterFilter] = useState<string | null>(null);
+  const [visibleSetCount, setVisibleSetCount] = useState<number>(8);
+  const setSentinelRef = useRef<ElementRef<"div"> | null>(null);
 
-  // 현재 활성화된 세트 풀이 상태
+  // 현재 활성화된 세트 풀이 상태 (5문항 점진적 로딩 + 백그라운드 프리페치)
   const [activeSet, setActiveSet] = useState<StudySetSummary | null>(null);
   const [questions, setQuestions] = useState<SolveQuestionItem[]>([]);
+  const [totalInSet, setTotalInSet] = useState<number>(0);
+  const [hasMoreQuestions, setHasMoreQuestions] = useState<boolean>(false);
+  const [prefetchingMore, setPrefetchingMore] = useState<boolean>(false);
   const [loadingQuestions, setLoadingQuestions] = useState<boolean>(false);
   const [currentIdx, setCurrentIdx] = useState<number>(0);
+  const prefetchLockRef = useRef<boolean>(false);
+  const activeSetKeyRef = useRef<string | null>(null);
 
   // 설정 토글: 즉시 채점 vs 20제 일괄 채점 / 본문 간략 접기(종이책 병행용)
   const [instantGradeMode, setInstantGradeMode] = useState<boolean>(true);
@@ -135,58 +142,165 @@ export default function InteractiveSolvePage() {
     void refreshCatalog(effectiveOwnerKey);
   }, [authLoading, effectiveOwnerKey, refreshCatalog]);
 
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    for (const s of sets) {
+      if (s.category === "ROUND") {
+        const y = s.setKey.split("::")[1];
+        if (y) years.add(y);
+      }
+    }
+    return ["ALL", ...Array.from(years).sort((a, b) => Number(b) - Number(a))];
+  }, [sets]);
+
   const filteredSets = useMemo(() => {
     return sets.filter((s) => {
       if (s.category !== catalogCategory) return false;
+      if (catalogCategory === "ROUND" && yearFilter !== "ALL") {
+        const y = s.setKey.split("::")[1];
+        if (y !== yearFilter) return false;
+      }
       if (subjectFilter !== "ALL" && s.subject !== subjectFilter) return false;
       if (chapterFilter && !s.setKey.includes(`::${chapterFilter}::`)) return false;
       return true;
     });
-  }, [sets, catalogCategory, subjectFilter, chapterFilter]);
+  }, [sets, catalogCategory, yearFilter, subjectFilter, chapterFilter]);
+
+  // 필터 변경 시 점진적 표시 개수 초기화 (최초 8개 즉시 렌더)
+  useEffect(() => {
+    setVisibleSetCount(8);
+  }, [catalogCategory, yearFilter, subjectFilter, chapterFilter]);
+
+  // 하단 센티넬이 화면에 보이면 8개씩 자동 추가 렌더 (IntersectionObserver)
+  useEffect(() => {
+    if (activeSet || loadingSets) return;
+    const node = setSentinelRef.current;
+    if (!node) return;
+    if (typeof globalThis === "undefined" || !("IntersectionObserver" in globalThis)) return;
+    const observer = new globalThis.IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setVisibleSetCount((prev) => Math.min(filteredSets.length, prev + 8));
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [activeSet, loadingSets, filteredSets.length]);
+
+  const visibleSets = useMemo(
+    () => filteredSets.slice(0, visibleSetCount),
+    [filteredSets, visibleSetCount]
+  );
 
   const availableSubjects = useMemo(() => {
     const set = new Set(sets.map((s) => s.subject));
     return ["ALL", ...Array.from(set)];
   }, [sets]);
 
+  const buildDraftsFromQuestions = (items: SolveQuestionItem[]): Record<string, LocalDraftState> => {
+    const map: Record<string, LocalDraftState> = {};
+    for (const q of items) {
+      const optMarks: Record<string, MarkStatus> = {};
+      for (const o of q.options) {
+        if (o.savedMark) optMarks[o.id] = o.savedMark;
+      }
+      const alreadySolved = q.savedIsCorrect !== null;
+      map[q.id] = {
+        selectedOption: q.savedSelectedOption,
+        subjectiveInput: q.savedSubjectiveInput ?? "",
+        questionMark: q.savedQuestionMark,
+        optionMarks: optMarks,
+        boxMarks: q.savedBoxMarks ?? {},
+        checked: alreadySolved,
+        isCorrect: q.savedIsCorrect,
+      };
+    }
+    return map;
+  };
+
+  /** 백그라운드 다음 배치(5문항) 프리페치 */
+  const prefetchNextBatch = useCallback(
+    async (setKey: string, currentLoadedCount: number, batchSize = 5) => {
+      if (!effectiveOwnerKey || prefetchLockRef.current) return;
+      if (activeSetKeyRef.current !== setKey) return;
+      prefetchLockRef.current = true;
+      setPrefetchingMore(true);
+      try {
+        const res = await fetchSolveSetQuestionsAction(effectiveOwnerKey, setKey, {
+          offset: currentLoadedCount,
+          limit: batchSize,
+        });
+        if (activeSetKeyRef.current !== setKey) return;
+        if (res.success && res.questions.length > 0) {
+          setQuestions((prev) => {
+            const existingIds = new Set(prev.map((item) => item.id));
+            const uniqueNew = res.questions.filter((item) => !existingIds.has(item.id));
+            return [...prev, ...uniqueNew];
+          });
+          setDrafts((prev) => ({
+            ...buildDraftsFromQuestions(res.questions),
+            ...prev,
+          }));
+          setTotalInSet(res.totalInSet);
+          setHasMoreQuestions(res.hasMore);
+        } else {
+          setHasMoreQuestions(false);
+        }
+      } finally {
+        prefetchLockRef.current = false;
+        setPrefetchingMore(false);
+      }
+    },
+    [effectiveOwnerKey]
+  );
+
+  // 사용자가 현재 배치를 보는 동안 자동으로 다음 5문항 백그라운드 프리페치!
+  useEffect(() => {
+    if (!activeSet || loadingQuestions || !hasMoreQuestions || prefetchingMore) return;
+    if (questions.length === 0) return;
+    // 현재 보고 있는 문항이 로드된 끝에서 3문항 이내에 도달하면 즉시 다음 5문항 프리페치
+    if (currentIdx >= questions.length - 3) {
+      void prefetchNextBatch(activeSet.setKey, questions.length, 5);
+    }
+  }, [
+    activeSet,
+    loadingQuestions,
+    hasMoreQuestions,
+    prefetchingMore,
+    questions.length,
+    currentIdx,
+    prefetchNextBatch,
+  ]);
+
   const handleOpenSet = async (setSummary: StudySetSummary) => {
     if (!effectiveOwnerKey) return;
+    activeSetKeyRef.current = setSummary.setKey;
+    prefetchLockRef.current = false;
     setActiveSet(setSummary);
+    setQuestions([]);
+    setTotalInSet(setSummary.questionCount);
+    setHasMoreQuestions(false);
     setLoadingQuestions(true);
     setShowSummary(false);
     setExpandedRepeatOptId(null);
     setShowOriginalQ(false);
 
-    const res = await fetchSolveSetQuestionsAction(effectiveOwnerKey, setSummary.setKey);
+    // 1단계: 최초 5문항만 초고속 로드 (나머지는 보는 동안 백그라운드 자동 프리페치!)
+    const res = await fetchSolveSetQuestionsAction(effectiveOwnerKey, setSummary.setKey, {
+      offset: 0,
+      limit: 5,
+    });
+    if (activeSetKeyRef.current !== setSummary.setKey) return;
     if (res.success) {
       setQuestions(res.questions);
-      const nextDrafts: Record<string, LocalDraftState> = {};
-      let firstUnsolvedIdx = 0;
-      let foundUnsolved = false;
-
-      res.questions.forEach((q, idx) => {
-        const optMarks: Record<string, MarkStatus> = {};
-        for (const o of q.options) {
-          if (o.savedMark) optMarks[o.id] = o.savedMark;
-        }
-        const alreadySolved = q.savedIsCorrect !== null;
-        if (!alreadySolved && !foundUnsolved) {
-          firstUnsolvedIdx = idx;
-          foundUnsolved = true;
-        }
-        nextDrafts[q.id] = {
-          selectedOption: q.savedSelectedOption,
-          subjectiveInput: q.savedSubjectiveInput ?? "",
-          questionMark: q.savedQuestionMark,
-          optionMarks: optMarks,
-          boxMarks: q.savedBoxMarks ?? {},
-          checked: alreadySolved,
-          isCorrect: q.savedIsCorrect,
-        };
-      });
-
+      setTotalInSet(res.totalInSet || setSummary.questionCount);
+      setHasMoreQuestions(res.hasMore);
+      const nextDrafts = buildDraftsFromQuestions(res.questions);
+      const firstUnsolvedIdx = res.questions.findIndex((q) => q.savedIsCorrect === null);
       setDrafts(nextDrafts);
-      setCurrentIdx(firstUnsolvedIdx);
+      setCurrentIdx(firstUnsolvedIdx >= 0 ? firstUnsolvedIdx : 0);
     }
     setLoadingQuestions(false);
   };
@@ -408,6 +522,11 @@ export default function InteractiveSolvePage() {
       const shouldGrade = instantGradeMode ? currentDraft.checked : currentDraft.selectedOption !== null;
       await persistQuestionToDb(currentQ, currentDraft, shouldGrade);
     }
+    // 아직 프리페치되지 않은 뒤쪽 번호로 직접 점프한 경우 필요한 범위까지 즉시 로드
+    if (activeSet && targetIdx >= questions.length && hasMoreQuestions) {
+      const needed = Math.max(5, targetIdx - questions.length + 3);
+      await prefetchNextBatch(activeSet.setKey, questions.length, needed);
+    }
     setExpandedRepeatOptId(null);
     setShowOriginalQ(false);
     setCurrentIdx(targetIdx);
@@ -460,30 +579,24 @@ export default function InteractiveSolvePage() {
               <button
                 type="button"
                 onClick={() => {
+                  activeSetKeyRef.current = null;
                   setActiveSet(null);
                   if (effectiveOwnerKey) refreshCatalog(effectiveOwnerKey);
                 }}
-                className="p-1.5 rounded-lg bg-white/[0.06] text-slate-300 hover:text-white shrink-0"
+                className="p-2 rounded-xl bg-white/[0.06] text-slate-300 hover:text-white shrink-0"
                 aria-label="세트 목록으로"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
-            ) : (
-              <Link
-                href="/study/books"
-                className="px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-[10px] font-black text-slate-300 shrink-0 transition"
-              >
-                ← 학습
-              </Link>
-            )}
+            ) : null}
             <div className="min-w-0">
               <h1 className="text-sm font-black text-white truncate">
-                {activeSet ? activeSet.title : "20제 문제·지문 O/★/X 체크"}
+                {activeSet ? activeSet.title : "연도·회차별 기출 20제"}
               </h1>
-              <p className="text-[10px] text-slate-400 truncate">
+              <p className="text-[11px] text-slate-400 truncate">
                 {activeSet
-                  ? "1문제마다 자동 저장 · 선지별 O/★/X 약점 추적"
-                  : "집에 갈 때 빠른 복습 & 종이책 병행 답안·지문 체크"}
+                  ? "5문항 즉시 로드 · 푸는 동안 다음 문항 백그라운드 자동 준비"
+                  : "연도별 실전 기출 풀이 · 단원별 꼬리물기는 상단 지식맵 탭"}
               </p>
             </div>
           </div>
@@ -497,42 +610,40 @@ export default function InteractiveSolvePage() {
           </Link>
         </div>
 
-        {/* 세트 선택 화면일 때 카테고리 & 과목 필터 */}
+        {/* 세트 선택 화면일 때: 연도별 기출 중심 필터 (+ 단원별 지식맵 바로가기) */}
         {!activeSet && (
           <div className="space-y-2">
-            <div className="grid grid-cols-2 gap-1.5 bg-[#0E0E12] p-1 rounded-xl border border-white/[0.05]">
-              <button
-                type="button"
-                onClick={() => setCatalogCategory("CHAPTER")}
-                className={`py-1.5 rounded-lg text-[11px] font-black transition ${
-                  catalogCategory === "CHAPTER"
-                    ? "bg-[#FF5A36] text-white shadow"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                📚 단원별 20제 묶음
-              </button>
-              <button
-                type="button"
-                onClick={() => setCatalogCategory("ROUND")}
-                className={`py-1.5 rounded-lg text-[11px] font-black transition ${
-                  catalogCategory === "ROUND"
-                    ? "bg-[#FF5A36] text-white shadow"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                🗓️ 연도·회차별 20제
-              </button>
-            </div>
+            {/* 연도 선택 칩 (연도별 기출 핵심 UX) */}
+            {catalogCategory === "ROUND" && availableYears.length > 1 && (
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
+                {availableYears.map((y) => (
+                  <button
+                    key={y}
+                    type="button"
+                    onClick={() => setYearFilter(y)}
+                    className={`shrink-0 min-h-[34px] px-3 rounded-xl text-xs font-black border transition ${
+                      yearFilter === y
+                        ? "bg-[#FF5A36] text-white border-[#FF5A36]"
+                        : "bg-[#0E0E12] text-slate-300 border-white/[0.08] hover:text-white"
+                    }`}
+                  >
+                    {y === "ALL" ? "전체 연도" : `${y}년`}
+                  </button>
+                ))}
+              </div>
+            )}
 
             <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 no-scrollbar">
               {chapterFilter && (
                 <button
                   type="button"
-                  onClick={() => setChapterFilter(null)}
-                  className="shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1"
+                  onClick={() => {
+                    setChapterFilter(null);
+                    setCatalogCategory("ROUND");
+                  }}
+                  className="shrink-0 min-h-[32px] px-2.5 rounded-full text-[11px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1"
                 >
-                  <span>플래너 선택 단원만 보기</span>
+                  <span>선택 단원 기출 보기 중</span>
                   <X className="w-3 h-3" />
                 </button>
               )}
@@ -542,12 +653,13 @@ export default function InteractiveSolvePage() {
                   type="button"
                   onClick={() => {
                     setChapterFilter(null);
+                    setCatalogCategory("ROUND");
                     setSubjectFilter(subj);
                   }}
-                  className={`shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-bold border transition ${
+                  className={`shrink-0 min-h-[32px] px-3 rounded-full text-[11px] font-bold border transition ${
                     subjectFilter === subj && !chapterFilter
                       ? "bg-white text-slate-950 border-white"
-                      : "bg-[#0E0E12] text-slate-400 border-white/[0.06]"
+                      : "bg-[#0E0E12] text-slate-400 border-white/[0.08]"
                   }`}
                 >
                   {subj === "ALL" ? "전체 과목" : subj}
@@ -557,7 +669,7 @@ export default function InteractiveSolvePage() {
           </div>
         )}
 
-        {/* 풀이 중일 때: 즉시 채점/일괄 채점 + 본문 접기 + 1..20 번호 네비 */}
+        {/* 풀이 중일 때: 즉시 채점/일괄 채점 + 본문 접기 + 1..N 점진적 번호 네비 */}
         {activeSet && !loadingQuestions && questions.length > 0 && !showSummary && (
           <div className="space-y-2">
             <div className="flex items-center justify-between gap-1.5">
@@ -565,34 +677,48 @@ export default function InteractiveSolvePage() {
                 <button
                   type="button"
                   onClick={() => setInstantGradeMode((v) => !v)}
-                  className={`px-2 py-1 rounded-lg text-[10px] font-black border transition ${
+                  className={`px-2 py-1 rounded-lg text-[10.5px] font-black border transition ${
                     instantGradeMode
                       ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/35"
                       : "bg-sky-500/15 text-sky-300 border-sky-500/35"
                   }`}
                 >
-                  {instantGradeMode ? "⚡ 1문제 즉시 채점" : "📝 20제 풀고 일괄 채점"}
+                  {instantGradeMode ? "⚡ 즉시 채점" : "📝 일괄 채점"}
                 </button>
                 <button
                   type="button"
                   onClick={() => setCompactQuestionMode((v) => !v)}
-                  className="px-2 py-1 rounded-lg text-[10px] font-bold bg-[#0E0E12] text-slate-300 border border-white/[0.08] flex items-center gap-1"
+                  className="px-2 py-1 rounded-lg text-[10.5px] font-bold bg-[#0E0E12] text-slate-300 border border-white/[0.08] flex items-center gap-1"
                 >
                   {compactQuestionMode ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                  <span>{compactQuestionMode ? "본문 펼치기" : "본문 간략접기"}</span>
+                  <span>{compactQuestionMode ? "본문 펼침" : "본문 접기"}</span>
                 </button>
               </div>
-              <span className="text-[10.5px] font-mono text-[#FF7A59] font-bold">
-                {savingId ? "저장중..." : `${currentIdx + 1}/${questions.length}`}
-              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                {prefetchingMore && (
+                  <span className="text-[10px] font-bold text-sky-300 flex items-center gap-1">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    <span>준비중</span>
+                  </span>
+                )}
+                <span className="text-[11px] font-mono text-[#FF7A59] font-black">
+                  {savingId
+                    ? "저장중..."
+                    : `${currentIdx + 1}/${totalInSet || questions.length}`}
+                </span>
+              </div>
             </div>
 
-            {/* 1~20 미니 번호 스트립 */}
+            {/* 1~20 미니 번호 스트립 (로드 완료 vs 백그라운드 대기 구분 표시) */}
             <div className="flex items-center gap-1 overflow-x-auto pb-0.5 no-scrollbar">
-              {questions.map((q, idx) => {
-                const d = drafts[q.id];
+              {Array.from({ length: Math.max(totalInSet, questions.length) }, (_, idx) => {
+                const q = questions[idx];
+                const d = q ? drafts[q.id] : undefined;
                 const isCurrent = idx === currentIdx;
-                let pillClass = "bg-[#0E0E12] text-slate-400 border-white/[0.06]";
+                const isLoaded = Boolean(q);
+                let pillClass = isLoaded
+                  ? "bg-[#0E0E12] text-slate-300 border-white/[0.08]"
+                  : "bg-[#0B0B10] text-slate-600 border-dashed border-white/[0.08]";
                 if (d?.checked) {
                   pillClass =
                     d.isCorrect === true
@@ -603,9 +729,9 @@ export default function InteractiveSolvePage() {
                 }
                 return (
                   <button
-                    key={q.id}
+                    key={q ? q.id : `pending-${idx}`}
                     type="button"
-                    onClick={() => handleMoveQuestion(idx)}
+                    onClick={() => void handleMoveQuestion(idx)}
                     className={`w-7 h-7 shrink-0 rounded-lg text-[10.5px] font-mono font-black border transition ${pillClass} ${
                       isCurrent ? "ring-2 ring-[#FF5A36] text-white" : ""
                     }`}
@@ -629,7 +755,7 @@ export default function InteractiveSolvePage() {
             </div>
           ) : (
             <div className="space-y-2.5">
-              {filteredSets.map((s) => {
+              {visibleSets.map((s) => {
                 const pct = s.questionCount > 0 ? Math.round((s.solvedCount / s.questionCount) * 100) : 0;
                 return (
                   <button
@@ -641,15 +767,15 @@ export default function InteractiveSolvePage() {
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <BookOpen className="w-4 h-4 text-[#FF7A59] shrink-0" />
-                        <span className="text-xs font-black text-white truncate">{s.title}</span>
+                        <span className="text-sm font-black text-white truncate">{s.title}</span>
                       </div>
-                      <span className="text-[10.5px] font-mono font-black text-amber-300 shrink-0">
+                      <span className="text-xs font-mono font-black text-amber-300 shrink-0">
                         {s.solvedCount}/{s.questionCount}
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-[10.5px] text-slate-400">
-                      <span>{s.subtitle}</span>
-                      <span>{pct}%</span>
+                    <div className="flex items-center justify-between text-xs text-slate-400">
+                      <span className="truncate">{s.subtitle}</span>
+                      <span className="shrink-0">{pct}%</span>
                     </div>
                     <div className="h-1.5 rounded-full bg-[#0E0E12] overflow-hidden">
                       <div
@@ -660,12 +786,30 @@ export default function InteractiveSolvePage() {
                   </button>
                 );
               })}
+
+              {/* 점진적 로딩 센티넬 & 수동 더보기 */}
+              {visibleSets.length < filteredSets.length && (
+                <div ref={setSentinelRef} className="pt-1 pb-2 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setVisibleSetCount((prev) => Math.min(filteredSets.length, prev + 8))
+                    }
+                    className="min-h-[40px] px-4 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-xs font-black text-slate-300 flex items-center gap-1.5 transition"
+                  >
+                    <span>
+                      기출 세트 더 불러오기 ({visibleSets.length}/{filteredSets.length})
+                    </span>
+                    <ChevronDown className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
             </div>
           )
         ) : loadingQuestions ? (
           <div className="my-auto py-14 flex flex-col items-center justify-center gap-2 text-slate-400">
             <Loader2 className="w-6 h-6 animate-spin text-[#FF5A36]" />
-            <p className="text-xs font-bold">20문제 & 지문 이력 불러오는 중...</p>
+            <p className="text-xs font-bold">첫 5문항 빠르게 불러오는 중...</p>
           </div>
         ) : showSummary ? (
           <div className="p-6 rounded-3xl bg-[#1A1A21] border border-white/[0.08] text-center space-y-4 my-auto">
@@ -1325,13 +1469,15 @@ export default function InteractiveSolvePage() {
                   <span>이전 문제</span>
                 </button>
 
-                {currentIdx + 1 < questions.length ? (
+                {currentIdx + 1 < Math.max(totalInSet, questions.length) ? (
                   <button
                     type="button"
-                    onClick={() => handleMoveQuestion(currentIdx + 1)}
+                    onClick={() => void handleMoveQuestion(currentIdx + 1)}
                     className="py-3 rounded-xl bg-white text-slate-950 text-xs font-black flex items-center justify-center gap-1"
                   >
-                    <span>저장 후 다음 ({currentIdx + 2}/{questions.length})</span>
+                    <span>
+                      저장 후 다음 ({currentIdx + 2}/{Math.max(totalInSet, questions.length)})
+                    </span>
                     <ChevronRight className="w-4 h-4" />
                   </button>
                 ) : (

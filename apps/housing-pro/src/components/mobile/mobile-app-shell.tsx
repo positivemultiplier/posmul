@@ -84,16 +84,18 @@ export function MobileAppShell({
   // 경로 기반 + prop 기반 소장Pro 모드 판별
   const isProShell = pathname.startsWith("/pro") || isProMode;
 
-  // 제로베이스 Power J 5탭 활성화: 오늘 · 플래너 · 문제 · 지식맵 · 분석
-  const isTodayTab = pathname === "/" && !isProShell;
+  // 제로베이스 Power J 5탭 활성화: 타이머 · 플래너 · 통계(3번) · 문제(기출+지식맵+OX) · 그룹
+  const isTimerTab = pathname === "/" && !isProShell;
   const isPlannerTab = pathname.startsWith("/study/planner");
+  const isStatsTab = pathname.startsWith("/study/stats");
+  const isGraphRoute = pathname.startsWith("/study/graph");
   const isPracticeTab =
     pathname.startsWith("/study/solve") ||
+    pathname.startsWith("/study/graph") ||
     pathname.startsWith("/study/ox") ||
     pathname.startsWith("/study/books") ||
     pathname.startsWith("/scan");
-  const isGraphTab = pathname.startsWith("/study/graph");
-  const isStatsTab = pathname.startsWith("/study/stats");
+  const isGroupTab = pathname.startsWith("/study/more");
 
   // 소장Pro 바텀 5탭 활성화
   const isProHomeTab = pathname === "/pro";
@@ -117,15 +119,15 @@ export function MobileAppShell({
       if (isProCommunityTab) return "소장Pro · 커뮤니티";
       return "소장Pro · 단지홈";
     }
-    if (isPlannerTab) return "회독 플래너";
-    if (pathname.startsWith("/study/ox")) return "스피드 O/X";
-    if (pathname.startsWith("/study/solve")) return "기출 5지선다";
-    if (pathname.startsWith("/study/books")) return "이론·키워드";
+    if (isPlannerTab) return "플래너";
+    if (isStatsTab) return "통계";
+    if (pathname.startsWith("/study/solve")) return "문제 · 연도별 기출";
+    if (isGraphRoute) return "문제 · 단원별 지식맵";
+    if (pathname.startsWith("/study/ox")) return "문제 · 스피드 O/X";
+    if (pathname.startsWith("/study/books")) return "이론 · 키워드";
     if (pathname.startsWith("/scan")) return "실물 책 스캔";
-    if (isGraphTab) return "2차 지식맵";
-    if (isStatsTab) return "학습 분석";
-    if (pathname.startsWith("/study/more")) return "내 서재 · 마이";
-    return "오늘의 집중";
+    if (isGroupTab) return "그룹스터디 · 마이";
+    return "타이머";
   }, [
     isProShell,
     isProLegalTab,
@@ -133,9 +135,10 @@ export function MobileAppShell({
     isProPredictTab,
     isProCommunityTab,
     isPlannerTab,
-    pathname,
-    isGraphTab,
     isStatsTab,
+    pathname,
+    isGraphRoute,
+    isGroupTab,
   ]);
 
   const showToast = (msg: string) => {
@@ -175,7 +178,7 @@ export function MobileAppShell({
         },
       };
     }
-    if (isGraphTab) {
+    if (isGraphRoute) {
       return {
         label: "1초 키워드 꼬리물기 검색",
         sub: "90개 기출 개념 · 17종 대조표 · 베스트 암기법",
@@ -188,12 +191,12 @@ export function MobileAppShell({
     }
     if (isPracticeTab) {
       return {
-        label: "스피드 O/X 약점 훈련",
-        sub: "5,880선지 기출 O/X로 틈새 3분 복습",
-        icon: Zap,
+        label: "단원별 지식맵 꼬리물기",
+        sub: "단원별 기출 · A vs B 대조표 · 인기 암기법 바로가기",
+        icon: GitCompareArrows,
         onClick: () => {
           setIsFabOpen(false);
-          router.push("/study/ox");
+          router.push("/study/graph");
         },
       };
     }
@@ -213,7 +216,7 @@ export function MobileAppShell({
     };
   }, [
     isPlannerTab,
-    isGraphTab,
+    isGraphRoute,
     isPracticeTab,
     quickTimer.active,
     quickTimer.elapsedSeconds,
@@ -412,15 +415,21 @@ export function MobileAppShell({
               })}
             </div>
           ) : (
-            /* 제로베이스 Power J × Second Brain 5탭: 오늘 · 플래너 · 문제 · 지식맵 · 분석 */
+            /* 제로베이스 Power J × Second Brain 5탭: 타이머 · 플래너 · 통계(3번) · 문제 · 그룹 */
             <div className="grid grid-cols-5 items-center px-1 pt-2 pb-1">
               {[
-                { href: "/", label: "오늘", icon: Clock, active: isTodayTab },
+                { href: "/", label: "타이머", icon: Clock, active: isTimerTab },
                 {
                   href: "/study/planner",
                   label: "플래너",
                   icon: TableProperties,
                   active: isPlannerTab,
+                },
+                {
+                  href: "/study/stats",
+                  label: "통계",
+                  icon: BarChart3,
+                  active: isStatsTab,
                 },
                 {
                   href: "/study/solve",
@@ -429,16 +438,10 @@ export function MobileAppShell({
                   active: isPracticeTab,
                 },
                 {
-                  href: "/study/graph",
-                  label: "지식맵",
-                  icon: GitCompareArrows,
-                  active: isGraphTab,
-                },
-                {
-                  href: "/study/stats",
-                  label: "분석",
-                  icon: BarChart3,
-                  active: isStatsTab,
+                  href: "/study/more?tab=group",
+                  label: "그룹",
+                  icon: Users,
+                  active: isGroupTab,
                 },
               ].map((item) => {
                 const Icon = item.icon;

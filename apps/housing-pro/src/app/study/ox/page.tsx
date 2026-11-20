@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import {
   CheckCircle2,
@@ -151,8 +151,13 @@ export default function OxSwipeStudyPage() {
 
   const [dbCards, setDbCards] = useState<ExamOxCardItem[]>([]);
   const [totalMatchedCount, setTotalMatchedCount] = useState<number>(0);
+  const [hasMoreCards, setHasMoreCards] = useState<boolean>(false);
+  const [nextOffset, setNextOffset] = useState<number>(0);
+  const [prefetchingMore, setPrefetchingMore] = useState<boolean>(false);
   const [isLoadingCards, setIsLoadingCards] = useState<boolean>(true);
   const [usingFallbackMock, setUsingFallbackMock] = useState<boolean>(false);
+  const oxQueryVersionRef = useRef<number>(0);
+  const oxPrefetchLockRef = useRef<boolean>(false);
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answered, setAnswered] = useState<boolean | null>(null);
@@ -238,10 +243,18 @@ export default function OxSwipeStudyPage() {
     });
   }, []);
 
+  const OX_BATCH_SIZE = 12;
+
   const loadDbCards = useCallback(async () => {
+    const version = ++oxQueryVersionRef.current;
+    oxPrefetchLockRef.current = false;
     setIsLoadingCards(true);
+    setHasMoreCards(false);
+    setNextOffset(0);
+
     if (isDbWeakMode) {
       const weakRes = await fetchUserWeakOxCardsAction(effectiveOwnerKey);
+      if (oxQueryVersionRef.current !== version) return;
       if (weakRes.success) {
         setDbCards(weakRes.cards);
         setTotalMatchedCount(weakRes.cards.length);
@@ -252,18 +265,24 @@ export default function OxSwipeStudyPage() {
       return;
     }
 
+    // 초기 12지문만 초고속 로드 (이후 스와이프 중 백그라운드 자동 프리페치!)
     const res = await fetchExamOxCardsAction({
       subject: selectedSubject,
       detailCode: chapterFilter || undefined,
       maxTier: onlyAmended ? 5 : selectedTier,
       onlyRepeated: !chapterFilter && !onlyAmended && (onlyRepeated || selectedTier === 1),
       onlyAmended,
-      limit: 60,
+      offset: 0,
+      limit: OX_BATCH_SIZE,
     });
+
+    if (oxQueryVersionRef.current !== version) return;
 
     if (res.success && res.cards.length > 0) {
       setDbCards(res.cards);
       setTotalMatchedCount(res.totalMatched);
+      setHasMoreCards(res.hasMore);
+      setNextOffset(res.nextOffset);
       setUsingFallbackMock(false);
     } else if (!res.success) {
       // DB 미연결 환경 폴백
@@ -278,6 +297,68 @@ export default function OxSwipeStudyPage() {
     }
     setIsLoadingCards(false);
   }, [selectedSubject, chapterFilter, selectedTier, onlyRepeated, onlyAmended, isDbWeakMode, effectiveOwnerKey]);
+
+  // 백그라운드 다음 12지문 프리페치
+  const prefetchNextOxBatch = useCallback(async () => {
+    if (
+      oxPrefetchLockRef.current ||
+      !hasMoreCards ||
+      isDbWeakMode ||
+      isScanWeakMode ||
+      usingFallbackMock
+    ) {
+      return;
+    }
+    const version = oxQueryVersionRef.current;
+    oxPrefetchLockRef.current = true;
+    setPrefetchingMore(true);
+    try {
+      const res = await fetchExamOxCardsAction({
+        subject: selectedSubject,
+        detailCode: chapterFilter || undefined,
+        maxTier: onlyAmended ? 5 : selectedTier,
+        onlyRepeated: !chapterFilter && !onlyAmended && (onlyRepeated || selectedTier === 1),
+        onlyAmended,
+        offset: nextOffset,
+        limit: OX_BATCH_SIZE,
+      });
+      if (oxQueryVersionRef.current !== version) return;
+      if (res.success && res.cards.length > 0) {
+        setDbCards((prev) => {
+          const seen = new Set(prev.map((c) => c.id));
+          const unique = res.cards.filter((c) => !seen.has(c.id));
+          return [...prev, ...unique];
+        });
+        setTotalMatchedCount(res.totalMatched);
+        setHasMoreCards(res.hasMore);
+        setNextOffset(res.nextOffset);
+      } else {
+        setHasMoreCards(false);
+      }
+    } finally {
+      oxPrefetchLockRef.current = false;
+      setPrefetchingMore(false);
+    }
+  }, [
+    hasMoreCards,
+    isDbWeakMode,
+    isScanWeakMode,
+    usingFallbackMock,
+    selectedSubject,
+    chapterFilter,
+    onlyAmended,
+    selectedTier,
+    onlyRepeated,
+    nextOffset,
+  ]);
+
+  // 스와이프 중 남은 카드가 6장 이하가 되면 백그라운드에서 다음 12지문 자동 프리페치!
+  useEffect(() => {
+    if (isLoadingCards || !hasMoreCards || prefetchingMore || dbCards.length === 0) return;
+    if (currentIndex >= dbCards.length - 6) {
+      void prefetchNextOxBatch();
+    }
+  }, [isLoadingCards, hasMoreCards, prefetchingMore, dbCards.length, currentIndex, prefetchNextOxBatch]);
 
   useEffect(() => {
     if (!isScanWeakMode) {
@@ -437,18 +518,15 @@ export default function OxSwipeStudyPage() {
       <header className="px-4 py-3 bg-[#16161C] border-b border-white/[0.06] space-y-2.5">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0">
-            <Link
-              href="/study/books"
-              className="px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-[10px] font-black text-slate-300 shrink-0 transition"
-            >
-              ← 학습
-            </Link>
             <Zap className="w-4 h-4 text-[#FF5A36] fill-[#FF5A36] shrink-0" />
             <h1 className="text-sm font-black text-white truncate">3초 컷 O/X</h1>
             {!usingFallbackMock && totalMatchedCount > 0 && !isScanWeakMode && (
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-300 font-mono shrink-0">
                 {totalMatchedCount}지문
               </span>
+            )}
+            {prefetchingMore && (
+              <Loader2 className="w-3 h-3 animate-spin text-sky-300 shrink-0" />
             )}
           </div>
 

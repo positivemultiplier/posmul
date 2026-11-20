@@ -112,8 +112,7 @@ export function YptGroupGrid({
     query: "",
   });
 
-  // + 확장 FAB & 그룹 만들기/가입/프로필 위저드
-  const [isFabMenuOpen, setIsFabMenuOpen] = useState(false);
+  // 그룹 만들기/가입/프로필 위저드
   const [wizardState, setWizardState] = useState<{
     open: boolean;
     mode: "create" | "join" | "profile";
@@ -421,32 +420,35 @@ export function YptGroupGrid({
                   <button
                     type="button"
                     onClick={() => goToSlide(currentJoinedIndex - 1)}
-                    className="p-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] text-slate-400 hover:text-white"
+                    className="w-9 h-9 rounded-xl bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 hover:text-white flex items-center justify-center transition"
                     title="이전 스터디방 (좌로 스와이프)"
+                    aria-label="이전 스터디방"
                   >
-                    <ChevronLeft className="w-3.5 h-3.5" />
+                    <ChevronLeft className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
                     onClick={() => goToSlide(currentJoinedIndex + 1)}
-                    className="p-1 rounded-lg bg-white/[0.04] hover:bg-white/[0.1] text-slate-400 hover:text-white"
+                    className="w-9 h-9 rounded-xl bg-white/[0.05] hover:bg-white/[0.12] text-slate-300 hover:text-white flex items-center justify-center transition"
                     title="다음 스터디방 (우로 스와이프)"
+                    aria-label="다음 스터디방"
                   >
-                    <ChevronRight className="w-3.5 h-3.5" />
+                    <ChevronRight className="w-4 h-4" />
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowGroupInfoModal(true)}
-                    className="p-1.5 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300"
+                    className="w-9 h-9 rounded-xl bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 flex items-center justify-center transition"
                     title="그룹 정보 · 설정"
+                    aria-label="그룹 정보 설정"
                   >
                     <MoreHorizontal className="w-4 h-4" />
                   </button>
                 </div>
               </div>
 
-              {/* 4열 책상 타일 그리드 */}
-              <div className="grid grid-cols-4 gap-1.5">
+              {/* 모바일 3열 · 넓은 화면 4열 책상 타일 그리드 (가독성 및 터치 영역 최적화) */}
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {mergedMembers.map((member) => {
                   const isMasked = hideOthers && !member.isMe;
                   const studying = member.isStudying && !isMasked;
@@ -464,12 +466,12 @@ export function YptGroupGrid({
                           });
                         }
                       }}
-                      className={`rounded-xl px-1.5 py-2.5 flex flex-col items-center text-center transition relative ${
+                      className={`rounded-2xl px-2 py-3 flex flex-col items-center text-center transition relative min-w-0 ${
                         member.isMe
                           ? "bg-[#1C1617] border cursor-pointer"
                           : studying
-                            ? "bg-[#18171E] border border-white/[0.06]"
-                            : "bg-[#111116] border border-white/[0.04] opacity-75"
+                            ? "bg-[#18171E] border border-white/[0.07]"
+                            : "bg-[#111116] border border-white/[0.05] opacity-80"
                       }`}
                       style={
                         member.isMe
@@ -488,14 +490,14 @@ export function YptGroupGrid({
                               {member.emoji}
                             </span>
                             <div
-                              className="w-8 h-1 rounded-full mt-1"
+                              className="w-8 h-1 rounded-full mt-1.5"
                               style={{ backgroundColor: accentHex }}
                             />
                           </div>
                         ) : (
-                          <div className="flex flex-col items-center text-slate-600">
+                          <div className="flex flex-col items-center text-slate-500">
                             {member.todaySeconds > 0 && !isMasked ? (
-                              <Clock className="w-3 h-3 text-slate-500 mb-0.5" />
+                              <Clock className="w-3 h-3 text-slate-400 mb-0.5" />
                             ) : null}
                             <LampDesk className="w-6 h-6 stroke-[1.5]" />
                           </div>
@@ -503,20 +505,20 @@ export function YptGroupGrid({
                       </div>
 
                       <div
-                        className={`text-[10px] font-extrabold truncate w-full mt-1 ${
+                        className={`text-[11.5px] font-extrabold truncate w-full mt-1.5 ${
                           member.isMe
                             ? "text-white"
                             : studying
-                              ? "text-[#FF8A6B]"
-                              : "text-slate-400"
+                              ? "text-[#FF9B82]"
+                              : "text-slate-300"
                         }`}
                       >
                         {isMasked ? "열공중" : member.nickname}
                       </div>
 
                       <div
-                        className={`font-mono text-[10px] font-black tracking-tight tabular-nums ${
-                          studying ? "text-[#FF7A59]" : "text-slate-500"
+                        className={`font-mono text-[11px] font-black tracking-tight tabular-nums mt-0.5 ${
+                          studying ? "text-[#FF7A59]" : "text-slate-400"
                         }`}
                         style={studying ? { color: accentHex } : undefined}
                       >
@@ -597,17 +599,17 @@ export function YptGroupGrid({
             </span>
           </div>
 
-          <div className="space-y-2.5 max-h-56 overflow-y-auto pr-0.5">
+          <div className="space-y-2.5 max-h-[52dvh] overflow-y-auto pr-0.5">
             {rankedMembers.slice(0, 7).map((m) => {
               const weekTotal = m.weeklySeconds.reduce((s, v) => s + v, 0);
               const attendedDays = m.weeklySeconds.filter((s) => s > 0).length;
               return (
-                <div key={m.id} className="space-y-1">
-                  <div className="flex items-center justify-between text-[11px] font-black">
-                    <span className={m.isMe ? "text-[#FF8A6B]" : "text-white"}>
+                <div key={m.id} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs font-black gap-2">
+                    <span className={`truncate ${m.isMe ? "text-[#FF8A6B]" : "text-white"}`}>
                       {m.emoji} {hideOthers && !m.isMe ? "수험생" : m.nickname}
                     </span>
-                    <span className="font-mono text-slate-300">
+                    <span className="font-mono text-[11px] text-slate-300 shrink-0">
                       {formatHHMMSS(weekTotal)} · ✓{attendedDays}
                     </span>
                   </div>
@@ -624,7 +626,7 @@ export function YptGroupGrid({
                       return (
                         <div
                           key={day}
-                          className={`py-1.5 rounded-md text-center font-mono text-[9.5px] font-black ${blockClass}`}
+                          className={`py-2 rounded-lg text-center font-mono text-[10px] font-black ${blockClass}`}
                         >
                           {sec > 0 ? formatHMM(sec) : day}
                         </div>
@@ -680,7 +682,7 @@ export function YptGroupGrid({
             </div>
           </div>
 
-          <div className="space-y-2 max-h-56 overflow-y-auto pr-0.5">
+          <div className="space-y-2 max-h-[52dvh] overflow-y-auto pr-0.5">
             {rankedMembers.map((m, idx) => {
               const valSec =
                 rankPeriod === "day"
@@ -731,11 +733,35 @@ export function YptGroupGrid({
         </div>
       )}
 
-      {/* 4. 스터디 그룹 찾기 · 여러 방 가입 · 캠/일반 스터디 개설 (레퍼런스 이미지 5) */}
+      {/* 4. 스터디 그룹 찾기 · 여러 방 가입 · 캠/일반 스터디 개설 (모바일 최적화 — 전역 FAB와 겹침 없음!) */}
       {groupTab === "browse" && (
-        <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-2.5 relative pb-12">
+        <div className="p-3.5 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-3">
+          {/* 상단 새 방 개설 2버튼 바 (일반 / 캠) */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() =>
+                setWizardState({ open: true, mode: "create", studyType: "general" })
+              }
+              className="min-h-[42px] px-3 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-xs font-black flex items-center justify-center gap-1.5 transition active:scale-95"
+            >
+              <Plus className="w-4 h-4 shrink-0" />
+              <span>일반 스터디 개설</span>
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setWizardState({ open: true, mode: "create", studyType: "cam" })
+              }
+              className="min-h-[42px] px-3 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-sky-200 text-xs font-black flex items-center justify-center gap-1.5 transition active:scale-95"
+            >
+              <Camera className="w-4 h-4 shrink-0" />
+              <span>캠 스터디 개설</span>
+            </button>
+          </div>
+
           {/* 상단 정렬 탭 (신규 · 출석률 · 공부량 · 캠 스터디 · 미션인증) */}
-          <div className="flex items-center gap-3 border-b border-white/[0.08] pb-2 overflow-x-auto no-scrollbar text-[11px] font-black">
+          <div className="flex items-center gap-3 border-b border-white/[0.08] pb-2 overflow-x-auto no-scrollbar text-xs font-black">
             {(
               [
                 { id: "newest", label: "신규" },
@@ -749,7 +775,7 @@ export function YptGroupGrid({
                 key={sTab.id}
                 type="button"
                 onClick={() => setBrowseSort(sTab.id)}
-                className={`pb-1 shrink-0 transition border-b-2 ${
+                className={`pb-1.5 shrink-0 transition border-b-2 ${
                   browseSort === sTab.id
                     ? "text-white border-[#FF5A36]"
                     : "text-slate-500 border-transparent hover:text-slate-300"
@@ -760,74 +786,76 @@ export function YptGroupGrid({
             ))}
           </div>
 
-          {/* 체크 필터 + 검색 */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <div className="relative flex-1 min-w-[120px]">
-              <Search className="w-3 h-3 text-slate-500 absolute left-2.5 top-1/2 -translate-y-1/2" />
+          {/* 검색 + 체크 필터 */}
+          <div className="space-y-2">
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={browseFilter.query}
                 onChange={(e) =>
                   setBrowseFilter((prev) => ({ ...prev, query: e.target.value }))
                 }
-                placeholder="스터디 그룹 검색..."
-                className="w-full pl-7 pr-2.5 py-1 rounded-lg bg-[#0D0D12] border border-white/[0.08] text-[10.5px] text-white"
+                placeholder="스터디 그룹 이름 검색..."
+                className="w-full min-h-[40px] pl-9 pr-3 rounded-xl bg-[#0D0D12] border border-white/[0.1] text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#FF5A36]"
               />
             </div>
-            {(
-              [
-                { key: "onlyCert", label: "자격증" },
-                { key: "onlyCam", label: "캠" },
-                { key: "onlyVacant", label: "빈자리" },
-                { key: "onlyPublic", label: "공개" },
-              ] as const
-            ).map((flt) => {
-              const checked = browseFilter[flt.key];
-              return (
-                <button
-                  key={flt.key}
-                  type="button"
-                  onClick={() =>
-                    setBrowseFilter((p) => ({ ...p, [flt.key]: !p[flt.key] }))
-                  }
-                  className={`px-2 py-1 rounded-lg text-[10px] font-bold border flex items-center gap-1 ${
-                    checked
-                      ? "bg-[#FF5A36]/20 border-[#FF5A36] text-[#FF8A6B]"
-                      : "bg-white/[0.04] border-white/[0.08] text-slate-400"
-                  }`}
-                >
-                  {checked && <Check className="w-2.5 h-2.5" />}
-                  <span>{flt.label}</span>
-                </button>
-              );
-            })}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+              {(
+                [
+                  { key: "onlyCert", label: "자격증" },
+                  { key: "onlyCam", label: "캠" },
+                  { key: "onlyVacant", label: "빈자리" },
+                  { key: "onlyPublic", label: "공개방" },
+                ] as const
+              ).map((flt) => {
+                const checked = browseFilter[flt.key];
+                return (
+                  <button
+                    key={flt.key}
+                    type="button"
+                    onClick={() =>
+                      setBrowseFilter((p) => ({ ...p, [flt.key]: !p[flt.key] }))
+                    }
+                    className={`min-h-[34px] px-3 rounded-xl text-xs font-bold border flex items-center gap-1 shrink-0 ${
+                      checked
+                        ? "bg-[#FF5A36]/20 border-[#FF5A36] text-[#FF8A6B]"
+                        : "bg-white/[0.04] border-white/[0.08] text-slate-400"
+                    }`}
+                  >
+                    {checked && <Check className="w-3 h-3" />}
+                    <span>{flt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* 그룹 카드 목록 */}
-          <div className="space-y-2 max-h-56 overflow-y-auto pr-0.5">
+          <div className="space-y-2.5 max-h-[52dvh] overflow-y-auto pr-0.5">
             {browseRooms.map((r) => {
               const isJoined = joinedRoomIds.includes(r.id);
               const isSelected = !isAddSlideActive && r.id === activeRoom?.id;
               return (
                 <div
                   key={r.id}
-                  className={`p-3 rounded-xl border space-y-1.5 ${
+                  className={`p-3.5 rounded-2xl border space-y-2 ${
                     isSelected
                       ? "bg-[#FF5A36]/12 border-[#FF5A36]"
-                      : "bg-[#101016] border-white/[0.07]"
+                      : "bg-[#101016] border-white/[0.08]"
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-[#FF8A6B]">
+                      <div className="flex items-center gap-1.5 text-[11px] font-bold text-[#FF8A6B]">
                         <span>{r.category}</span>
                         {r.studyType === "cam" && <Camera className="w-3 h-3" />}
                         {!r.isPublic && <Lock className="w-3 h-3 text-amber-400" />}
                         {r.joinMethod === "approval" && (
-                          <span className="text-[9px] text-slate-400">· 승인가입</span>
+                          <span className="text-[10px] text-slate-400">· 승인가입</span>
                         )}
                       </div>
-                      <div className="text-xs font-black text-white truncate mt-0.5">
+                      <div className="text-sm font-black text-white truncate mt-0.5">
                         {r.title}
                       </div>
                     </div>
@@ -848,11 +876,11 @@ export function YptGroupGrid({
                           });
                         }
                       }}
-                      className={`px-2.5 py-1 rounded-lg text-[10px] font-black shrink-0 ${
+                      className={`min-h-[36px] px-3 rounded-xl text-xs font-black shrink-0 ${
                         isSelected
                           ? "bg-emerald-500/20 text-emerald-300"
                           : isJoined
-                            ? "bg-white/[0.08] text-white"
+                            ? "bg-white/[0.1] text-white"
                             : "bg-[#FF5A36] hover:bg-[#ff6d4d] text-white"
                       }`}
                     >
@@ -860,100 +888,61 @@ export function YptGroupGrid({
                     </button>
                   </div>
 
-                  <div className="text-[10px] text-slate-400">
-                    목표 {r.goalHours}시간 · 인원 {r.memberCount}/{r.capacity}명 · 그룹장{" "}
-                    {r.leaderName} · 출석 {r.attendancePct}% · {r.createdLabel}
+                  <div className="text-[11px] text-slate-400 leading-relaxed">
+                    목표 {r.goalHours}시간 · 인원 {r.memberCount}/{r.capacity}명 · 출석{" "}
+                    {r.attendancePct}%
                   </div>
-                  <div className="text-[10.5px] text-slate-300 truncate">{r.notice}</div>
+                  <div className="text-xs text-slate-300 truncate">{r.notice}</div>
                 </div>
               );
             })}
-          </div>
-
-          {/* 레퍼런스 5: 우하단 주황 + 플로팅 확장 버튼 (캠 스터디 / 일반 스터디) */}
-          <div className="absolute right-3 bottom-3 z-20 flex flex-col items-end gap-2">
-            {isFabMenuOpen && (
-              <div className="flex flex-col items-end gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsFabMenuOpen(false);
-                    setWizardState({ open: true, mode: "create", studyType: "cam" });
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-white text-slate-950 text-[11px] font-black shadow-xl hover:scale-105 transition"
-                >
-                  <span>캠 스터디</span>
-                  <Camera className="w-4 h-4" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsFabMenuOpen(false);
-                    setWizardState({ open: true, mode: "create", studyType: "general" });
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 rounded-full bg-white text-slate-950 text-[11px] font-black shadow-xl hover:scale-105 transition"
-                >
-                  <span>일반 스터디</span>
-                  <LampDesk className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() => setIsFabMenuOpen((prev) => !prev)}
-              className="w-10 h-10 rounded-full bg-[#FF5A36] hover:bg-[#ff6d4d] text-white shadow-xl flex items-center justify-center transition"
-              title="새 스터디방 만들기"
-            >
-              {isFabMenuOpen ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
-            </button>
           </div>
         </div>
       )}
 
       {/* 5. 그룹 응원 채팅 */}
       {groupTab === "chat" && activeRoom && (
-        <div className="p-3 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-2.5">
-          <div className="flex items-center justify-between text-[11px] font-black text-white">
+        <div className="p-3.5 rounded-2xl bg-[#16161D] border border-white/[0.08] space-y-3">
+          <div className="flex items-center justify-between text-xs font-black text-white gap-2">
             <span className="truncate">{activeRoom.title} · 응원 채팅</span>
             <button
               type="button"
               onClick={handleCopyInvite}
-              className="px-2 py-0.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-[10px] text-sky-300 flex items-center gap-1 shrink-0"
+              className="min-h-[32px] px-2.5 rounded-lg bg-white/[0.08] hover:bg-white/[0.14] text-[11px] text-sky-300 flex items-center gap-1 shrink-0"
             >
-              {copiedInvite ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+              {copiedInvite ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
               <span>{copiedInvite ? "복사됨" : "초대"}</span>
             </button>
           </div>
 
-          <div className="space-y-1.5 max-h-44 overflow-y-auto pr-0.5">
+          <div className="space-y-2 max-h-[46dvh] overflow-y-auto pr-0.5">
             {activeRoom.chats.length === 0 ? (
-              <div className="text-center py-4 text-[11px] text-slate-500">
+              <div className="text-center py-6 text-xs text-slate-500">
                 첫 열공 응원 메시지를 남겨보세요!
               </div>
             ) : (
               activeRoom.chats.map((c) => (
                 <div
                   key={c.id}
-                  className={`p-2 rounded-xl text-[11px] ${
+                  className={`p-2.5 rounded-2xl text-xs ${
                     c.isMe
                       ? "bg-[#FF5A36]/15 border border-[#FF5A36]/30 ml-4"
                       : "bg-[#101016] mr-4"
                   }`}
                 >
-                  <div className="flex items-center justify-between text-[9.5px] text-slate-400">
+                  <div className="flex items-center justify-between text-[10.5px] text-slate-400">
                     <span className="font-bold text-slate-200">
                       {c.emoji} {c.sender}
                     </span>
                     <span>{c.timeLabel}</span>
                   </div>
-                  <div className="text-white mt-0.5">{c.text}</div>
+                  <div className="text-white mt-1 leading-relaxed">{c.text}</div>
                 </div>
               ))
             )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
             <input
               type="text"
               value={chatDraft}
@@ -962,27 +951,28 @@ export function YptGroupGrid({
                 if (e.key === "Enter") handleSendChat();
               }}
               placeholder="동기들에게 한마디 (예: 법규 2회독 끝!)"
-              className="flex-1 min-w-0 px-3 py-1.5 rounded-xl bg-[#0D0D12] border border-white/[0.1] text-xs text-white"
+              className="flex-1 min-w-0 min-h-[42px] px-3.5 rounded-xl bg-[#0D0D12] border border-white/[0.1] text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-[#FF5A36]"
             />
             <button
               type="button"
               onClick={handleSendChat}
-              className="p-2 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white"
+              className="w-11 h-11 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white flex items-center justify-center shrink-0"
+              aria-label="메시지 전송"
             >
-              <Send className="w-3.5 h-3.5" />
+              <Send className="w-4 h-4" />
             </button>
           </div>
         </div>
       )}
 
-      {/* 그룹 하단 5탭 네비게이션 */}
-      <div className="grid grid-cols-5 gap-1 p-1 rounded-2xl bg-[#121218] border border-white/[0.06] text-[10px] font-bold">
+      {/* 그룹 하단 5탭 네비게이션 (모바일 터치 48px + 깔끔한 1줄 라벨) */}
+      <div className="grid grid-cols-5 gap-1 p-1 rounded-2xl bg-[#121218] border border-white/[0.08] text-[11px] font-bold">
         {(
           [
             { id: "home", label: `홈(${joinedRooms.length})`, icon: Home },
             { id: "attendance", label: "출석부", icon: CalendarDays },
             { id: "ranking", label: "랭킹", icon: Trophy },
-            { id: "browse", label: "방찾기·개설", icon: Users },
+            { id: "browse", label: "방찾기", icon: Users },
             { id: "chat", label: "채팅", icon: MessageSquare },
           ] as const
         ).map((tab) => {
@@ -993,12 +983,12 @@ export function YptGroupGrid({
               key={tab.id}
               type="button"
               onClick={() => setGroupTab(tab.id)}
-              className={`py-1.5 rounded-xl flex flex-col items-center gap-0.5 transition ${
-                active ? "bg-white/[0.1] text-white font-black" : "text-slate-400 hover:text-white"
+              className={`min-h-[48px] px-1 rounded-xl flex flex-col items-center justify-center gap-1 transition ${
+                active ? "bg-white/[0.12] text-white font-black" : "text-slate-400 hover:text-white"
               }`}
             >
-              <Icon className="w-3.5 h-3.5" style={active ? { color: accentHex } : undefined} />
-              <span>{tab.label}</span>
+              <Icon className="w-4 h-4 shrink-0" style={active ? { color: accentHex } : undefined} />
+              <span className="truncate max-w-full">{tab.label}</span>
             </button>
           );
         })}

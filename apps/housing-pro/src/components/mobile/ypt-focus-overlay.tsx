@@ -93,8 +93,8 @@ export function YptFocusOverlay({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
-  // 레퍼런스 3 <-> 2 전환: 스터디그룹 타이머(기본) <-> 개인 집중 타이머
-  const [displayMode, setDisplayMode] = useState<"focus" | "group">("group");
+  // 개인 집중 타이머(기본 · 모바일 가독성 최우선) <-> 스터디그룹 열공방 전환
+  const [displayMode, setDisplayMode] = useState<"focus" | "group">("focus");
 
   // 레퍼런스 1: 우상단 ⊞ 플로팅 기능 메뉴 & 하위 도구 모달
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -194,11 +194,11 @@ export function YptFocusOverlay({
     return () => clearInterval(timer);
   }, [isOpen, isPaused, showVerifyModal]);
 
-  // 열릴 때 세션 초기화 (그룹 열공방 타이머를 기본으로 먼저 표시)
+  // 열릴 때 세션 초기화 (모바일 집중 타이머를 기본으로 먼저 표시, 상단 토글로 그룹 열공방 1탭 전환)
   useEffect(() => {
     if (isOpen) {
       startedAtRef.current = Date.now();
-      setDisplayMode("group");
+      setDisplayMode("focus");
       setElapsedSeconds(0);
       setIsPaused(false);
       setIsMenuOpen(false);
@@ -292,81 +292,72 @@ export function YptFocusOverlay({
 
   return (
     <div
-      className={`fixed inset-0 z-50 ${activeTheme.bgClass} text-white flex flex-col justify-between transition-colors duration-300`}
+      className={`fixed inset-0 z-[60] h-[100dvh] w-full ${activeTheme.bgClass} text-white flex flex-col justify-between overflow-hidden pt-safe pb-safe transition-colors duration-300`}
     >
-      {/* 상단 바 (레퍼런스 2 & 3) */}
-      <header className="w-full max-w-[460px] mx-auto px-4 pt-3 pb-2 flex items-center justify-between gap-2 relative z-30">
-        {displayMode === "focus" ? (
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="px-2.5 py-1 rounded-full bg-white/[0.07] border border-white/[0.1] text-[11px] font-black text-slate-200 shrink-0">
-              {dDayLabel}
-            </span>
-            {ambientTrack !== "none" && (
-              <button
-                type="button"
-                onClick={() => setActiveTool("sound")}
-                className="px-2 py-1 rounded-full text-[10px] font-black flex items-center gap-1 border"
-                style={{
-                  borderColor: `${activeTheme.accentHex}66`,
-                  backgroundColor: `${activeTheme.accentHex}22`,
-                  color: activeTheme.accentHex,
-                }}
-              >
-                <Volume2 className="w-3 h-3" />
-                <span>사운드 ON</span>
-              </button>
-            )}
-            {keepScreenOn && (
-              <span className="px-2 py-1 rounded-full bg-amber-500/15 text-amber-300 text-[10px] font-black hidden sm:inline">
-                화면유지
-              </span>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 min-w-0">
-            <span
-              className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: subjectColor }}
-            />
-            <span className="text-xs font-black text-white truncate">
-              {subjectTitle}
-            </span>
-            <span className="font-mono text-xs font-black text-slate-300 tabular-nums shrink-0">
-              {formatColonTime(subjectTotalLive)}
-            </span>
-          </div>
-        )}
+      {/* 모바일 최적화 상단 바 (세그먼트 전환 · 도구 메뉴 · 취소) */}
+      <header className="w-full max-w-[460px] mx-auto px-3.5 pt-2.5 pb-2 flex items-center justify-between gap-2 relative z-30 shrink-0 border-b border-white/[0.06]">
+        {/* 좌측: 집중 타이머 / 그룹 열공방 1탭 전환 세그먼트 */}
+        <div className="inline-flex items-center p-0.5 rounded-xl bg-white/[0.06] border border-white/[0.08] shrink-0">
+          <button
+            type="button"
+            onClick={() => setDisplayMode("focus")}
+            className={`min-h-[36px] px-2.5 rounded-lg text-xs font-black flex items-center gap-1 transition ${
+              displayMode === "focus"
+                ? "bg-[#FF5A36] text-white shadow-sm"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Timer className="w-3.5 h-3.5 shrink-0" />
+            <span>집중</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setDisplayMode("group")}
+            className={`min-h-[36px] px-2.5 rounded-lg text-xs font-black flex items-center gap-1 transition ${
+              displayMode === "group"
+                ? "bg-[#FF5A36] text-white shadow-sm"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <ArrowLeftRight className="w-3.5 h-3.5 shrink-0" />
+            <span>열공방</span>
+          </button>
+        </div>
 
-        {/* 우측 컨트롤: 뷰 전환(⇄) · 기능메뉴(⊞) · 닫기(취소) */}
+        {/* 중앙 상태 뱃지 (D-Day / 사운드) */}
+        <div className="flex items-center gap-1.5 min-w-0 justify-center">
+          <span className="px-2 py-0.5 rounded-full bg-white/[0.07] border border-white/[0.1] text-[11px] font-mono font-black text-slate-200 shrink-0">
+            {dDayLabel}
+          </span>
+          {ambientTrack !== "none" && (
+            <button
+              type="button"
+              onClick={() => setActiveTool("sound")}
+              className="w-8 h-8 rounded-lg flex items-center justify-center border shrink-0"
+              style={{
+                borderColor: `${activeTheme.accentHex}66`,
+                backgroundColor: `${activeTheme.accentHex}22`,
+                color: activeTheme.accentHex,
+              }}
+              aria-label="배경 사운드 설정"
+            >
+              <Volume2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+
+        {/* 우측 컨트롤: 기능메뉴(⊞) · 닫기(취소) */}
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
-            onClick={() =>
-              setDisplayMode((prev) => (prev === "focus" ? "group" : "focus"))
-            }
-            className={`p-2 rounded-xl transition ${
-              displayMode === "group"
-                ? "bg-white/[0.14] text-white"
-                : "text-slate-300 hover:text-white hover:bg-white/[0.08]"
-            }`}
-            title={
-              displayMode === "focus"
-                ? "그룹 열공방 보기로 전환"
-                : "집중 타이머 전체화면으로 전환"
-            }
-          >
-            <ArrowLeftRight className="w-4 h-4" />
-          </button>
-
-          <button
-            type="button"
             onClick={() => setIsMenuOpen((prev) => !prev)}
-            className={`p-2 rounded-xl transition ${
+            className={`w-10 h-10 rounded-xl flex items-center justify-center transition ${
               isMenuOpen
                 ? "bg-[#FF5A36] text-white"
-                : "text-slate-300 hover:text-white hover:bg-white/[0.08]"
+                : "bg-white/[0.06] text-slate-200 hover:text-white hover:bg-white/[0.12]"
             }`}
             title="기능 · 설정 메뉴 열기"
+            aria-label="타이머 도구 메뉴"
           >
             <LayoutGrid className="w-4 h-4" />
           </button>
@@ -374,7 +365,7 @@ export function YptFocusOverlay({
           <button
             type="button"
             onClick={onCancel}
-            className="px-2 py-1.5 rounded-xl text-[11px] font-bold text-slate-400 hover:text-white hover:bg-white/[0.06] transition"
+            className="min-h-[40px] px-2.5 rounded-xl bg-white/[0.05] text-xs font-bold text-slate-300 hover:text-white hover:bg-white/[0.1] transition"
             title="저장하지 않고 닫기"
           >
             취소
@@ -382,15 +373,15 @@ export function YptFocusOverlay({
         </div>
 
         {/* ========================================================== */}
-        {/* 레퍼런스 이미지 1: 우상단 플로팅 기능/부가기능/설정 메뉴 */}
+        {/* 모바일 안전 팝오버: 우상단 기능/부가기능/설정 메뉴          */}
         {/* ========================================================== */}
         {isMenuOpen && (
           <>
             <div
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-40 bg-black/40"
               onClick={() => setIsMenuOpen(false)}
             />
-            <div className="absolute right-3 top-12 z-50 w-[290px] rounded-3xl bg-[#1C1C24]/95 backdrop-blur-xl border border-white/[0.14] p-4 shadow-2xl space-y-3 text-xs">
+            <div className="absolute right-3 top-14 z-50 w-[min(310px,calc(100vw-24px))] max-h-[72dvh] overflow-y-auto rounded-3xl bg-[#1C1C24]/98 backdrop-blur-xl border border-white/[0.14] p-4 shadow-2xl space-y-3 text-xs">
               <div className="grid grid-cols-2 gap-3">
                 {/* 주요기능 컬럼 */}
                 <div className="space-y-1.5">
@@ -597,13 +588,22 @@ export function YptFocusOverlay({
       </header>
 
       {/* ========================================================== */}
-      {/* 본문 1: 단독 전체 집중 화면 (레퍼런스 이미지 2) */}
+      {/* 본문 1: 단독 전체 집중 화면 (모바일 360~460px 최적화)       */}
       {/* ========================================================== */}
       {displayMode === "focus" ? (
-        <main className="flex-1 w-full max-w-[440px] mx-auto px-6 flex flex-col items-center justify-between pb-6">
-          <div className="my-auto w-full flex flex-col items-center text-center space-y-6">
+        <main className="flex-1 w-full max-w-[460px] mx-auto px-4 py-3 flex flex-col justify-between overflow-y-auto">
+          <div className="my-auto w-full flex flex-col items-center text-center space-y-5 py-2">
+            {/* 현재 공부 중인 과목·단원 칩 */}
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.06] border border-white/[0.1] max-w-full">
+              <span
+                className="w-2.5 h-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: subjectColor }}
+              />
+              <span className="text-xs font-black text-white truncate">{subjectTitle}</span>
+            </div>
+
             {/* 상단 메인 숫자 */}
-            <div className="space-y-2">
+            <div className="space-y-2 w-full">
               <div className="text-xs font-bold text-slate-400 flex items-center justify-center gap-1.5">
                 {!isPaused && (
                   <span
@@ -614,34 +614,34 @@ export function YptFocusOverlay({
                 <span>{mainClockLabel}</span>
               </div>
 
-              <div className="font-mono text-5xl sm:text-6xl font-black tracking-tight text-white tabular-nums">
+              <div className="font-mono text-[clamp(2.75rem,13vw,3.85rem)] leading-none font-black tracking-tight text-white tabular-nums">
                 {mainClockText}
               </div>
 
-              {/* 과목 누적 vs 오늘 누적 2열 서브 카운터 (레퍼런스 이미지 2) */}
-              <div className="grid grid-cols-2 gap-6 pt-3 max-w-[300px] mx-auto">
-                <div className="space-y-0.5">
+              {/* 과목 누적 vs 오늘 누적 2열 서브 카운터 */}
+              <div className="grid grid-cols-2 gap-3 pt-3 max-w-[320px] mx-auto">
+                <div className="p-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.06] space-y-0.5 min-w-0">
                   <div className="text-[11px] font-bold text-slate-400 truncate">
-                    {subjectTitle}
+                    과목 누적
                   </div>
-                  <div className="font-mono text-sm font-black text-slate-200 tabular-nums">
+                  <div className="font-mono text-sm font-black text-slate-100 tabular-nums">
                     {formatColonTime(subjectTotalLive)}
                   </div>
                 </div>
-                <div className="space-y-0.5">
-                  <div className="text-[11px] font-bold text-slate-400">오늘</div>
-                  <div className="font-mono text-sm font-black text-slate-200 tabular-nums">
+                <div className="p-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.06] space-y-0.5 min-w-0">
+                  <div className="text-[11px] font-bold text-slate-400">오늘 총합</div>
+                  <div className="font-mono text-sm font-black text-slate-100 tabular-nums">
                     {formatColonTime(todayTotalLive)}
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* 중앙 Housing-Pro 시그니처 스터디콘 캐릭터 + 책상 무대 */}
-            <div className="pt-4 flex flex-col items-center space-y-2.5">
+            {/* 중앙 Housing-Pro 시그니처 스터디콘 캐릭터 */}
+            <div className="pt-1 flex flex-col items-center space-y-2">
               <div className="relative flex flex-col items-center">
                 <div
-                  className={`w-28 h-28 rounded-full flex items-center justify-center text-6xl border-2 transition-all ${
+                  className={`w-24 h-24 sm:w-28 sm:h-28 rounded-full flex items-center justify-center text-5xl sm:text-6xl border-2 transition-all ${
                     isPaused ? "opacity-55 grayscale" : "animate-pulse"
                   }`}
                   style={{
@@ -649,15 +649,14 @@ export function YptFocusOverlay({
                     background: `radial-gradient(circle, ${activeTheme.accentHex}24 0%, transparent 72%)`,
                     boxShadow: isPaused
                       ? "none"
-                      : `0 0 46px ${activeTheme.accentHex}38`,
+                      : `0 0 42px ${activeTheme.accentHex}38`,
                   }}
                 >
                   {coneEmoji}
                 </div>
-                {/* 펼쳐진 교재 & 책상 베이스 장식 */}
-                <div className="mt-1.5 flex items-center gap-1.5 text-[10px] font-black px-3 py-0.5 rounded-full bg-white/[0.06] border border-white/[0.1] text-slate-200">
+                <div className="mt-2 flex items-center gap-1.5 text-[11px] font-black px-3 py-1 rounded-full bg-white/[0.06] border border-white/[0.1] text-slate-200">
                   <Flame
-                    className="w-3 h-3"
+                    className="w-3.5 h-3.5 shrink-0"
                     style={{ color: activeTheme.accentHex }}
                   />
                   <span>
@@ -665,105 +664,120 @@ export function YptFocusOverlay({
                   </span>
                 </div>
               </div>
-              <p className="text-[10.5px] text-slate-500">
+              <p className="text-xs text-slate-400 px-2">
                 종료 시 AI 스캔 또는 3초 O/X로 유효 집중시간이 기록됩니다
               </p>
             </div>
           </div>
 
-          {/* 하단 액션 컨트롤 (레퍼런스 2: 중앙 일시정지 + 좌측 종료/인증 + 우측 수험 퀵도구) */}
-          <div className="w-full flex items-center justify-between gap-3 pt-2">
+          {/* 하단 엄지 존 액션 컨트롤 (최소 46px 터치 타겟) */}
+          <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center gap-3 pt-3 pb-1 shrink-0">
             <button
               type="button"
               onClick={() => setShowVerifyModal(true)}
-              className="px-3.5 py-2.5 rounded-2xl border text-[11px] font-black flex items-center gap-1.5 transition"
+              className="min-h-[48px] px-3 rounded-2xl border text-xs font-black flex items-center justify-center gap-1.5 transition active:scale-95"
               style={{
-                backgroundColor: `${activeTheme.accentHex}20`,
-                borderColor: `${activeTheme.accentHex}66`,
+                backgroundColor: `${activeTheme.accentHex}25`,
+                borderColor: `${activeTheme.accentHex}70`,
                 color: "#FFFFFF",
               }}
             >
-              <Square className="w-3.5 h-3.5 fill-current" />
+              <Square className="w-3.5 h-3.5 fill-current shrink-0" />
               <span>공부 종료</span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsPaused((prev) => !prev)}
-              className="w-14 h-14 rounded-full bg-white text-[#0A0A0D] hover:scale-105 active:scale-95 flex items-center justify-center shadow-xl transition"
+              className="w-16 h-16 rounded-full bg-white text-[#0A0A0D] hover:scale-105 active:scale-95 flex items-center justify-center shadow-2xl transition shrink-0"
               title={isPaused ? "공부 재개" : "잠시 일시정지"}
+              aria-label={isPaused ? "공부 재개" : "일시정지"}
             >
               {isPaused ? (
-                <Play className="w-6 h-6 fill-current ml-0.5" />
+                <Play className="w-7 h-7 fill-current ml-0.5" />
               ) : (
-                <Pause className="w-6 h-6 fill-current" />
+                <Pause className="w-7 h-7 fill-current" />
               )}
             </button>
 
             <button
               type="button"
               onClick={() => setActiveTool("dictionary")}
-              className="px-3.5 py-2.5 rounded-2xl bg-white/[0.07] hover:bg-white/[0.12] border border-white/[0.1] text-[11px] font-black text-slate-200 flex items-center gap-1.5 transition"
+              className="min-h-[48px] px-3 rounded-2xl bg-white/[0.08] hover:bg-white/[0.14] border border-white/[0.12] text-xs font-black text-slate-100 flex items-center justify-center gap-1.5 transition active:scale-95"
             >
-              <BookMarked className="w-3.5 h-3.5 text-amber-300" />
+              <BookMarked className="w-4 h-4 text-amber-300 shrink-0" />
               <span>법령사전</span>
             </button>
           </div>
         </main>
       ) : (
         /* ========================================================== */
-        /* 본문 2: 그룹 열공방 모드 (레퍼런스 이미지 3 ~ 9) */
+        /* 본문 2: 그룹 열공방 모드 (모바일 2단 컴팩트 카드 + 3열 그리드) */
         /* ========================================================== */
-        <main className="flex-1 w-full max-w-[460px] mx-auto px-4 pb-4 overflow-y-auto space-y-3">
-          {/* 상단 현재 집중 미니 카드 (레퍼런스 이미지 3) */}
+        <main className="flex-1 w-full max-w-[460px] mx-auto px-3.5 pt-2.5 pb-4 overflow-y-auto space-y-3">
+          {/* 상단 현재 집중 모바일 2단 카드 (360px에서도 겹침 0px!) */}
           <section
-            className={`p-3.5 rounded-2xl ${activeTheme.cardBgClass} border border-white/[0.08] flex items-center justify-between gap-3`}
+            className={`p-3.5 rounded-2xl ${activeTheme.cardBgClass} border border-white/[0.1] space-y-3`}
           >
-            <div className="space-y-1 min-w-0">
-              <div className="text-[10.5px] font-bold text-slate-400">
-                현재 집중 시간
-              </div>
-              <div className="flex items-center gap-2.5">
-                <span className="font-mono text-3xl font-black text-white tabular-nums tracking-tight">
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex items-center gap-1.5 text-[11px] font-bold text-slate-400">
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: subjectColor }}
+                  />
+                  <span className="truncate">{subjectTitle}</span>
+                </div>
+                <div className="font-mono text-3xl font-black text-white tabular-nums tracking-tight leading-none pt-0.5">
                   {mainClockText}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setIsPaused((prev) => !prev)}
-                  className="w-8 h-8 rounded-full bg-white text-[#0A0A0D] flex items-center justify-center shrink-0 hover:scale-105 transition"
-                  title={isPaused ? "재개" : "일시정지"}
-                >
-                  {isPaused ? (
-                    <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                  ) : (
-                    <Pause className="w-3.5 h-3.5 fill-current" />
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowVerifyModal(true)}
-                  className="px-2.5 py-1 rounded-xl text-[10.5px] font-black text-white shrink-0"
-                  style={{ backgroundColor: activeTheme.accentHex }}
-                >
-                  종료·인증
-                </button>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 bg-white/[0.04] px-2.5 py-1.5 rounded-xl border border-white/[0.08]">
+                <span className="text-2xl leading-none">{coneEmoji}</span>
+                <div className="text-right">
+                  <div className="text-[10px] text-slate-400 font-bold">오늘 총합</div>
+                  <div
+                    className="font-mono text-xs font-black tabular-nums"
+                    style={{ color: activeTheme.accentHex }}
+                  >
+                    {formatColonTime(todayTotalLive)}
+                  </div>
+                </div>
               </div>
             </div>
 
-            <div className="flex flex-col items-center shrink-0">
-              <div className="w-11 h-11 rounded-full bg-white/[0.05] border border-white/[0.12] flex items-center justify-center text-2xl">
-                {coneEmoji}
-              </div>
-              <span
-                className="font-mono text-[10px] font-black mt-0.5 tabular-nums"
-                style={{ color: activeTheme.accentHex }}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setIsPaused((prev) => !prev)}
+                className="min-h-[42px] rounded-xl bg-white text-[#0A0A0D] font-black text-xs flex items-center justify-center gap-1.5 active:scale-95 transition"
               >
-                {formatColonTime(todayTotalLive)}
-              </span>
+                {isPaused ? (
+                  <>
+                    <Play className="w-4 h-4 fill-current" />
+                    <span>공부 재개</span>
+                  </>
+                ) : (
+                  <>
+                    <Pause className="w-4 h-4 fill-current" />
+                    <span>일시정지</span>
+                  </>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowVerifyModal(true)}
+                className="min-h-[42px] rounded-xl text-xs font-black text-white flex items-center justify-center gap-1.5 active:scale-95 transition"
+                style={{ backgroundColor: activeTheme.accentHex }}
+              >
+                <Square className="w-3.5 h-3.5 fill-current" />
+                <span>종료 · 인증</span>
+              </button>
             </div>
           </section>
 
-          {/* 4열 책상 열공 그리드 + 좌우 스와이프 + 출석부 + 랭킹 + 그룹개설/가입 + 채팅 */}
+          {/* 3열(모바일)/4열 책상 열공 그리드 + 좌우 스와이프 + 출석부 + 랭킹 + 그룹개설/가입 + 채팅 */}
           <YptGroupGrid
             myStudySeconds={todayTotalLive}
             myConeEmoji={coneEmoji}
@@ -802,8 +816,8 @@ export function YptFocusOverlay({
 
       {/* 🛡️ 공회전 어뷰징 방지: 유효시간 확정 모달 */}
       {showVerifyModal && (
-        <div className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="w-full max-w-[400px] rounded-2xl bg-[#18181E] border border-[#FF5A36]/40 p-5 space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-[80] bg-black/85 backdrop-blur-md flex items-end sm:items-center justify-center p-3 sm:p-4">
+          <div className="w-full max-w-[420px] max-h-[88dvh] overflow-y-auto rounded-3xl bg-[#18181E] border border-[#FF5A36]/40 p-5 pb-safe space-y-4 shadow-2xl">
             <div className="flex items-start justify-between border-b border-white/[0.08] pb-3">
               <div className="space-y-1">
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#FF5A36]/20 text-[#FF7A59] text-[10px] font-black">

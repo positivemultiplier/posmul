@@ -122,7 +122,7 @@ export function StudyGroupCreateWizard({
 
   return (
     <div className="fixed inset-0 z-[85] bg-black/90 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full max-w-[440px] h-[92vh] sm:h-auto sm:max-h-[88vh] rounded-t-3xl sm:rounded-3xl bg-[#0D0D11] border border-white/[0.12] flex flex-col overflow-hidden text-white shadow-2xl">
+      <div className="w-full max-w-[440px] h-[92dvh] sm:h-auto sm:max-h-[88dvh] rounded-t-3xl sm:rounded-3xl bg-[#0D0D11] border border-white/[0.12] flex flex-col overflow-hidden text-white shadow-2xl pb-safe">
         {/* 상단 헤더 */}
         <div className="px-4 py-3.5 border-b border-white/[0.08] flex items-center justify-between bg-[#14141B]">
           <button
