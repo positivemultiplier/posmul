@@ -2,6 +2,7 @@
  * 주택관리사 공식 법령(「공동주택관리법 시행령」 [별표 7]) + 문항 수 균형 분할
  * 5과목 · 69개 세부 목차 및 DB 1,400문항 1:1 매핑
  */
+import { EXTRA_PRESET_TEXTBOOKS } from "@/data/preset-textbooks-extra";
 
 export interface StudyTopicNode {
   id: string;
@@ -16,6 +17,35 @@ export interface StudyTopicNode {
   estimatedMinutes: number;
   /** 단원별 사용자 지정 컬러 (미지정 시 소속 과목 컬러 사용) */
   color?: string;
+  /** 가변 Depth(최대 4단) 상위 경로 브레드크럼 (예: ["제1편 주택법", "제2장 건설"]) */
+  hierarchyPath?: string[];
+  /** 체크 단위 일괄 압축 시 접혀 보존된 하위 세부 목차 메모 */
+  subItems?: string[];
+  /** 교재 시작 페이지 (Tier 3 정밀 지표) */
+  pageStart?: number;
+  /** 교재 끝 페이지 (Tier 3 정밀 지표) */
+  pageEnd?: number;
+  /** 단원 목표 회독 수 (미지정 시 과목 목표 회독 수 또는 기본 3R) */
+  targetRounds?: number;
+}
+
+/** 단원의 페이지 분량 계산 (시작~끝 페이지가 모두 유효할 때) */
+export function getTopicPageCount(topic: Pick<StudyTopicNode, "pageStart" | "pageEnd">): number {
+  if (
+    typeof topic.pageStart === "number" &&
+    typeof topic.pageEnd === "number" &&
+    topic.pageEnd >= topic.pageStart &&
+    topic.pageStart > 0
+  ) {
+    return topic.pageEnd - topic.pageStart + 1;
+  }
+  return 0;
+}
+
+/** 페이지 수 기반 예상 학습시간(분) 자동 추정 (페이지당 약 2.5분, 15~180분 클램프) */
+export function estimateMinutesFromPages(pageCount: number, fallback = 35): number {
+  if (!pageCount || pageCount <= 0) return fallback;
+  return Math.min(180, Math.max(15, Math.round(pageCount * 2.5)));
 }
 
 export interface StudyUnitNode {
@@ -79,6 +109,8 @@ export interface StudySubjectNode {
   bookBadge?: string;
   isCustom?: boolean;
   isArchived?: boolean;
+  /** 과목 기본 목표 회독 수 (기본 3R, 사용자 1~10R 커스텀 가능) */
+  targetRounds?: number;
 }
 
 export type MatrixCellStatus = "done" | "plan" | "partial";
@@ -178,6 +210,8 @@ export interface TextbookCatalogItem {
   isbn?: string;
   publisher?: string;
   coverImageUrl?: string;
+  /** 검색·카테고리 필터링용 태그 (예: ["주택관리사", "2차", "법규"]) */
+  tags?: string[];
   requiresSerial: boolean;
   defaultExamDate: string; // YYYY-MM-DD
   subjects: StudySubjectNode[];
@@ -1089,6 +1123,7 @@ export const TEXTBOOK_CATALOG: TextbookCatalogItem[] = [
     edition: "2026 제29회 대비 · 기출 1,400제",
     badge: "공식 69목차",
     coverColor: "#FF5A36",
+    tags: ["주택관리사", "1차", "2차", "민법", "회계", "시설개론", "관계법규", "관리실무", "자격증"],
     requiresSerial: false,
     defaultExamDate: "2026-12-12",
     subjects: NUMBERED_ALL_SUBJECTS,
@@ -1103,6 +1138,7 @@ export const TEXTBOOK_CATALOG: TextbookCatalogItem[] = [
     edition: "2차 단기 집중판",
     badge: "2차 30목차",
     coverColor: "#F59E0B",
+    tags: ["주택관리사", "2차", "관계법규", "관리실무", "기출", "자격증"],
     requiresSerial: false,
     defaultExamDate: "2026-12-12",
     subjects: NUMBERED_SECOND_STAGE,
@@ -1117,12 +1153,14 @@ export const TEXTBOOK_CATALOG: TextbookCatalogItem[] = [
     edition: "2026 법령 16단원",
     badge: "법령 16단원",
     coverColor: "#A855F7",
+    tags: ["주택관리사", "2차", "관계법규", "법령", "자격증"],
     requiresSerial: false,
     defaultExamDate: "2026-12-12",
     subjects: [NUMBERED_LAW_SUBJECT],
     seedOffsets: [],
     seedTodos: [],
   },
+  ...EXTRA_PRESET_TEXTBOOKS,
 ];
 
 export function findTopicMetaInSubjects(

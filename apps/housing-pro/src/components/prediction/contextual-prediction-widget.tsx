@@ -25,9 +25,9 @@ interface ContextualPredictionWidgetProps {
 }
 
 export function ContextualPredictionWidget({
-  userPmpBalance = 1000,
+  userPmpBalance = 0,
   onBalanceChange,
-  userId = "user-demo-housing-1",
+  userId,
 }: ContextualPredictionWidgetProps) {
   const [selectedGameId, setSelectedGameId] = useState<string>(
     HOUSING_PREDICTION_GAMES[0].id

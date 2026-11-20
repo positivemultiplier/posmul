@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Camera,
@@ -125,7 +126,7 @@ export default function BookAiScanPage() {
       }
     }
 
-    getUserSerialStatusAction("user-demo-housing-1").then((res) => {
+    void getUserSerialStatusAction().then((res) => {
       if (res.isRegistered) {
         setIsSerialVerified(true);
         if (res.bookTitle) setVerifiedBookTitle(res.bookTitle);
@@ -386,7 +387,6 @@ export default function BookAiScanPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           imageBase64: imageDataUrl,
-          userId: "user-demo-housing-1",
           pageNumber: currentPreset.pageNumber,
           targetQuestionNumbers: currentPreset.questionNumbers,
           clientMarkingSheet,
@@ -525,10 +525,16 @@ export default function BookAiScanPage() {
   return (
     <MobileAppShell>
       {/* 상단 앱 헤더 */}
-      <header className="px-4 py-3 bg-[#16161C] border-b border-white/[0.06] flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Camera className="w-4 h-4 text-[#FF5A36]" />
-          <h1 className="text-sm font-black text-white">AI 카메라 채점 & O·★·X 스캐너</h1>
+      <header className="px-4 py-3 bg-[#16161C] border-b border-white/[0.06] flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <Link
+            href="/study/books"
+            className="px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-[10px] font-black text-slate-300 shrink-0 transition"
+          >
+            ← 학습
+          </Link>
+          <Camera className="w-4 h-4 text-[#FF5A36] shrink-0" />
+          <h1 className="text-sm font-black text-white truncate">AI 종이책 스캐너</h1>
         </div>
 
         {isSerialVerified ? (

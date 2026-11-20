@@ -8,7 +8,8 @@
     "start": "next start --port 3001",
     "lint": "eslint src",
     "type-check": "tsc --noEmit",
-    "parse:exam": "tsx scripts/parse-exam-to-options.ts"
+    "parse:exam": "tsx scripts/parse-exam-to-options.ts",
+    "build:vault": "tsx scripts/build-vault-graph.ts"
   },
   "dependencies": {
     "@next/third-parties": "^16.4.6",

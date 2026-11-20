@@ -35,6 +35,11 @@ import {
   TheoryBottomSheet,
   type TheorySheetTarget,
 } from "@/components/study/theory-bottom-sheet";
+import {
+  ConceptLinkedText,
+  type KnowledgeTrailTarget,
+} from "@/components/study/concept-linked-text";
+import { ConceptTrailDrawer } from "@/components/study/concept-trail-drawer";
 import { REAL_2026_EXAM_OX_CARDS } from "@/data/mock-exam-options";
 import { SerialRegisterModal } from "@/components/auth/serial-register-modal";
 import { getUserSerialStatusAction } from "@/app/actions/serial.actions";
@@ -45,6 +50,7 @@ import {
   fetchLawAmendedQuestionsAction,
   fetchUserWeakOxCardsAction,
   promoteWeakOptionToOAction,
+  recordOxOptionResultAction,
   type ExamOxCardItem,
   type AmendedQuestionPreviewItem,
   type LawStatus,
@@ -136,6 +142,7 @@ export default function OxSwipeStudyPage() {
   const [selectedSubject, setSelectedSubject] = useState<string>("ALL");
   const [chapterFilter, setChapterFilter] = useState<string | null>(null);
   const [onlyRepeated, setOnlyRepeated] = useState<boolean>(false);
+  const [onlyAmended, setOnlyAmended] = useState<boolean>(false);
   const [isScanWeakMode, setIsScanWeakMode] = useState(false);
   const [isDbWeakMode, setIsDbWeakMode] = useState(false);
   const [scannedWeakIds, setScannedWeakIds] = useState<string[]>([]);
@@ -155,6 +162,7 @@ export default function OxSwipeStudyPage() {
   const [showRepeatHistory, setShowRepeatHistory] = useState(false);
   const [showOriginalText, setShowOriginalText] = useState(false);
   const [theoryTarget, setTheoryTarget] = useState<TheorySheetTarget | null>(null);
+  const [knowledgeTarget, setKnowledgeTarget] = useState<KnowledgeTrailTarget | null>(null);
 
   // 스와이프 카드 모션 값 (좌: X, 우: O)
   const dragX = useMotionValue(0);
@@ -188,6 +196,9 @@ export default function OxSwipeStudyPage() {
 
       if (searchParams.get("mode") === "weak") {
         setIsDbWeakMode(true);
+      } else if (searchParams.get("mode") === "amended") {
+        setOnlyAmended(true);
+        setSelectedTier(5);
       }
 
       const cached = localStorage.getItem("housing_pro_serial_auth");
@@ -243,8 +254,9 @@ export default function OxSwipeStudyPage() {
     const res = await fetchExamOxCardsAction({
       subject: selectedSubject,
       detailCode: chapterFilter || undefined,
-      maxTier: selectedTier,
-      onlyRepeated: !chapterFilter && (onlyRepeated || selectedTier === 1),
+      maxTier: onlyAmended ? 5 : selectedTier,
+      onlyRepeated: !chapterFilter && !onlyAmended && (onlyRepeated || selectedTier === 1),
+      onlyAmended,
       limit: 60,
     });
 
@@ -264,7 +276,7 @@ export default function OxSwipeStudyPage() {
       setUsingFallbackMock(false);
     }
     setIsLoadingCards(false);
-  }, [selectedSubject, chapterFilter, selectedTier, onlyRepeated, isDbWeakMode, effectiveOwnerKey]);
+  }, [selectedSubject, chapterFilter, selectedTier, onlyRepeated, onlyAmended, isDbWeakMode, effectiveOwnerKey]);
 
   useEffect(() => {
     if (!isScanWeakMode) {
@@ -338,6 +350,13 @@ export default function OxSwipeStudyPage() {
       }
       if (isDbWeakMode && effectiveOwnerKey && currentCard) {
         void promoteWeakOptionToOAction(effectiveOwnerKey, currentCard.id);
+      } else if (!usingFallbackMock && !isScanWeakMode && effectiveOwnerKey && currentCard) {
+        void recordOxOptionResultAction({
+          clientKey: effectiveOwnerKey,
+          optionId: currentCard.id,
+          questionId: currentCard.questionId,
+          isRight: true,
+        });
       }
       if (isLoggedIn) {
         void grantAppStudyPmpAction({ kind: "OX" }).then((rewardRes) => {
@@ -350,6 +369,14 @@ export default function OxSwipeStudyPage() {
           }
         });
       }
+    } else if (!usingFallbackMock && !isScanWeakMode && effectiveOwnerKey && currentCard) {
+      // 일반 O/X 덱에서 틀린 지문도 자동으로 약점 O/X DB(study_option_logs)에 편입
+      void recordOxOptionResultAction({
+        clientKey: effectiveOwnerKey,
+        optionId: currentCard.id,
+        questionId: currentCard.questionId,
+        isRight: false,
+      });
     }
   };
 
@@ -407,22 +434,47 @@ export default function OxSwipeStudyPage() {
       {/* 상단 앱 헤더 */}
       <header className="px-4 py-3 bg-[#16161C] border-b border-white/[0.06] space-y-2.5">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 text-[#FF5A36] fill-[#FF5A36]" />
-            <h1 className="text-sm font-black text-white">3초 컷 기출 O/X 덱</h1>
+          <div className="flex items-center gap-2 min-w-0">
+            <Link
+              href="/study/books"
+              className="px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-[10px] font-black text-slate-300 shrink-0 transition"
+            >
+              ← 학습
+            </Link>
+            <Zap className="w-4 h-4 text-[#FF5A36] fill-[#FF5A36] shrink-0" />
+            <h1 className="text-sm font-black text-white truncate">3초 컷 O/X</h1>
             {!usingFallbackMock && totalMatchedCount > 0 && !isScanWeakMode && (
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-300 font-mono">
-                DB {totalMatchedCount}지문
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/[0.06] text-slate-300 font-mono shrink-0">
+                {totalMatchedCount}지문
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             {earnedPmpTotal > 0 && (
               <span className="text-[10px] font-black text-amber-300 bg-amber-950/70 px-2 py-0.5 rounded-full border border-amber-500/30 font-mono">
                 +{earnedPmpTotal} PMP
               </span>
             )}
+            <button
+              type="button"
+              onClick={() => {
+                setOnlyAmended((prev) => !prev);
+                setIsScanWeakMode(false);
+                setIsDbWeakMode(false);
+                setCurrentIndex(0);
+                resetCardTransientState();
+              }}
+              className={`text-[10px] font-black px-2 py-0.5 rounded-full border flex items-center gap-1 transition ${
+                onlyAmended
+                  ? "bg-emerald-500 text-slate-950 border-emerald-400"
+                  : "bg-white/[0.06] text-emerald-300 border-emerald-500/35 hover:bg-emerald-500/20"
+              }`}
+              title="2026 최신 개정법령 반영 지문만 모아서 O/X 훈련"
+            >
+              <Sparkles className="w-3 h-3" />
+              <span>개정 O/X{onlyAmended ? " ✕" : ""}</span>
+            </button>
             <button
               type="button"
               onClick={handleOpenAmendedPanel}
@@ -448,9 +500,6 @@ export default function OxSwipeStudyPage() {
                 단원 필터 ✕
               </button>
             )}
-            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-950/70 text-emerald-300 border border-emerald-500/35">
-              교재없이 무료해금
-            </span>
           </div>
         </div>
 
@@ -856,7 +905,14 @@ export default function OxSwipeStudyPage() {
                   </p>
                 )}
                 <p className="text-lg font-extrabold text-white leading-relaxed tracking-tight">
-                  &quot;{currentCard.statement}&quot;
+                  &quot;
+                  <ConceptLinkedText
+                    text={currentCard.statement}
+                    contextText={`${currentCard.questionText || ""} ${currentCard.statement}`}
+                    enabled={answered !== null}
+                    onSelectTarget={setKnowledgeTarget}
+                  />
+                  &quot;
                 </p>
               </div>
 
@@ -1001,6 +1057,10 @@ export default function OxSwipeStudyPage() {
       <TheoryBottomSheet
         target={theoryTarget}
         onClose={() => setTheoryTarget(null)}
+      />
+      <ConceptTrailDrawer
+        initialTarget={knowledgeTarget}
+        onClose={() => setKnowledgeTarget(null)}
       />
     </MobileAppShell>
   );

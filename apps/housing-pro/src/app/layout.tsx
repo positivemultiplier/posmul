@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import { Analytics } from "@vercel/analytics/next";
 import { StudyAuthProvider } from "@/components/auth/study-auth-provider";
+import { StudyCurriculumProvider } from "@/lib/study-curriculum-store";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -23,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body className="min-h-screen bg-[#070709] text-slate-100 antialiased">
-        <StudyAuthProvider>{children}</StudyAuthProvider>
+        <StudyAuthProvider>
+          <StudyCurriculumProvider>{children}</StudyCurriculumProvider>
+        </StudyAuthProvider>
         <Analytics />
         {gaId ? <GoogleAnalytics gaId={gaId} /> : null}
       </body>

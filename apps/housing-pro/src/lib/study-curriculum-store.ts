@@ -1,6 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  createContext,
+  useContext,
+  createElement,
+  type ReactNode,
+} from "react";
 import {
   TEXTBOOK_CATALOG,
   DEFAULT_SUBJECT_CATEGORIES,
@@ -47,6 +57,7 @@ export interface CustomBookSubjectInput {
   examStage?: "1차" | "2차";
   category?: string;
   sourceSubjectId?: string;
+  targetRounds?: number;
   units: Array<{
     title: string;
     sourceUnitId?: string;
@@ -55,6 +66,11 @@ export interface CustomBookSubjectInput {
       defaultKeyword?: string;
       estimatedMinutes?: number;
       sourceTopicId?: string;
+      hierarchyPath?: string[];
+      subItems?: string[];
+      pageStart?: number;
+      pageEnd?: number;
+      targetRounds?: number;
     }>;
   }>;
 }
@@ -107,6 +123,7 @@ function buildStudySubjectsForBook(params: {
       bookTitle,
       bookBadge,
       isCustom: true,
+      ...(typeof subjInput.targetRounds === "number" ? { targetRounds: subjInput.targetRounds } : {}),
       units: units.map((u, uIdx) => ({
         id: u.sourceUnitId || `custom-unit-${seedTimestamp}-${sIdx}-${uIdx}`,
         unitNo: String(uIdx + 1),
@@ -119,6 +136,13 @@ function buildStudySubjectsForBook(params: {
             title: t.title.trim(),
             defaultKeyword: t.defaultKeyword?.trim() || t.title.trim().slice(0, 6),
             estimatedMinutes: t.estimatedMinutes ?? 35,
+            ...(t.hierarchyPath && t.hierarchyPath.length > 0
+              ? { hierarchyPath: t.hierarchyPath }
+              : {}),
+            ...(t.subItems && t.subItems.length > 0 ? { subItems: t.subItems } : {}),
+            ...(typeof t.pageStart === "number" ? { pageStart: t.pageStart } : {}),
+            ...(typeof t.pageEnd === "number" ? { pageEnd: t.pageEnd } : {}),
+            ...(typeof t.targetRounds === "number" ? { targetRounds: t.targetRounds } : {}),
           })),
       })),
     });
@@ -133,6 +157,7 @@ export interface SubjectOverrideItem {
   color?: string;
   examStage?: "1차" | "2차";
   category?: string;
+  targetRounds?: number;
 }
 
 export interface TopicOverrideItem {
@@ -140,6 +165,9 @@ export interface TopicOverrideItem {
   defaultKeyword?: string;
   estimatedMinutes?: number;
   color?: string; // 빈 문자열 전달 시 과목 기본색으로 초기화
+  pageStart?: number | null; // null 전달 시 페이지 초기화
+  pageEnd?: number | null;
+  targetRounds?: number | null;
 }
 
 export interface CurriculumPersistedState {
@@ -427,9 +455,9 @@ function resolveBookIdForCell(
 }
 
 /**
- * 교재 선택 -> 목차 자동 주입 -> 플래너 매트릭스 · 타이머 · 통계 · 할일 · 달력을 하나로 동기화하는 훅
+ * 교재 선택 -> 목차 자동 주입 -> 플래너 매트릭스 · 타이머 · 통계 · 할일 · 달력을 하나로 동기화하는 내부 훅
  */
-export function useStudyCurriculum() {
+function useStudyCurriculumInternal() {
   const { isLoggedIn, effectiveOwnerKey, profile } = useStudyAuth();
   const initialTodayISO = useMemo(() => computeLogicalTodayISO(4), []);
   const [state, setState] = useState<CurriculumPersistedState>(() =>
@@ -445,6 +473,11 @@ export function useStudyCurriculum() {
   );
   const isSelfPersistingRef = useRef<boolean>(false);
   const hasMergedRemoteRef = useRef<string | null>(null);
+  const pendingSideEffectRef = useRef<{
+    persistLocal: boolean;
+    syncRemote: boolean;
+    addedFocusSeconds: number;
+  }>({ persistLocal: false, syncRemote: false, addedFocusSeconds: 0 });
 
   const dayResetHour = state.dayResetHour ?? 4;
   const todayISO = useMemo(
@@ -573,31 +606,51 @@ export function useStudyCurriculum() {
           ? { ...remote.customTopicsByBook, ...prev.customTopicsByBook }
           : prev.customTopicsByBook,
       };
-      isSelfPersistingRef.current = true;
-      persistState(next, instanceIdRef.current);
+      pendingSideEffectRef.current.persistLocal = true;
       return next;
     });
   }, [isHydrated, isLoggedIn, profile.userId, profile.examDate, profile.plannerState]);
+
+  // 3. React 커밋 이후(비-렌더 페이즈) 안전하게 localStorage 저장 및 DB Server Action 동기화
+  useEffect(() => {
+    const pending = pendingSideEffectRef.current;
+    if (!pending.persistLocal && !pending.syncRemote) return;
+
+    const shouldPersist = pending.persistLocal;
+    const shouldSyncRemote = pending.syncRemote;
+    const focusSecToSync = pending.addedFocusSeconds;
+    pendingSideEffectRef.current = {
+      persistLocal: false,
+      syncRemote: false,
+      addedFocusSeconds: 0,
+    };
+
+    if (shouldPersist) {
+      isSelfPersistingRef.current = true;
+      persistState(state, instanceIdRef.current);
+    }
+
+    if (shouldSyncRemote && isLoggedIn) {
+      void syncPlannerStateToDbAction({
+        examDate: state.examDate,
+        activeTrack: "app_only_69",
+        addedFocusSeconds: focusSecToSync,
+        plannerState: state as unknown as Record<string, unknown>,
+      });
+    }
+  }, [state, isLoggedIn]);
 
   const updateState = useCallback(
     (
       updater: (prev: CurriculumPersistedState) => CurriculumPersistedState,
       addedFocusSeconds = 0
     ) => {
-      setState((prev) => {
-        const next = updater(prev);
-        isSelfPersistingRef.current = true;
-        persistState(next, instanceIdRef.current);
-        if (isLoggedIn) {
-          void syncPlannerStateToDbAction({
-            examDate: next.examDate,
-            activeTrack: "app_only_69",
-            addedFocusSeconds,
-            plannerState: next as unknown as Record<string, unknown>,
-          });
-        }
-        return next;
-      });
+      pendingSideEffectRef.current.persistLocal = true;
+      if (isLoggedIn) {
+        pendingSideEffectRef.current.syncRemote = true;
+        pendingSideEffectRef.current.addedFocusSeconds += addedFocusSeconds;
+      }
+      setState((prev) => updater(prev));
     },
     [isLoggedIn]
   );
@@ -729,6 +782,7 @@ export function useStudyCurriculum() {
         color: ov?.color ?? subject.color,
         examStage: resolvedStage,
         category: ov?.category ?? subject.category ?? defaultCategory,
+        targetRounds: ov?.targetRounds ?? subject.targetRounds ?? 3,
         isArchived: archivedSet.has(subject.id),
         units: subject.units.map((unit) => {
           const extra = mergedUnitTopics[unit.id] || [];
@@ -739,7 +793,20 @@ export function useStudyCurriculum() {
               .filter((t) => !hiddenTopicSet.has(t.id))
               .map((t) => {
                 const tOv = topicOvMap[t.id];
-                const existingColor = "color" in t ? t.color : undefined;
+                const existingColor =
+                  "color" in t && typeof t.color === "string" ? t.color : undefined;
+                const existingPageStart =
+                  "pageStart" in t && typeof t.pageStart === "number"
+                    ? t.pageStart
+                    : undefined;
+                const existingPageEnd =
+                  "pageEnd" in t && typeof t.pageEnd === "number"
+                    ? t.pageEnd
+                    : undefined;
+                const existingTargetRounds =
+                  "targetRounds" in t && typeof t.targetRounds === "number"
+                    ? t.targetRounds
+                    : undefined;
                 if (!tOv) return t;
                 return {
                   ...t,
@@ -747,6 +814,24 @@ export function useStudyCurriculum() {
                   defaultKeyword: tOv.defaultKeyword ?? t.defaultKeyword,
                   estimatedMinutes: tOv.estimatedMinutes ?? t.estimatedMinutes,
                   color: tOv.color === "" ? undefined : tOv.color ?? existingColor,
+                  pageStart:
+                    tOv.pageStart === null
+                      ? undefined
+                      : typeof tOv.pageStart === "number"
+                        ? tOv.pageStart
+                        : existingPageStart,
+                  pageEnd:
+                    tOv.pageEnd === null
+                      ? undefined
+                      : typeof tOv.pageEnd === "number"
+                        ? tOv.pageEnd
+                        : existingPageEnd,
+                  targetRounds:
+                    tOv.targetRounds === null
+                      ? undefined
+                      : typeof tOv.targetRounds === "number"
+                        ? tOv.targetRounds
+                        : existingTargetRounds,
                 };
               }),
           };
@@ -1163,6 +1248,7 @@ export function useStudyCurriculum() {
             color: patch.color || subj.color,
             examStage: patch.examStage || subj.examStage,
             category: patch.category?.trim() || subj.category,
+            targetRounds: patch.targetRounds ?? subj.targetRounds,
           };
         });
         const prevOv = prev.subjectOverrides?.[subjectId] || {};
@@ -1234,6 +1320,24 @@ export function useStudyCurriculum() {
                       ? undefined
                       : patch.color
                     : t.color,
+                pageStart:
+                  patch.pageStart === null
+                    ? undefined
+                    : typeof patch.pageStart === "number"
+                      ? patch.pageStart
+                      : t.pageStart,
+                pageEnd:
+                  patch.pageEnd === null
+                    ? undefined
+                    : typeof patch.pageEnd === "number"
+                      ? patch.pageEnd
+                      : t.pageEnd,
+                targetRounds:
+                  patch.targetRounds === null
+                    ? undefined
+                    : typeof patch.targetRounds === "number"
+                      ? patch.targetRounds
+                      : t.targetRounds,
               };
             }),
           })),
@@ -2054,4 +2158,28 @@ export function useStudyCurriculum() {
     addTodo,
     deleteTodo,
   };
+}
+
+export type StudyCurriculumContextValue = ReturnType<typeof useStudyCurriculumInternal>;
+
+const StudyCurriculumContext = createContext<StudyCurriculumContextValue | null>(null);
+
+/**
+ * 앱 전역에서 커리큘럼·매트릭스·시간표·할일 상태를 단일 인스턴스로 공유하는 Provider
+ * (탭 이동 시 중복 localStorage 파싱 및 DB 재조회 방지)
+ */
+export function StudyCurriculumProvider({ children }: { children: ReactNode }) {
+  const value = useStudyCurriculumInternal();
+  return createElement(StudyCurriculumContext.Provider, { value }, children);
+}
+
+/**
+ * 교재 선택 -> 목차 자동 주입 -> 플래너 매트릭스 · 타이머 · 통계 · 할일 · 달력을 하나로 동기화하는 훅
+ */
+export function useStudyCurriculum(): StudyCurriculumContextValue {
+  const ctx = useContext(StudyCurriculumContext);
+  if (!ctx) {
+    throw new Error("useStudyCurriculum은 StudyCurriculumProvider 내부에서 사용해야 합니다.");
+  }
+  return ctx;
 }

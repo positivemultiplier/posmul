@@ -25,7 +25,7 @@ export function SerialRegisterModal({
   isOpen,
   onClose,
   onSuccess,
-  userId = "user-demo-housing-1",
+  userId,
 }: SerialRegisterModalProps) {
   const [serialInput, setSerialInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);

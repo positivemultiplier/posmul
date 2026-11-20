@@ -1,49 +1,32 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   AlertTriangle,
-  ArrowRight,
   BookCheck,
   BookOpen,
-  Calendar,
   Camera,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
-  KeyRound,
   Lightbulb,
   ListChecks,
   Loader2,
   Play,
-  Plus,
   Search,
   Sparkles,
-  X,
   Zap,
-  Check,
-  Trash2,
-  Archive,
-  ArchiveRestore,
-  Palette,
-  GripVertical,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
-import { SerialRegisterModal } from "@/components/auth/serial-register-modal";
-import { getUserSerialStatusAction } from "@/app/actions/serial.actions";
 import {
   TheoryBottomSheet,
   type TheorySheetTarget,
 } from "@/components/study/theory-bottom-sheet";
 import {
-  CurriculumAddModal,
-  type CurriculumAddStep,
-} from "@/components/study/curriculum-add-modal";
-import {
   fetchChapterStudyPacketAction,
+  recordOxOptionResultAction,
   searchStudyOptionsByKeywordsAction,
   type ChapterStudyPacketResult,
   type KeywordMatchedOption,
@@ -55,7 +38,7 @@ import {
   type StudyTopicNode,
 } from "@/data/study-textbooks";
 
-type CenterTab = "smart" | "concept" | "settings";
+type CenterTab = "smart" | "concept";
 
 const QUICK_TRAINING_KEYWORDS = [
   "장기수선충당금",
@@ -70,25 +53,8 @@ const QUICK_TRAINING_KEYWORDS = [
 export default function AppStandaloneStudyCenterPage() {
   const {
     todayISO,
-    activeBook,
-    activeBooks,
-    activeBookIds,
-    catalog,
     subjects,
-    archivedSubjects,
-    categories,
-    examDate,
-    setExamDate,
     matrixLogs,
-    toggleBookActive,
-    addCustomBook,
-    replaceCustomBookStructure,
-    deleteCustomBook,
-    addCustomSubject,
-    updateSubjectCustomization,
-    archiveSubject,
-    restoreSubject,
-    addCustomTopicsBulk,
     chapterTotals,
   } = useStudyCurriculum();
   const { isLoggedIn, effectiveOwnerKey, adjustLocalPmpBalance, setLocalPmpBalance } =
@@ -116,38 +82,6 @@ export default function AppStandaloneStudyCenterPage() {
   const [chapterPacket, setChapterPacket] = useState<ChapterStudyPacketResult | null>(null);
   const [miniOxAnswers, setMiniOxAnswers] = useState<Record<string, boolean>>({});
   const [theoryTarget, setTheoryTarget] = useState<TheorySheetTarget | null>(null);
-
-  // 기존 교재 설정/시리얼/커스텀 과목 보조 상태
-  const [previewBookId, setPreviewBookId] = useState<string | null>(activeBook.id);
-  const [addModalState, setAddModalState] = useState<{
-    open: boolean;
-    step: CurriculumAddStep;
-    bookId?: string;
-    subjectId?: string;
-  }>({ open: false, step: "book" });
-  const [toastMsg, setToastMsg] = useState<string | null>(null);
-  const [isSerialVerified, setIsSerialVerified] = useState(false);
-  const [isSerialModalOpen, setIsSerialModalOpen] = useState(false);
-
-  const openAddModal = (step: CurriculumAddStep, bookId?: string, subjectId?: string) => {
-    setAddModalState({
-      open: true,
-      step,
-      bookId: bookId || activeBooks[0]?.id || catalog[0]?.id,
-      subjectId,
-    });
-  };
-
-  useEffect(() => {
-    void getUserSerialStatusAction().then((res) => {
-      if (res.isRegistered) setIsSerialVerified(true);
-    });
-  }, []);
-
-  const showToast = (msg: string) => {
-    setToastMsg(msg);
-    globalThis.setTimeout(() => setToastMsg(null), 3500);
-  };
 
   // 오늘 플래너에 계획/실행 기록이 있는 내 책·커스텀 단원 목록
   const todayPlannedTopics = useMemo(() => {
@@ -189,12 +123,22 @@ export default function AppStandaloneStudyCenterPage() {
 
   const handleSmartOxSelect = async (
     optId: string,
+    questionId: string | undefined,
     selectedTrue: boolean,
     actualTrue: boolean
   ) => {
     if (smartOxAnswers[optId] !== undefined) return;
+    const isRight = selectedTrue === actualTrue;
     setSmartOxAnswers((prev) => ({ ...prev, [optId]: selectedTrue }));
-    if (selectedTrue === actualTrue && isLoggedIn) {
+    if (questionId && effectiveOwnerKey) {
+      void recordOxOptionResultAction({
+        clientKey: effectiveOwnerKey,
+        optionId: optId,
+        questionId,
+        isRight,
+      });
+    }
+    if (isRight && isLoggedIn) {
       const rewardRes = await grantAppStudyPmpAction({ kind: "OX" });
       if (rewardRes.success && rewardRes.authenticated) {
         if (typeof rewardRes.newBalance === "number") {
@@ -233,13 +177,23 @@ export default function AppStandaloneStudyCenterPage() {
 
   const handleMiniOxSelect = async (
     optId: string,
+    questionId: string | undefined,
     selectedTrue: boolean,
     actualTrue: boolean
   ) => {
     if (miniOxAnswers[optId] !== undefined) return;
+    const isRight = selectedTrue === actualTrue;
     setMiniOxAnswers((prev) => ({ ...prev, [optId]: selectedTrue }));
+    if (questionId && effectiveOwnerKey) {
+      void recordOxOptionResultAction({
+        clientKey: effectiveOwnerKey,
+        optionId: optId,
+        questionId,
+        isRight,
+      });
+    }
 
-    if (selectedTrue === actualTrue && isLoggedIn) {
+    if (isRight && isLoggedIn) {
       const rewardRes = await grantAppStudyPmpAction({ kind: "OX" });
       if (rewardRes.success && rewardRes.authenticated) {
         if (typeof rewardRes.newBalance === "number") {
@@ -278,85 +232,78 @@ export default function AppStandaloneStudyCenterPage() {
     [selectedTopic]
   );
 
-  const handleToggleBook = (bookId: string, title: string) => {
-    const isCurrentlyActive = activeBookIds.includes(bookId);
-    toggleBookActive(bookId);
-    setPreviewBookId(bookId);
-    showToast(
-      isCurrentlyActive
-        ? `「${title}」을(를) 서재로 뺐습니다 (기록·단원 보존됨).`
-        : `「${title}」이(가) 다중 교재에 추가 적용되었습니다!`
-    );
-  };
-
   return (
     <MobileAppShell>
-      {/* 헤더 */}
+      {/* 헤더: 학습 허브 (교재 설정은 마이 > 내 서재로 단일화) */}
       <header className="px-4 py-3 bg-[#16161C] border-b border-white/[0.06] flex items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-[#FF5A36]" />
-          <h1 className="text-sm font-black text-white">기출 매칭 · 암기 훈련실</h1>
+          <h1 className="text-sm font-black text-white">학습 센터 · 기출 · O/X · 개념</h1>
         </div>
         <Link
-          href="/study/planner"
-          className="px-2.5 py-1 rounded-full bg-[#FF5A36]/15 text-[#FF8A6B] border border-[#FF5A36]/35 text-[10px] font-black"
+          href="/study/more?tab=library"
+          className="px-2.5 py-1 rounded-full bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 border border-white/[0.1] text-[10px] font-black transition"
         >
-          내 책·일정 관리 →
+          내 서재 관리 →
         </Link>
       </header>
 
-      {/* 3대 탭 스위처 */}
+      {/* 2대 핵심 탭 스위처 (오늘 매칭·실전훈련 | 69단원 개념·이론서) */}
       <div className="px-4 pt-3">
-        <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-[#0D0D11] border border-white/[0.08] text-[10.5px] font-black">
+        <div className="grid grid-cols-2 gap-1 p-1 rounded-xl bg-[#0D0D11] border border-white/[0.08] text-[11px] font-black">
           <button
             type="button"
             onClick={() => setCenterTab("smart")}
-            className={`py-2 px-1 rounded-lg transition flex items-center justify-center gap-1 ${
+            className={`py-2 px-2 rounded-lg transition flex items-center justify-center gap-1.5 ${
               centerTab === "smart"
                 ? "bg-[#FF5A36] text-white shadow"
                 : "text-slate-400 hover:text-white"
             }`}
           >
             <Zap className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">오늘 매칭·훈련</span>
+            <span className="truncate">실전 훈련 · 키워드 매칭</span>
           </button>
           <button
             type="button"
             onClick={() => setCenterTab("concept")}
-            className={`py-2 px-1 rounded-lg transition flex items-center justify-center gap-1 ${
+            className={`py-2 px-2 rounded-lg transition flex items-center justify-center gap-1.5 ${
               centerTab === "concept"
                 ? "bg-[#FF5A36] text-white shadow"
                 : "text-slate-400 hover:text-white"
             }`}
           >
             <Lightbulb className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">목차별 학습</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setCenterTab("settings")}
-            className={`py-2 px-1 rounded-lg transition flex items-center justify-center gap-1 ${
-              centerTab === "settings"
-                ? "bg-[#FF5A36] text-white shadow"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <Calendar className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">교재·시험일</span>
+            <span className="truncate">69단원 개념 · 이론서</span>
           </button>
         </div>
       </div>
 
-      {toastMsg && (
-        <div className="mx-4 mt-3 p-3 rounded-xl bg-emerald-950/90 border border-emerald-500/40 text-emerald-200 text-xs font-bold flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-          <span>{toastMsg}</span>
-        </div>
-      )}
-
       {centerTab === "smart" ? (
         /* ① 커스텀 단원 키워드 기출 매칭 & 시험 4대 실전 훈련실 */
         <div className="px-4 py-4 space-y-4">
+          {/* NEW: 꼬리물기 기출 지식 그래프 & 집단지성 암기 위키 진입 배너 */}
+          <Link
+            href="/study/graph"
+            className="p-3.5 rounded-2xl bg-gradient-to-r from-[#1A2034] via-[#1B1829] to-[#241819] border border-sky-400/45 hover:border-[#FF5A36] flex items-center justify-between gap-3 shadow-lg transition"
+          >
+            <div className="min-w-0 space-y-0.5">
+              <div className="flex items-center gap-1.5">
+                <span className="px-1.5 py-0.2 rounded bg-[#FF5A36] text-white text-[9px] font-black">
+                  NEW
+                </span>
+                <span className="text-xs font-black text-white truncate">
+                  꼬리물기 지식 그래프 · 인기 암기법 위키
+                </span>
+              </div>
+              <p className="text-[10.5px] text-slate-300 truncate">
+                지문 속 단어·대조어 클릭 → 연관 개념 · 출제 통계 · 두문자 암기법 투표
+              </p>
+            </div>
+            <span className="px-2.5 py-1 rounded-xl bg-sky-500/20 border border-sky-400/40 text-sky-200 text-[10px] font-black shrink-0">
+              체험 →
+            </span>
+          </Link>
+
           {/* 실전 훈련 4종 바로가기 */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <Link
@@ -548,7 +495,12 @@ export default function AppStandaloneStudyCenterPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                void handleSmartOxSelect(opt.id, true, opt.isCorrect)
+                                void handleSmartOxSelect(
+                                  opt.id,
+                                  opt.questionId,
+                                  true,
+                                  opt.isCorrect
+                                )
                               }
                               className="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/30 border border-emerald-500/35 text-emerald-300 text-[11px] font-black"
                             >
@@ -557,7 +509,12 @@ export default function AppStandaloneStudyCenterPage() {
                             <button
                               type="button"
                               onClick={() =>
-                                void handleSmartOxSelect(opt.id, false, opt.isCorrect)
+                                void handleSmartOxSelect(
+                                  opt.id,
+                                  opt.questionId,
+                                  false,
+                                  opt.isCorrect
+                                )
                               }
                               className="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/35 text-rose-300 text-[11px] font-black"
                             >
@@ -601,7 +558,7 @@ export default function AppStandaloneStudyCenterPage() {
             </section>
           ) : null}
         </div>
-      ) : centerTab === "concept" ? (
+      ) : (
         <div className="px-4 py-4 space-y-4">
           {/* 상단 안내 카드 */}
           <section className="p-4 rounded-2xl bg-gradient-to-br from-[#23191A] to-[#15151B] border border-[#FF5A36]/40 space-y-2">
@@ -892,6 +849,7 @@ export default function AppStandaloneStudyCenterPage() {
                                                         onClick={() =>
                                                           void handleMiniOxSelect(
                                                             opt.id,
+                                                            opt.questionId,
                                                             true,
                                                             opt.isCorrect
                                                           )
@@ -905,6 +863,7 @@ export default function AppStandaloneStudyCenterPage() {
                                                         onClick={() =>
                                                           void handleMiniOxSelect(
                                                             opt.id,
+                                                            opt.questionId,
                                                             false,
                                                             opt.isCorrect
                                                           )
@@ -1016,434 +975,7 @@ export default function AppStandaloneStudyCenterPage() {
             ))}
           </div>
         </div>
-      ) : (
-        /* ② 시험일 · 교재 연동 설정(선택 사항) */
-        <div className="px-4 py-4 space-y-5">
-          <section className="p-4 rounded-2xl bg-gradient-to-br from-[#1E1B24] to-[#15151B] border border-[#FF5A36]/40 space-y-3 shadow-lg">
-            <div className="flex items-center justify-between gap-2">
-              <span className="px-2 py-0.5 rounded-full bg-[#FF5A36]/20 text-[#FF7A59] text-[10px] font-black">
-                현재 커리큘럼 &amp; D-Day
-              </span>
-              <Link
-                href="/study/planner"
-                className="text-[11px] font-black text-[#FF7A59] flex items-center gap-1 hover:underline"
-              >
-                <span>플래너 매트릭스 열기</span>
-                <ArrowRight className="w-3 h-3" />
-              </Link>
-            </div>
-            <div>
-              <h2 className="text-sm font-black text-white">
-                {activeBooks.map((b) => b.badge).join(" + ")} ({activeBooks.length}권 동시 적용중)
-              </h2>
-              <p className="text-[11px] text-slate-400 mt-0.5">
-                대표 교재: {activeBook.title}
-              </p>
-            </div>
-            <div className="pt-2 border-t border-white/[0.08] flex items-center justify-between gap-2">
-              <label className="text-[11px] font-bold text-slate-300 flex items-center gap-1.5">
-                <Calendar className="w-3.5 h-3.5 text-[#FF5A36]" />
-                <span>목표 시험일 (로그인 시 DB 동기화)</span>
-              </label>
-              <input
-                type="date"
-                value={examDate}
-                onChange={(e) => setExamDate(e.target.value)}
-                className="px-2.5 py-1 rounded-lg bg-[#0E0E12] border border-white/[0.12] text-[11px] font-mono font-bold text-white"
-              />
-            </div>
-          </section>
-
-          <section className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.08] flex items-center justify-between gap-2">
-            <div>
-              <div className="text-xs font-black text-white flex items-center gap-1.5">
-                <KeyRound className="w-3.5 h-3.5 text-amber-400" />
-                <span>종이 교재 정품 시리얼 (선택 사항)</span>
-              </div>
-              <p className="text-[10.5px] text-slate-400 mt-0.5">
-                시리얼이 없어도 앱 내 개념·O/X·1,400제 모두 100% 학습 가능합니다.
-              </p>
-            </div>
-            {isSerialVerified ? (
-              <span className="px-2.5 py-1 rounded-full bg-amber-950/80 text-amber-300 border border-amber-500/30 text-[10px] font-black shrink-0 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                인증됨
-              </span>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setIsSerialModalOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-white/[0.08] hover:bg-white/[0.14] text-amber-300 text-[10.5px] font-black shrink-0"
-              >
-                시리얼 등록
-              </button>
-            )}
-          </section>
-
-          <section className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-xs font-black text-white">
-                  다중 교재 선택 &amp; 커스텀 교재 추가
-                </h3>
-                <p className="text-[10px] text-emerald-300/90 mt-0.5">
-                  교재를 해제(서재로 빼기)해도 기존 회독·계획 기록과 추가 단원은 안전하게 보존됩니다.
-                </p>
-              </div>
-              <span className="text-[10px] text-slate-400 font-bold shrink-0">
-                {activeBookIds.length}권 선택 / 총 {catalog.length}종
-              </span>
-            </div>
-
-            {/* 계층형 책 · 과목 · 단원 수동 추가 바 */}
-            <div className="p-3.5 rounded-2xl bg-[#1A1A21] border border-white/[0.08] space-y-2.5">
-              <div className="flex items-center justify-between">
-                <div className="text-[11px] font-black text-white flex items-center gap-1.5">
-                  <BookOpen className="w-3.5 h-3.5 text-[#FF5A36]" />
-                  <span>교재 · 과목 · 단원 수동 구성</span>
-                </div>
-                <span className="text-[10px] text-slate-400 font-bold">
-                  드래그&amp;드롭 구조잡기 지원
-                </span>
-              </div>
-              <div className="grid grid-cols-4 gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => openAddModal("book")}
-                  className="py-2.5 px-1.5 rounded-xl bg-[#FF5A36] hover:bg-[#ff6d4d] text-white text-[11px] font-black flex items-center justify-center gap-1 transition"
-                >
-                  <Plus className="w-3.5 h-3.5 shrink-0" />
-                  <span>책 추가</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openAddModal("subject")}
-                  className="py-2.5 px-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
-                >
-                  <Plus className="w-3.5 h-3.5 shrink-0" />
-                  <span>과목</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openAddModal("topic")}
-                  className="py-2.5 px-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
-                >
-                  <Plus className="w-3.5 h-3.5 shrink-0" />
-                  <span>단원</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openAddModal("organize")}
-                  className="py-2.5 px-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/35 text-amber-200 text-[11px] font-black flex items-center justify-center gap-1 transition"
-                >
-                  <GripVertical className="w-3.5 h-3.5 shrink-0" />
-                  <span>구조잡기</span>
-                </button>
-              </div>
-            </div>
-
-            {catalog.map((book) => {
-              const isActive = activeBookIds.includes(book.id);
-              const isCustomBook = book.id.startsWith("custom-book-");
-              const isPreviewOpen = previewBookId === book.id;
-              const topicCount = book.subjects.reduce(
-                (acc, s) => acc + s.units.reduce((uAcc, u) => uAcc + u.topics.length, 0),
-                0
-              );
-
-              return (
-                <div
-                  key={book.id}
-                  className={`p-4 rounded-2xl border transition space-y-3 ${
-                    isActive
-                      ? "bg-[#1B1922] border-[#FF5A36]/60 shadow-md"
-                      : "bg-[#1A1A21] border-white/[0.06]"
-                  }`}
-                >
-                  <div className="flex items-start gap-3">
-                    {book.coverImageUrl && (
-                      <img
-                        src={book.coverImageUrl}
-                        alt={book.title}
-                        className="w-11 h-15 object-cover rounded-lg border border-white/15 shrink-0"
-                      />
-                    )}
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span
-                            className="px-2 py-0.5 rounded-md text-[9.5px] font-black text-white"
-                            style={{ backgroundColor: book.coverColor }}
-                          >
-                            {book.badge}
-                          </span>
-                          <span className="text-[10px] font-bold text-slate-400">
-                            {book.subjects.length}과목 · {topicCount}세부목차
-                          </span>
-                          {book.isbn && (
-                            <span className="text-[9.5px] font-mono text-slate-500">
-                              ISBN {book.isbn}
-                            </span>
-                          )}
-                        </div>
-                        {isCustomBook && (
-                          <button
-                            type="button"
-                            onClick={() => deleteCustomBook(book.id)}
-                            className="p-1 rounded-lg text-slate-500 hover:text-rose-400"
-                            title="커스텀 교재 삭제"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        )}
-                      </div>
-                      <h4 className="text-xs font-black text-white">{book.title}</h4>
-                      <p className="text-[11px] text-slate-400 leading-snug">{book.subtitle}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setPreviewBookId(isPreviewOpen ? null : book.id)}
-                        className="px-2.5 py-1.5 rounded-xl bg-[#111116] border border-white/[0.08] text-[10.5px] font-bold text-slate-300 hover:text-white flex items-center gap-1"
-                      >
-                        {isPreviewOpen ? (
-                          <ChevronDown className="w-3.5 h-3.5" />
-                        ) : (
-                          <ChevronRight className="w-3.5 h-3.5" />
-                        )}
-                        <span>목차</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openAddModal("subject", book.id)}
-                        className="px-2 py-1.5 rounded-xl bg-sky-500/15 border border-sky-500/30 text-[10px] font-black text-sky-200 hover:bg-sky-500/25"
-                      >
-                        + 과목
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => openAddModal("topic", book.id)}
-                        className="px-2 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-[10px] font-black text-emerald-200 hover:bg-emerald-500/25"
-                      >
-                        + 단원
-                      </button>
-                      {isCustomBook && (
-                        <button
-                          type="button"
-                          onClick={() => openAddModal("organize", book.id)}
-                          className="px-2 py-1.5 rounded-xl bg-amber-500/15 border border-amber-500/30 text-[10px] font-black text-amber-200 hover:bg-amber-500/25"
-                        >
-                          구조잡기
-                        </button>
-                      )}
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleToggleBook(book.id, book.title)}
-                      className={`px-3.5 py-1.5 rounded-xl text-[11px] font-black flex items-center gap-1.5 border transition ${
-                        isActive
-                          ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
-                          : "bg-[#FF5A36] hover:bg-[#ff6d4d] border-[#FF5A36] text-white"
-                      }`}
-                    >
-                      {isActive ? (
-                        <>
-                          <Check className="w-3.5 h-3.5" />
-                          <span>함께 적용중 (해제)</span>
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3.5 h-3.5" />
-                          <span>교재 추가 적용</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-
-                  {isPreviewOpen && (
-                    <div className="pt-2.5 border-t border-white/[0.06] space-y-2">
-                      {book.subjects.map((subj) => (
-                        <div key={subj.id} className="space-y-1">
-                          <div className="flex items-center gap-1.5 text-[10.5px] font-black text-white">
-                            <span
-                              className="w-2 h-2 rounded-full"
-                              style={{ backgroundColor: subj.color }}
-                            />
-                            <span className="text-slate-400">[{subj.examStage}]</span>
-                            <span>{subj.title}</span>
-                          </div>
-                          <div className="pl-3 flex flex-wrap gap-1">
-                            {subj.units.flatMap((u) => u.topics).map((t) => (
-                              <span
-                                key={t.id}
-                                className="px-2 py-0.5 rounded-md bg-[#111116] border border-white/[0.06] text-[9.5px] text-slate-300"
-                              >
-                                {t.topicNo ? `${t.topicNo}. ` : ""}
-                                {t.title}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </section>
-
-          <section className="p-4 rounded-2xl bg-[#1A1A21] border border-white/[0.06] space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs font-black text-white">
-                <Palette className="w-4 h-4 text-[#FF5A36]" />
-                <span>과목 색상 커스텀 · 보관함 관리</span>
-              </div>
-              <Link
-                href="/study/planner"
-                className="text-[10.5px] font-bold text-[#FF7A59] hover:underline"
-              >
-                플래너에서 상세편집 →
-              </Link>
-            </div>
-
-            <div className="space-y-1.5">
-              {subjects.map((subj) => (
-                <div
-                  key={subj.id}
-                  className="px-3 py-2 rounded-xl bg-[#111116] border border-white/[0.06] flex items-center justify-between gap-2"
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <input
-                      type="color"
-                      value={subj.color}
-                      onChange={(e) =>
-                        updateSubjectCustomization(subj.id, { color: e.target.value })
-                      }
-                      className="w-5 h-5 rounded-full bg-transparent cursor-pointer shrink-0"
-                      title="과목 색상 변경"
-                    />
-                    <span className="text-xs font-bold text-white truncate">
-                      {subj.title}
-                    </span>
-                    <select
-                      value={
-                        subj.category ||
-                        (subj.examStage === "1차" ? "주택관리사 1차" : "주택관리사 2차")
-                      }
-                      onChange={(e) =>
-                        updateSubjectCustomization(subj.id, { category: e.target.value })
-                      }
-                      className="px-1.5 py-0.5 rounded bg-[#181822] border border-white/[0.1] text-[9.5px] font-bold text-slate-300 shrink-0"
-                      title="과목 분류 변경"
-                    >
-                      {categories.map((cat) => (
-                        <option key={cat} value={cat}>
-                          {cat}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => archiveSubject(subj.id)}
-                    className="px-2 py-1 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-[10px] font-bold text-slate-300 flex items-center gap-1 shrink-0"
-                  >
-                    <Archive className="w-3 h-3" />
-                    <span>보관</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <div className="pt-1 flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => openAddModal("subject")}
-                className="flex-1 py-2 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/35 text-sky-200 text-xs font-black flex items-center justify-center gap-1 transition"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>책에 과목 추가</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => openAddModal("topic")}
-                className="flex-1 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/35 text-emerald-200 text-xs font-black flex items-center justify-center gap-1 transition"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>과목에 단원 추가</span>
-              </button>
-            </div>
-
-            {archivedSubjects.length > 0 && (
-              <div className="pt-2 border-t border-white/[0.06] space-y-1.5">
-                <div className="text-[10.5px] font-black text-slate-400">
-                  보관함 ({archivedSubjects.length})
-                </div>
-                {archivedSubjects.map((subj) => (
-                  <div
-                    key={subj.id}
-                    className="px-3 py-1.5 rounded-xl bg-[#101015] border border-white/[0.05] flex items-center justify-between gap-2"
-                  >
-                    <span className="text-[11px] font-bold text-slate-400 truncate">
-                      {subj.title}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => restoreSubject(subj.id)}
-                      className="px-2 py-1 rounded-lg bg-emerald-500/15 text-emerald-300 text-[10px] font-black flex items-center gap-1"
-                    >
-                      <ArchiveRestore className="w-3 h-3" />
-                      <span>꺼내기</span>
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </section>
-        </div>
       )}
-
-      <CurriculumAddModal
-        isOpen={addModalState.open}
-        initialStep={addModalState.step}
-        initialBookId={addModalState.bookId}
-        initialSubjectId={addModalState.subjectId}
-        onClose={() => setAddModalState((prev) => ({ ...prev, open: false }))}
-        catalog={catalog}
-        subjects={subjects}
-        categories={categories}
-        onAddBook={(params) => {
-          const newId = addCustomBook(params);
-          showToast(`교재 「${params.title}」이(가) 추가되었습니다.`);
-          return newId;
-        }}
-        onAddSubject={(params) => {
-          const res = addCustomSubject(params);
-          showToast(`과목 「${params.title}」이(가) 책에 연결되었습니다.`);
-          return res;
-        }}
-        onAddTopicsBulk={(unitId, titles, estMin) => {
-          addCustomTopicsBulk(unitId, titles, estMin);
-          showToast(`${titles.length}개 단원이 목차에 추가되었습니다.`);
-        }}
-        onReplaceBookStructure={(bookId, nextSubjects, cat) => {
-          replaceCustomBookStructure(bookId, nextSubjects, cat);
-          showToast("드래그&드롭으로 편집한 목차 구조가 저장되었습니다.");
-        }}
-      />
-
-      <SerialRegisterModal
-        isOpen={isSerialModalOpen}
-        onClose={() => setIsSerialModalOpen(false)}
-        onSuccess={() => {
-          setIsSerialVerified(true);
-          showToast("정품 교재 시리얼이 인증되었습니다!");
-        }}
-      />
 
       <TheoryBottomSheet
         target={theoryTarget}

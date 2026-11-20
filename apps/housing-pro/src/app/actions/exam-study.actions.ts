@@ -74,6 +74,7 @@ export interface FetchExamOxCardsInput {
   detailCode?: string;
   maxTier?: number;
   onlyRepeated?: boolean;
+  onlyAmended?: boolean;
   limit?: number;
 }
 
@@ -120,7 +121,14 @@ export async function fetchExamOxCardsAction(
   input: FetchExamOxCardsInput = {}
 ): Promise<{ success: boolean; cards: ExamOxCardItem[]; totalMatched: number; error?: string }> {
   try {
-    const { subject = "ALL", detailCode, maxTier = 5, onlyRepeated = false, limit = 60 } = input;
+    const {
+      subject = "ALL",
+      detailCode,
+      maxTier = 5,
+      onlyRepeated = false,
+      onlyAmended = false,
+      limit = 60,
+    } = input;
 
     let query = supabaseAdmin
       .schema("vertical_housing")
@@ -172,6 +180,9 @@ export async function fetchExamOxCardsAction(
     }
     if (onlyRepeated) {
       query = query.gte("repeat_count", 2);
+    }
+    if (onlyAmended) {
+      query = query.eq("is_amended", true);
     }
 
     const { data, count, error } = await query
@@ -920,6 +931,40 @@ export async function promoteWeakOptionToOAction(
       .eq("client_key", ownerKey)
       .eq("option_id", optionId);
 
+    return { success: !error };
+  } catch {
+    return { success: false };
+  }
+}
+
+/**
+ * 단원 미니 O/X · 키워드 매칭 O/X · 3초 O/X 풀이 결과를 단일 약점 DB(study_option_logs)에 통합 기록합니다.
+ * 오답이면 'X'(약점 덱 자동 편입), 정답이면 'O'(정복)로 갱신합니다.
+ */
+export async function recordOxOptionResultAction(params: {
+  clientKey: string;
+  optionId: string;
+  questionId: string;
+  isRight: boolean;
+}): Promise<{ success: boolean }> {
+  try {
+    const { user, ownerKey } = await resolveOwnerKeyAndUser(params.clientKey);
+    const nowIso = new Date().toISOString();
+    const { error } = await supabaseAdmin
+      .schema("vertical_housing")
+      .from("study_option_logs")
+      .upsert(
+        {
+          client_key: ownerKey,
+          user_id: user?.id ?? null,
+          question_id: params.questionId,
+          option_id: params.optionId,
+          mark_status: params.isRight ? "O" : "X",
+          mastered_by_ox: params.isRight,
+          updated_at: nowIso,
+        },
+        { onConflict: "client_key,option_id" }
+      );
     return { success: !error };
   } catch {
     return { success: false };
@@ -1715,6 +1760,7 @@ export async function fetchStudyAnalyticsAction(
 
 export interface ChapterKeyPointOption {
   id: string;
+  questionId?: string;
   statement: string;
   isCorrect: boolean;
   citation: string | null;
@@ -1839,6 +1885,7 @@ export async function fetchChapterStudyPacketAction(
       const qMeta = qMetaById.get(o.question_id);
       keyOptions.push({
         id: o.id,
+        questionId: o.question_id,
         statement: normalized,
         isCorrect: o.is_correct,
         citation: o.legal_citation,
@@ -2115,6 +2162,7 @@ export async function searchStudyOptionsByKeywordsAction(
 
       options.push({
         id: o.id,
+        questionId: o.question_id,
         statement: normText,
         isCorrect: o.is_correct,
         citation: o.legal_citation,

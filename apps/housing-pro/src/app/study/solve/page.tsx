@@ -29,6 +29,11 @@ import {
   TheoryBottomSheet,
   type TheorySheetTarget,
 } from "@/components/study/theory-bottom-sheet";
+import {
+  ConceptLinkedText,
+  type KnowledgeTrailTarget,
+} from "@/components/study/concept-linked-text";
+import { ConceptTrailDrawer } from "@/components/study/concept-trail-drawer";
 import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
 import {
   fetchStudySolveSetsAction,
@@ -51,15 +56,6 @@ import {
 } from "@/lib/box-items";
 
 const OPTION_CIRCLES = ["①", "②", "③", "④", "⑤"] as const;
-
-function getOrCreateClientKey(): string {
-  if (typeof window === "undefined") return "demo-housing-guest";
-  const existing = window.localStorage.getItem("housing_pro_client_key");
-  if (existing) return existing;
-  const generated = `hp-${Math.random().toString(36).slice(2, 10)}-${Date.now().toString(36)}`;
-  window.localStorage.setItem("housing_pro_client_key", generated);
-  return generated;
-}
 
 interface LocalDraftState {
   selectedOption: number | null;
@@ -110,6 +106,7 @@ export default function InteractiveSolvePage() {
   const [expandedRepeatOptId, setExpandedRepeatOptId] = useState<string | null>(null);
   const [showOriginalQ, setShowOriginalQ] = useState<boolean>(false);
   const [theoryTarget, setTheoryTarget] = useState<TheorySheetTarget | null>(null);
+  const [knowledgeTarget, setKnowledgeTarget] = useState<KnowledgeTrailTarget | null>(null);
 
   const refreshCatalog = useCallback(async (key: string) => {
     setLoadingSets(true);
@@ -470,7 +467,12 @@ export default function InteractiveSolvePage() {
                 <ChevronLeft className="w-4 h-4" />
               </button>
             ) : (
-              <ListChecks className="w-4 h-4 text-[#FF5A36] shrink-0" />
+              <Link
+                href="/study/books"
+                className="px-2 py-1 rounded-lg bg-white/[0.06] hover:bg-white/[0.12] text-[10px] font-black text-slate-300 shrink-0 transition"
+              >
+                ← 학습
+              </Link>
             )}
             <div className="min-w-0">
               <h1 className="text-sm font-black text-white truncate">
@@ -768,7 +770,14 @@ export default function InteractiveSolvePage() {
                 {/* 문제 본문 (종이책 병행 시 접기 가능) */}
                 {!compactQuestionMode ? (
                   <>
-                    <p className="text-[13.5px] font-bold text-white leading-relaxed">{currentQ.questionText}</p>
+                    <p className="text-[13.5px] font-bold text-white leading-relaxed">
+                      <ConceptLinkedText
+                        text={currentQ.questionText}
+                        contextText={`${currentQ.questionText} ${currentQ.options.map((o) => o.optionText).join(" ")}`}
+                        enabled={currentDraft.checked}
+                        onSelectTarget={setKnowledgeTarget}
+                      />
+                    </p>
                     {currentQ.boxContent && currentBoxItems.length < 2 && (
                       <div className="p-3 rounded-xl bg-[#101015] border border-white/[0.08] text-xs text-slate-200 whitespace-pre-wrap leading-relaxed">
                         {currentQ.boxContent}
@@ -1009,7 +1018,12 @@ export default function InteractiveSolvePage() {
                                 {OPTION_CIRCLES[opt.optionNumber - 1] ?? `${opt.optionNumber}.`}
                               </span>
                               <span className="text-xs font-medium text-slate-100 leading-relaxed">
-                                {opt.optionText}
+                                <ConceptLinkedText
+                                  text={opt.optionText}
+                                  contextText={`${currentQ.questionText} ${opt.optionText}`}
+                                  enabled={currentDraft.checked}
+                                  onSelectTarget={setKnowledgeTarget}
+                                />
                               </span>
                             </button>
 
@@ -1337,6 +1351,10 @@ export default function InteractiveSolvePage() {
       <TheoryBottomSheet
         target={theoryTarget}
         onClose={() => setTheoryTarget(null)}
+      />
+      <ConceptTrailDrawer
+        initialTarget={knowledgeTarget}
+        onClose={() => setKnowledgeTarget(null)}
       />
     </MobileAppShell>
   );

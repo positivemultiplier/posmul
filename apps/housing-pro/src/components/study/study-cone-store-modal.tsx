@@ -37,7 +37,7 @@ export function StudyConeStoreModal({
   onClose,
   equippedCone,
   onEquipChange,
-  userId = "user-demo-housing-1",
+  userId,
 }: StudyConeStoreModalProps) {
   const [activeTab, setActiveTab] = useState<"MY" | "STORE">("STORE");
   const [purchasedTypes, setPurchasedTypes] = useState<string[]>([

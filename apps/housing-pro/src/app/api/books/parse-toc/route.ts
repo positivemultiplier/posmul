@@ -1,9 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CUSTOM_SUBJECT_COLOR_PALETTE } from "@/data/study-textbooks";
+import {
+  CUSTOM_SUBJECT_COLOR_PALETTE,
+  estimateMinutesFromPages,
+} from "@/data/study-textbooks";
 import { resolveAuthenticatedUser } from "@/lib/auth-provision";
 
 const MAX_TOC_TEXT_CHARS = 50_000;
 const MAX_TOC_IMAGE_BASE64_CHARS = 8 * 1024 * 1024;
+
+export interface ParsedTocNode {
+  level: 0 | 1 | 2 | 3;
+  title: string;
+  pageStart?: number;
+  pageEnd?: number;
+  estimatedMinutes?: number;
+}
 
 export interface ParsedTocSubject {
   title: string;
@@ -13,83 +24,223 @@ export interface ParsedTocSubject {
     topics: Array<{
       title: string;
       estimatedMinutes: number;
+      hierarchyPath?: string[];
+      pageStart?: number;
+      pageEnd?: number;
     }>;
   }>;
 }
 
-/** 규칙 기반 스마트 목차 파서 (# 과목, PART/제N편/Ⅰ. 대단원, 나머지 단원) */
-function parseTocByRules(rawText: string, defaultSubjectTitle: string): ParsedTocSubject[] {
+/** 줄 끝의 페이지 번호(p.14, 14쪽, ... 42, (14p) 등) 분리 추출 */
+function extractTrailingPageNumber(rawLine: string): {
+  title: string;
+  pageStart?: number;
+} {
+  const trimmed = rawLine.trim();
+  // 패턴 1: p.14 / P.14 / 14p / 14쪽 / (p.14) / [14쪽]
+  const explicitMatch = trimmed.match(
+    /^(.*?)(?:[\s·.…\-–—]+|\s*[\(\[])?(?:p\.?\s*(\d{1,4})|(\d{1,4})\s*(?:p|쪽|페이지))[\)\]]?\s*$/i
+  );
+  if (explicitMatch) {
+    const num = Number(explicitMatch[2] || explicitMatch[3]);
+    const cleanTitle = explicitMatch[1].replace(/[\s·.…\-–—]+$/, "").trim();
+    if (cleanTitle.length >= 1 && num > 0 && num <= 3000) {
+      return { title: cleanTitle, pageStart: num };
+    }
+  }
+
+  // 패턴 2: 점선/공백 2칸 이상 뒤 숫자 ("제1장 총칙 .... 24" 또는 "01 용어정의   18")
+  const dottedMatch = trimmed.match(/^(.*?)(?:\.{2,}|…+|\s{2,}|\t+)(\d{1,4})\s*$/);
+  if (dottedMatch) {
+    const num = Number(dottedMatch[2]);
+    const cleanTitle = dottedMatch[1].replace(/[\s·.…\-–—]+$/, "").trim();
+    if (cleanTitle.length >= 2 && num > 0 && num <= 3000) {
+      return { title: cleanTitle, pageStart: num };
+    }
+  }
+
+  return { title: trimmed };
+}
+
+/** 인접한 시작 페이지들을 이용해 끝 페이지(pageEnd)와 예상시간 자동 보간 */
+function fillPageEndsAndMinutes(nodes: ParsedTocNode[]): ParsedTocNode[] {
+  const result = nodes.map((n) => ({ ...n }));
+  for (let i = 0; i < result.length; i += 1) {
+    const cur = result[i];
+    if (typeof cur.pageStart === "number" && typeof cur.pageEnd !== "number") {
+      // 다음으로 나오는 유효한 pageStart 검색
+      for (let j = i + 1; j < result.length; j += 1) {
+        const nextStart = result[j].pageStart;
+        if (typeof nextStart === "number" && nextStart >= cur.pageStart) {
+          cur.pageEnd = Math.max(cur.pageStart, nextStart - 1);
+          break;
+        }
+      }
+    }
+    if (
+      typeof cur.pageStart === "number" &&
+      typeof cur.pageEnd === "number" &&
+      cur.pageEnd >= cur.pageStart
+    ) {
+      const pages = cur.pageEnd - cur.pageStart + 1;
+      cur.estimatedMinutes = estimateMinutesFromPages(pages, cur.estimatedMinutes ?? 35);
+    }
+  }
+  return result;
+}
+
+/** 규칙 기반 4단계 스마트 목차 파서 (과목 0 · 편/PART 1 · 장/CHAPTER 2 · 절/단원 3 + 페이지 추출) */
+function parseTocNodesByRules(rawText: string, defaultSubjectTitle: string): ParsedTocNode[] {
   const lines = rawText
     .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean);
+    .map((l) => l.replace(/\t/g, "  ").trimEnd())
+    .filter((l) => l.trim().length > 0);
 
   if (lines.length === 0) return [];
 
-  const subjects: ParsedTocSubject[] = [];
-  let currentSubj: ParsedTocSubject | null = null;
-  let currentUnit: { title: string; topics: Array<{ title: string; estimatedMinutes: number }> } | null =
-    null;
+  const nodes: ParsedTocNode[] = [];
+  let hasPart = false;
+  let hasChapter = false;
 
-  const ensureSubject = (title: string) => {
-    if (!currentSubj) {
-      currentSubj = {
-        title,
-        color: CUSTOM_SUBJECT_COLOR_PALETTE[subjects.length % CUSTOM_SUBJECT_COLOR_PALETTE.length],
+  for (const rawLine of lines) {
+    const leadingSpaces = rawLine.length - rawLine.trimStart().length;
+    const trimmed = rawLine.trim();
+    const { title: withoutPage, pageStart } = extractTrailingPageNumber(trimmed);
+    if (!withoutPage) continue;
+
+    // Level 0: 과목 ("# 민법", "SUBJECT 1 ...", "[과목] ...")
+    if (/^(?:#\s*|SUBJECT\s*\d+\s+|\[과목\]\s*)/i.test(withoutPage)) {
+      const sTitle = withoutPage.replace(/^(?:#\s*|SUBJECT\s*\d+\s+|\[과목\]\s*)/i, "").trim();
+      nodes.push({ level: 0, title: sTitle, pageStart });
+      continue;
+    }
+
+    // Level 1: 편/PART/대단원 ("## ...", "PART 01 ...", "제1편 ...", "Ⅰ. ...")
+    if (/^(?:##\s*|PART\s*\d+[:.\s]+|제\s*\d+\s*편\b|[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩ]\.\s+)/i.test(withoutPage)) {
+      hasPart = true;
+      const pTitle = withoutPage.replace(/^##\s*/, "").trim();
+      nodes.push({ level: 1, title: pTitle, pageStart });
+      continue;
+    }
+
+    // Level 2: 장/CHAPTER/중단원 ("### ...", "CHAPTER 01 ...", "제1장 ...")
+    if (/^(?:###\s*|CHAPTER\s*\d+[:.\s]+|제\s*\d+\s*장\b)/i.test(withoutPage)) {
+      hasChapter = true;
+      const cTitle = withoutPage.replace(/^###\s*/, "").trim();
+      nodes.push({ level: 2, title: cTitle, pageStart });
+      continue;
+    }
+
+    // Level 3: 절/세부 단원 ("제1절 ...", "01. ...", "- ...", 들여쓰기)
+    const cleanTitle = withoutPage.replace(/^[-•*]\s*/, "").trim();
+    const inferredLevel: 0 | 1 | 2 | 3 =
+      leadingSpaces >= 4 || (hasPart && hasChapter) || /^제\s*\d+\s*절\b/.test(cleanTitle)
+        ? 3
+        : hasPart || hasChapter
+          ? 2
+          : 2;
+
+    nodes.push({
+      level: inferredLevel,
+      title: cleanTitle,
+      pageStart,
+      estimatedMinutes: 35,
+    });
+  }
+
+  // 과목(Level 0)이 하나도 없으면 맨 앞에 기본 과목 보정
+  if (nodes.length > 0 && !nodes.some((n) => n.level === 0)) {
+    nodes.unshift({ level: 0, title: defaultSubjectTitle });
+  }
+
+  return fillPageEndsAndMinutes(nodes);
+}
+
+/** ParsedTocNode[] -> 기존 ParsedTocSubject[] 호환 변환 */
+function nodesToParsedSubjects(
+  nodes: ParsedTocNode[],
+  defaultSubjectTitle: string
+): ParsedTocSubject[] {
+  const subjects: ParsedTocSubject[] = [];
+  let curSubj: ParsedTocSubject | null = null;
+  let curPartTitle = "";
+  let curChapterTitle = "";
+  let curUnit: ParsedTocSubject["units"][number] | null = null;
+
+  const ensureSubj = (title: string) => {
+    if (!curSubj) {
+      curSubj = {
+        title: title || defaultSubjectTitle,
+        color:
+          CUSTOM_SUBJECT_COLOR_PALETTE[
+            subjects.length % CUSTOM_SUBJECT_COLOR_PALETTE.length
+          ],
         units: [],
       };
-      subjects.push(currentSubj);
+      subjects.push(curSubj);
     }
-    return currentSubj;
+    return curSubj;
   };
 
   const ensureUnit = (title: string) => {
-    const subj = ensureSubject(defaultSubjectTitle);
-    if (!currentUnit) {
-      currentUnit = { title, topics: [] };
-      subj.units.push(currentUnit);
+    const subj = ensureSubj(defaultSubjectTitle);
+    if (!curUnit) {
+      curUnit = { title: title || "기본 목차", topics: [] };
+      subj.units.push(curUnit);
     }
-    return currentUnit;
+    return curUnit;
   };
 
-  for (const line of lines) {
-    // 과목 구분선: "# 민법", "SUBJECT 1 주택관리관계법규", "[과목] 회계원리"
-    const subjMatch = line.match(/^(?:#\s*|SUBJECT\s*\d+\s+|\[과목\]\s*)(.+)$/i);
-    if (subjMatch) {
-      const sTitle = subjMatch[1].trim();
-      currentSubj = {
-        title: sTitle,
-        color: CUSTOM_SUBJECT_COLOR_PALETTE[subjects.length % CUSTOM_SUBJECT_COLOR_PALETTE.length],
+  for (let i = 0; i < nodes.length; i += 1) {
+    const node = nodes[i];
+    const nextNode = nodes[i + 1];
+    const hasDeeperChild = Boolean(nextNode && nextNode.level > node.level);
+
+    if (node.level === 0) {
+      curSubj = {
+        title: node.title,
+        color:
+          CUSTOM_SUBJECT_COLOR_PALETTE[
+            subjects.length % CUSTOM_SUBJECT_COLOR_PALETTE.length
+          ],
         units: [],
       };
-      subjects.push(currentSubj);
-      currentUnit = null;
+      subjects.push(curSubj);
+      curPartTitle = "";
+      curChapterTitle = "";
+      curUnit = null;
       continue;
     }
 
-    // 대단원 구분선: "PART 01 ...", "제1편 ...", "Ⅰ. ...", "## ..."
-    const unitMatch = line.match(/^(?:##\s*|PART\s*\d+[:.\s]+|제\s*\d+\s*편\s+)(.+)$/i);
-    if (unitMatch) {
-      const subj = ensureSubject(defaultSubjectTitle);
-      currentUnit = {
-        title: line.replace(/^##\s*/, "").trim(),
-        topics: [],
-      };
-      subj.units.push(currentUnit);
+    if (node.level === 1 && hasDeeperChild) {
+      const subj = ensureSubj(defaultSubjectTitle);
+      curPartTitle = node.title;
+      curChapterTitle = "";
+      curUnit = { title: node.title, topics: [] };
+      subj.units.push(curUnit);
       continue;
     }
 
-    // 세부 단원 (앞의 불릿/기호만 살짝 정리)
-    const cleanTopic = line
-      .replace(/^[-•*]\s*/, "")
-      .replace(/^CHAPTER\s*\d+[:.\s]*/i, "")
-      .trim();
-    if (!cleanTopic) continue;
+    if (node.level === 2 && hasDeeperChild) {
+      curChapterTitle = node.title;
+      if (!curUnit) {
+        ensureUnit(curPartTitle || node.title);
+      }
+      continue;
+    }
 
-    const unit = ensureUnit("기본 목차");
+    // 말단 체크포인트 노드
+    const unit = ensureUnit(curPartTitle || "기본 목차");
+    const hierarchyPath: string[] = [];
+    if (curPartTitle && curPartTitle !== "기본 목차") hierarchyPath.push(curPartTitle);
+    if (curChapterTitle && node.level >= 3) hierarchyPath.push(curChapterTitle);
+
     unit.topics.push({
-      title: cleanTopic,
-      estimatedMinutes: 35,
+      title: node.title,
+      estimatedMinutes: node.estimatedMinutes ?? 35,
+      ...(hierarchyPath.length > 0 ? { hierarchyPath } : {}),
+      ...(typeof node.pageStart === "number" ? { pageStart: node.pageStart } : {}),
+      ...(typeof node.pageEnd === "number" ? { pageEnd: node.pageEnd } : {}),
     });
   }
 
@@ -127,7 +278,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (rawText.length > MAX_TOC_TEXT_CHARS || imageBase64.length > MAX_TOC_IMAGE_BASE64_CHARS) {
+    if (
+      rawText.length > MAX_TOC_TEXT_CHARS ||
+      imageBase64.length > MAX_TOC_IMAGE_BASE64_CHARS
+    ) {
       return NextResponse.json(
         { success: false, error: "입력 텍스트 또는 이미지 크기가 허용 한도를 초과했습니다." },
         { status: 413 }
@@ -142,26 +296,24 @@ export async function POST(req: NextRequest) {
         const prompt = `당신은 수험서/교재 목차 구조화 AI입니다.
 ${bookTitle ? `교재명: ${bookTitle}\n` : ""}제공된 ${
           imageBase64 ? "목차 페이지 이미지" : "목차 텍스트"
-        }에서 과목(Subject) → 대단원(Unit) → 세부 단원(Topic) 구조를 추출하여 순수 JSON으로 반환하세요.
+        }에서 최대 4단계 계층(level 0~3)과 각 항목의 시작 페이지 번호(pageStart)를 추출하여 순수 JSON으로 반환하세요.
 규칙:
-1. 과목이 명시되어 있으면 과목별로 나누고, 단일 과목 책이면 "${defaultSubjectTitle}" 1개 과목으로 묶으세요. (과목명을 책 이름과 똑같이 반복하지 말고 실제 과목명 또는 "${defaultSubjectTitle}" 사용)
-2. 페이지 번호(p.12, 123쪽 등)나 머리말/광고 문구는 제거하고 순수 학습 단원 제목만 추출하세요.
-3. 각 세부 단원의 예상 학습 시간(estimatedMinutes)은 25~50분 사이 정수로 추천하세요.
+1. level 의미:
+   - 0: 과목 (단일 과목 책이면 "${defaultSubjectTitle}" 1개로 시작)
+   - 1: 편 / PART / 대단원
+   - 2: 장 / CHAPTER / 중단원
+   - 3: 절 / 소단원 / 세부 체크포인트
+   (책이 단순 2단 구조라면 0과 2만 써도 되며, 불필요한 가짜 계층을 억지로 만들지 마세요)
+2. 제목 옆에 페이지 번호(p.14, 14쪽, ... 42 등)가 보이면 제목에서 숫자를 제거하고 정수 "pageStart" 필드에 정확히 넣으세요. 페이지가 없으면 생략하세요.
+3. 머리말/광고/출판사 홍보 문구는 제외하고 학습 목차만 순서대로 추출하세요.
 
 반드시 아래 JSON 형식으로만 응답하세요:
 {
-  "subjects": [
-    {
-      "title": "과목명",
-      "units": [
-        {
-          "title": "대단원명",
-          "topics": [
-            { "title": "세부 단원명", "estimatedMinutes": 35 }
-          ]
-        }
-      ]
-    }
+  "nodes": [
+    { "level": 0, "title": "과목명" },
+    { "level": 1, "title": "제1편 주택법", "pageStart": 12 },
+    { "level": 2, "title": "제1장 총칙", "pageStart": 14 },
+    { "level": 3, "title": "01. 용어의 정의", "pageStart": 14 }
   ]
 }`;
 
@@ -190,7 +342,7 @@ ${bookTitle ? `교재명: ${bookTitle}\n` : ""}제공된 ${
                 responseMimeType: "application/json",
               },
             }),
-            signal: AbortSignal.timeout(15000),
+            signal: AbortSignal.timeout(18000),
           }
         );
 
@@ -203,56 +355,57 @@ ${bookTitle ? `교재명: ${bookTitle}\n` : ""}제공된 ${
           const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (jsonText) {
             const parsed = JSON.parse(jsonText) as {
-              subjects?: Array<{
+              nodes?: Array<{
+                level?: number;
                 title?: string;
-                units?: Array<{
-                  title?: string;
-                  topics?: Array<{ title?: string; estimatedMinutes?: number }>;
-                }>;
+                pageStart?: number;
+                pageEnd?: number;
+                estimatedMinutes?: number;
               }>;
             };
-            const normalized: ParsedTocSubject[] = (parsed.subjects || [])
-              .filter((s) => s.title && Array.isArray(s.units))
-              .map((s, idx) => ({
-                title: String(s.title).trim(),
-                color:
-                  CUSTOM_SUBJECT_COLOR_PALETTE[idx % CUSTOM_SUBJECT_COLOR_PALETTE.length],
-                units: (s.units || [])
-                  .filter((u) => Array.isArray(u.topics) && u.topics.length > 0)
-                  .map((u) => ({
-                    title: String(u.title || "기본 목차").trim(),
-                    topics: (u.topics || [])
-                      .filter((t) => t.title && String(t.title).trim().length > 0)
-                      .map((t) => ({
-                        title: String(t.title).trim(),
-                        estimatedMinutes:
-                          typeof t.estimatedMinutes === "number" && t.estimatedMinutes > 0
-                            ? Math.min(120, Math.max(15, Math.round(t.estimatedMinutes)))
-                            : 35,
-                      })),
-                  })),
-              }))
-              .filter((s) => s.units.length > 0);
+            const rawNodes: ParsedTocNode[] = (parsed.nodes || [])
+              .filter((n) => n.title && String(n.title).trim().length > 0)
+              .map((n) => {
+                const lvl = Math.max(0, Math.min(3, Number(n.level ?? 2))) as 0 | 1 | 2 | 3;
+                return {
+                  level: lvl,
+                  title: String(n.title).trim(),
+                  ...(typeof n.pageStart === "number" && n.pageStart > 0
+                    ? { pageStart: Math.round(n.pageStart) }
+                    : {}),
+                  ...(typeof n.pageEnd === "number" && n.pageEnd > 0
+                    ? { pageEnd: Math.round(n.pageEnd) }
+                    : {}),
+                  ...(typeof n.estimatedMinutes === "number" && n.estimatedMinutes > 0
+                    ? { estimatedMinutes: Math.min(180, Math.max(15, Math.round(n.estimatedMinutes))) }
+                    : {}),
+                };
+              });
 
-            if (normalized.length > 0) {
+            if (rawNodes.length > 0) {
+              const enriched = fillPageEndsAndMinutes(rawNodes);
+              const subjects = nodesToParsedSubjects(enriched, defaultSubjectTitle);
               return NextResponse.json({
                 success: true,
                 engine: "gemini",
-                subjects: normalized,
+                nodes: enriched,
+                subjects,
               });
             }
           }
         }
       } catch {
-        // Gemini 실패 시 아래 규칙 파서로 폴백
+        // Gemini 실패 시 규칙 파서로 폴백
       }
     }
 
     if (rawText) {
-      const ruleSubjects = parseTocByRules(rawText, defaultSubjectTitle);
+      const ruleNodes = parseTocNodesByRules(rawText, defaultSubjectTitle);
+      const ruleSubjects = nodesToParsedSubjects(ruleNodes, defaultSubjectTitle);
       return NextResponse.json({
         success: true,
         engine: "rule",
+        nodes: ruleNodes,
         subjects: ruleSubjects,
       });
     }
@@ -260,14 +413,17 @@ ${bookTitle ? `교재명: ${bookTitle}\n` : ""}제공된 ${
     return NextResponse.json(
       {
         success: false,
-        error: "목차 이미지를 인식하지 못했습니다. 목차 텍스트를 직접 입력해 주세요.",
+        error:
+          "이미지에서 목차를 추출하지 못했습니다. Gemini API 키 설정을 확인하거나 텍스트로 붙여넣어 주세요.",
       },
       { status: 422 }
     );
-  } catch (error) {
-    console.error("[parse-toc] error:", error);
+  } catch (err) {
     return NextResponse.json(
-      { success: false, error: "목차 파싱 중 오류가 발생했습니다." },
+      {
+        success: false,
+        error: err instanceof Error ? err.message : "목차 파싱 중 오류 발생",
+      },
       { status: 500 }
     );
   }
