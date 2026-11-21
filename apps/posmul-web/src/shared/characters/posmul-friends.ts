@@ -132,8 +132,8 @@ export const POSMUL_FRIENDS: ReadonlyArray<PosMulFriendProfile> = [
   {
     id: "ollie",
     order: 2,
-    nameKo: "올리",
-    nameEn: "Ollie",
+    nameKo: "프레디",
+    nameEn: "Preddy",
     species: "예측 탐정 아기 올빼미",
     roleTitle: "집단지성 데이터 애널리스트",
     domainKey: "prediction",
@@ -364,8 +364,8 @@ export const POSMUL_FRIENDS: ReadonlyArray<PosMulFriendProfile> = [
   {
     id: "beomi",
     order: 6,
-    nameKo: "범이",
-    nameEn: "Beomi",
+    nameKo: "챔피",
+    nameEn: "Champy",
     species: "불꽃 갈기 아기 호랑이",
     roleTitle: "실시간 챌린지 & 명예의 전당 챔피언",
     domainKey: "ranking",
@@ -487,9 +487,18 @@ export const POSMUL_FRIEND_MAP: Record<PosMulFriendId, PosMulFriendProfile> = PO
   {} as Record<PosMulFriendId, PosMulFriendProfile>
 );
 
+const FRIEND_ID_ALIAS_MAP: Record<string, PosMulFriendId> = {
+  preddy: "ollie",
+  champy: "beomi",
+};
+
 export function getFriendById(id: string | null | undefined): PosMulFriendProfile {
-  if (id && id in POSMUL_FRIEND_MAP) {
-    return POSMUL_FRIEND_MAP[id as PosMulFriendId];
+  if (id) {
+    const normalized = id.toLowerCase();
+    const resolved = FRIEND_ID_ALIAS_MAP[normalized] ?? normalized;
+    if (resolved in POSMUL_FRIEND_MAP) {
+      return POSMUL_FRIEND_MAP[resolved as PosMulFriendId];
+    }
   }
   return POSMUL_FRIEND_MAP.wavy;
 }

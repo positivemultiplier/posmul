@@ -55,7 +55,7 @@ export default async function ChallengeLobbyPage() {
           </div>
         </div>
 
-        {/* 포스멀 프렌즈 범이(Beomi) 챌린지 응원 */}
+        {/* 포스멀 프렌즈 챔피(Champy) 챌린지 응원 */}
         <PosMulCharacterCompanion domain="challenge" variant="compact" />
 
         {/* 2. 6대 일상 프리셋 바로가기 칩 */}

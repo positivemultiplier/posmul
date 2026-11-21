@@ -811,7 +811,7 @@ export function ClientPredictionGamesGrid({
         </div>
       )}
 
-      {/* 포스멀 프렌즈 올리(Ollie) 예측 마켓 탐정 가이드 */}
+      {/* 포스멀 프렌즈 프레디(Preddy) 예측 마켓 탐정 가이드 */}
       <PosMulCharacterCompanion domain="prediction" variant="compact" />
 
       {/* =====================================================================

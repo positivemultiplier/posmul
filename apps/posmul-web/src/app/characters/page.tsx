@@ -5,7 +5,7 @@ import { CharactersUniverseClient } from "./CharactersUniverseClient";
 export const metadata: Metadata = {
   title: "포스멀 프렌즈 (PosMul Friends) | 세계관 & 캐릭터 도감",
   description:
-    "PMP·MoneyWave·PMC·힐링룸을 잇는 PosMul 공식 7인 캐릭터 팀(웨이비, 올리, 온기, 모아, 아고, 범이, 루미)의 멀티뷰 도감과 감정 스티커를 만나보세요.",
+    "PMP·MoneyWave·PMC·힐링룸을 잇는 PosMul 공식 7인 캐릭터 팀(웨이비, 프레디, 온기, 모아, 아고, 챔피, 루미)의 멀티뷰 도감과 감정 스티커를 만나보세요.",
 };
 
 export default function CharactersPage() {

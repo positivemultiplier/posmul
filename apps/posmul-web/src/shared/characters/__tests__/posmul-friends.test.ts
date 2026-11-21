@@ -3,6 +3,7 @@ import {
   POSMUL_STICKERS,
   encodeGuestbookStickerMessage,
   getFriendByDomain,
+  getFriendById,
   getFriendFromMinimiStyle,
   parseGuestbookStickerMessage,
 } from "../posmul-friends";
@@ -21,13 +22,19 @@ describe("posmul-friends", () => {
 
   it("도메인 및 힐링룸 미니미 ID에 맞는 캐릭터를 매핑한다", () => {
     expect(getFriendByDomain("prediction").id).toBe("ollie");
+    expect(getFriendByDomain("prediction").nameKo).toBe("프레디");
+    expect(getFriendByDomain("prediction").nameEn).toBe("Preddy");
     expect(getFriendByDomain("donation").id).toBe("ongi");
     expect(getFriendByDomain("consume").id).toBe("moa");
     expect(getFriendByDomain("forum").id).toBe("ago");
     expect(getFriendByDomain("ranking").id).toBe("beomi");
+    expect(getFriendByDomain("ranking").nameKo).toBe("챔피");
+    expect(getFriendByDomain("ranking").nameEn).toBe("Champy");
     expect(getFriendByDomain("economy").id).toBe("wavy");
     expect(getFriendByDomain("healing-room").id).toBe("roomie");
 
+    expect(getFriendById("preddy").id).toBe("ollie");
+    expect(getFriendById("champy").id).toBe("beomi");
     expect(getFriendFromMinimiStyle("friend-ollie")?.id).toBe("ollie");
     expect(getFriendFromMinimiStyle("warm-knit")).toBeNull();
   });

@@ -222,7 +222,7 @@ export const MINIMI_STYLES: ReadonlyArray<MinimiStyleItem> = [
   {
     id: "friend-ollie",
     category: "minimi",
-    name: "올리 (Ollie · 올빼미)",
+    name: "프레디 (Preddy · 올빼미)",
     description: "돋보기와 탐정 모자를 쓰고 내일의 확률을 추리하는 예측 탐정 (4방향 회전 지원)",
     pricePmp: 150,
     avatarEmoji: "🦉",
@@ -274,7 +274,7 @@ export const MINIMI_STYLES: ReadonlyArray<MinimiStyleItem> = [
   {
     id: "friend-beomi",
     category: "minimi",
-    name: "범이 (Beomi · 아기 호랑이)",
+    name: "챔피 (Champy · 아기 호랑이)",
     description: "번개 헤어밴드와 트로피를 향한 불꽃 열정의 맞짱 챔피언 (4방향 회전 지원)",
     pricePmp: 250,
     avatarEmoji: "🐯",
