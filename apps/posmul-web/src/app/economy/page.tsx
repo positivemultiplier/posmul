@@ -2,7 +2,6 @@ import { createClient } from "../../lib/supabase/server";
 import { FadeIn } from "../../shared/ui/components/animations";
 import { TrendingUp, Users, Coins, ArrowRight, Clock } from "lucide-react";
 import Link from "next/link";
-import { PosMulCharacterCompanion } from "@/shared/characters/PosMulCharacterCompanion";
 
 export default async function EconomyPage() {
     const supabase = await createClient();
@@ -27,9 +26,6 @@ export default async function EconomyPage() {
                             PosMul 경제 시스템의 실시간 흐름을 확인하세요
                         </p>
                     </div>
-
-                    {/* 포스멀 프렌즈 웨이비(Wavy) 경제 가이드 */}
-                    <PosMulCharacterCompanion domain="economy" variant="banner" className="mb-10" />
 
                     {/* MoneyWave Component */}
                     <div className="mb-12 p-8 bg-gradient-to-br from-green-500/10 to-emerald-500/10 backdrop-blur-xl border border-green-500/30 rounded-2xl">

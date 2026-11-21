@@ -41,8 +41,9 @@
 - **단일 데이터/뷰 아키텍처**: 모든 카테고리 상세 라우트(`economy`, `sports`, `entertainment`, `politics`, `consume`, `user-suggestions`)의 `renderPredictionDetailBySlug`와 `/prediction/[slug]` 모두 `fetchPredictionDetailDataBySlug` + `UniversalPredictionDetailClient`를 단일 뷰로 사용합니다.
 - **레이아웃 배치 순서**:
   - 상단: LIVE 연동 배너 ➔ 마이크로 심볼 + 제목 + 분류별 전용 게이지 헤더
-  - 좌측(2 cols): ① 집단지성 데이터 차트 센터(탭 뷰어) ➔ ② AI 균형 의사결정 브리핑 ➔ ③ 콤팩트 의제 정보 & 공인 오라클 판정 기준 ➔ ④ 이 의제 전용 시민 토론 갤러리
+  - 좌측(2 cols): ① 집단지성 데이터 차트 센터(탭 뷰어) ➔ ② AI 균형 의사결정 브리핑 (`BalancedDecisionBriefing` — 중립 팩트 탭 없이 고가독성 `14~15px` 기준: `BINARY` 좌우 50:50 VS 맞대결 / `WDL` 상단 3요약 + 하단 상세 펼침 / `RANKING` 확률 순위형 아코디언)
   - 우측(1 col): ① `MoneyWave 황금 모래시계` ➔ ② 3대 분류 맞춤형 시민 예측 참여 패널
+  - *(하단 `의제 정보 & 공식 판정 기준`, `꼬리 내기`, `의제 전용 시민 토론 갤러리`, 우측 `P2P 꼬리 내기 CTA`는 가독성 집중을 위해 제거됨)*
 - **3대 분류(`binary` / `wdl` / `ranking`) UI 분기**:
   - **양자택일 (`binary`)**: 반원 아크 게이지 + 2분할 점유율 배틀 바 + 에메랄드/로즈 캡슐 버튼
   - **승무패·3지선다 (`wdl`)**: 3색 도넛 세그먼트 게이지 + 3열 스코어 요약칩 + 3색 밸런스 바 + 에메랄드/앰버/로즈 카드

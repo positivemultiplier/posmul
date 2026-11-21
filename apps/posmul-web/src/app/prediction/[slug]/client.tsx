@@ -52,7 +52,6 @@ import {
   resolveGameVisualMeta,
   splitTitlePrefix,
 } from "@/bounded-contexts/prediction/presentation/components/PredictionGameCard";
-import { GalleryPostList } from "@/app/forum/components/GalleryPostList";
 import { BalancedDecisionBriefing } from "@/bounded-contexts/prediction/presentation/components/BalancedDecisionBriefing";
 import type { UserChallengeDTO } from "@/app/challenge/types";
 import {
@@ -74,12 +73,9 @@ import {
   PieChart,
   ShieldCheck,
   Radio,
-  Database,
   Coins,
   Sparkles,
   CheckCircle2,
-  FileText,
-  MessageSquare,
   BarChart3,
   Trophy,
   Scale,
@@ -379,13 +375,11 @@ export function UniversalPredictionDetailClient({
   slug,
   initialChartData,
   userLearningProfile,
-  tailChallenges = [],
+  tailChallenges: _tailChallenges = [],
 }: UniversalPredictionDetailClientProps) {
-  const tailCreateHref = `/challenge/create?linkedGameId=${encodeURIComponent(game.id)}&linkedSlug=${encodeURIComponent(slug || game.id)}&linkedTitle=${encodeURIComponent(game.title)}`;
   const analysisHref = `/prediction/${encodeURIComponent(slug || game.id)}/analysis`;
   const [chartTab, setChartTab] = useState<ChartTabType>("trend");
   const [isAnalystMode, setIsAnalystMode] = useState<boolean>(false);
-  const [isDescExpanded, setIsDescExpanded] = useState<boolean>(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const [balance, setBalance] = useState(userBalance);
@@ -1336,163 +1330,14 @@ export function UniversalPredictionDetailClient({
 
             </Card>
 
-            {/* 2️⃣ ⚖️ AI 균형 의사결정 브리핑 */}
+            {/* 2️⃣ ⚖️ AI 균형 의사결정 브리핑 (유형별 고가독성 비교 뷰) */}
             <BalancedDecisionBriefing
               gameId={game.id}
               gameTitle={game.title}
+              options={game.options}
+              selectedOptionId={selectedOption}
+              onSelectOption={setSelectedOption}
             />
-
-            {/* 3️⃣ 📋 의제 정보 & 공식 판정 기준 (심플 콤팩트 카드) */}
-            <div className="rounded-2xl bg-[#111622] border border-white/[0.08] p-4 sm:p-5 space-y-3.5 shadow-lg">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs sm:text-sm font-extrabold text-white">
-                  <FileText className="w-4 h-4 text-sky-400" />
-                  <span>의제 정보 & 공식 판정 기준</span>
-                </div>
-                <span className="text-[10.5px] font-bold text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
-                  {oracleSpec.badge}
-                </span>
-              </div>
-
-              {game.description && (
-                <div className="bg-slate-950/50 p-3 rounded-xl border border-white/[0.04] space-y-1.5">
-                  <p
-                    className={`text-xs text-slate-300 leading-relaxed whitespace-pre-line ${
-                      isDescExpanded ? "" : "line-clamp-3"
-                    }`}
-                  >
-                    {game.description}
-                  </p>
-                  {game.description.length > 110 && (
-                    <button
-                      type="button"
-                      onClick={() => setIsDescExpanded((prev) => !prev)}
-                      className="text-[11px] font-bold text-sky-400 hover:text-sky-300 transition-colors"
-                    >
-                      {isDescExpanded ? "접기 ▲" : "설명 전체 보기 ▼"}
-                    </button>
-                  )}
-                </div>
-              )}
-
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-xl bg-slate-950/80 border border-white/[0.06] text-xs">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Database className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                  <span className="text-slate-200 font-bold truncate">{oracleSpec.provider}</span>
-                  <span className="text-slate-600 hidden sm:inline">·</span>
-                  <span className="text-slate-400 text-[11px] truncate hidden sm:inline">{oracleSpec.scheduleDesc}</span>
-                </div>
-                <span className="text-[10.5px] text-sky-400 font-bold shrink-0 flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
-                  <span>취소·무효 시 100% PMP 전액 환불</span>
-                </span>
-              </div>
-            </div>
-
-            {/* 3-1️⃣ 🔥 이 이슈에 달린 시민 꼬리 내기 (PMP 뺏어오기 · 바이럴) */}
-            <div className="rounded-2xl bg-gradient-to-br from-amber-950/30 via-[#111622] to-[#111622] border border-amber-500/25 p-4 sm:p-5 space-y-3.5 shadow-lg">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-base">🥊</span>
-                  <div>
-                    <h3 className="text-xs sm:text-sm font-extrabold text-white flex items-center gap-2">
-                      <span>이 이슈의 시민 꼬리 내기</span>
-                      <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                        {tailChallenges.length}건
-                      </span>
-                    </h3>
-                    <p className="text-[11px] text-slate-400">
-                      공식 경기/이슈 안에서 세부 상황 내기를 직접 열고 친구들 PMP를 뺏어오세요 (+방장 수수료 3%)
-                    </p>
-                  </div>
-                </div>
-                <Link
-                  href={tailCreateHref}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs shadow-md transition whitespace-nowrap"
-                >
-                  <span>+ 꼬리 내기 붙이기</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
-                </Link>
-              </div>
-
-              {tailChallenges.length === 0 ? (
-                <div className="p-4 rounded-xl bg-slate-950/60 border border-dashed border-amber-500/25 text-center space-y-2">
-                  <p className="text-xs text-slate-300 font-semibold">
-                    아직 이 이슈에 달린 꼬리 내기가 없습니다!
-                  </p>
-                  <p className="text-[11px] text-slate-500">
-                    “전반전 추가시간 4분 이상?”, “이 지표 발표 직후 5% 급등?” 같은 내기를 10초 만에 열어 단톡방에 공유해 보세요.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {tailChallenges.slice(0, 4).map((tc) => {
-                    const optA = tc.options[0];
-                    const optB = tc.options[1];
-                    return (
-                      <Link
-                        key={tc.id}
-                        href={`/challenge/${tc.id}`}
-                        className="p-3.5 rounded-xl bg-[#0b0f19] hover:bg-slate-900 border border-white/[0.08] hover:border-amber-500/40 transition space-y-2.5 group block"
-                      >
-                        <div className="flex items-center justify-between text-[10px]">
-                          <span className="text-slate-400 font-bold">
-                            방장: {tc.hostName}
-                          </span>
-                          <span className="text-amber-400 font-black font-mono">
-                            💰 {tc.totalPoolPmp.toLocaleString()} PMP
-                          </span>
-                        </div>
-                        <div className="text-xs font-extrabold text-white group-hover:text-amber-300 transition line-clamp-2">
-                          {tc.title}
-                        </div>
-                        {optA && optB && (
-                          <div className="space-y-1">
-                            <div className="flex justify-between text-[10px] font-bold">
-                              <span className="text-sky-400 truncate max-w-[48%]">
-                                {optA.label} ({optA.ratio}%)
-                              </span>
-                              <span className="text-rose-400 truncate max-w-[48%]">
-                                {optB.label} ({optB.ratio}%)
-                              </span>
-                            </div>
-                            <div className="h-1.5 w-full bg-slate-800 rounded-full overflow-hidden flex">
-                              <div className="bg-sky-500 h-full" style={{ width: `${optA.ratio}%` }} />
-                              <div className="bg-rose-500 h-full" style={{ width: `${optB.ratio}%` }} />
-                            </div>
-                          </div>
-                        )}
-                      </Link>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* 4️⃣ 💬 이 의제 전용 시민 토론 갤러리 (소셜) */}
-            <div className="space-y-4 pt-1">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-                  <MessageSquare className="w-4 h-4 text-sky-400" />
-                  <span>이 의제 전용 시민 토론 갤러리</span>
-                  <span className="text-xs text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">
-                    건전 의견 작성 시 +10 PMP
-                  </span>
-                </h3>
-                <Link
-                  href="/forum"
-                  className="text-xs text-sky-400 hover:text-sky-300 font-bold transition-colors"
-                >
-                  포럼 전체 갤러리 가기 →
-                </Link>
-              </div>
-
-              <GalleryPostList
-                gameFilterId={game.id}
-                gameFilterTitle={game.title}
-                isCompactMode={true}
-              />
-            </div>
           </div>
 
           {/* ======================================================== */}
@@ -1750,28 +1595,6 @@ export function UniversalPredictionDetailClient({
                   : "🎯 예측 투표 참여하기"}
               </button>
             </Card>
-
-            {/* 🥊 꼬리 내기 빠르게 열기 사이드바 CTA */}
-            <Link
-              href={tailCreateHref}
-              className="block rounded-2xl p-4 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-[#111622] border border-amber-500/35 hover:border-amber-400 transition group shadow-lg"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="inline-flex items-center gap-1 text-[10px] font-black text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-full">
-                    <span>🥊 P2P 꼬리 내기</span>
-                    <span>· 방장 3%</span>
-                  </div>
-                  <div className="text-xs font-extrabold text-white group-hover:text-amber-300 transition">
-                    이 주제로 친구들과 즉석 내기 열기
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    카톡 링크로 친구를 끌어들여 PMP를 뺏어오고 내 시드를 불려보세요!
-                  </p>
-                </div>
-                <ArrowRight className="w-4 h-4 text-amber-400 shrink-0 mt-1 group-hover:translate-x-0.5 transition-transform" />
-              </div>
-            </Link>
           </div>
         </div>
       </main>

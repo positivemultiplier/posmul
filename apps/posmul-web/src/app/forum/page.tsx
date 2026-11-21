@@ -4,7 +4,6 @@ import React, { Suspense } from "react";
 import { MessageSquare, Flame, TrendingUp, Sparkles, Trophy, Award } from "lucide-react";
 import { GalleryPostList } from "./components/GalleryPostList";
 import { DomainContextHeader } from "@/shared/ui/components/layout/DomainContextHeader";
-import { PosMulCharacterCompanion } from "@/shared/characters/PosMulCharacterCompanion";
 
 export default function ForumPage() {
   return (
@@ -51,9 +50,6 @@ export default function ForumPage() {
             </div>
           </div>
         </div>
-
-        {/* 포스멀 프렌즈 아고(Ago) 공론장 가이드 */}
-        <PosMulCharacterCompanion domain="forum" variant="compact" />
 
         {/* 메인 갤러리 테이블 */}
         <Suspense

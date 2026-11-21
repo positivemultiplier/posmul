@@ -189,79 +189,82 @@ function buildModePromptInstructions(
 
   if (mode === "BINARY") {
     return [
-      "[게임 유형: 양자택일(BINARY) — 확증편향 방지 대조 분석]",
+      "[게임 유형: 양자택일(BINARY) — 좌우 VS 맞대결 비교]",
       "선택지 목록:",
       optionListText,
       "요구사항:",
       "- scenarios 배열에 위 2개 선택지를 optionId/optionLabel 그대로 각각 작성하세요.",
-      "- 각 선택지마다 arguments 배열에 서로 다른 구체적 논거 2개씩 작성하고 triggerCondition(실현 핵심 조건)을 1줄 붙이세요.",
+      "- 각 선택지 coreThesis는 35~55자 이내의 직관적인 두괄식 1문장으로 작성하세요.",
+      "- 각 선택지 arguments에는 서로 다른 핵심 논거를 정확히 2개씩만 작성하세요 (point: 8~18자 짧은 제목, detail: 40~70자 쉬운 1문장).",
       '- 1번 선택지 tone은 "bull", 2번 선택지 tone은 "bear" 로 설정하세요.',
     ].join("\n");
   }
 
   if (mode === "WIN_DRAW_LOSE") {
     return [
-      "[게임 유형: 3방향 균형(WIN_DRAW_LOSE) — 승무패 / 인상·동결·인하 시나리오 분석]",
+      "[게임 유형: 3방향 시나리오(WIN_DRAW_LOSE) — 승무패 / 인상·동결·인하]",
       "선택지 목록:",
       optionListText,
       "요구사항:",
       "- scenarios 배열에 위 3개 선택지를 모두 각각 작성하세요 (YES/NO 이분법 금지).",
       '- 1번(홈승/강세) tone은 "bull", 2번(무승부/동결/보합) tone은 "neutral", 3번(원정승/약세) tone은 "bear".',
-      "- 특히 2번(무승부·동결) 선택지는 왜 양극단이 아닌 제3의 결말이 나타날 수 있는지 구체적 전개 조건을 반드시 분석하세요.",
-      "- 각 선택지 arguments에는 구체적 논거 2개씩 넣고, tailRiskNote에 3방향 구도에서의 핵심 이변 변수를 1줄로 작성하세요.",
+      "- 각 선택지 coreThesis는 35~55자 이내의 명확한 1문장으로 작성하세요. 특히 2번(무승부·동결)은 제3의 결말이 나오는 핵심 조건을 짚으세요.",
+      "- 각 선택지 arguments에는 핵심 논거 2개씩만 간결히 담으세요 (point: 8~18자, detail: 40~70자 1문장).",
+      "- tailRiskNote에 3방향 구도의 핵심 이변 변수를 1문장(45~65자)으로 작성하세요.",
     ].join("\n");
   }
 
   return [
-    "[게임 유형: 다구간/랭킹(RANKING) — 분포 및 후보별 비교 매트릭스]",
+    "[게임 유형: 다자/랭킹(RANKING) — 후보별 핵심 시나리오]",
     "선택지 목록:",
     optionListText,
     "요구사항:",
     `- scenarios 배열에 위 ${options.length}개 선택지를 빠짐없이 모두 각각 작성하세요.`,
-    "- 각 선택지마다 stanceTag(예: '중심 유력', '상방 돌파', '하방 이탈', '다크호스')와 coreThesis(해당 구간/후보가 1위·적중할 조건 1~2문장), probabilityCue(예상 성립 조건 요약 1줄)를 작성하세요.",
-    "- 각 선택지의 arguments에는 핵심 근거 1~2개를 간결히 담으세요.",
-    "- tailRiskNote에 시장이 과소평가하기 쉬운 꼬리위험(Tail Risk)이나 다크호스 변수를 1줄로 작성하세요.",
+    "- 각 선택지마다 stanceTag(4~8자)와 coreThesis(해당 후보/구간이 1위·적중할 핵심 조건 35~55자 1문장)를 작성하세요.",
+    "- 각 선택지 arguments에는 핵심 근거 2개 이내를 간결히 담으세요 (point: 8~18자, detail: 40~70자 1문장).",
+    "- tailRiskNote에 시장이 놓치기 쉬운 다크호스·이변 변수를 1문장(45~65자)으로 작성하세요.",
   ].join("\n");
 }
 
 function buildSystemPrompt(mode: BriefingMode, options: BriefingGameOptionInput[]): string {
   return [
     "당신은 한국 예측시장 PosMul의 수석 데이터 애널리스트입니다.",
-    "주어진 예측 게임의 제목, 설명, 오라클 정보, 선택지만을 근거로 편향 없는 AI 균형 의사결정 브리핑 JSON을 생성하세요.",
+    "시민이 15초 안에 양측·후보별 논거를 한눈에 비교하고 의사결정할 수 있도록 짧고 날카로운 AI 균형 브리핑 JSON을 생성하세요.",
     "",
     "[절대 준수 규칙]",
-    "1. 할루시네이션 금지: 존재하지 않는 언론사 기사 제목, 가짜 통계 수치, URL(http/https)을 절대 지어내지 마세요.",
-    "2. 주제 일관성: 오직 제공된 게임 주제와 선택지에 관해서만 작성하세요. 타 주제 예시를 섞지 마세요.",
-    "3. 사행성 용어 금지: '배팅', '도박', '올인' 대신 '예측 참여', '확률 판단', '시나리오'를 사용하세요.",
-    "4. neutralFacts 4대 항목: currentValue(현재 기준선/관전 포인트), historicalContext(유사 패턴/맥락), officialSchedule(마감 및 정산 일정), source(공식 판정 출처)를 간결히 채우세요.",
+    "1. 할루시네이션 금지: 존재하지 않는 기사 제목, 가짜 통계 수치, URL(http/https)을 절대 지어내지 마세요.",
+    "2. 가독성·간결성 최우선: 보고서식 장문·미사여구를 빼고, 누구나 바로 이해하는 쉬운 한국어 단문(1문장)으로 핵심만 쓰세요.",
+    "3. 주제 일관성: 오직 제공된 게임 주제와 선택지에 관해서만 작성하세요.",
+    "4. 사행성 용어 금지: '배팅', '도박', '올인' 대신 '예측 참여', '확률 판단', '시나리오'를 사용하세요.",
+    "5. neutralFacts는 스키마 호환용으로 각 항목을 1줄 이내로 짧게 채우세요.",
     "",
     buildModePromptInstructions(mode, options),
     "",
     "반드시 아래 JSON 스키마만 출력하세요:",
     "{",
     '  "neutralFacts": {',
-    '    "title": "팩트체크 요약 제목",',
-    '    "description": "중립적 핵심 배경 1~2문장",',
-    '    "currentValue": "현재 확인된 기준 수치 또는 매치/공시 현황",',
-    '    "historicalContext": "과거 추이 또는 상대전적/컨센서스 맥락",',
-    '    "officialSchedule": "참여 마감 및 공식 정산 시점",',
-    '    "source": "공식 정산 기관/API 명칭"',
+    '    "title": "주제 1줄 요약",',
+    '    "description": "배경 1문장",',
+    '    "currentValue": "현재 기준선 1줄",',
+    '    "historicalContext": "직전 추이 1줄",',
+    '    "officialSchedule": "마감·정산 시점 1줄",',
+    '    "source": "공식 정산 출처명"',
     "  },",
     '  "scenarios": [',
     "    {",
     '      "optionId": "위 목록의 optionId",',
     '      "optionLabel": "위 목록의 label",',
-    '      "stanceTag": "4~10자 태그",',
+    '      "stanceTag": "4~8자 태그",',
     '      "tone": "bull" | "bear" | "neutral" | "darkhorse",',
-    '      "coreThesis": "이 선택지가 성립할 핵심 논리 1~2문장",',
-    '      "probabilityCue": "성립 트리거 조건 1줄",',
+    '      "coreThesis": "핵심 주장 1문장 (35~55자)",',
+    '      "probabilityCue": "성립 트리거 1줄 (선택)",',
     '      "arguments": [',
-    '        { "point": "핵심 포인트 제목", "detail": "구체적 근거 1~2문장", "triggerCondition": "발생 조건" }',
+    '        { "point": "핵심 키워드 제목 (8~18자)", "detail": "쉬운 근거 1문장 (40~70자)" }',
     "      ]",
     "    }",
     "  ],",
-    '  "aiInsight": "양쪽·모든 시나리오를 비교한 균형 총평 1~2문장",',
-    '  "tailRiskNote": "다크호스/이변/변동성 유의사항 1줄 (해당 시)"',
+    '  "aiInsight": "승부를 가를 단 하나의 핵심 변수 1문장 (45~75자)",',
+    '  "tailRiskNote": "다크호스/이변 변수 1문장 (40~65자, 해당 시)"',
     "}",
   ].join("\n");
 }
@@ -349,13 +352,13 @@ function normalizeAndValidateBriefing(
         : undefined,
       arguments:
         args.length > 0
-          ? args
+          ? args.slice(0, 2)
           : [
               {
                 point: `${opt.label} 성립 조건`,
                 detail:
                   opt.description ||
-                  `${input.title}의 마감 시점까지 핵심 변수가 ${opt.label} 방향으로 전개되는 경우입니다.`,
+                  `마감 시점까지 핵심 변수가 '${opt.label}' 방향으로 전개될 때 성립합니다.`,
               },
             ],
     };
@@ -440,11 +443,11 @@ export function buildDeterministicFallbackBriefing(
     tone: defaultToneForOption(mode, idx, input.options.length, opt.label),
     coreThesis:
       opt.description ||
-      `'${opt.label}' 결과가 최종 정산 조건에 부합하는 경우입니다.`,
+      `'${opt.label}' 쪽으로 흐름이 기울 때 성립하는 시나리오입니다.`,
     arguments: [
       {
-        point: `${opt.label} 판단 기준`,
-        detail: `${oracleLabel} 기준 최종 결과값이 '${opt.label}' 조건에 해당할 때 선택됩니다.`,
+        point: `${opt.label} 핵심 기준`,
+        detail: `${oracleLabel} 최종 결과가 '${opt.label}' 조건을 충족하면 적중합니다.`,
       },
     ],
   }));
@@ -457,18 +460,18 @@ export function buildDeterministicFallbackBriefing(
     providerBadge: "기본 구조화 요약 (AI 상세 분석 대기)",
     generatedAt: new Date().toISOString(),
     neutralFacts: {
-      title: `[공식 팩트체크] ${input.title}`,
+      title: input.title,
       description:
         (input.description ?? "").trim() ||
-        "공식 정산 일정과 기준 데이터를 확인한 뒤 예측에 참여하세요.",
-      currentValue: "게임 상세 설명의 기준선 참고",
-      historicalContext: "공식 발표 지표 및 시장 컨센서스 반영",
+        "공식 정산 기준에 따라 결과가 판정됩니다.",
+      currentValue: "실시간 참여 추이 참고",
+      historicalContext: "공식 발표 지표 및 시장 흐름 반영",
       officialSchedule: `참여 마감: ${formatKstDateTime(input.registrationEnd)}`,
       source: oracleLabel,
     },
     scenarios,
     aiInsight:
-      "각 선택지의 판정 조건과 마감 일정을 확인하고, 한쪽 편향 없이 균형 있게 판단해 보세요.",
+      "각 선택지의 핵심 조건과 마감 직전 흐름을 비교해 균형 있게 판단해 보세요.",
   };
 }
 

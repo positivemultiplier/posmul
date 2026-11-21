@@ -4,7 +4,6 @@ import {
   DOMAIN_PHILOSOPHY_MAP,
   type PosMulDomainKey,
 } from "../../tokens/domain-tones";
-import { PosMulCharacterCompanion } from "../../../characters/PosMulCharacterCompanion";
 
 export interface DomainMetricItem {
   label: string;
@@ -34,7 +33,7 @@ export function DomainContextHeader({
   subtitle,
   metrics = [],
   actionSlot,
-  hideCompanion = false,
+  hideCompanion: _hideCompanion = true,
   children,
 }: DomainContextHeaderProps) {
   const meta = DOMAIN_PHILOSOPHY_MAP[domain];
@@ -108,13 +107,6 @@ export function DomainContextHeader({
             </div>
           )}
         </div>
-
-        {/* 포스멀 프렌즈 도메인 전담 가이드 */}
-        {!hideCompanion && (
-          <div className="mt-3.5 pt-3 border-t border-white/[0.06]">
-            <PosMulCharacterCompanion domain={domain} variant="compact" />
-          </div>
-        )}
 
         {/* 하단 슬롯: 검색바 또는 보조 필터 */}
         {children && (
