@@ -49,3 +49,13 @@ description: Swarm 없이 도메인 참모들과 먼저 상의하고 대표님 �
   - 해당 도메인 참모 `SKILL.md` (불변식 · 숙제 갱신)
   - [DOMAIN_FLOW_AND_DECISIONS.md](file:///c:/G/posmul/docs/DOMAIN_FLOW_AND_DECISIONS.md) (결정 현황 보드 갱신)
 
+---
+
+## 4자 협업 산출물 수신 시 1:1 순차 처리 원칙
+Gemini App 또는 Google AI Studio에서 핸드오프 문서를 받으면 멀티에이전트 병렬 분업 없이 **단일 에이전트가 대표님과 1:1로 호흡하며 아래 순서로 순차 진행**한다:
+- **`[PRD]`**: 관련 `posmul-*` 스킬로 경제 헌법·Phase 잠금 검수 → Tier 1/Tier 2 구현 범위 제안 → 대표님 컨펌 후 착수.
+- **`[AI-SPEC]`**: 서버 인증(`getUser()`) + Zod 검증 + 입력 크기 제한 + Rate Limit + Fallback을 붙여 라우트/액션 이식.
+- **`[UI-SPEC]`**: 500줄 이하 컴포넌트 분해 + `Local First` 위치 배치 + Mock/실서버 액션 경계 분리 이식.
+- **`[AUDIT-FEEDBACK]`**: `[Antigravity 확인 필요]` 항목을 실코드/DB와 대조 후 대표님이 채택한 건만 `P0 → P1 → P2` 순차 수정.
+- **순차 구현 원칙**: 한 턴에 DB+Core+UI를 뭉뚱그리지 않고 **`DB/원장 → Core 로직/테스트 → UI/진입점 → Gate 검증`** 순으로 끊어 검증한다.
+

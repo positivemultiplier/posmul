@@ -23,7 +23,7 @@
 - **Tier 1 Core DDD (엄격한 4계층)**: `prediction`, `economy`(`shared/economy-kernel` + SDK 일원화), `feed` → `Domain(순수 TS, 외부 의존 0)` ← `Application(UseCase)` ← `Infrastructure(Supabase*Repository)` / `Presentation`.
 - **Tier 2 Clean Feature Slice (3단 책임 분리)**: `forum`, `donation`, `consume`, `ranking`, `apps/housing-pro` → 순수 비즈니스 규칙/계산(`domain` 또는 `*-policy.ts`) ← 인증+Zod+원자 RPC(`application` 또는 `*.actions.ts`) ← 500줄 이하 순수 UI.
 
-## 5. 에이전트 분업 & 완료 검증 게이트 (DoD)
-- **오케스트레이션**: 중~대형 작업이나 4자 협업 산출물(`[PRD]`, `[AI-SPEC]`, `[UI-SPEC]`, `[AUDIT-FEEDBACK]`) 수신 시 **`posmul-orchestrator` 스킬**과 관련 **`posmul-*` 도메인 참모 스킬**을 먼저 읽고 `Domain Council → DB/Core → UI/App → Delivery Gate` 순으로 분업합니다.
+## 5. 1:1 순차 작업 원칙 & 완료 검증 게이트 (DoD)
+- **1:1 컨펌·순차 진행**: 멀티에이전트 병렬 분업을 쓰지 않고 대표님과 1:1로 호흡합니다. 중~대형 작업이나 4자 협업 산출물(`[PRD]`, `[AI-SPEC]`, `[UI-SPEC]`, `[AUDIT-FEEDBACK]`) 수신 시 [domain-council.md](file:///c:/G/posmul/.agent/workflows/domain-council.md)와 관련 **`posmul-*` 도메인 참모 스킬**을 먼저 확인한 뒤 `대표님 컨펌 → DB/Core(테스트) → UI/App → Delivery Gate` 순으로 순차 구현합니다.
 - **코드 위생**: `TypeScript strict`(`any`, `@ts-ignore`, 빈 `catch {}`, 가짜 성공 UI 금지), 단일 파일 500줄 이하.
 - **완료 게이트**: 변경 앱/패키지 대상 `type-check` + `test` + `lint` 통과 후 `scripts/ship.ps1`로 빌드·`develop` 커밋/푸시 (`-Deploy`는 사용자 요청 시만).

@@ -6,8 +6,6 @@ keywords: plan, planning, phases, quality-gate, breakdown, roadmap
 
 # Feature Planner (한국어 우선)
 
-> 중~대형 기능 및 다중 도메인/계층 작업의 실제 실행 분업은 [posmul-orchestrator SKILL](file:///c:/G/posmul/.agent/skills/posmul-orchestrator/SKILL.md)과 연계합니다.
-
 ```mermaid
 flowchart TD
   A[Input: requirement] --> B[Analyze risks & scope]

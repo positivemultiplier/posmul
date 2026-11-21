@@ -106,8 +106,7 @@ c:\G\posmul\
 ## 3. 계층형 규칙 · 워크플로우 & 도메인 참모 스킬
 
 - **계층형 `AGENTS.md` 지도**: [루트 AGENTS.md](file:///c:/G/posmul/AGENTS.md) · [posmul-web](file:///c:/G/posmul/apps/posmul-web/AGENTS.md) · [housing-pro](file:///c:/G/posmul/apps/housing-pro/AGENTS.md) · [auth-economy-sdk](file:///c:/G/posmul/packages/auth-economy-sdk/AGENTS.md)
-- **멀티 에이전트 분업 지휘**: [posmul-orchestrator](file:///c:/G/posmul/.agent/skills/posmul-orchestrator/SKILL.md) (4자 협업 핸드오프 & 계층별 서브에이전트 분업)
-- **기획·도메인 의사결정 상의**: [domain-council.md](file:///c:/G/posmul/.agent/workflows/domain-council.md) + `.agent/skills/posmul-*/SKILL.md`
+- **기획·도메인 의사결정 & 4자 협업 수신**: [domain-council.md](file:///c:/G/posmul/.agent/workflows/domain-council.md) + `.agent/skills/posmul-*/SKILL.md`
 - **복잡한 기능 계획**: [feature-planner.md](file:///c:/G/posmul/.agent/workflows/feature-planner.md)
 - **기능 구현**: [posmul-feature.md](file:///c:/G/posmul/.agent/workflows/posmul-feature.md)
 - **새 Bounded Context 추가**: [domain-add.md](file:///c:/G/posmul/.agent/workflows/domain-add.md)
