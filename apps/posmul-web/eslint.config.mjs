@@ -90,4 +90,32 @@ export default [
       ],
     },
   },
+  // Clean Architecture 기계적 가드레일 3: Application 계층의 Infrastructure/supabaseAdmin 직접 의존 경고
+  {
+    files: ["src/bounded-contexts/*/application/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "warn",
+        {
+          patterns: [
+            {
+              group: ["**/infrastructure/**", "@/lib/supabase/admin"],
+              message:
+                "Clean Architecture(DIP) 권장 위반: Application 계층은 Infrastructure 구체 구현체나 supabaseAdmin 대신 Domain Port 인터페이스를 주입받으세요.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // God File 방지 가드레일: 단일 파일 500줄 초과 경고
+  {
+    files: ["src/**/*.ts", "src/**/*.tsx"],
+    rules: {
+      "max-lines": [
+        "warn",
+        { max: 500, skipBlankLines: true, skipComments: true },
+      ],
+    },
+  },
 ];

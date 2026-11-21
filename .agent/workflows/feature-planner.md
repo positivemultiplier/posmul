@@ -6,6 +6,8 @@ keywords: plan, planning, phases, quality-gate, breakdown, roadmap
 
 # Feature Planner (한국어 우선)
 
+> 중~대형 기능 및 다중 도메인/계층 작업의 실제 실행 분업은 [posmul-orchestrator SKILL](file:///c:/G/posmul/.agent/skills/posmul-orchestrator/SKILL.md)과 연계합니다.
+
 ```mermaid
 flowchart TD
   A[Input: requirement] --> B[Analyze risks & scope]
@@ -254,34 +256,14 @@ Consider:
 - **API/Controller Layer**: ≥70% (endpoints)
 - **UI/Presentation**: Integration tests preferred over coverage
 
-**Coverage Commands by Ecosystem**:
-```bash
-# JavaScript/TypeScript
-jest --coverage
-nyc report --reporter=html
-
-# Python
-pytest --cov=src --cov-report=html
-coverage report
-
-# Java
-mvn jacoco:report
-gradle jacocoTestReport
-
-# Go
-go test -cover ./...
-go tool cover -html=coverage.out
-
-# .NET
-dotnet test /p:CollectCoverage=true /p:CoverageReporter=html
-reportgenerator -reports:coverage.xml -targetdir:coverage
-
-# Ruby
-bundle exec rspec --coverage
-open coverage/index.html
-
-# PHP
-phpunit --coverage-html coverage
+**Verification & Coverage Commands (PosMul Monorepo PowerShell)**:
+```powershell
+Set-Location -Path c:\G\posmul
+pnpm -F @posmul/posmul-web test -- --coverage --passWithNoTests
+pnpm -F @posmul/posmul-web type-check
+pnpm -F @posmul/housing-pro type-check
+pnpm -F @posmul/auth-economy-sdk type-check
+pnpm turbo test
 ```
 
 ### Common Test Patterns
