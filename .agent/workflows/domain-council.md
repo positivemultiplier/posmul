@@ -17,6 +17,7 @@ description: Swarm 없이 도메인 참모들과 먼저 상의하고 대표님 �
 5. **[posmul-donation](file:///c:/G/posmul/.agent/skills/posmul-donation/SKILL.md)** — 2단계 가치 배분 훈련(Phase 1 기관·K-물품 vs Phase 2 팔로잉·미래꿈 투표)
 6. **[posmul-ranking](file:///c:/G/posmul/.agent/skills/posmul-ranking/SKILL.md)** — 읍면동 풀뿌리 랭킹 · 직업군 명예의 전당 · `Brier Score` 실력 평판
 7. **[posmul-housing-pro](file:///c:/G/posmul/.agent/skills/posmul-housing-pro/SKILL.md)** — 전문직 버티컬 1호(주택관리사 수험·소장 실무) · 버티컬 일일 300 PMP 통제
+8. **[posmul-growth](file:///c:/G/posmul/.agent/skills/posmul-growth/SKILL.md)** — 그로스·리텐션·습관 루프 전담(유저 성향별 MoneyWave 리듬 · 30초 모닝 브리핑 루틴 · 실험 추가/삭제 관리)
 
 ---
 
