@@ -6,6 +6,8 @@ import {
   PredictionType,
   GameStatus,
 } from "../../domain/value-objects/prediction-types";
+import { extractSportsMatchupBadges } from "../../domain/value-objects/sports-team-palettes";
+import { SportsMatchupBadgeCluster } from "./SportsTeamBadge";
 
 interface UserPrediction {
   prediction_id: string;
@@ -609,17 +611,30 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
       {/* 1행 헤더: [아바타 + 카테고리/출처/D-day] vs [우측 게이지] (텍스트 찌그러짐 원천 차단) */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
-          {/* 저작권 안전 40x40 마이크로 심볼 아바타 */}
-          <div
-            className={`w-10 h-10 rounded-xl ${meta.bgClass} border ${meta.borderClass} flex flex-col items-center justify-center shrink-0 shadow-inner`}
-          >
-            <span className={meta.textClass}>{meta.symbol}</span>
-            {meta.subLabel && (
-              <span className="text-[7.5px] font-bold opacity-80 text-white leading-none mt-0.5">
-                {meta.subLabel}
-              </span>
-            )}
-          </div>
+          {/* 저작권 안전 스포츠 팀 컬러 SVG 배지 또는 40x40 마이크로 심볼 아바타 */}
+          {(() => {
+            const sportsMatchup = extractSportsMatchupBadges({
+              title: game.title,
+              category: game.category,
+              subcategory: game.subcategory,
+              optionLabels: game.options.map((o) => o.text),
+            });
+            if (sportsMatchup) {
+              return <SportsMatchupBadgeCluster matchup={sportsMatchup} variant="card" />;
+            }
+            return (
+              <div
+                className={`w-10 h-10 rounded-xl ${meta.bgClass} border ${meta.borderClass} flex flex-col items-center justify-center shrink-0 shadow-inner`}
+              >
+                <span className={meta.textClass}>{meta.symbol}</span>
+                {meta.subLabel && (
+                  <span className="text-[7.5px] font-bold opacity-80 text-white leading-none mt-0.5">
+                    {meta.subLabel}
+                  </span>
+                )}
+              </div>
+            );
+          })()}
 
           {/* 카테고리 & 출처 & 기간 (세로 깨짐 방지: 가로 폭 넉넉히 확보) */}
           <div className="flex flex-col min-w-0">

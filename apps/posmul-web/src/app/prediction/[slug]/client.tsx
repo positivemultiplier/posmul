@@ -39,6 +39,10 @@ import {
 } from "@/bounded-contexts/prediction/presentation/components/PredictionGameCard";
 import { BalancedDecisionBriefing } from "@/bounded-contexts/prediction/presentation/components/BalancedDecisionBriefing";
 import { AiForecastSection } from "@/bounded-contexts/prediction/presentation/components/AiForecastSection";
+import { RelatedNewsSection } from "@/bounded-contexts/prediction/presentation/components/RelatedNewsSection";
+import { SportsMatchupBadgeCluster } from "@/bounded-contexts/prediction/presentation/components/SportsTeamBadge";
+import { extractSportsMatchupBadges } from "@/bounded-contexts/prediction/domain/value-objects/sports-team-palettes";
+import type { RelatedNewsItem } from "@/bounded-contexts/prediction/infrastructure/adapters/naver-news.adapter";
 import type { UserChallengeDTO } from "@/app/challenge/types";
 import { type UserLearningProfileSummary } from "@/bounded-contexts/prediction/domain/services/collective-intelligence-engine";
 import {
@@ -145,6 +149,7 @@ interface UniversalPredictionDetailClientProps {
   tailChallenges?: UserChallengeDTO[];
   initialBriefing?: BalancedBriefingDTO | null;
   initialForecasts?: AiForecastDTO[] | null;
+  relatedNews?: RelatedNewsItem[];
 }
 
 type ChartTabType = "trend" | "distribution" | "my_bets";
@@ -360,6 +365,7 @@ export function UniversalPredictionDetailClient({
   tailChallenges: _tailChallenges = [],
   initialBriefing,
   initialForecasts,
+  relatedNews,
 }: UniversalPredictionDetailClientProps) {
   const [chartTab, setChartTab] = useState<ChartTabType>("trend");
   const [isPending, startTransition] = useTransition();
@@ -1104,17 +1110,30 @@ export function UniversalPredictionDetailClient({
         <div className="rounded-2xl bg-[#111622] border border-white/[0.08] p-5 md:p-6 shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
-              {/* 메인 피드 카드와 일치하는 마이크로 심볼 아바타 */}
-              <div
-                className={`w-14 h-14 rounded-2xl ${meta.bgClass} border ${meta.borderClass} flex flex-col items-center justify-center shrink-0 shadow-lg`}
-              >
-                <span className={`${meta.textClass} text-2xl`}>{meta.symbol}</span>
-                {meta.subLabel && (
-                  <span className="text-[9px] font-black opacity-85 text-white leading-none mt-0.5">
-                    {meta.subLabel}
-                  </span>
-                )}
-              </div>
+              {/* 메인 피드 카드와 일치하는 스포츠 팀 컬러 SVG 배지 또는 마이크로 심볼 아바타 */}
+              {(() => {
+                const sportsMatchup = extractSportsMatchupBadges({
+                  title: game.title,
+                  category: game.category,
+                  subcategory: game.subcategory,
+                  optionLabels: game.options.map((o) => o.label),
+                });
+                if (sportsMatchup) {
+                  return <SportsMatchupBadgeCluster matchup={sportsMatchup} variant="detail" />;
+                }
+                return (
+                  <div
+                    className={`w-14 h-14 rounded-2xl ${meta.bgClass} border ${meta.borderClass} flex flex-col items-center justify-center shrink-0 shadow-lg`}
+                  >
+                    <span className={`${meta.textClass} text-2xl`}>{meta.symbol}</span>
+                    {meta.subLabel && (
+                      <span className="text-[9px] font-black opacity-85 text-white leading-none mt-0.5">
+                        {meta.subLabel}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 font-semibold">
@@ -1339,6 +1358,9 @@ export function UniversalPredictionDetailClient({
                 initialForecasts={initialForecasts}
               />
             </div>
+
+            {/* 4. 관련 최신 뉴스 (네이버 뉴스 Open API · 30분 캐시 · 최신 기사 필터) */}
+            <RelatedNewsSection articles={relatedNews} />
           </div>
 
           {/* ======================================================== */}

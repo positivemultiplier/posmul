@@ -17,6 +17,7 @@ import { analyzePredictionCapmAndEconomy } from "../../../bounded-contexts/predi
 import { getCachedPredictionDetailPublicData } from "./prediction-public-cache";
 import type { BalancedBriefingDTO } from "../../../bounded-contexts/prediction/domain/value-objects/briefing.types";
 import type { AiForecastDTO } from "../../../bounded-contexts/prediction/domain/value-objects/ai-forecast.types";
+import type { RelatedNewsItem } from "../../../bounded-contexts/prediction/infrastructure/adapters/naver-news.adapter";
 import type { UserChallengeDTO } from "../../challenge/types";
 
 function mapDifficultyToImportance(raw: unknown, optionCount: number): number {
@@ -77,6 +78,7 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
   tailChallenges: UserChallengeDTO[];
   initialBriefing: BalancedBriefingDTO | null;
   initialForecasts: AiForecastDTO[] | null;
+  relatedNews: RelatedNewsItem[];
   slug: string;
 } | null> {
   const decodedSlug = decodeURIComponent(slug);
@@ -100,6 +102,7 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     liveChallengeCount,
     initialBriefing,
     initialForecasts,
+    relatedNews,
   } = publicData;
 
   const user = userAuthRes.data?.user ?? null;
@@ -401,6 +404,7 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     tailChallenges: [],
     initialBriefing,
     initialForecasts,
+    relatedNews,
     slug: decodedSlug,
   };
 }
@@ -419,6 +423,7 @@ export async function renderPredictionDetailBySlug(slug: string) {
       tailChallenges={data.tailChallenges}
       initialBriefing={data.initialBriefing}
       initialForecasts={data.initialForecasts}
+      relatedNews={data.relatedNews}
       slug={data.slug}
     />
   );

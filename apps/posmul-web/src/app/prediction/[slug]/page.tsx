@@ -98,6 +98,7 @@ export default async function PredictionDetailPage({
         tailChallenges={dbDetailData.tailChallenges}
         initialBriefing={dbDetailData.initialBriefing}
         initialForecasts={dbDetailData.initialForecasts}
+        relatedNews={dbDetailData.relatedNews}
         slug={dbDetailData.slug}
       />
     );

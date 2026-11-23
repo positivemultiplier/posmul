@@ -18,6 +18,10 @@ import type {
   AiProviderStats,
   AiRecentFormItem,
 } from "@/bounded-contexts/prediction/domain/value-objects/ai-forecast.types";
+import {
+  getCachedRelatedNaverNews,
+  type RelatedNewsItem,
+} from "@/bounded-contexts/prediction/infrastructure/adapters/naver-news.adapter";
 
 export interface CachedActivePredictionFeed {
   platformTotalPool: number;
@@ -46,6 +50,7 @@ export interface CachedPredictionDetailPublicData {
   liveChallengeCount: number;
   initialBriefing: BalancedBriefingDTO | null;
   initialForecasts: AiForecastDTO[] | null;
+  relatedNews: RelatedNewsItem[];
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -353,6 +358,7 @@ export const getCachedPredictionDetailPublicData = unstable_cache(
       liveMsgRes,
       liveChallengeRes,
       aiForecastsRes,
+      relatedNews,
     ] = await Promise.all([
       supabaseAdmin
         .schema("prediction")
@@ -402,6 +408,7 @@ export const getCachedPredictionDetailPublicData = unstable_cache(
         )
         .eq("game_id", gameRow.game_id)
         .order("created_at", { ascending: true }),
+      getCachedRelatedNaverNews(gameRow.title),
     ]);
 
     const betsData = (betsRes.data ?? []) as CachedPublicBetRow[];
@@ -461,8 +468,9 @@ export const getCachedPredictionDetailPublicData = unstable_cache(
       liveChallengeCount: liveChallengeRes.count ?? 0,
       initialBriefing,
       initialForecasts,
+      relatedNews,
     };
   },
-  ["posmul-prediction-detail-public-v1"],
+  ["posmul-prediction-detail-public-v2"],
   { revalidate: 15, tags: ["prediction-detail"] }
 );
