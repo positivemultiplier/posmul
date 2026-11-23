@@ -298,7 +298,7 @@ export function getOracleSpecInfo(dataSource?: string, title?: string) {
     return {
       provider: "CoinGecko 글로벌 암호화폐 인덱스 · 업비트 시세",
       endpoint: "api.coingecko.com/api/v3/simple/price",
-      badge: "₿ CoinGecko 실시간 시세 오라클",
+      badge: "CoinGecko 실시간 시세 오라클",
       scheduleDesc: "마감 시각 기준 공식 종가/고가 인덱스 자동 대조 판정",
     };
   }
@@ -497,7 +497,7 @@ export function UniversalPredictionDetailClient({
   ]);
 
   // 메인 피드 카드와의 일관된 시각적 연속성
-  const { prefixEmoji, prefixTag, cleanTitle } = splitTitlePrefix(game.title);
+  const { prefixTag, cleanTitle } = splitTitlePrefix(game.title);
   const meta = resolveGameVisualMeta(game.title, game.category, game.subcategory);
   const oracleSpec = getOracleSpecInfo(game.dataSource, game.title);
 
@@ -782,7 +782,7 @@ export function UniversalPredictionDetailClient({
   // 우측 참여 패널 옵션 선택 UI (3종 분류별 차별화 렌더링)
   // ==========================================================
   const renderParticipationOptions = () => {
-    // 1️⃣ Binary (양자택일): 대립 점유율 바 + 2분할 에메랄드 vs 로즈 캡슐
+    // 1. Binary (양자택일): 대립 점유율 바 + 2분할 에메랄드 vs 로즈 캡슐
     if (effectiveType === "binary") {
       const opt1 = game.options[0];
       const opt2 = game.options[1];
@@ -853,7 +853,7 @@ export function UniversalPredictionDetailClient({
       );
     }
 
-    // 2️⃣ WDL (승무패 · 3지선다): 3색 스코어 요약칩 + 3색 밸런스 바 + 3색 캡슐 카드
+    // 2. WDL (승무패 · 3지선다): 3색 스코어 요약칩 + 3색 밸런스 바 + 3색 캡슐 카드
     if (effectiveType === "wdl") {
       const p0 = Math.round((game.options[0]?.probability || 0.34) * 100);
       const p1 = Math.round((game.options[1]?.probability || 0.33) * 100);
@@ -947,7 +947,7 @@ export function UniversalPredictionDetailClient({
       );
     }
 
-    // 3️⃣ Ranking (랭킹 · 다지선다 순위 예측): 🥇🥈🥉 실시간 순위 경쟁 프로그레스 리스트
+    // 3. Ranking (랭킹 · 다지선다 순위 예측): 실시간 순위 경쟁 프로그레스 리스트
     return (
       <div className="space-y-3">
         <div className="flex items-center justify-between text-xs font-bold text-slate-300">
@@ -1032,7 +1032,7 @@ export function UniversalPredictionDetailClient({
 
   return (
     <div className="min-h-screen bg-[#090b12] text-slate-100 selection:bg-cyan-500 selection:text-white">
-      {/* 🧭 상단 서브 헤더 네비게이션 */}
+      {/* 상단 서브 헤더 네비게이션 */}
       <header className="sticky top-[60px] md:top-[142px] z-20 backdrop-blur-xl bg-[#090b12]/85 border-b border-white/[0.08]">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <Link
@@ -1058,7 +1058,7 @@ export function UniversalPredictionDetailClient({
       </header>
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-        {/* 🔴 연동된 실시간 라이브 응원톡 콤팩트 배너 (실제 개설된 경우만 LIVE 배너 노출) */}
+        {/* 연동된 실시간 라이브 응원톡 콤팩트 배너 (실제 개설된 경우만 LIVE 배너 노출) */}
         {game.liveRoom ? (
           <Link
             href={`/live/${game.liveRoom.id}`}
@@ -1106,7 +1106,7 @@ export function UniversalPredictionDetailClient({
           </div>
         ) : null}
 
-        {/* 🌟 상세페이지 메인 헤더: 마이크로 심볼 아바타 + 제목 + 분류별 전용 게이지 */}
+        {/* 상세페이지 메인 헤더: 마이크로 심볼 아바타 + 제목 + 분류별 전용 게이지 */}
         <div className="rounded-2xl bg-[#111622] border border-white/[0.08] p-5 md:p-6 shadow-xl">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
@@ -1140,7 +1140,6 @@ export function UniversalPredictionDetailClient({
                 </div>
 
                 <h1 className="text-xl md:text-2xl font-black text-white leading-snug">
-                  {prefixEmoji && <span className="mr-1.5">{prefixEmoji}</span>}
                   {cleanTitle}
                 </h1>
               </div>
@@ -1157,7 +1156,7 @@ export function UniversalPredictionDetailClient({
           {/* Left Column (2 cols): 그래프 ➔ 의사결정 브리핑 ➔ 의제 정보 ➔ 소셜 갤러리 */}
           {/* ======================================================== */}
           <div className="lg:col-span-2 space-y-6">
-            {/* 1️⃣ 📊 집단지성 데이터 차트 센터 */}
+            {/* 1. 데이터 센터 */}
             <Card className="p-5 bg-[#111622] border-white/[0.08] space-y-4 shadow-xl">
               <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-3">
                 <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
@@ -1215,7 +1214,10 @@ export function UniversalPredictionDetailClient({
                         ? "3대 선택지 실시간 여론 밸런스 추이"
                         : "시간대별 찬/반 확률 변동 추이"}
                     </span>
-                    <span className="text-emerald-400 font-bold">● 실시간 마켓 데이터</span>
+                    <span className="text-emerald-400 font-bold inline-flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                      <span>실시간 마켓 데이터</span>
+                    </span>
                   </div>
                   <div className="min-h-[260px] w-full flex flex-col justify-end">
                     <ProbabilityLineChart
@@ -1314,7 +1316,7 @@ export function UniversalPredictionDetailClient({
 
             </Card>
 
-            {/* 2️⃣ AI 균형 의사결정 브리핑 (유형별 고가독성 비교 뷰) */}
+            {/* 2. AI 균형 의사결정 브리핑 (유형별 고가독성 비교 뷰) */}
             <div
               ref={briefingSectionRef}
               onClick={() => {
@@ -1330,7 +1332,7 @@ export function UniversalPredictionDetailClient({
               />
             </div>
 
-            {/* 3️⃣ 연동된 AI 모델별 독립 예측 현황 */}
+            {/* 3. 연동된 AI 모델별 독립 예측 현황 */}
             <div
               ref={aiSectionRef}
               onClick={() => {
@@ -1345,7 +1347,7 @@ export function UniversalPredictionDetailClient({
           {/* Right Column (1 col): 황금 모래시계 (최상단) & 3종 맞춤형 참여 패널 */}
           {/* ======================================================== */}
           <div className="space-y-5">
-            {/* ⏳ 상세페이지 황금 모래시계 위젯 (시선 집중 최상단 배치) */}
+            {/* 상세페이지 황금 모래시계 위젯 (시선 집중 최상단 배치) */}
             <MoneyWaveWaterfallCard totalPrizePool={Math.round(game.prizePool || 22817)} />
 
             {/* 시민 예측 참여 패널 (Binary / WDL / Ranking 맞춤형 단일 참여 플로우) */}

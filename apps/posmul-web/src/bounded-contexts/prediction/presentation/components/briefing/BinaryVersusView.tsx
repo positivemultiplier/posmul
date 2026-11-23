@@ -16,7 +16,7 @@ interface BinaryVersusViewProps {
   onSelectOption?: (optionId: string) => void;
 }
 
-/** ① 양자택일(BINARY): 좌우 50:50 VS 맞대결 뷰 (모바일 2버튼 토글) */
+/** 1. 양자택일(BINARY): 좌우 50:50 VS 맞대결 뷰 (모바일 2버튼 토글) */
 export function BinaryVersusView({
   scenarios,
   options,

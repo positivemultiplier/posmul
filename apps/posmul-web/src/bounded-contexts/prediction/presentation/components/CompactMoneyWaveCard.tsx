@@ -244,7 +244,7 @@ export function CompactMoneyWaveCard({
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 <div className="p-3 rounded-xl bg-slate-900/90 border border-sky-500/20">
                   <div className="flex items-center justify-between text-xs font-bold text-sky-300 mb-1">
-                    <span>① 기본 보장 시드풀 (45%)</span>
+                    <span>1. 기본 보장 시드풀 (45%)</span>
                     <Sparkles className="w-3.5 h-3.5" />
                   </div>
                   <div className="text-base font-black text-white">
@@ -257,7 +257,7 @@ export function CompactMoneyWaveCard({
 
                 <div className="p-3 rounded-xl bg-slate-900/90 border border-amber-500/20">
                   <div className="flex items-center justify-between text-xs font-bold text-amber-300 mb-1">
-                    <span>② 시민 참여 매칭 부스트 (35%)</span>
+                    <span>2. 시민 참여 매칭 부스트 (35%)</span>
                     <TrendingUp className="w-3.5 h-3.5" />
                   </div>
                   <div className="text-base font-black text-amber-300">
@@ -270,7 +270,7 @@ export function CompactMoneyWaveCard({
 
                 <div className="p-3 rounded-xl bg-slate-900/90 border border-indigo-500/20">
                   <div className="flex items-center justify-between text-xs font-bold text-indigo-300 mb-1">
-                    <span>③ 사회적 학습 임팩트 배수 (20%)</span>
+                    <span>3. 사회적 학습 임팩트 배수 (20%)</span>
                     <GraduationCap className="w-3.5 h-3.5" />
                   </div>
                   <div className="text-base font-black text-indigo-300">

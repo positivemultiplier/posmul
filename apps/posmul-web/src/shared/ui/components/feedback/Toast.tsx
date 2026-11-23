@@ -43,7 +43,7 @@ const toastStyles: Record<ToastType, { icon: string; bgClass: string; borderClas
     borderClass: "border-red-500",
   },
   info: {
-    icon: "ℹ️",
+    icon: "",
     bgClass: "bg-blue-50 dark:bg-blue-900/30",
     borderClass: "border-blue-500",
   },

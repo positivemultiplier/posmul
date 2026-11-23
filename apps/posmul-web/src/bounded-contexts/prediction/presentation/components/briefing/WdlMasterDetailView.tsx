@@ -19,7 +19,7 @@ interface WdlMasterDetailViewProps {
   onSelectOption?: (optionId: string) => void;
 }
 
-/** ② 승무패 · 3지선다(WIN_DRAW_LOSE): 상단 3요약 카드 + 하단 넓은 1단 상세 펼침 */
+/** 2. 승무패 · 3지선다(WIN_DRAW_LOSE): 상단 3요약 카드 + 하단 넓은 1단 상세 펼침 */
 export function WdlMasterDetailView({
   scenarios,
   options,

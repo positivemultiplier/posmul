@@ -52,7 +52,7 @@ const ECONOMY_SUBCATEGORY_CONFIG = {
   },
   crypto: {
     key: "crypto",
-    title: "₿ 암호화폐 예측 마켓",
+    title: "암호화폐 예측 마켓",
     subtitle: "비트코인, 이더리움 및 주요 가상자산의 가격 흐름과 주요 지표를 예측하세요",
     dataSources: ["CoinGecko", "Binance API"],
     emptyMessage: "현재 등록된 암호화폐 예측 게임이 준비 중입니다. 곧 업데이트됩니다.",

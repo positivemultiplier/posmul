@@ -683,7 +683,7 @@ export class GameSchedulingService {
       id: "btc-weekly-target",
       title: "[암호화폐] 비트코인(BTC) 이번 주 $95,000 돌파할까?",
       description:
-        "글로벌 현물 ETF 자금 유입과 거시 유동성 흐름 속에서 비트코인(BTC) 시세가 이번 주 마감 기준 $95,000를 돌파할지 예측하세요.\n 마감: 일요일 23:00 | ₿ 정산: CoinGecko 글로벌 인덱스 실시간 API",
+        "글로벌 현물 ETF 자금 유입과 거시 유동성 흐름 속에서 비트코인(BTC) 시세가 이번 주 마감 기준 $95,000를 돌파할지 예측하세요.\n 마감: 일요일 23:00 | 정산: CoinGecko 글로벌 인덱스 실시간 API",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "yes", label: "$95,000 돌파 (Yes)", description: "BTC ≥ $95,000" },

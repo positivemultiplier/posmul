@@ -17,7 +17,7 @@ interface RankingAccordionViewProps {
   onSelectOption?: (optionId: string) => void;
 }
 
-/** ③ 랭킹 · 다자 경쟁(RANKING): 확률 순위형 아코디언 비교 보드 */
+/** 3. 랭킹 · 다자 경쟁(RANKING): 확률 순위형 아코디언 비교 보드 */
 export function RankingAccordionView({
   scenarios,
   options,

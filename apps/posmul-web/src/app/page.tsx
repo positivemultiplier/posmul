@@ -57,29 +57,15 @@ export default async function Home() {
   return (
     <div className="min-h-screen bg-[#07090e] text-slate-100 selection:bg-blue-500 selection:text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-10">
-        {/* 🌟 1. 메인 브랜드 Hero 모션그래픽 섹션 */}
+        {/* 1. 메인 브랜드 Hero 모션그래픽 섹션 */}
         <HeroLandingSection
           totalPredictions={totalPredictionsCount}
           totalDonationAmount={totalDonationAmount}
           totalUsers={totalUsersCount}
         />
 
-        {/* 🎯 2. 실시간 예측 의사결정 훈련장 (Trending Prediction Markets) */}
-        <section id="featured-prediction-markets" className="space-y-4 pt-2">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                <span>실시간 의사결정 훈련 마켓</span>
-              </h2>
-              <p className="text-xs text-slate-400">
-                수많은 선택 앞에서 후회를 줄이는 연습, 지금 가장 뜨거운 이슈를 예측해보세요.
-              </p>
-            </div>
-            <div className="text-xs text-blue-400 font-bold">
-              진행 중 마켓 {featuredGames.length}개
-            </div>
-          </div>
-
+        {/* 2. 실시간 예측 마켓 그리드 */}
+        <section id="featured-prediction-markets" className="pt-2">
           <ClientPredictionGamesGrid
             games={featuredGames}
             basePath="/prediction"

@@ -81,10 +81,10 @@ export function resolveGameVisualMeta(
 
   if (t.includes("비트코인") || t.includes("BTC") || sub === "crypto") {
     return {
-      symbol: "₿",
-      subLabel: "BTC",
+      symbol: "BTC",
+      subLabel: "COIN",
       bgClass: "bg-gradient-to-br from-amber-500 to-orange-600",
-      textClass: "text-white font-black text-xl",
+      textClass: "text-white font-black text-xs",
       borderClass: "border-amber-400/40",
       categoryLabel: "암호화폐",
       sourceLabel: "CoinGecko",
@@ -361,7 +361,7 @@ export function resolveGameVisualMeta(
 }
 
 /**
- * 제목 앞의 [미국증시] 같은 말머리 및 이모지(🔥 등)를 완벽히 분리
+ * 제목 앞의 [미국증시] 같은 말머리 및 이모지를 분리
  */
 export function splitTitlePrefix(rawTitle: string): {
   prefixEmoji: string | null;
@@ -444,7 +444,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
   onViewDetails,
 }) => {
   const hasParticipated = Boolean(myPrediction && myPrediction.is_active);
-  const { prefixEmoji, prefixTag, cleanTitle } = splitTitlePrefix(game.title);
+  const { prefixTag, cleanTitle } = splitTitlePrefix(game.title);
   const meta = resolveGameVisualMeta(game.title, game.category, game.subcategory);
 
   const firstOption = game.options[0] ?? { id: "yes", text: "예 (Yes)", currentOdds: 0.58 };
@@ -606,7 +606,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
         </div>
       )}
 
-      {/* 🌟 1행 헤더: [아바타 + 카테고리/출처/D-day] vs [우측 게이지] (텍스트 찌그러짐 원천 차단) */}
+      {/* 1행 헤더: [아바타 + 카테고리/출처/D-day] vs [우측 게이지] (텍스트 찌그러짐 원천 차단) */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           {/* 저작권 안전 40x40 마이크로 심볼 아바타 */}
@@ -666,15 +666,14 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
         </div>
       </div>
 
-      {/* 🌟 2행 제목: 카드 가로 전체폭(Full Width)을 쓰는 시원한 2줄 제목 (10글자 잘림 해결) */}
+      {/* 2행 제목: 카드 가로 전체폭(Full Width)을 쓰는 시원한 2줄 제목 (10글자 잘림 해결) */}
       <div className="my-1 min-h-[40px] flex items-center">
         <h3 className="text-[14px] font-bold text-slate-100 group-hover:text-white leading-snug line-clamp-2">
-          {prefixEmoji && <span className="mr-1">{prefixEmoji}</span>}
           {cleanTitle}
         </h3>
       </div>
 
-      {/* 🌟 3행 캡슐 버튼: 분류별 특화 UI (Binary 2캡슐 / WDL 3색 캡슐 / Ranking 순위+점유율 바) */}
+      {/* 3행 캡슐 버튼: 분류별 특화 UI (Binary 2캡슐 / WDL 3색 캡슐 / Ranking 순위+점유율 바) */}
       <div className="my-1">
         {game.predictionType === PredictionType.BINARY ? (
           /* 양자택일: 녹색 캡슐 vs 로즈 캡슐 */
@@ -813,7 +812,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
         )}
       </div>
 
-      {/* 🌟 4행 하단 메타: 상금풀 + 학습배수 + 참여자수 + 북마크 */}
+      {/* 4행 하단 메타: 상금풀 + 학습배수 + 참여자수 + 북마크 */}
       <div className="pt-2 border-t border-white/[0.06] flex items-center justify-between text-[11px]">
         {/* 좌측: 상금풀 + 가중치 배지 */}
         <div className="flex items-center gap-2">
