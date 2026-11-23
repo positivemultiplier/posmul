@@ -53,10 +53,10 @@ const CATALOG_ITEMS: CatalogItem[] = [
   {
     id: "4a56aa1a-b59e-47a2-a260-c6179519d7f5",
     name: "LG 휘센 벽걸이 고효율 인버터 에어컨",
-    manufacturer: "LG Electronics (Made in Korea 🇰🇷)",
+    manufacturer: "LG Electronics (Made in Korea)",
     category: "electronics",
     categoryLabel: "가전·디지털",
-    icon: "🔌",
+    icon: "",
     unitPrice: 850000,
     description: "에너지소비효율 1등급 인버터 냉방으로 전기료 부담 없이 취약계층 어르신·아동 쉼터에 시원한 여름을 선물합니다.",
     specSummary: "벽걸이형 · 1등급 고효율 · 인버터 절전",
@@ -66,10 +66,10 @@ const CATALOG_ITEMS: CatalogItem[] = [
   {
     id: "6daddc20-92cc-4f09-94d2-3b6d3d4f1991",
     name: "키즈 웜 패딩부츠 & 튼튼 신학기 운동화",
-    manufacturer: "부산 A제화 (Made in Korea 👟)",
+    manufacturer: "부산 A제화 (Made in Korea)",
     category: "clothing",
     categoryLabel: "의류·신발",
-    icon: "👟",
+    icon: "",
     unitPrice: 35000,
     description: "미끄럼 방지 및 고밀도 보온 안감 처리된 한국 전통 제화 장인의 수제 공정 어린이 전용 안전 신발입니다.",
     specSummary: "미끄럼 방지 접지창 · 방한 안감 · 180~240mm",
@@ -79,10 +79,10 @@ const CATALOG_ITEMS: CatalogItem[] = [
   {
     id: "edeb5889-f979-4f63-a9d9-56fa0529f1e0",
     name: "철원 오대쌀 100% 햅쌀 10kg",
-    manufacturer: "철원영농조합 (Made in Korea 🌾)",
+    manufacturer: "철원영농조합 (Made in Korea)",
     category: "food",
     categoryLabel: "식품·생필품",
-    icon: "🍚",
+    icon: "",
     unitPrice: 42000,
     description: "비무장지대 DMZ 청정 수역에서 재배되어 밥맛이 차지고 영양이 풍부한 무료급식소 및 공동식당 전용 햅쌀입니다.",
     specSummary: "철원 오대벼 100% · 단일미 특등급 · 10kg",
@@ -95,7 +95,7 @@ const CATALOG_ITEMS: CatalogItem[] = [
     manufacturer: "Samsung Electronics (K-가전)",
     category: "electronics",
     categoryLabel: "가전·디지털",
-    icon: "🧺",
+    icon: "",
     unitPrice: 750000,
     description: "공동생활관 및 쉼터의 많은 빨랫감도 깨끗하고 위생적으로 살균 관리할 수 있는 AI 맞춤 코스 지원 대용량 세탁기입니다.",
     specSummary: "대용량 통돌이 · AI 진동저감 · 고온살균",
@@ -108,7 +108,7 @@ const CATALOG_ITEMS: CatalogItem[] = [
     manufacturer: "Samsung Electronics (K-디지털)",
     category: "education",
     categoryLabel: "교육·디지털",
-    icon: "💻",
+    icon: "",
     unitPrice: 450000,
     description: "온라인 EBS 인강 및 원격 수업, 디지털 코딩 교재를 학습할 수 있는 S펜 지원 10.9인치 고해상도 교육용 기기입니다.",
     specSummary: "10.9형 대화면 · S펜 기본 포함 · 대용량 배터리",
@@ -118,10 +118,10 @@ const CATALOG_ITEMS: CatalogItem[] = [
   {
     id: "ae27e1c7-dfe2-4d03-bd68-2d6aee4f6567",
     name: "신학기 꿈나무 프리미엄 학용품 12종 세트",
-    manufacturer: "모닝글로리 (Made in Korea 📚)",
+    manufacturer: "모닝글로리 (Made in Korea)",
     category: "education",
     categoryLabel: "교육·도서",
-    icon: "✏️",
+    icon: "",
     unitPrice: 25000,
     description: "새 학기를 맞이하는 취약계층 아동들을 위한 종합 노트, 친환경 필기구, 필통, 스케치북 등으로 구성된 선물 세트입니다.",
     specSummary: "국산 문구 12종 풀세트 · 친환경 안전 검증",
@@ -307,7 +307,7 @@ export function WishlistPageClient({
                 : "border-transparent text-slate-400 hover:text-slate-200"
             }`}
           >
-            <span>📋 전국 위시리스트 현황판</span>
+            <span>전국 위시리스트 현황판</span>
             <span className="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300">
               {approvedRequests.length}
             </span>
@@ -365,11 +365,11 @@ export function WishlistPageClient({
               {/* Category Filter Pills */}
               <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
                 {[
-                  { key: "all", label: "전체 물품", icon: "🎁" },
-                  { key: "electronics", label: "가전·디지털", icon: "🔌" },
-                  { key: "clothing", label: "의류·신발", icon: "👟" },
-                  { key: "food", label: "식품·생필품", icon: "🍚" },
-                  { key: "education", label: "교육·도서", icon: "📚" },
+                  { key: "all", label: "전체 물품", icon: "" },
+                  { key: "electronics", label: "가전·디지털", icon: "" },
+                  { key: "clothing", label: "의류·신발", icon: "" },
+                  { key: "food", label: "식품·생필품", icon: "" },
+                  { key: "education", label: "교육·도서", icon: "" },
                 ].map((cat) => (
                   <button
                     key={cat.key}
@@ -509,7 +509,7 @@ export function WishlistPageClient({
                 <form onSubmit={handleSubmit} className="space-y-6">
                   {formError && (
                     <div className="p-3.5 rounded-xl bg-rose-950/70 border border-rose-500/40 text-xs text-rose-300">
-                      ⚠️ {formError}
+                      {formError}
                     </div>
                   )}
 
@@ -677,7 +677,7 @@ export function WishlistPageClient({
                       disabled={isSubmitting}
                       className="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-sm shadow-xl shadow-purple-600/30 transition-all flex items-center justify-center gap-2"
                     >
-                      {isSubmitting ? "신청서 저장 중..." : `[${selectedItem.name}] 위시리스트 신청 완료하기 🎁`}
+                      {isSubmitting ? "신청서 저장 중..." : `[${selectedItem.name}] 위시리스트 신청 완료하기`}
                     </button>
                   </div>
                 </form>

@@ -106,7 +106,7 @@ export default function ForumWritePage() {
       });
 
       if (res.success && res.post) {
-        alert("게시글이 성공적으로 등록되었습니다! (+10 PMP 획득 🎁)");
+        alert("게시글이 성공적으로 등록되었습니다! (+10 PMP 획득)");
         router.push(`/forum/${res.post.id}`);
       } else {
         alert(res.error || "게시글 작성에 실패했습니다.");
@@ -174,11 +174,11 @@ export default function ForumWritePage() {
                   onChange={(e) => setCategory(e.target.value)}
                   className="bg-[#0c0f17] border border-white/[0.1] rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-sky-500"
                 >
-                  <option value="economy">📈 경제·주식</option>
-                  <option value="crypto">🪙 크립토</option>
-                  <option value="politics">🏛️ 정치·사회</option>
-                  <option value="culture">🍿 엔터·문화</option>
-                  <option value="free">☕ 자유·뻘글</option>
+                  <option value="economy">경제·주식</option>
+                  <option value="crypto">크립토</option>
+                  <option value="politics">정치·사회</option>
+                  <option value="culture">엔터·문화</option>
+                  <option value="free">자유·뻘글</option>
                 </select>
               </div>
 
@@ -212,7 +212,7 @@ export default function ForumWritePage() {
                   </h4>
                   <div className="flex items-center gap-3 text-xs text-slate-400">
                     <span className="text-amber-300 font-bold">
-                      💰 {selectedGame.allocatedPrizePool.toLocaleString()} PMC 상금풀
+                      {selectedGame.allocatedPrizePool.toLocaleString()} PMC 상금풀
                     </span>
                     <span>·</span>
                     <span className="text-slate-400">
@@ -276,7 +276,7 @@ export default function ForumWritePage() {
                 disabled={isSubmitting}
                 className="px-8 py-3 rounded-xl text-xs font-black bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xl shadow-emerald-500/20 disabled:opacity-50 transition"
               >
-                {isSubmitting ? "게시글 등록 중..." : "게시글 등록 (+10 PMP 🎁)"}
+                {isSubmitting ? "게시글 등록 중..." : "게시글 등록 (+10 PMP)"}
               </button>
             </div>
           </form>
@@ -320,7 +320,7 @@ export default function ForumWritePage() {
                       {game.title}
                     </h5>
                     <span className="text-[11px] text-amber-300 font-semibold">
-                      💰 {game.allocatedPrizePool.toLocaleString()} PMC
+                      {game.allocatedPrizePool.toLocaleString()} PMC
                     </span>
                   </div>
                   <span className="text-xs font-bold text-sky-400 px-3 py-1 rounded-lg bg-sky-500/15 border border-sky-500/30 shrink-0">

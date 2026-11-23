@@ -24,13 +24,13 @@ const AVAILABLE_PROJECTS = [
   {
     id: "6daddc20-92cc-4f09-94d2-3b6d3d4f1991",
     name: "키즈 웜 패딩부츠 & 튼튼 운동화",
-    manufacturer: "부산 A제화 (Made in Korea 👟)",
+    manufacturer: "부산 A제화 (Made in Korea)",
     category: "의류/신발",
   },
   {
     id: "edeb5889-f979-4f63-a9d9-56fa0529f1e0",
     name: "철원 오대쌀 햅쌀 10kg",
-    manufacturer: "철원영농조합 (Made in Korea 🌾)",
+    manufacturer: "철원영농조합 (Made in Korea)",
     category: "식품",
   },
   {
@@ -135,7 +135,7 @@ export function WishlistRequestModal({
               <strong>[{facilityName}]</strong>의 신청서가 안전하게 접수되었습니다. PosMul 공익검증단이 고유번호증 및 현장 유효성을 확인(통상 24시간 이내)한 후, 시민 크라우드펀딩 목록에 정식 등록됩니다.
             </p>
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 text-xs text-slate-400 max-w-md mx-auto">
-              💡 100% 모금 달성 시, 제조사 본사에서 시설 주소지로 직배송 설치가 진행됩니다.
+              100% 모금 달성 시, 제조사 본사에서 시설 주소지로 직배송 설치가 진행됩니다.
             </div>
             <button
               onClick={onClose}
@@ -161,7 +161,7 @@ export function WishlistRequestModal({
 
             {errorMessage && (
               <div className="p-3 rounded-xl bg-rose-950/70 border border-rose-500/40 text-xs text-rose-300">
-                ⚠️ {errorMessage}
+                {errorMessage}
               </div>
             )}
 
@@ -333,7 +333,7 @@ export function WishlistRequestModal({
                 disabled={isSubmitting}
                 className="w-2/3 py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-sm shadow-lg shadow-purple-600/30 transition-all flex items-center justify-center gap-2"
               >
-                {isSubmitting ? "신청 등록 중..." : "위시리스트 물품 신청하기 🎁"}
+                {isSubmitting ? "신청 등록 중..." : "위시리스트 물품 신청하기"}
               </button>
             </div>
           </form>

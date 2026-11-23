@@ -169,7 +169,7 @@ function AccountingTaxContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <DomainContextHeader
           domain="other"
-          title="📊 Accounting & Tax · 투명 회계 및 세무 자료"
+          title="Accounting & Tax · 투명 회계 및 세무 자료"
           subtitle="PMP·PMC 자산 획득 및 직접 집행 내역을 투명하게 조회하고 세무 자료를 다운로드하세요"
           metrics={[
             { label: '총 획득 자산', value: `+${totalEarned.toLocaleString()}`, unit: 'P' },
@@ -234,7 +234,7 @@ function AccountingTaxContent() {
 
         <div className="bg-slate-900/70 rounded-2xl border border-slate-800/90 overflow-hidden">
           <div className="px-5 py-4 border-b border-slate-800">
-            <h3 className="font-bold text-sm text-white">📋 시민 경제 활동 원장</h3>
+            <h3 className="font-bold text-sm text-white">시민 경제 활동 원장</h3>
           </div>
 
           <div className="overflow-x-auto">
@@ -260,13 +260,13 @@ function AccountingTaxContent() {
 
         <div className="grid sm:grid-cols-3 gap-3">
           <button className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-3 rounded-xl text-xs font-bold transition-colors">
-            📄 거래 명세서 다운로드 (PDF)
+            거래 명세서 다운로드 (PDF)
           </button>
           <button className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 py-3 rounded-xl text-xs font-bold transition-colors">
-            📊 원장 데이터 내보내기 (Excel)
+            원장 데이터 내보내기 (Excel)
           </button>
           <button className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-200 py-3 rounded-xl text-xs font-bold transition-colors">
-            🏛️ 세무 신고용 증빙 패키지 발급
+            세무 신고용 증빙 패키지 발급
           </button>
         </div>
       </div>

@@ -83,7 +83,7 @@ export default async function PredictionPage({ searchParams }: PageProps) {
     {
       id: "game-sample-crypto-1",
       slug: "crypto-bitcoin-100k-usd",
-      title: "🪙 비트코인, 이번 주 $120,000 신고점 경신할까?",
+      title: "비트코인, 이번 주 $120,000 신고점 경신할까?",
       description:
         "글로벌 가상자산 현물 ETF 자금 유입 기조 속 $120,000 사상 최고가 도달 여부 예측입니다.",
       predictionType: PredictionType.BINARY,
@@ -107,7 +107,7 @@ export default async function PredictionPage({ searchParams }: PageProps) {
     {
       id: "game-sample-sports-1",
       slug: "sports-son-goal-score",
-      title: "⚽ 손흥민, 이번 주말 리그 경기에서 득점할까?",
+      title: "손흥민, 이번 주말 리그 경기에서 득점할까?",
       description:
         "주전 공격수 출전이 확정된 주말 프리미어리그 핵심 라운드 손흥민 선수 득점 여부 예측입니다.",
       predictionType: PredictionType.BINARY,

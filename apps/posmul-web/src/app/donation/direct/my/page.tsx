@@ -12,11 +12,11 @@ import { MyDonationsClient } from "./client";
 
 // 카테고리 라벨 매핑
 const categoryLabels: Record<string, { label: string; icon: string }> = {
-  clothing: { label: "의류", icon: "👕" },
-  food: { label: "식품", icon: "🍚" },
-  housing: { label: "주거", icon: "🏠" },
-  medical: { label: "의료", icon: "💊" },
-  education: { label: "교육", icon: "📚" },
+  clothing: { label: "의류", icon: "" },
+  food: { label: "식품", icon: "" },
+  housing: { label: "주거", icon: "" },
+  medical: { label: "의료", icon: "" },
+  education: { label: "교육", icon: "" },
 };
 
 // 상태 라벨 매핑
@@ -123,7 +123,7 @@ export default async function MyDonationsPage() {
       title: item.title,
       category: item.category,
       categoryLabel: categoryLabels[item.category]?.label || item.category,
-      categoryIcon: categoryLabels[item.category]?.icon || "📦",
+      categoryIcon: categoryLabels[item.category]?.icon || "",
       status: item.status,
       statusLabel: statusLabels[item.status]?.label || item.status,
       statusColor: statusLabels[item.status]?.color || "gray",

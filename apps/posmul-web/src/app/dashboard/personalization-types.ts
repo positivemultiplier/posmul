@@ -21,7 +21,7 @@ export interface UserPersonalizationSettings {
 }
 
 export const DEFAULT_PERSONALIZATION: UserPersonalizationSettings = {
-  avatarEmoji: "🎯",
+  avatarEmoji: "",
   sido: "서울특별시",
   jobGroup: "IT·개발·AI",
   favoriteDomains: ["INVEST", "SPORTS", "ENTERTAINMENT"],

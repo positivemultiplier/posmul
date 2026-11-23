@@ -216,7 +216,7 @@ export default function AdminUsersPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`✅ 원장 기록 완료: ${data.message}`);
+        alert(`원장 기록 완료: ${data.message}`);
         setSelectedUser(null);
         setAdjustReason("");
         fetchUsers();
@@ -431,10 +431,10 @@ export default function AdminUsersPage() {
               className="px-3 py-2 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-blue-500"
             >
               <option value="all">전체 가입경로</option>
-              <option value="kakao">🟡 카카오 간편가입</option>
-              <option value="naver">🟢 네이버 간편가입</option>
-              <option value="google">🔵 구글 로그인</option>
-              <option value="email">✉️ 일반 이메일</option>
+              <option value="kakao">카카오 간편가입</option>
+              <option value="naver">네이버 간편가입</option>
+              <option value="google">구글 로그인</option>
+              <option value="email">일반 이메일</option>
             </select>
 
             {/* 상태 필터 */}
@@ -472,7 +472,7 @@ export default function AdminUsersPage() {
           <div className="flex items-center justify-between">
             <div>
               <AdminCardTitle className="text-base">
-                👥 시민 회원 명부 ({users.length}명 검색됨)
+                시민 회원 명부 ({users.length}명 검색됨)
               </AdminCardTitle>
               <AdminCardDescription>
                 닉네임, 활동 지역, 보유 자산(PMP/PMC)을 확인하고 원장 기반 포인트 지급 및 계정 제재를 수행합니다.
@@ -709,7 +709,7 @@ export default function AdminUsersPage() {
               </div>
 
               <div className="p-3 rounded-lg bg-blue-950/30 border border-blue-500/20 text-zinc-400 text-[11px] leading-relaxed">
-                💡 이 작업은 즉시 <code>economy.pmp_pmc_transactions</code> 불변 원장에 <strong>ADMIN_GRANT / ADMIN_REVOKE</strong> 유형으로 기록되어 영구 추적됩니다.
+                이 작업은 즉시 <code>economy.pmp_pmc_transactions</code> 불변 원장에 <strong>ADMIN_GRANT / ADMIN_REVOKE</strong> 유형으로 기록되어 영구 추적됩니다.
               </div>
             </div>
 

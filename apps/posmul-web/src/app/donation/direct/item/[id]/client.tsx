@@ -54,11 +54,11 @@ interface DirectDonationDetailClientProps {
 }
 
 const CATEGORY_ICON_MAP: Record<string, string> = {
-  electronics: "🔌",
-  food: "🍚",
-  clothing: "👟",
-  education: "📚",
-  medical: "💊",
+  electronics: "",
+  food: "",
+  clothing: "",
+  education: "",
+  medical: "",
 };
 
 export function DirectDonationDetailClient({
@@ -162,7 +162,7 @@ export function DirectDonationDetailClient({
     setIsSubmitting(false);
   };
 
-  const categoryIcon = CATEGORY_ICON_MAP[project.category] || "📦";
+  const categoryIcon = CATEGORY_ICON_MAP[project.category] || "";
 
   return (
     <div className="min-h-screen bg-[#090b12] text-slate-100 pb-28">
@@ -182,7 +182,7 @@ export function DirectDonationDetailClient({
               href="/donation/direct/wishlist"
               className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 border border-purple-500/30 hover:border-purple-500/60 text-xs font-bold text-purple-200 transition-all shadow-sm"
             >
-              <span>🎁 K-위시리스트 포털</span>
+              <span>K-위시리스트 포털</span>
             </Link>
 
             {/* Quick Application Modal CTA */}
@@ -397,7 +397,7 @@ export function DirectDonationDetailClient({
                             <span>
                               {isExpanded
                                 ? "시설 상세 스토리 접기"
-                                : "🏛️ 시설 상세 스토리 & 현장 정보 더보기"}
+                                : "시설 상세 스토리 & 현장 정보 더보기"}
                             </span>
                             {isExpanded ? (
                               <ChevronUp className="w-3.5 h-3.5" />
@@ -574,7 +574,7 @@ export function DirectDonationDetailClient({
                   >
                     <Flame className="w-3.5 h-3.5 text-amber-400 fill-current" />
                     <span>
-                      남은 {remainingAmount.toLocaleString()} PMC 채우고 즉시 완판시키기 🎁
+                      남은 {remainingAmount.toLocaleString()} PMC 채우고 즉시 완판시키기
                     </span>
                   </button>
                 )}
@@ -628,7 +628,7 @@ export function DirectDonationDetailClient({
               className="max-w-md w-full rounded-3xl bg-slate-900 border border-purple-500/40 p-6 sm:p-8 text-center space-y-4 shadow-2xl shadow-purple-500/20"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-500 to-indigo-500 mx-auto flex items-center justify-center text-3xl shadow-lg">
-                🎉
+                
               </div>
 
               <div className="space-y-1">
@@ -665,7 +665,7 @@ export function DirectDonationDetailClient({
 
               {successInfo.isFullyFunded ? (
                 <div className="p-3.5 rounded-xl bg-emerald-950/70 border border-emerald-500/40 text-xs text-emerald-300 space-y-1">
-                  <p className="font-bold">🎊 축하합니다! 100% 펀딩이 완료되었습니다!</p>
+                  <p className="font-bold">축하합니다! 100% 펀딩이 완료되었습니다!</p>
                   <p className="text-[11px] text-emerald-200/80">
                     해당 시설에 전달될 {project.product_name}의 {project.manufacturer.split(" ")[0]} 본사 직발주가 즉시 진행됩니다.
                   </p>

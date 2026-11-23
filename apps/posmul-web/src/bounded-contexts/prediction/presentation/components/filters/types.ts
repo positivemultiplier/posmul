@@ -22,25 +22,25 @@ export const CATEGORIES = [
   {
     id: "sports",
     label: "스포츠",
-    icon: "⚽",
+    icon: "",
     color: "bg-green-100 text-green-800",
   },
   {
     id: "politics",
     label: "정치",
-    icon: "🗳️",
+    icon: "",
     color: "bg-blue-100 text-blue-800",
   },
   {
     id: "economy",
     label: "경제",
-    icon: "📈",
+    icon: "",
     color: "bg-yellow-100 text-yellow-800",
   },
   {
     id: "entertainment",
     label: "엔터테인먼트",
-    icon: "🎭",
+    icon: "",
     color: "bg-purple-100 text-purple-800",
   },
 ] as const;

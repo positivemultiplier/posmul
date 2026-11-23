@@ -11,7 +11,7 @@ export default function BrainstormingPage() {
   return (
     <div className="space-y-8">
       <div className="text-center">
-        <h1 className="text-3xl font-bold text-gray-900">💡 브레인스토밍</h1>
+        <h1 className="text-3xl font-bold text-gray-900">브레인스토밍</h1>
         <p className="mt-4 text-lg text-gray-600">
           창의적 아이디어 제안과 협업 공간
         </p>

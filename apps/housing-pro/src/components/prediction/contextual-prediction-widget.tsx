@@ -247,7 +247,7 @@ export function ContextualPredictionWidget({
       </div>
 
       <div className="text-[10px] text-slate-400 flex items-center justify-between">
-        <span>📜 오라클: {currentGame.oracleSource}</span>
+        <span>오라클: {currentGame.oracleSource}</span>
         <a
           href={`${process.env.NEXT_PUBLIC_POSMUL_WEB_URL || "https://posmul.com"}/prediction/${currentGame.slug}/analysis`}
           target="_blank"

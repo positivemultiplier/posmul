@@ -80,7 +80,7 @@ export default async function SoccerPage({ searchParams }: PageProps) {
         <FadeIn>
           <DomainContextHeader
             domain="prediction"
-            title="⚽ 축구 예측 마켓"
+            title="축구 예측 마켓"
             subtitle="프리미어리그(EPL), K리그, 라리가, 챔피언스리그 등 주요 축구 경기 승패를 예측하세요"
             metrics={[
               {
@@ -96,7 +96,7 @@ export default async function SoccerPage({ searchParams }: PageProps) {
             ]}
           >
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 검증 데이터 소스:</span>
+              <span className="font-semibold text-slate-300">검증 데이터 소스:</span>
               {dataSources.map((ds) => (
                 <span
                   key={ds}
@@ -130,9 +130,9 @@ export default async function SoccerPage({ searchParams }: PageProps) {
             />
           ) : (
             <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4">
-              <div className="text-5xl">⚽</div>
+              <div className="text-5xl"></div>
               <h3 className="text-lg font-bold text-white">
-                ⚽ 축구 예측 준비 중
+                축구 예측 준비 중
               </h3>
               <p className="text-sm text-slate-400 max-w-md mx-auto">
                 다음 라운드 경기 일정에 맞춰 새로운 축구 예측 마켓이 곧 오픈됩니다.

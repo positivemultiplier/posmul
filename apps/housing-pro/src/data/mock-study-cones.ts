@@ -28,7 +28,7 @@ export const STUDY_CONE_CATALOG: StudyConeSpec[] = [
   {
     coneType: "FIRE_OWL",
     name: "불꽃 열공 부엉이",
-    badgeEmoji: "🦉",
+    badgeEmoji: "",
     description: "밤낮을 가리지 않고 법조문을 파고드는 끈기의 상징",
     themeColor: "from-amber-500 to-rose-600",
     priceKrw: 0,
@@ -44,7 +44,7 @@ export const STUDY_CONE_CATALOG: StudyConeSpec[] = [
   {
     coneType: "BLUE_DRAGON",
     name: "2026 합격기원 청룡 소장",
-    badgeEmoji: "🐉",
+    badgeEmoji: "",
     description: "2차 합격의 기운을 불어넣는 한정판 영물 스터디콘",
     themeColor: "from-sky-400 to-indigo-600",
     priceKrw: 3300,
@@ -60,7 +60,7 @@ export const STUDY_CONE_CATALOG: StudyConeSpec[] = [
   {
     coneType: "LUCKY_CAT",
     name: "합격 보증 마네키네코",
-    badgeEmoji: "🐱",
+    badgeEmoji: "",
     description: "헷갈리는 5지선다 오답을 귀신같이 피하게 해주는 행운의 고양이",
     themeColor: "from-emerald-400 to-teal-600",
     priceKrw: 1100,
@@ -76,7 +76,7 @@ export const STUDY_CONE_CATALOG: StudyConeSpec[] = [
   {
     coneType: "GOLD_LION",
     name: "과태료 철통방어 황금 사자",
-    badgeEmoji: "🦁",
+    badgeEmoji: "",
     description: "지자체 합동 감사와 과태료 리스크를 한 방에 물리치는 백수의 왕",
     themeColor: "from-amber-400 to-yellow-600",
     priceKrw: 2200,

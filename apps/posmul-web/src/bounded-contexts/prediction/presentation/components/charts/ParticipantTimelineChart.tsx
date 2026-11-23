@@ -51,7 +51,7 @@ export const ParticipantTimelineChart = ({ data, isDarkMode = false }: Participa
               }
               return [value, name];
             }}
-            labelFormatter={(label) => `⏰ ${label}`}
+            labelFormatter={(label) => `${label}`}
           />
           <Bar
             dataKey="count"

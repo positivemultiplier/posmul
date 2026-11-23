@@ -103,7 +103,7 @@ export async function GET() {
       {
         id: "tx-starter-grant",
         type: "reward",
-        title: "🎁 주권시민 기본 활동 보너스 적립",
+        title: "주권시민 기본 활동 보너스 적립",
         amount: +10000,
         currency: "PMP",
         status: "completed",
@@ -112,7 +112,7 @@ export async function GET() {
       {
         id: "tx-don-001",
         type: "donation",
-        title: "🌱 공익 기부 - 초록우산 환경·아동재단",
+        title: "공익 기부 - 초록우산 환경·아동재단",
         amount: -1000,
         currency: "PMC",
         status: "completed",
@@ -123,7 +123,7 @@ export async function GET() {
         return {
           id: `tx-bet-${bet.prediction_id}`,
           type: "prediction",
-          title: `🎲 예측 참여: ${gameInfo?.title || `#${String(bet.game_id).substring(0, 8)}`}`,
+          title: `예측 참여: ${gameInfo?.title || `#${String(bet.game_id).substring(0, 8)}`}`,
           amount: -Number(bet.bet_amount || 0),
           currency: "PMP",
           status:

@@ -65,7 +65,7 @@ export function ForumPostDetailClient({
       if (res.success && res.likeCount !== undefined) {
         setPost((prev) => (prev ? { ...prev, likeCount: res.likeCount! } : null));
         if (res.likeCount >= 3) {
-          setRewardNotice("🔥 이 글이 개념글(포텐)로 등록되었습니다!");
+          setRewardNotice("이 글이 개념글(포텐)로 등록되었습니다!");
         }
       } else {
         alert(res.error || "추천 처리에 실패했습니다.");
@@ -238,7 +238,7 @@ export function ForumPostDetailClient({
                 </span>
                 {post.isConcept && (
                   <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-500/20 text-amber-300 border border-amber-400/40">
-                    🔥 개념글 (포텐)
+                    개념글 (포텐)
                   </span>
                 )}
               </div>
@@ -318,7 +318,7 @@ export function ForumPostDetailClient({
                   </h3>
                   <div className="flex items-center gap-3 text-xs text-slate-300">
                     <span className="text-amber-300 font-bold">
-                      💰 MoneyWave 상금풀 연동 중
+                      MoneyWave 상금풀 연동 중
                     </span>
                     <span>·</span>
                     <span className="text-slate-400">

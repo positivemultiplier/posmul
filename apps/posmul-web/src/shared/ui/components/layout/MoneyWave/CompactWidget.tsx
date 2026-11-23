@@ -104,7 +104,7 @@ export function CompactWidget({ domain = 'prediction', category = 'all' }: Compa
 
                         {/* How it works */}
                         <div className="p-4 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-xl border border-blue-500/30 mb-6">
-                            <h3 className="font-bold mb-3">💡 Money Wave 작동 원리</h3>
+                            <h3 className="font-bold mb-3">Money Wave 작동 원리</h3>
                             <div className="space-y-2 text-sm text-gray-300">
                                 <p>• 세후 순이익(EAT) 기준 연간 재원을 365일로 나눔</p>
                                 <p>• 24시간으로 나눔 → <span className="text-green-400 font-semibold">1시간마다 Wave 발생</span></p>

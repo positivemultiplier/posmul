@@ -75,7 +75,7 @@ const basketballPredictionGamesData = {
     creator: {
       name: "NBA분석가김",
       reputation: 4.8,
-      avatar: "🏀",
+      avatar: "",
     },
     prizePool: 260000,
     minimumStake: 2000,
@@ -124,7 +124,7 @@ const basketballPredictionGamesData = {
     creator: {
       name: "KBL전문가박",
       reputation: 4.6,
-      avatar: "🇰🇷",
+      avatar: "",
     },
     prizePool: 150000,
     minimumStake: 1000,
@@ -165,7 +165,7 @@ const basketballPredictionGamesData = {
     creator: {
       name: "WNBA분석가이",
       reputation: 4.4,
-      avatar: "👩‍🏀",
+      avatar: "",
     },
     prizePool: 65000,
     minimumStake: 500,
@@ -230,7 +230,7 @@ const basketballPredictionGamesData = {
     creator: {
       name: "대학농구전문가",
       reputation: 4.5,
-      avatar: "🎓",
+      avatar: "",
     },
     prizePool: 125000,
     minimumStake: 800,

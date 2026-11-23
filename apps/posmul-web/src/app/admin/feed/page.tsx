@@ -151,7 +151,7 @@ export default function AdminFeedPage() {
       setStatusMessage(res.message);
       await loadData();
     } catch (e: any) {
-      setStatusMessage(`❌ 수집 실패: ${e?.message}`);
+      setStatusMessage(`수집 실패: ${e?.message}`);
     } finally {
       setIsFetching(false);
     }
@@ -223,7 +223,7 @@ export default function AdminFeedPage() {
           setModalOption1(res.draft.options[0]);
           setModalOption2(res.draft.options[1]);
         }
-        setStatusMessage("✨ Gemini AI가 도메인에 특화된 예측 문항과 판정 기준을 완성했습니다!");
+        setStatusMessage("Gemini AI가 도메인에 특화된 예측 문항과 판정 기준을 완성했습니다!");
       } else {
         alert(`AI 초안 생성 실패: ${res.error}`);
       }
@@ -261,7 +261,7 @@ export default function AdminFeedPage() {
       const res = await publishToPredictionGame(input);
       if (res.success) {
         setIsModalOpen(false);
-        setStatusMessage(`🎉 예측 게임이 성공적으로 정식 발행되었습니다! (게임 ID: ${res.gameId})`);
+        setStatusMessage(`예측 게임이 성공적으로 정식 발행되었습니다! (게임 ID: ${res.gameId})`);
         await loadData();
       } else {
         alert(`발행 실패: ${res.error}`);
@@ -291,7 +291,7 @@ export default function AdminFeedPage() {
     startTransition(async () => {
       const res = await autoSettleBillsAction();
       if (res.success) {
-        setStatusMessage(`⚡ 자동 정산 완료: ${JSON.stringify(res.data)}`);
+        setStatusMessage(`자동 정산 완료: ${JSON.stringify(res.data)}`);
         await loadData();
       } else {
         alert(`정산 실패: ${res.error}`);
@@ -312,7 +312,7 @@ export default function AdminFeedPage() {
       setStatusMessage(res.message);
       await loadData();
     } catch (err: unknown) {
-      setStatusMessage(`❌ AI 뉴스 생성 오류: ${err instanceof Error ? err.message : "오류"}`);
+      setStatusMessage(`AI 뉴스 생성 오류: ${err instanceof Error ? err.message : "오류"}`);
     } finally {
       setIsFetching(false);
     }
@@ -339,17 +339,17 @@ export default function AdminFeedPage() {
   const getCategoryBadge = (cat?: string) => {
     switch (cat?.toUpperCase()) {
       case "GWANGJU":
-        return { label: "전남·광주", bg: "bg-teal-500/10 text-teal-300 border-teal-500/30", icon: "📍" };
+        return { label: "전남·광주", bg: "bg-teal-500/10 text-teal-300 border-teal-500/30", icon: "" };
       case "AI":
-        return { label: "AI·테크", bg: "bg-violet-500/10 text-violet-300 border-violet-500/30", icon: "🤖" };
+        return { label: "AI·테크", bg: "bg-violet-500/10 text-violet-300 border-violet-500/30", icon: "" };
       case "SPORTS":
-        return { label: "스포츠", bg: "bg-blue-500/10 text-blue-400 border-blue-500/30", icon: "⚽" };
+        return { label: "스포츠", bg: "bg-blue-500/10 text-blue-400 border-blue-500/30", icon: "" };
       case "ECONOMY":
-        return { label: "경제/증권", bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", icon: "📈" };
+        return { label: "경제/증권", bg: "bg-emerald-500/10 text-emerald-400 border-emerald-500/30", icon: "" };
       case "ENTERTAINMENT":
-        return { label: "엔터/영화", bg: "bg-pink-500/10 text-pink-400 border-pink-500/30", icon: "🎬" };
+        return { label: "엔터/영화", bg: "bg-pink-500/10 text-pink-400 border-pink-500/30", icon: "" };
       default:
-        return { label: "정책/시사", bg: "bg-purple-500/10 text-purple-400 border-purple-500/30", icon: "🏛️" };
+        return { label: "정책/시사", bg: "bg-purple-500/10 text-purple-400 border-purple-500/30", icon: "" };
     }
   };
 
@@ -436,7 +436,7 @@ export default function AdminFeedPage() {
             className="px-3.5 py-2.5 rounded-xl bg-teal-950/40 hover:bg-teal-900/50 border border-teal-500/30 text-teal-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
           >
             <MapPin className="w-3.5 h-3.5 text-teal-400" />
-            📍 광주·전남(5개구) 수집
+            광주·전남(5개구) 수집
           </button>
 
           <button
@@ -445,7 +445,7 @@ export default function AdminFeedPage() {
             className="px-3.5 py-2.5 rounded-xl bg-violet-950/40 hover:bg-violet-900/50 border border-violet-500/30 text-violet-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
           >
             <Cpu className="w-3.5 h-3.5 text-violet-400" />
-            🤖 AI 공식블로그 수집
+            AI 공식블로그 수집
           </button>
 
           <button
@@ -454,7 +454,7 @@ export default function AdminFeedPage() {
             className="px-3.5 py-2.5 rounded-xl bg-blue-950/40 hover:bg-blue-900/50 border border-blue-500/30 text-blue-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
           >
             <Activity className="w-3.5 h-3.5 text-blue-400" />
-            ⚽ 스포츠 뉴스 수집
+            스포츠 뉴스 수집
           </button>
 
           <button
@@ -463,7 +463,7 @@ export default function AdminFeedPage() {
             className="px-3.5 py-2.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-900/50 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
           >
             <TrendingUp className="w-3.5 h-3.5 text-emerald-400" />
-            📈 경제/증권 뉴스 수집
+            경제/증권 뉴스 수집
           </button>
 
           <button
@@ -472,7 +472,7 @@ export default function AdminFeedPage() {
             className="px-3.5 py-2.5 rounded-xl bg-yellow-950/40 hover:bg-yellow-900/50 border border-yellow-500/30 text-yellow-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
           >
             <DollarSign className="w-3.5 h-3.5 text-yellow-400" />
-            💰 실시간 환율 & BTC 시세 수집
+            실시간 환율 & BTC 시세 수집
           </button>
 
           <button
@@ -481,7 +481,7 @@ export default function AdminFeedPage() {
             className="px-3.5 py-2.5 rounded-xl bg-pink-950/40 hover:bg-pink-900/50 border border-pink-500/30 text-pink-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
           >
             <Film className="w-3.5 h-3.5 text-pink-400" />
-            🎬 영화/박스오피스 & 시청률 수집
+            영화/박스오피스 & 시청률 수집
           </button>
 
           <button
@@ -490,7 +490,7 @@ export default function AdminFeedPage() {
             className="px-3.5 py-2.5 rounded-xl bg-purple-950/40 hover:bg-purple-900/50 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-1.5 transition-all disabled:opacity-50"
           >
             <Vote className="w-3.5 h-3.5 text-purple-400" />
-            🏛️ 국회 의안 수집
+            국회 의안 수집
           </button>
 
           {/* AI 언론사 브리핑 일괄 작성 */}
@@ -500,7 +500,7 @@ export default function AdminFeedPage() {
             className="px-3.5 py-2.5 rounded-xl bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 transition-all disabled:opacity-50"
           >
             <Newspaper className="w-3.5 h-3.5" />
-            📰 AI 뉴스 초안 4건 생성
+            AI 뉴스 초안 4건 생성
           </button>
 
           {/* 무인 자동 정산 (Auto-Settle) 원클릭 트리거 */}
@@ -510,7 +510,7 @@ export default function AdminFeedPage() {
             className="px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-orange-500/20 transition-all disabled:opacity-50 ml-auto"
           >
             <Scale className="w-3.5 h-3.5 text-amber-200" />
-            ⚖️ 오라클 만료 게임 자동 정산 (Auto-Settle)
+            오라클 만료 게임 자동 정산 (Auto-Settle)
           </button>
         </div>
 
@@ -583,7 +583,7 @@ export default function AdminFeedPage() {
                 : "bg-slate-900 text-slate-400 hover:text-white"
             }`}
           >
-            🌟 전체 피드 ({stats.totalItems})
+            전체 피드 ({stats.totalItems})
           </button>
 
           <button
@@ -594,7 +594,7 @@ export default function AdminFeedPage() {
                 : "bg-slate-900 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-950/40"
             }`}
           >
-            📰 AI 뉴스 데스크 ({newsDrafts.length})
+            AI 뉴스 데스크 ({newsDrafts.length})
           </button>
 
           <button
@@ -605,7 +605,7 @@ export default function AdminFeedPage() {
                 : "bg-slate-900 text-slate-400 hover:text-white"
             }`}
           >
-            📍 광주·전남 ({stats.categoryCounts.GWANGJU || 0})
+            광주·전남 ({stats.categoryCounts.GWANGJU || 0})
           </button>
 
           <button
@@ -616,7 +616,7 @@ export default function AdminFeedPage() {
                 : "bg-slate-900 text-slate-400 hover:text-white"
             }`}
           >
-            🤖 AI ({stats.categoryCounts.AI || 0})
+            AI ({stats.categoryCounts.AI || 0})
           </button>
 
           <button
@@ -627,7 +627,7 @@ export default function AdminFeedPage() {
                 : "bg-slate-900 text-slate-400 hover:text-white"
             }`}
           >
-            ⚽ 스포츠 ({stats.categoryCounts.SPORTS || 0})
+            스포츠 ({stats.categoryCounts.SPORTS || 0})
           </button>
 
           <button
@@ -638,7 +638,7 @@ export default function AdminFeedPage() {
                 : "bg-slate-900 text-slate-400 hover:text-white"
             }`}
           >
-            📈 경제/증권 ({stats.categoryCounts.ECONOMY || 0})
+            경제/증권 ({stats.categoryCounts.ECONOMY || 0})
           </button>
 
           <button
@@ -649,7 +649,7 @@ export default function AdminFeedPage() {
                 : "bg-slate-900 text-slate-400 hover:text-white"
             }`}
           >
-            🎬 영화/시청률 ({stats.categoryCounts.ENTERTAINMENT || 0})
+            영화/시청률 ({stats.categoryCounts.ENTERTAINMENT || 0})
           </button>
 
           <button
@@ -660,7 +660,7 @@ export default function AdminFeedPage() {
                 : "bg-slate-900 text-slate-400 hover:text-white"
             }`}
           >
-            📰 정책/사회 ({stats.categoryCounts.POLICY || 0})
+            정책/사회 ({stats.categoryCounts.POLICY || 0})
           </button>
 
           <button
@@ -671,7 +671,7 @@ export default function AdminFeedPage() {
                 : "bg-slate-900 text-slate-400 hover:text-white"
             }`}
           >
-            🏛️ 국회 의안 ({stats.totalBills})
+            국회 의안 ({stats.totalBills})
           </button>
         </div>
 
@@ -683,7 +683,7 @@ export default function AdminFeedPage() {
             className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-purple-500/20 transition-all disabled:opacity-50"
           >
             <Zap className="w-3.5 h-3.5 text-yellow-400" />
-            ⚡ 본회의 결과 기반 자동 정산 실행
+            본회의 결과 기반 자동 정산 실행
           </button>
         )}
       </div>
@@ -719,7 +719,7 @@ export default function AdminFeedPage() {
                 disabled={isFetching || isPending}
                 className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold disabled:opacity-50"
               >
-                🚀 즉시 발행 4건 생성
+                즉시 발행 4건 생성
               </button>
             </div>
           </div>
@@ -740,7 +740,7 @@ export default function AdminFeedPage() {
                       {draft.category.toUpperCase()}
                     </span>
                     <span className="px-2.5 py-0.5 rounded bg-teal-500/15 text-teal-300 border border-teal-500/30 font-semibold">
-                      📍 {draft.regionName} ({draft.regionCode})
+                      {draft.regionName} ({draft.regionCode})
                     </span>
                     <span className="text-slate-400">출처: {draft.sourceName}</span>
                     <span className="text-slate-500">· 모델: {draft.aiModel}</span>
@@ -753,7 +753,7 @@ export default function AdminFeedPage() {
                       disabled={isPending}
                       className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all disabled:opacity-50"
                     >
-                      ✅ 정식 발행 (/forum/news)
+                      정식 발행 (/forum/news)
                     </button>
                     <button
                       onClick={() => handleDraftDecision(draft.id, "archived")}
@@ -864,7 +864,7 @@ export default function AdminFeedPage() {
                       <span className="text-xs text-slate-400">{item.source_title}</span>
                       {item.ai_classification && (
                         <span className="px-2 py-0.5 rounded text-xs font-semibold bg-yellow-500/10 text-yellow-400 border border-yellow-500/20">
-                          {item.ai_classification === "PREDICTION" ? "🎯 예측 적합" : "💬 포럼 적합"}
+                          {item.ai_classification === "PREDICTION" ? "예측 적합" : "포럼 적합"}
                         </span>
                       )}
                       {isPublished && (

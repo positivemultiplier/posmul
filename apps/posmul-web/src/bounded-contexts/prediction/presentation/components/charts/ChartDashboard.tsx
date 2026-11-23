@@ -20,22 +20,22 @@ export function ChartDashboard(props: ChartDashboardProps) {
   }> = [
     {
       id: 'probability',
-      title: '📈 확률 변화 추이',
+      title: '확률 변화 추이',
       description: '시간별 예측 옵션 확률 변화'
     },
     {
       id: 'betting',
-      title: '💰 예측 참여 분포',
+      title: '예측 참여 분포',
       description: '옵션별 참여 PMP 및 비율'
     },
     {
       id: 'participants',
-      title: '👥 참여자 현황',
+      title: '참여자 현황',
       description: '시간대별 참여자 수 변화'
     },
     {
       id: 'timeline',
-      title: '⏰ 활동 타임라인',
+      title: '활동 타임라인',
       description: '주요 이벤트별 활동량'
     }
   ];
@@ -78,22 +78,22 @@ export function ChartDashboard(props: ChartDashboardProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {selectedCharts.includes('probability') && (
             <div key="probability" className="space-y-2">
-              <ChartWidget gameId={gameId} type="probability" title="📈 확률 변화 추이" height={320} />
+              <ChartWidget gameId={gameId} type="probability" title="확률 변화 추이" height={320} />
             </div>
           )}
           {selectedCharts.includes('betting') && (
             <div key="betting" className="space-y-2">
-              <ChartWidget gameId={gameId} type="betting" title="💰 예측 참여 분포" height={320} />
+              <ChartWidget gameId={gameId} type="betting" title="예측 참여 분포" height={320} />
             </div>
           )}
           {selectedCharts.includes('participants') && (
             <div key="participants" className="space-y-2">
-              <ChartWidget gameId={gameId} type="participants" title="👥 참여자 현황" height={320} />
+              <ChartWidget gameId={gameId} type="participants" title="참여자 현황" height={320} />
             </div>
           )}
           {selectedCharts.includes('timeline') && (
             <div key="timeline" className="space-y-2">
-              <ChartWidget gameId={gameId} type="timeline" title="⏰ 활동 타임라인" height={320} />
+              <ChartWidget gameId={gameId} type="timeline" title="활동 타임라인" height={320} />
             </div>
           )}
         </div>
@@ -106,7 +106,7 @@ export function ChartDashboard(props: ChartDashboardProps) {
 
       {/* 요약 통계 */}
       <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">📊 대시보드 요약</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">대시보드 요약</h3>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="text-center">

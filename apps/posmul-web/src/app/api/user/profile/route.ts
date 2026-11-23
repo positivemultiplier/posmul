@@ -395,7 +395,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `🎁 시민 활동 보너스 +${BONUS_PMP.toLocaleString()} PMP가 안전하게 원장에 기록되어 충전되었습니다!`,
+      message: `시민 활동 보너스 +${BONUS_PMP.toLocaleString()} PMP가 안전하게 원장에 기록되어 충전되었습니다!`,
       pmpBalance: newPmp,
       pmcBalance: newPmc,
       transactionId: row?.transaction_id,

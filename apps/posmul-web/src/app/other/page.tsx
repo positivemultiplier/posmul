@@ -91,7 +91,7 @@ export default function OtherServicesPage() {
     {
       href: '/other/gift-aid',
       icon: <Gift className="w-6 h-6" />,
-      title: '🎁 Gift Aid (기부금 세액공제)',
+      title: 'Gift Aid (기부금 세액공제)',
       description: '시민 직접 예산 집행(PMC 기부) 내역의 영수증 발급 및 연말정산 세액공제 계산 서비스입니다.',
       status: 'active',
       features: [
@@ -104,7 +104,7 @@ export default function OtherServicesPage() {
     {
       href: '/other/tax',
       icon: <BarChart3 className="w-6 h-6" />,
-      title: '📊 Accounting & Tax (세무·회계)',
+      title: 'Accounting & Tax (세무·회계)',
       description: 'PMP·PMC 자산 획득 및 사용 내역을 투명하게 검증하고 명세서를 출력하는 회계 서비스입니다.',
       status: 'active',
       features: [
@@ -117,7 +117,7 @@ export default function OtherServicesPage() {
     {
       href: '/other/support',
       icon: <MessageCircle className="w-6 h-6" />,
-      title: '💬 Support Center (시민 지원)',
+      title: 'Support Center (시민 지원)',
       description: '플랫폼 이용 가이드 및 1:1 문의, 시민 건의사항 접수 센터입니다.',
       status: 'coming-soon',
       features: [
@@ -130,7 +130,7 @@ export default function OtherServicesPage() {
     {
       href: '/other/settings',
       icon: <Settings className="w-6 h-6" />,
-      title: '⚙️ Account Settings (계정·환경)',
+      title: 'Account Settings (계정·환경)',
       description: '동네(읍·면·동) 인증, 직업군 설정 및 알림·보안 환경을 관리합니다.',
       status: 'coming-soon',
       features: [
@@ -147,7 +147,7 @@ export default function OtherServicesPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <DomainContextHeader
           domain="other"
-          title="⚡ Services · 투명 회계 & 시민 지원"
+          title="Services · 투명 회계 & 시민 지원"
           subtitle="기부금 세액공제(Gift Aid) 영수증 발급과 PMP/PMC 거래 명세서를 투명하게 확인하세요"
           metrics={[{ label: '활성 인프라', value: 2, unit: '서비스' }]}
         />

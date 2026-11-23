@@ -139,7 +139,7 @@ export function SlotMachine({
     if (!isSpinning && !showMeta) {
         return (
             <span className={twMerge("font-bold font-mono transition-all duration-500 text-green-400", className)}>
-                💰{formatNumber(value)}
+                {formatNumber(value)}
             </span>
         );
     }
@@ -147,7 +147,7 @@ export function SlotMachine({
     return (
         <span className={twMerge("slot-container", isSpinning ? 'spinning' : '', "text-green-400 font-bold font-mono", className)}>
             <span className="flex items-center">
-                <span className="text-inherit">💰</span>
+                <span className="text-inherit"></span>
                 {digits.map((digitInfo, index) => {
                     if (digitInfo.isComma) {
                         return (

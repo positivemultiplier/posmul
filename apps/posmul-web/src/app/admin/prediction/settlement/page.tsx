@@ -145,10 +145,10 @@ export default function PredictionSettlementDashboardPage() {
 
       const data = await res.json();
       if (data.success) {
-        alert(`🏆 정산 완료! (총 ${data.settledCount}건 베팅 정산 완료, 적중 유저 ${data.winnerCount}명)`);
+        alert(`정산 완료! (총 ${data.settledCount}건 베팅 정산 완료, 적중 유저 ${data.winnerCount}명)`);
         fetchGames();
       } else {
-        alert(`❌ 정산 실패: ${data.error}`);
+        alert(`정산 실패: ${data.error}`);
       }
     } catch (e: any) {
       alert(`Error settling: ${e.message}`);
@@ -204,10 +204,10 @@ export default function PredictionSettlementDashboardPage() {
                   });
                   const data = await res.json();
                   if (data.success) {
-                    alert(`✅ 오라클 일괄 정산 완료!\n정산: ${data.summary?.settledCount ?? 0}건\n배당: ${(data.summary?.totalRewardDistributed ?? 0).toLocaleString()} PMC`);
+                    alert(`오라클 일괄 정산 완료!\n정산: ${data.summary?.settledCount ?? 0}건\n배당: ${(data.summary?.totalRewardDistributed ?? 0).toLocaleString()} PMC`);
                     fetchGames();
                   } else {
-                    alert(`❌ 오라클 정산 실패: ${data.error}`);
+                    alert(`오라클 정산 실패: ${data.error}`);
                   }
                 } catch (e: unknown) {
                   alert(`오류 발생: ${e instanceof Error ? e.message : String(e)}`);
@@ -229,10 +229,10 @@ export default function PredictionSettlementDashboardPage() {
                   const res = await fetch("/api/cron/prediction-pipeline");
                   const data = await res.json();
                   if (data.success) {
-                    alert(`✅ AI 파이프라인 크론 실행 완료!\n${data.message}\n(자동 정산 게임: ${data.autoSettledGamesCount}건)`);
+                    alert(`AI 파이프라인 크론 실행 완료!\n${data.message}\n(자동 정산 게임: ${data.autoSettledGamesCount}건)`);
                     fetchGames();
                   } else {
-                    alert(`❌ 파이프라인 실행 실패: ${data.error}`);
+                    alert(`파이프라인 실행 실패: ${data.error}`);
                   }
                 } catch (e: any) {
                   alert(`오류 발생: ${e.message}`);
@@ -293,7 +293,7 @@ export default function PredictionSettlementDashboardPage() {
         {/* Games Settlement List */}
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-slate-200 flex items-center gap-2">
-            📊 예측 게임 정산 관리 목록 ({games.length}개)
+            예측 게임 정산 관리 목록 ({games.length}개)
           </h2>
 
           <div className="space-y-4">
@@ -345,7 +345,7 @@ export default function PredictionSettlementDashboardPage() {
                           className="px-3 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/40 text-xs font-bold flex items-center gap-1.5 transition"
                         >
                           <Sparkles className="w-3.5 h-3.5" />
-                          {suggestingGameId === gId ? "근거 조회 중..." : "🔍 오라클·RSS AI 판정 추천"}
+                          {suggestingGameId === gId ? "근거 조회 중..." : "오라클·RSS AI 판정 추천"}
                         </button>
                       )}
                     </div>
@@ -355,7 +355,7 @@ export default function PredictionSettlementDashboardPage() {
                     <div className="mb-4 p-4 rounded-xl bg-sky-950/30 border border-sky-500/40 text-xs space-y-2">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <span className="font-bold text-sky-300">
-                          🤖 {suggestion.sourceType.toUpperCase()} 판정 추천
+                          {suggestion.sourceType.toUpperCase()} 판정 추천
                           {suggestion.usedFallbackRss ? " (미등록 게임 → RSS 기사 보조 분석)" : ""}
                         </span>
                         <span
@@ -422,9 +422,9 @@ export default function PredictionSettlementDashboardPage() {
                             }`}
                           >
                             {isWinOpt
-                              ? `🏆 [승리: ${opt.label}]`
+                              ? `[승리: ${opt.label}]`
                               : isAiSuggested
-                                ? `⭐ AI 추천 [${opt.label}] 승인 정산`
+                                ? `AI 추천 [${opt.label}] 승인 정산`
                                 : `[${opt.label}] 승리로 정산`}
                           </button>
                         );

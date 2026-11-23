@@ -39,17 +39,17 @@ interface PredictionParticipationFormProps {
  * 통계 카테고리 설정
  */
 const STAT_CONFIG: Record<StatCategory, { icon: string; color: string }> = {
-  [StatCategory.BIRTH]: { icon: "👶", color: "text-pink-600" },
-  [StatCategory.DEATH]: { icon: "🕯️", color: "text-gray-600" },
-  [StatCategory.MARRIAGE]: { icon: "💍", color: "text-red-500" },
-  [StatCategory.DIVORCE]: { icon: "💔", color: "text-purple-600" },
-  [StatCategory.MIGRATION_IN]: { icon: "🏠", color: "text-green-600" },
-  [StatCategory.MIGRATION_OUT]: { icon: "🚚", color: "text-orange-600" },
-  [StatCategory.EMPLOYMENT]: { icon: "💼", color: "text-blue-600" },
-  [StatCategory.UNEMPLOYMENT]: { icon: "📉", color: "text-red-600" },
-  [StatCategory.LABOR_FORCE]: { icon: "👷", color: "text-indigo-600" },
-  [StatCategory.CPI]: { icon: "📊", color: "text-amber-600" },
-  [StatCategory.POPULATION]: { icon: "👥", color: "text-teal-600" },
+  [StatCategory.BIRTH]: { icon: "", color: "text-pink-600" },
+  [StatCategory.DEATH]: { icon: "", color: "text-gray-600" },
+  [StatCategory.MARRIAGE]: { icon: "", color: "text-red-500" },
+  [StatCategory.DIVORCE]: { icon: "", color: "text-purple-600" },
+  [StatCategory.MIGRATION_IN]: { icon: "", color: "text-green-600" },
+  [StatCategory.MIGRATION_OUT]: { icon: "", color: "text-orange-600" },
+  [StatCategory.EMPLOYMENT]: { icon: "", color: "text-blue-600" },
+  [StatCategory.UNEMPLOYMENT]: { icon: "", color: "text-red-600" },
+  [StatCategory.LABOR_FORCE]: { icon: "", color: "text-indigo-600" },
+  [StatCategory.CPI]: { icon: "", color: "text-amber-600" },
+  [StatCategory.POPULATION]: { icon: "", color: "text-teal-600" },
 };
 
 export function PredictionParticipationForm({

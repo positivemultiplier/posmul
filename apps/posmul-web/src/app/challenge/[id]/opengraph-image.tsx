@@ -87,7 +87,7 @@ export default async function Image({
                 letterSpacing: "-0.5px",
               }}
             >
-              ⚡ PosMul {isTailChallenge ? "꼬리 내기" : "맞짱 챌린지"}
+              PosMul {isTailChallenge ? "꼬리 내기" : "맞짱 챌린지"}
             </span>
           </div>
           <div
@@ -101,7 +101,7 @@ export default async function Image({
               borderRadius: "999px",
             }}
           >
-            🥊 [{hostName}]님의 도전장!
+            [{hostName}]님의 도전장!
           </div>
         </div>
 
@@ -150,10 +150,10 @@ export default async function Image({
             }}
           >
             <span style={{ color: "#38bdf8" }}>
-              🔴 {optionA.label} ({optionA.ratio}%)
+              {optionA.label} ({optionA.ratio}%)
             </span>
             <span style={{ color: "#fb7185" }}>
-              🔵 {optionB.label} ({optionB.ratio}%)
+              {optionB.label} ({optionB.ratio}%)
             </span>
           </div>
 
@@ -196,10 +196,10 @@ export default async function Image({
             }}
           >
             <span style={{ color: "#facc15", fontWeight: 800 }}>
-              💰 총 판돈: {totalPmp.toLocaleString()} PMP
+              총 판돈: {totalPmp.toLocaleString()} PMP
             </span>
             <span style={{ color: "#cbd5e1" }}>
-              👉 링크를 눌러 즉시 맞짱 대결 참여!
+              링크를 눌러 즉시 맞짱 대결 참여!
             </span>
           </div>
         </div>

@@ -12,14 +12,14 @@ import { InstituteClient } from "./client";
 
 // 카테고리 라벨 매핑
 const categoryLabels: Record<string, { label: string; icon: string }> = {
-  children: { label: "아동복지", icon: "👶" },
-  elderly: { label: "노인복지", icon: "👴" },
-  disaster: { label: "재난구호", icon: "🆘" },
-  environment: { label: "환경보전", icon: "🌿" },
-  education: { label: "교육지원", icon: "📚" },
-  medical: { label: "의료지원", icon: "🏥" },
-  animal: { label: "동물보호", icon: "🐾" },
-  other: { label: "기타", icon: "💝" },
+  children: { label: "아동복지", icon: "" },
+  elderly: { label: "노인복지", icon: "" },
+  disaster: { label: "재난구호", icon: "" },
+  environment: { label: "환경보전", icon: "" },
+  education: { label: "교육지원", icon: "" },
+  medical: { label: "의료지원", icon: "" },
+  animal: { label: "동물보호", icon: "" },
+  other: { label: "기타", icon: "" },
 };
 
 export default async function InstitutePage() {
@@ -59,7 +59,7 @@ export default async function InstitutePage() {
     description: inst.description || "",
     category: inst.category,
     categoryLabel: categoryLabels[inst.category]?.label || inst.category,
-    categoryIcon: categoryLabels[inst.category]?.icon || "💝",
+    categoryIcon: categoryLabels[inst.category]?.icon || "",
     websiteUrl: inst.website_url,
     trustScore: Number(inst.trust_score) || 0,
     isVerified: inst.is_verified,

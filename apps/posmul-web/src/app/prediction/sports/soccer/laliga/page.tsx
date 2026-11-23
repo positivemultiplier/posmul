@@ -77,7 +77,7 @@ export default async function LaLigaPage() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <FadeIn>
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-400 to-red-500 bg-clip-text text-transparent mb-6">🇪🇸 라리가 (La Liga)</h1>
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-400 to-red-500 bg-clip-text text-transparent mb-6">라리가 (La Liga)</h1>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">스페인 라리가 경기 결과를 예측하고 PMC 상금을 획득하세요.<br />레알 마드리드, 바르셀로나, 아틀레티코 마드리드의 경쟁을 예측해보세요!</p>
           </div>
         </FadeIn>

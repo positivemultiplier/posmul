@@ -35,7 +35,7 @@ export default async function ChallengeLobbyPage() {
               <span>P2P MATCH ARENA</span>
             </div>
             <h1 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight flex items-center gap-3">
-              <span>친구와 맞짱 내기 챌린지 🥊</span>
+              <span>친구와 맞짱 내기 챌린지</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
               사다리타기는 이제 그만! 10초 만에 단독 또는 공식 경기 꼬리 내기를 만들어 카카오톡·SNS에 도전장을 던지세요.
@@ -57,7 +57,7 @@ export default async function ChallengeLobbyPage() {
         {/* 2. 6대 일상 프리셋 바로가기 칩 */}
         <div className="space-y-3">
           <div className="flex items-center justify-between text-xs font-bold text-slate-400">
-            <span>⚡ 빠른 일상 내기 템플릿</span>
+            <span>빠른 일상 내기 템플릿</span>
             <span className="text-[11px] text-amber-400">터치 시 바로 개설 화면 이동</span>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
@@ -117,12 +117,12 @@ export default async function ChallengeLobbyPage() {
                         </span>
                         {c.linkedGameTitle && (
                           <span className="px-2 py-0.5 rounded-full bg-sky-500/15 border border-sky-500/30 text-sky-300 font-bold text-[10px] truncate max-w-[140px]">
-                            🔗 꼬리내기
+                            꼬리내기
                           </span>
                         )}
                       </div>
                       <span className="text-amber-400 font-black font-mono shrink-0">
-                        💰 {c.totalPoolPmp.toLocaleString()} PMP
+                        {c.totalPoolPmp.toLocaleString()} PMP
                       </span>
                     </div>
 

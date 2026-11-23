@@ -6,7 +6,7 @@
 - **3단 책임 분리**:
   1. **순수 도메인/계산 (`src/domain/`, `src/lib/` 순수 함수)**: 채점 로직, 회독 해금, 법정의무 룰 계산 등 외부 의존성 0.
   2. **서버 액션/API (`src/app/actions/`, `src/app/api/`)**: 서버 인증(`supabase.auth.getUser()`) + Zod 검증 + 원자적 DB RPC 호출.
-  3. **UI (`src/components/`, `src/app/**/page.tsx`)**: **500줄 이하** 순수 UI (`supabaseAdmin` 직접 import 금지 — ESLint `error` 강제).
+  3. **UI (`src/components/`, `src/app/**/page.tsx`)**: **500줄 이하** 순수 UI (`supabaseAdmin` 직접 import 금지 — ESLint `error` 강제, 장식용 이모지 남발 금지 및 `lucide-react` 아이콘 사용).
 - **Strangler Fig 원칙 (God File 확장 금지)**: `study/planner/page.tsx`, `actions/exam-study.actions.ts`, `lib/study-curriculum-store.ts` 등 기존 대형 파일에 새 기능을 직접 덧붙이지 말고, 독립 컴포넌트·액션·스토어 모듈로 분리 추출합니다.
 
 ## 2. 도메인 · 보안 · 경제 가드레일

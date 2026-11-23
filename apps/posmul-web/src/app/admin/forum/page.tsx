@@ -193,7 +193,7 @@ export default function AdminForumPage() {
 
       const data = await res.json();
       if (data.success) {
-        alert("🎉 공식 토론 게시글이 작성되었습니다!");
+        alert("공식 토론 게시글이 작성되었습니다!");
         setNewTitle("");
         setNewContent("");
         setIsCreateOpen(false);
@@ -271,8 +271,8 @@ export default function AdminForumPage() {
     }
 
     const confirmMsg = ip && ip !== "기록 없음"
-      ? `🚨 [스팸 글 삭제 + IP 영구 차단]\n게시글을 삭제하고 해당 IP (${ip})를 즉시 영구 차단하시겠습니까?`
-      : "🚨 [스팸 글 삭제]\n게시글을 삭제하시겠습니까?";
+      ? `[스팸 글 삭제 + IP 영구 차단]\n게시글을 삭제하고 해당 IP (${ip})를 즉시 영구 차단하시겠습니까?`
+      : "[스팸 글 삭제]\n게시글을 삭제하시겠습니까?";
 
     if (!confirm(confirmMsg)) return;
 
@@ -290,8 +290,8 @@ export default function AdminForumPage() {
       if (data.success) {
         alert(
           data.ipBanned
-            ? `✅ 글 삭제 및 IP (${data.bannedIp})가 영구 차단되었습니다!`
-            : "✅ 글이 삭제되었습니다."
+            ? `글 삭제 및 IP (${data.bannedIp})가 영구 차단되었습니다!`
+            : "글이 삭제되었습니다."
         );
         setPosts((prev) => prev.filter((p) => (p.id || p.post_id) !== postId));
         fetchData(page);
@@ -330,8 +330,8 @@ export default function AdminForumPage() {
   // 댓글 삭제 + 작성자 IP 차단
   const handlePurgeCommentAndBan = async (commentId: string, ip?: string) => {
     const confirmMsg = ip
-      ? `🚨 [댓글 삭제 + IP 차단]\n댓글을 삭제하고 작성자 IP (${ip})를 즉시 영구 차단하시겠습니까?`
-      : "🚨 댓글을 삭제하시겠습니까?";
+      ? `[댓글 삭제 + IP 차단]\n댓글을 삭제하고 작성자 IP (${ip})를 즉시 영구 차단하시겠습니까?`
+      : "댓글을 삭제하시겠습니까?";
 
     if (!confirm(confirmMsg)) return;
 
@@ -349,8 +349,8 @@ export default function AdminForumPage() {
       if (data.success) {
         alert(
           data.ipBanned
-            ? `✅ 댓글 삭제 및 작성자 IP (${data.bannedIp})가 차단되었습니다!`
-            : "✅ 댓글이 삭제되었습니다."
+            ? `댓글 삭제 및 작성자 IP (${data.bannedIp})가 차단되었습니다!`
+            : "댓글이 삭제되었습니다."
         );
         fetchData();
       } else {
@@ -382,7 +382,7 @@ export default function AdminForumPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`🛡️ IP (${manualIp}) 차단이 등록되었습니다!`);
+        alert(`IP (${manualIp}) 차단이 등록되었습니다!`);
         setManualIp("");
         setManualReason("");
         setManualExpiresHours("0");
@@ -410,7 +410,7 @@ export default function AdminForumPage() {
       });
       const data = await res.json();
       if (data.success) {
-        alert(`✅ IP (${ip}) 차단이 해제되었습니다.`);
+        alert(`IP (${ip}) 차단이 해제되었습니다.`);
         fetchData();
       } else {
         alert(`차단 해제 실패: ${data.error}`);
@@ -441,7 +441,7 @@ export default function AdminForumPage() {
 
       const data = await res.json();
       if (data.success) {
-        alert(`🚫 금지어 '${newBannedWord.trim()}'이(가) 등록되었습니다.`);
+        alert(`금지어 '${newBannedWord.trim()}'이(가) 등록되었습니다.`);
         setNewBannedWord("");
         setNewBannedWordReason("");
         fetchData();
@@ -643,7 +643,7 @@ export default function AdminForumPage() {
             }`}
           >
             <MessageSquare className="w-4 h-4" />
-            💬 게시글 관리 ({stats.totalPosts.toLocaleString()})
+            게시글 관리 ({stats.totalPosts.toLocaleString()})
           </button>
           <button
             onClick={() => setActiveTab("comments")}
@@ -654,7 +654,7 @@ export default function AdminForumPage() {
             }`}
           >
             <MessageCircle className="w-4 h-4" />
-            💭 댓글 & 의견 ({comments.length})
+            댓글 & 의견 ({comments.length})
           </button>
           <button
             onClick={() => setActiveTab("ip-defense")}
@@ -665,7 +665,7 @@ export default function AdminForumPage() {
             }`}
           >
             <ShieldAlert className="w-4 h-4" />
-            🛡️ 봇 방어 & IP 차단 ({activeBannedCount})
+            봇 방어 & IP 차단 ({activeBannedCount})
           </button>
           <button
             onClick={() => setActiveTab("banned-words")}
@@ -676,7 +676,7 @@ export default function AdminForumPage() {
             }`}
           >
             <AlertTriangle className="w-4 h-4" />
-            🚫 금지어 & 욕설 필터 ({bannedWords.length})
+            금지어 & 욕설 필터 ({bannedWords.length})
           </button>
         </div>
 

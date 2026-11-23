@@ -188,9 +188,9 @@ export class FootballMatchSchedulerService {
             id: `football-${match.id}`,
             title: `[${leagueName}] ${homeName} vs ${awayName}, 90분 승무패 결과는?`,
             description: [
-                `🎯 매치 정보: ${leagueName} 매치데이 ${match.matchday} (${homeName} 홈 vs ${awayName} 원정)`,
-                `🗓️ 킥오프 일정: ${kstKickoff} (KST 기준) · 경기 시작 10분 전 참여 마감`,
-                `⚖️ 판정 기준: 연장·승부차기 제외 정규시간(90분+추가시간) 공식 스코어 기준 Football-Data API 자동 정산`,
+                `매치 정보: ${leagueName} 매치데이 ${match.matchday} (${homeName} 홈 vs ${awayName} 원정)`,
+                `킥오프 일정: ${kstKickoff} (KST 기준) · 경기 시작 10분 전 참여 마감`,
+                `판정 기준: 연장·승부차기 제외 정규시간(90분+추가시간) 공식 스코어 기준 Football-Data API 자동 정산`,
             ].join("\n"),
             predictionType: PredictionType.WIN_DRAW_LOSE,
             options: [

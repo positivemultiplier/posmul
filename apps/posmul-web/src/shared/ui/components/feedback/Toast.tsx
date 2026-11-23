@@ -33,12 +33,12 @@ const ToastContext = createContext<ToastContextType | null>(null);
 // 토스트 아이콘 및 스타일
 const toastStyles: Record<ToastType, { icon: string; bgClass: string; borderClass: string }> = {
   success: {
-    icon: "✅",
+    icon: "",
     bgClass: "bg-green-50 dark:bg-green-900/30",
     borderClass: "border-green-500",
   },
   error: {
-    icon: "❌",
+    icon: "",
     bgClass: "bg-red-50 dark:bg-red-900/30",
     borderClass: "border-red-500",
   },
@@ -48,17 +48,17 @@ const toastStyles: Record<ToastType, { icon: string; bgClass: string; borderClas
     borderClass: "border-blue-500",
   },
   warning: {
-    icon: "⚠️",
+    icon: "",
     bgClass: "bg-yellow-50 dark:bg-yellow-900/30",
     borderClass: "border-yellow-500",
   },
   "pmc-reward": {
-    icon: "🎉",
+    icon: "",
     bgClass: "bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/30 dark:to-pink-900/30",
     borderClass: "border-purple-500",
   },
   "pmp-reward": {
-    icon: "💰",
+    icon: "",
     bgClass: "bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/30 dark:to-cyan-900/30",
     borderClass: "border-blue-500",
   },

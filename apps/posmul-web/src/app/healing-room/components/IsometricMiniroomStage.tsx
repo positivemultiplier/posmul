@@ -131,7 +131,7 @@ const MINIMI_VISUALS: Record<string, MinimiVisualSpec> = {
     skinColor: "#ffe2cf",
     cheekColor: "#fda4af",
     hatOrEar: "none",
-    propEmoji: "☕",
+    propEmoji: "",
   },
   "detective-owl": {
     hairColor: "#5b4636",
@@ -140,7 +140,7 @@ const MINIMI_VISUALS: Record<string, MinimiVisualSpec> = {
     skinColor: "#ffe4d4",
     cheekColor: "#fca5a5",
     hatOrEar: "owl",
-    propEmoji: "🔎",
+    propEmoji: "",
   },
   "cozy-camper": {
     hairColor: "#9a3412",
@@ -149,7 +149,7 @@ const MINIMI_VISUALS: Record<string, MinimiVisualSpec> = {
     skinColor: "#ffe2cf",
     cheekColor: "#fda4af",
     hatOrEar: "cap",
-    propEmoji: "🎒",
+    propEmoji: "",
   },
   "angel-wings": {
     hairColor: "#78350f",
@@ -158,7 +158,7 @@ const MINIMI_VISUALS: Record<string, MinimiVisualSpec> = {
     skinColor: "#fff0e8",
     cheekColor: "#f9a8d4",
     hatOrEar: "halo",
-    propEmoji: "🕊️",
+    propEmoji: "",
   },
   "golden-sage": {
     hairColor: "#312e81",
@@ -167,15 +167,15 @@ const MINIMI_VISUALS: Record<string, MinimiVisualSpec> = {
     skinColor: "#ffe5d6",
     cheekColor: "#fda4af",
     hatOrEar: "wizard",
-    propEmoji: "✨",
+    propEmoji: "",
   },
 };
 
 const HEALING_CHATS = [
-  "바닥을 클릭하면 내가 걸어다녀요! 🐾",
-  "오늘 하루도 고생 많았어요, 토닥토닥 ☕",
-  "나눔과 예측의 온기가 방에 가득해요 ✨",
-  "bgm 켜고 잠시 쉬어가도 괜찮아요 🎵",
+  "바닥을 클릭하면 내가 걸어다녀요!",
+  "오늘 하루도 고생 많았어요, 토닥토닥",
+  "나눔과 예측의 온기가 방에 가득해요",
+  "bgm 켜고 잠시 쉬어가도 괜찮아요",
 ];
 
 /**
@@ -543,7 +543,7 @@ export function IsometricMiniroomStage({
             <path d="M440 96 Q418 112 432 156 L440 206 Z" fill="#ffffff" opacity="0.88" />
             {/* 방문 하트 장식 & 손잡이 */}
             <circle cx="412" cy="134" r="9" fill="#ffffff" opacity="0.8" />
-            <text x="412" y="139" textAnchor="middle" fontSize="11">💖</text>
+            <text x="412" y="139" textAnchor="middle" fontSize="11"></text>
             <circle cx="430" cy="158" r="3.5" fill="#d97706" />
           </g>
 
@@ -626,7 +626,7 @@ export function IsometricMiniroomStage({
               <ellipse cx="4" cy="18" rx="12" ry="6" fill="#1e293b" />
               <circle cx="4" cy="18" r="3" fill="#f43f5e" />
               <text x="20" y="6" fontSize="12" fill="#e11d48">
-                🎵
+                
               </text>
             </g>
           )}
@@ -864,7 +864,7 @@ export function IsometricMiniroomStage({
         {/* 좌측 하단 안내 오버레이 & 프렌즈 미니미 회전/표정 컨트롤 */}
         <div className="absolute bottom-2 left-2.5 right-2.5 flex flex-wrap items-center justify-between gap-2 pointer-events-none">
           <div className="rounded bg-white/85 px-2 py-0.5 text-[10px] font-medium text-slate-600 shadow-sm border border-slate-200">
-            💡 바닥을 클릭하면 <strong className="text-sky-700">{minimiMeta.name}</strong> 미니미가 걸어다녀요
+            바닥을 클릭하면 <strong className="text-sky-700">{minimiMeta.name}</strong> 미니미가 걸어다녀요
           </div>
           {activeFriend && (
             <div className="pointer-events-auto flex items-center gap-1">
@@ -911,7 +911,7 @@ export function IsometricMiniroomStage({
       {/* 내 방일 때 보유 가구 빠른 ON/OFF 배치 바 (PosMul 인디고·앰버 톤온톤) */}
       {isOwner && onToggleProp && (
         <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-indigo-200/90 bg-gradient-to-r from-indigo-50/90 via-sky-50/75 to-amber-50/60 px-3 py-2 shadow-sm">
-          <span className="mr-1 text-[11px] font-extrabold text-indigo-900">🪑 미니룸 가구 배치:</span>
+          <span className="mr-1 text-[11px] font-extrabold text-indigo-900">미니룸 가구 배치:</span>
           {ROOM_PROPS.filter((prop) => ownedSet.has(prop.id) || prop.pricePmp === 0).map((prop) => {
             const active = placedSet.has(prop.id);
             return (

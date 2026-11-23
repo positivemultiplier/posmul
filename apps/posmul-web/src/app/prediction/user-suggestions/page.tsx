@@ -69,7 +69,7 @@ export default async function PredictionUserSuggestionsPage() {
         <FadeIn>
           <DomainContextHeader
             domain="prediction"
-            title="💡 시민 제안 예측 마켓"
+            title="시민 제안 예측 마켓"
             subtitle="관료가 정한 의제가 아닌, 시민과 AI·전문가가 직접 발의한 주제로 집단지성 예측 시장을 만듭니다"
             metrics={[
               {
@@ -86,7 +86,7 @@ export default async function PredictionUserSuggestionsPage() {
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                <span className="font-semibold text-slate-300">📡 공인 검증 데이터:</span>
+                <span className="font-semibold text-slate-300">공인 검증 데이터:</span>
                 {dataSources.map((ds) => (
                   <span
                     key={ds.name}
@@ -103,7 +103,7 @@ export default async function PredictionUserSuggestionsPage() {
                   href="/challenge/create"
                   className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 text-xs font-black transition shadow-sm"
                 >
-                  🥊 단톡방 맞짱 · 꼬리내기 열기
+                  단톡방 맞짱 · 꼬리내기 열기
                 </Link>
                 <Link
                   href="/prediction/create"

@@ -271,9 +271,9 @@ export function YptFocusOverlay({
 
     if (isRight) {
       setQuizCorrectCount(nextCorrect);
-      setQuizFeedback("✅ 정답! 핵심 함정을 정확히 파악했습니다.");
+      setQuizFeedback("정답! 핵심 함정을 정확히 파악했습니다.");
     } else {
-      setQuizFeedback(`💡 ${currentQuizCard.trapCorrection}`);
+      setQuizFeedback(`${currentQuizCard.trapCorrection}`);
     }
 
     setTimeout(() => {

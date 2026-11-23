@@ -31,7 +31,7 @@ export async function generateMetadata({
     if (data) {
       const hostName = data.host_name || "호스트";
       const poolPmp = Number(data.total_pool_pmp || 0).toLocaleString();
-      const prefix = data.linked_game_title ? "🔗 꼬리 내기" : "🥊 맞짱 도전장";
+      const prefix = data.linked_game_title ? "꼬리 내기" : "맞짱 도전장";
 
       const opts = (data.options as ChallengeOptionRow[]) || [];
       let ratioSummary = "";
@@ -41,7 +41,7 @@ export async function generateMetadata({
         const sum = amtA + amtB;
         const ratioA = sum > 0 ? Math.round((amtA / sum) * 100) : 50;
         const ratioB = 100 - ratioA;
-        ratioSummary = ` · 🔴 ${opts[0]?.label || "선택 A"}(${ratioA}%) vs 🔵 ${opts[1]?.label || "선택 B"}(${ratioB}%)`;
+        ratioSummary = ` ·${opts[0]?.label || "선택 A"}(${ratioA}%) vs${opts[1]?.label || "선택 B"}(${ratioB}%)`;
       }
 
       title = `${prefix} [${hostName}] "${data.title}" | PosMul`;

@@ -78,7 +78,7 @@ export async function grantDevLoginBonus(): Promise<DevBonusResult> {
 
     return {
       success: true,
-      message: `🎁 개발 보너스 지급 완료! PMP: ${result.data.pmpBalance.toLocaleString()}, PMC: ${result.data.pmcBalance.toLocaleString()}`,
+      message: `개발 보너스 지급 완료! PMP: ${result.data.pmpBalance.toLocaleString()}, PMC: ${result.data.pmcBalance.toLocaleString()}`,
       pmpBalance: result.data.pmpBalance,
       pmcBalance: result.data.pmcBalance,
       bonusGranted: true,

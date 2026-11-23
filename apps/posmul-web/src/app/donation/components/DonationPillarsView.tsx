@@ -117,7 +117,7 @@ export function DonationPillarsView() {
             }`}
           >
             <PackageCheck className="w-4 h-4 text-indigo-400" />
-            <span>📦 1. K-물품기부 (수출 승수)</span>
+            <span>1. K-물품기부 (수출 승수)</span>
           </button>
           <button
             onClick={() => setActivePillar("NGO_MILESTONE")}
@@ -128,7 +128,7 @@ export function DonationPillarsView() {
             }`}
           >
             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-            <span>🤝 2. 마일스톤 NGO (에스크로)</span>
+            <span>2. 마일스톤 NGO (에스크로)</span>
           </button>
           <button
             onClick={() => setActivePillar("HERO_BOUNTY")}
@@ -139,7 +139,7 @@ export function DonationPillarsView() {
             }`}
           >
             <Award className="w-4 h-4 text-amber-400" />
-            <span>🦸‍♂️ 3. 숨은 의인상 (비과세 포상)</span>
+            <span>3. 숨은 의인상 (비과세 포상)</span>
           </button>
           <button
             onClick={() => setActivePillar("DREAM_LADDER")}
@@ -150,7 +150,7 @@ export function DonationPillarsView() {
             }`}
           >
             <Sparkles className="w-4 h-4 text-purple-400" />
-            <span>🌱 4. 꿈의 사다리 (Pay-it-Forward)</span>
+            <span>4. 꿈의 사다리 (Pay-it-Forward)</span>
           </button>
         </div>
 
@@ -206,10 +206,10 @@ export function DonationPillarsView() {
                           : "bg-purple-950 text-purple-300 border-purple-800"
                       }`}
                     >
-                      {proj.pillar === "TIED_GOODS" && "📦 K-물품 직접기부"}
-                      {proj.pillar === "NGO_MILESTONE" && "🤝 마일스톤 검증 NGO"}
-                      {proj.pillar === "HERO_BOUNTY" && "🦸‍♂️ 숨은 의인 포상제"}
-                      {proj.pillar === "DREAM_LADDER" && "🌱 꿈의 사다리 (Pay-it-Forward)"}
+                      {proj.pillar === "TIED_GOODS" && "K-물품 직접기부"}
+                      {proj.pillar === "NGO_MILESTONE" && "마일스톤 검증 NGO"}
+                      {proj.pillar === "HERO_BOUNTY" && "숨은 의인 포상제"}
+                      {proj.pillar === "DREAM_LADDER" && "꿈의 사다리 (Pay-it-Forward)"}
                     </span>
                     <span className="text-[11px] font-bold text-slate-400 flex items-center gap-1">
                       <Building2 className="w-3.5 h-3.5 text-slate-500" />

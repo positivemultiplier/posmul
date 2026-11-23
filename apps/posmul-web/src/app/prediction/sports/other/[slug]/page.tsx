@@ -53,7 +53,7 @@ const otherSportsPredictionGamesData = {
     creator: {
       name: "피겨스케이팅팬",
       reputation: 4.5,
-      avatar: "⛸️",
+      avatar: "",
     },
     prizePool: 70000,
     minimumStake: 100,
@@ -118,7 +118,7 @@ const otherSportsPredictionGamesData = {
     creator: {
       name: "골프전문가이",
       reputation: 4.7,
-      avatar: "⛳",
+      avatar: "",
     },
     prizePool: 150000,
     minimumStake: 1000,
@@ -167,7 +167,7 @@ const otherSportsPredictionGamesData = {
     creator: {
       name: "테니스분석가박",
       reputation: 4.6,
-      avatar: "🎾",
+      avatar: "",
     },
     prizePool: 100000,
     minimumStake: 500,
@@ -224,7 +224,7 @@ const otherSportsPredictionGamesData = {
     creator: {
       name: "수영전문가김",
       reputation: 4.8,
-      avatar: "🏊‍♂️",
+      avatar: "",
     },
     prizePool: 125000,
     minimumStake: 800,
@@ -265,7 +265,7 @@ const otherSportsPredictionGamesData = {
     creator: {
       name: "양궁전문가이",
       reputation: 4.9,
-      avatar: "🏹",
+      avatar: "",
     },
     prizePool: 125000,
     minimumStake: 1000,

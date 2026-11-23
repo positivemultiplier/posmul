@@ -83,7 +83,7 @@ function buildGameForView(game: GameRow, stats: GameStats, gameOptions: ParsedOp
     creator: {
       name: "축구분석가",
       reputation: 4.7,
-      avatar: "⚽",
+      avatar: "",
     },
     prizePool:
       game.allocated_prize_pool ||

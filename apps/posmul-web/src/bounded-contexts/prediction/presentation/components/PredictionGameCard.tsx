@@ -630,10 +630,10 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
               {game.regionLevel && game.regionLevel !== "NATION" && (
                 <span className="shrink-0 px-1.5 py-0.5 rounded bg-emerald-500/15 border border-emerald-400/30 text-[9px] font-extrabold text-emerald-300 leading-none">
                   {game.regionLevel === "DONG"
-                    ? `🏡 ${game.regionName || "우리동네"}`
+                    ? `${game.regionName || "우리동네"}`
                     : game.regionLevel === "LOCAL"
-                      ? `📍 ${game.regionName || "우리구"}`
-                      : `🏙️ ${game.regionName || "시·도"}`}
+                      ? `${game.regionName || "우리구"}`
+                      : `${game.regionName || "시·도"}`}
                 </span>
               )}
             </div>
@@ -818,7 +818,7 @@ export const PredictionGameCard: React.FC<PredictionGameCardProps> = ({
         {/* 좌측: 상금풀 + 가중치 배지 */}
         <div className="flex items-center gap-2">
           <span className="font-extrabold text-amber-400 flex items-center gap-1">
-            <span>💰</span>
+            <span></span>
             <span>{(game.allocatedPrizePool || game.totalStake || 3200).toLocaleString()} PMC</span>
           </span>
           <span

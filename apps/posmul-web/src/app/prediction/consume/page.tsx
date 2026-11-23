@@ -68,7 +68,7 @@ export default async function PredictionConsumePage() {
         <FadeIn>
           <DomainContextHeader
             domain="prediction"
-            title="💳 소비·임팩트 예측 마켓"
+            title="소비·임팩트 예측 마켓"
             subtitle="시간(Time)·지역소비(Money)·크라우드펀딩(Cloud) 영역의 시민 참여 성과를 예측합니다"
             metrics={[
               {
@@ -80,7 +80,7 @@ export default async function PredictionConsumePage() {
             ]}
           >
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 공인 검증 데이터:</span>
+              <span className="font-semibold text-slate-300">공인 검증 데이터:</span>
               {dataSources.map((ds) => (
                 <span
                   key={ds.name}

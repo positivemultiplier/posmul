@@ -145,7 +145,7 @@ export function NewsFeedView({ initialCategory }: NewsFeedViewProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DomainContextHeader
           domain="forum"
-          title="📰 PosMul AI 뉴스룸 · 광주 5개구 실험실"
+          title="PosMul AI 뉴스룸 · 광주 5개구 실험실"
           subtitle="공식 보도자료와 검증된 1차 피드를 AI 데스크가 3줄로 정리하고, 이해도 퀴즈로 무위험 시민 자본(PMP)을 지급합니다"
           metrics={[{ label: "오늘 포럼 획득", value: dailyEarnedPmp, unit: "PMP" }]}
         >

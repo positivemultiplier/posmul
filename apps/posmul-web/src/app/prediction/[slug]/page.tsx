@@ -21,7 +21,7 @@ function decodeSlug(slug: string) {
 const SAMPLE_GAMES_MAP: Record<string, PredictionGameDetail> = {
   "sports-soccer-epl-tottenham-arsenal": {
     id: "game-sample-sports-1",
-    title: "⚽ 2026 북런던 더비: 토트넘 vs 아스날, 최종 경기 결과는?",
+    title: "2026 북런던 더비: 토트넘 vs 아스날, 최종 경기 결과는?",
     description:
       "손흥민 주장의 주전 출전이 예상되는 2026 시즌 프리미어리그 핵심 매치업 승무패 예측입니다. 양 팀의 최근 5경기 상대 전적과 홈/원정 전력을 종합 분석해보세요.",
     predictionType: "wdl",
@@ -41,12 +41,12 @@ const SAMPLE_GAMES_MAP: Record<string, PredictionGameDetail> = {
     endTime: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
     settlementTime: new Date(Date.now() + 4 * 24 * 60 * 60 * 1000).toISOString(),
     status: "ACTIVE",
-    creator: { name: "스포츠오라클", reputation: 4.9, avatar: "⚽" },
+    creator: { name: "스포츠오라클", reputation: 4.9, avatar: "" },
     prizePool: 25000,
   },
   "ranking-kpop-yearly-award-2026": {
     id: "game-sample-ranking-1",
-    title: "🏆 [2026 가요대전] 올해의 디지털 음원 대상 1위 수상자는?",
+    title: "[2026 가요대전] 올해의 디지털 음원 대상 1위 수상자는?",
     description:
       "써클차트·멜론 연간 스트리밍 지수와 심사위원 점수를 합산해 선정하는 연말 최고 영예 대상 1위 아티스트를 예측해보세요.",
     predictionType: "ranking",
@@ -68,7 +68,7 @@ const SAMPLE_GAMES_MAP: Record<string, PredictionGameDetail> = {
     endTime: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString(),
     settlementTime: new Date(Date.now() + 12 * 24 * 60 * 60 * 1000).toISOString(),
     status: "ACTIVE",
-    creator: { name: "K-콘텐츠 오라클", reputation: 4.9, avatar: "🎵" },
+    creator: { name: "K-콘텐츠 오라클", reputation: 4.9, avatar: "" },
     prizePool: 42000,
   },
 };
@@ -138,7 +138,7 @@ export default async function PredictionDetailPage({
       category: "이슈 예측",
       dataSource: "manual",
       settlementType: "auto",
-      creator: { name: "PosMul 오라클", reputation: 4.9, avatar: "🔮" },
+      creator: { name: "PosMul 오라클", reputation: 4.9, avatar: "" },
       prizePool: 35000,
     };
   }

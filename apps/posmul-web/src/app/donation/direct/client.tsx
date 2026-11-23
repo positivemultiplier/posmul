@@ -34,11 +34,11 @@ interface DirectDonationClientProps {
 }
 
 const CATEGORIES = [
-  { key: "all", label: "전체 물품", icon: "🎁" },
-  { key: "clothing", label: "의류·잡화", icon: "👕" },
-  { key: "food", label: "식품·생필품", icon: "🍚" },
-  { key: "education", label: "교육·도서", icon: "📚" },
-  { key: "medical", label: "의료·건강", icon: "💊" },
+  { key: "all", label: "전체 물품", icon: "" },
+  { key: "clothing", label: "의류·잡화", icon: "" },
+  { key: "food", label: "식품·생필품", icon: "" },
+  { key: "education", label: "교육·도서", icon: "" },
+  { key: "medical", label: "의료·건강", icon: "" },
 ];
 
 function DirectDonationContent({ projects }: DirectDonationClientProps) {
@@ -81,7 +81,7 @@ function DirectDonationContent({ projects }: DirectDonationClientProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DomainContextHeader
           domain="donation"
-          title="📦 K-물품 직접기부 (Tied Goods)"
+          title="K-물품 직접기부 (Tied Goods)"
           subtitle="LG·삼성 가전, CJ 영양식품 등 한국 기업 실물 물품을 직구매하여 취약계층에 전달하고 수출 승수 효과를 창출합니다"
           metrics={[
             { label: "전달된 물품", value: totalDelivered, unit: "개" },
@@ -122,7 +122,7 @@ function DirectDonationContent({ projects }: DirectDonationClientProps) {
         <div className="mb-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-950/70 via-slate-900 to-indigo-950/70 border border-purple-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg">
           <div className="flex items-center gap-3.5">
             <div className="w-10 h-10 rounded-xl bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-xl shrink-0">
-              🏢
+              
             </div>
             <div>
               <h3 className="font-extrabold text-sm text-white flex items-center gap-2">
@@ -141,7 +141,7 @@ function DirectDonationContent({ projects }: DirectDonationClientProps) {
               href="/donation/direct/wishlist"
               className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 text-white font-bold text-xs shadow-md shadow-purple-600/30 transition-all active:scale-95 flex items-center justify-center gap-1.5"
             >
-              <span>🎁 K-위시리스트 포털 가기</span>
+              <span>K-위시리스트 포털 가기</span>
             </Link>
             <button
               onClick={() => setIsWishlistModalOpen(true)}
@@ -240,7 +240,7 @@ function DirectDonationContent({ projects }: DirectDonationClientProps) {
 
                         <div className="pt-1">
                           <div className="w-full py-2 rounded-xl bg-purple-600/20 border border-purple-500/40 text-center text-purple-200 text-xs font-bold group-hover:bg-purple-600 group-hover:text-white transition-all">
-                            물품 후원하기 🎁
+                            물품 후원하기
                           </div>
                         </div>
                       </CardContent>

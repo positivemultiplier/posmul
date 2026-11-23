@@ -218,7 +218,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c1",
         nickname: "쏭아",
-        emoji: "🦉",
+        emoji: "",
         todaySeconds: 58376,
         isStudying: true,
         subject: "주택법",
@@ -227,7 +227,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c2",
         nickname: "건라겨이",
-        emoji: "🐉",
+        emoji: "",
         todaySeconds: 53651,
         isStudying: true,
         subject: "공동주택관리법",
@@ -236,7 +236,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c3",
         nickname: "향기구름",
-        emoji: "🐱",
+        emoji: "",
         todaySeconds: 53228,
         isStudying: true,
         subject: "관리실무",
@@ -245,7 +245,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c4",
         nickname: "신이가",
-        emoji: "🦁",
+        emoji: "",
         todaySeconds: 49438,
         isStudying: true,
         subject: "시설개론",
@@ -254,7 +254,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c5",
         nickname: "KFP열공",
-        emoji: "🦉",
+        emoji: "",
         todaySeconds: 48438,
         isStudying: true,
         subject: "회계원리",
@@ -263,7 +263,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c6",
         nickname: "파이팅혼공",
-        emoji: "🐉",
+        emoji: "",
         todaySeconds: 46099,
         isStudying: true,
         subject: "민법",
@@ -272,7 +272,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c7",
         nickname: "오렌지주스",
-        emoji: "🐱",
+        emoji: "",
         todaySeconds: 45598,
         isStudying: false,
         subject: "휴식 중",
@@ -281,7 +281,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c8",
         nickname: "다혜버터",
-        emoji: "🦁",
+        emoji: "",
         todaySeconds: 45173,
         isStudying: true,
         subject: "관계법규",
@@ -290,7 +290,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c9",
         nickname: "기술사도전",
-        emoji: "🦉",
+        emoji: "",
         todaySeconds: 44969,
         isStudying: false,
         subject: "잠시 쉬는중",
@@ -299,7 +299,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c10",
         nickname: "마리내꺼",
-        emoji: "🐱",
+        emoji: "",
         todaySeconds: 44570,
         isStudying: true,
         subject: "O/X 복습",
@@ -308,7 +308,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c11",
         nickname: "찌로로",
-        emoji: "🦉",
+        emoji: "",
         todaySeconds: 44539,
         isStudying: false,
         subject: "휴식 중",
@@ -319,8 +319,8 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "cc1",
         sender: "쏭아",
-        emoji: "🦉",
-        text: "오늘 다들 페이스 엄청 좋네요! 끝까지 완주합시다 💪",
+        emoji: "",
+        text: "오늘 다들 페이스 엄청 좋네요! 끝까지 완주합시다",
         timeLabel: "11:12",
       },
     ],
@@ -333,7 +333,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
     joinMethod: "instant",
     nicknameRule: "닉네임/목표회차 (예: 합격소장/29회)",
     hasMission: true,
-    notice: "매일 최소 4시간 인증 · 법규/실무 오답 공유 환영! 주말 모의고사 필참 💪",
+    notice: "매일 최소 4시간 인증 · 법규/실무 오답 공유 환영! 주말 모의고사 필참",
     leaderName: "달꼬밍",
     goalHours: 6,
     capacity: 50,
@@ -346,7 +346,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "m1",
         nickname: "달꼬밍",
-        emoji: "🐉",
+        emoji: "",
         todaySeconds: 16000,
         isStudying: true,
         subject: "공동주택관리법",
@@ -355,7 +355,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "m2",
         nickname: "왜모태",
-        emoji: "🦁",
+        emoji: "",
         todaySeconds: 8575,
         isStudying: false,
         subject: "휴식 중",
@@ -364,7 +364,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "m3",
         nickname: "ryu2026",
-        emoji: "🦉",
+        emoji: "",
         todaySeconds: 5472,
         isStudying: false,
         subject: "휴식 중",
@@ -373,7 +373,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "m4",
         nickname: "석이",
-        emoji: "🐱",
+        emoji: "",
         todaySeconds: 2497,
         isStudying: false,
         subject: "오프라인",
@@ -382,7 +382,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "m5",
         nickname: "숙이2",
-        emoji: "🦉",
+        emoji: "",
         todaySeconds: 2065,
         isStudying: false,
         subject: "오프라인",
@@ -391,7 +391,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "m6",
         nickname: "Feat.Dee",
-        emoji: "🐉",
+        emoji: "",
         todaySeconds: 58,
         isStudying: false,
         subject: "휴식 중",
@@ -400,7 +400,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "m7",
         nickname: "깜빡핑82",
-        emoji: "🦁",
+        emoji: "",
         todaySeconds: 15,
         isStudying: false,
         subject: "휴식 중",
@@ -409,7 +409,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "m8",
         nickname: "냐무냐무",
-        emoji: "🦉",
+        emoji: "",
         todaySeconds: 0,
         isStudying: false,
         subject: "대기중",
@@ -418,7 +418,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "m9",
         nickname: "빵꾸똥꾸",
-        emoji: "🐱",
+        emoji: "",
         todaySeconds: 0,
         isStudying: false,
         subject: "대기중",
@@ -427,7 +427,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "m10",
         nickname: "박아겅",
-        emoji: "🦉",
+        emoji: "",
         todaySeconds: 0,
         isStudying: false,
         subject: "대기중",
@@ -436,7 +436,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "m11",
         nickname: "짱구아부지",
-        emoji: "🐱",
+        emoji: "",
         todaySeconds: 0,
         isStudying: false,
         subject: "대기중",
@@ -447,15 +447,15 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c1",
         sender: "달꼬밍",
-        emoji: "🐉",
+        emoji: "",
         text: "장기수선충당금 3년마다 검토 조문 시험에 자주 나오니 꼭 체크하세요!",
         timeLabel: "10:42",
       },
       {
         id: "c2",
         sender: "석이",
-        emoji: "🐱",
-        text: "오늘 관계법규 3회독 달립니다 다들 화이팅 🔥",
+        emoji: "",
+        text: "오늘 관계법규 3회독 달립니다 다들 화이팅",
         timeLabel: "10:55",
       },
     ],
@@ -481,7 +481,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "f1",
         nickname: "법령요정",
-        emoji: "🦉",
+        emoji: "",
         todaySeconds: 14520,
         isStudying: true,
         subject: "주택법",
@@ -490,7 +490,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "f2",
         nickname: "실무만점",
-        emoji: "🦁",
+        emoji: "",
         todaySeconds: 11200,
         isStudying: true,
         subject: "관리실무",
@@ -499,7 +499,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "f3",
         nickname: "하자보수왕",
-        emoji: "🐉",
+        emoji: "",
         todaySeconds: 8940,
         isStudying: true,
         subject: "하자담보",
@@ -508,7 +508,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "f4",
         nickname: "주말전사",
-        emoji: "🐱",
+        emoji: "",
         todaySeconds: 3600,
         isStudying: false,
         subject: "휴식 중",
@@ -519,7 +519,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "c3",
         sender: "법령요정",
-        emoji: "🦉",
+        emoji: "",
         text: "오늘 밤 10시 OX 3초 퀴즈 챌린지 같이 달려요!",
         timeLabel: "09:18",
       },
@@ -544,7 +544,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "w1",
         nickname: "야근탈출",
-        emoji: "🐱",
+        emoji: "",
         todaySeconds: 7620,
         isStudying: true,
         subject: "회계원리",
@@ -553,7 +553,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "w2",
         nickname: "지하철암기",
-        emoji: "🦉",
+        emoji: "",
         todaySeconds: 5100,
         isStudying: false,
         subject: "이동 중",
@@ -584,7 +584,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "cm1",
         nickname: "새벽기상장",
-        emoji: "🦁",
+        emoji: "",
         todaySeconds: 18400,
         isStudying: true,
         subject: "시설개론",
@@ -593,7 +593,7 @@ export const INITIAL_STUDY_GROUPS: StudyGroupRoom[] = [
       {
         id: "cm2",
         nickname: "오전완주",
-        emoji: "🦉",
+        emoji: "",
         todaySeconds: 13200,
         isStudying: true,
         subject: "주택법",

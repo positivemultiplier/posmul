@@ -7,11 +7,11 @@ export const dynamic = 'force-dynamic';
 
 // 카테고리 라벨 데이터 (공통 사용)
 const categoryMap: Record<string, { label: string; icon: string }> = {
-  clothing: { label: "의류/잡화", icon: "👕" },
-  food: { label: "식품/생필품", icon: "🍚" },
-  education: { label: "교육/도서", icon: "📚" },
-  electronics: { label: "가전/디지털", icon: "🔌" },
-  medical: { label: "의료/건강", icon: "💊" },
+  clothing: { label: "의류/잡화", icon: "" },
+  food: { label: "식품/생필품", icon: "" },
+  education: { label: "교육/도서", icon: "" },
+  electronics: { label: "가전/디지털", icon: "" },
+  medical: { label: "의료/건강", icon: "" },
 };
 
 export default async function DirectDonationPage() {
@@ -37,7 +37,7 @@ export default async function DirectDonationPage() {
   const fundingProjects = (projects || []).map((project: any) => ({
     ...project,
     categoryLabel: categoryMap[project.category]?.label || "기타",
-    categoryIcon: categoryMap[project.category]?.icon || "🎁",
+    categoryIcon: categoryMap[project.category]?.icon || "",
     achievementRate: Math.min(100, Math.round((project.current_quantity / project.target_quantity) * 100)),
   }));
 

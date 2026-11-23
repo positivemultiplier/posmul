@@ -392,7 +392,7 @@ export default function AdminPredictionSchedulerPage() {
 
       const returnedLogs: string[] = Array.isArray(data.logs) ? data.logs : [];
       setLogs((prev) => [
-        `✅ [${new Date().toLocaleTimeString("ko-KR")}] '${label}' 완료`,
+        `[${new Date().toLocaleTimeString("ko-KR")}] '${label}' 완료`,
         ...returnedLogs,
         ...prev.slice(0, 60),
       ]);
@@ -403,7 +403,7 @@ export default function AdminPredictionSchedulerPage() {
       await fetchAll();
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      setLogs((prev) => [`❌ 오류: ${message}`, ...prev]);
+      setLogs((prev) => [`오류: ${message}`, ...prev]);
       setBannerMsg({ type: "error", text: message });
     } finally {
       setRunningStep(null);
@@ -467,7 +467,7 @@ export default function AdminPredictionSchedulerPage() {
       }
       const returnedLogs: string[] = Array.isArray(data.logs) ? data.logs : [];
       setLogs((prev) => [
-        `✅ [${new Date().toLocaleTimeString("ko-KR")}] 소수 샘플 발행 완료`,
+        `[${new Date().toLocaleTimeString("ko-KR")}] 소수 샘플 발행 완료`,
         ...returnedLogs,
         ...prev.slice(0, 60),
       ]);
@@ -511,7 +511,7 @@ export default function AdminPredictionSchedulerPage() {
       const msg =
         data.message || `${label} 완료 (${data.affectedCount ?? 0}건 처리)`;
       setLogs((prev) => [
-        `🧹 [${new Date().toLocaleTimeString("ko-KR")}] ${msg}`,
+        `[${new Date().toLocaleTimeString("ko-KR")}] ${msg}`,
         ...prev.slice(0, 60),
       ]);
       setBannerMsg({ type: "success", text: msg });

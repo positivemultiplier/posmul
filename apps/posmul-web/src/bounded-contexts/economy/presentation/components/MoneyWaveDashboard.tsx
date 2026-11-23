@@ -39,7 +39,7 @@ const waveInfo = {
     name: "Wave 1",
     title: "EBIT·사회적학습 발행",
     description: "일일 플랫폼 순이익 & 공론장 사회적 학습 비례 배분",
-    icon: "🌊",
+    icon: "",
     color: "from-blue-500 to-cyan-500",
     bgColor: "bg-blue-50 dark:bg-blue-900/20",
   },
@@ -47,7 +47,7 @@ const waveInfo = {
     name: "Wave 2",
     title: "휴면 PMC 재분배",
     description: "30일 미사용 PMC 회수 및 활성 시민 재분배",
-    icon: "🌀",
+    icon: "",
     color: "from-purple-500 to-pink-500",
     bgColor: "bg-purple-50 dark:bg-purple-900/20",
   },
@@ -55,7 +55,7 @@ const waveInfo = {
     name: "Wave 3",
     title: "기업가·로컬 생태계",
     description: "ESG 파트너 기업 및 지역 벤처 투자 풀",
-    icon: "🔥",
+    icon: "",
     color: "from-orange-500 to-red-500",
     bgColor: "bg-orange-50 dark:bg-orange-900/20",
   },
@@ -137,7 +137,7 @@ export function MoneyWaveDashboard({ initialData }: MoneyWaveDashboardProps) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6">
         <div className="text-center py-8">
-          <span className="text-4xl block mb-2">🌊</span>
+          <span className="text-4xl block mb-2"></span>
           <h3 className="font-bold text-gray-900 dark:text-white mb-2">MoneyWave</h3>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
             {error || "아직 MoneyWave 데이터가 없습니다."}
@@ -153,7 +153,7 @@ export function MoneyWaveDashboard({ initialData }: MoneyWaveDashboardProps) {
       <div className="bg-gradient-to-r from-blue-500 via-purple-500 to-orange-500 p-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">🌊</span>
+            <span className="text-3xl"></span>
             <div>
               <h3 className="font-bold text-white text-lg">MoneyWave</h3>
               <p className="text-sm text-white/80">일일 100,000 PMC · 사회적 학습 기반 분배 엔진</p>

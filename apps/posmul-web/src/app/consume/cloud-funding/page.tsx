@@ -205,7 +205,7 @@ function CloudFundingContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DomainContextHeader
           domain="consume"
-          title="💡 Cloud Funding · 임팩트 크라우드 펀딩"
+          title="Cloud Funding · 임팩트 크라우드 펀딩"
           subtitle="이웃과 청년 창업가의 프로젝트에 후원하고 펀딩액의 5%를 PMC로 적립받으세요"
           metrics={[
             { label: "내 누적 후원", value: formatAmount(totalInvested), unit: "원" },

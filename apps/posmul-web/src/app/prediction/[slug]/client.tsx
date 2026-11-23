@@ -276,7 +276,7 @@ export function getOracleSpecInfo(dataSource?: string, title?: string) {
     return {
       provider: "영화진흥위원회 통합전산망 (KOBIS Open API)",
       endpoint: "searchDailyBoxOfficeList / searchWeeklyBoxOfficeList",
-      badge: "🎬 KOBIS 공인 박스오피스 오라클",
+      badge: "KOBIS 공인 박스오피스 오라클",
       scheduleDesc: "주말 마감 후 월요일 09:00 공식 누적 관객수 자동 판정",
     };
   }
@@ -285,7 +285,7 @@ export function getOracleSpecInfo(dataSource?: string, title?: string) {
       return {
         provider: "Netflix Tudum / FlixPatrol 공식 TOP 10 집계",
         endpoint: "KContentOracleAdapter (ott_top1)",
-        badge: "📺 글로벌 OTT 공식 순위 오라클",
+        badge: "글로벌 OTT 공식 순위 오라클",
         scheduleDesc: "집계 발표 직후 대한민국 시리즈 TOP 10 1위 여부 판정",
       };
     }
@@ -293,14 +293,14 @@ export function getOracleSpecInfo(dataSource?: string, title?: string) {
       return {
         provider: "써클차트(Circle Chart) · 멜론 주간 디지털 차트",
         endpoint: "KContentOracleAdapter (music_chart_top10)",
-        badge: "🎵 공인 음원차트 오라클",
+        badge: "공인 음원차트 오라클",
         scheduleDesc: "주간 차트 발표 시점 순위 자동 대조 판정",
       };
     }
     return {
       provider: "닐슨코리아(Nielsen Korea) 전국 가구 시청률 공시",
       endpoint: "KContentOracleAdapter (nielsen_national_household)",
-      badge: "📺 닐슨코리아 공인 시청률 오라클",
+      badge: "닐슨코리아 공인 시청률 오라클",
       scheduleDesc: "본방송 익일 오전 07:00~09:00 공식 시청률 발표 즉시 판정",
     };
   }
@@ -316,7 +316,7 @@ export function getOracleSpecInfo(dataSource?: string, title?: string) {
     return {
       provider: "KRX 한국거래소 종가 / Alpha Vantage Global Market",
       endpoint: "TIME_SERIES_DAILY (Official Close Price)",
-      badge: "📈 증시 공식 종가 오라클",
+      badge: "증시 공식 종가 오라클",
       scheduleDesc: "정규장 마감 후 공식 확정 종가 자동 대조 판정",
     };
   }
@@ -324,7 +324,7 @@ export function getOracleSpecInfo(dataSource?: string, title?: string) {
     return {
       provider: "금융감독원 전자공시시스템 (OpenDART API)",
       endpoint: "opendart.fss.or.kr/api/fnlttSinglAcntAll.json",
-      badge: "📑 금감원 OpenDART 전자공시 오라클",
+      badge: "금감원 OpenDART 전자공시 오라클",
       scheduleDesc: "분기·사업보고서 연결재무제표 영업이익 확정치 자동 판정",
     };
   }
@@ -332,7 +332,7 @@ export function getOracleSpecInfo(dataSource?: string, title?: string) {
     return {
       provider: "한국은행 경제통계시스템 (BOK ECOS Open API)",
       endpoint: "ecos.bok.or.kr/api/StatisticSearch (722Y001 / 200Y101)",
-      badge: "🏦 한국은행 ECOS 공식 통계 오라클",
+      badge: "한국은행 ECOS 공식 통계 오라클",
       scheduleDesc: "금통위/속보치 공식 발표 직후 ECOS 통계표 자동 판정",
     };
   }
@@ -341,7 +341,7 @@ export function getOracleSpecInfo(dataSource?: string, title?: string) {
       return {
         provider: "LCK 공식 경기 기록실 & Riot Esports API",
         endpoint: "lolesports / Match Official Series Result",
-        badge: "⚔️ LCK 공식 매치 오라클",
+        badge: "LCK 공식 매치 오라클",
         scheduleDesc: "공식 매치 세트 스코어 종료 즉시 자동 판정",
       };
     }
@@ -350,14 +350,14 @@ export function getOracleSpecInfo(dataSource?: string, title?: string) {
         ? "KBO 공식 기록실 & TheSportsDB 매치 스코어"
         : "Football-Data.org / EPL 공식 경기 기록",
       endpoint: "Match Official FullTime Score & Player Stats",
-      badge: "⚽ 공식 스포츠 매치 기록 오라클",
+      badge: "공식 스포츠 매치 기록 오라클",
       scheduleDesc: "경기 종료(Full-Time) 공식 기록 확정 직후 자동 판정",
     };
   }
   return {
     provider: "통계청 국가통계포털 (KOSIS) · 국회 열린국회정보 API",
     endpoint: "kosis.kr/openapi / open.assembly.go.kr",
-    badge: "🏛️ 국가 공인 오픈데이터 오라클",
+    badge: "국가 공인 오픈데이터 오라클",
     scheduleDesc: "공식 통계 및 본회의 표결 공표 직후 자동 판정",
   };
 }
@@ -602,7 +602,7 @@ export function UniversalPredictionDetailClient({
         });
         if (result.success && result.newBalance !== undefined) {
           setBalance({ ...balance, pmp: result.newBalance });
-          setFeedbackMsg("🎉 예측 투표에 성공적으로 참여하였습니다!");
+          setFeedbackMsg("예측 투표에 성공적으로 참여하였습니다!");
           setBets([
             {
               betId: `bet-${Date.now()}`,
@@ -683,7 +683,7 @@ export function UniversalPredictionDetailClient({
       return (
         <div className="flex items-center gap-3 shrink-0 self-end md:self-center pl-2">
           <div className="hidden sm:flex flex-col items-end">
-            <span className="text-[10px] font-bold text-sky-400">🥇 현재 1위 후보</span>
+            <span className="text-[10px] font-bold text-sky-400">현재 1위 후보</span>
             <span className="text-xs font-black text-white max-w-[120px] truncate">
               {topOption.label}
             </span>
@@ -1185,7 +1185,7 @@ export function UniversalPredictionDetailClient({
                         : "text-slate-400 hover:text-white"
                     }`}
                   >
-                    <span>💜 내 참여 ({bets.length})</span>
+                    <span>내 참여 ({bets.length})</span>
                   </button>
                   <Link
                     href={analysisHref}
@@ -1499,10 +1499,10 @@ export function UniversalPredictionDetailClient({
                         </span>
                         <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/30">
                           {biasReport.riskLevel === "HIGH"
-                            ? "⚠️ 편향 주의"
+                            ? "편향 주의"
                             : biasReport.riskLevel === "MEDIUM"
-                            ? "🔎 교정 권장"
-                            : "✅ 균형 판단"}
+                            ? "교정 권장"
+                            : "균형 판단"}
                         </span>
                       </div>
                       <p className="leading-relaxed opacity-90">{biasReport.nudges[0]}</p>
@@ -1514,7 +1514,7 @@ export function UniversalPredictionDetailClient({
                     href={analysisHref}
                     className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-indigo-950/50 border border-indigo-500/30 text-[11px] font-bold text-indigo-300 hover:bg-indigo-600 hover:text-white transition"
                   >
-                    <span>📊 심층 경제학 · Brier Score 분석실 전체 보기</span>
+                    <span>심층 경제학 · Brier Score 분석실 전체 보기</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </Link>
                 </div>
@@ -1583,16 +1583,16 @@ export function UniversalPredictionDetailClient({
                 }`}
               >
                 {game.status === "SETTLED"
-                  ? "🏆 결과 정산 완료된 의제"
+                  ? "결과 정산 완료된 의제"
                   : game.status !== "ACTIVE"
-                  ? "🛑 예측 참여 마감된 의제"
+                  ? "예측 참여 마감된 의제"
                   : isPending
                   ? "참여 처리 중..."
                   : stakeAmount > balance.pmp
-                  ? "⚠️ PMP 잔액 부족"
+                  ? "PMP 잔액 부족"
                   : stakeAmount < (game.minimumStake || 100)
                   ? `최소 ${(game.minimumStake || 100).toLocaleString()} PMP 이상 필요`
-                  : "🎯 예측 투표 참여하기"}
+                  : "예측 투표 참여하기"}
               </button>
             </Card>
           </div>

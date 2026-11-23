@@ -31,21 +31,21 @@ interface UserPrediction {
 const ECONOMY_SUBCATEGORY_CONFIG = {
   stocks: {
     key: "stocks",
-    title: "📈 주식 예측 마켓",
+    title: "주식 예측 마켓",
     subtitle: "코스피, 나스닥, 글로벌 주요 종목의 일일 등락을 예측하고 PMC를 획득하세요",
     dataSources: ["Alpha Vantage (실시간)", "한국거래소 (KRX)"],
     emptyMessage: "현재 등록된 주식 예측 게임이 준비 중입니다. 곧 새로운 종목이 등록됩니다.",
   },
   earnings: {
     key: "earnings",
-    title: "💰 기업 실적 예측 마켓",
+    title: "기업 실적 예측 마켓",
     subtitle: "국내외 주요 기업들의 분기 실적 공시(DART/SEC) 지표를 예측하세요",
     dataSources: ["DART (전자공시)", "SEC EDGAR"],
     emptyMessage: "현재 등록된 기업 실적 예측 게임이 준비 중입니다. 실적 발표 시즌에 맞춰 등록됩니다.",
   },
   indicators: {
     key: "indicators",
-    title: "📊 거시경제 지표 예측 마켓",
+    title: "거시경제 지표 예측 마켓",
     subtitle: "기준금리(한국은행/Fed), 물가상승률(CPI), 경제성장률 등 거시 지표 흐름을 예측하세요",
     dataSources: ["KOSIS (국가통계포털)", "FRED (미 연준)"],
     emptyMessage: "현재 등록된 거시경제 지표 예측 게임이 준비 중입니다. 곧 업데이트됩니다.",
@@ -134,7 +134,7 @@ export default async function PredictionEconomySubcategoryPage({
           >
             {/* 검증 데이터 소스 배지 */}
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 검증 데이터 소스:</span>
+              <span className="font-semibold text-slate-300">검증 데이터 소스:</span>
               {config.dataSources.map((ds) => (
                 <span
                   key={ds}
@@ -169,7 +169,7 @@ export default async function PredictionEconomySubcategoryPage({
             />
           ) : (
             <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4">
-              <div className="text-5xl">📊</div>
+              <div className="text-5xl"></div>
               <h3 className="text-lg font-bold text-white">
                 {config.title.replace(" 마켓", "")} 준비 중
               </h3>

@@ -95,8 +95,8 @@ export function resolveOptionProbPct(
 }
 
 export function getRankBadge(rankIndex: number): string {
-  if (rankIndex === 0) return "🥇 1위";
-  if (rankIndex === 1) return "🥈 2위";
-  if (rankIndex === 2) return "🥉 3위";
+  if (rankIndex === 0) return "1위";
+  if (rankIndex === 1) return "2위";
+  if (rankIndex === 2) return "3위";
   return `${rankIndex + 1}위`;
 }

@@ -138,27 +138,27 @@ export default async function AdminMainPage() {
   }> = [
     {
       category: "ECONOMY",
-      label: "📈 경제 · 증시 · 실적 · 거시지표",
+      label: "경제 · 증시 · 실적 · 거시지표",
       colorClass: "bg-gradient-to-r from-sky-500 to-blue-600",
     },
     {
       category: "ENTERTAINMENT",
-      label: "🎬 엔터 · 박스오피스 · 드라마 시청률 · 음원",
+      label: "엔터 · 박스오피스 · 드라마 시청률 · 음원",
       colorClass: "bg-gradient-to-r from-fuchsia-500 to-purple-600",
     },
     {
       category: "SPORTS",
-      label: "⚽ 스포츠 · 프로야구(KBO) · 해외축구(EPL)",
+      label: "스포츠 · 프로야구(KBO) · 해외축구(EPL)",
       colorClass: "bg-gradient-to-r from-emerald-500 to-teal-600",
     },
     {
       category: "POLITICS",
-      label: "🏛️ 정치 · 국회 본회의 입법 · 정책",
+      label: "정치 · 국회 본회의 입법 · 정책",
       colorClass: "bg-gradient-to-r from-amber-500 to-orange-600",
     },
     {
       category: "INVEST",
-      label: "💳 소비 · 트렌드 · 소셜 임팩트",
+      label: "소비 · 트렌드 · 소셜 임팩트",
       colorClass: "bg-gradient-to-r from-indigo-500 to-violet-600",
     },
   ];

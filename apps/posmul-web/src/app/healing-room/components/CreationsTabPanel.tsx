@@ -47,19 +47,19 @@ const KIND_META: Record<
 > = {
   album: {
     label: "자작 앨범",
-    icon: "💿",
+    icon: "",
     badgeClass: "bg-amber-100 text-amber-800 border-amber-200",
     unitLabel: "트랙",
   },
   exhibition: {
     label: "그림 전시회",
-    icon: "🖼️",
+    icon: "",
     badgeClass: "bg-emerald-100 text-emerald-800 border-emerald-200",
     unitLabel: "점",
   },
   novel: {
     label: "출판 서재",
-    icon: "📖",
+    icon: "",
     badgeClass: "bg-purple-100 text-purple-800 border-purple-200",
     unitLabel: "화",
   },
@@ -233,7 +233,7 @@ export function CreationsTabPanel({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
         <div>
           <h3 className={`text-sm font-black ${titleColorClass}`}>
-            🎨 {ownerNickname}의 창작 작품관 (앨범 · 전시 · 서재)
+            {ownerNickname}의 창작 작품관 (앨범 · 전시 · 서재)
           </h3>
           <p className="mt-0.5 text-[11px] text-slate-500">
             수익화 없는 순수 취향 생성 공간 — 음악 앨범을 내고, 그림 전시회를 열고, 소설을 출판합니다.
@@ -259,15 +259,15 @@ export function CreationsTabPanel({
             { key: "all", label: `전체 (${creations.length})` },
             {
               key: "album",
-              label: `💿 앨범 (${creations.filter((c) => c.kind === "album").length})`,
+              label: `앨범 (${creations.filter((c) => c.kind === "album").length})`,
             },
             {
               key: "exhibition",
-              label: `🖼️ 전시회 (${creations.filter((c) => c.kind === "exhibition").length})`,
+              label: `전시회 (${creations.filter((c) => c.kind === "exhibition").length})`,
             },
             {
               key: "novel",
-              label: `📖 소설 (${creations.filter((c) => c.kind === "novel").length})`,
+              label: `소설 (${creations.filter((c) => c.kind === "novel").length})`,
             },
           ].map((tab) => (
             <button
@@ -356,7 +356,7 @@ export function CreationsTabPanel({
                       <p className="line-clamp-1 text-[11px] text-slate-500">{cr.subtitle}</p>
                     )}
                     <div className="rounded-lg border border-indigo-100 bg-indigo-50/70 px-2 py-1 text-[10.5px] leading-snug text-indigo-900">
-                      <span className="font-bold">🌌 세계관 연결:</span> {cr.loreConnection}
+                      <span className="font-bold">세계관 연결:</span> {cr.loreConnection}
                     </div>
                   </div>
 
@@ -428,7 +428,7 @@ export function CreationsTabPanel({
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center space-y-2">
-          <div className="text-2xl">🎨</div>
+          <div className="text-2xl"></div>
           <div className="text-xs font-black text-slate-700">
             아직 등록된 {kindFilter === "all" ? "창작물" : KIND_META[kindFilter].label}이 없습니다.
           </div>
@@ -488,11 +488,11 @@ export function CreationsTabPanel({
               {/* 세계관 연결 & 작가의 말 */}
               <div className="rounded-xl border border-indigo-500/30 bg-indigo-950/40 p-3 text-xs space-y-1.5">
                 <div className="font-bold text-indigo-200">
-                  🌌 세계관 연결: {activeViewing.loreConnection}
+                  세계관 연결: {activeViewing.loreConnection}
                 </div>
                 {activeViewing.creatorNote && (
                   <p className="text-[11px] leading-relaxed text-slate-300">
-                    💬 작가 노트: {activeViewing.creatorNote}
+                    작가 노트: {activeViewing.creatorNote}
                   </p>
                 )}
               </div>
@@ -582,7 +582,7 @@ export function CreationsTabPanel({
                         )}
                         <div className="p-3.5 space-y-1">
                           <div className="text-xs font-black text-emerald-300">
-                            🖼️ {curPiece.title}
+                            {curPiece.title}
                           </div>
                           {curPiece.docentNote && (
                             <p className="text-xs leading-relaxed text-slate-300">
@@ -670,7 +670,7 @@ export function CreationsTabPanel({
             <div className="flex items-center justify-between border-b border-slate-200 bg-indigo-50 px-4 py-3">
               <div>
                 <h4 className="text-sm font-black text-indigo-950">
-                  ✨ 나만의 취향 출판 · 개최 스튜디오
+                  나만의 취향 출판 · 개최 스튜디오
                 </h4>
                 <p className="text-[11px] text-indigo-700">
                   {nextCreationPmpCost === 0
@@ -746,7 +746,7 @@ export function CreationsTabPanel({
 
               <div>
                 <label className="mb-1 block font-bold text-slate-700">
-                  🌌 내 세계관과의 연결 설명 * (최소 8자 · 단순 도배 방지)
+                  내 세계관과의 연결 설명 * (최소 8자 · 단순 도배 방지)
                 </label>
                 <input
                   type="text"
@@ -811,7 +811,7 @@ export function CreationsTabPanel({
 
               <div>
                 <label className="mb-1 block font-bold text-slate-700">
-                  💬 창작 의도 · 프롬프트 비하인드
+                  창작 의도 · 프롬프트 비하인드
                 </label>
                 <textarea
                   rows={2}
@@ -827,7 +827,7 @@ export function CreationsTabPanel({
               {kind === "album" && (
                 <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50/50 p-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-black text-amber-900">💿 앨범 수록곡 목록</span>
+                    <span className="font-black text-amber-900">앨범 수록곡 목록</span>
                     <button
                       type="button"
                       onClick={() =>
@@ -905,7 +905,7 @@ export function CreationsTabPanel({
               {kind === "exhibition" && (
                 <div className="space-y-2 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-black text-emerald-900">🖼️ 전시 작품 목록</span>
+                    <span className="font-black text-emerald-900">전시 작품 목록</span>
                     <button
                       type="button"
                       onClick={() =>
@@ -983,7 +983,7 @@ export function CreationsTabPanel({
               {kind === "novel" && (
                 <div className="space-y-2 rounded-xl border border-purple-200 bg-purple-50/50 p-3">
                   <div className="flex items-center justify-between">
-                    <span className="font-black text-purple-900">📖 출판 챕터 목록</span>
+                    <span className="font-black text-purple-900">출판 챕터 목록</span>
                     <button
                       type="button"
                       onClick={() =>

@@ -101,7 +101,7 @@ export async function participateHousingPredictionAction(params: {
 
     return {
       success: true,
-      message: `🎉 『${option.label}』에 ${pmpAmount} PMP 예측 참여가 완료되었습니다! 예측 적중 시 약 +${expectedPmc.toLocaleString()} PMC가 지급됩니다.`,
+      message: `『${option.label}』에 ${pmpAmount} PMP 예측 참여가 완료되었습니다! 예측 적중 시 약 +${expectedPmc.toLocaleString()} PMC가 지급됩니다.`,
       gameTitle: game.title,
       optionLabel: option.label,
       stakedPmp: pmpAmount,
@@ -114,7 +114,7 @@ export async function participateHousingPredictionAction(params: {
     const expectedPmc = Math.round(pmpAmount * option.multiplier);
     return {
       success: true,
-      message: `🎉 『${option.label}』에 ${pmpAmount} PMP 예측 참여 완료! (데모 모드)`,
+      message: `『${option.label}』에 ${pmpAmount} PMP 예측 참여 완료! (데모 모드)`,
       gameTitle: game.title,
       optionLabel: option.label,
       stakedPmp: pmpAmount,

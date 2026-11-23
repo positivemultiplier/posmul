@@ -15,7 +15,7 @@ export const JOB_GROUPS: JobGroup[] = [
   {
     id: "IT_DEVELOPER",
     name: "IT · 개발자 · 스타트업",
-    icon: "💻",
+    icon: "",
     description: "인공지능 규제법, 망사용료, 주 52시간 유연근무, 소프트웨어 진흥법",
     keywords: ["AI", "인공지능", "개발자", "스타트업", "망사용료", "플랫폼", "소프트웨어", "원격근무"],
     color: "from-blue-500 to-indigo-500",
@@ -23,7 +23,7 @@ export const JOB_GROUPS: JobGroup[] = [
   {
     id: "SELF_EMPLOYED",
     name: "소상공인 · 자영업 · 외식업",
-    icon: "🏢",
+    icon: "",
     description: "배달앱 수수료 상한제, 최저임금 결정, 지역화폐 예산, 간이과세 기준",
     keywords: ["소상공인", "자영업", "배달", "수수료", "최저임금", "상권", "임대차", "지역화폐"],
     color: "from-amber-500 to-orange-500",
@@ -31,7 +31,7 @@ export const JOB_GROUPS: JobGroup[] = [
   {
     id: "FINANCE",
     name: "금융 · 증권 · 부동산",
-    icon: "💼",
+    icon: "",
     description: "금투세 폐지/유예안, 기준금리 인하, 공매도 전산화, 부동산 PF 및 DSR 규제",
     keywords: ["금투세", "주식", "금융", "금리", "환율", "부동산", "공매도", "증권", "가상자산"],
     color: "from-emerald-500 to-teal-500",
@@ -39,7 +39,7 @@ export const JOB_GROUPS: JobGroup[] = [
   {
     id: "MEDICAL",
     name: "의료 · 보건 · 바이오",
-    icon: "🏥",
+    icon: "",
     description: "의대 정원 조정, 간호법 제정 후속령, 비대면 진료 법제화, 필수 의료 수가",
     keywords: ["의료", "의대", "간호", "병원", "수가", "바이오", "신약", "비대면진료"],
     color: "from-rose-500 to-pink-500",
@@ -47,7 +47,7 @@ export const JOB_GROUPS: JobGroup[] = [
   {
     id: "MANUFACTURING",
     name: "제조 · 건설 · 엔지니어링",
-    icon: "🏭",
+    icon: "",
     description: "반도체 특별법, 중대재해처벌법 개정, 친환경 탄소국경세, 공공 인프라 발주",
     keywords: ["반도체", "제조", "건설", "중대재해", "탄소", "원전", "철강", "엔지니어링"],
     color: "from-purple-500 to-violet-500",
@@ -55,7 +55,7 @@ export const JOB_GROUPS: JobGroup[] = [
   {
     id: "EDUCATION",
     name: "교육 · 공공 · 연구원",
-    icon: "📚",
+    icon: "",
     description: "R&D 국가예산 복원, 교권보호 4법, 늘봄학교 확대, 공무원 보수체계 개편",
     keywords: ["R&D", "연구", "교육", "교권", "공무원", "늘봄", "교사", "대학"],
     color: "from-cyan-500 to-blue-500",
@@ -63,7 +63,7 @@ export const JOB_GROUPS: JobGroup[] = [
   {
     id: "CREATOR",
     name: "크리에이터 · 문화예술",
-    icon: "🎨",
+    icon: "",
     description: "생성형 AI 저작권 가이드라인, 웹툰/영상 표준계약서, 인앱결제 수수료 규제",
     keywords: ["크리에이터", "유튜브", "저작권", "웹툰", "콘텐츠", "영화", "예술", "엔터"],
     color: "from-fuchsia-500 to-pink-500",
@@ -71,7 +71,7 @@ export const JOB_GROUPS: JobGroup[] = [
   {
     id: "LOGISTICS",
     name: "물류 · 운송 · 모빌리티",
-    icon: "🚚",
+    icon: "",
     description: "안전운임제 부활 여부, 새벽배송 영업규제 완화, 자율주행 상용화 지원",
     keywords: ["물류", "택배", "운송", "화물", "새벽배송", "모빌리티", "전기차", "자율주행"],
     color: "from-yellow-500 to-amber-600",

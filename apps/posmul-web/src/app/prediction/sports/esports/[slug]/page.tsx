@@ -51,7 +51,7 @@ const esportsPredictionGamesData = {
     creator: {
       name: "LOL전문가이",
       reputation: 4.9,
-      avatar: "🎮",
+      avatar: "",
     },
     prizePool: 165000,
     minimumStake: 500,
@@ -92,7 +92,7 @@ const esportsPredictionGamesData = {
     creator: {
       name: "발로란트분석가",
       reputation: 4.7,
-      avatar: "🔫",
+      avatar: "",
     },
     prizePool: 92500,
     minimumStake: 200,
@@ -157,7 +157,7 @@ const esportsPredictionGamesData = {
     creator: {
       name: "오버워치코치김",
       reputation: 4.6,
-      avatar: "🤖",
+      avatar: "",
     },
     prizePool: 80000,
     minimumStake: 300,
@@ -206,7 +206,7 @@ const esportsPredictionGamesData = {
     creator: {
       name: "모바일게임전문가",
       reputation: 4.4,
-      avatar: "📱",
+      avatar: "",
     },
     prizePool: 57500,
     minimumStake: 100,

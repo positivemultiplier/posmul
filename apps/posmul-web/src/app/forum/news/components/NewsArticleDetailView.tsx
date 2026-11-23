@@ -492,7 +492,7 @@ export function NewsArticleDetailView({ articleId }: { articleId: string }) {
               </div>
               {article.predictionHook && (
                 <p className="text-sm text-slate-200 font-medium">
-                  💡 제안 이슈: &ldquo;{article.predictionHook}&rdquo;
+                  제안 이슈: &ldquo;{article.predictionHook}&rdquo;
                 </p>
               )}
               <div className="flex flex-wrap gap-2">

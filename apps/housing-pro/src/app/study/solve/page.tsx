@@ -782,7 +782,7 @@ export default function InteractiveSolvePage() {
                     : "bg-sky-500/15 text-sky-300 border-sky-500/35"
                     }`}
                 >
-                  {instantGradeMode ? "⚡ 즉시 채점" : "📝 일괄 채점"}
+                  {instantGradeMode ? "즉시 채점" : "일괄 채점"}
                 </button>
                 <button
                   type="button"
@@ -1405,7 +1405,7 @@ export default function InteractiveSolvePage() {
                                 <div className="p-2 rounded-lg bg-black/25 border border-white/[0.06] space-y-0.5 text-[10.5px]">
                                   {opt.trapSummary && (
                                     <div className="text-amber-300 font-bold">
-                                      💡 {opt.trapSummary}
+                                      {opt.trapSummary}
                                     </div>
                                   )}
                                   {opt.legalCitation && (
@@ -1451,7 +1451,7 @@ export default function InteractiveSolvePage() {
                           : "bg-rose-500/20 text-rose-300 border border-rose-500/40"
                           }`}
                       >
-                        {currentDraft.isCorrect ? "✅ 정답" : "❌ 오답"}
+                        {currentDraft.isCorrect ? "정답" : "오답"}
                       </span>
                     )}
                   </div>

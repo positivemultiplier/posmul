@@ -22,11 +22,11 @@ interface ItemRegisterClientProps {
 
 // ===== 카테고리/상태 옵션 =====
 const categories = [
-  { value: "clothing", label: "의류", icon: "👕" },
-  { value: "food", label: "식품", icon: "🍚" },
-  { value: "housing", label: "주거용품", icon: "🏠" },
-  { value: "medical", label: "의료용품", icon: "💊" },
-  { value: "education", label: "교육용품", icon: "📚" },
+  { value: "clothing", label: "의류", icon: "" },
+  { value: "food", label: "식품", icon: "" },
+  { value: "housing", label: "주거용품", icon: "" },
+  { value: "medical", label: "의료용품", icon: "" },
+  { value: "education", label: "교육용품", icon: "" },
 ];
 
 const conditions = [
@@ -114,7 +114,7 @@ export function ItemRegisterClient({ userId }: ItemRegisterClientProps) {
           >
             ← 돌아가기
           </Link>
-          <h1 className="text-3xl font-bold">📦 물품 등록</h1>
+          <h1 className="text-3xl font-bold">물품 등록</h1>
           <p className="text-white/90 mt-2">
             기부하실 물품 정보를 입력해주세요
           </p>
@@ -576,7 +576,7 @@ function Step3PickupConfirm({
         >
           {isSubmitting ? (
             <span className="flex items-center justify-center gap-2">
-              <span className="animate-spin">⏳</span> 등록 중...
+              <span className="animate-spin"></span> 등록 중...
             </span>
           ) : (
             "물품 등록하기 ✓"

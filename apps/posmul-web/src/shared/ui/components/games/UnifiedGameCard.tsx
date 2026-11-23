@@ -59,14 +59,14 @@ interface UnifiedGameCardProps {
 const getGameTypeIcon = (gameType?: string) => {
   switch (gameType?.toLowerCase()) {
     case 'binary':
-      return '⚡';
+      return '';
     case 'wdl':
     case 'win_draw_lose':
-      return '🥊';
+      return '';
     case 'ranking':
-      return '📈';
+      return '';
     default:
-      return '🎯';
+      return '';
   }
 };
 
@@ -96,8 +96,8 @@ export const UnifiedGameCard: React.FC<UnifiedGameCardProps> = ({
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <span className="text-lg">{getGameTypeIcon(game.gameType)}</span>
-          {game.isHot && <span className="text-red-500">🔥</span>}
-          {game.isFeatured && <span className="text-yellow-500">⭐</span>}
+          {game.isHot && <span className="text-red-500"></span>}
+          {game.isFeatured && <span className="text-yellow-500"></span>}
         </div>
         {getStatusBadge(game.status)}
       </div>
@@ -149,7 +149,7 @@ export const UnifiedGameCard: React.FC<UnifiedGameCardProps> = ({
       {game.moneyWave && (
         <div className="bg-blue-50 p-3 rounded-lg mb-3">
           <div className="text-xs text-blue-600 font-medium">
-            💰 상금 풀: {game.moneyWave.allocatedPool?.toLocaleString()} PMC
+            상금 풀: {game.moneyWave.allocatedPool?.toLocaleString()} PMC
           </div>
           <div className="text-xs text-gray-600">
             배수: {game.moneyWave.waveMultiplier}x

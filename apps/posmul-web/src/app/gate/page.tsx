@@ -132,7 +132,7 @@ export default function GatePage() {
 
           <div className="mt-6 pt-5 border-t border-slate-800/80 text-center">
             <p className="text-[11px] text-slate-500">
-              💡 대표님 전용 링크나 시크릿 파라미터가 포함된 URL을 클릭하시면 코드 입력 없이 즉시 입장하실 수 있습니다.
+              대표님 전용 링크나 시크릿 파라미터가 포함된 URL을 클릭하시면 코드 입력 없이 즉시 입장하실 수 있습니다.
             </p>
           </div>
         </div>

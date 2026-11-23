@@ -110,10 +110,10 @@ export class FinancialMarketCollector {
         const blueprint = serializeBlueprint({
           title: `[실시간 외환] 원/달러 환율, 3일 후 마감 기준 어느 가격대에 위치할까?`,
           summary: [
-            `🎯 기준선: 현재 원/달러 환율은 1달러 = ${usdKrw.toLocaleString()}원 부근에서 거래 중입니다.`,
-            `📈 상승·달러 강세 요인: 미국 국채금리 상승 및 글로벌 달러 인덱스 강세 압력이 상존합니다.`,
-            `📉 하락·원화 강세 요인: 외국인 주식 순매수 및 외환당국 구두 개입 경계감이 상단을 제한합니다.`,
-            `⚖️ 판정 기준: 72시간 후 글로벌 외환시장 기준 환율(USD/KRW) 수치로 4개 구간 중 하나를 정산합니다.`,
+            `기준선: 현재 원/달러 환율은 1달러 = ${usdKrw.toLocaleString()}원 부근에서 거래 중입니다.`,
+            `상승·달러 강세 요인: 미국 국채금리 상승 및 글로벌 달러 인덱스 강세 압력이 상존합니다.`,
+            `하락·원화 강세 요인: 외국인 주식 순매수 및 외환당국 구두 개입 경계감이 상단을 제한합니다.`,
+            `판정 기준: 72시간 후 글로벌 외환시장 기준 환율(USD/KRW) 수치로 4개 구간 중 하나를 정산합니다.`,
           ].join("\n"),
           keywords: ["원달러환율", "USD/KRW", "외환시장"],
           category: "ECONOMY",
@@ -145,10 +145,10 @@ export class FinancialMarketCollector {
         const btcBlueprint = serializeBlueprint({
           title: `[비트코인 4구간] BTC/USD 3일 후 마감 시점 예상 가격대는?`,
           summary: [
-            `🎯 기준선: 현재 비트코인(BTC) 시세는 $${crypto.btcUsd.toLocaleString()}(약 ${btcManKrw.toLocaleString()}만 원)입니다.`,
-            `📈 강세 요인: 현물 ETF 순유입 흐름과 글로벌 유동성 완화 기대가 하단을 지지합니다.`,
-            `📉 약세 요인: 주요 저항선 부근 차익 실현 물량과 거시 변동성 확대 우려가 존재합니다.`,
-            `⚖️ 판정 기준: 72시간 후 CoinGecko 공식 BTC/USD 현물 가격 기준으로 자동 정산합니다.`,
+            `기준선: 현재 비트코인(BTC) 시세는 $${crypto.btcUsd.toLocaleString()}(약 ${btcManKrw.toLocaleString()}만 원)입니다.`,
+            `강세 요인: 현물 ETF 순유입 흐름과 글로벌 유동성 완화 기대가 하단을 지지합니다.`,
+            `약세 요인: 주요 저항선 부근 차익 실현 물량과 거시 변동성 확대 우려가 존재합니다.`,
+            `판정 기준: 72시간 후 CoinGecko 공식 BTC/USD 현물 가격 기준으로 자동 정산합니다.`,
           ].join("\n"),
           keywords: ["비트코인", "BTC", "가상자산"],
           category: "ECONOMY",
@@ -189,10 +189,10 @@ export class FinancialMarketCollector {
         const ethBlueprint = serializeBlueprint({
           title: `[이더리움] ETH/USD 3일 후 $${ethTarget.toLocaleString()} 이상 돌파·마감할까?`,
           summary: [
-            `🎯 기준선: 현재 이더리움(ETH) 시세는 $${crypto.ethUsd.toLocaleString()}(약 ${ethManKrw.toLocaleString()}만 원)입니다.`,
-            `📈 돌파 논거: 현재가 대비 약 +2% 상단 돌파 시 생태계 TVL 회복세가 탄력을 받을 수 있습니다.`,
-            `📉 미달 논거: 알트코인 순환매 약세 및 BTC 도미넌스 상승 시 돌파가 지연될 수 있습니다.`,
-            `⚖️ 판정 기준: 정산 시점 CoinGecko ETH/USD 가격 $${ethTarget.toLocaleString()} 이상 여부로 자동 정산합니다.`,
+            `기준선: 현재 이더리움(ETH) 시세는 $${crypto.ethUsd.toLocaleString()}(약 ${ethManKrw.toLocaleString()}만 원)입니다.`,
+            `돌파 논거: 현재가 대비 약 +2% 상단 돌파 시 생태계 TVL 회복세가 탄력을 받을 수 있습니다.`,
+            `미달 논거: 알트코인 순환매 약세 및 BTC 도미넌스 상승 시 돌파가 지연될 수 있습니다.`,
+            `판정 기준: 정산 시점 CoinGecko ETH/USD 가격 $${ethTarget.toLocaleString()} 이상 여부로 자동 정산합니다.`,
           ].join("\n"),
           keywords: ["이더리움", "ETH", "가상자산"],
           category: "ECONOMY",

@@ -17,7 +17,7 @@ export interface NewsCategoryMeta {
 export const NEWS_CATEGORIES: ReadonlyArray<NewsCategoryMeta> = [
   {
     key: "gwangju",
-    label: "📍 전남·광주",
+    label: "전남·광주",
     shortLabel: "전남·광주",
     description: "광주 5개구(동·서·남·북·광산) 생활밀착 로컬 브리핑",
     gradient: "from-emerald-500 to-teal-500",
@@ -25,7 +25,7 @@ export const NEWS_CATEGORIES: ReadonlyArray<NewsCategoryMeta> = [
   },
   {
     key: "ai",
-    label: "🤖 AI·테크",
+    label: "AI·테크",
     shortLabel: "AI",
     description: "글로벌 AI 연구·모델 업데이트와 실전 활용 해설",
     gradient: "from-violet-500 to-indigo-500",
@@ -33,7 +33,7 @@ export const NEWS_CATEGORIES: ReadonlyArray<NewsCategoryMeta> = [
   },
   {
     key: "economy",
-    label: "📈 경제·정책",
+    label: "경제·정책",
     shortLabel: "경제",
     description: "거시지표·부동산·세제·중소벤처 핵심 정책 브리핑",
     gradient: "from-blue-500 to-cyan-500",
@@ -41,7 +41,7 @@ export const NEWS_CATEGORIES: ReadonlyArray<NewsCategoryMeta> = [
   },
   {
     key: "sports",
-    label: "⚽ 스포츠",
+    label: "스포츠",
     shortLabel: "스포츠",
     description: "KIA 타이거즈·광주FC 및 국내외 스포츠 분석·예측",
     gradient: "from-amber-500 to-orange-500",

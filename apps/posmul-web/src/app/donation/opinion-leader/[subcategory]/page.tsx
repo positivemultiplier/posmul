@@ -65,7 +65,7 @@ export default async function OpinionLeaderCategoryPage({
         totalDonationsInfluenced: Number(leader.total_donations_influenced) || 0,
         category: leader.category || "general",
         categoryLabel: categoryLabels[leader.category || "general"] || "일반",
-        categoryIcon: "👤", // Icon logic simplified for now
+        categoryIcon: "", // Icon logic simplified for now
         categoryColor: "gray",
         isFollowing: followedLeaderIds.includes(leader.id),
     }));

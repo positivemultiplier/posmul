@@ -247,7 +247,7 @@ export function useNotifications() {
     (gameId: string, gameTitle: string) => {
       return addNotification({
         type: "GAME_START",
-        title: "🎮 게임 시작됨",
+        title: "게임 시작됨",
         message: `"${gameTitle}" 예측 게임이 시작되었습니다!`,
         priority: "MEDIUM",
         gameId,
@@ -265,7 +265,7 @@ export function useNotifications() {
 
       return addNotification({
         type: "GAME_END",
-        title: "⏰ 게임 마감",
+        title: "게임 마감",
         message,
         priority: minutesLeft && minutesLeft <= 5 ? "HIGH" : "MEDIUM",
         gameId,
@@ -293,7 +293,7 @@ export function useNotifications() {
 
       return addNotification({
         type: "PRICE_CHANGE",
-        title: "📈 확률 변화",
+        title: "확률 변화",
         message: `"${gameTitle}" - ${option}: ${changePercent}% ${change > 0 ? "상승" : "하락"}`,
         priority: Math.abs(parseFloat(changePercent)) > 15 ? "HIGH" : "MEDIUM",
         gameId,
@@ -317,7 +317,7 @@ export function useNotifications() {
 
       return addNotification({
         type: "GAME_SETTLEMENT",
-        title: "🏆 게임 정산",
+        title: "게임 정산",
         message,
         priority: winnings ? "HIGH" : "MEDIUM",
         gameId,

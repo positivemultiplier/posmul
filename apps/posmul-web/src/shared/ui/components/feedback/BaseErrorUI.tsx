@@ -45,7 +45,7 @@ function getErrorDisplayInfo(error: BaseError | Error) {
         type: "인증 오류",
         title: "로그인이 필요합니다",
         description: "이 기능을 사용하려면 로그인이 필요합니다.",
-        icon: "🔐",
+        icon: "",
         canRetry: false,
         severity: "warning" as const,
       };
@@ -56,7 +56,7 @@ function getErrorDisplayInfo(error: BaseError | Error) {
         type: "권한 오류",
         title: "접근 권한이 없습니다",
         description: "이 작업을 수행할 권한이 없습니다. 관리자에게 문의하세요.",
-        icon: "🚫",
+        icon: "",
         canRetry: false,
         severity: "error" as const,
       };
@@ -67,7 +67,7 @@ function getErrorDisplayInfo(error: BaseError | Error) {
         type: "리소스 없음",
         title: "페이지를 찾을 수 없습니다",
         description: "요청하신 페이지가 존재하지 않거나 이동되었습니다.",
-        icon: "🔍",
+        icon: "",
         canRetry: false,
         severity: "warning" as const,
       };
@@ -78,7 +78,7 @@ function getErrorDisplayInfo(error: BaseError | Error) {
         type: "요청 제한",
         title: "너무 많은 요청이 발생했습니다",
         description: "잠시 후 다시 시도해주세요.",
-        icon: "⏱️",
+        icon: "",
         canRetry: true,
         severity: "warning" as const,
       };
@@ -90,7 +90,7 @@ function getErrorDisplayInfo(error: BaseError | Error) {
         title: "서버에서 문제가 발생했습니다",
         description:
           "잠시 후 다시 시도해주세요. 문제가 지속되면 고객지원팀에 연락하세요.",
-        icon: "🔧",
+        icon: "",
         canRetry: true,
         severity: "error" as const,
       };
@@ -101,7 +101,7 @@ function getErrorDisplayInfo(error: BaseError | Error) {
       type: "요청 오류",
       title: "입력 정보를 확인해주세요",
       description: error.message || "입력하신 정보에 문제가 있습니다.",
-      icon: "⚠️",
+      icon: "",
       canRetry: false,
       severity: "warning" as const,
     };
@@ -112,7 +112,7 @@ function getErrorDisplayInfo(error: BaseError | Error) {
     type: "시스템 오류",
     title: "예상치 못한 오류가 발생했습니다",
     description: "페이지를 새로고침하거나 잠시 후 다시 시도해주세요.",
-    icon: "❌",
+    icon: "",
     canRetry: true,
     severity: "error" as const,
   };

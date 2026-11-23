@@ -296,7 +296,7 @@ export default function KnowledgeGraphStudyPage() {
             .map((o) => `${OPTION_CIRCLES[o.number - 1]} ${o.trapSummary}`)
             .join(" / ") ||
           "문장 속 하늘 점선(개념어)과 주황 점선(대조어)을 눌러 핵심 특징·기출 함정·인기 암기법을 꼬리물기로 확인해 보세요!",
-        matchedBadge: `🔗 개념 ${currentLiveQ.matchedConceptCount} · ⚡대조 ${currentLiveQ.matchedContrastCount}`,
+        matchedBadge: `개념 ${currentLiveQ.matchedConceptCount} ·대조 ${currentLiveQ.matchedContrastCount}`,
       }
       : {
         examLabel: demoQ.examLabel,
@@ -601,7 +601,7 @@ export default function KnowledgeGraphStudyPage() {
                   : "bg-white/[0.05] border-white/[0.1] text-slate-400"
                   }`}
               >
-                {linksEnabled ? "🔗 링크 ON" : "시험모드"}
+                {linksEnabled ? "링크 ON" : "시험모드"}
               </button>
             </div>
 
@@ -755,7 +755,7 @@ export default function KnowledgeGraphStudyPage() {
 
             {/* 가독성 안내 바 */}
             <div className="px-3.5 py-2.5 rounded-xl bg-sky-950/35 border border-sky-500/25 text-xs text-sky-100 leading-relaxed">
-              <span className="text-[#FF9B82] font-black">⚡주황 점선(대조어)</span> ·{" "}
+              <span className="text-[#FF9B82] font-black">주황 점선(대조어)</span> ·{" "}
               <span className="text-sky-200 font-black underline decoration-dashed">
                 하늘 점선(개념어)
               </span>
@@ -882,8 +882,8 @@ export default function KnowledgeGraphStudyPage() {
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="font-black text-sm">
                         {isRight
-                          ? "✅ 정답입니다!"
-                          : `❌ 오답입니다 (정답: ${activeQuestion.correctOptions
+                          ? "정답입니다!"
+                          : `오답입니다 (정답: ${activeQuestion.correctOptions
                             .map((n) => OPTION_CIRCLES[n - 1] ?? n)
                             .join(", ")})`}
                       </span>
@@ -892,7 +892,7 @@ export default function KnowledgeGraphStudyPage() {
                       )}
                       {savedNotice === "saved_right" && (
                         <span className="text-[11px] text-emerald-300 font-black">
-                          💾 통계 자동 반영됨
+                          통계 자동 반영됨
                         </span>
                       )}
                       {savedNotice === "saved_weak" && (
@@ -900,7 +900,7 @@ export default function KnowledgeGraphStudyPage() {
                           href="/study/ox?mode=weak"
                           className="px-2 py-0.5 rounded-lg bg-[#FF5A36]/25 border border-[#FF5A36]/50 text-[11px] text-[#FF9B82] font-black"
                         >
-                          ⚡ 약점 O/X 자동 편입 →
+                          약점 O/X 자동 편입 →
                         </Link>
                       )}
                     </div>

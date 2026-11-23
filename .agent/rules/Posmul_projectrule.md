@@ -77,6 +77,7 @@ Infrastructure (bounded-contexts/{domain}/infrastructure/)
 - **TypeScript Strict**: `any`, `as any`, `@ts-ignore`, 빈 `catch {}`(에러 삼키기) 및 서버 에러 시 가짜 성공 UI 출력 금지.
 - **God File 금지**: 단일 컴포넌트/액션/스토어 파일이 **500줄을 초과하지 않도록** 책임별로 분리한다 (`apps/housing-pro` 포함).
 - **Local First UI**: `shared/ui`는 도메인 무관 순수 프리미티브(Button, Input, Modal shell 등)만 유지. 도메인 조합 UI 및 데이터 패칭 컴포넌트는 해당 도메인 `presentation/`에 둔다.
+- **UI 장식 이모지 금지 (`No Emoji Spam`)**: 프론트엔드 UI(제목·버튼·배지·라벨·네비게이션·헤더)에 장식용 이모지(`🚀`, `🔥`, `💡`, `🎯`, `⚡` 등) 남발을 금지한다. 시각적 아이콘이 필요할 때는 `lucide-react` 벡터 아이콘을 사용한다. *(순위 메달·미니홈피 스티커 등 도메인 고유 표현만 예외)*
 
 ---
 

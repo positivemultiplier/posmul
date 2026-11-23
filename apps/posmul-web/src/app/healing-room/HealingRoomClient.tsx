@@ -122,56 +122,56 @@ const CY_BOOKMARK_TABS: ReadonlyArray<{
   {
     key: "home",
     label: "홈",
-    icon: "🏠",
+    icon: "",
     inactiveClass: "bg-indigo-700 border-indigo-400/60 hover:bg-indigo-600 text-indigo-50",
     activeAccent: "text-indigo-900 border-l-indigo-500",
   },
   {
     key: "worldview",
     label: "세계관",
-    icon: "🌌",
+    icon: "",
     inactiveClass: "bg-violet-700 border-violet-400/60 hover:bg-violet-600 text-violet-50",
     activeAccent: "text-violet-900 border-l-violet-500",
   },
   {
     key: "creations",
     label: "작품관",
-    icon: "🎨",
+    icon: "",
     inactiveClass: "bg-fuchsia-700 border-fuchsia-400/60 hover:bg-fuchsia-600 text-fuchsia-50",
     activeAccent: "text-fuchsia-900 border-l-fuchsia-500",
   },
   {
     key: "profile",
     label: "프로필",
-    icon: "👤",
+    icon: "",
     inactiveClass: "bg-amber-600 border-amber-300/60 hover:bg-amber-500 text-amber-50",
     activeAccent: "text-amber-900 border-l-amber-500",
   },
   {
     key: "prediction",
     label: "예측장",
-    icon: "🔮",
+    icon: "",
     inactiveClass: "bg-sky-700 border-sky-400/60 hover:bg-sky-600 text-sky-50",
     activeAccent: "text-sky-900 border-l-sky-500",
   },
   {
     key: "donation",
     label: "기부첩",
-    icon: "🕊️",
+    icon: "",
     inactiveClass: "bg-purple-700 border-purple-400/60 hover:bg-purple-600 text-purple-50",
     activeAccent: "text-purple-900 border-l-purple-500",
   },
   {
     key: "shop",
     label: "선물가게",
-    icon: "🎁",
+    icon: "",
     inactiveClass: "bg-emerald-700 border-emerald-400/60 hover:bg-emerald-600 text-emerald-50",
     activeAccent: "text-emerald-900 border-l-emerald-500",
   },
   {
     key: "guestbook",
     label: "방명록",
-    icon: "💌",
+    icon: "",
     inactiveClass: "bg-rose-700 border-rose-400/60 hover:bg-rose-600 text-rose-50",
     activeAccent: "text-rose-900 border-l-rose-500",
   },
@@ -489,7 +489,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
       setActiveTab("home");
       showNotice(
         "info",
-        `🌊 ${json.data.room.ownerNickname}님의 PosMul 힐링룸으로 파도타기 했습니다!`
+        `${json.data.room.ownerNickname}님의 PosMul 힐링룸으로 파도타기 했습니다!`
       );
     } catch {
       showNotice("error", "파도타기 중 통신 오류가 발생했습니다.");
@@ -509,7 +509,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
         moodTag: editMood,
         bgmTrack: editBgm,
       },
-      "✨ PosMul 힐링룸 프로필과 BGM 설정을 저장했습니다."
+      "PosMul 힐링룸 프로필과 BGM 설정을 저장했습니다."
     );
   }
 
@@ -517,7 +517,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     event.preventDefault();
     const ok = await postAction(
       { action: "update_room", roomTitle: editTitle },
-      "✏️ 힐링룸 대문 제목을 변경했습니다."
+      "힐링룸 대문 제목을 변경했습니다."
     );
     if (ok) {
       setIsEditingHeadline(false);
@@ -546,7 +546,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
 
     await postAction(
       { action: "update_room", placedItems: nextPlaced },
-      alreadyPlaced ? "📦 가구를 보관함으로 정리했습니다." : "🪴 가구를 미니룸에 배치했습니다."
+      alreadyPlaced ? "가구를 보관함으로 정리했습니다." : "가구를 미니룸에 배치했습니다."
     );
   }
 
@@ -559,7 +559,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     if (item.category === "theme") {
       await postAction(
         { action: "update_room", roomTheme: item.id },
-        `🏠 '${item.name}' 미니룸 스킨을 적용했습니다.`
+        `'${item.name}' 미니룸 스킨을 적용했습니다.`
       );
       return;
     }
@@ -567,7 +567,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     if (item.category === "minimi") {
       await postAction(
         { action: "update_room", minimiStyle: item.id },
-        `🧸 '${item.name}' 미니미 코디를 장착했습니다.`
+        `'${item.name}' 미니미 코디를 장착했습니다.`
       );
       return;
     }
@@ -594,8 +594,8 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
         equipOnBuy: true,
       },
       item.pricePmp > 0
-        ? `🛒 ${item.pricePmp.toLocaleString()} PMP로 '${item.name}' 구매 및 장착을 완료했습니다!`
-        : `✨ '${item.name}' 아이템을 적용했습니다!`
+        ? `${item.pricePmp.toLocaleString()} PMP로 '${item.name}' 구매 및 장착을 완료했습니다!`
+        : `'${item.name}' 아이템을 적용했습니다!`
     );
   }
 
@@ -614,7 +614,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
         guestName: !isAuthenticated ? guestName : undefined,
         relationLabel: guestRelation,
       },
-      "💌 따뜻한 일촌평이 등록되었습니다."
+      "따뜻한 일촌평이 등록되었습니다."
     );
     if (ok) {
       setGuestContent("");
@@ -707,7 +707,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
         prev === "sequential" ? "shuffle" : prev === "shuffle" ? "repeat-one" : "sequential";
       const label =
         next === "sequential" ? "순차반복" : next === "shuffle" ? "랜덤반복" : "한곡반복";
-      showNotice("info", `🎵 주크박스 재생 모드를 '${label}'으로 변경했습니다.`);
+      showNotice("info", `주크박스 재생 모드를 '${label}'으로 변경했습니다.`);
       return next;
     });
   }
@@ -715,27 +715,27 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
   function handlePlayAlbumTrack(bgmId: string) {
     setPreviewBgmId(bgmId);
     setIsBgmPlaying(true);
-    showNotice("info", "💿 자작 앨범 트랙을 주크박스에서 재생합니다.");
+    showNotice("info", "자작 앨범 트랙을 주크박스에서 재생합니다.");
   }
 
   async function handleSaveWorldview(input: SaveWorldviewInput): Promise<boolean> {
     return postAction(
       { action: "save_worldview", ...input },
-      "🌌 나만의 내면 세계관 바이블을 저장했습니다."
+      "나만의 내면 세계관 바이블을 저장했습니다."
     );
   }
 
   async function handleSaveCreation(input: SaveCreationInput): Promise<boolean> {
     return postAction(
       { action: "save_creation", ...input },
-      "🎨 비상업 순수 창작물이 작품관에 출판되었습니다."
+      "비상업 순수 창작물이 작품관에 출판되었습니다."
     );
   }
 
   async function handleDeleteCreation(creationId: string): Promise<boolean> {
     return postAction(
       { action: "delete_creation", creationId },
-      "🗑️ 선택한 작품을 작품관에서 내렸습니다."
+      "선택한 작품을 작품관에서 내렸습니다."
     );
   }
 
@@ -752,7 +752,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     }
     await postAction(
       { action: "resonate_creation", creationId, viewerKey: guestKey },
-      "👏 작품에 따뜻한 공명을 보냈습니다!"
+      "작품에 따뜻한 공명을 보냈습니다!"
     );
   }
 
@@ -764,7 +764,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
     if (isOwner) {
       await postAction(
         { action: "update_room", bgmTrack: nextTrack.id },
-        `💿 BGM을 '${nextTrack.label}'(으)로 전환했습니다.`
+        `BGM을 '${nextTrack.label}'(으)로 전환했습니다.`
       );
     }
   }
@@ -898,7 +898,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
             </div>
 
             <div className="hidden sm:flex flex-1 items-center gap-2 rounded-lg border border-slate-700/80 bg-[#090d16]/90 px-3 py-1 text-xs text-slate-300 shadow-inner">
-              <span className="text-sky-400">🏡</span>
+              <span className="text-sky-400"></span>
               <span className="truncate font-mono text-[11px]">
                 posmul.com/healing-room/@{room.ownerNickname}
               </span>
@@ -946,7 +946,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 rounded-lg border border-violet-400/45 bg-violet-500/20 px-2.5 py-1 text-[11px] font-bold text-violet-200 transition hover:bg-violet-500/30"
             >
-              <span>🐾 프렌즈 도감</span>
+              <span>프렌즈 도감</span>
             </a>
 
             <button
@@ -1200,7 +1200,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             .filter((n) => n.userId !== room.userId)
                             .map((neighbor) => (
                               <option key={neighbor.userId} value={neighbor.userId}>
-                                🌊 {neighbor.ownerNickname}
+                                {neighbor.ownerNickname}
                                 {neighbor.universeTitle ? ` · ${neighbor.universeTitle}` : ` (${neighbor.regionLabel})`}
                                 {(neighbor.creationsCount ?? 0) > 0 ? ` [${neighbor.creationsCount}]` : ""}
                               </option>
@@ -1274,7 +1274,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             : "bg-sky-50 text-sky-700 border-sky-200"
                         }`}
                       >
-                        {isOwner ? "👑 내 PosMul 힐링룸" : "🌊 이웃 마실 모드"}
+                        {isOwner ? "내 PosMul 힐링룸" : "이웃 마실 모드"}
                       </span>
                       <span className="hidden sm:inline font-mono text-[10px] text-slate-400">
                         @{room.ownerNickname}
@@ -1328,7 +1328,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 onClick={() => setActiveTab("donation")}
                                 className="flex items-center justify-between bg-purple-50/50 px-2.5 py-1.5 hover:bg-purple-50"
                               >
-                                <span className="font-bold text-purple-900">🕊️ 공공기부</span>
+                                <span className="font-bold text-purple-900">공공기부</span>
                                 <span className="font-extrabold text-purple-700">
                                   {ownerStats.donationCount}건
                                 </span>
@@ -1338,7 +1338,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 onClick={() => setActiveTab("prediction")}
                                 className="flex items-center justify-between bg-amber-50/50 px-2.5 py-1.5 hover:bg-amber-50"
                               >
-                                <span className="font-bold text-amber-900">🎯 개설게임</span>
+                                <span className="font-bold text-amber-900">개설게임</span>
                                 <span className="font-extrabold text-amber-700">
                                   {ownerStats.createdGamesCount}개
                                 </span>
@@ -1350,7 +1350,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 onClick={() => setActiveTab("prediction")}
                                 className="flex items-center justify-between bg-sky-50/40 px-2.5 py-1.5 hover:bg-sky-50"
                               >
-                                <span className="font-bold text-sky-900">🔮 예측참여</span>
+                                <span className="font-bold text-sky-900">예측참여</span>
                                 <span className="font-extrabold text-sky-700">
                                   {ownerStats.predictionCount}회
                                 </span>
@@ -1360,7 +1360,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 onClick={() => setActiveTab("profile")}
                                 className="flex items-center justify-between bg-amber-50/30 px-2.5 py-1.5 hover:bg-amber-50"
                               >
-                                <span className="font-bold text-slate-700">🏅 명예배지</span>
+                                <span className="font-bold text-slate-700">명예배지</span>
                                 <span className="font-extrabold text-amber-600">
                                   {unlockedTrophies.length}/{data.trophies.length}
                                 </span>
@@ -1372,7 +1372,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 onClick={() => setActiveTab("shop")}
                                 className="flex items-center justify-between bg-emerald-50/40 px-2.5 py-1.5 hover:bg-emerald-50"
                               >
-                                <span className="font-bold text-emerald-900">💎 보유PMP</span>
+                                <span className="font-bold text-emerald-900">보유PMP</span>
                                 <span className="font-extrabold text-emerald-700">
                                   {ownerStats.pmpBalance.toLocaleString()}
                                 </span>
@@ -1382,7 +1382,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 onClick={() => setActiveTab("guestbook")}
                                 className="flex items-center justify-between bg-rose-50/40 px-2.5 py-1.5 hover:bg-rose-50"
                               >
-                                <span className="font-bold text-rose-900">💌 방명록</span>
+                                <span className="font-bold text-rose-900">방명록</span>
                                 <span className="font-extrabold text-rose-600">
                                   {data.guestbooks.length}개
                                 </span>
@@ -1404,7 +1404,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             </span>
                           </div>
                           <span className="truncate text-[11px] font-bold text-indigo-700">
-                            ✨ {room.minimiQuote}
+                            {room.minimiQuote}
                           </span>
                         </div>
 
@@ -1427,7 +1427,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <div>
                             <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-extrabold text-violet-800">
-                              🌌 CREATOR UNIVERSE · 비상업 순수 창작
+                              CREATOR UNIVERSE · 비상업 순수 창작
                             </span>
                             <h3 className="mt-1 text-xs font-black text-slate-900">
                               {data.worldview?.universeTitle ?? `${room.ownerNickname}의 내면 세계관`}
@@ -1467,12 +1467,12 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 <div className="flex items-center justify-between text-[10px] font-bold text-slate-500">
                                   <span>
                                     {cr.kind === "album"
-                                      ? "💿 앨범"
+                                      ? "앨범"
                                       : cr.kind === "exhibition"
-                                        ? "🖼️ 전시"
-                                        : "📖 출판"}
+                                        ? "전시"
+                                        : "출판"}
                                   </span>
-                                  <span className="text-rose-500">👏 {cr.resonanceCount}</span>
+                                  <span className="text-rose-500">{cr.resonanceCount}</span>
                                 </div>
                                 <div className="mt-0.5 truncate text-[11px] font-extrabold text-slate-900">
                                   {cr.title}
@@ -1537,7 +1537,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                     : "border-indigo-200 bg-white text-indigo-700 hover:bg-indigo-100"
                                 }`}
                               >
-                                {pickedSticker ? `🐾 ${pickedSticker.friendName}` : "🐾 스티커"}
+                                {pickedSticker ? `${pickedSticker.friendName}` : "스티커"}
                               </button>
                               <button
                                 type="submit"
@@ -1649,7 +1649,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                     <div className="space-y-5">
                       <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                         <h2 className="text-sm font-extrabold text-indigo-900">
-                          👤 미니홈피 프로필 설정 & 영광의 선반
+                          미니홈피 프로필 설정 & 영광의 선반
                         </h2>
                         <span className="text-xs font-bold text-amber-600">
                           해금 트로피 {unlockedTrophies.length} / {data.trophies.length}
@@ -1737,7 +1737,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                               >
                                 {bgmTracks.map((track) => (
                                   <option key={track.id} value={track.id}>
-                                    🎵 {track.label} ({track.moodDesc})
+                                    {track.label} ({track.moodDesc})
                                   </option>
                                 ))}
                               </select>
@@ -1749,7 +1749,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                             disabled={isBusy}
                             className="rounded-lg bg-gradient-to-r from-indigo-600 to-sky-600 px-4 py-2 text-xs font-bold text-white shadow hover:brightness-110 disabled:opacity-50"
                           >
-                            {isBusy ? "저장 중..." : "✨ 미니홈피 설정 저장"}
+                            {isBusy ? "저장 중..." : "미니홈피 설정 저장"}
                           </button>
                         </form>
                       ) : (
@@ -1815,7 +1815,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                     <div className="space-y-5">
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
                         <h2 className="text-sm font-extrabold text-sky-800">
-                          🔮 {room.ownerNickname}님의 예측 활동 다이어리
+                          {room.ownerNickname}님의 예측 활동 다이어리
                         </h2>
                         <Link
                           href="/prediction"
@@ -1831,7 +1831,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div className="rounded-lg border border-amber-200 bg-amber-50/30 p-3.5">
                           <h3 className="mb-2.5 text-xs font-extrabold text-amber-800">
-                            🎯 직접 개설한 예측게임 ({ownerStats.createdGamesCount}개)
+                            직접 개설한 예측게임 ({ownerStats.createdGamesCount}개)
                           </h3>
                           {data.createdGames.length > 0 ? (
                             <ul className="space-y-2">
@@ -1869,7 +1869,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
 
                         <div className="rounded-lg border border-sky-200 bg-sky-50/30 p-3.5">
                           <h3 className="mb-2.5 text-xs font-extrabold text-sky-800">
-                            ✨ 최근 예측 참여 ({ownerStats.predictionCount}회)
+                            최근 예측 참여 ({ownerStats.predictionCount}회)
                           </h3>
                           {data.recentPredictions.length > 0 ? (
                             <ul className="space-y-2">
@@ -1914,7 +1914,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2">
                         <div>
                           <h2 className="text-sm font-extrabold text-purple-900">
-                            🕊️ {room.ownerNickname}님의 나눔 기록첩
+                            {room.ownerNickname}님의 나눔 기록첩
                           </h2>
                           <p className="text-[11px] text-slate-500">
                             누적 {ownerStats.donationCount}회 · 총{" "}
@@ -1973,7 +1973,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                       <div className="flex flex-col justify-between gap-2 rounded-xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-sky-50 to-indigo-50 p-3 sm:flex-row sm:items-center">
                         <div>
                           <p className="text-xs font-extrabold text-emerald-950">
-                            🎁 PosMul 힐링 선물가게 (경제 불변식: 무위험 포인트 PMP 전용)
+                            PosMul 힐링 선물가게 (경제 불변식: 무위험 포인트 PMP 전용)
                           </p>
                           <p className="mt-0.5 text-[11px] text-slate-600">
                             예측·포럼 활동으로 얻은 PMP로만 구매 가능하며, 소중한 PMC는 절대 차감되지 않습니다.
@@ -1997,9 +1997,9 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                         {(
                           [
                             { key: "all", label: "전체 카탈로그" },
-                            { key: "theme", label: "🏠 미니룸 스킨" },
-                            { key: "minimi", label: "🧸 미니미 코디" },
-                            { key: "prop", label: "🪑 가구 · 소품" },
+                            { key: "theme", label: "미니룸 스킨" },
+                            { key: "minimi", label: "미니미 코디" },
+                            { key: "prop", label: "가구 · 소품" },
                           ] as const
                         ).map((cat) => (
                           <button
@@ -2094,11 +2094,11 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                   >
                                     {isEquipped
                                       ? item.category === "prop"
-                                        ? "✅ 배치됨 (치우기)"
-                                        : "✅ 적용 중"
+                                        ? "배치됨 (치우기)"
+                                        : "적용 중"
                                       : item.category === "prop"
-                                        ? "🪑 방에 배치하기"
-                                        : "✨ 적용하기"}
+                                        ? "방에 배치하기"
+                                        : "적용하기"}
                                   </button>
                                 ) : (
                                   <button
@@ -2109,7 +2109,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                   >
                                     {isBusy
                                       ? "구매 중..."
-                                      : `🎁 ${item.pricePmp.toLocaleString()} PMP 선물구매`}
+                                      : `${item.pricePmp.toLocaleString()} PMP 선물구매`}
                                   </button>
                                 )}
                               </div>
@@ -2127,7 +2127,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                     <div className="space-y-4">
                       <div className="border-b border-slate-200 pb-2">
                         <h2 className="text-sm font-extrabold text-rose-700">
-                          💌 {room.ownerNickname}님의 방명록 ({data.guestbooks.length}건)
+                          {room.ownerNickname}님의 방명록 ({data.guestbooks.length}건)
                         </h2>
                       </div>
 
@@ -2137,7 +2137,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2">
                           <span className="text-xs font-bold text-slate-800">
-                            💌 일촌평 남기기
+                            일촌평 남기기
                           </span>
                           <div className="flex flex-wrap gap-1">
                             {RELATION_PRESETS.map((preset) => (
@@ -2186,7 +2186,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                                 : "border-rose-200 bg-white text-rose-700 hover:bg-rose-50"
                             }`}
                           >
-                            {pickedSticker ? `🐾 ${pickedSticker.friendName}` : "🐾 스티커"}
+                            {pickedSticker ? `${pickedSticker.friendName}` : "스티커"}
                           </button>
                           <button
                             type="submit"
@@ -2322,19 +2322,19 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
               {/* 3색 게이지 바 */}
               {[
                 {
-                  label: "🌿 힐링지수",
+                  label: "힐링지수",
                   pct: healingPct,
                   barClass: "bg-gradient-to-r from-emerald-500 to-teal-400",
                   onPlus: () => setBoostHealing((p) => (p + 10) % 40),
                 },
                 {
-                  label: "🕊️ 나눔온도",
+                  label: "나눔온도",
                   pct: warmthPct,
                   barClass: "bg-gradient-to-r from-purple-500 to-fuchsia-400",
                   onPlus: () => setBoostWarmth((p) => (p + 10) % 40),
                 },
                 {
-                  label: "🔮 집단통찰",
+                  label: "집단통찰",
                   pct: insightPct,
                   barClass: "bg-gradient-to-r from-sky-500 to-indigo-400",
                   onPlus: () => setBoostInsight((p) => (p + 10) % 40),
@@ -2366,7 +2366,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
 
               {/* 마이심볼 */}
               <div className="flex items-center justify-between border-t border-slate-800 pt-2.5">
-                <span className="font-bold text-slate-300">🏅 마이심볼</span>
+                <span className="font-bold text-slate-300">마이심볼</span>
                 <div className="flex items-center gap-1">
                   {unlockedTrophies.length > 0 ? (
                     unlockedTrophies.slice(0, 4).map((t) => (
@@ -2375,7 +2375,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
                       </span>
                     ))
                   ) : (
-                    <span className="text-[11px] text-slate-500">🌱 🔮 ☕</span>
+                    <span className="text-[11px] text-slate-500"></span>
                   )}
                 </div>
               </div>
@@ -2405,7 +2405,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
             {/* PosMul Lo-Fi & 자작 앨범 주크박스 */}
             <div className="border-t border-slate-800 bg-[#0b101d] p-3">
               <div className="mb-1.5 flex items-center justify-between text-[10px] font-bold text-slate-400">
-                <span>💿 POSMUL JUKEBOX</span>
+                <span>POSMUL JUKEBOX</span>
                 <span className={isBgmPlaying ? "text-amber-300 animate-pulse" : "text-slate-500"}>
                   {isBgmPlaying
                     ? bgmPlayMode === "shuffle"
@@ -2508,7 +2508,7 @@ export function HealingRoomClient({ initialData }: HealingRoomClientProps) {
           {/* PMP 선물가게 추천 아이템 카드 */}
           <div className="overflow-hidden rounded-2xl border border-emerald-500/35 bg-[#111827]/95 shadow-2xl backdrop-blur-xl">
             <div className="flex items-center justify-between border-b border-slate-800 bg-slate-900/90 px-3 py-2 text-[11px] font-extrabold text-emerald-200">
-              <span>🎁 PMP 선물가게 추천</span>
+              <span>PMP 선물가게 추천</span>
               <ShoppingBag className="h-3.5 w-3.5 text-amber-400" />
             </div>
             <div className="p-3 space-y-2.5">

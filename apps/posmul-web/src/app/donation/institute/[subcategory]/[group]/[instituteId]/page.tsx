@@ -226,14 +226,14 @@ export default async function InstituteDetailPage({ params }: InstituteDetailPag
 
   // 카테고리 라벨 매핑
   const categoryLabels: Record<string, { label: string; icon: string; color: string }> = {
-    children: { label: "아동복지", icon: "👶", color: "from-pink-500 to-rose-500" },
-    elderly: { label: "노인복지", icon: "👴", color: "from-amber-500 to-orange-500" },
-    disaster: { label: "재난구호", icon: "🆘", color: "from-red-500 to-rose-600" },
-    environment: { label: "환경보전", icon: "🌿", color: "from-green-500 to-emerald-500" },
-    education: { label: "교육지원", icon: "📚", color: "from-blue-500 to-indigo-500" },
-    medical: { label: "의료지원", icon: "🏥", color: "from-cyan-500 to-teal-500" },
-    animal: { label: "동물보호", icon: "🐾", color: "from-yellow-500 to-amber-500" },
-    other: { label: "기타", icon: "💝", color: "from-purple-500 to-violet-500" },
+    children: { label: "아동복지", icon: "", color: "from-pink-500 to-rose-500" },
+    elderly: { label: "노인복지", icon: "", color: "from-amber-500 to-orange-500" },
+    disaster: { label: "재난구호", icon: "", color: "from-red-500 to-rose-600" },
+    environment: { label: "환경보전", icon: "", color: "from-green-500 to-emerald-500" },
+    education: { label: "교육지원", icon: "", color: "from-blue-500 to-indigo-500" },
+    medical: { label: "의료지원", icon: "", color: "from-cyan-500 to-teal-500" },
+    animal: { label: "동물보호", icon: "", color: "from-yellow-500 to-amber-500" },
+    other: { label: "기타", icon: "", color: "from-purple-500 to-violet-500" },
   };
 
   const categoryInfo = categoryLabels[instData.category] || categoryLabels.other;

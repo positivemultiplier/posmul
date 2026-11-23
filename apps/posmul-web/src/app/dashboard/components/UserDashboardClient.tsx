@@ -147,7 +147,7 @@ export interface UserDashboardProps {
   };
 }
 
-const AVATAR_EMOJIS = ["🎯", "🦅", "🦁", "🚀", "🐳", "🔥", "💎", "🌟"];
+const AVATAR_EMOJIS = ["", "", "", "", "", "", "", ""];
 
 const SIDO_LIST = [
   "서울특별시",
@@ -182,35 +182,35 @@ const JOB_GROUPS = [
 const DOMAIN_OPTIONS = [
   {
     key: "INVEST",
-    label: "📈 경제·금융·환율",
+    label: "경제·금융·환율",
     desc: "한국은행 ECOS, 나스닥 100, 비트코인, 기업 실적 예측",
     liveCategory: "economy",
     href: "/prediction/economy",
   },
   {
     key: "SPORTS",
-    label: "⚽ 스포츠 (KBO/EPL)",
+    label: "스포츠 (KBO/EPL)",
     desc: "프로야구 한국시리즈, 프리미어리그, e스포츠 승부 예측",
     liveCategory: "sports",
     href: "/prediction/sports",
   },
   {
     key: "ENTERTAINMENT",
-    label: "🎬 K-콘텐츠·연예·OTT",
+    label: "K-콘텐츠·연예·OTT",
     desc: "넷플릭스 주간 Top 10, 주말 미니시리즈 시청률, 박스오피스",
     liveCategory: "entertainment",
     href: "/prediction/entertainment",
   },
   {
     key: "POLITICS",
-    label: "🗳️ 정치·입법·예산",
+    label: "정치·입법·예산",
     desc: "국회 열린국회정보 법안 본회의 통과 여부 및 공공 정책",
     liveCategory: "economy",
     href: "/prediction/politics",
   },
   {
     key: "USER_PROPOSED",
-    label: "💳 라이프·소비·시민제안",
+    label: "라이프·소비·시민제안",
     desc: "실생활 물가, 로컬 소비 캠페인 및 시민 직접 제안 마켓",
     liveCategory: "entertainment",
     href: "/prediction/consume",
@@ -219,10 +219,10 @@ const DOMAIN_OPTIONS = [
 
 const BET_PRESETS = [100, 500, 1000, 5000];
 const LANDING_OPTIONS = [
-  { path: "/dashboard", label: "📊 내 맞춤 대시보드 (/dashboard)" },
-  { path: "/prediction", label: "🎯 예측 마켓 전체 피드 (/prediction)" },
-  { path: "/live", label: "🔴 실시간 LIVE 응원톡 (/live)" },
-  { path: "/forum", label: "🏛️ 시민 공론장·갤러리 (/forum)" },
+  { path: "/dashboard", label: "내 맞춤 대시보드 (/dashboard)" },
+  { path: "/prediction", label: "예측 마켓 전체 피드 (/prediction)" },
+  { path: "/live", label: "실시간 LIVE 응원톡 (/live)" },
+  { path: "/forum", label: "시민 공론장·갤러리 (/forum)" },
 ];
 
 export function UserDashboardClient({ initialData }: UserDashboardProps) {
@@ -359,8 +359,8 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
         showToast(
           "success",
           fromWizard
-            ? "✨ 환영합니다! 나만의 맞춤 관심사와 배팅 프리셋이 대시보드에 적용되었습니다."
-            : "✅ 개인맞춤 설정 및 시민 프로필이 성공적으로 저장되었습니다."
+            ? "환영합니다! 나만의 맞춤 관심사와 배팅 프리셋이 대시보드에 적용되었습니다."
+            : "개인맞춤 설정 및 시민 프로필이 성공적으로 저장되었습니다."
         );
         if (fromWizard) {
           setActiveTab("foryou");
@@ -395,7 +395,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
           {
             id: `tx-bonus-${Date.now()}`,
             type: "reward",
-            title: "🎁 시민 대시보드 활동 응원 보너스 (+5,000 PMP / +500 PMC)",
+            title: "시민 대시보드 활동 응원 보너스 (+5,000 PMP / +500 PMC)",
             amount: 5000,
             currency: "PMP",
             status: "completed",
@@ -498,19 +498,19 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
   const getCategoryMeta = (cat: string | null) => {
     switch ((cat || "").toUpperCase()) {
       case "SPORTS":
-        return { label: "⚽ 스포츠", variant: "success" as const, path: "/prediction/sports" };
+        return { label: "스포츠", variant: "success" as const, path: "/prediction/sports" };
       case "ENTERTAINMENT":
         return {
-          label: "🎬 K-콘텐츠·연예",
+          label: "K-콘텐츠·연예",
           variant: "purple" as const,
           path: "/prediction/entertainment",
         };
       case "POLITICS":
-        return { label: "🗳️ 정치·입법", variant: "info" as const, path: "/prediction/politics" };
+        return { label: "정치·입법", variant: "info" as const, path: "/prediction/politics" };
       case "USER_PROPOSED":
-        return { label: "💳 라이프·소비", variant: "warning" as const, path: "/prediction/consume" };
+        return { label: "라이프·소비", variant: "warning" as const, path: "/prediction/consume" };
       default:
-        return { label: "📈 경제·금융", variant: "info" as const, path: "/prediction/economy" };
+        return { label: "경제·금융", variant: "info" as const, path: "/prediction/economy" };
     }
   };
 
@@ -586,7 +586,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                     </span>
                   ))}
                   <span className="px-2 py-0.5 rounded-md text-[11px] font-mono bg-amber-500/10 text-amber-300 border border-amber-500/25">
-                    ⚡ 기본 배팅 {personalization.defaultBetPmp.toLocaleString()} PMP · 확신도{" "}
+                    기본 배팅 {personalization.defaultBetPmp.toLocaleString()} PMP · 확신도{" "}
                     {personalization.defaultConfidence}%
                   </span>
                 </div>
@@ -614,7 +614,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                 }}
                 className="inline-flex items-center gap-1.5 rounded-lg border border-sky-400/45 bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 px-4 py-2 text-sm font-semibold text-sky-200 shadow-sm transition-all hover:from-sky-500/30 hover:to-purple-500/30"
               >
-                <span aria-hidden="true">🏡</span>
+                <span aria-hidden="true"></span>
                 <span>내 힐링룸 꾸미기 (새 창)</span>
               </a>
 
@@ -663,7 +663,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="text-base font-bold text-white">
-                        ✨ 나만의 PosMul 개인맞춤 빠른 설정 (Personalization Wizard)
+                        나만의 PosMul 개인맞춤 빠른 설정 (Personalization Wizard)
                       </h2>
                       {!onboardingCompleted && (
                         <AdminBadge variant="warning">신규 로그인 추천</AdminBadge>
@@ -788,7 +788,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
 
               <div className="flex items-center justify-between pt-3 border-t border-zinc-800/80">
                 <span className="text-[11px] text-zinc-400">
-                  💡 설정은 언제든 우측 상단 <strong>[개인맞춤 설정]</strong> 탭에서 변경할 수 있습니다.
+                  설정은 언제든 우측 상단 <strong>[개인맞춤 설정]</strong> 탭에서 변경할 수 있습니다.
                 </span>
                 <AdminButton
                   variant="primary"
@@ -927,26 +927,26 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
           {[
             {
               id: "foryou" as const,
-              label: "✨ 맞춤 브리핑 & 추천 (For You)",
+              label: "맞춤 브리핑 & 추천 (For You)",
               badge: `${personalizedGames.length}`,
             },
             {
               id: "predictions" as const,
-              label: "🎯 내 예측 포트폴리오",
+              label: "내 예측 포트폴리오",
               badge: `${myPredictions.length}`,
             },
             {
               id: "wallet" as const,
-              label: "💳 통합 지갑 & 원장",
+              label: "통합 지갑 & 원장",
               badge: `${transactions.length}`,
             },
             {
               id: "donation" as const,
-              label: "🌱 기부 & 소셜 임팩트",
+              label: "기부 & 소셜 임팩트",
             },
             {
               id: "settings" as const,
-              label: "⚙️ 개인맞춤 설정 (프로필·관심사)",
+              label: "개인맞춤 설정 (프로필·관심사)",
             },
           ].map((tab) => {
             const active = activeTab === tab.id;
@@ -986,7 +986,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                 <div>
                   <div className="flex items-center gap-2">
                     <AdminCardTitle className="text-base">
-                      🎯 {displayName}님을 위한 맞춤 예측 마켓
+                      {displayName}님을 위한 맞춤 예측 마켓
                     </AdminCardTitle>
                     <AdminBadge variant="info">
                       관심 도메인 {personalization.favoriteDomains.length}개 반영
@@ -1073,7 +1073,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                         <div className="mt-4 pt-3 border-t border-zinc-800/80 flex items-center justify-between text-[11px] text-zinc-400">
                           <div>
                             <span className="text-emerald-400 font-bold">
-                              💰 {game.prize_pool.toLocaleString()} PMC
+                              {game.prize_pool.toLocaleString()} PMC
                             </span>
                             <span className="mx-1.5">·</span>
                             <span>{game.participants_count}명 참여</span>
@@ -1102,7 +1102,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                       <div className="flex items-center gap-2">
                         <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping" />
                         <AdminCardTitle className="text-base">
-                          🔴 실시간 LIVE 응원톡 맞춤 채널
+                          실시간 LIVE 응원톡 맞춤 채널
                         </AdminCardTitle>
                       </div>
                       <AdminCardDescription>
@@ -1128,18 +1128,18 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                             <AdminBadge
                               variant={room.status === "LIVE" ? "danger" : "warning"}
                             >
-                              {room.status === "LIVE" ? "🔴 ON-AIR" : "⏰ UPCOMING"}
+                              {room.status === "LIVE" ? "ON-AIR" : "UPCOMING"}
                             </AdminBadge>
                             <span className="text-xs font-semibold text-zinc-300">
                               {room.categoryLabel}
                             </span>
                             <span className="text-[11px] text-zinc-500">
-                              · 👥 {room.viewerCount.toLocaleString()}명 시청 중
+                              ·{room.viewerCount.toLocaleString()}명 시청 중
                             </span>
                           </div>
                           <h4 className="text-sm font-bold text-white">{room.title}</h4>
                           <p className="text-xs text-zinc-400">
-                            🎯 연동 예측: <span className="text-zinc-300">{room.linkedPredictionTitle}</span>
+                            연동 예측: <span className="text-zinc-300">{room.linkedPredictionTitle}</span>
                           </p>
                         </div>
 
@@ -1168,7 +1168,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                   <AdminCardHeader>
                     <AdminCardTitle className="text-base flex items-center gap-2">
                       <Compass className="w-4 h-4 text-emerald-400" />
-                      <span>🌊 PosMul 시민 선순환 가이드</span>
+                      <span>PosMul 시민 선순환 가이드</span>
                     </AdminCardTitle>
                     <AdminCardDescription>
                       포럼 ➔ 소비 ➔ 예측 ➔ 기부로 이어지는 내 자산 순환 현황
@@ -1223,7 +1223,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
             <AdminCardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80">
               <div>
                 <AdminCardTitle className="text-base">
-                  🎯 나의 예측 참여 포트폴리오 ({filteredPredictions.length}건)
+                  나의 예측 참여 포트폴리오 ({filteredPredictions.length}건)
                 </AdminCardTitle>
                 <AdminCardDescription>
                   진행 중인 예측은 마감 전 언제든 철회하여 배팅한 PMP를 100% 환불받을 수 있습니다.
@@ -1337,7 +1337,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                             ) : pred.gameStatus === "SETTLED" ? (
                               <Link href="/donation">
                                 <AdminButton variant="success" size="sm">
-                                  🤲 기부하기
+                                  기부하기
                                 </AdminButton>
                               </Link>
                             ) : (
@@ -1360,7 +1360,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
             <AdminCardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80">
               <div>
                 <AdminCardTitle className="text-base">
-                  💳 PMP · PMC 통합 자산 원장 (Ledger Transactions)
+                  PMP · PMC 통합 자산 원장 (Ledger Transactions)
                 </AdminCardTitle>
                 <AdminCardDescription>
                   모든 예측 배팅, 오라클 정산 보상, 캠페인 시청 적립 및 공익 기부 내역이 투명하게 기록됩니다.
@@ -1369,10 +1369,10 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
               <div className="flex flex-wrap items-center gap-1.5">
                 {[
                   { key: "all" as const, label: "전체" },
-                  { key: "prediction" as const, label: "🎲 예측 배팅" },
-                  { key: "reward" as const, label: "🎁 보너스/보상" },
-                  { key: "donation" as const, label: "🌱 기부" },
-                  { key: "consume" as const, label: "🎬 소비 적립" },
+                  { key: "prediction" as const, label: "예측 배팅" },
+                  { key: "reward" as const, label: "보너스/보상" },
+                  { key: "donation" as const, label: "기부" },
+                  { key: "consume" as const, label: "소비 적립" },
                 ].map((tab) => (
                   <button
                     key={tab.key}
@@ -1447,7 +1447,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                     <div>
                       <AdminCardTitle className="text-base flex items-center gap-2">
                         <Heart className="w-4 h-4 text-rose-400" />
-                        <span>🌱 나의 기부 & 사회적 임팩트 리포트</span>
+                        <span>나의 기부 & 사회적 임팩트 리포트</span>
                       </AdminCardTitle>
                       <AdminCardDescription>
                         예측 성공과 MoneyWave로 획득한 PMC를 사회에 환원한 투명한 공헌 기록입니다.
@@ -1490,7 +1490,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
 
                   <div className="p-5 rounded-xl bg-zinc-900/70 border border-zinc-800/80 space-y-3">
                     <h4 className="text-sm font-bold text-white">
-                      🌊 MoneyWave2 미사용 PMC 재분배 & 세제 혜택 안내
+                      MoneyWave2 미사용 PMC 재분배 & 세제 혜택 안내
                     </h4>
                     <p className="text-xs text-zinc-400 leading-relaxed">
                       • <strong>MoneyWave2 순환</strong>: 일정 기간 사용되지 않은 휴면 PMC는 생태계 활성화를 위해 성실 예측 참여자 및 공익 기금 풀로 재분배됩니다.
@@ -1512,7 +1512,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                     href="/donation/direct"
                     className="block p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-emerald-500/40 transition-all"
                   >
-                    <p className="text-xs font-bold text-white">📦 K-물품 직접 기부</p>
+                    <p className="text-xs font-bold text-white">K-물품 직접 기부</p>
                     <p className="text-[11px] text-zinc-400 mt-0.5">
                       의류·식품·교육 물품을 필요한 이웃에게 직접 매칭
                     </p>
@@ -1521,7 +1521,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                     href="/donation/institute"
                     className="block p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-emerald-500/40 transition-all"
                   >
-                    <p className="text-xs font-bold text-white">🏛️ 공인 기관 기부</p>
+                    <p className="text-xs font-bold text-white">공인 기관 기부</p>
                     <p className="text-[11px] text-zinc-400 mt-0.5">
                       긴급구호·아동복지·환경보호 인증 기관 후원
                     </p>
@@ -1530,7 +1530,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                     href="/donation/opinion-leader"
                     className="block p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-emerald-500/40 transition-all"
                   >
-                    <p className="text-xs font-bold text-white">🌟 오피니언 리더 후원</p>
+                    <p className="text-xs font-bold text-white">오피니언 리더 후원</p>
                     <p className="text-[11px] text-zinc-400 mt-0.5">
                       공익 의제를 이끄는 분야별 전문가 및 크리에이터 응원
                     </p>
@@ -1908,17 +1908,17 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                   {[
                     {
                       key: "settlementAlert" as const,
-                      title: "⚖️ 공인 오라클 정산 완료 알림",
+                      title: "공인 오라클 정산 완료 알림",
                       desc: "참여한 예측 마켓이 정산되어 PMC 보상이 지급될 때 알림",
                     },
                     {
                       key: "liveRoomAlert" as const,
-                      title: "🔴 관심 분야 LIVE 응원톡 오픈 알림",
+                      title: "관심 분야 LIVE 응원톡 오픈 알림",
                       desc: "내가 선택한 관심 도메인의 빅매치 LIVE 채팅방 시작 시 알림",
                     },
                     {
                       key: "moneyWaveAlert" as const,
-                      title: "🌊 MoneyWave 배당 & 상금풀 변동 알림",
+                      title: "MoneyWave 배당 & 상금풀 변동 알림",
                       desc: "일일 MoneyWave 상금풀 부스트 및 휴면 PMC 재분배 알림",
                     },
                   ].map((item) => {
@@ -1971,7 +1971,7 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                     <div>
                       <p className="text-xs font-bold text-zinc-200 flex items-center gap-1">
                         <Lock className="w-3.5 h-3.5 text-emerald-400" />
-                        <span>🏆 전국/지역 시민 랭킹 보드에 내 닉네임 공개</span>
+                        <span>전국/지역 시민 랭킹 보드에 내 닉네임 공개</span>
                       </p>
                       <p className="text-[11px] text-zinc-500 mt-0.5">
                         비공개 시 랭킹 보드에 익명 시민으로 표시됩니다.
@@ -1996,8 +1996,8 @@ export function UserDashboardClient({ initialData }: UserDashboardProps) {
                 <AdminCardFooter className="justify-between">
                   <span className="text-[11px] text-zinc-400">
                     {initialData.isAuthenticated
-                      ? "🔒 Supabase 프로필 DB에 영구 저장됩니다."
-                      : "💡 체험 모드에서는 브라우저에 즉시 저장됩니다."}
+                      ? "Supabase 프로필 DB에 영구 저장됩니다."
+                      : "체험 모드에서는 브라우저에 즉시 저장됩니다."}
                   </span>
                   <AdminButton
                     variant="primary"

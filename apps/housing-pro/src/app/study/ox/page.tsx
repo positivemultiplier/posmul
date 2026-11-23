@@ -600,7 +600,7 @@ export default function OxSwipeStudyPage() {
               }`}
             >
               <Camera className="w-3.5 h-3.5" />
-              <span>📸 방금 스캔한 ★/X 약점 선지 ({scannedWeakIds.length}개)</span>
+              <span>방금 스캔한 ★/X 약점 선지 ({scannedWeakIds.length}개)</span>
             </button>
           </div>
         )}
@@ -630,7 +630,7 @@ export default function OxSwipeStudyPage() {
               href="/study/solve"
               className="shrink-0 px-2.5 py-1 rounded-full text-[10.5px] font-black border bg-[#FF5A36]/15 text-[#FF7A59] border-[#FF5A36]/40 hover:bg-[#FF5A36]/25 transition"
             >
-              ✍️ 20제 풀기
+              20제 풀기
             </Link>
             <button
               type="button"
@@ -905,7 +905,7 @@ export default function OxSwipeStudyPage() {
               {showRepeatHistory && (
                 <div className="p-3 rounded-2xl bg-[#101015] border border-orange-500/25 space-y-2 text-left">
                   <div className="flex items-center justify-between text-[10.5px] font-black text-orange-300">
-                    <span>📌 역대 기출 출제 이력 ({currentCard.appearedCitations.length}회)</span>
+                    <span>역대 기출 출제 이력 ({currentCard.appearedCitations.length}회)</span>
                     <span className="text-slate-400 font-normal">동일·함정변형 지문 기준</span>
                   </div>
                   <div className="space-y-1.5 max-h-[140px] overflow-y-auto">
@@ -947,8 +947,8 @@ export default function OxSwipeStudyPage() {
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[10.5px] font-black text-emerald-300">
                       {currentCard.lawStatus === "AMENDED_MODIFIED" || currentCard.isAmendedOption
-                        ? "🔄 개정 법령 반영 문항"
-                        : "⚠️ 법령 개정 여부 확인 필요 문항"}
+                        ? "개정 법령 반영 문항"
+                        : "법령 개정 여부 확인 필요 문항"}
                     </span>
                     {(currentCard.originalOptionText || currentCard.originalQuestionSnapshot?.question_text) && (
                       <button
@@ -1007,8 +1007,8 @@ export default function OxSwipeStudyPage() {
                   <div className="flex items-center justify-between text-xs font-black">
                     <span>
                       {answered
-                        ? "✅ 정답! ★/X ➔ O 완전 정복 (+10 PMP)"
-                        : `❌ 오답! (선택: ${userSelected ? "O" : "X"}) 약점덱 복습 유지`}
+                        ? "정답! ★/X ➔ O 완전 정복 (+10 PMP)"
+                        : `오답! (선택: ${userSelected ? "O" : "X"}) 약점덱 복습 유지`}
                     </span>
                     <span className="font-mono">
                       실제 정답: {currentCard.isCorrectStatement ? "옳음(O)" : "틀림(X)"}
@@ -1016,14 +1016,14 @@ export default function OxSwipeStudyPage() {
                   </div>
                   {currentCard.trapCorrection && (
                     <div className="text-xs font-bold text-amber-300">
-                      💡 {currentCard.trapCorrection}
+                      {currentCard.trapCorrection}
                     </div>
                   )}
                   <div className="text-[10.5px] text-slate-400 font-mono flex items-center justify-between gap-2 flex-wrap">
                     <span>출처: {currentCard.citation ?? `${currentCard.examYear}년 제${currentCard.examRound}회 ${currentCard.subject} ${currentCard.questionNumber}번`}</span>
                     {currentCard.repeatCount >= 2 && (
                       <span className="text-orange-300 font-bold">
-                        🔥 기출 {currentCard.repeatCount}회 반복 지문
+                        기출 {currentCard.repeatCount}회 반복 지문
                       </span>
                     )}
                   </div>

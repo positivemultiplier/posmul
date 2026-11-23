@@ -63,7 +63,7 @@ export function StudyGroupCreateWizard({
 
   // STEP 4: 내 그룹 프로필 설정
   const [myNickname, setMyNickname] = useState(defaultNickname || "posmul");
-  const [myConeEmoji, setMyConeEmoji] = useState(defaultConeEmoji || "🦉");
+  const [myConeEmoji, setMyConeEmoji] = useState(defaultConeEmoji || "");
   const [joinPasswordInput, setJoinPasswordInput] = useState("");
   const [passwordError, setPasswordError] = useState<string | null>(null);
 
@@ -81,7 +81,7 @@ export function StudyGroupCreateWizard({
     setEnableNicknameRule(true);
     setNicknameRule("");
     setMyNickname(defaultNickname || "posmul");
-    setMyConeEmoji(defaultConeEmoji || "🦉");
+    setMyConeEmoji(defaultConeEmoji || "");
     setJoinPasswordInput("");
     setPasswordError(null);
   }, [isOpen, mode, initialStudyType, defaultNickname, defaultConeEmoji]);
@@ -476,14 +476,14 @@ export function StudyGroupCreateWizard({
 
                   <button
                     type="button"
-                    onClick={() => setMyConeEmoji("🧑‍💻")}
+                    onClick={() => setMyConeEmoji("")}
                     className={`p-3 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition ${
-                      myConeEmoji === "🧑‍💻"
+                      myConeEmoji === ""
                         ? "border-[#FF5A36] bg-[#FF5A36]/15"
                         : "border-white/[0.08] bg-[#16161D] hover:border-white/[0.2]"
                     }`}
                   >
-                    <span className="text-3xl">🧑‍💻</span>
+                    <span className="text-3xl"></span>
                     <span className="text-[10px] font-bold text-slate-300">기본 열공</span>
                   </button>
 

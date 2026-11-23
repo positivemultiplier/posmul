@@ -160,7 +160,7 @@ function MajorLeagueContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DomainContextHeader
           domain="consume"
-          title="🎬 Major League · 시간 가치화 캠페인"
+          title="Major League · 시간 가치화 캠페인"
           subtitle="브랜드의 비전과 공익 메시지를 시청하고 무위험 예측 자산(PMP)을 획득하세요"
           metrics={[
             { label: "내 누적 획득", value: totalPmpEarned, unit: "PMP" },
@@ -208,7 +208,7 @@ function MajorLeagueContent() {
               >
                 <Card className="bg-slate-900/70 border-slate-800/90 hover:border-indigo-500/40 transition-all group overflow-hidden h-full">
                   <div className="aspect-video bg-gradient-to-br from-indigo-950/60 via-slate-900 to-slate-950 relative flex items-center justify-center border-b border-white/[0.04]">
-                    <div className="text-4xl opacity-80">🎬</div>
+                    <div className="text-4xl opacity-80"></div>
                     {ad.isNew && (
                       <span className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-indigo-500 text-white text-[10px] font-extrabold rounded">
                         NEW

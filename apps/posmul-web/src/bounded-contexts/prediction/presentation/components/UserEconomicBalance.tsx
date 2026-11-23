@@ -86,7 +86,7 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
             <div className="text-xs text-gray-500">
               PmpAmount (위험프리자산)
             </div>
-            <div className="text-xs text-blue-600 mt-1">💰 예측 참여 가능</div>
+            <div className="text-xs text-blue-600 mt-1">예측 참여 가능</div>
           </div>
 
           {/* PmcAmount Balance */}
@@ -95,7 +95,7 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
               {formatCurrency(economicStats.pmcBalance)}
             </div>
             <div className="text-xs text-gray-500">PmcAmount (위험자산)</div>
-            <div className="text-xs text-purple-600 mt-1">💎 기부 전용</div>
+            <div className="text-xs text-purple-600 mt-1">기부 전용</div>
           </div>
 
           {/* Performance Stats */}
@@ -104,7 +104,7 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
               {(economicStats.predictionAccuracy * 100).toFixed(1)}%
             </div>
             <div className="text-xs text-gray-500">예측 정확도</div>
-            <div className="text-xs text-green-600 mt-1">📊 평균 73%</div>
+            <div className="text-xs text-green-600 mt-1">평균 73%</div>
           </div>
 
           {/* Win Rate */}
@@ -112,7 +112,7 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
             <div className="text-2xl font-bold text-orange-600">{winRate}%</div>
             <div className="text-xs text-gray-500">승률</div>
             <div className="text-xs text-orange-600 mt-1">
-              🏆 {economicStats.wonGames}/{economicStats.participatedGames}
+              {economicStats.wonGames}/{economicStats.participatedGames}
             </div>
           </div>
         </div>
@@ -126,10 +126,10 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
 
           <div className="flex gap-2 mt-2">
             <button className="px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors">
-              📈 포트폴리오
+              포트폴리오
             </button>
             <button className="px-3 py-1 text-xs bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors">
-              💸 기부하기
+              기부하기
             </button>
           </div>
         </div>
@@ -139,7 +139,7 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
       <div className="mt-6 pt-4 border-t border-blue-200">
         <div className="flex flex-wrap gap-4 text-sm">
           <div className="flex items-center gap-2">
-            <span className="text-gray-600">💡 추천:</span>
+            <span className="text-gray-600">추천:</span>
             <span className="text-blue-700 font-medium">
               {economicStats.riskLevel === "LOW"
                 ? "PmpAmount 비중 증가 권장 (안정성 우선)"
@@ -150,7 +150,7 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-gray-600">🎯 다음 목표:</span>
+            <span className="text-gray-600">다음 목표:</span>
             <span className="text-purple-700 font-medium">
               PmcAmount {formatCurrency(2000 - economicStats.pmcBalance)} 추가
               획득
@@ -158,7 +158,7 @@ const UserEconomicBalance: React.FC<UserEconomicBalanceProps> = async ({
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-gray-600">🔄 MoneyWave:</span>
+            <span className="text-gray-600">MoneyWave:</span>
             <span className="text-green-700 font-medium">
               다음 분배까지 {Math.floor(Math.random() * 24)}시간
             </span>

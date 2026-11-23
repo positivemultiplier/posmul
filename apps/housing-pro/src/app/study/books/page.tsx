@@ -484,7 +484,7 @@ export default function AppStandaloneStudyCenterPage() {
                           </span>
                           <span className="font-mono text-slate-400">
                             {opt.examYear}년 {opt.questionNumber}번
-                            {opt.repeatCount >= 2 && ` · 🔥${opt.repeatCount}회`}
+                            {opt.repeatCount >= 2 && ` ·${opt.repeatCount}회`}
                           </span>
                         </div>
 
@@ -531,7 +531,7 @@ export default function AppStandaloneStudyCenterPage() {
                                   isRight ? "text-emerald-300" : "text-rose-300"
                                 }
                               >
-                                {isRight ? "✅ 정답! (+PMP)" : "❌ 오답!"}{" "}
+                                {isRight ? "정답! (+PMP)" : "오답!"}{" "}
                                 (정답: {opt.isCorrect ? "O" : "X"})
                               </span>
                               {opt.citation && (
@@ -542,12 +542,12 @@ export default function AppStandaloneStudyCenterPage() {
                             </div>
                             {opt.trapSummary && (
                               <div className="text-amber-300 font-bold">
-                                💡 {opt.trapSummary}
+                                {opt.trapSummary}
                               </div>
                             )}
                             {opt.amendedNote && (
                               <div className="text-emerald-300">
-                                🔄 {opt.amendedNote}
+                                {opt.amendedNote}
                               </div>
                             )}
                           </div>
@@ -741,7 +741,7 @@ export default function AppStandaloneStudyCenterPage() {
 
                                       <div className="p-3 rounded-xl bg-[#1A1A23] border border-amber-500/30 space-y-2">
                                         <div className="text-[11px] font-black text-amber-300">
-                                          🔢 시험 직전 필수 암기 수치 · 요건
+                                          시험 직전 필수 암기 수치 · 요건
                                         </div>
                                         <div className="flex flex-wrap gap-1.5">
                                           {activeConceptNote.mustNumbers.map((num, idx) => (
@@ -791,7 +791,7 @@ export default function AppStandaloneStudyCenterPage() {
                                     <div className="p-3 rounded-xl bg-[#171720] border border-white/[0.08] space-y-2.5">
                                       <div className="flex items-center justify-between gap-2">
                                         <span className="text-[11px] font-black text-[#FF7A59]">
-                                          ⚖️ 이 단원 실제 기출 핵심 지문 바로 점검
+                                          이 단원 실제 기출 핵심 지문 바로 점검
                                         </span>
                                         {chapterPacket && (
                                           <span className="text-[10px] font-mono text-slate-400">
@@ -843,7 +843,7 @@ export default function AppStandaloneStudyCenterPage() {
                                                   <div className="flex items-center justify-between gap-2">
                                                     <span className="text-[9.5px] text-slate-500 font-mono">
                                                       {opt.citation || `${opt.examYear}년 ${opt.questionNumber}번`}
-                                                      {opt.repeatCount >= 2 && ` · 🔥${opt.repeatCount}회 반복`}
+                                                      {opt.repeatCount >= 2 && ` ·${opt.repeatCount}회 반복`}
                                                     </span>
                                                     <div className="flex items-center gap-1.5 shrink-0">
                                                       <button
@@ -886,7 +886,7 @@ export default function AppStandaloneStudyCenterPage() {
                                                             : "text-rose-300"
                                                         }
                                                       >
-                                                        {isRight ? "✅ 정답!" : "❌ 오답!"}{" "}
+                                                        {isRight ? "정답!" : "오답!"}{" "}
                                                         (정답: {opt.isCorrect ? "O" : "X"})
                                                       </span>
                                                       <span className="text-slate-400 font-mono">
@@ -895,12 +895,12 @@ export default function AppStandaloneStudyCenterPage() {
                                                     </div>
                                                     {opt.trapSummary && (
                                                       <div className="text-amber-300 font-bold">
-                                                        💡 {opt.trapSummary}
+                                                        {opt.trapSummary}
                                                       </div>
                                                     )}
                                                     {opt.amendedNote && (
                                                       <div className="text-emerald-300">
-                                                        🔄 {opt.amendedNote}
+                                                        {opt.amendedNote}
                                                       </div>
                                                     )}
                                                   </div>

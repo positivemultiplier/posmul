@@ -28,17 +28,17 @@ interface UserPrediction {
 
 const POLITICS_SUBCATEGORY_CONFIG = {
   "national-elections": {
-    title: "🗳️ 국가 선거 예측 마켓",
+    title: "국가 선거 예측 마켓",
     subtitle: "대통령 선거, 국회의원 총선거 및 주요 국가 단위 선거 결과를 집단지성으로 예측하세요",
     dataSources: ["중앙선거관리위원회 선거통계시스템"],
   },
   "local-elections": {
-    title: "🏛️ 지역 선거 예측 마켓",
+    title: "지역 선거 예측 마켓",
     subtitle: "전국동시지방선거, 광역·기초단체장 및 재보궐 선거 결과를 예측하세요",
     dataSources: ["중앙선거관리위원회", "지방자치단체 공고"],
   },
   "policy-changes": {
-    title: "📜 정책·법안 변화 예측 마켓",
+    title: "정책·법안 변화 예측 마켓",
     subtitle: "주요 민생 법안 국회 본회의 통과 여부 및 정부 핵심 정책 시행을 예측하세요",
     dataSources: ["대한민국 국회 의안정보시스템", "대한민국 정책브리핑"],
   },
@@ -114,7 +114,7 @@ export default async function PredictionPoliticsSubcategoryPage({
             ]}
           >
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 검증 데이터 소스:</span>
+              <span className="font-semibold text-slate-300">검증 데이터 소스:</span>
               {config.dataSources.map((ds) => (
                 <span
                   key={ds}
@@ -147,7 +147,7 @@ export default async function PredictionPoliticsSubcategoryPage({
             />
           ) : (
             <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4">
-              <div className="text-5xl">🗳️</div>
+              <div className="text-5xl"></div>
               <h3 className="text-lg font-bold text-white">
                 {config.title.replace(" 마켓", "")} 준비 중
               </h3>

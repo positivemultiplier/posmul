@@ -91,28 +91,28 @@ function getScoreByCategory(entry: ScoreEntry, category: RankingCategory): numbe
 
 // 배지 계산 - 기부
 function getDonationBadge(score: number): string | null {
-  if (score >= 1000000) return '💎 다이아몬드';
-  if (score >= 500000) return '🌟 플래티넘';
-  if (score >= 100000) return '🏅 골드';
-  if (score >= 50000) return '🎖️ 실버';
-  if (score >= 10000) return '🎗️ 브론즈';
+  if (score >= 1000000) return '다이아몬드';
+  if (score >= 500000) return '플래티넘';
+  if (score >= 100000) return '골드';
+  if (score >= 50000) return '실버';
+  if (score >= 10000) return '브론즈';
   return null;
 }
 
 // 배지 계산 - 포럼
 function getForumBadge(score: number): string | null {
-  if (score >= 10000) return '📝 마스터';
-  if (score >= 5000) return '📖 전문가';
-  if (score >= 1000) return '✍️ 활동가';
+  if (score >= 10000) return '마스터';
+  if (score >= 5000) return '전문가';
+  if (score >= 1000) return '활동가';
   return null;
 }
 
 // 배지 계산 - 종합
 function getOverallBadge(score: number): string | null {
-  if (score >= 10000) return '👑 레전드';
-  if (score >= 5000) return '⭐ 마스터';
-  if (score >= 2000) return '🔥 열정';
-  if (score >= 500) return '🌱 성장';
+  if (score >= 10000) return '레전드';
+  if (score >= 5000) return '마스터';
+  if (score >= 2000) return '열정';
+  if (score >= 500) return '성장';
   return null;
 }
 
@@ -122,9 +122,9 @@ function getExpectBadge(entry: ScoreEntry): string | null {
   const skillWeight = Number(entry.expect_skill_weight ?? 1.0);
   const brierScore = Number(entry.expect_brier_score ?? 0.25);
 
-  if (settled >= 3 && skillWeight >= 1.2) return '🎯 초정밀 예측가';
-  if (settled >= 2 && brierScore <= 0.15) return '🔬 브라이어 우수';
-  if (settled >= 1) return '📊 예측 분석가';
+  if (settled >= 3 && skillWeight >= 1.2) return '초정밀 예측가';
+  if (settled >= 2 && brierScore <= 0.15) return '브라이어 우수';
+  if (settled >= 1) return '예측 분석가';
   return null;
 }
 

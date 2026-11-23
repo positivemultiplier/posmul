@@ -230,15 +230,15 @@ export class PredictionResult {
 
     switch (this._result) {
       case PredictionResultEnum.CORRECT:
-        return `🎉 완벽한 예측입니다! (정확도: ${percentage}%, 등급: ${grade})`;
+        return `완벽한 예측입니다! (정확도: ${percentage}%, 등급: ${grade})`;
       case PredictionResultEnum.PARTIALLY_CORRECT:
-        return `👍 좋은 예측입니다! (정확도: ${percentage}%, 등급: ${grade})`;
+        return `좋은 예측입니다! (정확도: ${percentage}%, 등급: ${grade})`;
       case PredictionResultEnum.INCORRECT:
-        return `😔 아쉽게도 틀렸습니다. (정확도: ${percentage}%, 등급: ${grade})`;
+        return `아쉽게도 틀렸습니다. (정확도: ${percentage}%, 등급: ${grade})`;
       case PredictionResultEnum.PENDING:
-        return `⏳ 결과를 기다리고 있습니다...`;
+        return `결과를 기다리고 있습니다...`;
       default:
-        return `❓ 알 수 없는 결과입니다.`;
+        return `알 수 없는 결과입니다.`;
     }
   }
 

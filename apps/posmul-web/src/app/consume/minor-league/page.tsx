@@ -183,7 +183,7 @@ function MinorLeagueContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DomainContextHeader
           domain="consume"
-          title="🏪 Minor League · 지역 상생 매장"
+          title="Minor League · 지역 상생 매장"
           subtitle="동네 소상공인 매장에서 착한 소비로 결제하고 사회적 가치 자산(PMC)을 적립하세요"
           metrics={[
             { label: "내 상생 적립", value: totalPmcEarned, unit: "PMC" },

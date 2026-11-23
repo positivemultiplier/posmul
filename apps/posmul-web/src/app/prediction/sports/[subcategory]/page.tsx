@@ -30,27 +30,27 @@ interface UserPrediction {
 
 const SPORTS_SUBCATEGORY_CONFIG = {
   soccer: {
-    title: "⚽ 축구 예측 마켓",
+    title: "축구 예측 마켓",
     subtitle: "프리미어리그(EPL), K리그, 라리가, 챔피언스리그 등 주요 축구 경기 승패를 예측하세요",
     dataSources: ["API-Football (실시간)", "K리그 공식 기록"],
   },
   baseball: {
-    title: "⚾ 야구 예측 마켓",
+    title: "야구 예측 마켓",
     subtitle: "KBO 리그, MLB 메이저리그 주요 경기 승패 및 다득점 여부를 예측하세요",
     dataSources: ["KBO 공식 기록실", "MLB Statcast"],
   },
   basketball: {
-    title: "🏀 농구 예측 마켓",
+    title: "농구 예측 마켓",
     subtitle: "NBA, KBL 프로농구 주요 매치업 승패 및 플레이오프 결과를 예측하세요",
     dataSources: ["NBA Official Stats", "KBL 공식 기록"],
   },
   esports: {
-    title: "🎮 e스포츠 예측 마켓",
+    title: "e스포츠 예측 마켓",
     subtitle: "LCK, 월드 챔피언십(롤드컵), 발로란트 등 글로벌 e스포츠 매치 결과를 예측하세요",
     dataSources: ["Riot Games Esports API", "공식 대회 기록"],
   },
   other: {
-    title: "🏅 종합 스포츠 예측 마켓",
+    title: "종합 스포츠 예측 마켓",
     subtitle: "올림픽, 아시안게임, 격투기, 테니스 등 주요 글로벌 스포츠 이벤트를 예측하세요",
     dataSources: ["국제 경기 연맹 공식 발표"],
   },
@@ -127,7 +127,7 @@ export default async function PredictionSportsSubcategoryPage({
             ]}
           >
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 검증 데이터 소스:</span>
+              <span className="font-semibold text-slate-300">검증 데이터 소스:</span>
               {config.dataSources.map((ds) => (
                 <span
                   key={ds}
@@ -160,7 +160,7 @@ export default async function PredictionSportsSubcategoryPage({
             />
           ) : (
             <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4">
-              <div className="text-5xl">⚽</div>
+              <div className="text-5xl"></div>
               <h3 className="text-lg font-bold text-white">
                 {config.title.replace(" 마켓", "")} 준비 중
               </h3>

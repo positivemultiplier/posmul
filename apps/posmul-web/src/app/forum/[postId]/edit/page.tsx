@@ -122,11 +122,11 @@ export default function ForumPostEditPage() {
                 onChange={(e) => setCategory(e.target.value)}
                 className="bg-[#0c0f17] border border-white/[0.1] rounded-xl px-3 py-2 text-xs font-bold text-white focus:outline-none focus:border-sky-500"
               >
-                <option value="economy">📈 경제·주식</option>
-                <option value="crypto">🪙 크립토</option>
-                <option value="politics">🏛️ 정치·사회</option>
-                <option value="culture">🍿 엔터·문화</option>
-                <option value="free">☕ 자유·뻘글</option>
+                <option value="economy">경제·주식</option>
+                <option value="crypto">크립토</option>
+                <option value="politics">정치·사회</option>
+                <option value="culture">엔터·문화</option>
+                <option value="free">자유·뻘글</option>
               </select>
             </div>
 

@@ -220,7 +220,7 @@ function ForumAgoraContent() {
       const data = await res.json();
       if (data.success) {
         alert(
-          `🗳️ 표결 완료! (${
+          `표결 완료! (${
             voteType === "AGREE" ? "찬성" : "반대"
           } 표결이 반영되었습니다)`
         );
@@ -276,7 +276,7 @@ function ForumAgoraContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DomainContextHeader
           domain="forum"
-          title="💬 Agora · 직접민주주의 공론장"
+          title="Agora · 직접민주주의 공론장"
           subtitle="시민 정책 숙의 · 찬반 표결 · Liquid Democracy 의결권 위임"
           actionSlot={
             <button
@@ -346,10 +346,10 @@ function ForumAgoraContent() {
                         <div className="text-center">
                           <div className="text-4xl mb-2">
                             {topic.type === "brainstorm"
-                              ? "💡"
+                              ? ""
                               : topic.type === "debate"
-                              ? "💬"
-                              : "🗳️"}
+                              ? ""
+                              : ""}
                           </div>
                           <div className="flex items-center justify-center gap-4 text-xs text-slate-300">
                             <span className="flex items-center gap-1">
@@ -417,13 +417,13 @@ function ForumAgoraContent() {
                             onClick={(e) => handleVote(e, topic.id, "AGREE")}
                             className="py-1.5 rounded-lg bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-700/50 text-emerald-300 text-xs font-bold transition flex items-center justify-center gap-1"
                           >
-                            👍 찬성 투표
+                            찬성 투표
                           </button>
                           <button
                             onClick={(e) => handleVote(e, topic.id, "DISAGREE")}
                             className="py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 border border-rose-700/50 text-rose-300 text-xs font-bold transition flex items-center justify-center gap-1"
                           >
-                            👎 반대 투표
+                            반대 투표
                           </button>
                         </div>
                       </CardContent>
@@ -475,13 +475,13 @@ function ForumAgoraContent() {
                     className="w-full bg-slate-800 border border-slate-700 rounded-lg p-2.5 text-sm text-white focus:outline-none focus:border-emerald-500"
                   >
                     <option value="김OO 정책전문가">
-                      🏛️ 김OO 정책전문가 (청년주거 전문)
+                      김OO 정책전문가 (청년주거 전문)
                     </option>
                     <option value="환경시민연대 대표">
-                      🌱 환경시민연대 대표 (기후위기 전문)
+                      환경시민연대 대표 (기후위기 전문)
                     </option>
                     <option value="박OO 경제학 박사">
-                      📊 박OO 경제학 박사 (지역경제 전문)
+                      박OO 경제학 박사 (지역경제 전문)
                     </option>
                   </select>
                 </div>

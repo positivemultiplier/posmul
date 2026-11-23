@@ -294,7 +294,7 @@ export default async function DashboardPage() {
     {
       id: "tx-welcome-pmp",
       type: "reward",
-      title: "🎁 주권시민 기본 활동 보너스 적립",
+      title: "주권시민 기본 활동 보너스 적립",
       amount: +10000,
       currency: "PMP",
       status: "completed",
@@ -303,7 +303,7 @@ export default async function DashboardPage() {
     {
       id: "tx-don-eco",
       type: "donation",
-      title: "🌱 공익 기부 - 초록우산 환경·아동재단",
+      title: "공익 기부 - 초록우산 환경·아동재단",
       amount: -1000,
       currency: "PMC",
       status: "completed",
@@ -312,7 +312,7 @@ export default async function DashboardPage() {
     {
       id: "tx-con-major",
       type: "consume",
-      title: "🎬 Major League 공익 캠페인 시청 보상",
+      title: "Major League 공익 캠페인 시청 보상",
       amount: +300,
       currency: "PMP",
       status: "completed",
@@ -322,7 +322,7 @@ export default async function DashboardPage() {
       (pred): DashboardTransactionItem => ({
         id: `tx-pred-${pred.prediction_id}`,
         type: "prediction",
-        title: `🎲 예측 참여: ${pred.gameTitle} (${pred.selectedOptionLabel})`,
+        title: `예측 참여: ${pred.gameTitle} (${pred.selectedOptionLabel})`,
         amount: -pred.bet_amount,
         currency: "PMP",
         status: !pred.is_active
@@ -418,7 +418,7 @@ export default async function DashboardPage() {
     >
       {!isAuthenticated && (
         <div className="bg-amber-950/70 border-b border-amber-500/40 px-4 py-2.5 text-center text-xs font-bold text-amber-200 flex flex-wrap items-center justify-center gap-3">
-          <span>⚠️ 현재 비로그인 미리보기(데모) 상태입니다. 로그인하셔야 내 PMP/PMC 잔액과 참여 기록이 유지됩니다.</span>
+          <span>현재 비로그인 미리보기(데모) 상태입니다. 로그인하셔야 내 PMP/PMC 잔액과 참여 기록이 유지됩니다.</span>
           <Link
             href="/auth/login?next=/dashboard"
             className="px-3 py-1 rounded-lg bg-amber-400 text-slate-950 font-black hover:bg-amber-300 transition"

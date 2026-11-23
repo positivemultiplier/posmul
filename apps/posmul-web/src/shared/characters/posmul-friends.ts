@@ -162,7 +162,7 @@ export const POSMUL_FRIENDS: ReadonlyArray<PosMulFriendProfile> = [
       {
         id: "ollie-expr-2",
         key: "expr-2",
-        label: "예측 적중! ✨",
+        label: "예측 적중!",
         caption: "내가 그랬제!! 완벽하게 들어맞았어!",
         image: "/images/characters/sprites/ollie/expr-2.png",
       },

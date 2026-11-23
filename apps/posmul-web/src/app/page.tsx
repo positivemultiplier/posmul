@@ -69,7 +69,7 @@ export default async function Home() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
             <div>
               <h2 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                <span>🔥 실시간 의사결정 훈련 마켓</span>
+                <span>실시간 의사결정 훈련 마켓</span>
               </h2>
               <p className="text-xs text-slate-400">
                 수많은 선택 앞에서 후회를 줄이는 연습, 지금 가장 뜨거운 이슈를 예측해보세요.

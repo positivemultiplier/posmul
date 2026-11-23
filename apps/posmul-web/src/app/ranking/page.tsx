@@ -34,11 +34,11 @@ import { KOREA_REGIONS, SIDO_LIST, JOB_GROUPS } from '@/shared/constants/regions
 import { DomainContextHeader } from '@/shared/ui/components/layout/DomainContextHeader';
 
 function getTierInfo(score: number) {
-  if (score >= 10000) return { name: '레전드', color: 'from-amber-400 to-yellow-300', nextScore: 10000, progress: 100, icon: '👑' };
-  if (score >= 5000) return { name: '마스터', color: 'from-purple-400 to-pink-400', nextScore: 10000, progress: Math.min(100, Math.round(((score - 5000) / 5000) * 100)), icon: '⭐' };
-  if (score >= 2000) return { name: '열정 시민', color: 'from-blue-400 to-cyan-400', nextScore: 5000, progress: Math.min(100, Math.round(((score - 2000) / 3000) * 100)), icon: '🔥' };
-  if (score >= 500) return { name: '성장 시민', color: 'from-emerald-400 to-teal-400', nextScore: 2000, progress: Math.min(100, Math.round(((score - 500) / 1500) * 100)), icon: '🌱' };
-  return { name: '새싹 시민', color: 'from-slate-400 to-zinc-400', nextScore: 500, progress: Math.min(100, Math.round((score / 500) * 100)), icon: '🐣' };
+  if (score >= 10000) return { name: '레전드', color: 'from-amber-400 to-yellow-300', nextScore: 10000, progress: 100, icon: '' };
+  if (score >= 5000) return { name: '마스터', color: 'from-purple-400 to-pink-400', nextScore: 10000, progress: Math.min(100, Math.round(((score - 5000) / 5000) * 100)), icon: '' };
+  if (score >= 2000) return { name: '열정 시민', color: 'from-blue-400 to-cyan-400', nextScore: 5000, progress: Math.min(100, Math.round(((score - 2000) / 3000) * 100)), icon: '' };
+  if (score >= 500) return { name: '성장 시민', color: 'from-emerald-400 to-teal-400', nextScore: 2000, progress: Math.min(100, Math.round(((score - 500) / 1500) * 100)), icon: '' };
+  return { name: '새싹 시민', color: 'from-slate-400 to-zinc-400', nextScore: 500, progress: Math.min(100, Math.round((score / 500) * 100)), icon: '' };
 }
 
 function HallOfFamePodium({
@@ -79,7 +79,7 @@ function HallOfFamePodium({
           <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
           <span>
             {category === 'expect'
-              ? '🔮 PREDICTION MASTERS · "내가 그랬제!" 명예의 전당'
+              ? 'PREDICTION MASTERS · "내가 그랬제!" 명예의 전당'
               : `HALL OF FAME · ${regionText} 명예의 전당`}
           </span>
         </div>
@@ -105,7 +105,7 @@ function HallOfFamePodium({
             className="flex flex-col items-center"
           >
             <div className="relative mb-3 flex flex-col items-center">
-              <span className="text-2xl mb-1 filter drop-shadow">🥈</span>
+              <span className="text-2xl mb-1 filter drop-shadow"></span>
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-slate-300 to-slate-600 p-[2px] shadow-lg shadow-slate-500/20">
                 <div className="w-full h-full bg-slate-900/90 rounded-2xl flex items-center justify-center font-bold text-white text-lg">
                   {second.displayName.slice(0, 2)}
@@ -135,7 +135,7 @@ function HallOfFamePodium({
             className="flex flex-col items-center -mt-6 z-10"
           >
             <div className="relative mb-3 flex flex-col items-center">
-              <span className="text-3xl md:text-4xl mb-1 filter drop-shadow-lg animate-bounce">👑</span>
+              <span className="text-3xl md:text-4xl mb-1 filter drop-shadow-lg animate-bounce"></span>
               <div className="relative w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-yellow-300 via-amber-400 to-amber-600 p-[3px] shadow-2xl shadow-amber-500/40">
                 <div className="w-full h-full bg-slate-900 rounded-2xl flex items-center justify-center font-black text-amber-300 text-xl md:text-2xl">
                   {first.displayName.slice(0, 2)}
@@ -166,7 +166,7 @@ function HallOfFamePodium({
             className="flex flex-col items-center"
           >
             <div className="relative mb-3 flex flex-col items-center">
-              <span className="text-2xl mb-1 filter drop-shadow">🥉</span>
+              <span className="text-2xl mb-1 filter drop-shadow"></span>
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-2xl bg-gradient-to-br from-amber-700 to-amber-900 p-[2px] shadow-lg shadow-amber-900/30">
                 <div className="w-full h-full bg-slate-900/90 rounded-2xl flex items-center justify-center font-bold text-amber-500 text-lg">
                   {third.displayName.slice(0, 2)}
@@ -236,7 +236,7 @@ function RankingCard({
               entry.rank
             )}`}
           >
-            {entry.rank <= 3 ? ['🥇', '🥈', '🥉'][entry.rank - 1] : entry.rank}
+            {entry.rank <= 3 ? ['', '', ''][entry.rank - 1] : entry.rank}
           </div>
 
           <div className="min-w-0">
@@ -335,7 +335,7 @@ function RankingCard({
             {entry.score.toLocaleString()}
           </div>
           <div className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">
-            {category === 'expect' ? '🔮 예측 적중 PMC' : category === 'forum' ? 'PMP 활동' : category === 'donation' ? '기부 PMC' : '종합 점수'}
+            {category === 'expect' ? '예측 적중 PMC' : category === 'forum' ? 'PMP 활동' : category === 'donation' ? '기부 PMC' : '종합 점수'}
           </div>
         </div>
       </div>
@@ -500,7 +500,7 @@ function RankingContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-7">
         <DomainContextHeader
           domain="ranking"
-          title="🏆 Ranking · 동네 풀뿌리 명예의 전당"
+          title="Ranking · 동네 풀뿌리 명예의 전당"
           subtitle="읍·면·동 행정동 단위 세분화 & 직업군별 '내가 그랬제!' 예측 명사수 및 시민 주권 랭킹"
           metrics={[
             { label: '집계 주권 시민', value: rankings.length, unit: '명' },

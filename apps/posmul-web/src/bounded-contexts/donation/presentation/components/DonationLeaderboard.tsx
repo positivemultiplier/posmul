@@ -19,20 +19,20 @@ interface LeaderboardPeriod {
 }
 
 const periods: LeaderboardPeriod[] = [
-  { id: "all", label: "전체", icon: "🏆" },
-  { id: "monthly", label: "이번 달", icon: "📅" },
-  { id: "weekly", label: "이번 주", icon: "📆" },
+  { id: "all", label: "전체", icon: "" },
+  { id: "monthly", label: "이번 달", icon: "" },
+  { id: "weekly", label: "이번 주", icon: "" },
 ];
 
 // 랭크에 따른 배지
 function getRankBadge(rank: number): { emoji: string; color: string; bg: string } {
   switch (rank) {
     case 1:
-      return { emoji: "🥇", color: "text-yellow-500", bg: "from-yellow-100 to-amber-100 dark:from-yellow-900/30 dark:to-amber-900/30" };
+      return { emoji: "", color: "text-yellow-500", bg: "from-yellow-100 to-amber-100 dark:from-yellow-900/30 dark:to-amber-900/30" };
     case 2:
-      return { emoji: "🥈", color: "text-gray-400", bg: "from-gray-100 to-slate-100 dark:from-gray-800/50 dark:to-slate-800/50" };
+      return { emoji: "", color: "text-gray-400", bg: "from-gray-100 to-slate-100 dark:from-gray-800/50 dark:to-slate-800/50" };
     case 3:
-      return { emoji: "🥉", color: "text-orange-400", bg: "from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30" };
+      return { emoji: "", color: "text-orange-400", bg: "from-orange-100 to-amber-100 dark:from-orange-900/30 dark:to-amber-900/30" };
     default:
       return { emoji: "", color: "text-gray-600", bg: "bg-white dark:bg-gray-800" };
   }
@@ -40,12 +40,12 @@ function getRankBadge(rank: number): { emoji: string; color: string; bg: string 
 
 // 기부 레벨 배지
 function getDonorBadge(totalAmount: number): { title: string; emoji: string } {
-  if (totalAmount >= 1000000) return { title: "다이아몬드 기부자", emoji: "💎" };
-  if (totalAmount >= 500000) return { title: "플래티넘 기부자", emoji: "🌟" };
-  if (totalAmount >= 100000) return { title: "골드 기부자", emoji: "🏅" };
-  if (totalAmount >= 50000) return { title: "실버 기부자", emoji: "🎖️" };
-  if (totalAmount >= 10000) return { title: "브론즈 기부자", emoji: "🎗️" };
-  return { title: "신규 기부자", emoji: "💝" };
+  if (totalAmount >= 1000000) return { title: "다이아몬드 기부자", emoji: "" };
+  if (totalAmount >= 500000) return { title: "플래티넘 기부자", emoji: "" };
+  if (totalAmount >= 100000) return { title: "골드 기부자", emoji: "" };
+  if (totalAmount >= 50000) return { title: "실버 기부자", emoji: "" };
+  if (totalAmount >= 10000) return { title: "브론즈 기부자", emoji: "" };
+  return { title: "신규 기부자", emoji: "" };
 }
 
 export function DonationLeaderboard() {
@@ -81,7 +81,7 @@ export function DonationLeaderboard() {
       {/* Header */}
       <div className="bg-gradient-to-r from-green-500 to-emerald-500 p-6 text-white">
         <h2 className="text-2xl font-bold flex items-center gap-2">
-          <span>🏆</span>
+          <span></span>
           기부 리더보드
         </h2>
         <p className="text-white/80 text-sm mt-1">
@@ -124,7 +124,7 @@ export function DonationLeaderboard() {
           </div>
         ) : leaderboard.length === 0 ? (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-            <span className="text-4xl block mb-3">📊</span>
+            <span className="text-4xl block mb-3"></span>
             <p>아직 기부 내역이 없습니다.</p>
             <p className="text-sm">첫 번째 기부자가 되어보세요!</p>
           </div>
@@ -234,7 +234,7 @@ export function DonationLeaderboard() {
       <div className="px-6 pb-6">
         <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">
-            💡 기부하면 리더보드에 오를 수 있어요!
+            기부하면 리더보드에 오를 수 있어요!
           </p>
         </div>
       </div>

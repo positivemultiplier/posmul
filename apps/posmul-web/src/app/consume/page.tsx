@@ -19,7 +19,7 @@ import { DomainContextHeader } from "@/shared/ui/components/layout/DomainContext
 const PILLARS = [
   {
     key: "major",
-    title: "🎬 Major League",
+    title: "Major League",
     subtitle: "시간 가치화 · 광고 시청 · PMP 획득",
     description:
       "공익·혁신 브랜드 광고와 설문에 참여하고 무위험 시민 자산(PMP)을 획득하세요. 1분으로 예측 자본을 쌓을 수 있습니다.",
@@ -33,7 +33,7 @@ const PILLARS = [
   },
   {
     key: "minor",
-    title: "🏪 Minor League",
+    title: "Minor League",
     subtitle: "지역 상생 소비 · Phase 3 오픈 예정",
     description:
       "소상공인 매장 결제 및 지역 기부 연계 기능은 v3.0 로드맵에 따라 Phase 3에서 오픈될 예정입니다.",
@@ -48,7 +48,7 @@ const PILLARS = [
   },
   {
     key: "cloud",
-    title: "💡 Cloud Funding",
+    title: "Cloud Funding",
     subtitle: "소셜 임팩트 펀딩 · Phase 3 오픈 예정",
     description:
       "임팩트 펀딩 기능은 v3.0 로드맵에 따라 Phase 3에서 오픈될 예정입니다. 현재는 Major League 광고 참여로 PMP만 획득할 수 있습니다.",
@@ -95,7 +95,7 @@ export default function ConsumePage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
         <DomainContextHeader
           domain="consume"
-          title="💳 Consume · 가치 소비 생태계"
+          title="Consume · 가치 소비 생태계"
           subtitle="광고 시청 및 참여로 오직 PMP만 획득합니다. 모은 PMP로 예측 게임에 도전해 PMC를 얻으세요 (소상공인·펀딩은 Phase 3 예정)"
           metrics={[
             { label: "이번 달 누적 획득", value: totalEarned, unit: "P" },
@@ -183,7 +183,7 @@ export default function ConsumePage() {
         <div className="grid gap-6 lg:grid-cols-3">
           <section className="lg:col-span-2 space-y-3">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <span>🔥 오늘의 인기 가치 소비</span>
+              <span>오늘의 인기 가치 소비</span>
             </h2>
             <div className="space-y-2.5">
               {HOT_ACTIVITIES.map((activity, index) => (
@@ -225,7 +225,7 @@ export default function ConsumePage() {
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-white">
-              💡 시간·화폐·클라우드 3대 소비 철학
+              시간·화폐·클라우드 3대 소비 철학
             </h2>
             <div className="space-y-2.5">
               <div className="p-3.5 rounded-xl bg-indigo-950/20 border border-indigo-500/20 flex items-center gap-3">

@@ -15,28 +15,28 @@ const categoryLabels: Record<
   string,
   { label: string; icon: string; color: string }
 > = {
-  environment: { label: "환경", icon: "🌿", color: "green" },
-  welfare: { label: "복지", icon: "🤝", color: "blue" },
-  science: { label: "과학", icon: "🔬", color: "purple" },
-  human_rights: { label: "인권", icon: "⚖️", color: "red" },
-  education: { label: "교육", icon: "📚", color: "yellow" },
-  health: { label: "건강", icon: "💊", color: "pink" },
-  culture: { label: "문화", icon: "🎨", color: "indigo" },
-  economy: { label: "경제", icon: "💰", color: "emerald" },
-  general: { label: "일반", icon: "👤", color: "gray" },
+  environment: { label: "환경", icon: "", color: "green" },
+  welfare: { label: "복지", icon: "", color: "blue" },
+  science: { label: "과학", icon: "", color: "purple" },
+  human_rights: { label: "인권", icon: "", color: "red" },
+  education: { label: "교육", icon: "", color: "yellow" },
+  health: { label: "건강", icon: "", color: "pink" },
+  culture: { label: "문화", icon: "", color: "indigo" },
+  economy: { label: "경제", icon: "", color: "emerald" },
+  general: { label: "일반", icon: "", color: "gray" },
 };
 
 // 기관 카테고리 라벨
 const instituteCategoryLabels: Record<string, { label: string; icon: string }> =
 {
-  children: { label: "아동복지", icon: "👶" },
-  elderly: { label: "노인복지", icon: "👴" },
-  disaster: { label: "재난구호", icon: "🆘" },
-  environment: { label: "환경보전", icon: "🌿" },
-  education: { label: "교육지원", icon: "📚" },
-  medical: { label: "의료지원", icon: "🏥" },
-  animal: { label: "동물보호", icon: "🐾" },
-  other: { label: "기타", icon: "💝" },
+  children: { label: "아동복지", icon: "" },
+  elderly: { label: "노인복지", icon: "" },
+  disaster: { label: "재난구호", icon: "" },
+  environment: { label: "환경보전", icon: "" },
+  education: { label: "교육지원", icon: "" },
+  medical: { label: "의료지원", icon: "" },
+  animal: { label: "동물보호", icon: "" },
+  other: { label: "기타", icon: "" },
 };
 
 interface PageProps {
@@ -59,7 +59,7 @@ function transformLeaderData(leader: any) {
     totalDonationsInfluenced: Number(leader.total_donations_influenced) || 0,
     category: leader.category || "general",
     categoryLabel: categoryLabels[leader.category || "general"]?.label || "일반",
-    categoryIcon: categoryLabels[leader.category || "general"]?.icon || "👤",
+    categoryIcon: categoryLabels[leader.category || "general"]?.icon || "",
     categoryColor: categoryLabels[leader.category || "general"]?.color || "gray",
     createdAt: leader.created_at,
   };
@@ -85,7 +85,7 @@ function transformEndorsements(endorsements: any[]) {
         category: inst?.category || "other",
         categoryLabel:
           instituteCategoryLabels[inst?.category]?.label || inst?.category,
-        categoryIcon: instituteCategoryLabels[inst?.category]?.icon || "💝",
+        categoryIcon: instituteCategoryLabels[inst?.category]?.icon || "",
         websiteUrl: inst?.website_url,
         trustScore: Number(inst?.trust_score) || 0,
         isVerified: inst?.is_verified || false,

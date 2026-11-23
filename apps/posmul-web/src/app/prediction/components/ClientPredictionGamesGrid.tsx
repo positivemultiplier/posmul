@@ -99,11 +99,11 @@ const CATEGORY_CHIPS: CategoryChipItem[] = [
 ];
 
 const REGION_LEVEL_CHIPS: Array<{ id: string; label: string }> = [
-  { id: "ALL", label: "🌐 전체 스케일" },
-  { id: "NATION", label: "🇰🇷 나라 (전국)" },
-  { id: "REGION", label: "🏙️ 시·도 (광역)" },
-  { id: "LOCAL", label: "📍 구·군 (우리구)" },
-  { id: "DONG", label: "🏡 동·읍·면 (우리동네)" },
+  { id: "ALL", label: "전체 스케일" },
+  { id: "NATION", label: "나라 (전국)" },
+  { id: "REGION", label: "시·도 (광역)" },
+  { id: "LOCAL", label: "구·군 (우리구)" },
+  { id: "DONG", label: "동·읍·면 (우리동네)" },
 ];
 
 const matchesCategory = (gameCategory: string | undefined, chipId: string): boolean => {
@@ -464,7 +464,7 @@ export function ClientPredictionGamesGrid({
                             : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30"
                         }`}
                       >
-                        {isRanking ? "🏆 다자 순위" : isWdl ? "⚖️ 3지선다 승부" : "⚡ 양자택일"}
+                        {isRanking ? "다자 순위" : isWdl ? "3지선다 승부" : "양자택일"}
                       </span>
                       {spotlightCandidates.length > 1 && (
                         <button
@@ -554,7 +554,7 @@ export function ClientPredictionGamesGrid({
                       <div className="flex items-center justify-between pt-3 border-t border-white/[0.06]">
                         <div>
                           <div className="text-sm font-extrabold text-amber-300">
-                            💰 {Math.round(featuredGame.allocatedPrizePool || 1800).toLocaleString()} PMC Pool
+                            {Math.round(featuredGame.allocatedPrizePool || 1800).toLocaleString()} PMC Pool
                           </div>
                           <div className="text-[11px] text-slate-400 mt-0.5">
                             {featuredGame.currentParticipants.toLocaleString()}명 참여 · 최소{" "}
@@ -861,7 +861,7 @@ export function ClientPredictionGamesGrid({
                   }`}
                 >
                   <span>인기순</span>
-                  <span className="text-[10px]">🔥</span>
+                  <span className="text-[10px]"></span>
                 </button>
                 <button
                   type="button"
@@ -873,7 +873,7 @@ export function ClientPredictionGamesGrid({
                   }`}
                 >
                   <span>상금순</span>
-                  <span className="text-[10px]">💰</span>
+                  <span className="text-[10px]"></span>
                 </button>
                 <button
                   type="button"
@@ -885,7 +885,7 @@ export function ClientPredictionGamesGrid({
                   }`}
                 >
                   <span>마감임박</span>
-                  <span className="text-[10px]">⏰</span>
+                  <span className="text-[10px]"></span>
                 </button>
               </div>
             )}
@@ -894,7 +894,7 @@ export function ClientPredictionGamesGrid({
               href="/challenge/create"
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black text-xs shadow-md shadow-amber-500/20 transition-all whitespace-nowrap shrink-0"
             >
-              <span>✨</span>
+              <span></span>
               <span>예측 만들기</span>
             </Link>
           </div>

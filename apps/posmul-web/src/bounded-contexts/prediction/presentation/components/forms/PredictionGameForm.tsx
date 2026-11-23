@@ -51,7 +51,7 @@ export default function PredictionGameForm({
     <Card className="w-full max-w-2xl mx-auto p-6">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          🎯 예측 게임 생성
+          예측 게임 생성
         </h2>
         <p className="text-gray-600">
           새로운 예측 게임을 만들어 참여자들과 예측을 공유하세요.
@@ -108,7 +108,7 @@ export default function PredictionGameForm({
         {/* 지역 범위 선택 (4단계 공간 계층) */}
         <div className="bg-blue-50/60 p-4 rounded-lg border border-blue-100 space-y-3">
           <h3 className="text-sm font-semibold text-gray-800">
-            📍 지역 범위 설정 (선택)
+            지역 범위 설정 (선택)
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
@@ -145,7 +145,7 @@ export default function PredictionGameForm({
             </div>
           </div>
           <p className="text-xs text-gray-500">
-            💡 초기에는 구·군 단위 중심이며, 동네·주민센터 행사 예측은 &apos;우리동네&apos;로 직접 제안할 수 있습니다.
+            초기에는 구·군 단위 중심이며, 동네·주민센터 행사 예측은 &apos;우리동네&apos;로 직접 제안할 수 있습니다.
           </p>
         </div>
 
@@ -247,7 +247,7 @@ export default function PredictionGameForm({
 
         {/* 정산 방법 */}
         <div className="bg-gray-50 p-4 rounded-lg space-y-4">
-          <h3 className="text-sm font-semibold text-gray-700">⚙️ 정산 설정</h3>
+          <h3 className="text-sm font-semibold text-gray-700">정산 설정</h3>
 
           <div className="grid grid-cols-2 gap-4">
             {/* 정산 유형 */}
@@ -281,15 +281,15 @@ export default function PredictionGameForm({
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="manual">직접 입력</option>
-                <option value="football_data">⚽ 축구 (football-data.org)</option>
-                <option value="thesportsdb">🏆 스포츠 (TheSportsDB)</option>
-                <option value="kosis">📊 경제지표 (KOSIS)</option>
+                <option value="football_data">축구 (football-data.org)</option>
+                <option value="thesportsdb">스포츠 (TheSportsDB)</option>
+                <option value="kosis">경제지표 (KOSIS)</option>
               </select>
             </div>
           </div>
 
           <p className="text-xs text-gray-500">
-            💡 자동/반자동 정산 시 외부 API에서 결과를 가져와 정산합니다.
+            자동/반자동 정산 시 외부 API에서 결과를 가져와 정산합니다.
           </p>
         </div>
 

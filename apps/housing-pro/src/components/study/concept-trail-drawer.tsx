@@ -134,7 +134,7 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
 
   const handleVote = async (mnemonicId: string) => {
     if (!isLoggedIn) {
-      setMnemonicFeedback("로그인하면 베스트 암기법에 👍 투표할 수 있습니다.");
+      setMnemonicFeedback("로그인하면 베스트 암기법에 투표할 수 있습니다.");
       return;
     }
     const res = await toggleMnemonicVoteAction(mnemonicId);
@@ -189,7 +189,7 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
 
   const getTrailLabel = (item: KnowledgeTrailTarget): string => {
     if (item.kind === "axis") {
-      return item.triggerWord ? `⚡${item.triggerWord}` : "⚡대조 비교";
+      return item.triggerWord ? `${item.triggerWord}` : "대조 비교";
     }
     return getConceptById(item.conceptId)?.title || item.conceptId;
   };
@@ -327,7 +327,7 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
                           >
                             <span>{c.title}</span>
                             <span className="text-[9.5px] font-mono opacity-80">
-                              🔥{c.examCount}회
+                              {c.examCount}회
                             </span>
                           </button>
                         );
@@ -485,7 +485,7 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
                 {activeConcept.contrastIds.length > 0 && (
                   <div className="space-y-1.5">
                     <div className="text-[10px] font-black text-[#FF8A70]">
-                      ⚡ 반대·대조 개념 (오답 선지 단골!)
+                      반대·대조 개념 (오답 선지 단골!)
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {activeConcept.contrastIds.map((cid) => {
@@ -512,7 +512,7 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
                 {activeConcept.sameGroupIds.length > 0 && (
                   <div className="space-y-1.5">
                     <div className="text-[10px] font-black text-sky-300">
-                      🔗 같은 분류 개념 ({activeConcept.contrastSide || activeConcept.category})
+                      같은 분류 개념 ({activeConcept.contrastSide || activeConcept.category})
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {activeConcept.sameGroupIds.map((cid) => {
@@ -647,7 +647,7 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 {idx === 0 && (
                                   <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 text-[9px] font-black">
-                                    👑 BEST
+                                    BEST
                                   </span>
                                 )}
                                 <span
@@ -735,7 +735,7 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
                             </span>
                             {opt.repeatCount >= 2 && (
                               <span className="text-[#FF8A70] font-black">
-                                🔥{opt.repeatCount}회 반복
+                                {opt.repeatCount}회 반복
                               </span>
                             )}
                           </div>
@@ -770,12 +770,12 @@ export function ConceptTrailDrawer({ initialTarget, onClose }: ConceptTrailDrawe
                                   isRight ? "text-emerald-300" : "text-rose-300"
                                 }`}
                               >
-                                {isRight ? "✅ 정답!" : "❌ 오답!"} (정답:{" "}
+                                {isRight ? "정답!" : "오답!"} (정답:{" "}
                                 {opt.isCorrect ? "O" : "X"})
                               </div>
                               {opt.trapSummary && (
                                 <div className="text-amber-300 font-bold">
-                                  💡 {opt.trapSummary}
+                                  {opt.trapSummary}
                                 </div>
                               )}
                             </div>

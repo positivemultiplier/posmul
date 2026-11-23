@@ -30,25 +30,25 @@ export const REGION_LEVEL_OPTIONS: ReadonlyArray<{
 }> = [
   {
     value: "NATION",
-    label: "🇰🇷 나라 (전국)",
+    label: "나라 (전국)",
     shortLabel: "나라",
     description: "전국 공통 경제·정책·스포츠·문화 이슈",
   },
   {
     value: "REGION",
-    label: "🏙️ 시·도 (광역)",
+    label: "시·도 (광역)",
     shortLabel: "시·도",
     description: "광역시·도 단위 대기질·행사·광역 생활 지표",
   },
   {
     value: "LOCAL",
-    label: "📍 구·군 (우리구 · 초기 주력)",
+    label: "구·군 (우리구 · 초기 주력)",
     shortLabel: "구·군",
     description: "구청·시청 공식 통계·도서관·문화행사·상권 활력",
   },
   {
     value: "DONG",
-    label: "🏡 동·읍·면 (우리동네 · 확장형)",
+    label: "동·읍·면 (우리동네 · 확장형)",
     shortLabel: "우리동네",
     description: "동네 날씨 및 주민센터·이웃 커뮤니티 확장용",
   },

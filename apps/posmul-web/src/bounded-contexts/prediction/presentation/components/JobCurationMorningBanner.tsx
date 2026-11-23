@@ -87,7 +87,7 @@ export function JobCurationMorningBanner() {
           </div>
 
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white tracking-tight flex items-center gap-2.5 flex-wrap">
-            <span>🌅 오늘 아침</span>
+            <span>오늘 아침</span>
             <span className="bg-gradient-to-r from-blue-400 via-cyan-300 to-indigo-300 bg-clip-text text-transparent underline decoration-blue-500/50 decoration-2 underline-offset-4">
               [{currentJob.name}]
             </span>

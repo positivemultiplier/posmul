@@ -417,9 +417,9 @@ export default function StudyStatisticsPage() {
         {/* 초고속 3대 핵심 분석 탭 (계획·실행 우선) */}
         <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-[#0E0E12] border border-white/[0.06]">
           {[
-            { id: "gap" as const, label: "⏱️ 계획 · 실행" },
-            { id: "matrix" as const, label: "🗓️ 회독 · 구멍" },
-            { id: "exam" as const, label: "🎯 기출 · 빈출" },
+            { id: "gap" as const, label: "계획 · 실행" },
+            { id: "matrix" as const, label: "회독 · 구멍" },
+            { id: "exam" as const, label: "기출 · 빈출" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -452,9 +452,9 @@ export default function StudyStatisticsPage() {
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-[#1A1A21] border border-white/[0.08] text-[10.5px] font-black">
               {[
-                { id: "predict" as const, label: "🎯 합격 예측" },
-                { id: "frequency" as const, label: "📊 출제 빈도" },
-                { id: "progress" as const, label: "📈 기출 진도" },
+                { id: "predict" as const, label: "합격 예측" },
+                { id: "frequency" as const, label: "출제 빈도" },
+                { id: "progress" as const, label: "기출 진도" },
               ].map((sub) => (
                 <button
                   key={sub.id}
@@ -1740,7 +1740,7 @@ export default function StudyStatisticsPage() {
                     ))}
                     {studyRhythm.underStudiedSubjects.length > 0 && (
                       <div className="p-2 rounded-xl bg-rose-950/35 border border-rose-500/25 text-[10px] text-rose-200 font-bold">
-                        💡 부족 과목:{" "}
+                        부족 과목:{" "}
                         {studyRhythm.underStudiedSubjects
                           .slice(0, 3)
                           .map((s) => s.shortTitle)

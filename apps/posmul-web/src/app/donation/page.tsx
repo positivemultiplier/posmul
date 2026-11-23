@@ -26,7 +26,7 @@ import { DomainContextHeader } from "@/shared/ui/components/layout/DomainContext
 const PILLARS = [
   {
     key: "direct",
-    title: "📦 K-물품 직접기부 (Direct Goods)",
+    title: "K-물품 직접기부 (Direct Goods)",
     subtitle: "한국 기업 물품 구매 · 수출 승수 효과",
     description:
       "현금 대신 LG·삼성 고효율 가전, CJ 햇반 등 대한민국 기업의 실물 제품을 직접 구매하여 전달합니다. 취약계층 구호와 함께 국내 기업의 매출 및 수출을 촉진하는 승수 기부 모델입니다.",
@@ -40,7 +40,7 @@ const PILLARS = [
   },
   {
     key: "institute",
-    title: "🏛️ 마일스톤 검증 NGO (Institute)",
+    title: "마일스톤 검증 NGO (Institute)",
     subtitle: "스마트 에스크로 · 영수증 시민 검증",
     description:
       "초록우산, 유니세프 등 공인 NGO와 제휴하되, 기부금을 한 번에 주지 않고 3단계(30% ➔ 40% ➔ 30%)로 나누어 현장 사진과 영수증을 시민이 투표로 승인해야 다음 기부금이 집행됩니다.",
@@ -54,7 +54,7 @@ const PILLARS = [
   },
   {
     key: "leader",
-    title: "🌟 팔로잉 · 미래꿈 기부 (Phase 2 예정)",
+    title: "팔로잉 · 미래꿈 기부 (Phase 2 예정)",
     subtitle: "오피니언 리더 위임 · 콩도르세/보르다 꿈 배분 투표",
     description:
       "신뢰하는 오피니언 리더에게 기부를 위임하거나, 정답이 없는 여러 사람의 꿈에 콩도르세·보르다 투표로 공익 자원을 배분하는 기능은 Phase 2에서 오픈됩니다.",
@@ -75,7 +75,7 @@ const FEATURED_GOODS_PROJECTS = [
     id: "6daddc20-92cc-4f09-94d2-3b6d3d4f1991",
     title: "지역아동센터 아이들을 위한 따뜻한 신학기 운동화·방한화 나눔",
     subtitle: "한국 대표 제화사 부산 A제화 직구매 ➔ 보육원·도서분교 아이들 첫 등굣길 선물",
-    manufacturer: "부산 A제화 (Made in Korea 👟)",
+    manufacturer: "부산 A제화 (Made in Korea)",
     itemSpec: "키즈 웜 패딩부츠 & 튼튼 운동화",
     unitPrice: 35000,
     targetQuantity: 50,
@@ -89,7 +89,7 @@ const FEATURED_GOODS_PROJECTS = [
     id: "4a56aa1a-b59e-47a2-a260-c6179519d7f5",
     title: "건강한 여름나기를 위한 LG 휘센 에어컨 나눔",
     subtitle: "한국 대표 가전 LG전자 직구매 ➔ 아동센터·어르신쉼터 시원한 여름 선물",
-    manufacturer: "LG Electronics (Made in Korea 🇰🇷)",
+    manufacturer: "LG Electronics (Made in Korea)",
     itemSpec: "LG Whisen 벽걸이 고효율 에어컨",
     unitPrice: 850000,
     targetQuantity: 30,
@@ -103,7 +103,7 @@ const FEATURED_GOODS_PROJECTS = [
     id: "edeb5889-f979-4f63-a9d9-56fa0529f1e0",
     title: "독거 어르신 100가구에 전하는 철원 오대쌀 햅쌀 나눔",
     subtitle: "국내 농가 직접구매 ➔ 결식 우려 무료급식소·마을식당 따뜻한 밥상 지원",
-    manufacturer: "철원영농조합 (Made in Korea 🌾)",
+    manufacturer: "철원영농조합 (Made in Korea)",
     itemSpec: "철원 오대쌀 10kg",
     unitPrice: 42000,
     targetQuantity: 100,
@@ -201,7 +201,7 @@ export default function DonationPage() {
         {/* 상단 도메인 컨텍스트 헤더 (3RowNavbar 톤온톤 일치) */}
         <DomainContextHeader
           domain="donation"
-          title="💖 Donation · 시민 소셜 임팩트 기부센터"
+          title="Donation · 시민 소셜 임팩트 기부센터"
           subtitle="예측 성공으로 획득한 PMC로 한국 기업 물품 지원(수출 승수), 투명 NGO 에스크로, 비과세 의인 포상에 직접 예산을 집행하세요"
           metrics={[
             { label: "누적 기부액", value: totalDonation, unit: "PMC" },
@@ -227,7 +227,7 @@ export default function DonationPage() {
         <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-slate-800 pb-3">
             <h2 className="text-xl font-black text-white flex items-center gap-2">
-              <span>🏛️ PosMul 3대 기부 필러 둘러보기</span>
+              <span>PosMul 3대 기부 필러 둘러보기</span>
             </h2>
             <span className="text-xs text-slate-500">
               카드를 클릭하여 카테고리별 상세 목록 및 개별 프로젝트를 확인하세요
@@ -305,7 +305,7 @@ export default function DonationPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
             <div>
               <h2 className="text-xl font-black text-white flex items-center gap-2">
-                <span>🔥 실시간 추천 물품 펀딩 프로젝트</span>
+                <span>실시간 추천 물품 펀딩 프로젝트</span>
               </h2>
               <p className="text-xs text-slate-400">
                 한국 제조사의 실물 물품을 대량 구매하여 취약계층에 전달하는 프로젝트입니다. 카드를 클릭하면 상세 견적서와 이야기를 볼 수 있습니다.
@@ -442,19 +442,19 @@ export default function DonationPage() {
                       className="w-full bg-slate-950 border border-slate-800 rounded-xl p-2.5 text-xs text-white focus:outline-none focus:border-purple-500"
                     >
                       <option value="LG 가전 지원 펀드">
-                        📦 LG전자 고효율 가전 지원 펀드 (수출 승수)
+                        LG전자 고효율 가전 지원 펀드 (수출 승수)
                       </option>
                       <option value="CJ 결식아동 영양키트">
-                        🍚 CJ제일제당 햇반·식품 구호 펀드 (K-푸드)
+                        CJ제일제당 햇반·식품 구호 펀드 (K-푸드)
                       </option>
                       <option value="초록우산 주거안정 에스크로">
-                        🤝 초록우산 마일스톤 검증 펀드 (영수증 투표)
+                        초록우산 마일스톤 검증 펀드 (영수증 투표)
                       </option>
                       <option value="이달의 의인 포상금">
-                        🦸‍♂️ 숨은 의인 비과세 포상금 펀드 (청년 발굴)
+                        숨은 의인 비과세 포상금 펀드 (청년 발굴)
                       </option>
                       <option value="자립청년 꿈의 사다리">
-                        🌱 자립준비청년 카페 창업 (Pay-it-Forward)
+                        자립준비청년 카페 창업 (Pay-it-Forward)
                       </option>
                     </select>
                   </div>

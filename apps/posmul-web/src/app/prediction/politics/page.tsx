@@ -68,7 +68,7 @@ export default async function PredictionPoliticsPage() {
         <FadeIn>
           <DomainContextHeader
             domain="prediction"
-            title="🗳️ 정치·선거 예측 마켓"
+            title="정치·선거 예측 마켓"
             subtitle="국가·지역 선거 결과와 핵심 법안·정책 변화를 집단지성으로 예측하세요"
             metrics={[
               {
@@ -80,7 +80,7 @@ export default async function PredictionPoliticsPage() {
             ]}
           >
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 공인 검증 데이터:</span>
+              <span className="font-semibold text-slate-300">공인 검증 데이터:</span>
               {dataSources.map((ds) => (
                 <span
                   key={ds.name}

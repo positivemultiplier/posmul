@@ -129,7 +129,7 @@ function CreateChallengeFormContent() {
     if (!createdChallengeId) return;
     const url = `${window.location.origin}/challenge/${createdChallengeId}`;
     const hostChoice = options[hostOptionIndex] || "내 선택";
-    const tweetText = `🥊 [PosMul 맞짱 챌린지]\n"${title}"\n\n나는 [${hostChoice}]에 ${hostBetAmount} PMP 걸었다! 반대하는 사람 들어와라 ㅋㅋㅋ\n👉 ${url}`;
+    const tweetText = `[PosMul 맞짱 챌린지]\n"${title}"\n\n나는 [${hostChoice}]에 ${hostBetAmount} PMP 걸었다! 반대하는 사람 들어와라 ㅋㅋㅋ\n${url}`;
     window.open(
       `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`,
       "_blank"
@@ -160,7 +160,7 @@ function CreateChallengeFormContent() {
             <Link2 className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
             <div className="space-y-0.5">
               <div className="font-black text-amber-300">
-                🔗 공식 예측 꼬리 내기 연결 모드
+                공식 예측 꼬리 내기 연결 모드
               </div>
               <div className="text-slate-300 line-clamp-1">
                 원본 마켓: <strong className="text-white">{linkedTitle}</strong>
@@ -180,8 +180,8 @@ function CreateChallengeFormContent() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
             {isTailMode
-              ? "이 이슈로 꼬리 내기 붙이기 🥊"
-              : "10초 만에 내기·예측 만들기 🥊"}
+              ? "이 이슈로 꼬리 내기 붙이기"
+              : "10초 만에 내기·예측 만들기"}
           </h1>
           <p className="text-xs text-slate-400">
             카톡·SNS로 친구를 끌어들여 이기면 상대 PMP를 뺏어오고, 방장은 전체 판돈의 3% 수수료를 챙깁니다!
@@ -191,7 +191,7 @@ function CreateChallengeFormContent() {
         {/* 1. 6대 일상 프리셋 템플릿 선택 바 */}
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-300">
-            ⚡ 빠른 프리셋 템플릿 선택 (탭하면 자동 작성!)
+            빠른 프리셋 템플릿 선택 (탭하면 자동 작성!)
           </label>
           <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
             {CHALLENGE_PRESETS.map((preset) => {
@@ -273,7 +273,7 @@ function CreateChallengeFormContent() {
                           : "bg-slate-900 text-slate-400 border-white/[0.06] hover:text-white"
                       }`}
                     >
-                      {isHostPick ? "내 픽 🎯" : `선택 ${idx + 1}`}
+                      {isHostPick ? "내 픽" : `선택 ${idx + 1}`}
                     </button>
                     <input
                       type="text"
@@ -288,7 +288,7 @@ function CreateChallengeFormContent() {
               })}
             </div>
             <p className="text-[11px] text-slate-500">
-              * 붉은색 [내 픽 🎯]으로 지정된 선택지에 방장의 초기 베팅이 걸립니다.
+              * 붉은색 [내 픽]으로 지정된 선택지에 방장의 초기 베팅이 걸립니다.
             </p>
           </div>
 
@@ -373,7 +373,7 @@ function CreateChallengeFormContent() {
                       visibility === "PUBLIC" ? "text-white" : "text-slate-400"
                     }`}
                   >
-                    🌐 오픈 챌린지 (추천)
+                    오픈 챌린지 (추천)
                   </div>
                   <div className="text-[10px] text-slate-500">
                     링크 공유 + 공개 피드 노출로 많은 도전자 모집 & 3% 수수료!
@@ -403,7 +403,7 @@ function CreateChallengeFormContent() {
                       visibility === "PRIVATE" ? "text-white" : "text-slate-400"
                     }`}
                   >
-                    🔒 단톡방 비공개 (프라이빗)
+                    단톡방 비공개 (프라이빗)
                   </div>
                   <div className="text-[10px] text-slate-500">
                     링크 아는 친구끼리 시작 (5명 이상 모이면 자동 오픈 승격)
@@ -423,7 +423,7 @@ function CreateChallengeFormContent() {
             ) : (
               <>
                 <Flame className="w-4 h-4" />
-                <span>내기 룸 만들고 카톡/트위터로 쏘기 🚀</span>
+                <span>내기 룸 만들고 카톡/트위터로 쏘기</span>
               </>
             )}
           </button>
@@ -434,7 +434,7 @@ function CreateChallengeFormContent() {
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-[#111520] border border-amber-500/40 rounded-3xl p-6 max-w-md w-full space-y-5 shadow-2xl text-center">
               <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center mx-auto text-xl">
-                🥊
+                
               </div>
               <div className="space-y-1">
                 <h3 className="text-xl font-black text-white">

@@ -28,17 +28,17 @@ interface UserPrediction {
 
 const CONSUME_SUBCATEGORY_CONFIG = {
   time: {
-    title: "⏰ TimeConsume 예측 마켓",
+    title: "TimeConsume 예측 마켓",
     subtitle: "시민의 시간 참여(광고 시청·설문 응답) 캠페인 목표 달성 여부를 예측하세요",
     dataSources: ["PosMul Major League 온체인 로그"],
   },
   money: {
-    title: "💳 MoneyConsume 예측 마켓",
+    title: "MoneyConsume 예측 마켓",
     subtitle: "소상공인·지역 상생 가맹점의 월간 소비 활성화 지표를 예측하세요",
     dataSources: ["PosMul Minor League 로컬 정산 데이터"],
   },
   cloud: {
-    title: "☁️ CloudConsume 예측 마켓",
+    title: "CloudConsume 예측 마켓",
     subtitle: "공익·스타트업 크라우드 펀딩 프로젝트의 목표 달성률을 예측하세요",
     dataSources: ["PosMul Cloud Funding 스마트 에스크로"],
   },
@@ -114,7 +114,7 @@ export default async function PredictionConsumeSubcategoryPage({
             ]}
           >
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 검증 데이터 소스:</span>
+              <span className="font-semibold text-slate-300">검증 데이터 소스:</span>
               {config.dataSources.map((ds) => (
                 <span
                   key={ds}
@@ -147,7 +147,7 @@ export default async function PredictionConsumeSubcategoryPage({
             />
           ) : (
             <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4">
-              <div className="text-5xl">💳</div>
+              <div className="text-5xl"></div>
               <h3 className="text-lg font-bold text-white">
                 {config.title.replace(" 마켓", "")} 준비 중
               </h3>

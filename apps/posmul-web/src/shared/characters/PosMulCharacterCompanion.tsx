@@ -128,7 +128,7 @@ export function PosMulCharacterCompanion({
               className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full border border-slate-900 bg-slate-950 text-[10px] text-white shadow"
               aria-hidden="true"
             >
-              💬
+              
             </span>
           </button>
 

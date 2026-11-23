@@ -29,43 +29,43 @@ interface UserPrediction {
 const ENTERTAINMENT_SUBCATEGORY_CONFIG = {
   movies: {
     dbValues: ["movie", "movies"],
-    title: "🎬 영화·박스오피스 예측 마켓",
+    title: "영화·박스오피스 예측 마켓",
     subtitle: "주말 박스오피스 1위, 개봉 첫 주 누적 관객 수 및 흥행 기록을 예측하세요",
     dataSources: ["KOBIS (영화관입장권통합전산망)", "Box Office Mojo"],
   },
   movie: {
     dbValues: ["movie", "movies"],
-    title: "🎬 영화·박스오피스 예측 마켓",
+    title: "영화·박스오피스 예측 마켓",
     subtitle: "주말 박스오피스 1위, 개봉 첫 주 누적 관객 수 및 흥행 기록을 예측하세요",
     dataSources: ["KOBIS (영화관입장권통합전산망)", "Box Office Mojo"],
   },
   dramas: {
     dbValues: ["drama", "dramas"],
-    title: "📺 드라마·시청률 예측 마켓",
+    title: "드라마·시청률 예측 마켓",
     subtitle: "주말·미니시리즈 최고 시청률 돌파 여부와 OTT 화제성 순위를 예측하세요",
     dataSources: ["닐슨코리아", "굿데이터코퍼레이션"],
   },
   drama: {
     dbValues: ["drama", "dramas"],
-    title: "📺 드라마·시청률 예측 마켓",
+    title: "드라마·시청률 예측 마켓",
     subtitle: "주말·미니시리즈 최고 시청률 돌파 여부와 OTT 화제성 순위를 예측하세요",
     dataSources: ["닐슨코리아", "굿데이터코퍼레이션"],
   },
   variety: {
     dbValues: ["variety", "show"],
-    title: "🎤 예능·방송 예측 마켓",
+    title: "예능·방송 예측 마켓",
     subtitle: "프라임타임 예능 시청률 1위 방송사 및 경연 프로그램 우승자를 예측하세요",
     dataSources: ["닐슨코리아", "방송사 공식 발표"],
   },
   music: {
     dbValues: ["music", "kpop"],
-    title: "🎵 음악·K-POP 차트 예측 마켓",
+    title: "음악·K-POP 차트 예측 마켓",
     subtitle: "신규 발매 음원 주간 차트 TOP 10 진입 및 글로벌 빌보드 순위를 예측하세요",
     dataSources: ["써클차트 (Circle Chart)", "멜론·빌보드"],
   },
   awards: {
     dbValues: ["awards", "award"],
-    title: "🏆 시상식 예측 마켓",
+    title: "시상식 예측 마켓",
     subtitle: "국내외 주요 영화·드라마·음악 시상식 대상 및 주요 부문 수상자를 예측하세요",
     dataSources: ["공식 시상식 위원회 발표"],
   },
@@ -141,7 +141,7 @@ export default async function PredictionEntertainmentSubcategoryPage({
             ]}
           >
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 검증 데이터 소스:</span>
+              <span className="font-semibold text-slate-300">검증 데이터 소스:</span>
               {config.dataSources.map((ds) => (
                 <span
                   key={ds}
@@ -174,7 +174,7 @@ export default async function PredictionEntertainmentSubcategoryPage({
             />
           ) : (
             <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4">
-              <div className="text-5xl">🎬</div>
+              <div className="text-5xl"></div>
               <h3 className="text-lg font-bold text-white">
                 {config.title.replace(" 마켓", "")} 준비 중
               </h3>

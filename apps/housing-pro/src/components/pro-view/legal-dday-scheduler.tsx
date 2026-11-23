@@ -255,7 +255,7 @@ export function LegalDdayScheduler({ onSuccessDefend }: LegalDdaySchedulerProps)
                   <div className="flex items-center gap-1.5">
                     <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
                     <span>
-                      🎓 수험 시절 암기 선지 연동: {item.relatedExam.year}년 제{item.relatedExam.round}회 {item.relatedExam.subject} {item.relatedExam.questionNumber}번
+                      수험 시절 암기 선지 연동: {item.relatedExam.year}년 제{item.relatedExam.round}회 {item.relatedExam.subject} {item.relatedExam.questionNumber}번
                     </span>
                   </div>
                   {isExpanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -264,7 +264,7 @@ export function LegalDdayScheduler({ onSuccessDefend }: LegalDdaySchedulerProps)
                 {isExpanded && (
                   <div className="mt-2 p-3 rounded-lg bg-indigo-950/40 border border-indigo-500/20 text-xs space-y-1">
                     <div className="text-[11px] font-bold text-indigo-300">
-                      💡 2차 시험에서 출제된 오답 함정 포인트:
+                      2차 시험에서 출제된 오답 함정 포인트:
                     </div>
                     <p className="text-slate-300 leading-relaxed font-mono text-[11.5px]">
                       &quot;{item.relatedExam.trapSummary}&quot;
@@ -302,7 +302,7 @@ export function LegalDdayScheduler({ onSuccessDefend }: LegalDdaySchedulerProps)
                 <div className="font-extrabold text-white">{completingItem.title}</div>
                 <div className="text-slate-400 text-[11px]">{completingItem.legalCitation}</div>
                 <div className="text-emerald-400 font-bold pt-1">
-                  🛡️ 사전 방어 완료 금액: {completingItem.maxFineLabel}
+                  사전 방어 완료 금액: {completingItem.maxFineLabel}
                 </div>
               </div>
 

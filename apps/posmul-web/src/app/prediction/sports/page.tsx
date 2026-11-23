@@ -99,7 +99,7 @@ export default async function PredictionSportsPage({
         <FadeIn>
           <DomainContextHeader
             domain="prediction"
-            title="⚽ 스포츠 예측 마켓"
+            title="스포츠 예측 마켓"
             subtitle="축구, 야구, 농구, e스포츠 경기 결과를 예측하고 MoneyWave PMC를 획득하세요"
             metrics={[
               { label: "스포츠 상금풀", value: sportsPool || 15200, unit: "PMC" },
@@ -107,7 +107,7 @@ export default async function PredictionSportsPage({
             ]}
           >
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 공인 검증 데이터:</span>
+              <span className="font-semibold text-slate-300">공인 검증 데이터:</span>
               {dataSources.map((ds) => (
                 <span
                   key={ds.name}

@@ -200,7 +200,7 @@ export const useRealtimeDataStore = create<RealtimeDataState>()(
           if (wave.urgencyLevel === "high") {
             get().addNotification({
               type: "warning",
-              title: "🌊 MoneyWave 긴급",
+              title: "MoneyWave 긴급",
               message: `이번 시간 분배 마감까지 ${Math.floor(
                 wave.timeRemaining / 60
               )}분 남았습니다!`,

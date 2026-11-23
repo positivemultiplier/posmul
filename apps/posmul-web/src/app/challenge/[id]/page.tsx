@@ -102,7 +102,7 @@ export default function ChallengeDetailPage() {
       const diffMs = closeMs - Date.now();
 
       if (challenge.status === "SETTLED") {
-        setTimeLeftStr("정산 완료 🏆");
+        setTimeLeftStr("정산 완료");
       } else if (diffMs <= 0 || challenge.status === "LOCKED") {
         setTimeLeftStr("베팅 마감 (결과 대기)");
       } else {
@@ -234,7 +234,7 @@ export default function ChallengeDetailPage() {
   const handleCopyLink = () => {
     const url = window.location.href;
     const inviteText = challenge
-      ? `🥊 [PosMul ${challenge.linkedGameTitle ? "꼬리 내기" : "맞짱 도전장"}]\n"${challenge.title}"\n💰 총 판돈 ${challenge.totalPoolPmp.toLocaleString()} PMP · 지금 들어와서 한판 붙자!\n👉 ${url}`
+      ? `[PosMul ${challenge.linkedGameTitle ? "꼬리 내기" : "맞짱 도전장"}]\n"${challenge.title}"\n 총 판돈 ${challenge.totalPoolPmp.toLocaleString()} PMP · 지금 들어와서 한판 붙자!\n${url}`
       : url;
     navigator.clipboard.writeText(inviteText);
     setCopied(true);
@@ -247,7 +247,7 @@ export default function ChallengeDetailPage() {
     if (typeof navigator !== "undefined" && typeof navigator.share === "function" && challenge) {
       try {
         await navigator.share({
-          title: `🥊 [${challenge.hostName}] ${challenge.title}`,
+          title: `[${challenge.hostName}] ${challenge.title}`,
           text: `총 판돈 ${challenge.totalPoolPmp.toLocaleString()} PMP 맞짱! 내 편에 서거나 맞불을 놓으세요.`,
           url,
         });
@@ -265,7 +265,7 @@ export default function ChallengeDetailPage() {
   const handleShareTwitter = () => {
     if (!challenge) return;
     const url = window.location.href;
-    const tweetText = `🥊 [PosMul 맞짱 챌린지]\n"${challenge.title}"\n\n호스트 [${challenge.hostName}]님의 도전장! 지금 바로 참여하세요!\n👉 ${url}`;
+    const tweetText = `[PosMul 맞짱 챌린지]\n"${challenge.title}"\n\n호스트 [${challenge.hostName}]님의 도전장! 지금 바로 참여하세요!\n${url}`;
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`, "_blank");
   };
 
@@ -273,7 +273,7 @@ export default function ChallengeDetailPage() {
   const handleCopyVictoryCert = () => {
     if (!challenge) return;
     const winningLabel = challenge.winningOptionLabel || "승리";
-    const certText = `🏆 [PosMul 승리 인증서]\n대결 주제: "${challenge.title}"\n결과: [${winningLabel}] 최종 적중 성공!\n호스트 [${challenge.hostName}]을(를) 꺾고 PMP 쟁취 완료 👑\n👉 https://posmul.com/challenge/${challenge.id}`;
+    const certText = `[PosMul 승리 인증서]\n대결 주제: "${challenge.title}"\n결과: [${winningLabel}] 최종 적중 성공!\n호스트 [${challenge.hostName}]을(를) 꺾고 PMP 쟁취 완료 \n https://posmul.com/challenge/${challenge.id}`;
     navigator.clipboard.writeText(certText);
     setCertCopied(true);
     setTimeout(() => setCertCopied(false), 2000);
@@ -371,7 +371,7 @@ export default function ChallengeDetailPage() {
                   </span>
                 </>
               ) : (
-                <span className="text-slate-400 text-[11px]">첫 맞짱 대결! 🥊</span>
+                <span className="text-slate-400 text-[11px]">첫 맞짱 대결!</span>
               )}
             </div>
           </div>
@@ -388,7 +388,7 @@ export default function ChallengeDetailPage() {
             className="p-3 rounded-2xl bg-sky-950/40 border border-sky-500/30 hover:border-sky-400/60 text-xs flex items-center justify-between gap-2 transition group"
           >
             <span className="text-sky-300 font-bold truncate">
-              🔗 공식 예측 꼬리 내기: <strong className="text-white">{challenge.linkedGameTitle}</strong>
+              공식 예측 꼬리 내기: <strong className="text-white">{challenge.linkedGameTitle}</strong>
             </span>
             <span className="text-[11px] font-black text-sky-400 shrink-0 group-hover:underline">
               원본 마켓 보기 →
@@ -403,7 +403,7 @@ export default function ChallengeDetailPage() {
               <div className="flex items-center gap-2">
                 <Trophy className="w-5 h-5 text-amber-400 shrink-0" />
                 <span>
-                  <strong>🏆 정산 완료!</strong> 최종 승리 옵션:{" "}
+                  <strong>정산 완료!</strong> 최종 승리 옵션:{" "}
                   <span className="text-white font-black underline underline-offset-2">
                     {challenge.winningOptionLabel || "승리 확정"}
                   </span>
@@ -416,7 +416,7 @@ export default function ChallengeDetailPage() {
                   className="px-3 py-1.5 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shrink-0 flex items-center gap-1 shadow-md transition"
                 >
                   <Trophy className="w-3.5 h-3.5" />
-                  <span>승리 인증서 자랑하기 👑</span>
+                  <span>승리 인증서 자랑하기</span>
                 </button>
               )}
             </div>
@@ -443,7 +443,7 @@ export default function ChallengeDetailPage() {
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-amber-400 shrink-0" />
                 <span>
-                  <strong>⚖️ 공정 합의 대기 중 (10분 골든타임)</strong> — 방장 판정:{" "}
+                  <strong>공정 합의 대기 중 (10분 골든타임)</strong> — 방장 판정:{" "}
                   <strong className="text-white underline">
                     {challenge.pendingWinningOptionLabel || challenge.pendingWinningOptionId}
                   </strong>
@@ -462,7 +462,7 @@ export default function ChallengeDetailPage() {
                     onClick={handleAcceptResult}
                     className="px-3.5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition shadow-md"
                   >
-                    🤝 결과 인정 (GG) · 1초 만에 정산 완료
+                    결과 인정 (GG) · 1초 만에 정산 완료
                   </button>
                 )}
                 <button
@@ -477,7 +477,7 @@ export default function ChallengeDetailPage() {
                 >
                   {challenge.hasDisputed
                     ? "이의 제기 완료됨"
-                    : "🚨 판정 이의 제기 (30% 이상 시 전액 환불)"}
+                    : "판정 이의 제기 (30% 이상 시 전액 환불)"}
                 </button>
               </div>
             )}
@@ -487,7 +487,7 @@ export default function ChallengeDetailPage() {
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-amber-400 shrink-0" />
               <span>
-                <strong>🔒 베팅 마감!</strong> 경기/상황이 시작되어 추가 베팅이 잠겼습니다.
+                <strong>베팅 마감!</strong> 경기/상황이 시작되어 추가 베팅이 잠겼습니다.
               </span>
             </div>
             <span className="text-[11px] font-mono text-amber-400">결과 대기 중</span>
@@ -500,10 +500,10 @@ export default function ChallengeDetailPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="px-2.5 py-0.5 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/30 text-[11px] font-black">
-                🥊 {challenge.hostName}님의 맞짱 챌린지
+                {challenge.hostName}님의 맞짱 챌린지
               </span>
               <span className="text-[11px] text-slate-500 font-bold">
-                {challenge.visibility === "PRIVATE" ? "🔒 비공개 링크" : "🌐 오픈 매치"}
+                {challenge.visibility === "PRIVATE" ? "비공개 링크" : "오픈 매치"}
               </span>
             </div>
             <span className="text-xs font-mono font-bold text-slate-400 flex items-center gap-1">
@@ -522,12 +522,12 @@ export default function ChallengeDetailPage() {
             <div className="space-y-2">
               <div className="flex justify-between text-xs sm:text-sm font-black">
                 <span className="text-sky-400 flex items-center gap-1">
-                  <span>🔴 {optionA.label}</span>
+                  <span>{optionA.label}</span>
                   <span className="font-mono">({optionA.ratio}%)</span>
                 </span>
                 <span className="text-rose-400 flex items-center gap-1">
                   <span className="font-mono">({optionB.ratio}%)</span>
-                  <span>🔵 {optionB.label}</span>
+                  <span>{optionB.label}</span>
                 </span>
               </div>
 
@@ -645,7 +645,7 @@ export default function ChallengeDetailPage() {
                   <>
                     <Flame className="w-4 h-4" />
                     <span>
-                      [{challenge.options.find((o) => o.id === selectedBetOption)?.label}]에 {betAmount.toLocaleString()} PMP 맞불 베팅 🥊
+                      [{challenge.options.find((o) => o.id === selectedBetOption)?.label}]에 {betAmount.toLocaleString()} PMP 맞불 베팅
                     </span>
                   </>
                 )}
@@ -689,7 +689,7 @@ export default function ChallengeDetailPage() {
                   onClick={() => handleSettle(opt.id, opt.label)}
                   className="py-2.5 px-3 rounded-xl bg-slate-900 hover:bg-emerald-950/60 border border-white/[0.08] hover:border-emerald-500/40 text-xs font-bold text-slate-300 hover:text-emerald-300 transition"
                 >
-                  [{opt.label}] 승리 확정 🏆
+                  [{opt.label}] 승리 확정
                 </button>
               ))}
             </div>
@@ -759,7 +759,7 @@ export default function ChallengeDetailPage() {
           <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-[#111520] border-2 border-amber-400/60 rounded-3xl p-6 max-w-sm w-full space-y-5 shadow-2xl text-center relative">
               <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-amber-500 to-yellow-300 text-slate-950 flex items-center justify-center mx-auto text-3xl shadow-lg shadow-amber-500/30">
-                👑
+                
               </div>
               <div className="space-y-1">
                 <div className="text-[10px] font-black tracking-widest text-amber-400 uppercase">

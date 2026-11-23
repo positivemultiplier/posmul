@@ -193,9 +193,9 @@ export default function WalletPage() {
               <Filter className="w-4 h-4 text-slate-500 mr-1" />
               {[
                 { key: "all", label: "전체" },
-                { key: "prediction", label: "🎲 예측 배팅" },
-                { key: "donation", label: "🌱 기부" },
-                { key: "consume", label: "🎬 소비/광고" },
+                { key: "prediction", label: "예측 배팅" },
+                { key: "donation", label: "기부" },
+                { key: "consume", label: "소비/광고" },
               ].map((tab) => (
                 <button
                   key={tab.key}

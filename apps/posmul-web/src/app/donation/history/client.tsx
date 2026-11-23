@@ -28,15 +28,15 @@ interface HistoryClientProps {
 
 // 카테고리 정보
 const categoryInfo: Record<string, { label: string; icon: string; color: string }> = {
-  children: { label: "아동/청소년", icon: "👶", color: "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200" },
-  elderly: { label: "노인", icon: "👴", color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
-  disabled: { label: "장애인", icon: "♿", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
-  disaster: { label: "재난구호", icon: "🆘", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
-  environment: { label: "환경", icon: "🌿", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
-  education: { label: "교육", icon: "📚", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
-  medical: { label: "의료", icon: "🏥", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200" },
-  animal: { label: "동물", icon: "🐾", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
-  other: { label: "기타", icon: "💝", color: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200" },
+  children: { label: "아동/청소년", icon: "", color: "bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200" },
+  elderly: { label: "노인", icon: "", color: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
+  disabled: { label: "장애인", icon: "", color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200" },
+  disaster: { label: "재난구호", icon: "", color: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200" },
+  environment: { label: "환경", icon: "", color: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200" },
+  education: { label: "교육", icon: "", color: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+  medical: { label: "의료", icon: "", color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900 dark:text-cyan-200" },
+  animal: { label: "동물", icon: "", color: "bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200" },
+  other: { label: "기타", icon: "", color: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200" },
 };
 
 // 상태 정보
@@ -84,7 +84,7 @@ export function HistoryClient({ donations, stats }: HistoryClientProps) {
             <span className="text-white">내 기부 내역</span>
           </nav>
 
-          <h1 className="text-4xl font-bold mb-4">💝 내 기부 내역</h1>
+          <h1 className="text-4xl font-bold mb-4">내 기부 내역</h1>
           <p className="text-lg text-white/90 mb-8">
             지금까지의 따뜻한 나눔을 확인하세요
           </p>
@@ -169,7 +169,7 @@ export function HistoryClient({ donations, stats }: HistoryClientProps) {
         {/* 기부 내역 리스트 */}
         {filteredDonations.length === 0 ? (
           <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-12 text-center">
-            <span className="text-6xl block mb-4">📭</span>
+            <span className="text-6xl block mb-4"></span>
             <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
               기부 내역이 없습니다
             </h3>
@@ -222,18 +222,18 @@ export function HistoryClient({ donations, stats }: HistoryClientProps) {
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-600 dark:text-gray-400">
                         {donation.instituteName && (
                           <span className="flex items-center gap-1">
-                            🏛️ {donation.instituteName}
+                            {donation.instituteName}
                           </span>
                         )}
                         <span className="flex items-center gap-1">
-                          🏷️ {category.label}
+                          {category.label}
                         </span>
                         <span className="flex items-center gap-1">
-                          📅 {formatDate(donation.createdAt)}
+                          {formatDate(donation.createdAt)}
                         </span>
                         {donation.isAnonymous && (
                           <span className="flex items-center gap-1 text-gray-500">
-                            👤 익명 기부
+                            익명 기부
                           </span>
                         )}
                       </div>

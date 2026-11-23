@@ -51,7 +51,7 @@ function createPlaceholderRoom(roomId: string): LiveEventRoom {
   return {
     id: roomId,
     category: "ECONOMY",
-    categoryLabel: "📡 PosMul LIVE",
+    categoryLabel: "PosMul LIVE",
     title: "라이브 응원톡 연결 중...",
     subtitle: "실시간 예측 마켓 데이터를 불러오고 있습니다.",
     status: "LIVE",
@@ -212,7 +212,7 @@ export default function LiveRoomPage() {
             sender: "시민응원단",
             teamTag: roomData.predictionGame?.optionA.label || "A팀",
             teamColor: "bg-sky-500/20 text-sky-300 border-sky-400/40",
-            message: "실시간 라이브 응원톡에 오신 것을 환영합니다! 함께 응원해요 🔥",
+            message: "실시간 라이브 응원톡에 오신 것을 환영합니다! 함께 응원해요",
             time: "방금",
           },
         ]);
@@ -256,7 +256,7 @@ export default function LiveRoomPage() {
         const challengeMsg: ChatMessage = {
           id: `cmsg-${payload.id}-${Date.now()}`,
           sender: payload.hostName,
-          teamTag: "⚡번개예측",
+          teamTag: "번개예측",
           teamColor: "bg-amber-500/20 text-amber-300 border-amber-400/40",
           message: payload.title,
           time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -329,7 +329,7 @@ export default function LiveRoomPage() {
     const newMsg: ChatMessage = {
       id: `cmsg-${challenge.id}-${Date.now()}`,
       sender: challenge.hostName,
-      teamTag: "⚡번개예측",
+      teamTag: "번개예측",
       teamColor: "bg-amber-500/20 text-amber-300 border-amber-400/40",
       message: payload.title,
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
@@ -656,7 +656,7 @@ export default function LiveRoomPage() {
             <div className="flex items-center gap-2">
               <Trophy className="w-4 h-4 text-amber-400 shrink-0" />
               <span>
-                <strong>🏆 정산이 완료된 이벤트입니다.</strong> 최종 승리 옵션:{" "}
+                <strong>정산이 완료된 이벤트입니다.</strong> 최종 승리 옵션:{" "}
                 <span className="text-amber-300 font-extrabold underline underline-offset-2">
                   {roomData.winningOptionLabel || "정산 확정"}
                 </span>
@@ -675,7 +675,7 @@ export default function LiveRoomPage() {
             <div className="flex items-center gap-2">
               <Lock className="w-4 h-4 text-amber-400 shrink-0" />
               <span>
-                <strong>🔒 본 이벤트는 마감 시간({formattedDeadline || "마감 시각"})이 경과하여 라이브가 종료되었습니다.</strong>
+                <strong>본 이벤트는 마감 시간({formattedDeadline || "마감 시각"})이 경과하여 라이브가 종료되었습니다.</strong>
               </span>
             </div>
             <span className="text-[11px] text-amber-300 font-mono hidden sm:inline">
@@ -739,7 +739,7 @@ export default function LiveRoomPage() {
                   <span>검증 오라클: {roomData.predictionGame?.oracleLabel}</span>
                 </span>
                 <span className="text-amber-300 font-bold">
-                  💰 {roomData.predictionGame?.totalPoolPmc.toLocaleString()} PMC 상금풀
+                  {roomData.predictionGame?.totalPoolPmc.toLocaleString()} PMC 상금풀
                 </span>
               </div>
             </div>
@@ -807,7 +807,7 @@ export default function LiveRoomPage() {
                       : "bg-slate-900 text-slate-300 border-white/[0.08] hover:border-sky-500/50"
                   }`}
                 >
-                  <span>👍 {roomData.predictionGame.optionA.label} {isClosedOrEnded ? "" : "응원"}</span>
+                  <span>{roomData.predictionGame.optionA.label} {isClosedOrEnded ? "" : "응원"}</span>
                 </button>
 
                 <button
@@ -822,7 +822,7 @@ export default function LiveRoomPage() {
                       : "bg-slate-900 text-slate-300 border-white/[0.08] hover:border-rose-500/50"
                   }`}
                 >
-                  <span>🔥 {roomData.predictionGame.optionB.label} {isClosedOrEnded ? "" : "응원"}</span>
+                  <span>{roomData.predictionGame.optionB.label} {isClosedOrEnded ? "" : "응원"}</span>
                 </button>
               </div>
 
@@ -973,48 +973,48 @@ export default function LiveRoomPage() {
           >
             <button
               type="button"
-              onClick={() => sendQuickReaction("🔥")}
+              onClick={() => sendQuickReaction("")}
               disabled={isClosedOrEnded}
               className="text-base hover:scale-125 transition-transform p-1 disabled:pointer-events-none"
               title="불꽃 연타"
             >
-              🔥
+              
             </button>
             <button
               type="button"
-              onClick={() => sendQuickReaction("🎉")}
+              onClick={() => sendQuickReaction("")}
               disabled={isClosedOrEnded}
               className="text-base hover:scale-125 transition-transform p-1 disabled:pointer-events-none"
               title="축하 연타"
             >
-              🎉
+              
             </button>
             <button
               type="button"
-              onClick={() => sendQuickReaction("👏")}
+              onClick={() => sendQuickReaction("")}
               disabled={isClosedOrEnded}
               className="text-base hover:scale-125 transition-transform p-1 disabled:pointer-events-none"
               title="박수 연타"
             >
-              👏
+              
             </button>
             <button
               type="button"
-              onClick={() => sendQuickReaction("😱")}
+              onClick={() => sendQuickReaction("")}
               disabled={isClosedOrEnded}
               className="text-base hover:scale-125 transition-transform p-1 disabled:pointer-events-none"
               title="경악 연타"
             >
-              😱
+              
             </button>
             <button
               type="button"
-              onClick={() => sendQuickReaction("🚀")}
+              onClick={() => sendQuickReaction("")}
               disabled={isClosedOrEnded}
               className="text-base hover:scale-125 transition-transform p-1 disabled:pointer-events-none"
               title="떡상 연타"
             >
-              🚀
+              
             </button>
           </div>
 

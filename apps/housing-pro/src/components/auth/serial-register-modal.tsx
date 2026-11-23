@@ -154,7 +154,7 @@ export function SerialRegisterModal({
                   onClick={handleFillSample}
                   className="text-[11px] font-bold text-amber-400 hover:text-amber-300 underline"
                 >
-                  💡 테스트용 정품 키 자동입력
+                  테스트용 정품 키 자동입력
                 </button>
               </div>
 

@@ -75,7 +75,7 @@ export function GroupClient({
                         onClick={handleBundleDonate}
                         className="px-8 py-4 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-xl font-bold text-lg shadow-lg shadow-purple-500/30 transition-all transform hover:scale-105"
                     >
-                        🎁 이 그룹에 한 번에 기부하기
+                        이 그룹에 한 번에 기부하기
                     </button>
                 </div>
             </div>
@@ -83,7 +83,7 @@ export function GroupClient({
             {/* Institute Grid */}
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-center gap-2 mb-8 px-2">
-                    <span className="text-2xl">🤝</span>
+                    <span className="text-2xl"></span>
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white">참여 기관 ({institutes.length})</h2>
                 </div>
 

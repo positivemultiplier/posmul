@@ -51,7 +51,7 @@ export default async function GamesListPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-zinc-800/80 pb-5">
         <div>
           <h1 className="text-2xl font-black text-white tracking-tight">
-            🎮 전체 예측 게임 마스터 테이블
+            전체 예측 게임 마스터 테이블
           </h1>
           <p className="text-xs sm:text-sm text-zinc-400 mt-1">
             Supabase prediction.prediction_games 실시간 DB 연동 · 총 {allGames.length}개 등록됨
@@ -104,7 +104,7 @@ export default async function GamesListPage() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
               <h2 className="text-sm font-extrabold text-amber-300">
-                ⏳ 베팅 마감 · 정산 대기 마켓 ({closedGames.length}개)
+                베팅 마감 · 정산 대기 마켓 ({closedGames.length}개)
               </h2>
               <p className="text-xs text-zinc-400 mt-0.5">
                 베팅은 마감되었으나 아직 최종 결과 정산(SETTLED)이 완료되지 않은 게임입니다.
@@ -226,7 +226,7 @@ export default async function GamesListPage() {
       <AdminCard>
         <AdminCardHeader>
           <AdminCardTitle>
-            🏆 정산 완료된 게임 ({settledGames.length}개)
+            정산 완료된 게임 ({settledGames.length}개)
           </AdminCardTitle>
           <AdminCardDescription>
             오라클 또는 운영자 판정을 통해 승자에게 PMC 상금 배분이 완료된 게임

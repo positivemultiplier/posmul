@@ -18,18 +18,18 @@ interface TransactionHistoryProps {
 
 // 거래 타입별 아이콘 및 색상 매핑
 const transactionConfig: Record<string, { icon: string; label: string; colorClass: string }> = {
-  PREDICTION_STAKE: { icon: "🎯", label: "예측 참여", colorClass: "text-yellow-500" },
-  PREDICTION_WIN: { icon: "🏆", label: "예측 성공", colorClass: "text-green-500" },
+  PREDICTION_STAKE: { icon: "", label: "예측 참여", colorClass: "text-yellow-500" },
+  PREDICTION_WIN: { icon: "", label: "예측 성공", colorClass: "text-green-500" },
   PREDICTION_REFUND: { icon: "↩️", label: "예측 환불", colorClass: "text-blue-500" },
-  PREDICTION_LOSS: { icon: "❌", label: "예측 실패", colorClass: "text-red-500" },
-  GRANT: { icon: "🎁", label: "지급", colorClass: "text-green-500" },
-  DONATION: { icon: "❤️", label: "기부", colorClass: "text-pink-500" },
-  MONEY_WAVE: { icon: "🌊", label: "MoneyWave", colorClass: "text-cyan-500" },
-  TRANSFER: { icon: "💸", label: "전송", colorClass: "text-purple-500" },
+  PREDICTION_LOSS: { icon: "", label: "예측 실패", colorClass: "text-red-500" },
+  GRANT: { icon: "", label: "지급", colorClass: "text-green-500" },
+  DONATION: { icon: "", label: "기부", colorClass: "text-pink-500" },
+  MONEY_WAVE: { icon: "", label: "MoneyWave", colorClass: "text-cyan-500" },
+  TRANSFER: { icon: "", label: "전송", colorClass: "text-purple-500" },
 };
 
 function getTransactionDisplay(type: string) {
-  return transactionConfig[type] || { icon: "💰", label: type, colorClass: "text-gray-500" };
+  return transactionConfig[type] || { icon: "", label: type, colorClass: "text-gray-500" };
 }
 
 export default function TransactionHistory({ userId }: TransactionHistoryProps) {
@@ -96,7 +96,7 @@ export default function TransactionHistory({ userId }: TransactionHistoryProps) 
     return (
       <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
         <div className="text-red-500 text-center py-8">
-          <span className="text-3xl block mb-2">⚠️</span>
+          <span className="text-3xl block mb-2"></span>
           {error}
         </div>
       </div>
@@ -108,7 +108,7 @@ export default function TransactionHistory({ userId }: TransactionHistoryProps) 
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-          📊 거래 내역
+          거래 내역
         </h3>
         <button
           onClick={() => fetchTransactions()}
@@ -162,7 +162,7 @@ export default function TransactionHistory({ userId }: TransactionHistoryProps) 
       {/* Transaction List */}
       {filteredTransactions.length === 0 ? (
         <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-          <span className="text-4xl block mb-3">📭</span>
+          <span className="text-4xl block mb-3"></span>
           거래 내역이 없습니다.
         </div>
       ) : (

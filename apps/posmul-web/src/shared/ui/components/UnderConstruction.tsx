@@ -29,7 +29,7 @@ export function UnderConstruction({ pageName, description }: UnderConstructionPr
                 {/* 제목 */}
                 <div>
                     <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-orange-400">
-                        🚧 {pageName}
+                        {pageName}
                     </h1>
                     <p className="mt-2 text-lg text-gray-400">준비 중입니다</p>
                 </div>

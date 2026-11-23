@@ -136,7 +136,7 @@ function ForumBudgetContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DomainContextHeader
           domain="forum"
-          title="💰 Budget · 시민 예산 감시"
+          title="Budget · 시민 예산 감시"
           subtitle="관료·정치인의 예산 편성을 투명하게 감시하고 재정 이슈를 발굴하여 PMP를 획득하세요"
           metrics={[{ label: "예산 감시 보상", value: totalPmpEarned, unit: "PMP" }]}
         >

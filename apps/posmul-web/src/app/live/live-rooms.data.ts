@@ -182,20 +182,20 @@ export function resolveLiveCategoryMeta(rawCategory: unknown): {
   const norm = String(rawCategory || "").trim().toUpperCase();
   switch (norm) {
     case "SPORTS":
-      return { category: "SPORTS", categoryLabel: "⚽ 스포츠" };
+      return { category: "SPORTS", categoryLabel: "스포츠" };
     case "ENTERTAINMENT":
     case "KCONTENT":
     case "CULTURE":
-      return { category: "ENTERTAINMENT", categoryLabel: "🎬 엔터·K컬처" };
+      return { category: "ENTERTAINMENT", categoryLabel: "엔터·K컬처" };
     case "POLITICS":
     case "SOCIETY":
     case "GOVERNANCE":
-      return { category: "POLITICS", categoryLabel: "🏛️ 정치·사회" };
+      return { category: "POLITICS", categoryLabel: "정치·사회" };
     case "ECONOMY":
     case "FINANCE":
     case "CONSUME":
     default:
-      return { category: "ECONOMY", categoryLabel: "📈 경제·금융" };
+      return { category: "ECONOMY", categoryLabel: "경제·금융" };
   }
 }
 
@@ -305,7 +305,7 @@ export function mapPredictionGameToLiveRoom(
         sender: "PosMul LIVE 진행자",
         teamTag: oracleLabel,
         teamColor: "bg-indigo-500/20 text-indigo-300 border-indigo-400/40",
-        message: `"${row.title}" 실시간 토론방이 열렸습니다! 의견을 나누고 상단 번개 예측도 개설해 보세요 ⚡`,
+        message: `"${row.title}" 실시간 토론방이 열렸습니다! 의견을 나누고 상단 번개 예측도 개설해 보세요`,
         time: "방금",
       },
     ],

@@ -146,7 +146,7 @@ export const PredictionGameListWithFilter = ({
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* 페이지 헤더 */}
       <div className="text-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">🎯 예측 게임</h1>
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">예측 게임</h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
           다양한 분야의 예측 게임에 참여하고 PMP를 획득하세요!
         </p>
@@ -188,10 +188,10 @@ export const PredictionGameListWithFilter = ({
         {/* 뷰 옵션 */}
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm">
-            🔲 그리드
+            그리드
           </Button>
           <Button variant="ghost" size="sm">
-            📋 리스트
+            리스트
           </Button>
         </div>
       </div>
@@ -209,7 +209,7 @@ export const PredictionGameListWithFilter = ({
         </div>
       ) : (
         <div className="text-center py-16">
-          <div className="text-6xl mb-4">🔍</div>
+          <div className="text-6xl mb-4"></div>
           <h3 className="text-xl font-semibold text-gray-700 mb-2">
             조건에 맞는 게임을 찾을 수 없습니다
           </h3>

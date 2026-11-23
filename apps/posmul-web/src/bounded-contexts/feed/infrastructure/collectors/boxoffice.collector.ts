@@ -57,10 +57,10 @@ async function fetchKobisTopics(
     const blueprint = serializeBlueprint({
       title: `[박스오피스] '${top1.movieNm}' 이번 주말 누적 관객 ${nextMilestoneMan.toLocaleString()}만 명 돌파할까?`,
       summary: [
-        `🎯 기준선: 영진위 KOBIS 집계 기준 '${top1.movieNm}'의 현재 누적 관객 수는 약 ${accMan.toLocaleString()}만 명(박스오피스 1위)입니다.`,
-        `📈 돌파 요인: 현재 예매율 및 주말 가족·커플 관객 유입이 유지될 경우 ${nextMilestoneMan.toLocaleString()}만 명 도달 가능성이 높습니다.`,
-        `📉 미달 요인: 신작 개봉에 따른 상영관 점유율 분산 여부가 핵심 변수입니다.`,
-        `⚖️ 판정 기준: 주말 마감 후 월요일 오전 KOBIS 공식 누적 관객 수로 자동 정산합니다.`,
+        `기준선: 영진위 KOBIS 집계 기준 '${top1.movieNm}'의 현재 누적 관객 수는 약 ${accMan.toLocaleString()}만 명(박스오피스 1위)입니다.`,
+        `돌파 요인: 현재 예매율 및 주말 가족·커플 관객 유입이 유지될 경우 ${nextMilestoneMan.toLocaleString()}만 명 도달 가능성이 높습니다.`,
+        `미달 요인: 신작 개봉에 따른 상영관 점유율 분산 여부가 핵심 변수입니다.`,
+        `판정 기준: 주말 마감 후 월요일 오전 KOBIS 공식 누적 관객 수로 자동 정산합니다.`,
       ].join("\n"),
       keywords: [top1.movieNm, "박스오피스", "KOBIS"],
       category: "ENTERTAINMENT",
@@ -95,10 +95,10 @@ async function fetchKobisTopics(
     const blueprint = serializeBlueprint({
       title: `[극장 맞대결] 이번 주말 박스오피스 1위는 '${top1.movieNm}' vs '${top2.movieNm}' 중 어느 작품일까?`,
       summary: [
-        `🎯 기준선: 현재 일별 박스오피스 1위는 '${top1.movieNm}', 2위는 '${top2.movieNm}'입니다.`,
-        `📈 1위 수성 시나리오: '${top1.movieNm}'의 입소문과 좌석판매율 우위가 주말까지 이어지는 경우입니다.`,
-        `📉 역전 시나리오: '${top2.movieNm}' 또는 제3의 신작이 주말 스크린 확보로 순위를 뒤집는 경우입니다.`,
-        `⚖️ 판정 기준: KOBIS 주말 박스오피스 1위 작품 공식 발표 기준으로 정산합니다.`,
+        `기준선: 현재 일별 박스오피스 1위는 '${top1.movieNm}', 2위는 '${top2.movieNm}'입니다.`,
+        `1위 수성 시나리오: '${top1.movieNm}'의 입소문과 좌석판매율 우위가 주말까지 이어지는 경우입니다.`,
+        `역전 시나리오: '${top2.movieNm}' 또는 제3의 신작이 주말 스크린 확보로 순위를 뒤집는 경우입니다.`,
+        `판정 기준: KOBIS 주말 박스오피스 1위 작품 공식 발표 기준으로 정산합니다.`,
       ].join("\n"),
       keywords: [top1.movieNm, top2.movieNm, "주말박스오피스"],
       category: "ENTERTAINMENT",

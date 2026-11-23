@@ -205,7 +205,7 @@ export default function SignupPage() {
                 계정 활성화 인증 메일을 발송했습니다.
               </p>
               <div className="p-4 rounded-2xl bg-white/5 border border-white/10 text-xs text-gray-300 mb-8 space-y-1.5 text-left">
-                <p className="font-bold text-amber-300">🎁 신규 시민 스타터 패키지 증정</p>
+                <p className="font-bold text-amber-300">신규 시민 스타터 패키지 증정</p>
                 <p>• 무위험 예측 포인트: <strong>+10,000 PMP</strong></p>
                 <p>• 나눔·가치 화폐: <strong>+1,000 PMC</strong></p>
                 <p>• 소속 활동 지역: <strong>{sido}</strong></p>

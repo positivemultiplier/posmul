@@ -139,7 +139,7 @@ export async function purchaseStudyConeAction(params: {
     // 3. 백서 v3.1 원칙: 버티컬 앱 유료 결제 세후 순이익은 중앙 코어 현금 EAT 풀로 기여 기록
     if (spec.priceKrw > 0) {
       console.log(
-        `[PosMul Economy] 현금 EAT 유입: 주택관리사 스터디콘 ${spec.name} (${spec.priceKrw}원) ➡️ MoneyWave 풀 적립`
+        `[PosMul Economy] 현금 EAT 유입: 주택관리사 스터디콘 ${spec.name} (${spec.priceKrw}원) MoneyWave 풀 적립`
       );
     }
 
@@ -155,7 +155,7 @@ export async function purchaseStudyConeAction(params: {
 
     return {
       success: true,
-      message: `🎉 『${spec.name}』 구매 및 장착이 완료되었습니다! 결제액 ${spec.priceKrw.toLocaleString()}원은 PosMul 현금 EAT 연료로 전환되었습니다.`,
+      message: `『${spec.name}』 구매 및 장착이 완료되었습니다! 결제액 ${spec.priceKrw.toLocaleString()}원은 PosMul 현금 EAT 연료로 전환되었습니다.`,
       cones: [newItem],
       equippedCone: newItem,
       contributedEatKrw: spec.priceKrw,
@@ -175,7 +175,7 @@ export async function purchaseStudyConeAction(params: {
 
     return {
       success: true,
-      message: `🎉 『${spec.name}』 구매 및 장착이 완료되었습니다! (데모 모드)`,
+      message: `『${spec.name}』 구매 및 장착이 완료되었습니다! (데모 모드)`,
       cones: [fallbackItem],
       equippedCone: fallbackItem,
       contributedEatKrw: spec.priceKrw,

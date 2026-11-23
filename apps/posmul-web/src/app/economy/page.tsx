@@ -20,7 +20,7 @@ export default async function EconomyPage() {
                     {/* Header */}
                     <div className="mb-8">
                         <h1 className="text-5xl font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                            💰 경제 대시보드
+                            경제 대시보드
                         </h1>
                         <p className="text-xl text-gray-400">
                             PosMul 경제 시스템의 실시간 흐름을 확인하세요

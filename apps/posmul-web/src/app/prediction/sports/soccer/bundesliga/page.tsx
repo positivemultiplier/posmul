@@ -78,7 +78,7 @@ export default async function BundesligaPage() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <FadeIn>
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-red-500 to-yellow-400 bg-clip-text text-transparent mb-6">🇩🇪 분데스리가</h1>
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-red-500 to-yellow-400 bg-clip-text text-transparent mb-6">분데스리가</h1>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">독일 분데스리가 경기 결과를 예측하고 PMC 상금을 획득하세요.<br />바이에른 뮌헨, 도르트문트, 라이프치히의 경쟁을 예측해보세요!</p>
           </div>
         </FadeIn>

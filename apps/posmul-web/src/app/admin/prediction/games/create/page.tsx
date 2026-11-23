@@ -370,11 +370,11 @@ export default function CreatePredictionGamePage() {
       const data = await res.json();
       if (data.success) {
         alert(
-          `🎉 예측 게임 등록 완료!\n- 오라클(${sourceType}) 연동: ${data.oracleRegistered ? "완료" : "수동"}\n- AI 균형 브리핑 생성: ${data.briefingGenerated ? "완료" : "대기(상세 진입 시 자동)"}`
+          `예측 게임 등록 완료!\n- 오라클(${sourceType}) 연동: ${data.oracleRegistered ? "완료" : "수동"}\n- AI 균형 브리핑 생성: ${data.briefingGenerated ? "완료" : "대기(상세 진입 시 자동)"}`
         );
         router.push("/admin/prediction");
       } else {
-        alert(`❌ 게임 생성 실패: ${data.error}`);
+        alert(`게임 생성 실패: ${data.error}`);
       }
     } catch (err) {
       alert(`오류 발생: ${err instanceof Error ? err.message : "Unknown"}`);
@@ -443,12 +443,12 @@ export default function CreatePredictionGamePage() {
                 onChange={(e) => handleCategoryChange(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-indigo-500"
               >
-                <option value="POLITICS">🗳️ 정치 / 정책</option>
-                <option value="ECONOMY">💰 경제 / 암호화폐</option>
-                <option value="INVEST">📈 투자 / 기업</option>
-                <option value="SPORTS">⚽ 스포츠 / 경기</option>
-                <option value="ENTERTAINMENT">🎬 엔터 / 대중문화</option>
-                <option value="CONSUME">🛒 소비 / 로컬</option>
+                <option value="POLITICS">정치 / 정책</option>
+                <option value="ECONOMY">경제 / 암호화폐</option>
+                <option value="INVEST">투자 / 기업</option>
+                <option value="SPORTS">스포츠 / 경기</option>
+                <option value="ENTERTAINMENT">엔터 / 대중문화</option>
+                <option value="CONSUME">소비 / 로컬</option>
               </select>
             </div>
 
@@ -581,7 +581,7 @@ export default function CreatePredictionGamePage() {
                 disabled={previewLoading || sourceType === "manual"}
                 className="px-3 py-1.5 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 disabled:opacity-40 text-sky-300 border border-sky-500/40 text-xs font-bold transition shrink-0"
               >
-                ⚡ 오라클 연결 미리 테스트
+                오라클 연결 미리 테스트
               </button>
             </div>
 
@@ -596,18 +596,18 @@ export default function CreatePredictionGamePage() {
                   }}
                   className="w-full bg-slate-900 border border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-100"
                 >
-                  <option value="rss_ai">🔍 RSS 뉴스 AI 반자동 추천 (rss_ai)</option>
-                  <option value="kr_public">🗺️ 한국 공공데이터 오라클 (kr_public)</option>
+                  <option value="rss_ai">RSS 뉴스 AI 반자동 추천 (rss_ai)</option>
+                  <option value="kr_public">한국 공공데이터 오라클 (kr_public)</option>
                   <option value="coingecko">₿ CoinGecko 실시간 암호화폐 (자동)</option>
-                  <option value="alpha-vantage">📈 AlphaVantage 미국·글로벌 주식 (자동)</option>
-                  <option value="fmp">📊 FMP 글로벌 실적·주가 (자동)</option>
-                  <option value="ecos">🏛️ 한국은행 ECOS 금리·환율 (자동)</option>
-                  <option value="kosis">📑 통계청 KOSIS 국가통계 (자동)</option>
-                  <option value="dart">🏢 금감원 OpenDART 공시 (자동)</option>
-                  <option value="kobis">🎬 영진위 KOBIS 박스오피스 (자동)</option>
-                  <option value="football_data">⚽ Football-Data 경기 결과 (자동)</option>
-                  <option value="kcontent">📺 K-콘텐츠 시청률·차트 (반자동)</option>
-                  <option value="manual">✍️ 수동 정산 (manual)</option>
+                  <option value="alpha-vantage">AlphaVantage 미국·글로벌 주식 (자동)</option>
+                  <option value="fmp">FMP 글로벌 실적·주가 (자동)</option>
+                  <option value="ecos">한국은행 ECOS 금리·환율 (자동)</option>
+                  <option value="kosis">통계청 KOSIS 국가통계 (자동)</option>
+                  <option value="dart">금감원 OpenDART 공시 (자동)</option>
+                  <option value="kobis">영진위 KOBIS 박스오피스 (자동)</option>
+                  <option value="football_data">Football-Data 경기 결과 (자동)</option>
+                  <option value="kcontent">K-콘텐츠 시청률·차트 (반자동)</option>
+                  <option value="manual">수동 정산 (manual)</option>
                 </select>
               </div>
 
@@ -788,7 +788,7 @@ export default function CreatePredictionGamePage() {
           <div className="space-y-3 pt-2 border-t border-slate-800">
             <div className="flex justify-between items-center">
               <label className="block text-xs font-bold text-slate-200">
-                🎯 예측 선택지 (Options — 2개일 경우 자동 yes/no 매핑)
+                예측 선택지 (Options — 2개일 경우 자동 yes/no 매핑)
               </label>
               <button
                 type="button"
@@ -876,7 +876,7 @@ export default function CreatePredictionGamePage() {
                 disabled={submitting}
                 className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-600/30 flex items-center gap-1.5"
               >
-                {submitting ? "등록 중..." : "🚀 오라클 연동 게임 등록"}
+                {submitting ? "등록 중..." : "오라클 연동 게임 등록"}
               </button>
             </div>
           </div>

@@ -209,17 +209,17 @@ export function OpinionLeaderProfileClient({
   const getSocialIcon = (platform: string): string => {
     switch (platform.toLowerCase()) {
       case "instagram":
-        return "📸";
+        return "";
       case "youtube":
-        return "📺";
+        return "";
       case "twitter":
-        return "🐦";
+        return "";
       case "blog":
-        return "📝";
+        return "";
       case "facebook":
-        return "👤";
+        return "";
       default:
-        return "🔗";
+        return "";
     }
   };
 
@@ -285,10 +285,10 @@ export function OpinionLeaderProfileClient({
                   {leader.categoryIcon} {leader.categoryLabel}
                 </span>
                 <span className="bg-white/20 px-4 py-2 rounded-full text-sm">
-                  👥 팔로워 {formatFollowerCount(followerCount)}
+                  팔로워 {formatFollowerCount(followerCount)}
                 </span>
                 <span className="bg-white/20 px-4 py-2 rounded-full text-sm">
-                  💜 기부 영향력 ₩{formatAmount(leader.totalDonationsInfluenced)}
+                  기부 영향력 ₩{formatAmount(leader.totalDonationsInfluenced)}
                 </span>
               </div>
 
@@ -335,7 +335,7 @@ export function OpinionLeaderProfileClient({
             onClick={() => setShowSupportModal(true)}
             className="flex-1 py-3 px-6 rounded-xl font-semibold bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90 transition-all"
           >
-            💜 직접 후원하기
+            직접 후원하기
           </button>
         </MotionDiv>
       </div>
@@ -381,7 +381,7 @@ export function OpinionLeaderProfileClient({
         {/* Endorsed Institutes */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 mb-8">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-            <span>🏛️</span>
+            <span></span>
             {leader.displayName}님이 추천하는 기관
           </h2>
 
@@ -425,7 +425,7 @@ export function OpinionLeaderProfileClient({
                         )}
                         <div className="flex items-center gap-4 mt-3 text-sm text-gray-500 dark:text-gray-400">
                           <span className="flex items-center gap-1">
-                            <span className="text-yellow-500">⭐</span>
+                            <span className="text-yellow-500"></span>
                             {endorsement.institute.trustScore.toFixed(1)}
                           </span>
                           <span>{formatDate(endorsement.endorsedAt)} 추천</span>
@@ -451,7 +451,7 @@ export function OpinionLeaderProfileClient({
             </div>
           ) : (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              <span className="text-4xl block mb-2">🏛️</span>
+              <span className="text-4xl block mb-2"></span>
               아직 추천하는 기관이 없습니다.
             </div>
           )}
@@ -474,7 +474,7 @@ export function OpinionLeaderProfileClient({
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-md w-full p-6">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-gray-900 dark:text-white">
-                💜 직접 후원하기
+                직접 후원하기
               </h3>
               <button
                 onClick={() => setShowSupportModal(false)}

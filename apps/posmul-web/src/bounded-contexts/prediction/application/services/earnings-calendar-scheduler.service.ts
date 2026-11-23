@@ -154,10 +154,10 @@ export class EarningsCalendarSchedulerService {
             id: `earnings-${event.symbol}-${event.date}`,
             title: `[미국 실적] ${companyInfo.name}(${event.symbol}), 분기 EPS 예상($${epsEstimate.toFixed(2)}) 상회할까?`,
             description: [
-                `🎯 기준선: 애널리스트 컨센서스 EPS $${epsEstimate.toFixed(2)} (${companyInfo.name} · ${event.symbol})`,
-                `📈 어닝 서프라이즈(Beat): 실제 발표 EPS > $${epsEstimate.toFixed(2)}`,
-                `📉 어닝 쇼크(Miss): 실제 발표 EPS ≤ $${epsEstimate.toFixed(2)}`,
-                `⚖️ 판정 기준: ${event.date} (${timeLabel}) 실적 공시 확정치(FMP API) 기준 정산`,
+                `기준선: 애널리스트 컨센서스 EPS $${epsEstimate.toFixed(2)} (${companyInfo.name} · ${event.symbol})`,
+                `어닝 서프라이즈(Beat): 실제 발표 EPS > $${epsEstimate.toFixed(2)}`,
+                `어닝 쇼크(Miss): 실제 발표 EPS ≤ $${epsEstimate.toFixed(2)}`,
+                `판정 기준: ${event.date} (${timeLabel}) 실적 공시 확정치(FMP API) 기준 정산`,
             ].join("\n"),
             predictionType: PredictionType.BINARY,
             options: [

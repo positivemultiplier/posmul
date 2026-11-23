@@ -4,7 +4,7 @@ export default function NotFound() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center px-4">
       <div className="max-w-md w-full text-center">
-        <div className="text-8xl mb-8">🔍</div>
+        <div className="text-8xl mb-8"></div>
 
         <h1 className="text-6xl font-bold text-gray-900 mb-4">404</h1>
 
@@ -22,14 +22,14 @@ export default function NotFound() {
             href="/"
             className="block w-full py-3 px-6 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
           >
-            🏠 홈페이지로 돌아가기
+            홈페이지로 돌아가기
           </Link>
 
           <Link
             href="/prediction"
             className="block w-full py-3 px-6 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition-colors"
           >
-            🎯 예측 게임 둘러보기
+            예측 게임 둘러보기
           </Link>
         </div>
 

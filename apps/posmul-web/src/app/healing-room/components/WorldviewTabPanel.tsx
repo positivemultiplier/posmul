@@ -108,7 +108,7 @@ export function WorldviewTabPanel({
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 pb-2.5">
         <div>
           <h3 className={`text-sm font-black ${titleColorClass}`}>
-            🌌 {worldview?.universeTitle ?? `${ownerNickname}의 내면 세계관`}
+            {worldview?.universeTitle ?? `${ownerNickname}의 내면 세계관`}
           </h3>
           <p className="mt-0.5 text-[11px] text-slate-500">
             현실의 나를 잠시 내려놓고, AI 음악·그림·소설이 태어나는 나만의 고유한 우주 설정집
@@ -141,7 +141,7 @@ export function WorldviewTabPanel({
         >
           <div className="flex items-center justify-between">
             <span className="font-black text-indigo-900">
-              ✨ 나만의 세계관 바이블 집필
+              나만의 세계관 바이블 집필
             </span>
             <button
               type="button"
@@ -213,7 +213,7 @@ export function WorldviewTabPanel({
           <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-black text-slate-700">
-                ⏳ 세계관 연대기 (사건 흐름)
+                세계관 연대기 (사건 흐름)
               </span>
               <button
                 type="button"
@@ -279,7 +279,7 @@ export function WorldviewTabPanel({
           <div className="space-y-2 rounded-lg border border-slate-200 bg-white p-2.5">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-black text-slate-700">
-                🧑‍🎨 등장인물 도감 (이 세계에 사는 존재들)
+                등장인물 도감 (이 세계에 사는 존재들)
               </span>
               <button
                 type="button"
@@ -488,7 +488,7 @@ export function WorldviewTabPanel({
         </div>
       ) : (
         <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center space-y-2.5">
-          <div className="text-2xl">🌌</div>
+          <div className="text-2xl"></div>
           <div className="text-xs font-black text-slate-700">
             아직 {ownerNickname}님의 세계관 바이블이 열리지 않았습니다.
           </div>

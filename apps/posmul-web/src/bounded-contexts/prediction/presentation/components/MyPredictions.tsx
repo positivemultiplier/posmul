@@ -221,7 +221,7 @@ export function MyPredictions({ userId }: MyPredictionsProps) {
                 href="/donation"
                 className="ml-4 px-3 py-1.5 text-sm font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 dark:text-emerald-400 rounded-lg transition-colors flex items-center gap-1"
               >
-                <span>🤲</span>
+                <span></span>
                 <span>기부하기</span>
               </Link>
             )}

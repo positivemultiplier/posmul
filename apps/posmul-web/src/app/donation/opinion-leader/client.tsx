@@ -29,11 +29,11 @@ interface OpinionLeaderClientProps {
 }
 
 const CATEGORIES = [
-  { key: "all", label: "전체 리더", icon: "🌟" },
-  { key: "environment", label: "환경", icon: "🌿" },
-  { key: "welfare", label: "복지", icon: "🤝" },
-  { key: "science", label: "과학·교육", icon: "🔬" },
-  { key: "human-rights", label: "인권·동물", icon: "🕊️" },
+  { key: "all", label: "전체 리더", icon: "" },
+  { key: "environment", label: "환경", icon: "" },
+  { key: "welfare", label: "복지", icon: "" },
+  { key: "science", label: "과학·교육", icon: "" },
+  { key: "human-rights", label: "인권·동물", icon: "" },
 ];
 
 function OpinionLeaderContent({ leaders }: OpinionLeaderClientProps) {
@@ -99,7 +99,7 @@ function OpinionLeaderContent({ leaders }: OpinionLeaderClientProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DomainContextHeader
           domain="donation"
-          title="🌟 Opinion Leader · 오피니언 리더 연대 후원"
+          title="Opinion Leader · 오피니언 리더 연대 후원"
           subtitle="신뢰하는 전문가·인플루언서가 보증하는 공익 캠페인에 동참하여 선한 영향력을 확산하세요"
           metrics={[
             { label: "연대 팔로워", value: formatCount(totalFollowers), unit: "명" },

@@ -138,7 +138,7 @@ export const PredictionHistoryPanel: React.FC<PredictionHistoryPanelProps> = ({
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          📊 예측 히스토리
+          예측 히스토리
         </CardTitle>
         <CardDescription>과거 예측 게임 참여 내역과 성과 분석</CardDescription>
       </CardHeader>
@@ -243,11 +243,11 @@ export const PredictionHistoryPanel: React.FC<PredictionHistoryPanelProps> = ({
 
         {/* 성과 분석 */}
         <div className="mt-6 p-4 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg border border-indigo-200">
-          <h4 className="font-semibold text-indigo-700 mb-3">📈 성과 분석</h4>
+          <h4 className="font-semibold text-indigo-700 mb-3">성과 분석</h4>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
             <div>
               <div className="font-medium text-indigo-600 mb-1">
-                🎯 예측 패턴 분석
+                예측 패턴 분석
               </div>
               <div className="text-indigo-600">
                 경제 지표 예측에서 높은 정확도(
@@ -257,7 +257,7 @@ export const PredictionHistoryPanel: React.FC<PredictionHistoryPanelProps> = ({
             </div>
             <div>
               <div className="font-medium text-indigo-600 mb-1">
-                💰 수익성 분석
+                수익성 분석
               </div>
               <div className="text-indigo-600">
                 PmpAmount 대비 PmcAmount 수익률:{" "}

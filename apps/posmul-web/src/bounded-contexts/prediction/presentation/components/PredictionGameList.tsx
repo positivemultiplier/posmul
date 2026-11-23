@@ -168,7 +168,7 @@ const PredictionGameList: React.FC<PredictionGameListProps> = async ({
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">🔮 예측 게임</h2>
+          <h2 className="text-2xl font-bold text-gray-900">예측 게임</h2>
           <p className="text-gray-600 mt-1">
             사회적 이슈를 예측하며 PmcAmount를 획득하고 집단지성에 기여하세요
           </p>
@@ -176,9 +176,9 @@ const PredictionGameList: React.FC<PredictionGameListProps> = async ({
 
         <div className="flex gap-2">
           <Button variant="default" size="sm">
-            📊 내 예측 이력
+            내 예측 이력
           </Button>
-          <Button size="sm">➕ 새 게임 제안</Button>
+          <Button size="sm">새 게임 제안</Button>
         </div>
       </div>
 

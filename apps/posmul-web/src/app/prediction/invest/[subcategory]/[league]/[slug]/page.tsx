@@ -24,7 +24,7 @@ export default async function PredictionInvestDepth5Page({ params }: PageProps) 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-        <h1 className="text-3xl font-bold mb-4">📌 투자 예측 이관 안내</h1>
+        <h1 className="text-3xl font-bold mb-4">투자 예측 이관 안내</h1>
         <p className="text-gray-300 mb-8">
           이 게임(슬러그: <span className="font-mono">{slug}</span>)은 투자 기능 이관에 따라
           Consume 도메인에서 제공됩니다.

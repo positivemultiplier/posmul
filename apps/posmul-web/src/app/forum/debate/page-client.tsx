@@ -31,15 +31,15 @@ const STAT_CATEGORIES: Array<{
   color: string;
   bgColor: string;
 }> = [
-  { key: StatCategory.BIRTH, icon: "👶", label: "출생아", color: "text-pink-600", bgColor: "bg-pink-50" },
-  { key: StatCategory.DEATH, icon: "🕯️", label: "사망자", color: "text-gray-600", bgColor: "bg-gray-50" },
-  { key: StatCategory.MARRIAGE, icon: "💍", label: "혼인", color: "text-red-500", bgColor: "bg-red-50" },
-  { key: StatCategory.DIVORCE, icon: "💔", label: "이혼", color: "text-purple-600", bgColor: "bg-purple-50" },
-  { key: StatCategory.MIGRATION_IN, icon: "🏠", label: "전입", color: "text-green-600", bgColor: "bg-green-50" },
-  { key: StatCategory.MIGRATION_OUT, icon: "🚚", label: "전출", color: "text-orange-600", bgColor: "bg-orange-50" },
-  { key: StatCategory.EMPLOYMENT, icon: "💼", label: "취업률", color: "text-blue-600", bgColor: "bg-blue-50" },
-  { key: StatCategory.UNEMPLOYMENT, icon: "📉", label: "실업률", color: "text-red-600", bgColor: "bg-red-50" },
-  { key: StatCategory.CPI, icon: "📊", label: "물가지수", color: "text-amber-600", bgColor: "bg-amber-50" },
+  { key: StatCategory.BIRTH, icon: "", label: "출생아", color: "text-pink-600", bgColor: "bg-pink-50" },
+  { key: StatCategory.DEATH, icon: "", label: "사망자", color: "text-gray-600", bgColor: "bg-gray-50" },
+  { key: StatCategory.MARRIAGE, icon: "", label: "혼인", color: "text-red-500", bgColor: "bg-red-50" },
+  { key: StatCategory.DIVORCE, icon: "", label: "이혼", color: "text-purple-600", bgColor: "bg-purple-50" },
+  { key: StatCategory.MIGRATION_IN, icon: "", label: "전입", color: "text-green-600", bgColor: "bg-green-50" },
+  { key: StatCategory.MIGRATION_OUT, icon: "", label: "전출", color: "text-orange-600", bgColor: "bg-orange-50" },
+  { key: StatCategory.EMPLOYMENT, icon: "", label: "취업률", color: "text-blue-600", bgColor: "bg-blue-50" },
+  { key: StatCategory.UNEMPLOYMENT, icon: "", label: "실업률", color: "text-red-600", bgColor: "bg-red-50" },
+  { key: StatCategory.CPI, icon: "", label: "물가지수", color: "text-amber-600", bgColor: "bg-amber-50" },
 ];
 
 /**
@@ -334,7 +334,7 @@ export function DemographicDebatePageClient() {
       {/* Debate Cards */}
       {filteredDebates.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-xl border border-gray-200">
-          <div className="text-4xl mb-4">📊</div>
+          <div className="text-4xl mb-4"></div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             조건에 맞는 예측 게임이 없습니다
           </h3>
@@ -424,7 +424,7 @@ export function DemographicDebatePageClient() {
                     <div className="flex items-center justify-between text-sm mb-4">
                       <span className="text-gray-500">마감까지</span>
                       <span className="font-medium text-orange-600">
-                        ⏰ {formatTimeRemaining(debate.deadline)}
+                        {formatTimeRemaining(debate.deadline)}
                       </span>
                     </div>
                   )}
@@ -455,22 +455,22 @@ export function DemographicDebatePageClient() {
 
       {/* Info Section */}
       <div className="mt-12 bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl border border-green-200 p-6">
-        <h2 className="text-xl font-bold text-green-900 mb-4">💡 인구통계 예측 게임 안내</h2>
+        <h2 className="text-xl font-bold text-green-900 mb-4">인구통계 예측 게임 안내</h2>
         <div className="grid md:grid-cols-3 gap-6 text-sm">
           <div>
-            <h3 className="font-semibold text-green-800 mb-2">📊 데이터 출처</h3>
+            <h3 className="font-semibold text-green-800 mb-2">데이터 출처</h3>
             <p className="text-green-700">
               모든 통계 데이터는 KOSIS(국가통계포털)에서 제공하는 공식 데이터를 사용합니다.
             </p>
           </div>
           <div>
-            <h3 className="font-semibold text-green-800 mb-2">🎯 예측 방법</h3>
+            <h3 className="font-semibold text-green-800 mb-2">예측 방법</h3>
             <p className="text-green-700">
               제시된 범위 내에서 예측값을 선택하고 PMP를 배팅합니다. 정답에 가까울수록 더 많은 보상!
             </p>
           </div>
           <div>
-            <h3 className="font-semibold text-green-800 mb-2">💰 보상 시스템</h3>
+            <h3 className="font-semibold text-green-800 mb-2">보상 시스템</h3>
             <p className="text-green-700">
               실제 통계 발표 후 정답에 가까운 예측자에게 PMC로 보상이 지급됩니다.
             </p>

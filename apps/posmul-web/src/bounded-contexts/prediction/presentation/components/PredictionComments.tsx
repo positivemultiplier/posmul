@@ -83,7 +83,7 @@ export function PredictionComments({ gameId, predictionType, options }: Predicti
       if (res.success && res.comment) {
         setComments([res.comment, ...comments]);
         setNewComment("");
-        setRewardNotice(`🎉 소중한 의견이 등록되었습니다! 활동 보상으로 +${res.earnedPmp ?? 10} PMP가 적립되었습니다.`);
+        setRewardNotice(`소중한 의견이 등록되었습니다! 활동 보상으로 +${res.earnedPmp ?? 10} PMP가 적립되었습니다.`);
         setTimeout(() => setRewardNotice(null), 5000);
       } else {
         setErrorMessage(res.error || "댓글 등록에 실패했습니다.");
@@ -186,7 +186,7 @@ export function PredictionComments({ gameId, predictionType, options }: Predicti
           />
           <div className="flex items-center justify-between mt-2">
             <span className="text-xs text-slate-500">
-              💡 건전한 정책·사회 담론 형성을 위해 팩트에 기반한 의견 작성을 권장합니다.
+              건전한 정책·사회 담론 형성을 위해 팩트에 기반한 의견 작성을 권장합니다.
             </span>
             <Button
               type="submit"

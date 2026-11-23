@@ -178,7 +178,7 @@ export function LiveQuickChallengeModal({
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            🎮 LCK/롤 전용
+            LCK/롤 전용
           </button>
           <button
             type="button"
@@ -192,7 +192,7 @@ export function LiveQuickChallengeModal({
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            ⚽ 스포츠/축구
+            스포츠/축구
           </button>
           <button
             type="button"
@@ -208,7 +208,7 @@ export function LiveQuickChallengeModal({
                 : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            ✍️ 직접 입력
+            직접 입력
           </button>
         </div>
 
@@ -216,7 +216,7 @@ export function LiveQuickChallengeModal({
         {selectedCategory !== "CUSTOM" && (
           <div className="mb-4">
             <label className="block text-[11px] font-semibold text-slate-400 mb-1.5">
-              💡 1초 완성 템플릿 선택
+              1초 완성 템플릿 선택
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {PRESETS.filter((p) => p.category === selectedCategory).map((p) => (
@@ -287,7 +287,7 @@ export function LiveQuickChallengeModal({
           <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-3">
             <div>
               <label className="block text-xs font-semibold text-slate-300 mb-1.5">
-                🎯 방장(나)은 어느 쪽에 베팅하시겠습니까?
+                방장(나)은 어느 쪽에 베팅하시겠습니까?
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -318,7 +318,7 @@ export function LiveQuickChallengeModal({
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  ⏱️ 마감 시간
+                  마감 시간
                 </label>
                 <div className="flex gap-1.5">
                   {[3, 5, 10, 15].map((min) => (
@@ -340,7 +340,7 @@ export function LiveQuickChallengeModal({
 
               <div className="flex-1">
                 <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  🪙 베팅 포인트
+                  베팅 포인트
                 </label>
                 <div className="flex gap-1.5">
                   {[100, 300, 500, 1000].map((amt) => (
@@ -375,7 +375,7 @@ export function LiveQuickChallengeModal({
             className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-indigo-600 hover:from-amber-400 hover:to-indigo-500 text-white font-bold text-sm shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2 transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
           >
             <Zap className="w-4 h-4 fill-white" />
-            <span>{isPending ? "채팅방에 쏘아 올리는 중..." : "⚡ 채팅방에 번개 예측 던지기!"}</span>
+            <span>{isPending ? "채팅방에 쏘아 올리는 중..." : "채팅방에 번개 예측 던지기!"}</span>
           </button>
         </form>
       </div>

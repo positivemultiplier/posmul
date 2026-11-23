@@ -164,7 +164,7 @@ function GiftAidContent() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         <DomainContextHeader
           domain="other"
-          title="🎁 Gift Aid · 기부금 영수증 및 세액공제"
+          title="Gift Aid · 기부금 영수증 및 세액공제"
           subtitle="시민이 직접 집행한 PMC 기부 내역을 확인하고 연말정산 세액공제 영수증을 발급받으세요"
           metrics={[
             { label: '확정 기부 금액', value: totalDonation, unit: 'PMC' },
@@ -201,7 +201,7 @@ function GiftAidContent() {
             <div className="bg-slate-900/70 rounded-2xl border border-slate-800/90 overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
                 <h3 className="font-bold text-sm text-white">
-                  📋 연도별 기부 내역 원장
+                  연도별 기부 내역 원장
                 </h3>
                 <select
                   value={year}
@@ -246,10 +246,10 @@ function GiftAidContent() {
 
             <div className="grid sm:grid-cols-2 gap-3">
               <button className="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white py-3 rounded-xl text-xs font-bold transition-colors">
-                📄 연간 기부금 영수증 일괄 발급
+                연간 기부금 영수증 일괄 발급
               </button>
               <button className="bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 py-3 rounded-xl text-xs font-bold transition-colors">
-                📊 국세청 연말정산 간소화 자료 다운로드
+                국세청 연말정산 간소화 자료 다운로드
               </button>
             </div>
           </div>

@@ -18,67 +18,67 @@ const STAT_CATEGORY_CONFIG: Record<
   { icon: string; color: string; bgColor: string; label: string }
 > = {
   [StatCategory.BIRTH]: {
-    icon: "👶",
+    icon: "",
     color: "text-pink-600",
     bgColor: "bg-pink-50",
     label: "출생아 수",
   },
   [StatCategory.DEATH]: {
-    icon: "🕯️",
+    icon: "",
     color: "text-gray-600",
     bgColor: "bg-gray-50",
     label: "사망자 수",
   },
   [StatCategory.MARRIAGE]: {
-    icon: "💍",
+    icon: "",
     color: "text-red-500",
     bgColor: "bg-red-50",
     label: "혼인 건수",
   },
   [StatCategory.DIVORCE]: {
-    icon: "💔",
+    icon: "",
     color: "text-purple-600",
     bgColor: "bg-purple-50",
     label: "이혼 건수",
   },
   [StatCategory.MIGRATION_IN]: {
-    icon: "🏠",
+    icon: "",
     color: "text-green-600",
     bgColor: "bg-green-50",
     label: "전입자 수",
   },
   [StatCategory.MIGRATION_OUT]: {
-    icon: "🚚",
+    icon: "",
     color: "text-orange-600",
     bgColor: "bg-orange-50",
     label: "전출자 수",
   },
   [StatCategory.EMPLOYMENT]: {
-    icon: "💼",
+    icon: "",
     color: "text-blue-600",
     bgColor: "bg-blue-50",
     label: "취업률",
   },
   [StatCategory.UNEMPLOYMENT]: {
-    icon: "📉",
+    icon: "",
     color: "text-red-600",
     bgColor: "bg-red-50",
     label: "실업률",
   },
   [StatCategory.LABOR_FORCE]: {
-    icon: "👷",
+    icon: "",
     color: "text-indigo-600",
     bgColor: "bg-indigo-50",
     label: "경제활동인구",
   },
   [StatCategory.CPI]: {
-    icon: "📊",
+    icon: "",
     color: "text-amber-600",
     bgColor: "bg-amber-50",
     label: "소비자물가지수",
   },
   [StatCategory.POPULATION]: {
-    icon: "👥",
+    icon: "",
     color: "text-teal-600",
     bgColor: "bg-teal-50",
     label: "총 인구",
@@ -274,7 +274,7 @@ export function DemographicDebateCard({
                   : "text-gray-900"
               }`}
             >
-              ⏰ {timeRemaining}
+              {timeRemaining}
             </span>
           </div>
         )}
@@ -373,7 +373,7 @@ export function DemographicDebateList({
       {/* Debate Cards */}
       {filteredDebates.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
-          <div className="text-4xl mb-3">📊</div>
+          <div className="text-4xl mb-3"></div>
           <p>{emptyMessage}</p>
         </div>
       ) : (

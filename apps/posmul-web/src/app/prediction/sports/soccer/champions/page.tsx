@@ -78,7 +78,7 @@ export default async function ChampionsLeaguePage() {
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
         <FadeIn>
           <div className="text-center mb-12">
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-6">🇪🇺 UEFA 챔피언스리그</h1>
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent mb-6">UEFA 챔피언스리그</h1>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto">유럽 최고의 클럽 대회, 챔피언스리그 경기 결과를 예측하고 PMC 상금을 획득하세요!<br />유럽 최강팀들의 치열한 경쟁을 예측해보세요!</p>
           </div>
         </FadeIn>

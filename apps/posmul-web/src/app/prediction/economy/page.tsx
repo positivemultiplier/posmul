@@ -105,7 +105,7 @@ export default async function PredictionEconomyPage({
           {/* PosMul 통일 디자인 시스템 헤더 (DomainContextHeader) */}
           <DomainContextHeader
             domain="prediction"
-            title="📈 경제 예측 마켓"
+            title="경제 예측 마켓"
             subtitle="주식, 기업 실적, 거시경제 지표, 암호화폐 흐름을 예측하고 PMC를 획득하세요"
             metrics={[
               {
@@ -118,7 +118,7 @@ export default async function PredictionEconomyPage({
           >
             {/* 검증 데이터 소스 안내 배지 (3row 중복 탭 제거 후 데이터 신뢰성 강조) */}
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 공인 검증 데이터:</span>
+              <span className="font-semibold text-slate-300">공인 검증 데이터:</span>
               {dataSources.map((ds) => (
                 <span
                   key={ds.name}
@@ -153,7 +153,7 @@ export default async function PredictionEconomyPage({
             />
           ) : (
             <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80">
-              <div className="text-5xl mb-3">📈</div>
+              <div className="text-5xl mb-3"></div>
               <h3 className="text-lg font-bold text-white mb-1">
                 경제 예측 게임 준비 중
               </h3>

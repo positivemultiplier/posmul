@@ -28,19 +28,19 @@ interface UserPrediction {
 
 const SUGGESTION_SUBCATEGORY_CONFIG = {
   "user-proposals": {
-    title: "🙋 시민 직접 제안 예측 마켓",
+    title: "시민 직접 제안 예측 마켓",
     subtitle: "주권자인 시민이 직접 발의한 사회·지역 의제 기반 집단지성 예측 마켓입니다",
     depthSubcategory: "user_proposals",
     dataSources: ["PosMul 시민 아고라 합의 검증"],
   },
   "ai-recommendations": {
-    title: "🤖 AI 추천 예측 마켓",
+    title: "AI 추천 예측 마켓",
     subtitle: "실시간 공공 뉴스와 국가 예산 데이터에서 AI가 도출한 핵심 예측 주제입니다",
     depthSubcategory: "ai_recommendations",
     dataSources: ["AI 공공뉴스 팩트 파이프라인"],
   },
   "opinion-leader-suggestions": {
-    title: "🌟 오피니언 리더 제안 마켓",
+    title: "오피니언 리더 제안 마켓",
     subtitle: "각 분야 정책 전문가와 오피니언 리더가 화두를 던진 공익 예측 마켓입니다",
     depthSubcategory: "opinion_leaders",
     dataSources: ["전문가 자문단 공인 검증"],
@@ -119,7 +119,7 @@ export default async function PredictionUserSuggestionsSubcategoryPage({
           >
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-                <span className="font-semibold text-slate-300">📡 검증 데이터 소스:</span>
+                <span className="font-semibold text-slate-300">검증 데이터 소스:</span>
                 {config.dataSources.map((ds) => (
                   <span
                     key={ds}
@@ -159,7 +159,7 @@ export default async function PredictionUserSuggestionsSubcategoryPage({
             />
           ) : (
             <div className="text-center py-16 bg-slate-900/40 rounded-2xl border border-slate-800/80 space-y-4">
-              <div className="text-5xl">💡</div>
+              <div className="text-5xl"></div>
               <h3 className="text-lg font-bold text-white">
                 {config.title.replace(" 마켓", "")} 준비 중
               </h3>

@@ -35,12 +35,12 @@ interface GalleryPostListProps {
 
 const CATEGORIES = [
   { key: "all", label: "전체 갤", icon: Flame },
-  { key: "concept", label: "🔥 개념글/포텐", icon: Sparkles },
-  { key: "economy", label: "📈 경제·주식", icon: TrendingUp },
-  { key: "crypto", label: "🪙 크립토", icon: Coins },
-  { key: "politics", label: "🏛️ 정치·사회", icon: Landmark },
-  { key: "culture", label: "🍿 엔터·문화", icon: Film },
-  { key: "free", label: "☕ 자유·뻘글", icon: Coffee },
+  { key: "concept", label: "개념글/포텐", icon: Sparkles },
+  { key: "economy", label: "경제·주식", icon: TrendingUp },
+  { key: "crypto", label: "크립토", icon: Coins },
+  { key: "politics", label: "정치·사회", icon: Landmark },
+  { key: "culture", label: "엔터·문화", icon: Film },
+  { key: "free", label: "자유·뻘글", icon: Coffee },
 ];
 
 const PAGE_SIZE = 15; // 페이지당 표시 글 개수
@@ -311,7 +311,7 @@ export function GalleryPostList({
                                   : "bg-slate-800/80 text-slate-400 border border-slate-700/50"
                               }`}
                             >
-                              {post.isConcept ? "🔥포텐" : post.tag || "자유"}
+                              {post.isConcept ? "포텐" : post.tag || "자유"}
                             </span>
                           </Link>
                         </td>

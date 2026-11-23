@@ -63,19 +63,19 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       news: {
-        title: "📰 News",
+        title: "News",
         href: "/forum/news",
         segmentAliases: ["news"],
         subcategories: [
           { title: "전체 뉴스", path: "/forum/news" },
-          { title: "📍 전남·광주", path: "/forum/news?category=gwangju" },
-          { title: "🤖 AI·테크", path: "/forum/news?category=ai" },
-          { title: "📈 경제·정책", path: "/forum/news?category=economy" },
-          { title: "⚽ 스포츠", path: "/forum/news?category=sports" },
+          { title: "전남·광주", path: "/forum/news?category=gwangju" },
+          { title: "AI·테크", path: "/forum/news?category=ai" },
+          { title: "경제·정책", path: "/forum/news?category=economy" },
+          { title: "스포츠", path: "/forum/news?category=sports" },
         ],
       },
       budget: {
-        title: "💰 Budget",
+        title: "Budget",
         href: "/forum/budget",
         segmentAliases: ["budget"],
         subcategories: [
@@ -86,7 +86,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       agora: {
-        title: "💬 Agora",
+        title: "Agora",
         href: "/forum/agora",
         segmentAliases: ["agora"],
         subcategories: [
@@ -113,7 +113,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       major: {
-        title: "🎬 Major League",
+        title: "Major League",
         href: "/consume/major-league",
         segmentAliases: ["major-league", "major", "time"],
         subcategories: [
@@ -124,7 +124,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       minor: {
-        title: "🏪 Minor League",
+        title: "Minor League",
         href: "/consume/minor-league",
         segmentAliases: ["minor-league", "minor", "money"],
         subcategories: [
@@ -135,7 +135,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       cloud: {
-        title: "💡 Cloud Funding",
+        title: "Cloud Funding",
         href: "/consume/cloud-funding",
         segmentAliases: ["cloud-funding", "cloud"],
         subcategories: [
@@ -156,13 +156,13 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         href: "/prediction",
         subcategories: [
           { title: "전체 마켓 피드", path: "/prediction" },
-          { title: "🔥 인기·핫이슈", path: "/prediction?filter=hot" },
-          { title: "💰 고액 상금풀", path: "/prediction?filter=high-pool" },
-          { title: "⏰ 마감 임박", path: "/prediction?filter=closing" },
+          { title: "인기·핫이슈", path: "/prediction?filter=hot" },
+          { title: "고액 상금풀", path: "/prediction?filter=high-pool" },
+          { title: "마감 임박", path: "/prediction?filter=closing" },
         ],
       },
       economy: {
-        title: "📈 경제",
+        title: "경제",
         href: "/prediction/economy",
         segmentAliases: ["economy", "invest"],
         subcategories: [
@@ -174,18 +174,18 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       consume: {
-        title: "💳 소비예측",
+        title: "소비예측",
         href: "/prediction/consume",
         segmentAliases: ["consume"],
         subcategories: [
           { title: "소비예측 전체", path: "/prediction/consume" },
-          { title: "⏰ TimeConsume", path: "/prediction/consume/time" },
-          { title: "💳 MoneyConsume", path: "/prediction/consume/money" },
-          { title: "☁️ CloudConsume", path: "/prediction/consume/cloud" },
+          { title: "TimeConsume", path: "/prediction/consume/time" },
+          { title: "MoneyConsume", path: "/prediction/consume/money" },
+          { title: "CloudConsume", path: "/prediction/consume/cloud" },
         ],
       },
       sports: {
-        title: "⚽ 스포츠",
+        title: "스포츠",
         href: "/prediction/sports",
         segmentAliases: ["sports"],
         subcategories: [
@@ -197,7 +197,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       entertainment: {
-        title: "🎬 엔터테인먼트",
+        title: "엔터테인먼트",
         href: "/prediction/entertainment",
         segmentAliases: ["entertainment"],
         subcategories: [
@@ -210,7 +210,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       politics: {
-        title: "🗳️ 정치/선거",
+        title: "정치/선거",
         href: "/prediction/politics",
         segmentAliases: ["politics"],
         subcategories: [
@@ -221,7 +221,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       "user-suggestions": {
-        title: "💡 시민 제안",
+        title: "시민 제안",
         href: "/prediction/user-suggestions",
         segmentAliases: ["user-suggestions"],
         subcategories: [
@@ -248,7 +248,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       direct: {
-        title: "📦 K-물품 기부",
+        title: "K-물품 기부",
         href: "/donation/direct",
         segmentAliases: ["direct"],
         subcategories: [
@@ -260,7 +260,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       institute: {
-        title: "🏛️ 기관 기부",
+        title: "기관 기부",
         href: "/donation/institute",
         segmentAliases: ["institute"],
         subcategories: [
@@ -272,7 +272,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       opinion: {
-        title: "🌟 오피니언 리더",
+        title: "오피니언 리더",
         href: "/donation/opinion-leader",
         segmentAliases: ["opinion-leader", "opinion"],
         subcategories: [
@@ -290,7 +290,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
     href: "/ranking",
     categories: {
       expect: {
-        title: "🔮 예측 명사수",
+        title: "예측 명사수",
         href: "/ranking?category=expect",
         subcategories: [
           { title: "전국 명예의 전당", path: "/ranking?category=expect" },
@@ -300,7 +300,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       overall: {
-        title: "🏆 종합 시민",
+        title: "종합 시민",
         href: "/ranking?category=overall",
         subcategories: [
           { title: "전국 종합", path: "/ranking?category=overall" },
@@ -310,7 +310,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       forum: {
-        title: "💬 공론 기여",
+        title: "공론 기여",
         href: "/ranking?category=forum",
         subcategories: [
           { title: "PMP 공론 랭킹", path: "/ranking?category=forum" },
@@ -319,7 +319,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       consume: {
-        title: "💳 상생 소비",
+        title: "상생 소비",
         href: "/ranking?category=consume",
         subcategories: [
           { title: "PMC 소비 랭킹", path: "/ranking?category=consume" },
@@ -328,7 +328,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       donation: {
-        title: "❤️ 나눔 리더",
+        title: "나눔 리더",
         href: "/ranking?category=donation",
         subcategories: [
           { title: "PMC 기부 랭킹", path: "/ranking?category=donation" },
@@ -352,7 +352,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       giftaid: {
-        title: "🎁 Gift Aid",
+        title: "Gift Aid",
         href: "/other/gift-aid",
         segmentAliases: ["gift-aid", "giftaid"],
         subcategories: [
@@ -362,7 +362,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       tax: {
-        title: "📊 세무·회계",
+        title: "세무·회계",
         href: "/other/tax",
         segmentAliases: ["tax"],
         subcategories: [
@@ -372,7 +372,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       support: {
-        title: "💬 고객지원",
+        title: "고객지원",
         href: "/other/support",
         segmentAliases: ["support"],
         subcategories: [
@@ -382,7 +382,7 @@ export const navigationData: Record<PosMulDomainKey, NavDomainItem> = {
         ],
       },
       settings: {
-        title: "⚙️ 설정",
+        title: "설정",
         href: "/other/settings",
         segmentAliases: ["settings"],
         subcategories: [
@@ -548,14 +548,14 @@ const MORE_MENU_GROUPS = [
         title: "소비",
         desc: "광고 · 상점 · 클라우드 펀딩",
         href: "/consume",
-        icon: "💳",
+        icon: "",
         badge: "+PMP·PMC",
       },
       {
         title: "랭킹",
         desc: "전국·지역 시민 명예의 전당",
         href: "/ranking",
-        icon: "🏆",
+        icon: "",
         badge: "명예",
       },
     ],
@@ -567,21 +567,21 @@ const MORE_MENU_GROUPS = [
         title: "LIVE 응원톡",
         desc: "실시간 이슈 라이브 중계·응원",
         href: "/live",
-        icon: "🔴",
+        icon: "",
         badge: "LIVE",
       },
       {
         title: "맞짱 챌린지",
         desc: "1:1 예측 승부 및 커스텀 내기",
         href: "/challenge",
-        icon: "🥊",
+        icon: "",
         badge: "대결",
       },
       {
         title: "프렌즈 도감",
         desc: "포스멀 캐릭터 유니버스",
         href: "/characters",
-        icon: "🐾",
+        icon: "",
         badge: "도감",
       },
     ],
@@ -593,25 +593,25 @@ const MORE_MENU_GROUPS = [
         title: "Gift Aid (세액공제)",
         desc: "기부 영수증 및 공제 계산",
         href: "/other/gift-aid",
-        icon: "🎁",
+        icon: "",
       },
       {
         title: "세무 · 회계",
         desc: "거래 내역 및 수익 명세서",
         href: "/other/tax",
-        icon: "📊",
+        icon: "",
       },
       {
         title: "고객지원 · 가이드",
         desc: "FAQ · 1:1 문의 · 이용 안내",
         href: "/other/support",
-        icon: "💬",
+        icon: "",
       },
       {
         title: "기타 서비스 전체",
         desc: "전체 부가 기능 모아보기",
         href: "/other",
-        icon: "⚙️",
+        icon: "",
       },
     ],
   },
@@ -921,7 +921,7 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
               onClick={handleOpenHealingRoom}
               className="px-3 py-1.5 bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 hover:from-sky-500/30 hover:to-purple-500/30 text-sky-200 rounded-xl transition-all duration-200 border border-sky-400/40 text-xs font-semibold flex items-center gap-1 whitespace-nowrap shrink-0"
             >
-              <span>🏡</span>
+              <span></span>
               <span>힐링룸</span>
             </a>
 
@@ -1233,7 +1233,7 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                 }}
                 className="block w-full px-4 py-2 bg-gradient-to-r from-sky-500/20 via-indigo-500/20 to-purple-500/20 border border-sky-400/40 text-sky-200 rounded-xl text-center text-xs font-bold"
               >
-                🏡 PosMul 힐링룸 (새 창)
+                PosMul 힐링룸 (새 창)
               </a>
               {user ? (
                 <div className="space-y-2">
@@ -1249,14 +1249,14 @@ function ThreeRowNavbarContent({ hideNav = false }: ThreeRowNavbarProps) {
                       onClick={() => setMobileOpen(false)}
                       className="block px-4 py-2 bg-slate-800 text-slate-200 rounded-xl text-center text-xs font-semibold"
                     >
-                      📊 내 대시보드
+                      내 대시보드
                     </Link>
                     <Link
                       href="/other/settings"
                       onClick={() => setMobileOpen(false)}
                       className="block px-4 py-2 bg-slate-900 border border-slate-800 text-slate-200 rounded-xl text-center text-xs font-semibold"
                     >
-                      ⚙️ 프로필 설정
+                      프로필 설정
                     </Link>
                   </div>
                   <button

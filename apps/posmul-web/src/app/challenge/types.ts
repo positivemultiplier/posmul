@@ -72,7 +72,7 @@ export interface ChallengePreset {
 export const CHALLENGE_PRESETS: ChallengePreset[] = [
   {
     id: "coffee",
-    icon: "☕",
+    icon: "",
     category: "COMPANY",
     categoryLabel: "오후 커피 쏘기",
     title: "오늘 오후 3시 커피 쏘기! 오늘의 코스피 종가 끝자리?",
@@ -81,7 +81,7 @@ export const CHALLENGE_PRESETS: ChallengePreset[] = [
   },
   {
     id: "lunch",
-    icon: "🍱",
+    icon: "",
     category: "COMPANY",
     categoryLabel: "점심 메뉴 대결",
     title: "오늘 점심 메뉴 어디로 갈까?",
@@ -90,7 +90,7 @@ export const CHALLENGE_PRESETS: ChallengePreset[] = [
   },
   {
     id: "son-goal",
-    icon: "⚽",
+    icon: "",
     category: "SPORTS",
     categoryLabel: "손흥민 골 배틀",
     title: "오늘 밤 손흥민 공격포인트 기록할까?",
@@ -99,7 +99,7 @@ export const CHALLENGE_PRESETS: ChallengePreset[] = [
   },
   {
     id: "kdy-hr",
-    icon: "⚾",
+    icon: "",
     category: "FANDOM",
     categoryLabel: "김도영 홈런",
     title: "오늘 김도영 49호 홈런 터질까?",
@@ -108,7 +108,7 @@ export const CHALLENGE_PRESETS: ChallengePreset[] = [
   },
   {
     id: "dinner-after",
-    icon: "🍻",
+    icon: "",
     category: "COMPANY",
     categoryLabel: "회식 2차 여부",
     title: "오늘 금요일 회식, 부장님 2차 가자고 하실까?",
@@ -117,7 +117,7 @@ export const CHALLENGE_PRESETS: ChallengePreset[] = [
   },
   {
     id: "late-dating",
-    icon: "⏰",
+    icon: "",
     category: "COUPLE",
     categoryLabel: "데이트 지각 배틀",
     title: "이번 주말 데이트 약속, 누가 5분 이상 늦을까?",
@@ -126,7 +126,7 @@ export const CHALLENGE_PRESETS: ChallengePreset[] = [
   },
   {
     id: "lol-rank",
-    icon: "🎮",
+    icon: "",
     category: "CASUAL",
     categoryLabel: "롤 승급전",
     title: "오늘 철수 롤 골드 승급전 성공할까?",

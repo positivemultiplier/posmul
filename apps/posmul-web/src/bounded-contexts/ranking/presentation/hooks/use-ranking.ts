@@ -171,15 +171,15 @@ export function useRanking(initialCategory: RankingCategory = 'expect') {
 
 // 카테고리 정보
 export const RANKING_CATEGORIES: { id: RankingCategory; label: string; icon: string; description: string }[] = [
-  { id: 'expect', label: '🔮 예측의 신 ("내가 그랬제!")', icon: '🔮', description: '미래 예측 적중 및 통찰력 랭킹' },
-  { id: 'overall', label: '🏆 종합', icon: '🏆', description: '모든 활동 점수 합산' },
-  { id: 'donation', label: '❤️ 기부 엔젤', icon: '❤️', description: '공익 기부 PMC 랭킹' },
-  { id: 'forum', label: '💬 공론장', icon: '💬', description: '토론 및 이슈 리포트 PMP' },
-  { id: 'consume', label: '💳 소비', icon: '💳', description: '소비 활동 PMC' },
+  { id: 'expect', label: '예측의 신 ("내가 그랬제!")', icon: '', description: '미래 예측 적중 및 통찰력 랭킹' },
+  { id: 'overall', label: '종합', icon: '', description: '모든 활동 점수 합산' },
+  { id: 'donation', label: '기부 엔젤', icon: '', description: '공익 기부 PMC 랭킹' },
+  { id: 'forum', label: '공론장', icon: '', description: '토론 및 이슈 리포트 PMP' },
+  { id: 'consume', label: '소비', icon: '', description: '소비 활동 PMC' },
 ];
 
 export const RANKING_PERIODS: { id: RankingPeriod; label: string; icon: string }[] = [
-  { id: 'all', label: '전체', icon: '🏆' },
-  { id: 'monthly', label: '이번 달', icon: '📅' },
-  { id: 'weekly', label: '이번 주', icon: '📆' },
+  { id: 'all', label: '전체', icon: '' },
+  { id: 'monthly', label: '이번 달', icon: '' },
+  { id: 'weekly', label: '이번 주', icon: '' },
 ];

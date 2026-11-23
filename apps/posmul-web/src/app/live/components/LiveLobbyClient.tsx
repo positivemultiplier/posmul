@@ -263,7 +263,7 @@ export function LiveLobbyClient({ initialRooms }: LiveLobbyClientProps) {
 
                 <div className="flex items-center justify-between pt-1">
                   <span className="text-xs font-black text-amber-300">
-                    💰 {room.predictionGame?.totalPoolPmc.toLocaleString()} PMC 풀
+                    {room.predictionGame?.totalPoolPmc.toLocaleString()} PMC 풀
                   </span>
                   <span
                     className={`text-xs font-extrabold flex items-center gap-1 group-hover:translate-x-1 transition-transform ${

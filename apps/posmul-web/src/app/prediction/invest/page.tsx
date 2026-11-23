@@ -5,7 +5,7 @@ export default function PredictionInvestPage() {
         <div className="min-h-screen bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 text-white">
             <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
                 <FadeIn>
-                    <h1 className="text-4xl font-bold mb-4">📌 투자 예측 이관 안내</h1>
+                    <h1 className="text-4xl font-bold mb-4">투자 예측 이관 안내</h1>
                     <p className="text-gray-300 mb-8">
                         투자 예측은 이제 <span className="font-semibold">소비 예측</span> 카테고리로 통합되었습니다.
                         <br />
@@ -18,7 +18,7 @@ export default function PredictionInvestPage() {
                                 href="/prediction/consume/money"
                                 className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
                             >
-                                <div className="text-2xl font-bold mb-2">💳 MoneyConsume</div>
+                                <div className="text-2xl font-bold mb-2">MoneyConsume</div>
                                 <div className="text-sm text-gray-300">Local League (지역 소비)</div>
                             </Link>
                         </HoverLift>
@@ -28,7 +28,7 @@ export default function PredictionInvestPage() {
                                 href="/prediction/consume/time"
                                 className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
                             >
-                                <div className="text-2xl font-bold mb-2">⏰ TimeConsume</div>
+                                <div className="text-2xl font-bold mb-2">TimeConsume</div>
                                 <div className="text-sm text-gray-300">Major League (광고/설문)</div>
                             </Link>
                         </HoverLift>
@@ -38,7 +38,7 @@ export default function PredictionInvestPage() {
                                 href="/prediction/consume/cloud"
                                 className="block rounded-2xl border border-white/10 bg-white/5 p-6 hover:bg-white/10 transition-colors"
                             >
-                                <div className="text-2xl font-bold mb-2">☁️ CloudConsume</div>
+                                <div className="text-2xl font-bold mb-2">CloudConsume</div>
                                 <div className="text-sm text-gray-300">Cloud Funding (펀딩)</div>
                             </Link>
                         </HoverLift>

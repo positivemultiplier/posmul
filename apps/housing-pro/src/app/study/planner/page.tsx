@@ -2255,7 +2255,7 @@ export default function StudyPlannerMatrixPage() {
                     {selectedDiaryDate === todayISO && nowClock?.isOvernight && (
                       <div className="mt-1.5 inline-flex items-center gap-1.5 px-2 py-1 rounded-lg bg-indigo-500/15 border border-indigo-400/30 text-[10px] font-bold text-indigo-200">
                         <span>
-                          🌙 새벽 연장 구간 (현재{" "}
+                          새벽 연장 구간 (현재{" "}
                           {String(nowClock.hour).padStart(2, "0")}:
                           {String(nowClock.minute).padStart(2, "0")}) · 05:00 리셋 전까지
                           오늘({selectedDiaryDate.slice(5)}) 랭킹·시간표에 합산됩니다.
@@ -2412,7 +2412,7 @@ export default function StudyPlannerMatrixPage() {
                         <Fragment key={hour}>
                           {hour === 0 && (
                             <div className="px-2.5 py-1 bg-indigo-950/35 border-y border-indigo-400/20 text-[9.5px] font-bold text-indigo-200 flex items-center justify-between">
-                              <span>🌙 자정 이후 · 익일 새벽 (00:00 ~ 04:59)</span>
+                              <span>자정 이후 · 익일 새벽 (00:00 ~ 04:59)</span>
                               <span className="font-mono text-[9px] text-indigo-300/90">
                                 05:00 리셋 전까지 오늘 기록
                               </span>
@@ -2639,7 +2639,7 @@ export default function StudyPlannerMatrixPage() {
                                   colSpan={8}
                                   className="py-1 px-2 text-[9px] font-bold text-indigo-200 text-center"
                                 >
-                                  🌙 자정 이후 · 익일 새벽 (00:00 ~ 04:59 · 05:00 리셋 전까지 당일 합산)
+                                  자정 이후 · 익일 새벽 (00:00 ~ 04:59 · 05:00 리셋 전까지 당일 합산)
                                 </td>
                               </tr>
                             )}

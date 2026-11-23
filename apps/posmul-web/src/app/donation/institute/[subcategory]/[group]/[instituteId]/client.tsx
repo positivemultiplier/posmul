@@ -69,8 +69,8 @@ type ActiveTab = "info" | "impact" | "transparency";
 
 const TAB_DEFINITIONS: ReadonlyArray<{ id: ActiveTab; label: string; icon: string }> = [
   { id: "info", label: "기관 소개", icon: "ℹ️" },
-  { id: "impact", label: "임팩트", icon: "📊" },
-  { id: "transparency", label: "투명성", icon: "🔍" },
+  { id: "impact", label: "임팩트", icon: "" },
+  { id: "transparency", label: "투명성", icon: "" },
 ];
 
 const PRESET_AMOUNTS: ReadonlyArray<number> = [1000, 5000, 10000, 50000, 100000];
@@ -101,7 +101,7 @@ function DonationSuccessOverlay({
   return (
     <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 max-w-md w-full mx-4 text-center animate-bounce-in">
-        <div className="text-6xl mb-4">🎉</div>
+        <div className="text-6xl mb-4"></div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">기부 완료!</h2>
         <p className="text-gray-600 dark:text-gray-400 mb-4">
           {instituteName}에<br />
@@ -111,7 +111,7 @@ function DonationSuccessOverlay({
           를 기부했습니다.
         </p>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          당신의 따뜻한 마음이 세상을 바꿉니다 ❤️
+          당신의 따뜻한 마음이 세상을 바꿉니다
         </p>
       </div>
     </div>
@@ -171,7 +171,7 @@ function HeroSection({
 
             <div className="mt-6 flex items-center gap-6">
               <div className="flex items-center gap-2">
-                <span className="text-yellow-300 text-xl">⭐</span>
+                <span className="text-yellow-300 text-xl"></span>
                 <span className="text-2xl font-bold">{institute.trustScore.toFixed(1)}</span>
                 <span className="text-white/60 text-sm">/ 10.0 신뢰도</span>
               </div>
@@ -214,7 +214,7 @@ function OpinionLeadersSection({ opinionLeaders }: { opinionLeaders: OpinionLead
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <span className="text-2xl">🌟</span>
+            <span className="text-2xl"></span>
             이 기관을 후원하는 오피니언 리더
           </h3>
           <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -282,7 +282,7 @@ function OpinionLeadersSection({ opinionLeaders }: { opinionLeaders: OpinionLead
               )}
 
               <div className="mt-3 text-xs text-gray-400 flex items-center gap-1">
-                <span>📅</span>
+                <span></span>
                 {new Date(leader.endorsedAt).toLocaleDateString("ko-KR")} 부터 후원
               </div>
             </div>
@@ -309,7 +309,7 @@ function InstituteInfoTab({ institute }: { institute: Institute }) {
             rel="noopener noreferrer"
             className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
-            <span className="text-2xl">🌐</span>
+            <span className="text-2xl"></span>
             <div>
               <div className="text-sm text-gray-500 dark:text-gray-400">웹사이트</div>
               <div className="text-gray-900 dark:text-white font-medium truncate">
@@ -324,7 +324,7 @@ function InstituteInfoTab({ institute }: { institute: Institute }) {
             href={`mailto:${institute.contactEmail}`}
             className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
           >
-            <span className="text-2xl">✉️</span>
+            <span className="text-2xl"></span>
             <div>
               <div className="text-sm text-gray-500 dark:text-gray-400">이메일</div>
               <div className="text-gray-900 dark:text-white font-medium">{institute.contactEmail}</div>
@@ -334,7 +334,7 @@ function InstituteInfoTab({ institute }: { institute: Institute }) {
 
         {institute.contactPhone && (
           <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <span className="text-2xl">📞</span>
+            <span className="text-2xl"></span>
             <div>
               <div className="text-sm text-gray-500 dark:text-gray-400">전화</div>
               <div className="text-gray-900 dark:text-white font-medium">{institute.contactPhone}</div>
@@ -344,7 +344,7 @@ function InstituteInfoTab({ institute }: { institute: Institute }) {
 
         {institute.registrationNumber && (
           <div className="flex items-center gap-3 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-            <span className="text-2xl">📋</span>
+            <span className="text-2xl"></span>
             <div>
               <div className="text-sm text-gray-500 dark:text-gray-400">등록번호</div>
               <div className="text-gray-900 dark:text-white font-medium">{institute.registrationNumber}</div>
@@ -363,22 +363,22 @@ function InstituteImpactTab({ stats }: { stats: InstituteDetailClientProps["stat
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-pink-50 to-rose-50 dark:from-pink-900/20 dark:to-rose-900/20 rounded-xl p-4 text-center">
-          <div className="text-3xl mb-2">👶</div>
+          <div className="text-3xl mb-2"></div>
           <div className="text-2xl font-bold text-pink-600 dark:text-pink-400">{Math.floor(stats.totalAmount / 10000)}</div>
           <div className="text-xs text-gray-600 dark:text-gray-400">아동 지원</div>
         </div>
         <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-xl p-4 text-center">
-          <div className="text-3xl mb-2">🍚</div>
+          <div className="text-3xl mb-2"></div>
           <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{Math.floor(stats.totalAmount / 5000)}</div>
           <div className="text-xs text-gray-600 dark:text-gray-400">끼니 제공</div>
         </div>
         <div className="bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-xl p-4 text-center">
-          <div className="text-3xl mb-2">📚</div>
+          <div className="text-3xl mb-2"></div>
           <div className="text-2xl font-bold text-green-600 dark:text-green-400">{Math.floor(stats.totalAmount / 20000)}</div>
           <div className="text-xs text-gray-600 dark:text-gray-400">교육 지원</div>
         </div>
         <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-xl p-4 text-center">
-          <div className="text-3xl mb-2">🏠</div>
+          <div className="text-3xl mb-2"></div>
           <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">{Math.floor(stats.totalAmount / 100000)}</div>
           <div className="text-xs text-gray-600 dark:text-gray-400">가정 지원</div>
         </div>
@@ -433,21 +433,21 @@ function ImpactMetricsSection({ impactMetrics }: { impactMetrics: Record<string,
       <div className="grid grid-cols-3 gap-3">
         {beneficiaries !== undefined && (
           <div className="bg-white dark:bg-gray-800 rounded-lg p-3 text-center">
-            <div className="text-2xl mb-1">👥</div>
+            <div className="text-2xl mb-1"></div>
             <div className="text-xl font-bold text-gray-900 dark:text-white">{beneficiaries.toLocaleString()}</div>
             <div className="text-xs text-gray-500 dark:text-gray-400">수혜자</div>
           </div>
         )}
         {projects !== undefined && (
           <div className="bg-white dark:bg-gray-800 rounded-lg p-3 text-center">
-            <div className="text-2xl mb-1">📋</div>
+            <div className="text-2xl mb-1"></div>
             <div className="text-xl font-bold text-gray-900 dark:text-white">{projects}</div>
             <div className="text-xs text-gray-500 dark:text-gray-400">프로젝트</div>
           </div>
         )}
         {successRate !== undefined && (
           <div className="bg-white dark:bg-gray-800 rounded-lg p-3 text-center">
-            <div className="text-2xl mb-1">✨</div>
+            <div className="text-2xl mb-1"></div>
             <div className="text-xl font-bold text-gray-900 dark:text-white">{successRate}%</div>
             <div className="text-xs text-gray-500 dark:text-gray-400">성공률</div>
           </div>
@@ -462,7 +462,7 @@ function TransparencyReportCard({ report }: { report: TransparencyReport }) {
     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-6 space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <span className="text-xl">📊</span>
+          <span className="text-xl"></span>
           기부금 사용 보고서
         </h4>
         <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -497,7 +497,7 @@ function TransparencyReportCard({ report }: { report: TransparencyReport }) {
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
         >
-          <span>📄</span>
+          <span></span>
           상세 보고서 보기
           <span>→</span>
         </a>
@@ -516,7 +516,7 @@ function TransparencyReportsList({ reports }: { reports: TransparencyReport[] })
   if (reports.length === 0) {
     return (
       <div className="text-center py-8 bg-gray-50 dark:bg-gray-700/50 rounded-xl">
-        <span className="text-4xl block mb-3">📋</span>
+        <span className="text-4xl block mb-3"></span>
         <p className="text-gray-600 dark:text-gray-400">
           아직 등록된 투명성 보고서가 없습니다.<br />
           <span className="text-sm text-gray-500">보고서가 등록되면 여기에 표시됩니다.</span>
@@ -579,7 +579,7 @@ function InstituteTransparencyTab({
       <div className="space-y-4">
         <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">✅</span>
+            <span className="text-2xl"></span>
             <span className="font-medium text-gray-900 dark:text-white">기관 인증 완료</span>
           </div>
           <span className="text-green-600 dark:text-green-400 text-sm">
@@ -667,7 +667,7 @@ function RecentDonationsCard({ recentDonations }: { recentDonations: DonationRec
 
       {recentDonations.length === 0 ? (
         <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-          <span className="text-4xl block mb-2">💝</span>
+          <span className="text-4xl block mb-2"></span>
           아직 기부 내역이 없습니다.<br />
           첫 번째 기부자가 되어주세요!
         </div>
@@ -782,7 +782,7 @@ function DonateButton({
   } else if (isDonating) {
     content = (
       <span className="flex items-center justify-center gap-2">
-        <span className="animate-spin">⏳</span>
+        <span className="animate-spin"></span>
         처리 중...
       </span>
     );
@@ -1059,7 +1059,7 @@ export function InstituteDetailClient({
 
       if (result.success) {
         toast.success(
-          "기부 완료! 💝",
+          "기부 완료!",
           `${institute.name}에 ${donationAmount.toLocaleString()} PMC를 기부했습니다.`
         );
         setShowSuccess(true);

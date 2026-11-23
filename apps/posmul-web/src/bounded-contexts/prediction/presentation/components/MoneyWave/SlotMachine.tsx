@@ -116,7 +116,7 @@ export function SlotMachine({
                This prevents the text from jittering horizontally as numbers change (e.g. 1 vs 0).
             */}
             <div className="flex items-center gap-1.5" style={{ height: "1.2em" }}>
-                <span className="text-inherit translate-y-[1px]">💰</span>
+                <span className="text-inherit translate-y-[1px]"></span>
                 <span className="text-inherit font-bold tracking-tight" style={{ fontVariantNumeric: "tabular-nums" }}>
                     {formatNumber(displayValue)}
                 </span>

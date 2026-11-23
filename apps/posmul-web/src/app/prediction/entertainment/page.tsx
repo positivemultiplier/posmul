@@ -69,7 +69,7 @@ export default async function PredictionEntertainmentPage() {
         <FadeIn>
           <DomainContextHeader
             domain="prediction"
-            title="🎬 엔터테인먼트 예측 마켓"
+            title="엔터테인먼트 예측 마켓"
             subtitle="영화 흥행, 드라마 시청률, 음악 차트, 글로벌 시상식 결과를 예측하세요"
             metrics={[
               {
@@ -81,7 +81,7 @@ export default async function PredictionEntertainmentPage() {
             ]}
           >
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">📡 공인 검증 데이터:</span>
+              <span className="font-semibold text-slate-300">공인 검증 데이터:</span>
               {dataSources.map((ds) => (
                 <span
                   key={ds.name}

@@ -22,20 +22,20 @@ const MOCK_PROJECT = {
 저는 지난 10년간 광고 카피라이터로 일하며 수많은 브랜드의 이야기를 만들어왔습니다.
 그러다 문득 깨달았어요. 정작 제 이야기는 쓰지 못하고 있었다는 것을.
 
-## 📖 이 책에 담긴 이야기
+## 이 책에 담긴 이야기
 
 - 출퇴근길 지하철에서 마주친 따뜻한 순간들
 - 동네 카페 사장님과의 소소한 대화
 - 비 오는 날 창가에서 바라본 풍경
 - 오래된 LP판에서 흘러나오는 음악과 추억
 
-## 🎁 후원자 특전
+## 후원자 특전
 
 1등 (10만원 이상): 친필 사인본 + 작가와의 북토크 초대
 2등 (5만원 이상): 친필 사인본 + 독점 굿즈 세트
 3등 (3만원 이상): 친필 사인본
 
-## 📅 일정
+## 일정
 
 - 펀딩 마감: 2026년 12월 31일
 - 초판 발행: 2027년 2월 예정
@@ -293,7 +293,7 @@ export default function CloudFundingDetailPage() {
                                 <p className="text-emerald-400 font-bold text-lg">
                                     {investMessage || `투자 완료! (+${earnedPmc} PMC)`}
                                 </p>
-                                <p className="text-slate-400 text-sm">프로젝트 성공을 함께 응원해주세요 💚</p>
+                                <p className="text-slate-400 text-sm">프로젝트 성공을 함께 응원해주세요</p>
                             </CardContent>
                         </Card>
                     </motion.div>

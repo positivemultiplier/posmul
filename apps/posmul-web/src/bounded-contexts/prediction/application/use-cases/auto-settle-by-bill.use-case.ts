@@ -172,12 +172,12 @@ export class AutoSettleByBillUseCase {
                             winnersCount: settleResult.data.winnersCount,
                         });
                         logs.push(
-                            `✅ Game ${game.game_id} settled successfully! Reward distributed: ${settleResult.data.totalRewardDistributed} PMC`
+                            `Game ${game.game_id} settled successfully! Reward distributed: ${settleResult.data.totalRewardDistributed} PMC`
                         );
                     } else {
                         const errMsg = (settleResult as any).error?.message || "Unknown error";
                         logs.push(
-                            `❌ Settlement failed for game ${game.game_id}: ${errMsg}`
+                            `Settlement failed for game ${game.game_id}: ${errMsg}`
                         );
                     }
                 }

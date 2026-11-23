@@ -122,7 +122,7 @@ export const PredictionChartView = ({
     <div className="space-y-6">
       {/* 차트 제목 섹션 */}
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">📊 실시간 분석</h2>
+        <h2 className="text-2xl font-bold text-gray-900">실시간 분석</h2>
         <div className="flex items-center space-x-4 text-sm text-gray-600">
           <div className="flex items-center space-x-1">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
@@ -137,7 +137,7 @@ export const PredictionChartView = ({
         <Card className="p-6 hover:shadow-lg transition-shadow duration-200">
           <div className="flex items-center space-x-2 mb-4">
             <TrendingUp className="w-5 h-5 text-blue-600" />
-            <h3 className="text-lg font-semibold text-gray-900">📈 확률 변화</h3>
+            <h3 className="text-lg font-semibold text-gray-900">확률 변화</h3>
           </div>
           <ProbabilityLineChart
             data={currentProbabilityData}
@@ -153,7 +153,7 @@ export const PredictionChartView = ({
         <Card className="p-6 hover:shadow-lg transition-shadow duration-200">
           <div className="flex items-center space-x-2 mb-4">
             <PieChart className="w-5 h-5 text-green-600" />
-            <h3 className="text-lg font-semibold text-gray-900">💰 예측 참여 분포</h3>
+            <h3 className="text-lg font-semibold text-gray-900">예측 참여 분포</h3>
           </div>
           <BettingDistributionChart data={currentBettingData} />
           <div className="mt-4 space-y-2">
@@ -180,7 +180,7 @@ export const PredictionChartView = ({
       <Card className="p-6 hover:shadow-lg transition-shadow duration-200">
         <div className="flex items-center space-x-2 mb-4">
           <Users className="w-5 h-5 text-purple-600" />
-          <h3 className="text-lg font-semibold text-gray-900">👥 참여자 타임라인</h3>
+          <h3 className="text-lg font-semibold text-gray-900">참여자 타임라인</h3>
         </div>
         <ParticipantTimelineChart data={currentParticipantData} />
         <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">

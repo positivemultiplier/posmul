@@ -452,7 +452,7 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     creator: {
       name: "PosMul 공인 오라클",
       reputation: 4.9,
-      avatar: "🏛️",
+      avatar: "",
     },
     prizePool,
     minimumStake: Number(dbGame.min_bet_amount) || 100,

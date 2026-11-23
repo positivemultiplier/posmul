@@ -25,7 +25,7 @@ const MOCK_TOPIC = {
     type: "debate",
     typeLabel: "정책 토론",
     author: "정책연구소",
-    authorAvatar: "🏛️",
+    authorAvatar: "",
     createdAt: "2026-10-28",
     endDate: "2026-11-30",
     status: "active",
@@ -51,7 +51,7 @@ const MOCK_TOPIC = {
         {
             id: 1,
             author: "청년A",
-            avatar: "👨‍💻",
+            avatar: "",
             content: "전월세 지원도 중요하지만, 결국 공급을 늘려야 근본적인 해결이 됩니다. 수요만 늘고 공급이 그대로면 가격은 계속 오를 수밖에 없어요.",
             createdAt: "2시간 전",
             likes: 45,
@@ -61,7 +61,7 @@ const MOCK_TOPIC = {
         {
             id: 2,
             author: "부동산전문가",
-            avatar: "🏠",
+            avatar: "",
             content: "공공임대를 30% 이상 늘려야 합니다. OECD 평균에도 못 미치는 수준이에요. 서울 기준 공공임대 비율이 5%도 안 됩니다.",
             createdAt: "4시간 전",
             likes: 89,
@@ -71,7 +71,7 @@ const MOCK_TOPIC = {
         {
             id: 3,
             author: "경제학도",
-            avatar: "📊",
+            avatar: "",
             content: "무조건 공급만 늘리는 건 비효율적입니다. 주거 수요가 집중된 지역에 선별적으로 공급하고, 동시에 지방 균형발전으로 수요를 분산해야죠.",
             createdAt: "어제",
             likes: 67,
@@ -122,7 +122,7 @@ export default function AgoraTopicDetailPage() {
                     const mapped: TopicComment[] = list.map((c: Record<string, unknown>, idx: number) => ({
                         id: String(c.id ?? idx + 100),
                         author: String(c.authorName ?? "시민 참여자"),
-                        avatar: "🗣️",
+                        avatar: "",
                         content: String(c.content ?? ""),
                         createdAt: "방금 전",
                         likes: Number(c.upvoteCount ?? 0),
@@ -179,7 +179,7 @@ export default function AgoraTopicDetailPage() {
         const createdItem: TopicComment = {
             id: `c-${Date.now()}`,
             author: "나 (시민 참여자)",
-            avatar: "🙋",
+            avatar: "",
             content: trimmed,
             createdAt: "방금 전",
             likes: 0,
@@ -234,7 +234,7 @@ export default function AgoraTopicDetailPage() {
             <main className="max-w-4xl mx-auto px-4 py-6 space-y-6">
                 <div className="aspect-[21/9] bg-gradient-to-br from-purple-900/50 to-slate-900 rounded-2xl flex items-center justify-center">
                     <div className="text-center">
-                        <div className="text-6xl mb-4">💬</div>
+                        <div className="text-6xl mb-4"></div>
                         <p className="text-purple-400 text-sm">정책 토론</p>
                     </div>
                 </div>

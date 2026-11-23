@@ -527,7 +527,7 @@ async function ensureAndLoadRoom(
     owner_nickname: ownerNickname,
     room_title: `${ownerNickname}의 작은 힐링룸`,
     status_message: "오늘도 세상의 변화를 즐겁게 예측하고 따뜻하게 나눕니다.",
-    mood_tag: "평온 ☕",
+    mood_tag: "평온",
     bgm_track: DEFAULT_BGM_ID,
     room_theme: DEFAULT_THEME_ID,
     minimi_style: DEFAULT_MINIMI_ID,
@@ -904,7 +904,7 @@ export async function loadHealingRoomData(
       if (!track?.title) return;
       customAlbumTracks.push({
         id: `custom-${cr.id}-${idx}`,
-        label: `💿 ${track.title} · ${cr.title}`,
+        label: `${track.title} · ${cr.title}`,
         artist: room.ownerNickname,
         moodDesc: track.lyricsOrMood || cr.subtitle || "자작 창작 앨범 트랙",
         audioUrl: track.audioUrl?.trim() || undefined,

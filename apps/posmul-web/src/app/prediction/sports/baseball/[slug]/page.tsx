@@ -75,7 +75,7 @@ const baseballPredictionGamesData = {
     creator: {
       name: "야구분석가박",
       reputation: 4.7,
-      avatar: "⚾",
+      avatar: "",
     },
     prizePool: 177500,
     minimumStake: 1000,
@@ -116,7 +116,7 @@ const baseballPredictionGamesData = {
     creator: {
       name: "MLB전문가김",
       reputation: 4.8,
-      avatar: "🏆",
+      avatar: "",
     },
     prizePool: 130000,
     minimumStake: 2000,
@@ -165,7 +165,7 @@ const baseballPredictionGamesData = {
     creator: {
       name: "국대야구전문가",
       reputation: 4.9,
-      avatar: "🇰🇷",
+      avatar: "",
     },
     prizePool: 157500,
     minimumStake: 1500,
@@ -222,7 +222,7 @@ const baseballPredictionGamesData = {
     creator: {
       name: "NPB분석가이",
       reputation: 4.5,
-      avatar: "🗾",
+      avatar: "",
     },
     prizePool: 117000,
     minimumStake: 800,

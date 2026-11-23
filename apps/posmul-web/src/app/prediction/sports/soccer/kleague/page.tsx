@@ -81,7 +81,7 @@ export default async function KLeaguePage() {
         <FadeIn>
           <div className="text-center mb-12">
             <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-red-400 to-blue-500 bg-clip-text text-transparent mb-6">
-              🇰🇷 K-리그
+              K-리그
             </h1>
             <p className="text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed">
               한국 프로축구 K-리그 경기 결과를 예측하고 PMC 상금을 획득하세요.

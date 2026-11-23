@@ -27,12 +27,12 @@ const leagues: ReadonlyArray<{
   href: string;
   label: string;
 }> = [
-  { id: "epl", href: "/prediction/sports/soccer/epl", label: "🇬🇧 EPL" },
-  { id: "laliga", href: "/prediction/sports/soccer/laliga", label: "🇪🇸 라리가" },
-  { id: "bundesliga", href: "/prediction/sports/soccer/bundesliga", label: "🇩🇪 분데스리가" },
-  { id: "seriea", href: "/prediction/sports/soccer/seriea", label: "🇮🇹 세리에A" },
-  { id: "kleague", href: "/prediction/sports/soccer/kleague", label: "🇰🇷 K-리그" },
-  { id: "champions", href: "/prediction/sports/soccer/champions", label: "🇪🇺 챔피언스리그" },
+  { id: "epl", href: "/prediction/sports/soccer/epl", label: "EPL" },
+  { id: "laliga", href: "/prediction/sports/soccer/laliga", label: "라리가" },
+  { id: "bundesliga", href: "/prediction/sports/soccer/bundesliga", label: "분데스리가" },
+  { id: "seriea", href: "/prediction/sports/soccer/seriea", label: "세리에A" },
+  { id: "kleague", href: "/prediction/sports/soccer/kleague", label: "K-리그" },
+  { id: "champions", href: "/prediction/sports/soccer/champions", label: "챔피언스리그" },
 ];
 
 const isLeagueId = (value: string): value is LeagueId => {

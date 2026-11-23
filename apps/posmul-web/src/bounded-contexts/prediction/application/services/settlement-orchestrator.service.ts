@@ -380,7 +380,7 @@ export class SettlementOrchestratorService {
 
         skippedCount++;
         logs.push(
-          `📝 [Oracle:rss_ai] Game ${source.gameId} 반자동 추천 업데이트 (resolved=${preview.resolved}, option=${preview.winningOptionId ?? "none"})`
+          `[Oracle:rss_ai] Game ${source.gameId} 반자동 추천 업데이트 (resolved=${preview.resolved}, option=${preview.winningOptionId ?? "none"})`
         );
         continue;
       }
@@ -410,12 +410,12 @@ export class SettlementOrchestratorService {
           rewardDistributed: reward,
         });
         logs.push(
-          `✅ [Oracle:${source.sourceType}] Game ${source.gameId} settled -> ${execRes.result.winningOptionId} (${reward} PMC)`
+          `[Oracle:${source.sourceType}] Game ${source.gameId} settled -> ${execRes.result.winningOptionId} (${reward} PMC)`
         );
       } else {
         skippedCount++;
         logs.push(
-          `⏳ [Oracle:${source.sourceType}] Game ${source.gameId} pending: ${execRes.error}`
+          `[Oracle:${source.sourceType}] Game ${source.gameId} pending: ${execRes.error}`
         );
       }
     }

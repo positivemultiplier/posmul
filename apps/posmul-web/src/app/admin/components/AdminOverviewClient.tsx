@@ -195,14 +195,14 @@ export function AdminOverviewClient({
       const data = await res.json();
       if (data.success !== false) {
         setActionToast(
-          `✅ ${label} 완료! ${data.message || ""}`
+          `${label} 완료! ${data.message || ""}`
         );
         router.refresh();
       } else {
-        setActionToast(`❌ ${label} 실패: ${data.error || "알 수 없는 오류"}`);
+        setActionToast(`${label} 실패: ${data.error || "알 수 없는 오류"}`);
       }
     } catch (e: any) {
-      setActionToast(`❌ 오류 발생: ${e?.message}`);
+      setActionToast(`오류 발생: ${e?.message}`);
     } finally {
       setActionLoading(null);
     }
@@ -408,7 +408,7 @@ export function AdminOverviewClient({
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            📊 종합 애널리틱스 & 오라클
+            종합 애널리틱스 & 오라클
           </button>
           <button
             type="button"
@@ -419,7 +419,7 @@ export function AdminOverviewClient({
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            🎮 예측 마켓 테이블 ({games.length})
+            예측 마켓 테이블 ({games.length})
           </button>
           <button
             type="button"
@@ -430,7 +430,7 @@ export function AdminOverviewClient({
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            ⚖️ 자동 정산 대기열 ({settlementSources.length})
+            자동 정산 대기열 ({settlementSources.length})
           </button>
           <button
             type="button"
@@ -441,7 +441,7 @@ export function AdminOverviewClient({
                 : "text-zinc-400 hover:text-white"
             }`}
           >
-            🔴 LIVE 응원톡 매니저 ({liveRooms.length})
+            LIVE 응원톡 매니저 ({liveRooms.length})
           </button>
         </div>
 
@@ -581,7 +581,7 @@ export function AdminOverviewClient({
               <AdminCardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <AdminCardTitle>📡 9대 공인 데이터 오라클 상태</AdminCardTitle>
+                    <AdminCardTitle>9대 공인 데이터 오라클 상태</AdminCardTitle>
                     <AdminCardDescription>
                       문서화된 마스터 데이터 소스와 SettlementOrchestrator 실시간 연결 현황
                     </AdminCardDescription>
@@ -617,7 +617,7 @@ export function AdminOverviewClient({
             {/* 경제 & 포인트 빠른 컨트롤 카드 */}
             <AdminCard>
               <AdminCardHeader>
-                <AdminCardTitle>⚡ 경제 & 포인트 원클릭 도구</AdminCardTitle>
+                <AdminCardTitle>경제 & 포인트 원클릭 도구</AdminCardTitle>
                 <AdminCardDescription>
                   테스트 계정 PMP 즉시 충전 및 3단계 MoneyWave 상금풀 재계산
                 </AdminCardDescription>
@@ -781,7 +781,7 @@ export function AdminOverviewClient({
                               className="px-2 py-1 rounded bg-amber-500/15 hover:bg-amber-500/30 border border-amber-500/30 text-amber-300 text-[11px] font-bold transition cursor-pointer"
                               title={`'${opt.label}' 승리 확정 및 정산`}
                             >
-                              🏆 {opt.label.slice(0, 8)}
+                              {opt.label.slice(0, 8)}
                             </button>
                           ))}
                         <Link
@@ -808,7 +808,7 @@ export function AdminOverviewClient({
           <AdminCardHeader className="flex flex-row items-center justify-between">
             <div>
               <AdminCardTitle>
-                ⚖️ 오라클 무인 자동 정산 대기열 ({settlementSources.length}건)
+                오라클 무인 자동 정산 대기열 ({settlementSources.length}건)
               </AdminCardTitle>
               <AdminCardDescription>
                 prediction.settlement_sources 테이블에 등록된 공식 오라클 판정 설정 및 정산 예정 시각
@@ -892,7 +892,7 @@ export function AdminOverviewClient({
                     연동 예측: <span className="text-white font-bold">{room.linkedGameQuestion}</span>
                   </div>
                   <div className="text-emerald-300 text-[11px]">
-                    📡 오라클: {room.oracleLabel} · 💰 {room.totalPoolPmc.toLocaleString()} PMC
+                    오라클: {room.oracleLabel} ·{room.totalPoolPmc.toLocaleString()} PMC
                   </div>
                 </div>
 
@@ -902,7 +902,7 @@ export function AdminOverviewClient({
                     target="_blank"
                     className="flex-1 py-2 px-3 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold text-center transition"
                   >
-                    🔴 라이브 룸 입장
+                    라이브 룸 입장
                   </Link>
                   <Link
                     href={`/prediction/${room.linkedGameSlug}`}

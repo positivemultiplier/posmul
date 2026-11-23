@@ -96,7 +96,7 @@ export function CharactersUniverseClient() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 rounded-xl border border-violet-400/40 bg-violet-600/25 px-4 py-2 text-xs font-extrabold text-violet-200 transition hover:bg-violet-600/40"
               >
-                <span>🏡 힐링룸에서 미니미로 만나기</span>
+                <span>힐링룸에서 미니미로 만나기</span>
                 <ArrowUpRight className="h-3.5 w-3.5" />
               </Link>
             </div>
@@ -297,7 +297,7 @@ export function CharactersUniverseClient() {
                 </div>
                 <div>
                   <div className="text-[11px] font-bold text-amber-300">
-                    ✨ 시그니처 소품
+                    시그니처 소품
                   </div>
                   <div className="text-sm font-black text-white">
                     {friend.signaturePropName}

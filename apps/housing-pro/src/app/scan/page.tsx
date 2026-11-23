@@ -625,7 +625,7 @@ export default function BookAiScanPage() {
         {/* 2. 스캔할 기출문제집 페이지 선택 바 */}
         <div className="flex items-center justify-between gap-2 bg-[#16161C] px-3 py-2 rounded-xl border border-white/[0.06]">
           <span className="text-[11px] font-bold text-slate-300 shrink-0">
-            📖 스캔 페이지:
+            스캔 페이지:
           </span>
           <div className="grid grid-cols-4 gap-1 flex-1">
             {EXAM_PAGE_PRESETS.map((preset, idx) => (
@@ -773,8 +773,8 @@ export default function BookAiScanPage() {
                   <Camera className="w-4 h-4" />
                   <span>
                     {cameraActive
-                      ? "📸 현재 카메라 화면 촬영 & AI 채점·판독"
-                      : "📸 기출문제지 촬영 & AI 정답 채점·O/★/X 판독 실행"}
+                      ? "현재 카메라 화면 촬영 & AI 채점·판독"
+                      : "기출문제지 촬영 & AI 정답 채점·O/★/X 판독 실행"}
                   </span>
                 </>
               )}
@@ -827,7 +827,7 @@ export default function BookAiScanPage() {
                     {/* 수험생이 선택한 문제 정답 (①~⑤) */}
                     <div className="flex items-center justify-between bg-[#16161C] px-2.5 py-1.5 rounded-xl border border-white/[0.05]">
                       <span className="text-[10.5px] font-bold text-amber-300">
-                        ✏️ 내가 고른 문제 답안:
+                        내가 고른 문제 답안:
                       </span>
                       <div className="flex items-center gap-1">
                         {[1, 2, 3, 4, 5].map((optNum) => (
@@ -921,7 +921,7 @@ export default function BookAiScanPage() {
             {/* 실제 생성된 종이 시험지 캔버스 프리뷰 */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[10.5px] text-slate-400">
-                <span>📄 카메라 스캔 대상 실제 시험지 렌더링 프리뷰</span>
+                <span>카메라 스캔 대상 실제 시험지 렌더링 프리뷰</span>
                 <span className="font-mono text-[#FF7A59]">720×920 JPEG</span>
               </div>
               <div className="rounded-2xl overflow-hidden border border-white/[0.12] bg-[#FAF8F2]">
@@ -946,7 +946,7 @@ export default function BookAiScanPage() {
               ) : (
                 <>
                   <Camera className="w-4 h-4" />
-                  <span>📸 위 마킹 시험지 촬영 스캔 & 자동 채점 실행</span>
+                  <span>위 마킹 시험지 촬영 스캔 & 자동 채점 실행</span>
                 </>
               )}
             </button>
@@ -1075,7 +1075,7 @@ export default function BookAiScanPage() {
                     <span>카메라 이미지 비전 인식 완료</span>
                   </div>
                   <p className="text-[10.5px] text-slate-400 leading-snug">
-                    아래에서 문항별 <strong>내 답안 채점 결과(⭕/❌)</strong>와 선지별 <strong>O · ★ · X 구분</strong>을 확인·터치 보정할 수 있습니다.
+                    아래에서 문항별 <strong>내 답안 채점 결과(/)</strong>와 선지별 <strong>O · ★ · X 구분</strong>을 확인·터치 보정할 수 있습니다.
                   </p>
                 </div>
               </div>
@@ -1103,13 +1103,13 @@ export default function BookAiScanPage() {
                         {q.isQuestionCorrect ? (
                           <span className="px-2 py-0.5 rounded-full bg-emerald-950/90 text-emerald-300 border border-emerald-500/40 text-[10.5px] font-black flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3" />
-                            <span>⭕ 문제 정답! (내 답 {q.selectedOption}번)</span>
+                            <span>문제 정답! (내 답 {q.selectedOption}번)</span>
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded-full bg-rose-950/90 text-rose-300 border border-rose-500/40 text-[10.5px] font-black flex items-center gap-1">
                             <XCircle className="w-3 h-3" />
                             <span>
-                              ❌ 오답 (내 답 {q.selectedOption}번 → 실제 정답 {q.correctOption}번)
+                              오답 (내 답 {q.selectedOption}번 → 실제 정답 {q.correctOption}번)
                             </span>
                           </span>
                         )}
@@ -1237,7 +1237,7 @@ export default function BookAiScanPage() {
                           {/* ★ 또는 X로 분류된 선지(또는 오답 문항)는 즉시 1줄 함정 해설 노출 */}
                           {(opt.userMark !== "O" || !q.isQuestionCorrect) && (
                             <div className="text-[10.5px] text-amber-300/90 bg-black/30 px-2.5 py-1.5 rounded-lg flex items-center justify-between gap-2">
-                              <span>💡 {opt.trapCorrection}</span>
+                              <span>{opt.trapCorrection}</span>
                               <span className="text-[9.5px] text-slate-400 font-mono shrink-0">
                                 {opt.masteryTier}회독
                               </span>

@@ -104,10 +104,10 @@ export default function AdminPredictionDashboard() {
       if (data.logs) setLogs(data.logs);
 
       if (data.success) {
-        alert("🎉 AI 파이프라인이 성공적으로 수행되어 예측 게임이 자동 생성되었습니다!");
+        alert("AI 파이프라인이 성공적으로 수행되어 예측 게임이 자동 생성되었습니다!");
         fetchGames(); // 목록 새로고침
       } else {
-        alert(`❌ Pipeline failed: ${data.error}`);
+        alert(`Pipeline failed: ${data.error}`);
       }
     } catch (e: any) {
       alert(`Error running pipeline: ${e.message}`);
@@ -145,10 +145,10 @@ export default function AdminPredictionDashboard() {
       const data = await res.json();
 
       if (data.success) {
-        alert(`🎯 베팅 성공! '${selectedOption}' 옵션에 ${amount}P 베팅이 등록되었습니다.`);
+        alert(`베팅 성공! '${selectedOption}' 옵션에 ${amount}P 베팅이 등록되었습니다.`);
         fetchGames();
       } else {
-        alert(`❌ 베팅 실패: ${data.error}`);
+        alert(`베팅 실패: ${data.error}`);
       }
     } catch (e: any) {
       alert(`Error participating: ${e.message}`);
@@ -179,10 +179,10 @@ export default function AdminPredictionDashboard() {
 
       const data = await res.json();
       if (data.success) {
-        alert(`🏆 정산 완료! (총 ${data.settledCount}건 정산 완료, 적중 유저 ${data.winnerCount}명)`);
+        alert(`정산 완료! (총 ${data.settledCount}건 정산 완료, 적중 유저 ${data.winnerCount}명)`);
         fetchGames();
       } else {
-        alert(`❌ 정산 실패: ${data.error}`);
+        alert(`정산 실패: ${data.error}`);
       }
     } catch (e: any) {
       alert(`Error settling game: ${e.message}`);
@@ -230,7 +230,7 @@ export default function AdminPredictionDashboard() {
               href="/admin/prediction/settlement"
               className="px-4 py-2 bg-amber-950 hover:bg-amber-900 border border-amber-800 text-amber-300 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-md"
             >
-              🏆 정산 센터
+              정산 센터
             </Link>
             <button
               onClick={fetchGames}
@@ -281,7 +281,7 @@ export default function AdminPredictionDashboard() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
             <div>
               <h2 className="text-xl font-bold text-indigo-300 flex items-center gap-2">
-                ⚡ 1단계: AI 뉴스 피드 수집 & 예측 게임 자동 생성
+                1단계: AI 뉴스 피드 수집 & 예측 게임 자동 생성
               </h2>
               <p className="text-xs text-slate-400 mt-1">
                 RSS 실시간 뉴스를 수집하고 Gemini AI로 분석하여 파이프라인 예측 게임을 DB에 자동 등록합니다.
@@ -302,7 +302,7 @@ export default function AdminPredictionDashboard() {
                   AI 분석 및 게임 생성 중...
                 </>
               ) : (
-                <>🚀 AI 파이프라인 수동 실행</>
+                <>AI 파이프라인 수동 실행</>
               )}
             </button>
           </div>
@@ -322,13 +322,13 @@ export default function AdminPredictionDashboard() {
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <h2 className="text-xl font-bold text-slate-200 flex items-center gap-2">
-              🎮 2단계: 예측 게임 목록 & 베팅/정산 관리 콘솔 ({games.length}개)
+              2단계: 예측 게임 목록 & 베팅/정산 관리 콘솔 ({games.length}개)
             </h2>
           </div>
 
           {games.length === 0 ? (
             <div className="bg-slate-900/40 border border-slate-800 rounded-2xl p-12 text-center text-slate-400">
-              아직 생성된 예측 게임이 없습니다. 상단의 <b>[🚀 AI 파이프라인 수동 실행]</b> 버튼을 눌러보세요!
+              아직 생성된 예측 게임이 없습니다. 상단의 <b>[AI 파이프라인 수동 실행]</b> 버튼을 눌러보세요!
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -368,7 +368,7 @@ export default function AdminPredictionDashboard() {
 
                     {/* Betting & Settle Controls */}
                     <div className="mt-4 pt-4 border-t border-slate-800/80 space-y-3">
-                      <div className="text-xs font-semibold text-slate-300">🎯 베팅 실시간 테스트</div>
+                      <div className="text-xs font-semibold text-slate-300">베팅 실시간 테스트</div>
 
                       {/* Option Radio Buttons */}
                       <div className="grid grid-cols-2 gap-2">
@@ -423,7 +423,7 @@ export default function AdminPredictionDashboard() {
 
                       {/* Settle Section */}
                       <div className="pt-3 border-t border-slate-800/80 flex justify-between items-center text-xs">
-                        <span className="text-slate-400 font-medium">🏆 승부 정산:</span>
+                        <span className="text-slate-400 font-medium">승부 정산:</span>
                         <div className="flex gap-1.5">
                           {options.map((opt, idx) => (
                             <button

@@ -172,7 +172,7 @@ export async function verifyAndRegisterSerialAction(params: {
       bookTitle,
       bookCode,
       registeredAt: nowIso,
-      message: "🎉 정품 인증이 완료되었습니다! 2~5회독 전 범위 및 AI 스캔 PMP 보상이 즉시 해금되었습니다.",
+      message: "정품 인증이 완료되었습니다! 2~5회독 전 범위 및 AI 스캔 PMP 보상이 즉시 해금되었습니다.",
     };
   } catch (err) {
     console.error("[verifyAndRegisterSerialAction] Error:", err);
@@ -186,7 +186,7 @@ export async function verifyAndRegisterSerialAction(params: {
         bookTitle: sample.bookTitle,
         bookCode: sample.bookCode,
         registeredAt: new Date().toISOString(),
-        message: "🎉 정품 인증이 완료되었습니다! 2~5회독 전 범위 및 AI 스캔 PMP 보상이 즉시 해금되었습니다.",
+        message: "정품 인증이 완료되었습니다! 2~5회독 전 범위 및 AI 스캔 PMP 보상이 즉시 해금되었습니다.",
       };
     }
 

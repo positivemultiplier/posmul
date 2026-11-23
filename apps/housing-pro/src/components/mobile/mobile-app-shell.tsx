@@ -159,7 +159,7 @@ export function MobileAppShell({
     const res = stopAndSaveQuickTimer();
     if (res.savedSeconds >= 5) {
       const mins = Math.max(1, Math.round(res.savedSeconds / 60));
-      showToast(`⏱️ ${res.topicTitle} (${mins}분) 학습 기록을 저장했습니다!`);
+      showToast(`${res.topicTitle} (${mins}분) 학습 기록을 저장했습니다!`);
     } else {
       showToast("타이머를 종료했습니다 (5초 미만 미기록).");
     }
@@ -210,7 +210,7 @@ export function MobileAppShell({
         setIsFabOpen(false);
         if (!quickTimer.active) {
           startQuickTimer();
-          showToast("⏱️ 집중 타이머가 시작되었습니다! 어느 탭에서도 상단에 유지됩니다.");
+          showToast("집중 타이머가 시작되었습니다! 어느 탭에서도 상단에 유지됩니다.");
         }
       },
     };
@@ -741,7 +741,7 @@ export function MobileAppShell({
                     setIsFabOpen(false);
                     if (!quickTimer.active) {
                       startQuickTimer();
-                      showToast("⏱️ 집중 타이머가 시작되었습니다!");
+                      showToast("집중 타이머가 시작되었습니다!");
                     }
                   }}
                   className="p-3.5 rounded-2xl bg-[#1E202E] hover:bg-[#262839] border border-white/[0.08] text-left space-y-1.5 transition"

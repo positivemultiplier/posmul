@@ -303,7 +303,7 @@ export function TheoryBottomSheet({ target, onClose }: TheoryBottomSheetProps) {
               )}
               {fallbackNote.examTrap && (
                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-100">
-                  <strong>⚠️ 함정 주의:</strong> {fallbackNote.examTrap}
+                  <strong>함정 주의:</strong> {fallbackNote.examTrap}
                 </div>
               )}
             </div>

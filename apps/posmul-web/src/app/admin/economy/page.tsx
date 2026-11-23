@@ -116,7 +116,7 @@ export default function AdminEconomyPage() {
 
       const data = await res.json();
       if (data.success) {
-        alert("💰 원장(Ledger)에 공식 기록 후 10,000 PMP가 안전하게 지급되었습니다!");
+        alert("원장(Ledger)에 공식 기록 후 10,000 PMP가 안전하게 지급되었습니다!");
         fetchStats();
       } else {
         alert(`지급 실패: ${data.error}`);
@@ -141,7 +141,7 @@ export default function AdminEconomyPage() {
 
       const data = await res.json();
       if (data.success) {
-        alert(`🌊 MoneyWave 풀 계산 수행: ${data.message}`);
+        alert(`MoneyWave 풀 계산 수행: ${data.message}`);
         fetchStats();
       }
     } catch (e: any) {
@@ -192,7 +192,7 @@ export default function AdminEconomyPage() {
               </div>
               <div>
                 <AdminCardTitle className="text-base text-white">
-                  🛡️ PMP/PMC 원장 무결성 및 불법 조작 탐지 시스템 (Live Ledger Audit)
+                  PMP/PMC 원장 무결성 및 불법 조작 탐지 시스템 (Live Ledger Audit)
                 </AdminCardTitle>
                 <AdminCardDescription>
                   일반 유저의 DB 직접 수정 권한(RLS)을 전면 차단하고, 모든 거래를 `economy.pmp_pmc_transactions` 불변 원장에 원자적으로 기록합니다.
@@ -307,7 +307,7 @@ export default function AdminEconomyPage() {
           <div className="flex items-center gap-2">
             <History className="w-4 h-4 text-purple-400" />
             <AdminCardTitle className="text-base">
-              📜 최근 불변 원장 기록 (Live Immutable Ledger Trace)
+              최근 불변 원장 기록 (Live Immutable Ledger Trace)
             </AdminCardTitle>
           </div>
           <AdminCardDescription>
@@ -381,7 +381,7 @@ export default function AdminEconomyPage() {
       <AdminCard>
         <AdminCardHeader className="border-b border-zinc-800/80">
           <AdminCardTitle className="text-base">
-            ⚙️ 안전한 관리자 테스트 & MoneyWave 풀 트리거
+            안전한 관리자 테스트 & MoneyWave 풀 트리거
           </AdminCardTitle>
           <AdminCardDescription>
             관리자 지급 시에도 `execute_ledger_transaction`을 호출하여 원장에 `ADMIN_PMP_GRANT` 기록이 정확히 남습니다.
@@ -406,7 +406,7 @@ export default function AdminEconomyPage() {
                 onClick={handleGrantPmp}
                 className="w-full"
               >
-                {granting ? "원장 기록 및 지급 중..." : "💰 10,000 PMP 원장 지급하기"}
+                {granting ? "원장 기록 및 지급 중..." : "10,000 PMP 원장 지급하기"}
               </AdminButton>
             </div>
 
@@ -425,7 +425,7 @@ export default function AdminEconomyPage() {
                 onClick={handleCalculateMoneyWave}
                 className="w-full"
               >
-                🌊 MoneyWave 풀 수동 정산
+                MoneyWave 풀 수동 정산
               </AdminButton>
             </div>
           </div>

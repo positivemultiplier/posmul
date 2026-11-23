@@ -26,6 +26,7 @@ Infrastructure (bounded-contexts/{domain}/infrastructure/)
 - **얇은 진입점**: `src/app/api/**` 및 Server Action에서 `supabaseAdmin`으로 직접 DB DML을 하지 않고, `① 서버 인증 → ② Zod 검증 → ③ UseCase/도메인 서비스 호출 → ④ 응답 반환` 순서를 따릅니다.
 - **유령 도메인 규율**: `healing-room`, `challenge`, `live`, `wallet`, `user` 등에 신규 비즈니스 로직을 `src/app/` 아래에 덧붙이지 말고, 소속 BC의 `domain/`·`application/` 또는 신규 BC([domain-add.md](file:///c:/G/posmul/.agent/workflows/domain-add.md))로 분리합니다.
 - **Local First UI & 파일 크기**: `src/shared/ui/`에는 도메인 무관 순수 프리미티브(Button, Input, Modal shell 등)만 배치하고, 도메인 조합 UI는 `bounded-contexts/{domain}/presentation/components/`에 둡니다. 모든 파일은 **500줄 이내**(`max-lines` 경고)로 분리합니다.
+- **UI 장식 이모지 금지**: 제목·버튼·배지·네비게이션·카드 라벨에 의미 없는 장식 이모지(`🔥`, `🚀`, `🎯`, `💡` 등)를 쓰지 말고 `lucide-react` 아이콘을 사용합니다.
 
 ## 3. 검증 명령 (`c:\G\posmul` 루트 기준 PowerShell)
 ```powershell

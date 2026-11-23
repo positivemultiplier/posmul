@@ -155,7 +155,7 @@ export function AiBriefingViewer() {
             <div className="space-y-4 text-xs">
               <div className="p-3.5 rounded-xl bg-slate-950/80 border border-white/[0.06] space-y-2">
                 <div className="text-[11px] font-bold text-sky-400">
-                  🏛️ 공식 유권청: {modalArticle.officialBody} ({modalArticle.officialDocNumber})
+                  공식 유권청: {modalArticle.officialBody} ({modalArticle.officialDocNumber})
                 </div>
                 <div className="font-bold text-white text-xs">
                   쟁점: {modalArticle.coreIssue}

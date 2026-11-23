@@ -33,12 +33,12 @@ import { usePathname } from "next/navigation";
 // Navigation Data Structure based on Project_Features.md
 const navigationData = {
   all: {
-    title: "📋 전체",
+    title: "전체",
     description: "모든 예측 게임 보기",
     subcategories: [],
   },
   economy: {
-    title: "📈 경제",
+    title: "경제",
     description: "경제 지표 및 기업 실적 예측",
     subcategories: [
       {
@@ -64,7 +64,7 @@ const navigationData = {
     ],
   },
   consume: {
-    title: "💳 소비 예측",
+    title: "소비 예측",
     description: "Time/Money/Cloud 소비 영역 예측",
     subcategories: [
       {
@@ -85,7 +85,7 @@ const navigationData = {
     ],
   },
   sports: {
-    title: "⚽ 스포츠 예측",
+    title: "스포츠 예측",
     description: "경기 결과 및 선수 성과 예측",
     subcategories: [
       { slug: "soccer", title: "축구", description: "국내외 축구 경기" },
@@ -95,7 +95,7 @@ const navigationData = {
     ],
   },
   entertainment: {
-    title: "🎬 엔터테인먼트",
+    title: "엔터테인먼트",
     description: "흥행 성적 및 수상 예측",
     subcategories: [
       { slug: "movies", title: "영화", description: "박스오피스 예측" },
@@ -106,7 +106,7 @@ const navigationData = {
     ],
   },
   politics: {
-    title: "🗳️ 정치/선거",
+    title: "정치/선거",
     description: "선거 결과 및 정책 예측",
     subcategories: [
       {
@@ -132,7 +132,7 @@ const navigationData = {
     ],
   },
   "user-suggestions": {
-    title: "💡 사용자 제안",
+    title: "사용자 제안",
     description: "커뮤니티 제안 예측 시장",
     subcategories: [
       {

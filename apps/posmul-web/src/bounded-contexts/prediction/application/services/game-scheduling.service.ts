@@ -213,7 +213,7 @@ export class GameSchedulingService {
       id: "ecos-bok-base-rate",
       title: "[금통위] 한국은행 이번 금융통화위원회 기준금리 결정은?",
       description:
-        "한국은행 금융통화위원회 본회의 기준금리 결정(인상·동결·인하)을 예측하세요.\n📅 마감: 금통위 발표 1시간 전(09:00) | 🏛️ 정산: 한국은행 ECOS 공식 통계표(722Y001)",
+        "한국은행 금융통화위원회 본회의 기준금리 결정(인상·동결·인하)을 예측하세요.\n 마감: 금통위 발표 1시간 전(09:00) | 정산: 한국은행 ECOS 공식 통계표(722Y001)",
       predictionType: PredictionType.WIN_DRAW_LOSE,
       options: [
         { id: "hike", label: "금리 인상 (Hike)", description: "직전 기준금리 대비 인상" },
@@ -246,7 +246,7 @@ export class GameSchedulingService {
       id: "ecos-bok-gdp-quarterly",
       title: "[한국은행] 이번 분기 실질 GDP 성장률(전기비) 0.5% 돌파할까?",
       description:
-        "한국은행이 발표하는 분기 실질 국내총생산(GDP) 속보치 성장률이 전기 대비 0.5%를 상회할지 예측하세요.\n📅 마감: 발표 1시간 전(07:00) | 🏛️ 정산: 한국은행 ECOS(200Y101)",
+        "한국은행이 발표하는 분기 실질 국내총생산(GDP) 속보치 성장률이 전기 대비 0.5%를 상회할지 예측하세요.\n 마감: 발표 1시간 전(07:00) | 정산: 한국은행 ECOS(200Y101)",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "above", label: "0.5% 초과 (성장 호조)", description: "전기비 성장률 > 0.5%" },
@@ -279,7 +279,7 @@ export class GameSchedulingService {
       id: "ecos-bok-current-account",
       title: "[국제수지] 한국 이번 달 경상수지 흑자 50억 달러 상회할까?",
       description:
-        "반도체·자동차 수출 실적에 따른 한국은행 월간 국제수지(경상수지) 잠정치 흑자 규모를 예측하세요.\n📅 마감: 발표 1시간 전(07:00) | 🏛️ 정산: 한국은행 ECOS(301Y013)",
+        "반도체·자동차 수출 실적에 따른 한국은행 월간 국제수지(경상수지) 잠정치 흑자 규모를 예측하세요.\n 마감: 발표 1시간 전(07:00) | 정산: 한국은행 ECOS(301Y013)",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "above", label: "50억 달러 초과", description: "수출 흑자 확대" },
@@ -317,7 +317,7 @@ export class GameSchedulingService {
       id: "kosis-cpi-monthly",
       title: "[통계청] 이번 달 소비자물가 상승률(전년동월비) 2.5% 상회할까?",
       description:
-        "통계청 소비자물가동향 발표 기준 전년동월대비 물가상승률이 2.5%를 넘을지 예측하세요.\n📅 마감: 발표일 07:00 (발표 1시간 전) | 📊 정산: 통계청 KOSIS(DT_1J22003)",
+        "통계청 소비자물가동향 발표 기준 전년동월대비 물가상승률이 2.5%를 넘을지 예측하세요.\n 마감: 발표일 07:00 (발표 1시간 전) | 정산: 통계청 KOSIS(DT_1J22003)",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "above", label: "2.5% 초과 (물가 상방압력)", description: "CPI 상승률 > 2.5%" },
@@ -354,7 +354,7 @@ export class GameSchedulingService {
       id: "kosis-unemployment-monthly",
       title: "[고용동향] 통계청 이번 달 전국 실업률 3.0% 이하 기록할까?",
       description:
-        "통계청 경제활동인구조사 월간 고용동향 실업률 지표를 예측하세요.\n📅 마감: 발표일 07:00 | 📊 정산: 통계청 KOSIS(DT_1DA7004S)",
+        "통계청 경제활동인구조사 월간 고용동향 실업률 지표를 예측하세요.\n 마감: 발표일 07:00 | 정산: 통계청 KOSIS(DT_1DA7004S)",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "below", label: "3.0% 이하 (고용 호조)", description: "실업률 ≤ 3.0%" },
@@ -451,7 +451,7 @@ export class GameSchedulingService {
       this.templates.push({
         id: corp.id,
         title: `[실적공시] ${corp.name} 이번 분기 연결 ${corp.accountName} ${corp.thresholdLabel} 돌파할까?`,
-        description: `${corp.name}의 분기 보고서(연결재무제표 기준) ${corp.accountName}이 ${corp.thresholdLabel}을 상회할지 예측하세요.\n📅 마감: 공시 마감 1시간 전 | 📑 정산: 금융감독원 OpenDART 공식 재무제표 API`,
+        description: `${corp.name}의 분기 보고서(연결재무제표 기준) ${corp.accountName}이 ${corp.thresholdLabel}을 상회할지 예측하세요.\n 마감: 공시 마감 1시간 전 | 정산: 금융감독원 OpenDART 공식 재무제표 API`,
         predictionType: PredictionType.BINARY,
         options: [
           {
@@ -499,7 +499,7 @@ export class GameSchedulingService {
       id: "kobis-weekend-boxoffice",
       title: "[주말극장] 이번 주말 박스오피스 1위 영화, 누적 관객 100만 돌파할까?",
       description:
-        "영화진흥위원회 통합전산망(KOBIS) 주말 박스오피스 1위 작품의 누적 관객수가 일요일 자정 기준 100만 명을 돌파할지 예측하세요.\n📅 마감: 금요일 18:00 (주말 집계 시작 전) | 🎬 정산: 월요일 09:00 KOBIS API",
+        "영화진흥위원회 통합전산망(KOBIS) 주말 박스오피스 1위 작품의 누적 관객수가 일요일 자정 기준 100만 명을 돌파할지 예측하세요.\n 마감: 금요일 18:00 (주말 집계 시작 전) | 정산: 월요일 09:00 KOBIS API",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "above", label: "100만 관객 돌파 (Yes)", description: "누적 관객수 ≥ 1,000,000명" },
@@ -530,7 +530,7 @@ export class GameSchedulingService {
       id: "kcontent-weekend-drama-rating",
       title: "[주말드라마] 이번 주 금토·주말 미니시리즈 최고 시청률 12% 돌파할까?",
       description:
-        "이번 주말 방영되는 지상파·종편·케이블 미니시리즈 중 닐슨코리아 전국 가구 기준 시청률 12.0% 돌파 작품이 나올지 예측하세요.\n📅 마감: 토요일 21:00 (본방송 1시간 전) | 📺 정산: 일요일 09:00 시청률 발표",
+        "이번 주말 방영되는 지상파·종편·케이블 미니시리즈 중 닐슨코리아 전국 가구 기준 시청률 12.0% 돌파 작품이 나올지 예측하세요.\n 마감: 토요일 21:00 (본방송 1시간 전) | 정산: 일요일 09:00 시청률 발표",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "yes", label: "12.0% 이상 돌파 (Yes)", description: "전국 가구 시청률 ≥ 12.0%" },
@@ -561,7 +561,7 @@ export class GameSchedulingService {
       id: "kcontent-sunday-variety-king",
       title: "[예능대전] 이번 주 일요일 프라임타임 예능 시청률 1위 방송사는?",
       description:
-        "일요일 저녁 황금시간대(18:00~23:00) 방영 예능 프로그램 중 최고 시청률 1위를 기록할 채널군을 예측하세요.\n📅 마감: 일요일 17:00 (방영 1시간 전) | 🏆 정산: 월요일 09:00 시청률 집계",
+        "일요일 저녁 황금시간대(18:00~23:00) 방영 예능 프로그램 중 최고 시청률 1위를 기록할 채널군을 예측하세요.\n 마감: 일요일 17:00 (방영 1시간 전) | 정산: 월요일 09:00 시청률 집계",
       predictionType: PredictionType.WIN_DRAW_LOSE,
       options: [
         { id: "sbs_kbs", label: "SBS · KBS 지상파", description: "미운우리새끼 · 1박2일 등" },
@@ -591,7 +591,7 @@ export class GameSchedulingService {
       id: "kcontent-kpop-chart-top10",
       title: "[K-POP 차트] 이번 주 신규 발매 음원, 주간 차트 TOP 10 진입 성공할까?",
       description:
-        "이번 주 발매된 K-POP 컴백 신곡이 멜론/써클 주간 디지털 차트 10위권 내에 새롭게 진입(New Entry)할지 예측하세요.\n📅 마감: 일요일 18:00 | 🎵 정산: 월요일 12:00 주간 차트 발표",
+        "이번 주 발매된 K-POP 컴백 신곡이 멜론/써클 주간 디지털 차트 10위권 내에 새롭게 진입(New Entry)할지 예측하세요.\n 마감: 일요일 18:00 | 정산: 월요일 12:00 주간 차트 발표",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "yes", label: "TOP 10 신곡 진입 성공 (Yes)", description: "주간 차트 1~10위 내 신곡 진입" },
@@ -620,7 +620,7 @@ export class GameSchedulingService {
       id: "kcontent-ott-netflix-top1",
       title: "[OTT·드라마] 금주 화제작 한국 드라마, 넷플릭스 한국 TOP 10 1위 수성할까?",
       description:
-        "주말 방영 및 공개 직후 한국 넷플릭스 시리즈 TOP 10 공식 순위(Tudum / FlixPatrol 집계)에서 한국 드라마가 1위를 차지할지 예측하세요.\n📅 마감: 일요일 21:00 | 📺 정산: 월요일 11:00 공식 순위 집계",
+        "주말 방영 및 공개 직후 한국 넷플릭스 시리즈 TOP 10 공식 순위(Tudum / FlixPatrol 집계)에서 한국 드라마가 1위를 차지할지 예측하세요.\n 마감: 일요일 21:00 | 정산: 월요일 11:00 공식 순위 집계",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "yes", label: "한국 드라마 1위 수성 (Yes)", description: "넷플릭스 한국 시리즈 1위" },
@@ -654,7 +654,7 @@ export class GameSchedulingService {
       id: "us-nasdaq-daily",
       title: "[미국증시] 오늘 밤 나스닥 100(QQQ) 전일 대비 상승 마감할까?",
       description:
-        "미국 기술주 중심 나스닥 100 추종 ETF(QQQ)가 오늘 정규장 종가 기준 상승 마감할지 예측하세요.\n📅 마감: 미국 정규장 개장 1시간 전(21:30 KST) | 📈 정산: 장 마감 후 AlphaVantage API",
+        "미국 기술주 중심 나스닥 100 추종 ETF(QQQ)가 오늘 정규장 종가 기준 상승 마감할지 예측하세요.\n 마감: 미국 정규장 개장 1시간 전(21:30 KST) | 정산: 장 마감 후 AlphaVantage API",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "up", label: "상승 마감 (Up)", description: "전일 종가 대비 상승" },
@@ -683,7 +683,7 @@ export class GameSchedulingService {
       id: "btc-weekly-target",
       title: "[암호화폐] 비트코인(BTC) 이번 주 $95,000 돌파할까?",
       description:
-        "글로벌 현물 ETF 자금 유입과 거시 유동성 흐름 속에서 비트코인(BTC) 시세가 이번 주 마감 기준 $95,000를 돌파할지 예측하세요.\n📅 마감: 일요일 23:00 | ₿ 정산: CoinGecko 글로벌 인덱스 실시간 API",
+        "글로벌 현물 ETF 자금 유입과 거시 유동성 흐름 속에서 비트코인(BTC) 시세가 이번 주 마감 기준 $95,000를 돌파할지 예측하세요.\n 마감: 일요일 23:00 | ₿ 정산: CoinGecko 글로벌 인덱스 실시간 API",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "yes", label: "$95,000 돌파 (Yes)", description: "BTC ≥ $95,000" },
@@ -720,7 +720,7 @@ export class GameSchedulingService {
       id: "sports-epl-bigmatch-wdl",
       title: "[프리미어리그] 이번 주 EPL 빅매치 맞대결 최종 승무패 결과는?",
       description:
-        "잉글랜드 프리미어리그(EPL) 이번 라운드 최고 빅매치의 정규시간 90분 승무패 결과를 예측하세요.\n📅 마감: 주말 경기 킥오프 1시간 전 | ⚽ 정산: Football-Data 공식 경기 결과 API",
+        "잉글랜드 프리미어리그(EPL) 이번 라운드 최고 빅매치의 정규시간 90분 승무패 결과를 예측하세요.\n 마감: 주말 경기 킥오프 1시간 전 | 정산: Football-Data 공식 경기 결과 API",
       predictionType: PredictionType.WIN_DRAW_LOSE,
       options: [
         { id: "win", label: "홈팀 승리 (Win)", description: "정규시간 홈팀 승리" },
@@ -751,7 +751,7 @@ export class GameSchedulingService {
       id: "sports-lck-bigmatch-wdl",
       title: "[LCK·e스포츠] 이번 주 LCK 빅매치 상위 시드팀 세트별 승리 양상은?",
       description:
-        "LoL 챔피언스 코리아(LCK) 주요 빅매치에서 탑 시드 팀이 2:0 완승, 2:1 신승, 또는 업셋 패배 중 어떤 결과를 만들지 예측하세요.\n📅 마감: 경기 시작 1시간 전 | 🎮 정산: LCK 공식 매치 데이터",
+        "LoL 챔피언스 코리아(LCK) 주요 빅매치에서 탑 시드 팀이 2:0 완승, 2:1 신승, 또는 업셋 패배 중 어떤 결과를 만들지 예측하세요.\n 마감: 경기 시작 1시간 전 | 정산: LCK 공식 매치 데이터",
       predictionType: PredictionType.WIN_DRAW_LOSE,
       options: [
         { id: "2_0", label: "상위 시드 2:0 완승", description: "압도적 세트 스윕" },
@@ -777,7 +777,7 @@ export class GameSchedulingService {
       id: "sports-k-league-scoring-binary",
       title: "[K리그·프로스포츠] 이번 주말 주요 빅매치 양팀 합산 3득점 이상 다득점 나올까?",
       description:
-        "이번 주말 펼쳐지는 K리그·국내 프로스포츠 대표 라운드 매치에서 공격적인 다득점 경기가 나올지 예측하세요.\n📅 마감: 토요일 13:00 | 🏟️ 정산: 경기 종료 후 공식 스코어보드",
+        "이번 주말 펼쳐지는 K리그·국내 프로스포츠 대표 라운드 매치에서 공격적인 다득점 경기가 나올지 예측하세요.\n 마감: 토요일 13:00 | 정산: 경기 종료 후 공식 스코어보드",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "yes", label: "3득점 이상 오버 (Yes)", description: "합산 득점 ≥ 3" },
@@ -807,7 +807,7 @@ export class GameSchedulingService {
       id: "politics-assembly-bill-binary",
       title: "[국회 본회의] 이번 주 상정된 핵심 민생·경제 법안 원안 가결 통과될까?",
       description:
-        "국회 본회의 표결에 부쳐지는 주요 경제·민생 지원 법안이 재석의원 과반 찬성으로 가결될지 예측하세요.\n📅 마감: 본회의 개회 1시간 전 | 🏛️ 정산: 국회 열린국회정보 공식 의결 공시",
+        "국회 본회의 표결에 부쳐지는 주요 경제·민생 지원 법안이 재석의원 과반 찬성으로 가결될지 예측하세요.\n 마감: 본회의 개회 1시간 전 | 정산: 국회 열린국회정보 공식 의결 공시",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "yes", label: "원안·수정안 가결 (Yes)", description: "본회의 과반 찬성 통과" },
@@ -832,7 +832,7 @@ export class GameSchedulingService {
       id: "politics-economic-policy-wdl",
       title: "[국정·정책] 차기 주간 정례 경제정책 여론 평가 방향성은?",
       description:
-        "주요 여론조사 기관의 차기 주간 정례 경제·민생 정책 평가에서 전주 대비 어떤 흐름이 우세할지 예측하세요.\n📅 마감: 목요일 18:00 | 📊 정산: 금요일 10:00 공식 여론조사 공표",
+        "주요 여론조사 기관의 차기 주간 정례 경제·민생 정책 평가에서 전주 대비 어떤 흐름이 우세할지 예측하세요.\n 마감: 목요일 18:00 | 정산: 금요일 10:00 공식 여론조사 공표",
       predictionType: PredictionType.WIN_DRAW_LOSE,
       options: [
         { id: "positive", label: "긍정 평가 우세", description: "전주 대비 긍정 응답 상승" },
@@ -863,7 +863,7 @@ export class GameSchedulingService {
       id: "ranking-global-asset-weekly",
       title: "[자산군 대전] 이번 주 주요 투자 자산군 중 주간 수익률 1위는?",
       description:
-        "금주 글로벌 금융시장에서 미국 기술주(QQQ), 코스피 대형주, 비트코인(BTC), 국제 금(Gold), 장기 미 국채 중 가장 높은 주간 수익률을 기록할 자산을 예측하세요.\n📅 마감: 금요일 20:00 | 📈 정산: 주말 AlphaVantage·CoinGecko 종가 집계",
+        "금주 글로벌 금융시장에서 미국 기술주(QQQ), 코스피 대형주, 비트코인(BTC), 국제 금(Gold), 장기 미 국채 중 가장 높은 주간 수익률을 기록할 자산을 예측하세요.\n 마감: 금요일 20:00 | 정산: 주말 AlphaVantage·CoinGecko 종가 집계",
       predictionType: PredictionType.RANKING,
       options: [
         { id: "qqq", label: "미국 빅테크 (QQQ)", description: "나스닥 100 기술주 ETF" },
@@ -902,7 +902,7 @@ export class GameSchedulingService {
       id: "ranking-kpop-chart-weekly",
       title: "[K-POP 랭킹] 이번 주 멜론·써클 주간 디지털 차트 1위 진영은?",
       description:
-        "이번 주 국내 음원 스트리밍 주간 종합 차트에서 1위 왕좌를 차지할 아티스트 진영을 예측하세요.\n📅 마감: 일요일 18:00 | 🎵 정산: 월요일 12:00 주간 차트 공식 발표",
+        "이번 주 국내 음원 스트리밍 주간 종합 차트에서 1위 왕좌를 차지할 아티스트 진영을 예측하세요.\n 마감: 일요일 18:00 | 정산: 월요일 12:00 주간 차트 공식 발표",
       predictionType: PredictionType.RANKING,
       options: [
         { id: "girlgroup", label: "4·5세대 걸그룹", description: "메이저 걸그룹 타이틀곡" },
@@ -933,7 +933,7 @@ export class GameSchedulingService {
       id: "ranking-boxoffice-weekend",
       title: "[극장가 랭킹] 이번 주말 KOBIS 박스오피스 관객수 1위 작품군은?",
       description:
-        "금·토·일 사흘간 영화진흥위원회 통합전산망(KOBIS) 주말 박스오피스에서 관객수 1위를 차지할 영화 장르·배급군을 예측하세요.\n📅 마감: 금요일 17:00 | 🎬 정산: 월요일 09:00 KOBIS 공식 집계",
+        "금·토·일 사흘간 영화진흥위원회 통합전산망(KOBIS) 주말 박스오피스에서 관객수 1위를 차지할 영화 장르·배급군을 예측하세요.\n 마감: 금요일 17:00 | 정산: 월요일 09:00 KOBIS 공식 집계",
       predictionType: PredictionType.RANKING,
       options: [
         { id: "kr_action", label: "한국 액션·범죄 대작", description: "국내 텐트폴 배급작" },
@@ -964,7 +964,7 @@ export class GameSchedulingService {
       id: "ranking-invest-consumer-trend",
       title: "[소비·트렌드] 이번 달 온라인 소비지출 전년비 증가율 1위 품목군은?",
       description:
-        "통계청 온라인쇼핑동향 공식 통계에서 이번 달 전년 동월 대비 거래액 성장률 1위를 기록할 소비 품목군을 예측하세요.\n📅 마감: 월말 18:00 | 📊 정산: 통계청 KOSIS 온라인쇼핑동향 공표",
+        "통계청 온라인쇼핑동향 공식 통계에서 이번 달 전년 동월 대비 거래액 성장률 1위를 기록할 소비 품목군을 예측하세요.\n 마감: 월말 18:00 | 정산: 통계청 KOSIS 온라인쇼핑동향 공표",
       predictionType: PredictionType.RANKING,
       options: [
         { id: "ai_tech", label: "AI·디지털 가전", description: "스마트 기기·PC·가전 구독" },
@@ -995,7 +995,7 @@ export class GameSchedulingService {
       id: "ranking-sports-league-monthly",
       title: "[스포츠 랭킹] 이번 달 국내외 팬덤 참여·화제성 1위 스포츠 리그는?",
       description:
-        "이번 달 PosMul 스포츠 팬덤 참여와 주요 경기 이슈를 주도할 최고 인기 리그 1위를 예측하세요.\n📅 마감: 월말 20:00 | 🏆 정산: 월간 결산 집계",
+        "이번 달 PosMul 스포츠 팬덤 참여와 주요 경기 이슈를 주도할 최고 인기 리그 1위를 예측하세요.\n 마감: 월말 20:00 | 정산: 월간 결산 집계",
       predictionType: PredictionType.RANKING,
       options: [
         { id: "epl", label: "프리미어리그 (EPL)", description: "유럽 축구 최고 인기 리그" },
@@ -1027,7 +1027,7 @@ export class GameSchedulingService {
       id: "local-dong-weekend-weather",
       title: "[우리동네 날씨] 이번 주말 우리 동네(첨단·성수) 나들이 쾌청 기온(12~26℃·무강수) 달성할까?",
       description:
-        "이번 주말 우리 동네 야외 나들이와 지역 상권 나들이에 쾌적한 기온(12~26℃) 및 강수량 5mm 미만 쾌청 날씨가 달성될지 예측해보세요.\n📅 마감: 금요일 21:00 | 🌤️ 정산: 기상청 동네예보(KMA) 공식 관측치",
+        "이번 주말 우리 동네 야외 나들이와 지역 상권 나들이에 쾌적한 기온(12~26℃) 및 강수량 5mm 미만 쾌청 날씨가 달성될지 예측해보세요.\n 마감: 금요일 21:00 | 정산: 기상청 동네예보(KMA) 공식 관측치",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "yes", label: "쾌청 나들이 달성 (Yes)", description: "낮 최고 12~26℃ · 강수 5mm 미만" },
@@ -1067,7 +1067,7 @@ export class GameSchedulingService {
       id: "local-gu-vitality-gwangju-ranking",
       title: "[우리구 활력 응원] 이번 달 광주 5개 자치구 중 문화·창업·생활인구 활력 지수 상승률 1위 구는?",
       description:
-        "광주 5개 자치구의 문화행사 방문, 청년 창업, 생활인구 유입 등 긍정 활력 지표가 가장 크게 도약할 자치구를 응원하며 예측해보세요.\n📅 마감: 월말 18:00 | 📊 정산: 통계청 SGIS·KOSIS 및 지자체 공식 활력 지표",
+        "광주 5개 자치구의 문화행사 방문, 청년 창업, 생활인구 유입 등 긍정 활력 지표가 가장 크게 도약할 자치구를 응원하며 예측해보세요.\n 마감: 월말 18:00 | 정산: 통계청 SGIS·KOSIS 및 지자체 공식 활력 지표",
       predictionType: PredictionType.RANKING,
       options: [
         { id: "29110", label: "동구 (충장·문화예술 활력)", description: "ACC·충장로 도심 문화 상권 반등" },
@@ -1105,7 +1105,7 @@ export class GameSchedulingService {
       id: "local-city-clean-air-week",
       title: "[우리시 맑은하늘] 이번 주 우리 시 초미세먼지(PM2.5) '좋음·보통' 쾌적 대기질 기준(35㎍/㎥ 이하) 달성할까?",
       description:
-        "대기환경공단 에어코리아 기준으로 이번 주 우리 시 초미세먼지(PM2.5)가 쾌적 기준(35㎍/㎥ 이하)을 유지해 맑은 하늘 주간을 달성할지 예측하세요.\n📅 마감: 금요일 18:00 | 🌿 정산: 에어코리아·대기질 공식 측정치",
+        "대기환경공단 에어코리아 기준으로 이번 주 우리 시 초미세먼지(PM2.5)가 쾌적 기준(35㎍/㎥ 이하)을 유지해 맑은 하늘 주간을 달성할지 예측하세요.\n 마감: 금요일 18:00 | 정산: 에어코리아·대기질 공식 측정치",
       predictionType: PredictionType.BINARY,
       options: [
         { id: "yes", label: "맑은하늘 쾌적 달성 (Yes)", description: "PM2.5 35㎍/㎥ 이하 유지" },
@@ -1143,7 +1143,7 @@ export class GameSchedulingService {
       id: "national-living-price-stability",
       title: "[전국 생활물가] 이번 주 전국 알뜰주유·장바구니 체감 물가 안정세(인하·보합) 달성할까?",
       description:
-        "한국석유공사 오피넷 전국 평균 유가 및 소비자원 생필품(참가격)·농산물 유통지표가 이번 주 서민 물가 안정세(전주 대비 하락 또는 ±0.5% 이내 보합)를 기록할지 예측하세요.\n📅 마감: 금요일 17:00 | 🛒 정산: 오피넷·소비자원·KAMIS 공식 집계",
+        "한국석유공사 오피넷 전국 평균 유가 및 소비자원 생필품(참가격)·농산물 유통지표가 이번 주 서민 물가 안정세(전주 대비 하락 또는 ±0.5% 이내 보합)를 기록할지 예측하세요.\n 마감: 금요일 17:00 | 정산: 오피넷·소비자원·KAMIS 공식 집계",
       predictionType: PredictionType.WIN_DRAW_LOSE,
       options: [
         { id: "down", label: "인하 안정 (소비자 혜택)", description: "전주 대비 -0.1% 이상 하락" },

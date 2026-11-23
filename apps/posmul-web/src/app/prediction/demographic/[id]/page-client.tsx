@@ -26,17 +26,17 @@ import {
  * 통계 카테고리 설정
  */
 const STAT_CONFIG: Record<StatCategory, { icon: string; label: string; color: string; bgColor: string }> = {
-  [StatCategory.BIRTH]: { icon: "👶", label: "출생아 수", color: "text-pink-600", bgColor: "bg-pink-50" },
-  [StatCategory.DEATH]: { icon: "🕯️", label: "사망자 수", color: "text-gray-600", bgColor: "bg-gray-50" },
-  [StatCategory.MARRIAGE]: { icon: "💍", label: "혼인 건수", color: "text-red-500", bgColor: "bg-red-50" },
-  [StatCategory.DIVORCE]: { icon: "💔", label: "이혼 건수", color: "text-purple-600", bgColor: "bg-purple-50" },
-  [StatCategory.MIGRATION_IN]: { icon: "🏠", label: "전입자 수", color: "text-green-600", bgColor: "bg-green-50" },
-  [StatCategory.MIGRATION_OUT]: { icon: "🚚", label: "전출자 수", color: "text-orange-600", bgColor: "bg-orange-50" },
-  [StatCategory.EMPLOYMENT]: { icon: "💼", label: "취업률", color: "text-blue-600", bgColor: "bg-blue-50" },
-  [StatCategory.UNEMPLOYMENT]: { icon: "📉", label: "실업률", color: "text-red-600", bgColor: "bg-red-50" },
-  [StatCategory.LABOR_FORCE]: { icon: "👷", label: "경제활동인구", color: "text-indigo-600", bgColor: "bg-indigo-50" },
-  [StatCategory.CPI]: { icon: "📊", label: "소비자물가지수", color: "text-amber-600", bgColor: "bg-amber-50" },
-  [StatCategory.POPULATION]: { icon: "👥", label: "총 인구", color: "text-teal-600", bgColor: "bg-teal-50" },
+  [StatCategory.BIRTH]: { icon: "", label: "출생아 수", color: "text-pink-600", bgColor: "bg-pink-50" },
+  [StatCategory.DEATH]: { icon: "", label: "사망자 수", color: "text-gray-600", bgColor: "bg-gray-50" },
+  [StatCategory.MARRIAGE]: { icon: "", label: "혼인 건수", color: "text-red-500", bgColor: "bg-red-50" },
+  [StatCategory.DIVORCE]: { icon: "", label: "이혼 건수", color: "text-purple-600", bgColor: "bg-purple-50" },
+  [StatCategory.MIGRATION_IN]: { icon: "", label: "전입자 수", color: "text-green-600", bgColor: "bg-green-50" },
+  [StatCategory.MIGRATION_OUT]: { icon: "", label: "전출자 수", color: "text-orange-600", bgColor: "bg-orange-50" },
+  [StatCategory.EMPLOYMENT]: { icon: "", label: "취업률", color: "text-blue-600", bgColor: "bg-blue-50" },
+  [StatCategory.UNEMPLOYMENT]: { icon: "", label: "실업률", color: "text-red-600", bgColor: "bg-red-50" },
+  [StatCategory.LABOR_FORCE]: { icon: "", label: "경제활동인구", color: "text-indigo-600", bgColor: "bg-indigo-50" },
+  [StatCategory.CPI]: { icon: "", label: "소비자물가지수", color: "text-amber-600", bgColor: "bg-amber-50" },
+  [StatCategory.POPULATION]: { icon: "", label: "총 인구", color: "text-teal-600", bgColor: "bg-teal-50" },
 };
 
 /**
@@ -155,7 +155,7 @@ export function PredictionDetailClient({ predictionId: _predictionId }: Predicti
         <div className="mb-6 bg-green-50 border border-green-200 rounded-xl p-4">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
-              ✅
+              
             </div>
             <div>
               <h3 className="font-semibold text-green-900">예측 참여 완료!</h3>
@@ -238,7 +238,7 @@ export function PredictionDetailClient({ predictionId: _predictionId }: Predicti
 
           {/* Prediction Range Info */}
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-            <h3 className="font-semibold text-blue-900 mb-3">📊 예측 범위</h3>
+            <h3 className="font-semibold text-blue-900 mb-3">예측 범위</h3>
             <div className="grid grid-cols-3 gap-4 text-sm">
               <div>
                 <span className="text-blue-700">최소값:</span>
@@ -263,7 +263,7 @@ export function PredictionDetailClient({ predictionId: _predictionId }: Predicti
 
           {/* Distribution Chart */}
           <div className="mb-6">
-            <h3 className="font-semibold text-gray-900 mb-3">📈 현재 배팅 분포</h3>
+            <h3 className="font-semibold text-gray-900 mb-3">현재 배팅 분포</h3>
             <div className="space-y-2">
               {prediction.distribution.map((item) => (
                 <div key={item.range} className="flex items-center gap-3">
@@ -290,7 +290,7 @@ export function PredictionDetailClient({ predictionId: _predictionId }: Predicti
       {isOpen && !success && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <div className="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4">
-            <h2 className="text-xl font-bold text-white">🎯 예측 참여하기</h2>
+            <h2 className="text-xl font-bold text-white">예측 참여하기</h2>
             <p className="text-green-100 text-sm">
               예측값을 선택하고 PMP를 배팅하세요
             </p>
@@ -405,7 +405,7 @@ export function PredictionDetailClient({ predictionId: _predictionId }: Predicti
       {/* Closed Message */}
       {!isOpen && (
         <div className="bg-gray-100 rounded-xl p-6 text-center">
-          <div className="text-4xl mb-3">⏰</div>
+          <div className="text-4xl mb-3"></div>
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             이 예측 게임은 마감되었습니다
           </h3>

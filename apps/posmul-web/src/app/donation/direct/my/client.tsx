@@ -107,7 +107,7 @@ export function MyDonationsClient({ items, stats }: MyDonationsClientProps) {
           >
             ← 직접 기부
           </Link>
-          <h1 className="text-3xl font-bold">📋 내 기부 내역</h1>
+          <h1 className="text-3xl font-bold">내 기부 내역</h1>
           <p className="text-white/90 mt-2">등록한 물품과 매칭 상태를 확인하세요</p>
         </div>
       </div>
@@ -221,7 +221,7 @@ function FilterButton({
 function EmptyState({ statusFilter }: { statusFilter: string | null }) {
   return (
     <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl">
-      <span className="text-6xl block mb-4">📦</span>
+      <span className="text-6xl block mb-4"></span>
       <p className="text-gray-500 dark:text-gray-400 mb-4">
         {statusFilter
           ? "해당 상태의 물품이 없습니다."
@@ -231,7 +231,7 @@ function EmptyState({ statusFilter }: { statusFilter: string | null }) {
         href="/donation/direct/register"
         className="inline-flex items-center gap-2 text-orange-600 hover:text-orange-700"
       >
-        ➕ 물품 등록하기
+        물품 등록하기
       </Link>
     </div>
   );
@@ -381,7 +381,7 @@ function DonationMatchSection({
     <div className="bg-gray-50 dark:bg-gray-700/50 rounded-xl p-4 mb-4">
       <div className="flex items-center justify-between mb-3">
         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-          🤝 매칭 정보
+          매칭 정보
         </span>
         <span
           className={`text-xs px-2 py-1 rounded-full ${getStatusColorClass(
@@ -398,7 +398,7 @@ function DonationMatchSection({
             {match.recipient.displayName}
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400">
-            📍 {match.recipient.location}
+            {match.recipient.location}
           </div>
         </div>
       ) : null}

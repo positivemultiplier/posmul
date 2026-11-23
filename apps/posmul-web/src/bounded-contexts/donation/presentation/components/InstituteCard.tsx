@@ -55,7 +55,7 @@ export const InstituteCard = ({ institute }: InstituteCardProps) => {
                             </span>
                         </div>
                         <div className="flex items-center gap-1.5" title="Trust Score">
-                            <span className="text-sm">🛡️</span>
+                            <span className="text-sm"></span>
                             <span className="text-sm font-bold text-gray-900 dark:text-white">{institute.trustScore.toFixed(1)}</span>
                         </div>
                     </div>

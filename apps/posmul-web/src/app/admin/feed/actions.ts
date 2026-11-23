@@ -605,8 +605,8 @@ export async function generateAiNewsFromFeedItemAction(
       articleId: res.articleId,
       message:
         publishMode === "published"
-          ? `📰 AI 뉴스 즉시 발행 완료: ${res.title}`
-          : `📝 AI 뉴스 초안 저장 완료 (승인 대기): ${res.title}`,
+          ? `AI 뉴스 즉시 발행 완료: ${res.title}`
+          : `AI 뉴스 초안 저장 완료 (승인 대기): ${res.title}`,
     };
   } catch (err: unknown) {
     return {
@@ -674,6 +674,6 @@ export async function updateAiNewsDraftStatusAction(
 
   return {
     success: true,
-    message: status === "published" ? "📰 정식 기사로 발행되었습니다!" : "초안을 보관함으로 이동했습니다.",
+    message: status === "published" ? "정식 기사로 발행되었습니다!" : "초안을 보관함으로 이동했습니다.",
   };
 }

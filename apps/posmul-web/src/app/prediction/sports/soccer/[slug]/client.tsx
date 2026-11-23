@@ -392,7 +392,7 @@ export function SoccerPredictionDetailClient({
                         </div>
                         <div>
                           <div className="font-bold text-white">{game.creator.name}</div>
-                          <div className="text-yellow-400 text-xs">⭐ Reputation: {game.creator.reputation}</div>
+                          <div className="text-yellow-400 text-xs">Reputation: {game.creator.reputation}</div>
                         </div>
                       </div>
                       <div className="text-xs text-slate-400 bg-slate-800/50 p-3 rounded-lg">

@@ -297,7 +297,7 @@ export default function HousingProStudentTimerPage() {
       keyword: `망각복습·${keyword}`,
       minutes,
     });
-    setToastMsg("🧠 망각곡선 복습 단원을 오늘 계획에 바로 추가했습니다!");
+    setToastMsg("망각곡선 복습 단원을 오늘 계획에 바로 추가했습니다!");
     globalThis.setTimeout(() => setToastMsg(null), 3500);
   };
 
@@ -511,7 +511,7 @@ export default function HousingProStudentTimerPage() {
               }
               className="py-1.5 px-2 rounded-xl bg-sky-500/20 border border-sky-500/40 text-sky-200 text-center hover:bg-sky-500/30 transition"
             >
-              ⚡ 3초 O/X
+              3초 O/X
             </Link>
             <Link
               href={
@@ -521,7 +521,7 @@ export default function HousingProStudentTimerPage() {
               }
               className="py-1.5 px-2 rounded-xl bg-[#FF5A36]/20 border border-[#FF5A36]/40 text-[#FF8A6B] text-center hover:bg-[#FF5A36]/30 transition"
             >
-              📝 기출 20제
+              기출 20제
             </Link>
             <Link
               href={
@@ -531,7 +531,7 @@ export default function HousingProStudentTimerPage() {
               }
               className="py-1.5 px-2 rounded-xl bg-amber-500/15 border border-amber-500/35 text-amber-300 text-center hover:bg-amber-500/25 transition"
             >
-              🔗 지식맵
+              지식맵
             </Link>
           </div>
         </div>
@@ -642,7 +642,7 @@ export default function HousingProStudentTimerPage() {
                 </span>
               ) : (
                 <span>
-                  🎉 현재 추적 중인 <strong className="text-emerald-300">{forgettingSummary.allTrackedCount}개 단원</strong> 모두 기억 안정권입니다!
+                  현재 추적 중인 <strong className="text-emerald-300">{forgettingSummary.allTrackedCount}개 단원</strong> 모두 기억 안정권입니다!
                 </span>
               )}
             </div>

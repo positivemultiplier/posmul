@@ -32,64 +32,64 @@ interface InstituteClientProps {
 }
 
 const CATEGORIES = [
-  { key: "all", label: "전체 기관", icon: "🏛️" },
-  { key: "emergency", label: "긴급구호", icon: "🆘" },
-  { key: "children", label: "아동복지", icon: "👶" },
-  { key: "environment", label: "환경보호", icon: "🌿" },
-  { key: "education", label: "교육지원", icon: "📚" },
+  { key: "all", label: "전체 기관", icon: "" },
+  { key: "emergency", label: "긴급구호", icon: "" },
+  { key: "children", label: "아동복지", icon: "" },
+  { key: "environment", label: "환경보호", icon: "" },
+  { key: "education", label: "교육지원", icon: "" },
 ];
 
 function getInstituteBrandInfo(name: string) {
   if (name.includes("유니세프")) {
     return {
-      icon: "🇺🇳",
+      icon: "",
       tag: "UN 산하 아동구호기구",
     };
   }
   if (name.includes("세이브더칠드런")) {
     return {
-      icon: "🛡️",
+      icon: "",
       tag: "국제 아동권리 전문 NGO",
     };
   }
   if (name.includes("초록우산")) {
     return {
-      icon: "☂️",
+      icon: "",
       tag: "어린이 복지 76년",
     };
   }
   if (name.includes("월드비전")) {
     return {
-      icon: "🌍",
+      icon: "",
       tag: "글로벌 긴급구호 NGO",
     };
   }
   if (name.includes("굿네이버스")) {
     return {
-      icon: "🌱",
+      icon: "",
       tag: "대한민국 토종 국제 NGO",
     };
   }
   if (name.includes("적십자")) {
     return {
-      icon: "⛑️",
+      icon: "",
       tag: "인도주의 재난대응",
     };
   }
   if (name.includes("환경재단")) {
     return {
-      icon: "🌳",
+      icon: "",
       tag: "아시아 기후위기 대응",
     };
   }
   if (name.includes("밀알")) {
     return {
-      icon: "🤝",
+      icon: "",
       tag: "장애인 복지 전문",
     };
   }
   return {
-    icon: "🏛️",
+    icon: "",
     tag: "공익 인증 기관",
   };
 }
@@ -157,7 +157,7 @@ function InstituteContent({ institutes }: InstituteClientProps) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <DomainContextHeader
           domain="donation"
-          title="🏛️ Institute · 검증된 공익 기관 기부"
+          title="Institute · 검증된 공익 기관 기부"
           subtitle="투명성 등급(AAA~A)이 검증된 공익 파트너에 PMC를 후원하고 세액공제(Gift Aid) 혜택을 받으세요"
           metrics={[
             {

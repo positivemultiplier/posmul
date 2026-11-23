@@ -402,7 +402,7 @@ export function TiptapForumEditor({
 
       {/* 하단 단축 안내 */}
       <div className="px-3 py-1.5 bg-slate-950 border-t border-slate-900 text-[11px] text-slate-500 flex items-center justify-between flex-wrap gap-2">
-        <span>💡 캡처 화면 <strong>Ctrl + V</strong>나 고용량 사진도 브라우저에서 <strong>WebP로 자동 압축</strong>되어 초고속 업로드됩니다.</span>
+        <span>캡처 화면 <strong>Ctrl + V</strong>나 고용량 사진도 브라우저에서 <strong>WebP로 자동 압축</strong>되어 초고속 업로드됩니다.</span>
         <span className="text-emerald-500/80 font-medium">스토리지 95% 비용 절감 가동 중</span>
       </div>
     </div>

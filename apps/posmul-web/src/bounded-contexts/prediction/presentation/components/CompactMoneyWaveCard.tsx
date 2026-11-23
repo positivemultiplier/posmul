@@ -146,7 +146,7 @@ export function CompactMoneyWaveCard({
             {/* 좌측: MoneyWave 누적 상금풀 (고대비 골드/화이트) */}
             <div className="flex items-center gap-3.5">
               <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500/20 to-amber-500/20 border border-sky-400/30 flex items-center justify-center text-lg shrink-0 shadow-inner">
-                🌊
+                
               </div>
 
               <div>
