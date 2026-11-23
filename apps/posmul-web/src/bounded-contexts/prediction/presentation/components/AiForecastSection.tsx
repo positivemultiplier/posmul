@@ -11,6 +11,8 @@ import type {
 
 interface AiForecastSectionProps {
   gameId: string;
+  /** SSR에서 이미 캐시된 AI 예측이 있으면 즉시 렌더 (클라이언트 Server Action 왕복 생략) */
+  initialForecasts?: AiForecastDTO[] | null;
 }
 
 const PROVIDER_ACCENT: Record<
@@ -82,11 +84,24 @@ function RecentFormStrip({ forecast }: { forecast: AiForecastDTO }) {
   );
 }
 
-export function AiForecastSection({ gameId }: AiForecastSectionProps) {
-  const [forecasts, setForecasts] = useState<AiForecastDTO[]>([]);
-  const [loading, setLoading] = useState(true);
+export function AiForecastSection({
+  gameId,
+  initialForecasts,
+}: AiForecastSectionProps) {
+  const hasInitial = Boolean(initialForecasts && initialForecasts.length > 0);
+  const [forecasts, setForecasts] = useState<AiForecastDTO[]>(
+    initialForecasts ?? []
+  );
+  const [loading, setLoading] = useState(!hasInitial);
 
   useEffect(() => {
+    // SSR에서 이미 연동 AI 예측을 내려받았다면 추가 POST 왕복 생략
+    if (initialForecasts && initialForecasts.length > 0) {
+      setForecasts(initialForecasts);
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
     setLoading(true);
 
@@ -103,7 +118,7 @@ export function AiForecastSection({ gameId }: AiForecastSectionProps) {
     return () => {
       mounted = false;
     };
-  }, [gameId]);
+  }, [gameId, initialForecasts]);
 
   if (loading) {
     return (

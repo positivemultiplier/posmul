@@ -1,15 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "../../../lib/supabase/server";
 import {
-  getPredictionGameBySlug,
-  getPredictionGameStats,
-} from "../../../bounded-contexts/prediction/infrastructure/repositories/prediction-query.repository";
-import { getGameHistory } from "../../../bounded-contexts/prediction/infrastructure/repositories/get-game-history";
-import {
-  attachHourlyGamePoolsToRows,
   mapDbPredictionType,
   mapGameOptions,
-  type PredictionGameRow,
 } from "./prediction-game-mapper";
 import {
   UniversalPredictionDetailClient,
@@ -17,17 +10,13 @@ import {
 } from "../[slug]/client";
 import {
   computeBayesianMarketPosterior,
-  summarizeUserLearningProfile,
   type CollectiveParticipationSignal,
-  type SettledPredictionRecord,
   type UserLearningProfileSummary,
 } from "../../../bounded-contexts/prediction/domain/services/collective-intelligence-engine";
-import {
-  extractWinningOptionId,
-  resolveCanonicalOptionId,
-} from "../../../bounded-contexts/prediction/application/services/prediction-learning-stats.service";
 import { analyzePredictionCapmAndEconomy } from "../../../bounded-contexts/prediction/domain/services/prediction-economic-model";
-import { getTailChallengesForGameAction } from "../../challenge/actions/challenge.actions";
+import { getCachedPredictionDetailPublicData } from "./prediction-public-cache";
+import type { BalancedBriefingDTO } from "../../../bounded-contexts/prediction/domain/value-objects/briefing.types";
+import type { AiForecastDTO } from "../../../bounded-contexts/prediction/domain/value-objects/ai-forecast.types";
 import type { UserChallengeDTO } from "../../challenge/types";
 
 function mapDifficultyToImportance(raw: unknown, optionCount: number): number {
@@ -56,6 +45,23 @@ function toIsoOrFallback(value: unknown, fallbackMsFromNow: number): string {
   return new Date(Date.now() + fallbackMsFromNow).toISOString();
 }
 
+function hashGameId(id: string): number {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) {
+    hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  }
+  return hash;
+}
+
+function toFiniteNumber(value: unknown, fallback: number): number {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return fallback;
+}
+
 export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
   game: PredictionGameDetail;
   userBalance: { pmp: number; pmc: number };
@@ -69,80 +75,58 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
   initialChartData: Array<{ time: string; [key: string]: string | number }>;
   userLearningProfile?: UserLearningProfileSummary;
   tailChallenges: UserChallengeDTO[];
+  initialBriefing: BalancedBriefingDTO | null;
+  initialForecasts: AiForecastDTO[] | null;
   slug: string;
 } | null> {
   const decodedSlug = decodeURIComponent(slug);
   const supabase = await createClient();
 
-  // 1단계: 게임 기본 정보와 유저 인증 세션을 병렬 조회 (직렬 2 RTT -> 1 RTT)
-  const [dbGame, userAuthRes] = await Promise.all([
-    getPredictionGameBySlug(decodedSlug),
+  // 1단계 병렬: 15초 서버 캐시된 공개 게임 데이터 + 현재 유저 인증 세션 확인
+  const [publicData, userAuthRes] = await Promise.all([
+    getCachedPredictionDetailPublicData(decodedSlug),
     supabase.auth.getUser(),
   ]);
-  if (!dbGame) return null;
+
+  if (!publicData) return null;
+
+  const {
+    dbGame,
+    stats,
+    hourlyWavePool,
+    betsData,
+    initialChartData,
+    liveMsgCount,
+    liveChallengeCount,
+    initialBriefing,
+    initialForecasts,
+  } = publicData;
 
   const user = userAuthRes.data?.user ?? null;
-  const initialOptionsForHistory = mapGameOptions(dbGame.game_options, dbGame.game_id);
-  const roomLookupKeys = Array.from(
-    new Set([dbGame.slug, dbGame.game_id].filter((v): v is string => Boolean(v)))
-  );
 
-  // 2단계: 모든 부가 데이터(통계·잔액·풀·베팅·학습프로필·차트·꼬리예측·LIVE방)를 단일 Promise.all로 병렬 조회
-  const [
-    stats,
-    balanceRes,
-    boostedRows,
-    betsRes,
-    userStatsRes,
-    initialChartData,
-    tailChallenges,
-    liveMsgRes,
-    liveChallengeRes,
-  ] = await Promise.all([
-    getPredictionGameStats(dbGame.game_id),
-    user
-      ? supabase
+  // 2단계: 로그인 유저일 때만 개인 잔액 · 영구 학습 프로필 2건만 초경량 병렬 조회
+  // (비로그인 시 DB 쿼리 0회 추가, 캐시 히트 시 전체 0 RTT!)
+  const [balanceRes, userStatsRes] = user
+    ? await Promise.all([
+        supabase
           .schema("economy")
           .from("pmp_pmc_accounts")
           .select("pmp_balance, pmc_balance")
           .eq("user_id", user.id)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-    attachHourlyGamePoolsToRows(supabase, [dbGame as PredictionGameRow]),
-    supabase
-      .schema("prediction")
-      .from("predictions")
-      .select("prediction_id, user_id, bet_amount, confidence_level, prediction_data, created_at")
-      .eq("game_id", dbGame.game_id)
-      .eq("is_active", true)
-      .order("created_at", { ascending: true }),
-    user
-      ? supabase
+          .maybeSingle(),
+        supabase
           .schema("prediction")
           .from("user_prediction_stats")
           .select(
             "settled_count, win_rate, average_confidence, average_brier_score, average_log_loss, calibration_gap, skill_weight, calibration_status, recent_trend"
           )
           .eq("user_id", user.id)
-          .maybeSingle()
-      : Promise.resolve({ data: null, error: null }),
-    getGameHistory(
-      dbGame.game_id,
-      initialOptionsForHistory.map((opt) => ({ id: opt.id }))
-    ),
-    getTailChallengesForGameAction(dbGame.game_id, dbGame.slug || decodedSlug),
-    supabase
-      .schema("forum")
-      .from("live_room_messages")
-      .select("id", { count: "exact", head: true })
-      .in("room_id", roomLookupKeys),
-    supabase
-      .schema("prediction")
-      .from("user_challenges")
-      .select("id", { count: "exact", head: true })
-      .eq("linked_game_id", dbGame.game_id)
-      .like("title", "[LIVE]%"),
-  ]);
+          .maybeSingle(),
+      ])
+    : [
+        { data: null, error: null },
+        { data: null, error: null },
+      ];
 
   const balanceAccount = Array.isArray(balanceRes.data)
     ? balanceRes.data[0]
@@ -155,9 +139,9 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
         }
       : null;
 
-  // 이미 가져온 활성 베팅 목록에서 현재 유저의 베팅을 메모리 필터링 (중복 DB + Auth 왕복 제거)
+  // 이미 캐시된 공개 베팅 목록에서 현재 유저의 베팅만 메모리 필터링 (추가 DB 왕복 0회)
   const userBets = user
-    ? (betsRes.data || [])
+    ? betsData
         .filter((pred) => pred.user_id === user.id)
         .reverse()
         .map((pred) => ({
@@ -170,7 +154,6 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
         }))
     : [];
 
-  // 로그인 유저의 Brier · Calibration 지속 학습 프로필 로드 (DB 영구 프로필 우선, 미적재 시 fallback 계산)
   let userLearningProfile: UserLearningProfileSummary | undefined;
   const persistedStats = userStatsRes.data;
   if (persistedStats && !userStatsRes.error) {
@@ -189,79 +172,11 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
         (persistedStats.recent_trend as UserLearningProfileSummary["recentTrend"]) ||
         "STABLE",
     };
-  } else if (user) {
-    const { data: rawUserHistory } = await supabase
-      .schema("prediction")
-      .from("predictions")
-      .select("game_id, confidence_level, prediction_data, is_active, created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(30);
-
-    const activeOrSettledCandidates = (rawUserHistory || []).filter((r) => {
-      const pData = r.prediction_data as { withdrawn?: boolean } | null;
-      return !pData?.withdrawn;
-    });
-
-    if (activeOrSettledCandidates.length > 0) {
-      const historyGameIds = Array.from(
-        new Set(activeOrSettledCandidates.map((r) => r.game_id).filter(Boolean))
-      );
-      const { data: settledGames } = await supabase
-        .schema("prediction")
-        .from("prediction_games")
-        .select("game_id, status, winning_option_id, actual_result, settled_at, game_options")
-        .in("game_id", historyGameIds)
-        .eq("status", "SETTLED");
-
-      if (settledGames && settledGames.length > 0) {
-        const settledMap = new Map(settledGames.map((sg) => [sg.game_id, sg]));
-        const settledRecords: SettledPredictionRecord[] = [];
-        for (const pred of activeOrSettledCandidates) {
-          const sg = settledMap.get(pred.game_id);
-          if (!sg) continue;
-          const rawWinning = extractWinningOptionId({
-            game_id: sg.game_id,
-            status: sg.status,
-            game_options: sg.game_options,
-            winning_option_id: sg.winning_option_id,
-            actual_result: sg.actual_result as Record<string, unknown> | null,
-            settled_at: sg.settled_at,
-          });
-          const predData = pred.prediction_data as { selectedOptionId?: string } | null;
-          const rawSelected = predData?.selectedOptionId;
-          if (!rawSelected || !rawWinning) continue;
-
-          const selectedResolved = resolveCanonicalOptionId(rawSelected, sg.game_options);
-          const winningResolved = resolveCanonicalOptionId(rawWinning, sg.game_options);
-          if (!selectedResolved.canonicalId || !winningResolved.canonicalId) continue;
-
-          const rawConf = Number(pred.confidence_level);
-          const confidence = Number.isFinite(rawConf)
-            ? rawConf > 1
-              ? rawConf / 100
-              : rawConf
-            : 0.5;
-
-          settledRecords.push({
-            selectedOptionId: selectedResolved.canonicalId,
-            correctOptionId: winningResolved.canonicalId,
-            confidence,
-            optionCount: Math.max(selectedResolved.optionCount, winningResolved.optionCount),
-            createdAt: pred.created_at,
-          });
-        }
-        userLearningProfile = summarizeUserLearningProfile(settledRecords);
-      } else {
-        userLearningProfile = summarizeUserLearningProfile([]);
-      }
-    }
   }
 
-  const boostedGame = boostedRows[0] || dbGame;
-  const parsedOptions = mapGameOptions(boostedGame.game_options, dbGame.game_id);
+  const parsedOptions = mapGameOptions(dbGame.game_options, dbGame.game_id);
 
-  const betsData = betsRes.data || [];
+  // 단일 패스로 옵션별 볼륨 및 베이지안 시그널 산출 (중복 DB 조회 없이 메모리 집계)
   const optionVolumes: Record<string, number> = {};
   let calculatedTotalVolume = 0;
   parsedOptions.forEach((opt) => {
@@ -269,12 +184,13 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
   });
 
   const signals: CollectiveParticipationSignal[] = [];
-  betsData.forEach((bet) => {
+  for (const bet of betsData) {
     const pData = bet.prediction_data as {
       selectedOptionId?: string;
+      optionId?: string;
     } | null;
-    const optId = pData?.selectedOptionId;
-    const amt = Number(bet.bet_amount) || 0;
+    const optId = pData?.selectedOptionId ?? pData?.optionId;
+    const amt = toFiniteNumber(bet.bet_amount, 0);
     if (optId) {
       optionVolumes[optId] = (optionVolumes[optId] || 0) + amt;
       const rawConf = Number(bet.confidence_level);
@@ -294,9 +210,34 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
       });
     }
     calculatedTotalVolume += amt;
-  });
+  }
 
-  // 최근 10건 참여 비중 (군중 쏠림 / 최근 편향 진단용)
+  // MoneyWave 3단계 하이브리드 상금풀 계산 (attachHourlyGamePoolsToRows와 동일 공식, DB 추가 조회 0회)
+  const difficulty = Math.max(1.0, Math.min(5.0, toFiniteNumber(dbGame.difficulty, 2.5)));
+  const seedHash = hashGameId(dbGame.game_id);
+  const learningBasePool = Math.round(420 * difficulty + (seedHash % 380));
+  const dbParticipants = toFiniteNumber(dbGame.total_participants_count, 0);
+  const baselineParticipants = Math.max(
+    betsData.length,
+    dbParticipants,
+    (seedHash % 14) + 3
+  );
+  const baselineStake = Math.max(
+    calculatedTotalVolume,
+    toFiniteNumber(dbGame.total_stake_amount, 0),
+    baselineParticipants * 600
+  );
+  const crowdMatchingBoost = Math.round(
+    baselineParticipants * 95 + baselineStake * 0.12
+  );
+  const rawAllocated = toFiniteNumber(dbGame.allocated_prize_pool, 0);
+  const prizePool = Math.round(
+    Math.max(
+      rawAllocated + hourlyWavePool,
+      learningBasePool + hourlyWavePool + crowdMatchingBoost
+    ) || 25000
+  );
+
   const recentSignals = signals.slice(-10);
   const recentOptionShares: Record<string, number> = {};
   if (recentSignals.length > 0) {
@@ -306,37 +247,31 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     }
   }
 
-  // 1) 순차 베이지안 사후확률 계산
   const collectiveOptions = parsedOptions.map((opt) => ({
     id: opt.id,
     label: opt.text,
     priorProbability: opt.currentOdds,
   }));
   const bayesianResult = computeBayesianMarketPosterior(collectiveOptions, signals);
-
   const bayesianById = new Map(bayesianResult.options.map((o) => [o.optionId, o]));
 
   const finalTotalVolume =
     calculatedTotalVolume > 0
       ? calculatedTotalVolume
-      : Number(boostedGame.total_stake_amount) ||
-        Number(stats?.total_bet_amount) ||
-        35000;
+      : baselineStake ||
+        toFiniteNumber(stats?.total_bet_amount, 35000);
 
   const participantCount =
     betsData.length > 0
-      ? Math.max(betsData.length, Number(boostedGame.total_participants_count) || 0)
-      : Number(boostedGame.total_participants_count) ||
-        Number(stats?.total_participants) ||
-        18;
+      ? Math.max(betsData.length, baselineParticipants)
+      : baselineParticipants ||
+        toFiniteNumber(stats?.total_participants, 18);
 
-  const prizePool = Math.round(Number(boostedGame.allocated_prize_pool) || 25000);
   const gameImportance = mapDifficultyToImportance(
-    (dbGame as { difficulty?: unknown }).difficulty,
+    dbGame.difficulty,
     parsedOptions.length
   );
 
-  // 2) CAPM · Agency Theory · Behavioral Economics 시장 분석 실행
   const capmInputs = parsedOptions.map((opt, idx) => {
     const optVol = optionVolumes[opt.id] || 0;
     const bayes = bayesianById.get(opt.id);
@@ -364,13 +299,11 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     marketEconomy.options.map((m) => [m.optionId, m])
   );
 
-  const effectiveType = mapDbPredictionType(dbGame.prediction_type, parsedOptions.length) as
-    | "binary"
-    | "wdl"
-    | "ranking";
+  const effectiveType = mapDbPredictionType(
+    dbGame.prediction_type,
+    parsedOptions.length
+  ) as "binary" | "wdl" | "ranking";
 
-  const liveMsgCount = liveMsgRes.count ?? 0;
-  const liveChallengeCount = liveChallengeRes.count ?? 0;
   const gameMetadata = (
     dbGame as { metadata?: Record<string, unknown> | null }
   ).metadata;
@@ -382,7 +315,6 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     liveMsgCount > 0 ||
     liveChallengeCount > 0;
 
-  // 실제로 LIVE 방이 개설된 진행 중(ACTIVE & 마감 전) 마켓에만 LIVE 응원톡 배너 연결
   const matchedLiveRoom =
     dbGame.status === "ACTIVE" && isBeforeRegistrationEnd && isLiveRoomOpened
       ? {
@@ -443,11 +375,12 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     endTime: toIsoOrFallback(dbGame.registration_end, 7 * 24 * 60 * 60 * 1000),
     settlementTime: toIsoOrFallback(dbGame.settlement_date, 14 * 24 * 60 * 60 * 1000),
     status: mapStatus(dbGame.status),
-    category: dbGame.category || "예측",
-    subcategory: dbGame.subcategory || undefined,
-    dataSource: dbGame.data_source || "kosis",
-    externalId: dbGame.external_id || undefined,
-    settlementType: dbGame.settlement_type || "auto",
+    category: typeof dbGame.category === "string" ? dbGame.category : "예측",
+    subcategory: typeof dbGame.subcategory === "string" ? dbGame.subcategory : undefined,
+    dataSource: typeof dbGame.data_source === "string" ? dbGame.data_source : "kosis",
+    externalId: typeof dbGame.external_id === "string" ? dbGame.external_id : undefined,
+    settlementType:
+      typeof dbGame.settlement_type === "string" ? dbGame.settlement_type : "auto",
     liveRoom: matchedLiveRoom,
     creator: {
       name: "PosMul 공인 오라클",
@@ -465,7 +398,9 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     userBets,
     initialChartData,
     userLearningProfile,
-    tailChallenges,
+    tailChallenges: [],
+    initialBriefing,
+    initialForecasts,
     slug: decodedSlug,
   };
 }
@@ -482,6 +417,8 @@ export async function renderPredictionDetailBySlug(slug: string) {
       initialChartData={data.initialChartData}
       userLearningProfile={data.userLearningProfile}
       tailChallenges={data.tailChallenges}
+      initialBriefing={data.initialBriefing}
+      initialForecasts={data.initialForecasts}
       slug={data.slug}
     />
   );

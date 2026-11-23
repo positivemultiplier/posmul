@@ -14,19 +14,9 @@ import {
 } from "@/bounded-contexts/prediction/domain/value-objects/decision-telemetry.types";
 import { useRouter } from "next/navigation";
 import { openLiveRoomForGameAction } from "@/app/live/actions/live.actions";
-
-const ProbabilityLineChart = dynamic(
-  () =>
-    import(
-      "@/bounded-contexts/prediction/presentation/components/charts/ProbabilityLineChart"
-    ).then((m) => m.ProbabilityLineChart),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[240px] w-full animate-pulse rounded-xl bg-slate-900/60" />
-    ),
-  }
-);
+import { ProbabilityLineChart } from "@/bounded-contexts/prediction/presentation/components/charts/ProbabilityLineChart";
+import type { BalancedBriefingDTO } from "@/bounded-contexts/prediction/domain/value-objects/briefing.types";
+import type { AiForecastDTO } from "@/bounded-contexts/prediction/domain/value-objects/ai-forecast.types";
 
 const BettingDistributionChart = dynamic(
   () =>
@@ -153,6 +143,8 @@ interface UniversalPredictionDetailClientProps {
   initialChartData?: Array<{ time: string; [key: string]: string | number }>;
   userLearningProfile?: UserLearningProfileSummary;
   tailChallenges?: UserChallengeDTO[];
+  initialBriefing?: BalancedBriefingDTO | null;
+  initialForecasts?: AiForecastDTO[] | null;
 }
 
 type ChartTabType = "trend" | "distribution" | "my_bets";
@@ -366,6 +358,8 @@ export function UniversalPredictionDetailClient({
   initialChartData,
   userLearningProfile: _userLearningProfile,
   tailChallenges: _tailChallenges = [],
+  initialBriefing,
+  initialForecasts,
 }: UniversalPredictionDetailClientProps) {
   const [chartTab, setChartTab] = useState<ChartTabType>("trend");
   const [isPending, startTransition] = useTransition();
@@ -1329,6 +1323,7 @@ export function UniversalPredictionDetailClient({
                 options={game.options}
                 selectedOptionId={selectedOption}
                 onSelectOption={setSelectedOption}
+                initialBriefing={initialBriefing}
               />
             </div>
 
@@ -1339,7 +1334,10 @@ export function UniversalPredictionDetailClient({
                 viewedAiRef.current = true;
               }}
             >
-              <AiForecastSection gameId={game.id} />
+              <AiForecastSection
+                gameId={game.id}
+                initialForecasts={initialForecasts}
+              />
             </div>
           </div>
 

@@ -8,6 +8,52 @@ const VALID_PASSWORDS = [
   (process.env.SITE_SECRET_PASS || "").trim().toLowerCase(),
 ].filter(Boolean);
 
+/**
+ * Supabase 인증 쿠키의 JWT 만료 임박 여부만 가볍게 판별 (미들웨어 중복 원격 RTT 회피용)
+ * - 실제 권한/금융 검증은 모든 서버 페이지·API·Server Action의 supabase.auth.getUser()에서 엄격 수행
+ * - 미들웨어는 토큰 만료가 5분 이내이거나 파싱이 불가할 때만 세션 쿠키를 원격 리프레시함
+ */
+function shouldRefreshSupabaseSession(request: NextRequest): boolean {
+  const sbCookies = request.cookies
+    .getAll()
+    .filter((c) => c.name.startsWith("sb-") && c.name.includes("-auth-token") && Boolean(c.value));
+
+  if (sbCookies.length === 0) {
+    return false;
+  }
+
+  try {
+    const baseKey = sbCookies[0].name.replace(/\.\d+$/, "");
+    const rawValue = sbCookies
+      .filter((c) => c.name === baseKey || c.name.startsWith(`${baseKey}.`))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((c) => c.value)
+      .join("");
+
+    const jsonStr = rawValue.startsWith("base64-")
+      ? atob(rawValue.slice(7).replace(/-/g, "+").replace(/_/g, "/"))
+      : decodeURIComponent(rawValue);
+    const parsed = JSON.parse(jsonStr) as { expires_at?: number; access_token?: string };
+
+    let expiresAtSec = typeof parsed.expires_at === "number" ? parsed.expires_at : 0;
+    if (!expiresAtSec && typeof parsed.access_token === "string") {
+      const payloadPart = parsed.access_token.split(".")[1];
+      if (payloadPart) {
+        const padded = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(atob(padded)) as { exp?: number };
+        expiresAtSec = typeof payload.exp === "number" ? payload.exp : 0;
+      }
+    }
+
+    if (!expiresAtSec) return true;
+    const nowSec = Math.floor(Date.now() / 1000);
+    // 만료 5분 전 이내일 때만 원격 리프레시 수행
+    return expiresAtSec - nowSec <= 300;
+  } catch {
+    return true;
+  }
+}
+
 async function refreshPosmulSessionCookie(
   request: NextRequest,
   baseResponse: NextResponse
@@ -18,10 +64,7 @@ async function refreshPosmulSessionCookie(
     return baseResponse;
   }
 
-  const hasSbCookie = request.cookies
-    .getAll()
-    .some((c) => c.name.startsWith("sb-") && Boolean(c.value));
-  if (!hasSbCookie) {
+  if (!shouldRefreshSupabaseSession(request)) {
     return baseResponse;
   }
 

@@ -2,7 +2,6 @@
 
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { FadeIn } from "../../HomeClientComponents";
 import {
   PredictionGameCard,
   resolveGameVisualMeta,
@@ -990,7 +989,7 @@ export function ClientPredictionGamesGrid({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-5">
-            {sortedGames.map((game, index) => {
+            {sortedGames.map((game) => {
               const myPrediction = getPredictionForGame(game.id);
 
               const safeGame = {
@@ -1003,10 +1002,10 @@ export function ClientPredictionGamesGrid({
               };
 
               return (
-                <FadeIn key={game.slug || game.id} delay={Math.min(index * 0.03, 0.25)}>
+                <div key={game.slug || game.id}>
                   <Link
                     href={game.href ?? `${basePath}/${game.slug}`}
-                    prefetch={true}
+                    prefetch={false}
                     className="block"
                   >
                     <PredictionGameCard
@@ -1015,7 +1014,7 @@ export function ClientPredictionGamesGrid({
                       myPrediction={myPrediction}
                     />
                   </Link>
-                </FadeIn>
+                </div>
               );
             })}
           </div>

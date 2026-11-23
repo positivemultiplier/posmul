@@ -18,6 +18,8 @@ interface BalancedDecisionBriefingProps {
   options?: ReadonlyArray<BriefingOptionMeta>;
   selectedOptionId?: string;
   onSelectOption?: (optionId: string) => void;
+  /** SSR에서 이미 캐시된 브리핑이 있으면 즉시 렌더 (클라이언트 Server Action 왕복 생략) */
+  initialBriefing?: BalancedBriefingDTO | null;
 }
 
 export function BalancedDecisionBriefing({
@@ -25,11 +27,21 @@ export function BalancedDecisionBriefing({
   options,
   selectedOptionId,
   onSelectOption,
+  initialBriefing,
 }: BalancedDecisionBriefingProps) {
-  const [briefing, setBriefing] = useState<BalancedBriefingDTO | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [briefing, setBriefing] = useState<BalancedBriefingDTO | null>(
+    initialBriefing ?? null
+  );
+  const [loading, setLoading] = useState(!initialBriefing);
 
   useEffect(() => {
+    // SSR로 유효한 브리핑을 이미 받았다면 추가 POST 왕복 생략
+    if (initialBriefing && initialBriefing.scenarios.length > 0) {
+      setBriefing(initialBriefing);
+      setLoading(false);
+      return;
+    }
+
     let mounted = true;
     setLoading(true);
 
@@ -46,7 +58,7 @@ export function BalancedDecisionBriefing({
     return () => {
       mounted = false;
     };
-  }, [gameId]);
+  }, [gameId, initialBriefing]);
 
   if (loading) {
     return (

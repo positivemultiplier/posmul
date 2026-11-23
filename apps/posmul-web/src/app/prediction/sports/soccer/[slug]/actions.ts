@@ -10,7 +10,7 @@
  * @since 2024-12
  */
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import {
   UserId,
   PredictionGameId,
@@ -88,7 +88,9 @@ export async function placeBet(request: PlaceBetRequest): Promise<PlaceBetRespon
       .eq("user_id", user.id)
       .single();
 
-    // 4. 페이지 새로고침 (전체 예측 경로 갱신)
+    // 4. 페이지 새로고침 및 15초 공개 캐시 즉시 무효화 (전체 예측 경로 갱신)
+    revalidateTag("prediction-detail");
+    revalidateTag("prediction-feed");
     revalidatePath('/prediction', 'layout');
 
     return {
@@ -426,7 +428,9 @@ export async function withdrawBet(
         .eq("game_id", prediction.game_id);
     }
 
-    // 5. 페이지 캐시 무효화
+    // 5. 페이지 캐시 및 15초 공개 캐시 즉시 무효화
+    revalidateTag("prediction-detail");
+    revalidateTag("prediction-feed");
     revalidatePath(`/prediction/sports/soccer/${gameSlug}`);
     revalidatePath("/prediction/sports");
     revalidatePath("/dashboard");

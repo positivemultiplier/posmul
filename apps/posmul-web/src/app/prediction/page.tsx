@@ -1,18 +1,12 @@
 import { createClient } from "../../lib/supabase/server";
-import { FadeIn } from "../../shared/ui/components/animations";
 import { ClientPredictionGamesGrid, type SortOption } from "./components/ClientPredictionGamesGrid";
-import { getAggregatedPrizePool } from "../../bounded-contexts/prediction/application/prediction-pool.service";
-import {
-  attachHourlyGamePoolsToRows,
-  mapPredictionGameRowToCardModel,
-  type PredictionGameRow,
-} from "./components/prediction-game-mapper";
+import { getCachedActivePredictionFeed } from "./components/prediction-public-cache";
 import {
   PredictionType,
   GameStatus,
 } from "../../bounded-contexts/prediction/domain/value-objects/prediction-types";
 
-// 최신 DB 게임 및 실시간 MoneyWave 상금풀 즉시 반영
+// 최신 DB 게임 및 실시간 MoneyWave 상금풀 (공개 피드는 15초 서버 캐시, 개인 베팅만 경량 조회)
 export const dynamic = "force-dynamic";
 
 interface PageProps {
@@ -35,42 +29,26 @@ export default async function PredictionPage({ searchParams }: PageProps) {
           ? "closing_soon"
           : "latest";
 
-  // 1단계 병렬 요청: 유저 인증, MoneyWave 상금풀, 활성 게임 목록을 동시에 fetch
-  const [userResult, platformTotalPool, recentGamesResult] = await Promise.all([
+  // 1단계 병렬: 15초 캐시된 공개 마켓 피드(캐시 히트 시 DB 0회) + 현재 유저 세션 확인
+  const [cachedFeed, userResult] = await Promise.all([
+    getCachedActivePredictionFeed(),
     supabase.auth.getUser(),
-    getAggregatedPrizePool(supabase),
-    supabase
-      .schema("prediction")
-      .from("prediction_games")
-      .select(
-        "game_id, slug, category, subcategory, league, data_source, title, description, prediction_type, game_options, registration_start, registration_end, settlement_date, min_bet_amount, max_bet_amount, status, difficulty, created_at, metadata"
-      )
-      .eq("status", "ACTIVE")
-      .order("created_at", { ascending: false })
-      .limit(50),
   ]);
-
-  if (recentGamesResult.error) {
-    console.error("[PredictionPage] prediction_games 조회 실패:", recentGamesResult.error);
-  }
 
   const user = userResult.data?.user ?? null;
-  const recentGameRows = (recentGamesResult.data ?? []) as PredictionGameRow[];
+  const { platformTotalPool } = cachedFeed;
+  let mappedGames = cachedFeed.mappedGames;
 
-  // 2단계 병렬 요청: 게임별 실시간 상금풀 매핑 및 유저의 활성 베팅 목록을 동시에 fetch
-  const [recentGameRowsWithPools, userPredictionsResult] = await Promise.all([
-    attachHourlyGamePoolsToRows(supabase, recentGameRows),
-    user
-      ? supabase
-          .schema("prediction")
-          .from("predictions")
-          .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
-          .eq("user_id", user.id)
-          .eq("is_active", true)
-      : Promise.resolve({ data: [] }),
-  ]);
+  // 2단계: 로그인 유저일 때만 개인 활성 참여 내역 단 1쿼리 조회
+  const userPredictionsResult = user
+    ? await supabase
+        .schema("prediction")
+        .from("predictions")
+        .select("prediction_id, game_id, bet_amount, is_active, prediction_data")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+    : { data: [] };
 
-  let mappedGames = recentGameRowsWithPools.map(mapPredictionGameRowToCardModel);
   const userPredictions = (userPredictionsResult.data || []) as Array<{
     prediction_id: string;
     game_id: string;
@@ -137,18 +115,16 @@ export default async function PredictionPage({ searchParams }: PageProps) {
   return (
     <div className="min-h-screen bg-[#090b12] text-slate-100">
       <div className="mx-auto max-w-7xl px-4 pt-4 pb-12 sm:px-6 lg:px-8">
-        <FadeIn>
-          <ClientPredictionGamesGrid
-            games={mappedGames}
-            userId={user?.id}
-            userPredictions={userPredictions}
-            basePath="/prediction"
-            showCategoryFilter={false}
-            showSortToolbar={true}
-            initialSort={initialSort}
-            platformTotalPool={platformTotalPool}
-          />
-        </FadeIn>
+        <ClientPredictionGamesGrid
+          games={mappedGames}
+          userId={user?.id}
+          userPredictions={userPredictions}
+          basePath="/prediction"
+          showCategoryFilter={false}
+          showSortToolbar={true}
+          initialSort={initialSort}
+          platformTotalPool={platformTotalPool}
+        />
       </div>
     </div>
   );
