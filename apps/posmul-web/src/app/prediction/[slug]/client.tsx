@@ -53,6 +53,7 @@ import {
   splitTitlePrefix,
 } from "@/bounded-contexts/prediction/presentation/components/PredictionGameCard";
 import { BalancedDecisionBriefing } from "@/bounded-contexts/prediction/presentation/components/BalancedDecisionBriefing";
+import { AiForecastSection } from "@/bounded-contexts/prediction/presentation/components/AiForecastSection";
 import type { UserChallengeDTO } from "@/app/challenge/types";
 import {
   evaluateExperienceBias,
@@ -1330,7 +1331,7 @@ export function UniversalPredictionDetailClient({
 
             </Card>
 
-            {/* 2️⃣ ⚖️ AI 균형 의사결정 브리핑 (유형별 고가독성 비교 뷰) */}
+            {/* 2️⃣ AI 균형 의사결정 브리핑 (유형별 고가독성 비교 뷰) */}
             <BalancedDecisionBriefing
               gameId={game.id}
               gameTitle={game.title}
@@ -1338,6 +1339,9 @@ export function UniversalPredictionDetailClient({
               selectedOptionId={selectedOption}
               onSelectOption={setSelectedOption}
             />
+
+            {/* 3️⃣ 연동된 AI 모델별 독립 예측 현황 */}
+            <AiForecastSection gameId={game.id} />
           </div>
 
           {/* ======================================================== */}

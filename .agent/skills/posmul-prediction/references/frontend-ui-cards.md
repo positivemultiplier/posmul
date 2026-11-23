@@ -41,7 +41,7 @@
 - **단일 데이터/뷰 아키텍처**: 모든 카테고리 상세 라우트(`economy`, `sports`, `entertainment`, `politics`, `consume`, `user-suggestions`)의 `renderPredictionDetailBySlug`와 `/prediction/[slug]` 모두 `fetchPredictionDetailDataBySlug` + `UniversalPredictionDetailClient`를 단일 뷰로 사용합니다.
 - **레이아웃 배치 순서**:
   - 상단: LIVE 연동 배너 ➔ 마이크로 심볼 + 제목 + 분류별 전용 게이지 헤더
-  - 좌측(2 cols): ① 집단지성 데이터 차트 센터(탭 뷰어) ➔ ② AI 균형 의사결정 브리핑 (`BalancedDecisionBriefing` — 중립 팩트 탭 없이 고가독성 `14~15px` 기준: `BINARY` 좌우 50:50 VS 맞대결 / `WDL` 상단 3요약 + 하단 상세 펼침 / `RANKING` 확률 순위형 아코디언)
+  - 좌측(2 cols): ① 집단지성 데이터 차트 센터(탭 뷰어) ➔ ② AI 균형 의사결정 브리핑 (`BalancedDecisionBriefing` — 중립 팩트 탭 없이 고가독성 `14~15px` 기준: `BINARY` 좌우 50:50 VS 맞대결 / `WDL` 상단 3요약 + 하단 상세 펼침 / `RANKING` 확률 순위형 아코디언) ➔ ③ 연동된 AI 모델별 독립 예측 현황 (`AiForecastSection` — 실연동 LLM만 오픈 시점 고정 표시 · 반대 방향 유도 금지 · 장식 이모지 0개)
   - 우측(1 col): ① `MoneyWave 황금 모래시계` ➔ ② 3대 분류 맞춤형 시민 예측 참여 패널
   - *(하단 `의제 정보 & 공식 판정 기준`, `꼬리 내기`, `의제 전용 시민 토론 갤러리`, 우측 `P2P 꼬리 내기 CTA`는 가독성 집중을 위해 제거됨)*
 - **3대 분류(`binary` / `wdl` / `ranking`) UI 분기**:
