@@ -4,8 +4,14 @@
  */
 "use client";
 
-import { useState, useTransition, useMemo } from "react";
+import { useState, useTransition, useMemo, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
+import { recordDecisionTelemetryAction } from "@/app/prediction/components/prediction-telemetry.actions";
+import {
+  clampDeliberationSec,
+  calculateStakeConvictionRatio,
+  computeRevealedConfidence,
+} from "@/bounded-contexts/prediction/domain/value-objects/decision-telemetry.types";
 import { useRouter } from "next/navigation";
 import { openLiveRoomForGameAction } from "@/app/live/actions/live.actions";
 
@@ -35,18 +41,7 @@ const BettingDistributionChart = dynamic(
   }
 );
 
-const ParticipantTimelineChart = dynamic(
-  () =>
-    import(
-      "@/bounded-contexts/prediction/presentation/components/charts/ParticipantTimelineChart"
-    ).then((m) => m.ParticipantTimelineChart),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="h-[220px] w-full animate-pulse rounded-xl bg-slate-900/60" />
-    ),
-  }
-);
+
 import { MoneyWaveWaterfallCard } from "@/bounded-contexts/prediction/presentation/components/MoneyWaveWaterfallCard";
 import {
   resolveGameVisualMeta,
@@ -55,10 +50,7 @@ import {
 import { BalancedDecisionBriefing } from "@/bounded-contexts/prediction/presentation/components/BalancedDecisionBriefing";
 import { AiForecastSection } from "@/bounded-contexts/prediction/presentation/components/AiForecastSection";
 import type { UserChallengeDTO } from "@/app/challenge/types";
-import {
-  evaluateExperienceBias,
-  type UserLearningProfileSummary,
-} from "@/bounded-contexts/prediction/domain/services/collective-intelligence-engine";
+import { type UserLearningProfileSummary } from "@/bounded-contexts/prediction/domain/services/collective-intelligence-engine";
 import {
   analyzePredictionCapmAndEconomy,
   evaluateOptionParticipationEconomics,
@@ -66,7 +58,6 @@ import {
 } from "@/bounded-contexts/prediction/domain/services/prediction-economic-model";
 import { placeBet } from "../sports/soccer/[slug]/actions";
 import {
-  Users,
   ArrowLeft,
   ArrowRight,
   Clock,
@@ -81,8 +72,6 @@ import {
   Trophy,
   Scale,
   Layers,
-  Brain,
-  SlidersHorizontal,
 } from "lucide-react";
 import Link from "next/link";
 import { Card } from "@/shared/ui/components/base";
@@ -166,7 +155,7 @@ interface UniversalPredictionDetailClientProps {
   tailChallenges?: UserChallengeDTO[];
 }
 
-type ChartTabType = "trend" | "distribution" | "participants" | "my_bets";
+type ChartTabType = "trend" | "distribution" | "my_bets";
 
 interface OptionColorTheme {
   hex: string;
@@ -375,13 +364,49 @@ export function UniversalPredictionDetailClient({
   userBets,
   slug,
   initialChartData,
-  userLearningProfile,
+  userLearningProfile: _userLearningProfile,
   tailChallenges: _tailChallenges = [],
 }: UniversalPredictionDetailClientProps) {
-  const analysisHref = `/prediction/${encodeURIComponent(slug || game.id)}/analysis`;
   const [chartTab, setChartTab] = useState<ChartTabType>("trend");
-  const [isAnalystMode, setIsAnalystMode] = useState<boolean>(false);
   const [isPending, startTransition] = useTransition();
+
+  // 무자각 의사결정 텔레메트리 추적용 Refs (UI 비간섭)
+  const openedAtRef = useRef<number>(Date.now());
+  const briefingSectionRef = useRef<HTMLDivElement | null>(null);
+  const aiSectionRef = useRef<HTMLDivElement | null>(null);
+  const viewedBriefingRef = useRef<boolean>(false);
+  const viewedAiRef = useRef<boolean>(false);
+  const chartTabSwitchesRef = useRef<number>(0);
+
+  useEffect(() => {
+    openedAtRef.current = Date.now();
+    if (typeof IntersectionObserver === "undefined") return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          if (entry.target === briefingSectionRef.current) {
+            viewedBriefingRef.current = true;
+          } else if (entry.target === aiSectionRef.current) {
+            viewedAiRef.current = true;
+          }
+        }
+      },
+      { threshold: 0.35 }
+    );
+
+    if (briefingSectionRef.current) observer.observe(briefingSectionRef.current);
+    if (aiSectionRef.current) observer.observe(aiSectionRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleSwitchChartTab = (nextTab: ChartTabType) => {
+    if (nextTab !== chartTab) {
+      chartTabSwitchesRef.current += 1;
+      setChartTab(nextTab);
+    }
+  };
   const router = useRouter();
   const [balance, setBalance] = useState(userBalance);
   const [bets, setBets] = useState(userBets);
@@ -413,14 +438,15 @@ export function UniversalPredictionDetailClient({
   }, [game.predictionType, game.options.length]);
 
   const [selectedOption, setSelectedOption] = useState<string>(game.options[0]?.id || "");
-  const [confidencePct, setConfidencePct] = useState<number>(() => {
-    const initialProb = game.options[0]?.probability ?? 0.65;
-    return Math.min(95, Math.max(50, Math.round(initialProb * 100)));
-  });
   const [stakeAmount, setStakeAmount] = useState<number>(game.minimumStake || 100);
   const [feedbackMsg, setFeedbackMsg] = useState<string | null>(null);
 
-  // CAPM · Agency Theory · Prospect Theory 시장 전체 분석 (사용자 확신도 변화 반영)
+  const impliedMarketConfidence = useMemo(() => {
+    const prob = game.options.find((opt) => opt.id === selectedOption)?.probability ?? 0.65;
+    return Math.min(0.95, Math.max(0.5, prob));
+  }, [game.options, selectedOption]);
+
+  // CAPM · Agency Theory · Prospect Theory 시장 전체 분석 (시장 내재 확률 기반)
   const marketEconomy = useMemo(() => {
     return analyzePredictionCapmAndEconomy({
       options: game.options.map((opt) => ({
@@ -434,7 +460,7 @@ export function UniversalPredictionDetailClient({
       prizePool: game.prizePool,
       gameImportance: game.collectiveIntelligence?.gameImportance,
       normalizedEntropy: game.collectiveIntelligence?.normalizedEntropy,
-      userConfidence: confidencePct / 100,
+      userConfidence: impliedMarketConfidence,
     });
   }, [
     game.options,
@@ -442,15 +468,15 @@ export function UniversalPredictionDetailClient({
     game.participantCount,
     game.prizePool,
     game.collectiveIntelligence,
-    confidencePct,
+    impliedMarketConfidence,
   ]);
 
-  // 현재 선택한 옵션 & 입력 PMP/확신도 기준 실시간 경제학 시뮬레이션
+  // 현재 선택한 옵션 & 입력 PMP 기준 실시간 경제학 시뮬레이션
   const participationEconomy = useMemo(() => {
     return evaluateOptionParticipationEconomics({
       selectedOptionId: selectedOption,
       stakeAmount,
-      confidence: confidencePct / 100,
+      confidence: impliedMarketConfidence,
       userPmpBalance: balance.pmp,
       totalVolume: game.totalVolume,
       prizePool: game.prizePool,
@@ -461,40 +487,13 @@ export function UniversalPredictionDetailClient({
   }, [
     selectedOption,
     stakeAmount,
-    confidencePct,
+    impliedMarketConfidence,
     balance.pmp,
     game.totalVolume,
     game.prizePool,
     game.participantCount,
     game.collectiveIntelligence,
     marketEconomy,
-  ]);
-
-  // 선택된 옵션에 대한 실시간 경험 편향(Experience Bias) 디바이어싱 진단
-  const biasReport = useMemo(() => {
-    const opt = game.options.find((o) => o.id === selectedOption);
-    if (!opt) return null;
-    const recentShare =
-      game.collectiveIntelligence?.recentOptionShares?.[opt.id] ?? opt.probability;
-    return evaluateExperienceBias({
-      selectedOptionId: opt.id,
-      confidence: confidencePct / 100,
-      stakeAmount,
-      marketBayesianProbability: opt.probability,
-      optionPriorProbability: opt.priorProbability ?? 1 / Math.max(2, game.options.length),
-      totalParticipants: game.participantCount,
-      recentOptionShare: recentShare,
-      userCalibrationGap: userLearningProfile?.calibrationGap,
-      userPastSettledCount: userLearningProfile?.settledCount,
-    });
-  }, [
-    game.options,
-    game.participantCount,
-    game.collectiveIntelligence,
-    selectedOption,
-    confidencePct,
-    stakeAmount,
-    userLearningProfile,
   ]);
 
   // 메인 피드 카드와의 일관된 시각적 연속성
@@ -593,17 +592,46 @@ export function UniversalPredictionDetailClient({
   const handlePlaceBet = async () => {
     if (!selectedOption) return;
     setFeedbackMsg(null);
+    const balanceBefore = balance.pmp;
+    const deliberationSec = clampDeliberationSec(Date.now() - openedAtRef.current);
+    const stakeConvictionRatio = calculateStakeConvictionRatio(stakeAmount, balanceBefore);
+    const revealedConfidence = computeRevealedConfidence({
+      stakeConvictionRatio,
+      deliberationSec,
+      viewedBriefing: viewedBriefingRef.current,
+      viewedAiForecasts: viewedAiRef.current,
+    });
+    const selectedOptObj = game.options.find((o) => o.id === selectedOption);
+
     startTransition(async () => {
       try {
         const result = await placeBet({
           gameId: game.id,
           optionId: selectedOption,
           stakeAmount,
-          confidence: confidencePct / 100,
+          confidence: revealedConfidence,
         });
         if (result.success && result.newBalance !== undefined) {
           setBalance({ ...balance, pmp: result.newBalance });
           setFeedbackMsg("예측 투표에 성공적으로 참여하였습니다!");
+
+          // 무자각 의사결정 텔레메트리 백그라운드 기록 (투표 완료 흐름 비차단)
+          void recordDecisionTelemetryAction({
+            gameId: game.id,
+            predictionId: result.predictionId,
+            selectedOptionId: selectedOption,
+            stakeAmount,
+            balanceBefore,
+            optionProbAtTime: selectedOptObj?.probability,
+            deliberationSec,
+            viewedBriefing: viewedBriefingRef.current,
+            viewedAiForecasts: viewedAiRef.current,
+            chartTabSwitches: chartTabSwitchesRef.current,
+            deviceType:
+              typeof window !== "undefined" && window.innerWidth < 768
+                ? "mobile"
+                : "desktop",
+          }).catch(() => undefined);
           setBets([
             {
               betId: `bet-${Date.now()}`,
@@ -1131,56 +1159,41 @@ export function UniversalPredictionDetailClient({
           <div className="lg:col-span-2 space-y-6">
             {/* 1️⃣ 📊 집단지성 데이터 차트 센터 */}
             <Card className="p-5 bg-[#111622] border-white/[0.08] space-y-4 shadow-xl">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.08] pb-3">
-                <div className="flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4 text-sky-400" />
-                  <span className="text-sm font-extrabold text-white">집단지성 데이터 센터</span>
-                  <span className="text-[10px] text-sky-400 font-bold bg-sky-950/60 px-2 py-0.5 rounded border border-sky-800/40">
-                    실시간 동기화
-                  </span>
+              <div className="flex items-center justify-between gap-2 border-b border-white/[0.08] pb-3">
+                <div className="flex items-center gap-2 shrink-0 whitespace-nowrap">
+                  <BarChart3 className="w-4 h-4 text-sky-400 shrink-0" />
+                  <span className="text-sm font-extrabold text-white whitespace-nowrap">데이터 센터</span>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold bg-slate-950/80 p-1 rounded-xl border border-white/[0.06]">
+                <div className="flex flex-nowrap items-center gap-1 text-xs font-bold bg-slate-950/80 p-1 rounded-xl border border-white/[0.06] overflow-x-auto">
                   <button
                     type="button"
-                    onClick={() => setChartTab("trend")}
-                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                    onClick={() => handleSwitchChartTab("trend")}
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       chartTab === "trend"
                         ? "bg-sky-500 text-white shadow-md font-extrabold"
                         : "text-slate-400 hover:text-white"
                     }`}
                   >
-                    <TrendingUp className="w-3.5 h-3.5" />
-                    <span>실시간 확률 추이</span>
+                    <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                    <span>추이</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setChartTab("distribution")}
-                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                    onClick={() => handleSwitchChartTab("distribution")}
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       chartTab === "distribution"
                         ? "bg-sky-500 text-white shadow-md font-extrabold"
                         : "text-slate-400 hover:text-white"
                     }`}
                   >
-                    <PieChart className="w-3.5 h-3.5" />
-                    <span>참여 비중 분포</span>
+                    <PieChart className="w-3.5 h-3.5 shrink-0" />
+                    <span>비중</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setChartTab("participants")}
-                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
-                      chartTab === "participants"
-                        ? "bg-sky-500 text-white shadow-md font-extrabold"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    <Users className="w-3.5 h-3.5" />
-                    <span>시민 참여 추이</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setChartTab("my_bets")}
-                    className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 ${
+                    onClick={() => handleSwitchChartTab("my_bets")}
+                    className={`px-2.5 sm:px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 ${
                       chartTab === "my_bets"
                         ? "bg-purple-600 text-white shadow-md font-extrabold"
                         : "text-slate-400 hover:text-white"
@@ -1188,14 +1201,6 @@ export function UniversalPredictionDetailClient({
                   >
                     <span>내 참여 ({bets.length})</span>
                   </button>
-                  <Link
-                    href={analysisHref}
-                    className="px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5 bg-indigo-950/60 text-indigo-300 border border-indigo-500/30 hover:bg-indigo-600 hover:text-white"
-                  >
-                    <Brain className="w-3.5 h-3.5" />
-                    <span>심층 분석실</span>
-                    <ArrowRight className="w-3 h-3" />
-                  </Link>
                 </div>
               </div>
 
@@ -1272,29 +1277,7 @@ export function UniversalPredictionDetailClient({
                 </div>
               )}
 
-              {/* 탭 3: 시민 참여자 수 추이 */}
-              {chartTab === "participants" && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-                    <span>시간 경과에 따른 참여 시민 누적 증가 추이</span>
-                    <span className="text-emerald-400 font-bold">총 {game.participantCount.toLocaleString()}명</span>
-                  </div>
-                  <div className="min-h-[220px] flex items-center justify-center">
-                    <ParticipantTimelineChart
-                      data={[
-                        { time: "월", count: Math.round(game.participantCount * 0.15) || 120 },
-                        { time: "화", count: Math.round(game.participantCount * 0.35) || 280 },
-                        { time: "수", count: Math.round(game.participantCount * 0.55) || 450 },
-                        { time: "목", count: Math.round(game.participantCount * 0.8) || 710 },
-                        { time: "금", count: game.participantCount || 1248 },
-                      ]}
-                      isDarkMode={true}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* 탭 4: 내 참여 내역 */}
+              {/* 탭 3: 내 참여 내역 */}
               {chartTab === "my_bets" && (
                 <div className="space-y-3">
                   <div className="text-xs text-slate-400 px-1">
@@ -1332,16 +1315,30 @@ export function UniversalPredictionDetailClient({
             </Card>
 
             {/* 2️⃣ AI 균형 의사결정 브리핑 (유형별 고가독성 비교 뷰) */}
-            <BalancedDecisionBriefing
-              gameId={game.id}
-              gameTitle={game.title}
-              options={game.options}
-              selectedOptionId={selectedOption}
-              onSelectOption={setSelectedOption}
-            />
+            <div
+              ref={briefingSectionRef}
+              onClick={() => {
+                viewedBriefingRef.current = true;
+              }}
+            >
+              <BalancedDecisionBriefing
+                gameId={game.id}
+                gameTitle={game.title}
+                options={game.options}
+                selectedOptionId={selectedOption}
+                onSelectOption={setSelectedOption}
+              />
+            </div>
 
             {/* 3️⃣ 연동된 AI 모델별 독립 예측 현황 */}
-            <AiForecastSection gameId={game.id} />
+            <div
+              ref={aiSectionRef}
+              onClick={() => {
+                viewedAiRef.current = true;
+              }}
+            >
+              <AiForecastSection gameId={game.id} />
+            </div>
           </div>
 
           {/* ======================================================== */}
@@ -1351,178 +1348,25 @@ export function UniversalPredictionDetailClient({
             {/* ⏳ 상세페이지 황금 모래시계 위젯 (시선 집중 최상단 배치) */}
             <MoneyWaveWaterfallCard totalPrizePool={Math.round(game.prizePool || 22817)} />
 
-            {/* 🎯 시민 예측 참여 패널 (Binary / WDL / Ranking 맞춤형 렌더링) */}
+            {/* 시민 예측 참여 패널 (Binary / WDL / Ranking 맞춤형 단일 참여 플로우) */}
             <Card className="p-5 bg-gradient-to-b from-[#131b2e] via-[#0f172a] to-[#090b12] border-white/[0.1] space-y-4 shadow-2xl">
               <div className="flex justify-between items-center pb-3 border-b border-white/[0.08] gap-2">
-                <span className="text-sm font-extrabold text-white flex items-center gap-1.5">
+                <span className="text-sm font-extrabold text-white flex items-center gap-1.5 whitespace-nowrap">
                   <Sparkles className="w-4 h-4 text-amber-400" />
                   <span>시민 예측 참여</span>
                 </span>
-                {/* 방법 C: 심플 / 분석가 모드 전환 토글 */}
-                <div className="flex items-center gap-1 bg-slate-950/90 p-0.5 rounded-lg border border-white/[0.08] text-[10.5px] font-bold">
-                  <button
-                    type="button"
-                    onClick={() => setIsAnalystMode(false)}
-                    className={`px-2.5 py-1 rounded-md transition-all ${
-                      !isAnalystMode
-                        ? "bg-sky-500 text-white shadow"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    심플
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsAnalystMode(true)}
-                    className={`px-2.5 py-1 rounded-md transition-all ${
-                      isAnalystMode
-                        ? "bg-indigo-600 text-white shadow"
-                        : "text-slate-400 hover:text-white"
-                    }`}
-                  >
-                    분석가
-                  </button>
-                </div>
               </div>
 
               {/* 3대 분류 맞춤형 옵션 선택기 */}
               {renderParticipationOptions()}
 
-              {/* 심플 모드: 핵심 예상 리워드 1줄 요약 바 */}
-              {!isAnalystMode && (
-                <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/[0.07] text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 font-semibold">예상 수령</span>
-                    <span className="font-black text-emerald-300">
-                      ~{participationEconomy.baseEstimatedPmc.toLocaleString()} PMC
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsAnalystMode(true)}
-                    className="text-[11px] font-bold text-indigo-300 hover:text-indigo-200 transition-colors"
-                  >
-                    확신도 · 편향 분석 ▾
-                  </button>
-                </div>
-              )}
-
-              {/* 분석가 모드: 확신도 슬라이더 + CAPM/MoneyWave 시뮬레이터 + 경험 편향 코치 */}
-              {isAnalystMode && (
-                <div className="space-y-3.5">
-                  {/* 확률적 판단: 내 확신도(Confidence - Agency 정보품질 · Prospect 보정) */}
-                  <div className="p-3.5 rounded-2xl bg-slate-950/75 border border-white/[0.07] space-y-2.5">
-                    <div className="flex items-center justify-between text-xs font-bold">
-                      <span className="text-slate-300 flex items-center gap-1.5">
-                        <SlidersHorizontal className="w-3.5 h-3.5 text-sky-400" />
-                        <span>내 예측 확신도 (Agency · Prospect)</span>
-                      </span>
-                      <span className="text-sky-300 font-black">{confidencePct}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={50}
-                      max={95}
-                      step={5}
-                      value={confidencePct}
-                      onChange={(e) => setConfidencePct(Number(e.target.value))}
-                      className="w-full accent-sky-400 cursor-pointer"
-                    />
-                    <div className="flex justify-between text-[10px] text-slate-500">
-                      <span>50% (탐색적)</span>
-                      <span>75% (데이터 확신)</span>
-                      <span>95% (고신뢰)</span>
-                    </div>
-                  </div>
-
-                  {/* 실시간 CAPM · Agency · MoneyWave 위험/보상 시뮬레이터 */}
-                  <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-950 via-[#0d1526] to-indigo-950/30 border border-indigo-500/25 space-y-2 text-[11px]">
-                    <div className="flex items-center justify-between font-extrabold">
-                      <span className="text-indigo-300 flex items-center gap-1.5">
-                        <Scale className="w-3.5 h-3.5 text-indigo-400" />
-                        <span>CAPM · MoneyWave 예상 리워드</span>
-                      </span>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full border ${
-                          participationEconomy.portfolioRisk.riskLevel === "HIGH"
-                            ? "bg-rose-950/70 text-rose-300 border-rose-500/40"
-                            : participationEconomy.portfolioRisk.riskLevel === "MEDIUM"
-                            ? "bg-amber-950/70 text-amber-300 border-amber-500/40"
-                            : "bg-emerald-950/70 text-emerald-300 border-emerald-500/40"
-                        }`}
-                      >
-                        포트폴리오 {participationEconomy.portfolioRisk.riskLevel} (
-                        {Math.round(participationEconomy.portfolioRisk.riskRatio * 100)}%)
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-0.5">
-                      <div className="p-2 rounded-xl bg-black/30 border border-white/[0.05]">
-                        <div className="text-[10px] text-slate-400">기본 예상 수령 PMC</div>
-                        <div className="text-sm font-black text-emerald-300 mt-0.5">
-                          ~{participationEconomy.baseEstimatedPmc.toLocaleString()} PMC
-                        </div>
-                        <div className="text-[9.5px] text-slate-500">
-                          최대 ~{participationEconomy.maxPotentialPmc.toLocaleString()} PMC
-                        </div>
-                      </div>
-                      <div className="p-2 rounded-xl bg-black/30 border border-white/[0.05]">
-                        <div className="text-[10px] text-slate-400">옵션 CAPM β / Alpha</div>
-                        <div className="text-sm font-black text-sky-300 mt-0.5">
-                          β {participationEconomy.optionMetrics.capmBeta.toFixed(2)} · α{" "}
-                          {participationEconomy.optionMetrics.jensenAlpha >= 0
-                            ? `+${Math.round(participationEconomy.optionMetrics.jensenAlpha * 100)}%`
-                            : `${Math.round(participationEconomy.optionMetrics.jensenAlpha * 100)}%`}
-                        </div>
-                        <div className="text-[9.5px] text-slate-500">
-                          적중 보너스 +
-                          {Math.round(participationEconomy.prospectAdjustment.confidenceBonus * 100)}%
-                        </div>
-                      </div>
-                    </div>
-                    <p className="text-[10px] text-slate-400 leading-relaxed">
-                      {participationEconomy.portfolioRisk.recommendation}
-                    </p>
-                  </div>
-
-                  {/* 실시간 경험 편향(Experience Bias) 디바이어싱 코치 */}
-                  {biasReport && (
-                    <div
-                      className={`p-3 rounded-2xl border text-[11px] space-y-1 ${
-                        biasReport.riskLevel === "HIGH"
-                          ? "bg-amber-950/45 border-amber-500/40 text-amber-200"
-                          : biasReport.riskLevel === "MEDIUM"
-                          ? "bg-sky-950/35 border-sky-500/30 text-sky-200"
-                          : "bg-emerald-950/30 border-emerald-500/25 text-emerald-200"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between font-extrabold">
-                        <span className="flex items-center gap-1.5">
-                          <Brain className="w-3.5 h-3.5" />
-                          <span>경험 편향 & 과신 진단</span>
-                        </span>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/30">
-                          {biasReport.riskLevel === "HIGH"
-                            ? "편향 주의"
-                            : biasReport.riskLevel === "MEDIUM"
-                            ? "교정 권장"
-                            : "균형 판단"}
-                        </span>
-                      </div>
-                      <p className="leading-relaxed opacity-90">{biasReport.nudges[0]}</p>
-                    </div>
-                  )}
-
-                  {/* 방법 A: 2차 심층 분석 페이지 직결 링크 */}
-                  <Link
-                    href={analysisHref}
-                    className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-indigo-950/50 border border-indigo-500/30 text-[11px] font-bold text-indigo-300 hover:bg-indigo-600 hover:text-white transition"
-                  >
-                    <span>심층 경제학 · Brier Score 분석실 전체 보기</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
-                </div>
-              )}
+              {/* 핵심 예상 리워드 1줄 요약 바 */}
+              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-white/[0.07] text-xs">
+                <span className="text-slate-400 font-semibold">예상 수령</span>
+                <span className="font-black text-emerald-300">
+                  ~{participationEconomy.baseEstimatedPmc.toLocaleString()} PMC
+                </span>
+              </div>
 
               {/* 참여 PMP 설정 */}
               <div className="space-y-2 pt-1">
