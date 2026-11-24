@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
-import { YptGroupGrid } from "@/components/mobile/ypt-group-grid";
+import { StudyGroupManager } from "@/components/study/group/StudyGroupManager";
 import { MyLibraryPanel } from "@/components/study/my-library-panel";
 import { ContextualPredictionWidget } from "@/components/prediction/contextual-prediction-widget";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
@@ -72,7 +72,7 @@ export default function StudyMyHubPage() {
           {(
             [
               { id: "group", label: "스터디 그룹", icon: Users },
-              { id: "library", label: "내 교재", icon: BookOpen },
+              { id: "library", label: "과목 · 회독", icon: BookOpen },
               { id: "wallet", label: "지갑 · Pro", icon: Coins },
             ] as const
           ).map((item) => {
@@ -100,12 +100,10 @@ export default function StudyMyHubPage() {
         {activeTab === "library" && <MyLibraryPanel />}
 
         {activeTab === "group" && (
-          <YptGroupGrid
+          <StudyGroupManager
             myStudySeconds={actualTodayStudySeconds}
-            myConeEmoji=""
             myNickname={isLoggedIn ? profile.displayName : "게스트 수험생"}
             currentSubjectLabel={subjects[0]?.shortTitle || "주택관리 관계법규"}
-            isMeStudying={false}
           />
         )}
 

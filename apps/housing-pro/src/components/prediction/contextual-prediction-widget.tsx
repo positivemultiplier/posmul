@@ -1,21 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import {
-  Sparkles,
-  TrendingUp,
-  Scale,
-  ExternalLink,
-  CheckCircle2,
-  AlertCircle,
-  Coins,
-  ChevronRight,
-  ShieldCheck,
-} from "lucide-react";
-import {
-  HOUSING_PREDICTION_GAMES,
-  HousingPredictionGame,
-} from "@/data/mock-housing-predictions";
+import { CheckCircle2, ChevronRight, ExternalLink, TrendingUp } from "lucide-react";
+import { HOUSING_PREDICTION_GAMES } from "@/data/mock-housing-predictions";
 import { participateHousingPredictionAction } from "@/app/actions/prediction-widget.actions";
 
 interface ContextualPredictionWidgetProps {
@@ -42,7 +29,6 @@ export function ContextualPredictionWidget({
   const currentGame =
     HOUSING_PREDICTION_GAMES.find((g) => g.id === selectedGameId) ||
     HOUSING_PREDICTION_GAMES[0];
-
   const currentOption =
     currentGame.options.find((o) => o.id === selectedOptionId) ||
     currentGame.options[0];
@@ -59,7 +45,6 @@ export function ContextualPredictionWidget({
   const handleParticipate = async () => {
     setIsLoading(true);
     setResultMsg(null);
-
     try {
       const res = await participateHousingPredictionAction({
         userId,
@@ -67,9 +52,7 @@ export function ContextualPredictionWidget({
         optionId: selectedOptionId,
         pmpAmount: stakedAmount,
       });
-
       setResultMsg(res.message);
-
       if (res.success && res.newPmpBalance !== undefined && onBalanceChange) {
         onBalanceChange(res.newPmpBalance);
       }
@@ -79,50 +62,38 @@ export function ContextualPredictionWidget({
   };
 
   const expectedPmc = Math.round(stakedAmount * (currentOption?.multiplier || 1.5));
+  const posmulWebUrl = process.env.NEXT_PUBLIC_POSMUL_WEB_URL || "https://posmul.com";
 
   return (
-    <div className="rounded-2xl bg-gradient-to-br from-slate-950 via-[#101728] to-indigo-950/40 border border-indigo-500/30 p-5 space-y-4 shadow-xl text-xs">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between border-b border-white/[0.08] pb-3">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-950/80 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-            <Sparkles className="w-3.5 h-3.5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-extrabold text-white text-xs">
-                주택관리사 상시 예측 마켓
-              </span>
-              <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-indigo-900/60 text-indigo-300">
-                PosMul 연동
-              </span>
-            </div>
-            <p className="text-[10.5px] text-slate-400">
-              학습으로 모은 PMP로 참여하고 오직 적중 시에만 PMC 획득
-            </p>
-          </div>
+    <section className="rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] p-4 space-y-4 text-xs text-[var(--hp-text)]">
+      <div className="flex items-start justify-between gap-2 border-b border-[var(--hp-border)] pb-3">
+        <div>
+          <div className="text-sm font-medium">주택관리사 예측 마켓</div>
+          <p className="text-[11px] text-[var(--hp-text-3)] mt-0.5">
+            학습 PMP로 참여 · 적중 시 PosMul 지갑에 PMC 지급
+          </p>
         </div>
-
         <a
-          href={`${process.env.NEXT_PUBLIC_POSMUL_WEB_URL || "https://posmul.com"}/prediction`}
+          href={`${posmulWebUrl}/prediction`}
           target="_blank"
           rel="noreferrer"
-          className="text-[11px] font-bold text-sky-400 hover:text-sky-300 flex items-center gap-1"
+          className="text-[11px] text-[var(--hp-text-2)] hover:text-[var(--hp-text)] flex items-center gap-1 shrink-0"
         >
-          <span>본진 마켓 ↗</span>
+          <span>본진 마켓</span>
+          <ExternalLink className="w-3 h-3 stroke-[1.5]" />
         </a>
       </div>
 
-      {/* 게임 선택 탭 */}
-      <div className="flex gap-1.5 overflow-x-auto p-1 bg-slate-900/90 rounded-xl text-[11px] font-bold">
+      <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
         {HOUSING_PREDICTION_GAMES.map((game) => (
           <button
             key={game.id}
+            type="button"
             onClick={() => handleGameChange(game.id)}
-            className={`px-2.5 py-1 rounded-lg transition shrink-0 ${
+            className={`px-2.5 py-1.5 rounded-lg text-[11px] whitespace-nowrap border transition ${
               selectedGameId === game.id
-                ? "bg-indigo-600 text-white shadow-sm"
-                : "text-slate-400 hover:text-white"
+                ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] border-transparent font-medium"
+                : "bg-[var(--hp-bg)] border-[var(--hp-border)] text-[var(--hp-text-2)]"
             }`}
           >
             {game.categoryLabel}
@@ -130,135 +101,127 @@ export function ContextualPredictionWidget({
         ))}
       </div>
 
-      {/* 현재 게임 본문 */}
-      <div className="p-3.5 rounded-xl bg-slate-950/80 border border-white/[0.06] space-y-3">
+      <div className="p-3.5 rounded-xl bg-[var(--hp-bg)] border border-[var(--hp-border)] space-y-3">
         <div className="space-y-1">
-          <div className="flex items-center justify-between text-[10.5px] text-slate-400">
-            <span>마감: {currentGame.dueDate}</span>
-            <span className="text-amber-300 font-bold">
-              총 상금풀 {currentGame.totalPoolPmc.toLocaleString()} PMC
-            </span>
+          <div className="flex items-center justify-between text-[11px] hp-tabular text-[var(--hp-text-3)]">
+            <span>마감 {currentGame.dueDate}</span>
+            <span>풀 {currentGame.totalPoolPmc.toLocaleString()} PMC</span>
           </div>
-          <h4 className="font-extrabold text-white text-xs leading-snug">
+          <h4 className="font-medium text-sm leading-snug text-[var(--hp-text)]">
             {currentGame.title}
           </h4>
-          <p className="text-[11px] text-slate-400 leading-relaxed">
+          <p className="text-[11px] text-[var(--hp-text-2)] leading-relaxed">
             {currentGame.description}
           </p>
         </div>
 
-        {/* 옵션 퍼센티지 게이지 바 */}
-        <div className="space-y-1.5 pt-1">
-          <div className="flex justify-between text-[11px] font-mono">
-            <span className="text-emerald-400 font-bold">
-              {currentGame.options[0].label} ({currentGame.options[0].probabilityPct}%)
+        {/* 확률 바 */}
+        <div className="space-y-1">
+          <div className="flex justify-between text-[11px] hp-tabular text-[var(--hp-text-2)]">
+            <span>
+              {currentGame.options[0].label} {currentGame.options[0].probabilityPct}%
             </span>
-            <span className="text-rose-400 font-bold">
-              {currentGame.options[1].label} ({currentGame.options[1].probabilityPct}%)
+            <span>
+              {currentGame.options[1].label} {currentGame.options[1].probabilityPct}%
             </span>
           </div>
-          <div className="h-2 rounded-full bg-slate-900 overflow-hidden flex">
+          <div className="h-1.5 rounded-full bg-[var(--hp-surface-2)] overflow-hidden flex">
             <div
-              className="bg-emerald-500 h-full transition-all"
+              className="bg-[#5B8C73] h-full"
               style={{ width: `${currentGame.options[0].probabilityPct}%` }}
             />
             <div
-              className="bg-rose-500 h-full transition-all"
+              className="bg-[#C97B63] h-full"
               style={{ width: `${currentGame.options[1].probabilityPct}%` }}
             />
           </div>
         </div>
 
-        {/* 옵션 라디오 선택기 */}
-        <div className="grid grid-cols-2 gap-2 pt-1">
+        {/* 옵션 선택 */}
+        <div className="grid grid-cols-2 gap-2">
           {currentGame.options.map((opt) => (
             <button
               key={opt.id}
+              type="button"
               onClick={() => setSelectedOptionId(opt.id)}
-              className={`p-2.5 rounded-xl text-left transition border ${
+              className={`p-2.5 rounded-lg text-left border transition ${
                 selectedOptionId === opt.id
-                  ? "bg-indigo-950/70 border-indigo-500 text-white shadow-md shadow-indigo-950/40"
-                  : "bg-slate-900/60 border-white/[0.05] text-slate-400 hover:border-white/[0.15]"
+                  ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text)]"
+                  : "border-[var(--hp-border)] text-[var(--hp-text-2)]"
               }`}
             >
-              <div className="font-extrabold text-[11px]">{opt.label}</div>
-              <div className="text-[10px] text-amber-300 font-mono font-bold pt-0.5">
-                예상 {opt.multiplier}x 리워드
+              <div className="font-medium text-xs">{opt.label}</div>
+              <div className="text-[10.5px] hp-tabular text-[var(--hp-text-3)] mt-0.5">
+                예상 {opt.multiplier}x
               </div>
             </button>
           ))}
         </div>
 
-        {/* PMP 참여 금액 선택 */}
-        <div className="space-y-2 pt-1 border-t border-white/[0.05]">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-slate-300 font-bold">참여 PMP 설정:</span>
-            <span className="text-slate-400 font-mono">
-              보유: {userPmpBalance.toLocaleString()} PMP
+        {/* 참여 PMP 설정 */}
+        <div className="space-y-2 pt-2 border-t border-[var(--hp-border)]">
+          <div className="flex items-center justify-between text-[11px] hp-tabular">
+            <span className="text-[var(--hp-text-2)]">참여 PMP</span>
+            <span className="text-[var(--hp-text-3)]">
+              보유 {userPmpBalance.toLocaleString()} PMP
             </span>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="grid grid-cols-4 gap-1.5">
             {[50, 100, 200, 300].map((amt) => (
               <button
                 key={amt}
+                type="button"
                 onClick={() => setStakedAmount(amt)}
-                className={`flex-1 py-1.5 rounded-lg text-[10.5px] font-bold transition ${
+                className={`py-1.5 rounded-md text-[11px] hp-tabular border transition ${
                   stakedAmount === amt
-                    ? "bg-sky-500 text-white"
-                    : "bg-slate-900 text-slate-400 hover:text-white"
+                    ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] border-transparent font-medium"
+                    : "border-[var(--hp-border)] text-[var(--hp-text-2)]"
                 }`}
               >
-                {amt} PMP
+                {amt}
               </button>
             ))}
           </div>
 
-          <div className="flex items-center justify-between text-[11px] bg-slate-900/80 p-2 rounded-lg">
-            <span className="text-slate-400">예측 적중 시 예상 획득:</span>
-            <span className="font-black text-amber-300">
+          <div className="flex items-center justify-between text-[11px] hp-tabular py-1">
+            <span className="text-[var(--hp-text-3)]">적중 시 예상</span>
+            <span className="font-medium text-[var(--hp-text)]">
               +{expectedPmc.toLocaleString()} PMC
             </span>
           </div>
 
           <button
-            onClick={handleParticipate}
+            type="button"
+            onClick={() => void handleParticipate()}
             disabled={isLoading}
-            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 hover:from-indigo-500 hover:to-blue-500 text-white font-black text-xs transition shadow-lg shadow-indigo-600/25 flex items-center justify-center gap-1.5"
+            className="w-full h-10 rounded-lg bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] font-medium text-xs flex items-center justify-center gap-1.5 disabled:opacity-40 hover:opacity-90 transition"
           >
-            {isLoading ? (
-              <span>예측 참여 처리 중...</span>
-            ) : (
-              <>
-                <TrendingUp className="w-3.5 h-3.5 text-white" />
-                <span>{stakedAmount} PMP로 예측 참여하기</span>
-              </>
-            )}
+            <TrendingUp className="w-3.5 h-3.5 stroke-[1.75]" />
+            <span>{isLoading ? "처리 중..." : `${stakedAmount} PMP 예측 참여`}</span>
           </button>
         </div>
 
-        {/* 결과 피드백 */}
         {resultMsg && (
-          <div className="p-2.5 rounded-lg bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-[11px] leading-relaxed flex items-start gap-2">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+          <div className="p-2.5 rounded-lg bg-[var(--hp-surface)] border border-[var(--hp-border-strong)] text-[11px] text-[var(--hp-text)] flex items-start gap-2">
+            <CheckCircle2 className="w-3.5 h-3.5 stroke-[1.5] text-[var(--hp-success)] shrink-0 mt-0.5" />
             <span>{resultMsg}</span>
           </div>
         )}
       </div>
 
-      <div className="text-[10px] text-slate-400 flex items-center justify-between">
-        <span>오라클: {currentGame.oracleSource}</span>
+      <div className="text-[11px] text-[var(--hp-text-3)] flex items-center justify-between">
+        <span className="truncate">오라클: {currentGame.oracleSource}</span>
         <a
-          href={`${process.env.NEXT_PUBLIC_POSMUL_WEB_URL || "https://posmul.com"}/prediction/${currentGame.slug}/analysis`}
+          href={`${posmulWebUrl}/prediction/${currentGame.slug}/analysis`}
           target="_blank"
           rel="noreferrer"
-          className="text-indigo-400 hover:underline flex items-center gap-0.5"
+          className="text-[var(--hp-text-2)] hover:text-[var(--hp-text)] flex items-center gap-0.5 shrink-0"
         >
-          <span>심층 분석실</span>
-          <ChevronRight className="w-2.5 h-2.5" />
+          <span>분석</span>
+          <ChevronRight className="w-3 h-3 stroke-[1.5]" />
         </a>
       </div>
-    </div>
+    </section>
   );
 }
-
