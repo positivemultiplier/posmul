@@ -9,6 +9,7 @@ import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import {
   fetchSolveSetQuestionsAction,
   fetchStudySolveSetsAction,
+  type SolveDifficultyFilter,
   type SolveQuestionItem,
   type StudySetSummary,
 } from "@/app/actions/exam-study.actions";
@@ -23,6 +24,20 @@ const SUBJECT_FILTERS = [
   "공동주택관리실무",
 ] as const;
 
+type RoundPresetId = "1R" | "2R" | "3R" | "4R";
+
+const ROUND_PRESETS: ReadonlyArray<{
+  id: RoundPresetId;
+  label: string;
+  difficulty: SolveDifficultyFilter;
+  count: number;
+}> = [
+  { id: "1R", label: "1회독 S·A", difficulty: "SA", count: 10 },
+  { id: "2R", label: "2회독 S·A·B", difficulty: "SAB", count: 15 },
+  { id: "3R", label: "3회독+ 전범위", difficulty: "ALL", count: 20 },
+  { id: "4R", label: "20제 풀세트", difficulty: "ALL", count: 20 },
+];
+
 export default function StudySolvePage() {
   const { effectiveOwnerKey } = useStudyAuth();
 
@@ -33,13 +48,17 @@ export default function StudySolvePage() {
 
   const [category, setCategory] = useState<"CHAPTER" | "ROUND">("CHAPTER");
   const [subjectFilter, setSubjectFilter] = useState<string>("전체");
+  const [yearFilter, setYearFilter] = useState<string>("전체");
   const [chapterCodeFilter, setChapterCodeFilter] = useState<string | null>(null);
+
+  // 회독 난이도 & 문항 수 선택 (기존 기능 복원)
+  const [difficultyFilter, setDifficultyFilter] = useState<SolveDifficultyFilter>("ALL");
+  const [maxQuestions, setMaxQuestions] = useState<number>(20);
 
   const [activeSet, setActiveSet] = useState<StudySetSummary | null>(null);
   const [activeQuestions, setActiveQuestions] = useState<SolveQuestionItem[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
 
-  // URL 쿼리(?chapter=CIV_03_AGENCY) 감지 -> 해당 단원으로 자동 필터링
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
@@ -78,16 +97,30 @@ export default function StudySolvePage() {
     };
   }, [effectiveOwnerKey]);
 
+  const availableYears = useMemo(() => {
+    const ys = new Set<string>();
+    for (const s of sets) {
+      if (s.category === "ROUND") {
+        const y = s.setKey.split("::")[1];
+        if (y) ys.add(y);
+      }
+    }
+    return ["전체", ...Array.from(ys).sort((a, b) => Number(b) - Number(a))];
+  }, [sets]);
+
   const filteredSets = useMemo(() => {
     return sets.filter((s) => {
       if (s.category !== category) return false;
       if (chapterCodeFilter) {
         return s.setKey.includes(`::${chapterCodeFilter}::`);
       }
+      if (category === "ROUND" && yearFilter !== "전체") {
+        if (s.setKey.split("::")[1] !== yearFilter) return false;
+      }
       if (subjectFilter !== "전체" && s.subject !== subjectFilter) return false;
       return true;
     });
-  }, [sets, category, subjectFilter, chapterCodeFilter]);
+  }, [sets, category, subjectFilter, yearFilter, chapterCodeFilter]);
 
   const handleOpenSet = async (target: StudySetSummary) => {
     setActiveSet(target);
@@ -96,14 +129,14 @@ export default function StudySolvePage() {
     try {
       const res = await fetchSolveSetQuestionsAction(effectiveOwnerKey, target.setKey, {
         offset: 0,
-        limit: 20,
-        maxQuestions: 20,
-        difficultyFilter: "ALL",
+        limit: maxQuestions,
+        maxQuestions,
+        difficultyFilter,
       });
       if (res.success && res.questions.length > 0) {
         setActiveQuestions(res.questions);
       } else {
-        setErrorMsg(res.error || "해당 세트의 문항이 비어 있습니다.");
+        setErrorMsg(res.error || "해당 조건의 문항이 없습니다.");
         setActiveSet(null);
       }
     } catch {
@@ -135,8 +168,8 @@ export default function StudySolvePage() {
         />
       ) : (
         <div className="flex-1 flex flex-col">
-          {/* 상단 필터 영역 */}
-          <div className="px-4 pt-3 pb-3 border-b border-[var(--hp-border)] space-y-3 bg-[var(--hp-bg)]">
+          {/* 상단 필터 */}
+          <div className="px-4 pt-3 pb-3 border-b border-[var(--hp-border)] space-y-2.5 bg-[var(--hp-bg)]">
             <div className="grid grid-cols-2 gap-1 p-0.5 rounded-lg bg-[var(--hp-surface)] border border-[var(--hp-border)]">
               <button
                 type="button"
@@ -144,10 +177,10 @@ export default function StudySolvePage() {
                 className={`py-1.5 rounded-md text-xs font-medium transition ${
                   category === "CHAPTER"
                     ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)]"
-                    : "text-[var(--hp-text-2)] hover:text-[var(--hp-text)]"
+                    : "text-[var(--hp-text-2)]"
                 }`}
               >
-                단원별 20제
+                단원별
               </button>
               <button
                 type="button"
@@ -158,13 +191,53 @@ export default function StudySolvePage() {
                 className={`py-1.5 rounded-md text-xs font-medium transition ${
                   category === "ROUND"
                     ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)]"
-                    : "text-[var(--hp-text-2)] hover:text-[var(--hp-text)]"
+                    : "text-[var(--hp-text-2)]"
                 }`}
               >
-                회차별 20제
+                회차별
               </button>
             </div>
 
+            {/* 난이도(S·A / S·A·B / 전체) & 문항 수(5/10/15/20) */}
+            <div className="flex items-center justify-between gap-2 text-[11px]">
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                {ROUND_PRESETS.slice(0, 3).map((p) => {
+                  const active = difficultyFilter === p.difficulty;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => {
+                        setDifficultyFilter(p.difficulty);
+                        setMaxQuestions(p.count);
+                      }}
+                      className={`px-2 py-1 rounded border whitespace-nowrap ${
+                        active
+                          ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text)] font-medium"
+                          : "border-[var(--hp-border)] text-[var(--hp-text-3)]"
+                      }`}
+                    >
+                      {p.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <select
+                value={maxQuestions}
+                onChange={(e) => setMaxQuestions(Number(e.target.value))}
+                className="h-7 px-2 rounded bg-[var(--hp-surface)] border border-[var(--hp-border)] text-[11px] hp-tabular text-[var(--hp-text)] shrink-0"
+                aria-label="문항 수 선택"
+              >
+                {[5, 10, 15, 20].map((n) => (
+                  <option key={n} value={n}>
+                    {n}제
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 과목 필터 */}
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
               {SUBJECT_FILTERS.map((subj) => {
                 const selected = !chapterCodeFilter && subjectFilter === subj;
@@ -180,7 +253,7 @@ export default function StudySolvePage() {
                     className={`px-2.5 py-1 rounded-md text-[11px] flex items-center gap-1.5 whitespace-nowrap border transition ${
                       selected
                         ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text)] font-medium"
-                        : "border-transparent text-[var(--hp-text-2)] hover:text-[var(--hp-text)]"
+                        : "border-transparent text-[var(--hp-text-2)]"
                     }`}
                   >
                     {dotColor && (
@@ -195,15 +268,33 @@ export default function StudySolvePage() {
               })}
             </div>
 
+            {/* 연도 필터 (회차별 모드) */}
+            {category === "ROUND" && availableYears.length > 2 && (
+              <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+                {availableYears.map((y) => (
+                  <button
+                    key={y}
+                    type="button"
+                    onClick={() => setYearFilter(y)}
+                    className={`px-2 py-0.5 rounded text-[11px] hp-tabular border ${
+                      yearFilter === y
+                        ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text)]"
+                        : "border-transparent text-[var(--hp-text-3)]"
+                    }`}
+                  >
+                    {y === "전체" ? "전체 연도" : `${y}년`}
+                  </button>
+                ))}
+              </div>
+            )}
+
             {chapterCodeFilter && (
               <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--hp-surface)] border border-[var(--hp-border-strong)] text-xs">
-                <span className="text-[var(--hp-text)]">
-                  선택 단원 필터 적용됨 ({filteredSets.length}개 세트)
-                </span>
+                <span>선택 단원 필터 적용됨 ({filteredSets.length}개 세트)</span>
                 <button
                   type="button"
                   onClick={() => setChapterCodeFilter(null)}
-                  className="text-[var(--hp-text-2)] hover:text-[var(--hp-text)] flex items-center gap-1"
+                  className="text-[var(--hp-text-2)] flex items-center gap-1"
                 >
                   <X className="w-3.5 h-3.5 stroke-[1.5]" />
                   <span>해제</span>
@@ -221,10 +312,10 @@ export default function StudySolvePage() {
                 <RotateCw className="w-4 h-4 stroke-[1.5] text-[var(--hp-text-2)] shrink-0" />
                 <div className="min-w-0">
                   <div className="text-xs font-medium text-[var(--hp-text)]">
-                    별표 · 오답 선지 3초 O/X 복습
+                    체크한 ★ · X 보기 모아서 O/X 복습
                   </div>
                   <div className="text-[11px] text-[var(--hp-text-3)] mt-0.5 hp-tabular">
-                    누적 약점 선지 {weakOptionCount}건
+                    누적 약점 보기 {weakOptionCount}건
                   </div>
                 </div>
               </div>
@@ -241,7 +332,9 @@ export default function StudySolvePage() {
               <div className="py-16 flex flex-col items-center justify-center gap-2 text-xs text-[var(--hp-text-3)]">
                 <Loader2 className="w-5 h-5 animate-spin stroke-[1.5]" />
                 <span>
-                  {loadingQuestions ? "20제 세트 불러오는 중..." : "기출 목록 불러오는 중..."}
+                  {loadingQuestions
+                    ? `${maxQuestions}제 세트 불러오는 중...`
+                    : "기출 목록 불러오는 중..."}
                 </span>
               </div>
             ) : filteredSets.length === 0 ? (

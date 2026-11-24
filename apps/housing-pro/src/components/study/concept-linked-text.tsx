@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Zap } from "lucide-react";
+import { GitCompareArrows } from "lucide-react";
 import { tokenizeTextWithKnowledgeGraph } from "@/data/knowledge-graph-housing";
 
 export type KnowledgeTrailTarget =
@@ -19,8 +19,8 @@ interface ConceptLinkedTextProps {
 }
 
 /**
- * 기출 문항·선지 텍스트 안의 핵심 개념어(하늘색 점선)와 대조어(⚡ 주황 점선)를
- * 클릭 가능한 꼬리물기 링크로 변환하는 경량 렌더러
+ * 기출 문항·선지 텍스트 안의 핵심 개념어와 반대어·대조어를
+ * 클릭 가능한 꼬리물기 링크로 변환하는 경량 렌더러 (다크/라이트 시맨틱 대응)
  */
 export function ConceptLinkedText({
   text,
@@ -50,7 +50,7 @@ export function ConceptLinkedText({
                 e.stopPropagation();
                 onSelectTarget({ kind: "concept", conceptId: tok.conceptId! });
               }}
-              className="inline px-1 py-0.2 mx-0.5 rounded bg-sky-500/15 hover:bg-sky-500/30 border-b border-dashed border-sky-400 text-sky-200 font-black transition cursor-pointer"
+              className="inline px-1 mx-0.5 rounded bg-[#4F7CAC]/15 hover:bg-[#4F7CAC]/25 border-b border-dashed border-[#4F7CAC] text-[var(--hp-text)] font-semibold transition cursor-pointer"
               title={`「${tok.text}」 개념·출제통계·암기법 보기`}
             >
               {tok.text}
@@ -71,10 +71,10 @@ export function ConceptLinkedText({
                   triggerWord: tok.text,
                 });
               }}
-              className="inline-flex items-center gap-0.5 px-1 py-0.2 mx-0.5 rounded bg-[#FF5A36]/20 hover:bg-[#FF5A36]/35 border-b border-dashed border-[#FF7A59] text-[#FF9B82] font-black transition cursor-pointer align-baseline"
-              title={`「${tok.text}」 대조·반대 개념 꼬리물기`}
+              className="inline-flex items-center gap-0.5 px-1 mx-0.5 rounded bg-[#C97B63]/18 hover:bg-[#C97B63]/30 border-b border-dashed border-[#C97B63] text-[var(--hp-text)] font-semibold transition cursor-pointer align-baseline"
+              title={`「${tok.text}」 반대어·대조 개념 비교`}
             >
-              <Zap className="w-2.5 h-2.5 inline shrink-0" />
+              <GitCompareArrows className="w-2.5 h-2.5 inline shrink-0 text-[#C97B63]" />
               <span>{tok.text}</span>
             </button>
           );

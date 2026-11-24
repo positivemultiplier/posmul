@@ -2,7 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronRight, Loader2, Plus, RotateCw, Trash2, X } from "lucide-react";
+import {
+  BookOpen,
+  Check,
+  ChevronRight,
+  History,
+  Loader2,
+  Plus,
+  RotateCw,
+  Trash2,
+  X,
+} from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
@@ -13,7 +23,17 @@ import {
   recordOxOptionResultAction,
   type ExamOxCardItem,
 } from "@/app/actions/exam-study.actions";
+import {
+  ConceptLinkedText,
+  type KnowledgeTrailTarget,
+} from "@/components/study/concept-linked-text";
+import { ConceptTrailDrawer } from "@/components/study/concept-trail-drawer";
+import {
+  TheoryBottomSheet,
+  type TheorySheetTarget,
+} from "@/components/study/theory-bottom-sheet";
 import { REAL_2026_EXAM_OX_CARDS } from "@/data/mock-exam-options";
+import { getMutedSubjectColor } from "@/lib/study-theme";
 
 type ReviewTab = "weak" | "frequent" | "custom";
 
@@ -25,6 +45,21 @@ interface CustomOxCard {
 }
 
 const CUSTOM_OX_STORAGE_KEY = "housing_pro_custom_ox_v1";
+
+const SUBJECT_FILTERS = [
+  { key: "ALL", label: "전체" },
+  { key: "민법", label: "민법" },
+  { key: "회계원리", label: "회계" },
+  { key: "공동주택시설개론", label: "시설" },
+  { key: "주택관리관계법규", label: "법규" },
+  { key: "공동주택관리실무", label: "실무" },
+] as const;
+
+function getDistinctYearsLabel(card: ExamOxCardItem): string {
+  const years = Array.from(new Set(card.appearedCitations.map((c) => c.year))).sort((a, b) => a - b);
+  if (years.length === 0) return `'${String(card.examYear).slice(-2)}`;
+  return years.map((y) => `'${String(y).slice(-2)}`).join(", ");
+}
 
 function fallbackMockCards(): ExamOxCardItem[] {
   return REAL_2026_EXAM_OX_CARDS.slice(0, 20).map((card) => ({
@@ -58,13 +93,23 @@ export default function StudyReviewOxPage() {
   const { effectiveOwnerKey, setLocalPmpBalance } = useStudyAuth();
 
   const [tab, setTab] = useState<ReviewTab>("weak");
+  const [subjectFilter, setSubjectFilter] = useState<string>("ALL");
+  const [onlyRepeated, setOnlyRepeated] = useState<boolean>(true);
+  const [onlyAmended, setOnlyAmended] = useState<boolean>(false);
+
   const [cards, setCards] = useState<ExamOxCardItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [index, setIndex] = useState(0);
   const [picked, setPicked] = useState<boolean | null>(null);
   const [correctStreak, setCorrectStreak] = useState(0);
 
-  // 나만의 1줄 O/X 암기장 (로컬 즉시 저장)
+  // 반복 출제 이력 · 개정 원문 · 이론 시트 · 반대어/개념 꼬리물기 드로어
+  const [showRepeatHistory, setShowRepeatHistory] = useState(false);
+  const [showOriginalText, setShowOriginalText] = useState(false);
+  const [theoryTarget, setTheoryTarget] = useState<TheorySheetTarget | null>(null);
+  const [knowledgeTarget, setKnowledgeTarget] = useState<KnowledgeTrailTarget | null>(null);
+
+  // 나만의 1줄 O/X 암기장
   const [customCards, setCustomCards] = useState<CustomOxCard[]>([]);
   const [customStatement, setCustomStatement] = useState("");
   const [customAnswer, setCustomAnswer] = useState<boolean>(true);
@@ -74,7 +119,13 @@ export default function StudyReviewOxPage() {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     if (params.get("mode") === "frequent") setTab("frequent");
-    else if (params.get("mode") === "custom") setTab("custom");
+    else if (params.get("mode") === "amended") {
+      setTab("frequent");
+      setOnlyAmended(true);
+      setOnlyRepeated(false);
+    } else if (params.get("mode") === "custom") {
+      setTab("custom");
+    }
 
     try {
       const raw = window.localStorage.getItem(CUSTOM_OX_STORAGE_KEY);
@@ -83,7 +134,7 @@ export default function StudyReviewOxPage() {
         if (Array.isArray(parsed)) setCustomCards(parsed as CustomOxCard[]);
       }
     } catch {
-      // ignore storage error
+      // 스토리지 오류 무시
     }
   }, []);
 
@@ -95,28 +146,33 @@ export default function StudyReviewOxPage() {
     setLoading(true);
     setIndex(0);
     setPicked(null);
+    setShowRepeatHistory(false);
+    setShowOriginalText(false);
 
     try {
       if (tab === "weak") {
-        // 약점 선지가 0건일 때 몰래 빈출 카드로 대체하지 않고 실제 빈 상태를 정직하게 표시
         const res = await fetchUserWeakOxCardsAction(effectiveOwnerKey);
-        setCards(res.success ? res.cards : []);
+        const list = res.success ? res.cards : [];
+        setCards(
+          subjectFilter === "ALL" ? list : list.filter((c) => c.subject === subjectFilter)
+        );
       } else {
         const freq = await fetchExamOxCardsAction({
-          subject: "ALL",
-          maxTier: 3,
-          onlyRepeated: true,
+          subject: subjectFilter,
+          maxTier: onlyAmended ? 5 : 3,
+          onlyRepeated: !onlyAmended && onlyRepeated,
+          onlyAmended,
           offset: 0,
-          limit: 24,
+          limit: 30,
         });
         setCards(freq.success && freq.cards.length > 0 ? freq.cards : fallbackMockCards());
       }
     } catch {
-      setCards(fallbackMockCards());
+      setCards(tab === "weak" ? [] : fallbackMockCards());
     } finally {
       setLoading(false);
     }
-  }, [tab, effectiveOwnerKey]);
+  }, [tab, subjectFilter, onlyRepeated, onlyAmended, effectiveOwnerKey]);
 
   useEffect(() => {
     void loadCards();
@@ -167,12 +223,12 @@ export default function StudyReviewOxPage() {
         optionId: currentCard.id,
         isRight: isCorrect,
       }).catch(() => {
-        // 비동기 기록 오류 무시
+        // 무시
       });
 
       if (isCorrect && tab === "weak") {
         void promoteWeakOptionToOAction(effectiveOwnerKey, currentCard.id).catch(() => {
-          // 비동기 승급 오류 무시
+          // 무시
         });
       }
 
@@ -184,7 +240,7 @@ export default function StudyReviewOxPage() {
             }
           })
           .catch(() => {
-            // 비동기 적립 오류 무시
+            // 무시
           });
       }
     }
@@ -192,6 +248,8 @@ export default function StudyReviewOxPage() {
 
   const handleNext = () => {
     setPicked(null);
+    setShowRepeatHistory(false);
+    setShowOriginalText(false);
     setIndex((i) => i + 1);
   };
 
@@ -213,7 +271,7 @@ export default function StudyReviewOxPage() {
     try {
       window.localStorage.setItem(CUSTOM_OX_STORAGE_KEY, JSON.stringify(nextList));
     } catch {
-      // ignore
+      // 무시
     }
   };
 
@@ -225,7 +283,7 @@ export default function StudyReviewOxPage() {
     try {
       window.localStorage.setItem(CUSTOM_OX_STORAGE_KEY, JSON.stringify(nextList));
     } catch {
-      // ignore
+      // 무시
     }
   };
 
@@ -234,8 +292,8 @@ export default function StudyReviewOxPage() {
 
   return (
     <MobileAppShell>
-      {/* 상단 3모드 세그먼트 */}
-      <div className="px-4 py-3 border-b border-[var(--hp-border)] bg-[var(--hp-bg)]">
+      {/* 상단 3모드 + 과목/빈출/개정 필터 */}
+      <div className="px-4 py-3 border-b border-[var(--hp-border)] bg-[var(--hp-bg)] space-y-2.5">
         <div className="grid grid-cols-3 gap-1 p-0.5 rounded-lg bg-[var(--hp-surface)] border border-[var(--hp-border)]">
           {(
             [
@@ -262,6 +320,67 @@ export default function StudyReviewOxPage() {
             </button>
           ))}
         </div>
+
+        {tab !== "custom" && (
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+              {SUBJECT_FILTERS.map((f) => {
+                const active = subjectFilter === f.key;
+                const dot = f.key === "ALL" ? null : getMutedSubjectColor(f.key);
+                return (
+                  <button
+                    key={f.key}
+                    type="button"
+                    onClick={() => setSubjectFilter(f.key)}
+                    className={`px-2 py-1 rounded text-[11px] flex items-center gap-1 whitespace-nowrap border ${
+                      active
+                        ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text)] font-medium"
+                        : "border-transparent text-[var(--hp-text-3)]"
+                    }`}
+                  >
+                    {dot && (
+                      <span
+                        className="w-1.5 h-1.5 rounded-full shrink-0"
+                        style={{ backgroundColor: dot }}
+                      />
+                    )}
+                    <span>{f.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {tab === "frequent" && (
+              <div className="flex items-center gap-1 shrink-0 text-[10.5px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setOnlyRepeated((p) => !p);
+                    setOnlyAmended(false);
+                  }}
+                  className={`px-2 py-1 rounded border ${
+                    onlyRepeated && !onlyAmended
+                      ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text)]"
+                      : "border-[var(--hp-border)] text-[var(--hp-text-3)]"
+                  }`}
+                >
+                  반복출제
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOnlyAmended((p) => !p)}
+                  className={`px-2 py-1 rounded border ${
+                    onlyAmended
+                      ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-success)]"
+                      : "border-[var(--hp-border)] text-[var(--hp-text-3)]"
+                  }`}
+                >
+                  개정법령
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="px-4 py-5 space-y-5 flex-1 flex flex-col">
@@ -331,7 +450,7 @@ export default function StudyReviewOxPage() {
             <div className="text-sm font-medium text-[var(--hp-text)]">
               {activeDeck.length === 0
                 ? tab === "weak"
-                  ? "아직 별표(★) 또는 오답(X)으로 체크한 약점 선지가 없습니다."
+                  ? "아직 문제 풀이에서 ★ 또는 X로 체크한 약점 보기가 없습니다."
                   : "등록된 복습 카드가 없습니다."
                 : "이번 복습 세트를 모두 완료했습니다."}
             </div>
@@ -377,52 +496,136 @@ export default function StudyReviewOxPage() {
               <div className="flex items-center justify-between text-[11px] hp-tabular text-[var(--hp-text-3)]">
                 <span>
                   {currentCard.subject} · {currentCard.examYear}년
+                  {currentCard.repeatCount >= 2
+                    ? ` · ${currentCard.repeatCount}회 출제 (${getDistinctYearsLabel(currentCard)})`
+                    : ""}
                 </span>
                 <span>
                   {index + 1}/{activeDeck.length}
-                  {correctStreak >= 2 ? ` · ${correctStreak}연속 정답` : ""}
+                  {correctStreak >= 2 ? ` · ${correctStreak}연속` : ""}
                 </span>
               </div>
 
-              {/* 메인 카드 */}
-              <div className="p-6 rounded-2xl bg-[var(--hp-surface)] border border-[var(--hp-border-strong)] min-h-[210px] flex flex-col justify-between gap-4">
-                <p className="text-[16px] leading-relaxed font-medium text-[var(--hp-text)]">
-                  {currentCard.statement}
+              {/* 메인 카드 (채점 후 반대어·개념 꼬리물기 활성화) */}
+              <div className="p-5 rounded-2xl bg-[var(--hp-surface)] border border-[var(--hp-border-strong)] min-h-[200px] flex flex-col justify-between gap-4">
+                <p className="text-[15px] leading-relaxed font-medium text-[var(--hp-text)]">
+                  <ConceptLinkedText
+                    text={currentCard.statement}
+                    contextText={`${currentCard.subject} ${currentCard.questionText} ${currentCard.statement}`}
+                    enabled={picked !== null}
+                    onSelectTarget={setKnowledgeTarget}
+                  />
                 </p>
 
-                <div className="flex items-center justify-between text-[11px] text-[var(--hp-text-3)]">
+                <div className="flex items-center justify-between gap-2 text-[11px] text-[var(--hp-text-3)] flex-wrap">
                   <span>{currentCard.citation || "핵심 기출 지문"}</span>
-                  {tab === "custom" && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteCustomCard(currentCard.id)}
-                      className="text-[var(--hp-text-3)] hover:text-[var(--hp-danger)] flex items-center gap-1"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" />
-                      <span>삭제</span>
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {picked !== null && tab !== "custom" && (
+                      <>
+                        {currentCard.appearedCitations.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowRepeatHistory((p) => !p)}
+                            className="flex items-center gap-1 text-[var(--hp-text-2)] hover:text-[var(--hp-text)]"
+                          >
+                            <History className="w-3 h-3 stroke-[1.5]" />
+                            <span>출제이력</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setTheoryTarget({
+                              subject: currentCard.subject,
+                              detailCode: currentCard.detailCode,
+                              sectionCode: currentCard.theorySectionCode,
+                              chapterTitle: currentCard.chapterTitle,
+                              statement: currentCard.statement,
+                              isCorrectStatement: currentCard.isCorrectStatement,
+                              citation: currentCard.citation,
+                              trapSummary: currentCard.trapCorrection,
+                            })
+                          }
+                          className="flex items-center gap-1 text-[var(--hp-text-2)] hover:text-[var(--hp-text)]"
+                        >
+                          <BookOpen className="w-3 h-3 stroke-[1.5]" />
+                          <span>이론</span>
+                        </button>
+                      </>
+                    )}
+                    {tab === "custom" && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteCustomCard(currentCard.id)}
+                        className="text-[var(--hp-text-3)] hover:text-[var(--hp-danger)] flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" />
+                        <span>삭제</span>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* 0ms 즉시 판정 해설 */}
+              {/* 0ms 즉시 판정 해설 + 개정 원문 + 반복 출제 이력 */}
               {picked !== null && (
-                <div className="p-4 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] space-y-1.5">
+                <div className="p-4 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] space-y-2 text-xs">
                   <div
-                    className={`text-xs font-semibold ${
+                    className={`font-semibold ${
                       isCorrectPicked ? "text-[var(--hp-success)]" : "text-[var(--hp-danger)]"
                     }`}
                   >
                     {isCorrectPicked ? "정답" : "오답"} · 정해:{" "}
                     {currentCard.isCorrectStatement ? "O (옳음)" : "X (틀림)"}
                   </div>
-                  <p className="text-xs leading-relaxed text-[var(--hp-text-2)]">
-                    {currentCard.trapCorrection ||
-                      currentCard.amendedNote ||
-                      (currentCard.isCorrectStatement
-                        ? "법령 및 판례에 부합하는 옳은 지문입니다."
-                        : "함정 키워드에 주의해야 하는 틀린 지문입니다.")}
+                  <p className="leading-relaxed text-[var(--hp-text-2)]">
+                    <ConceptLinkedText
+                      text={
+                        currentCard.trapCorrection ||
+                        currentCard.amendedNote ||
+                        (currentCard.isCorrectStatement
+                          ? "법령 및 판례에 부합하는 옳은 지문입니다."
+                          : "함정 키워드에 주의해야 하는 틀린 지문입니다.")
+                      }
+                      contextText={`${currentCard.subject} ${currentCard.statement}`}
+                      enabled
+                      onSelectTarget={setKnowledgeTarget}
+                    />
                   </p>
+
+                  {currentCard.originalOptionText && (
+                    <div className="pt-1.5 border-t border-[var(--hp-border)]">
+                      <button
+                        type="button"
+                        onClick={() => setShowOriginalText((p) => !p)}
+                        className="text-[11px] text-[var(--hp-text-2)] underline"
+                      >
+                        {showOriginalText ? "개정 전 원문 접기" : "개정 전 원문 보기"}
+                      </button>
+                      {showOriginalText && (
+                        <p className="mt-1 text-[11px] text-[var(--hp-text-3)]">
+                          {currentCard.originalOptionText}
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {showRepeatHistory && currentCard.appearedCitations.length > 0 && (
+                    <div className="pt-2 border-t border-[var(--hp-border)] space-y-1.5">
+                      <div className="text-[11px] font-medium text-[var(--hp-text-2)]">
+                        역대 반복 출제 이력
+                      </div>
+                      {currentCard.appearedCitations.map((c, ci) => (
+                        <div key={ci} className="text-[11px] text-[var(--hp-text-3)] space-y-0.5">
+                          <div className="hp-tabular">
+                            {c.year}년 제{c.round}회 {c.subject} {c.questionNumber}번 (
+                            {c.isCorrect ? "O" : "X"})
+                          </div>
+                          <div className="text-[var(--hp-text-2)]">{c.optionText}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -460,6 +663,12 @@ export default function StudyReviewOxPage() {
           </div>
         )}
       </div>
+
+      <TheoryBottomSheet target={theoryTarget} onClose={() => setTheoryTarget(null)} />
+      <ConceptTrailDrawer
+        initialTarget={knowledgeTarget}
+        onClose={() => setKnowledgeTarget(null)}
+      />
     </MobileAppShell>
   );
 }
