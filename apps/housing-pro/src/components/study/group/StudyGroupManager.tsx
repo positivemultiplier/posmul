@@ -41,6 +41,9 @@ export function StudyGroupManager({
   const [newRoomTitle, setNewRoomTitle] = useState("");
   const [newRoomGoal, setNewRoomGoal] = useState(6);
   const [newRoomNotice, setNewRoomNotice] = useState("");
+  const [confirmLeaveRoom, setConfirmLeaveRoom] = useState<{ id: string; title: string } | null>(
+    null
+  );
 
   const activeRoom = useMemo(() => {
     const found = joinedRooms.find((r) => r.id === activeRoomId);
@@ -245,10 +248,12 @@ export function StudyGroupManager({
             {joinedRoomIds.length > 1 && (
               <button
                 type="button"
-                onClick={() => leaveRoom(activeRoom.id)}
+                onClick={() =>
+                  setConfirmLeaveRoom({ id: activeRoom.id, title: activeRoom.title })
+                }
                 className="p-1.5 rounded-lg border border-[var(--hp-border)] text-[var(--hp-text-3)] hover:text-[var(--hp-danger)] shrink-0"
-                title="이 그룹 나가기"
-                aria-label="이 그룹 나가기"
+                title="이 그룹 탈퇴"
+                aria-label="이 그룹 탈퇴"
               >
                 <LogOut className="w-3.5 h-3.5 stroke-[1.5]" />
               </button>
@@ -433,6 +438,48 @@ export function StudyGroupManager({
             );
           })}
         </ul>
+      )}
+
+      {/* 스터디 그룹 탈퇴 확인 모달 (실수 방지) */}
+      {confirmLeaveRoom && (
+        <div
+          className="fixed inset-0 z-[85] bg-[var(--hp-overlay)] backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setConfirmLeaveRoom(null)}
+          role="alertdialog"
+          aria-modal="true"
+        >
+          <div
+            className="w-full max-w-[340px] rounded-2xl bg-[var(--hp-bg)] border border-[var(--hp-border-strong)] p-5 space-y-4 shadow-2xl text-[var(--hp-text)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="space-y-1.5">
+              <h3 className="text-sm font-semibold">스터디 그룹 탈퇴</h3>
+              <p className="text-xs leading-relaxed text-[var(--hp-text-2)]">
+                &apos;{confirmLeaveRoom.title}&apos; 그룹에서 정말 탈퇴하시겠습니까? 언제든 그룹
+                찾기에서 다시 참여할 수 있습니다.
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmLeaveRoom(null)}
+                className="h-9 rounded-lg border border-[var(--hp-border-strong)] text-xs font-medium text-[var(--hp-text)] hover:bg-[var(--hp-surface)] transition"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  leaveRoom(confirmLeaveRoom.id);
+                  setConfirmLeaveRoom(null);
+                }}
+                className="h-9 rounded-lg bg-[var(--hp-danger)] text-white text-xs font-medium hover:opacity-90 transition"
+              >
+                탈퇴하기
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
