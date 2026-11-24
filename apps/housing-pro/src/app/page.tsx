@@ -3,13 +3,18 @@
 import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Play, Users } from "lucide-react";
+import { Check, ChevronRight, Play, Plus, Users } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
-import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
+import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useStudyGroupsStore } from "@/lib/study-groups-store";
 import { useGlobalUx } from "@/components/mobile/global-ux-provider";
 import { getSavedPersonaMode } from "@/lib/pro-workspace-store";
-import { getTimetableSlotActual } from "@/data/study-textbooks";
+import type { StudyTodoItem } from "@/data/study-textbooks";
+import {
+  getStudySecondsForDate,
+  getSubjectSecondsForDate,
+  getTodoLoggedSeconds,
+} from "@/lib/study-metrics";
 import {
   formatClockHHMMSS,
   formatCompactMinutes,
@@ -26,71 +31,70 @@ function formatKoreanDate(iso: string): string {
 
 export default function SimpleTimerHomePage() {
   const router = useRouter();
-  const { todayISO, subjects, matrixLogs, timetablesByDate } = useStudyCurriculum();
+  const { todayISO, subjects, todos, studySessions, toggleTodo } = useStudyCurriculum();
   const { joinedRooms, rooms, activeRoomId } = useStudyGroupsStore();
   const { dailyGoalMinutes, quickTimer, startQuickTimer, openTimerOverlay } = useGlobalUx();
 
-  // 기존 소장 Pro 사용자가 루트 진입 시 Pro 워크스페이스 자동 복귀
   useEffect(() => {
     if (getSavedPersonaMode() === "pro") {
       router.replace("/pro");
     }
   }, [router]);
 
-  // 과목별 오늘 순공시간(분) 계산
-  const subjectStats = useMemo(() => {
-    const todaySlots = timetablesByDate[todayISO] || {};
-    const slotMinByTopic = new Map<string, number>();
-    for (const slot of Object.values(todaySlots)) {
-      const actual = getTimetableSlotActual(slot);
-      if (actual?.topicId) {
-        slotMinByTopic.set(actual.topicId, (slotMinByTopic.get(actual.topicId) ?? 0) + 10);
-      }
+  // 오늘 플래너에 등록된 할 일을 과목별로 정확히 매칭
+  const todayTodosBySubject = useMemo(() => {
+    const map = new Map<string, StudyTodoItem[]>();
+    const todayTodos = todos.filter((t) => t.dueDate === todayISO);
+
+    for (const todo of todayTodos) {
+      const matched =
+        (todo.subjectId ? subjects.find((s) => s.id === todo.subjectId) : undefined) ||
+        subjects.find(
+          (s) =>
+            s.title === todo.subjectTitle ||
+            s.shortTitle === todo.subjectTitle ||
+            s.title.includes(todo.subjectTitle) ||
+            todo.subjectTitle.includes(s.shortTitle || s.title)
+        );
+      const key = matched?.id || subjects[0]?.id || "other";
+      const list = map.get(key) || [];
+      list.push(todo);
+      map.set(key, list);
     }
+    return map;
+  }, [todos, todayISO, subjects]);
 
+  // 과목별 실제 순공시간(초) — SSOT(studySessions) 단일 집계
+  const subjectSecondsMap = useMemo(
+    () => getSubjectSecondsForDate(studySessions, subjects, todayISO),
+    [studySessions, subjects, todayISO]
+  );
+
+  const subjectRows = useMemo(() => {
     return subjects.map((subj, idx) => {
-      let totalMinutes = 0;
-      let firstTopicId = subj.id;
-      let firstTopicTitle = subj.title;
-      let foundFirst = false;
-
-      for (const unit of subj.units) {
-        for (const topic of unit.topics) {
-          if (!foundFirst) {
-            firstTopicId = topic.id;
-            firstTopicTitle = topic.title;
-            foundFirst = true;
-          }
-          const log = matrixLogs[makeMatrixKey(topic.id, todayISO)];
-          const slotMin = slotMinByTopic.get(topic.id) ?? 0;
-          const loggedMin =
-            log?.actualMinutes !== undefined
-              ? log.actualMinutes
-              : log && (log.status === "done" || log.status === "partial") && log.minutes
-                ? log.minutes
-                : 0;
-          totalMinutes += Math.max(loggedMin, slotMin);
-        }
-      }
-
       const color = getMutedSubjectColor(subj.title, subj.color, idx);
+      const baseSec = subjectSecondsMap.get(subj.id) ?? 0;
+      const isRunningThis = quickTimer.active && quickTimer.subjectId === subj.id;
+      const liveSec = baseSec + (isRunningThis ? quickTimer.elapsedSeconds : 0);
+      const dayTodos = todayTodosBySubject.get(subj.id) || [];
+
       return {
         id: subj.id,
         title: subj.title,
         shortTitle: subj.shortTitle || subj.title,
         examStage: subj.examStage,
         color,
-        minutes: totalMinutes,
-        defaultTopicId: firstTopicId,
-        defaultTopicTitle: firstTopicTitle,
+        liveSeconds: liveSec,
+        isRunning: isRunningThis,
+        dayTodos,
       };
     });
-  }, [subjects, matrixLogs, timetablesByDate, todayISO]);
+  }, [subjects, subjectSecondsMap, quickTimer, todayTodosBySubject]);
 
   const totalTodaySeconds = useMemo(() => {
-    const baseMin = subjectStats.reduce((sum, s) => sum + s.minutes, 0);
-    return baseMin * 60 + (quickTimer.active ? quickTimer.elapsedSeconds : 0);
-  }, [subjectStats, quickTimer.active, quickTimer.elapsedSeconds]);
+    const baseSec = getStudySecondsForDate(studySessions, todayISO);
+    return baseSec + (quickTimer.active ? quickTimer.elapsedSeconds : 0);
+  }, [studySessions, todayISO, quickTimer.active, quickTimer.elapsedSeconds]);
 
   const goalPct = useMemo(() => {
     const goalSec = Math.max(60, dailyGoalMinutes * 60);
@@ -110,23 +114,45 @@ export default function SimpleTimerHomePage() {
       : membersActive;
   }, [activeGroup]);
 
-  const handleStartSubject = (item: (typeof subjectStats)[number]) => {
-    if (quickTimer.active && quickTimer.subjectTitle === item.shortTitle) {
+  const handleStartSubject = (row: (typeof subjectRows)[number]) => {
+    if (quickTimer.active && quickTimer.subjectId === row.id) {
+      openTimerOverlay();
+      return;
+    }
+    const nextPendingTodo = row.dayTodos.find((t) => !t.completed);
+    startQuickTimer({
+      id: nextPendingTodo?.id || row.id,
+      subjectId: row.id,
+      subjectTitle: row.shortTitle,
+      subjectColor: row.color,
+      topicId: nextPendingTodo?.topicId,
+      todoId: nextPendingTodo?.id,
+      title: nextPendingTodo ? nextPendingTodo.title : `${row.shortTitle} 집중 학습`,
+    });
+  };
+
+  const handleStartTodo = (row: (typeof subjectRows)[number], todo: StudyTodoItem) => {
+    if (quickTimer.active && quickTimer.todoId === todo.id) {
       openTimerOverlay();
       return;
     }
     startQuickTimer({
-      id: item.defaultTopicId,
-      title: item.defaultTopicTitle,
-      subjectTitle: item.shortTitle,
-      subjectColor: item.color,
+      id: todo.id,
+      subjectId: row.id,
+      subjectTitle: row.shortTitle,
+      subjectColor: row.color,
+      topicId: todo.topicId,
+      todoId: todo.id,
+      title: todo.title,
     });
   };
+
+  const totalTodayTodos = todos.filter((t) => t.dueDate === todayISO).length;
 
   return (
     <MobileAppShell>
       <div className="flex-1 flex flex-col">
-        {/* ① 상단 오늘 총 순공시간 히어로 (극강 심플) */}
+        {/* ① 상단 오늘 총 순공시간 히어로 */}
         <section className="px-6 pt-8 pb-7 border-b border-[var(--hp-border)] flex flex-col items-center text-center">
           <div className="text-xs text-[var(--hp-text-2)]">
             {formatKoreanDate(todayISO)} · 05:00 기준
@@ -136,7 +162,6 @@ export default function SimpleTimerHomePage() {
             {formatClockHHMMSS(totalTodaySeconds)}
           </div>
 
-          {/* 목표 대비 미니멀 헤어라인 프로그레스 */}
           <div className="mt-5 w-full max-w-[260px] space-y-1.5">
             <div className="h-[3px] w-full rounded-full bg-[var(--hp-surface-2)] overflow-hidden">
               <div
@@ -165,61 +190,134 @@ export default function SimpleTimerHomePage() {
           )}
         </section>
 
-        {/* ② 과목별 원탭 시작 리스트 */}
+        {/* ② 과목별 타이머 + 오늘 플래너 할 일 실시간 연동 리스트 */}
         <section className="px-5 py-4 flex-1">
           <div className="flex items-center justify-between mb-2">
-            <h2 className="text-xs font-medium text-[var(--hp-text-3)]">과목 선택 후 즉시 시작</h2>
-            <span className="text-[11px] text-[var(--hp-text-3)]">실행 시 그룹 화면 노출</span>
+            <h2 className="text-xs font-medium text-[var(--hp-text-3)]">
+              과목 및 오늘 계획 ({totalTodayTodos}건)
+            </h2>
+            <Link
+              href="/study/planner"
+              className="text-[11px] text-[var(--hp-text-2)] hover:text-[var(--hp-text)] flex items-center gap-0.5"
+            >
+              <Plus className="w-3 h-3 stroke-[1.75]" />
+              <span>계획 추가</span>
+            </Link>
           </div>
 
           <ul className="divide-y divide-[var(--hp-border)]">
-            {subjectStats.map((item) => {
-              const isRunningThis =
-                quickTimer.active && quickTimer.subjectTitle === item.shortTitle;
-              const liveSec =
-                item.minutes * 60 + (isRunningThis ? quickTimer.elapsedSeconds : 0);
-
-              return (
-                <li key={item.id} className="py-3.5 flex items-center justify-between gap-3">
+            {subjectRows.map((row) => (
+              <li key={row.id} className="py-3.5 space-y-2.5">
+                {/* 과목 메인 행 */}
+                <div className="flex items-center justify-between gap-3">
                   <button
                     type="button"
-                    onClick={() => handleStartSubject(item)}
-                    className="flex items-center gap-3 min-w-0 flex-1 text-left group"
+                    onClick={() => handleStartSubject(row)}
+                    className="flex items-center gap-3 min-w-0 flex-1 text-left"
                   >
                     <span
                       className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: item.color }}
+                      style={{ backgroundColor: row.color }}
                     />
                     <div className="min-w-0">
                       <div className="text-sm font-medium text-[var(--hp-text)] truncate">
-                        {item.title}
+                        {row.title}
                       </div>
                       <div className="text-[11px] text-[var(--hp-text-3)] mt-0.5">
-                        {item.examStage}
+                        {row.examStage}
+                        {row.dayTodos.length > 0 ? ` · 오늘 할 일 ${row.dayTodos.length}건` : ""}
                       </div>
                     </div>
                   </button>
 
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="text-sm hp-tabular text-[var(--hp-text-2)]">
-                      {formatClockHHMMSS(liveSec)}
+                      {formatClockHHMMSS(row.liveSeconds)}
                     </span>
                     <button
                       type="button"
-                      onClick={() => handleStartSubject(item)}
+                      onClick={() => handleStartSubject(row)}
                       className={`w-9 h-9 rounded-full border flex items-center justify-center transition ${
-                        isRunningThis
+                        row.isRunning
                           ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] border-transparent"
                           : "border-[var(--hp-border-strong)] text-[var(--hp-text)] hover:bg-[var(--hp-surface)]"
                       }`}
-                      aria-label={`${item.title} 타이머 시작`}
+                      aria-label={`${row.title} 타이머 시작`}
                     >
                       <Play className="w-3.5 h-3.5 stroke-[1.75] translate-x-[0.5px]" />
                     </button>
                   </div>
-                </li>
-              );
-            })}
+                </div>
+
+                {/* 이 과목에 연결된 오늘 플래너 할 일 (체크 & 개별 실행) */}
+                {row.dayTodos.length > 0 && (
+                  <ul className="pl-5 space-y-1.5">
+                    {row.dayTodos.map((todo) => {
+                      const isTodoRunning = quickTimer.active && quickTimer.todoId === todo.id;
+                      const loggedSec =
+                        getTodoLoggedSeconds(studySessions, todo.id, todo.loggedSeconds ?? 0) +
+                        (isTodoRunning ? quickTimer.elapsedSeconds : 0);
+
+                      return (
+                        <li
+                          key={todo.id}
+                          className="flex items-center justify-between gap-2 py-1 px-2.5 rounded-lg bg-[var(--hp-surface)] border border-[var(--hp-border)]"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleTodo(todo.id)}
+                            className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                          >
+                            <span
+                              className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center shrink-0 ${
+                                todo.completed
+                                  ? "bg-[var(--hp-accent)] border-[var(--hp-accent)] text-[var(--hp-accent-fg)]"
+                                  : "border-[var(--hp-border-strong)]"
+                              }`}
+                            >
+                              {todo.completed && <Check className="w-2.5 h-2.5 stroke-[2.2]" />}
+                            </span>
+                            <span
+                              className={`text-xs truncate ${
+                                todo.completed
+                                  ? "line-through text-[var(--hp-text-3)]"
+                                  : "text-[var(--hp-text)]"
+                              }`}
+                            >
+                              {todo.title}
+                            </span>
+                          </button>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {loggedSec > 0 && (
+                              <span className="text-[10.5px] hp-tabular text-[var(--hp-text-3)]">
+                                {loggedSec >= 60
+                                  ? formatCompactMinutes(Math.floor(loggedSec / 60))
+                                  : `${loggedSec}s`}
+                              </span>
+                            )}
+                            {!todo.completed && (
+                              <button
+                                type="button"
+                                onClick={() => handleStartTodo(row, todo)}
+                                className={`w-6 h-6 rounded-full border flex items-center justify-center transition ${
+                                  isTodoRunning
+                                    ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] border-transparent"
+                                    : "border-[var(--hp-border)] hover:border-[var(--hp-border-strong)] text-[var(--hp-text-2)]"
+                                }`}
+                                aria-label={`${todo.title} 타이머 시작`}
+                              >
+                                <Play className="w-2.5 h-2.5 stroke-[2] translate-x-[0.5px]" />
+                              </button>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </li>
+            ))}
           </ul>
         </section>
 
@@ -230,7 +328,7 @@ export default function SimpleTimerHomePage() {
               <button
                 type="button"
                 onClick={() => {
-                  const first = subjectStats[0];
+                  const first = subjectRows[0];
                   if (first) handleStartSubject(first);
                 }}
                 className="flex items-center gap-2.5 min-w-0 flex-1 text-left"

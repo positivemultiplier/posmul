@@ -2,16 +2,23 @@
 
 import { useMemo, useState } from "react";
 import { ArrowRight, Check, Play, Plus, Trash2 } from "lucide-react";
-import type { StudySubjectNode, StudyTodoItem } from "@/data/study-textbooks";
-import { getMutedSubjectColor } from "@/lib/study-theme";
+import type {
+  StudySessionLog,
+  StudySubjectNode,
+  StudyTodoItem,
+} from "@/data/study-textbooks";
+import { getTodoLoggedSeconds } from "@/lib/study-metrics";
+import { formatCompactMinutes, getMutedSubjectColor } from "@/lib/study-theme";
 
 interface DailyTodoSectionProps {
   selectedDateISO: string;
   yesterdayISO: string;
   subjects: StudySubjectNode[];
   todos: StudyTodoItem[];
+  studySessions: StudySessionLog[];
   onAddTodo: (params: {
     title: string;
+    subjectId?: string;
     subjectTitle: string;
     subjectColor: string;
     topicId?: string;
@@ -27,6 +34,7 @@ export function DailyTodoSection({
   yesterdayISO,
   subjects,
   todos,
+  studySessions,
   onAddTodo,
   onToggleTodo,
   onDeleteTodo,
@@ -40,7 +48,6 @@ export function DailyTodoSection({
     [todos, selectedDateISO]
   );
 
-  // 어제 날짜의 미완료 항목 (오늘 이미 같은 제목이 있으면 중복 제외)
   const carryOverCandidates = useMemo(() => {
     const existingTitles = new Set(dayTodos.map((t) => t.title.trim()));
     return todos.filter(
@@ -65,6 +72,7 @@ export function DailyTodoSection({
     if (!clean) return;
     onAddTodo({
       title: clean,
+      subjectId: activeSubject?.id,
       subjectTitle: activeSubject?.shortTitle || activeSubject?.title || "일반",
       subjectColor: activeColor,
       dueDate: selectedDateISO,
@@ -76,6 +84,7 @@ export function DailyTodoSection({
     for (const item of carryOverCandidates) {
       onAddTodo({
         title: item.title,
+        subjectId: item.subjectId,
         subjectTitle: item.subjectTitle,
         subjectColor: getMutedSubjectColor(item.subjectTitle, item.subjectColor),
         topicId: item.topicId,
@@ -86,7 +95,6 @@ export function DailyTodoSection({
 
   return (
     <section className="space-y-3">
-      {/* 섹션 헤더 + 달성률 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-xs font-medium text-[var(--hp-text-2)]">오늘 할 일</h2>
@@ -94,14 +102,11 @@ export function DailyTodoSection({
             {completedCount}/{dayTodos.length}
           </span>
         </div>
-        {dayTodos.length > 0 && (
-          <span className="text-[11px] hp-tabular text-[var(--hp-text-2)]">
-            달성 {completionPct}%
-          </span>
-        )}
+        <span className="text-[11px] text-[var(--hp-text-3)]">
+          {dayTodos.length > 0 ? `달성 ${completionPct}% · 타이머 홈 자동 연동` : "타이머 홈 자동 연동"}
+        </span>
       </div>
 
-      {/* 어제 미완료 1버튼 이월 배너 */}
       {carryOverCandidates.length > 0 && (
         <button
           type="button"
@@ -118,7 +123,7 @@ export function DailyTodoSection({
         </button>
       )}
 
-      {/* 3초 인라인 추가 (과목 칩 + 1줄 입력) */}
+      {/* 3초 인라인 추가 */}
       <div className="p-3 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] space-y-2.5">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {subjects.slice(0, 6).map((subj, idx) => {
@@ -156,7 +161,7 @@ export function DailyTodoSection({
             type="text"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="할 일 입력 후 Enter (예: 민법 대리 20제)"
+            placeholder="할 일 입력 후 Enter (타이머 탭에도 즉시 표시)"
             className="flex-1 h-9 px-3 rounded-lg bg-[var(--hp-bg)] border border-[var(--hp-border)] focus:border-[var(--hp-border-strong)] text-xs text-[var(--hp-text)] placeholder:text-[var(--hp-text-3)] outline-none"
           />
           <button
@@ -172,17 +177,22 @@ export function DailyTodoSection({
 
       {/* 할 일 체크리스트 */}
       {dayTodos.length === 0 ? (
-        <div className="py-8 text-center rounded-xl border border-dashed border-[var(--hp-border)] text-xs text-[var(--hp-text-3)]">
-          등록된 할 일이 없습니다. 위에서 1줄로 바로 추가하거나 회독표에서 단원을 담아보세요.
+        <div className="py-7 text-center rounded-xl border border-dashed border-[var(--hp-border)] text-xs text-[var(--hp-text-3)]">
+          등록된 할 일이 없습니다. 위에서 추가하거나 회독표에서 단원을 담아보세요.
         </div>
       ) : (
         <ul className="divide-y divide-[var(--hp-border)] border-y border-[var(--hp-border)]">
           {dayTodos.map((item) => {
             const dotColor = getMutedSubjectColor(item.subjectTitle, item.subjectColor);
+            const loggedSec = getTodoLoggedSeconds(
+              studySessions,
+              item.id,
+              item.loggedSeconds ?? 0
+            );
             return (
               <li
                 key={item.id}
-                className="py-3 flex items-center justify-between gap-2.5 group"
+                className="py-3 flex items-center justify-between gap-2.5"
               >
                 <button
                   type="button"
@@ -209,12 +219,23 @@ export function DailyTodoSection({
                     >
                       {item.title}
                     </div>
-                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-[var(--hp-text-3)]">
+                    <div className="mt-1 flex items-center gap-1.5 text-[11px] text-[var(--hp-text-3)] hp-tabular">
                       <span
                         className="w-1.5 h-1.5 rounded-full shrink-0"
                         style={{ backgroundColor: dotColor }}
                       />
                       <span>{item.subjectTitle}</span>
+                      {loggedSec > 0 && (
+                        <>
+                          <span>·</span>
+                          <span>
+                            누적{" "}
+                            {loggedSec >= 60
+                              ? formatCompactMinutes(Math.floor(loggedSec / 60))
+                              : `${loggedSec}초`}
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </button>

@@ -17,10 +17,10 @@ import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { YptGroupGrid } from "@/components/mobile/ypt-group-grid";
 import { MyLibraryPanel } from "@/components/study/my-library-panel";
 import { ContextualPredictionWidget } from "@/components/prediction/contextual-prediction-widget";
-import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
+import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
 import { setSavedPersonaMode } from "@/lib/pro-workspace-store";
-import { getTimetableSlotActual } from "@/data/study-textbooks";
+import { getStudySecondsForDate } from "@/lib/study-metrics";
 
 type MyTab = "group" | "library" | "wallet";
 
@@ -34,7 +34,7 @@ export default function StudyMyHubPage() {
     setLocalPmpBalance,
     signOut,
   } = useStudyAuth();
-  const { todayISO, subjects, matrixLogs, timetablesByDate } = useStudyCurriculum();
+  const { todayISO, subjects, studySessions } = useStudyCurriculum();
 
   const [activeTab, setActiveTab] = useState<MyTab>("group");
   const [guestPmpBalance, setGuestPmpBalance] = useState<number>(0);
@@ -58,41 +58,10 @@ export default function StudyMyHubPage() {
     }
   }, [router]);
 
-  const actualTodayStudySeconds = useMemo(() => {
-    const todaySlots = timetablesByDate[todayISO] || {};
-    const actualSlotMinByTopic = new Map<string, number>();
-    for (const slot of Object.values(todaySlots)) {
-      const actual = getTimetableSlotActual(slot);
-      if (actual?.topicId) {
-        actualSlotMinByTopic.set(
-          actual.topicId,
-          (actualSlotMinByTopic.get(actual.topicId) ?? 0) + 10
-        );
-      }
-    }
-
-    let totalSec = 0;
-    for (const subj of subjects) {
-      for (const unit of subj.units) {
-        for (const topic of unit.topics) {
-          const todayLog = matrixLogs[makeMatrixKey(topic.id, todayISO)];
-          const slotMinutes = actualSlotMinByTopic.get(topic.id) ?? 0;
-          let recordedMinutes = 0;
-          if (todayLog?.actualMinutes !== undefined) {
-            recordedMinutes = todayLog.actualMinutes;
-          } else if (
-            todayLog &&
-            (todayLog.status === "done" || todayLog.status === "partial") &&
-            todayLog.minutes
-          ) {
-            recordedMinutes = todayLog.minutes;
-          }
-          totalSec += Math.max(recordedMinutes, slotMinutes) * 60;
-        }
-      }
-    }
-    return totalSec;
-  }, [subjects, matrixLogs, timetablesByDate, todayISO]);
+  const actualTodayStudySeconds = useMemo(
+    () => getStudySecondsForDate(studySessions, todayISO),
+    [studySessions, todayISO]
+  );
 
   const effectivePmpBalance = isLoggedIn ? pmpBalance : guestPmpBalance;
 

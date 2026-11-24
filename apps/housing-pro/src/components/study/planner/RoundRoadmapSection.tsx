@@ -1,17 +1,26 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Plus } from "lucide-react";
-import type { MatrixCellLog, StudySubjectNode } from "@/data/study-textbooks";
+import Link from "next/link";
+import { ArrowUpRight, Plus } from "lucide-react";
+import {
+  diffDaysISO,
+  type StudySubjectNode,
+  type TopicRoundRecord,
+} from "@/data/study-textbooks";
+import type { ChapterProgressSummary } from "@/app/actions/exam-study.actions";
 import { getMutedSubjectColor } from "@/lib/study-theme";
 
 interface RoundRoadmapSectionProps {
+  todayISO: string;
   selectedDateISO: string;
   subjects: StudySubjectNode[];
-  matrixLogs: Record<string, MatrixCellLog>;
-  onMarkRound: (topicId: string, roundNo: number, defaultKeyword: string, minutes: number) => void;
+  roundsByTopic: Record<string, TopicRoundRecord[]>;
+  chapterTotals: Record<string, ChapterProgressSummary>;
+  onCycleRound: (topicId: string, roundNo: number, dateISO: string) => void;
   onAddTopicToToday: (params: {
     topicId: string;
+    subjectId: string;
     title: string;
     subjectTitle: string;
     subjectColor: string;
@@ -20,11 +29,19 @@ interface RoundRoadmapSectionProps {
 
 const ROUND_STAMPS = [1, 2, 3, 4, 5] as const;
 
+function formatShortMMDD(iso: string): string {
+  const parts = iso.split("-");
+  if (parts.length < 3) return iso;
+  return `${Number(parts[1])}/${Number(parts[2])}`;
+}
+
 export function RoundRoadmapSection({
+  todayISO,
   selectedDateISO,
   subjects,
-  matrixLogs,
-  onMarkRound,
+  roundsByTopic,
+  chapterTotals,
+  onCycleRound,
   onAddTopicToToday,
 }: RoundRoadmapSectionProps) {
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>(subjects[0]?.id || "");
@@ -35,29 +52,30 @@ export function RoundRoadmapSection({
     [subjects, selectedSubjectId]
   );
 
-  // 단원별 완료 회독 수 집계 (`topicId::YYYY-MM-DD`에서 status === "done" 개수)
-  const roundCountByTopic = useMemo(() => {
-    const map = new Map<string, number>();
-    for (const [key, log] of Object.entries(matrixLogs)) {
-      if (log.status !== "done") continue;
-      const sepIdx = key.indexOf("::");
-      if (sepIdx <= 0) continue;
-      const topicId = key.slice(0, sepIdx);
-      map.set(topicId, (map.get(topicId) ?? 0) + 1);
-    }
-    return map;
-  }, [matrixLogs]);
-
   const subjectTopics = useMemo(() => {
     if (!activeSubject) return [];
     return activeSubject.units.flatMap((u) =>
-      u.topics.map((t) => ({
-        unitTitle: u.title,
-        topic: t,
-        rounds: roundCountByTopic.get(t.id) ?? 0,
-      }))
+      u.topics.map((t) => {
+        const records = roundsByTopic[t.id] || [];
+        const recordByRound = new Map<number, TopicRoundRecord>();
+        let latestDate: string | null = null;
+        for (const r of records) {
+          recordByRound.set(r.round, r);
+          if (!latestDate || r.dateISO > latestDate) latestDate = r.dateISO;
+        }
+        const chapterProgress = t.chapterCode ? chapterTotals[t.chapterCode] : undefined;
+
+        return {
+          unitTitle: u.title,
+          topic: t,
+          recordByRound,
+          completedCount: records.length,
+          latestDate,
+          chapterProgress,
+        };
+      })
     );
-  }, [activeSubject, roundCountByTopic]);
+  }, [activeSubject, roundsByTopic, chapterTotals]);
 
   const subjectColor = activeSubject
     ? getMutedSubjectColor(
@@ -71,7 +89,10 @@ export function RoundRoadmapSection({
   const overallProgressPct = useMemo(() => {
     if (subjectTopics.length === 0) return 0;
     const totalTarget = subjectTopics.length * targetRounds;
-    const achieved = subjectTopics.reduce((sum, item) => sum + Math.min(targetRounds, item.rounds), 0);
+    const achieved = subjectTopics.reduce(
+      (sum, item) => sum + Math.min(targetRounds, item.completedCount),
+      0
+    );
     return Math.round((achieved / Math.max(1, totalTarget)) * 100);
   }, [subjectTopics, targetRounds]);
 
@@ -103,7 +124,7 @@ export function RoundRoadmapSection({
         })}
       </div>
 
-      {/* 과목 전체 회독률 요약 */}
+      {/* 과목 회독 요약 + 조작 규칙 안내 */}
       {activeSubject && (
         <div className="p-3.5 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] space-y-2">
           <div className="flex items-center justify-between text-xs">
@@ -118,77 +139,131 @@ export function RoundRoadmapSection({
               style={{ width: `${overallProgressPct}%`, backgroundColor: subjectColor }}
             />
           </div>
+          <div className="text-[11px] text-[var(--hp-text-3)]">
+            1회 탭: 완료({formatShortMMDD(selectedDateISO)}) · 2회 탭: 재복습 표시 · 3회 탭: 취소 (순공시간과 별도 기록)
+          </div>
         </div>
       )}
 
-      {/* 단원별 1·2·3·4·5 원탭 회독 도장 리스트 */}
+      {/* 단원별 회독 체크 리스트 */}
       <ul className="divide-y divide-[var(--hp-border)] border-y border-[var(--hp-border)]">
-        {subjectTopics.map(({ topic, rounds }) => {
+        {subjectTopics.map(({ topic, recordByRound, completedCount, latestDate, chapterProgress }) => {
           const isAdded = addedTopicIds.has(topic.id);
+          const daysAgo = latestDate ? diffDaysISO(latestDate, todayISO) : null;
+          const elapsedLabel =
+            daysAgo === null
+              ? "미학습"
+              : daysAgo === 0
+                ? "오늘 회독"
+                : daysAgo > 0
+                  ? `${daysAgo}일 전`
+                  : `${formatShortMMDD(latestDate!)}`;
+
           return (
-            <li key={topic.id} className="py-3 space-y-2.5">
+            <li key={topic.id} className="py-3.5 space-y-2.5">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="text-sm text-[var(--hp-text)] leading-snug">
                     {topic.topicNo ? `${topic.topicNo}. ` : ""}
                     {topic.title}
                   </div>
-                  <div className="text-[11px] text-[var(--hp-text-3)] mt-0.5 hp-tabular">
-                    누적 {rounds}회독 · 기준일 {selectedDateISO}
+                  <div className="text-[11px] text-[var(--hp-text-3)] mt-0.5 hp-tabular flex items-center gap-1.5 flex-wrap">
+                    <span>{completedCount}회독</span>
+                    <span>·</span>
+                    <span>{elapsedLabel}</span>
+                    {(chapterProgress?.solvedCount || topic.questionCount) && (
+                      <>
+                        <span>·</span>
+                        <span>
+                          기출 {chapterProgress?.solvedCount ?? 0}/{topic.questionCount ?? 0}제
+                          {chapterProgress && chapterProgress.solvedCount > 0
+                            ? ` (${Math.round((chapterProgress.correctCount / chapterProgress.solvedCount) * 100)}%)`
+                            : ""}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    onAddTopicToToday({
-                      topicId: topic.id,
-                      title: `${topic.topicNo ? `${topic.topicNo}. ` : ""}${topic.title}`,
-                      subjectTitle: activeSubject?.shortTitle || activeSubject?.title || "학습",
-                      subjectColor,
-                    });
-                    setAddedTopicIds((prev) => {
-                      const next = new Set(prev);
-                      next.add(topic.id);
-                      return next;
-                    });
-                  }}
-                  className={`px-2.5 py-1 rounded-md text-[11px] border flex items-center gap-1 shrink-0 transition ${
-                    isAdded
-                      ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text-2)]"
-                      : "border-[var(--hp-border)] hover:border-[var(--hp-border-strong)] text-[var(--hp-text-2)] hover:text-[var(--hp-text)]"
-                  }`}
-                >
-                  <Plus className="w-3 h-3 stroke-[1.75]" />
-                  <span>{isAdded ? "담김" : "오늘"}</span>
-                </button>
+                <div className="flex items-center gap-1 shrink-0">
+                  {topic.chapterCode && (
+                    <Link
+                      href={`/study/solve?chapter=${encodeURIComponent(topic.chapterCode)}`}
+                      className="px-2 py-1 rounded-md text-[11px] border border-[var(--hp-border)] hover:border-[var(--hp-border-strong)] text-[var(--hp-text-2)] hover:text-[var(--hp-text)] flex items-center gap-0.5 transition"
+                      title="이 단원 기출 풀기"
+                    >
+                      <span>기출</span>
+                      <ArrowUpRight className="w-3 h-3 stroke-[1.5]" />
+                    </Link>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!activeSubject) return;
+                      onAddTopicToToday({
+                        topicId: topic.id,
+                        subjectId: activeSubject.id,
+                        title: `${topic.topicNo ? `${topic.topicNo}. ` : ""}${topic.title}`,
+                        subjectTitle: activeSubject.shortTitle || activeSubject.title,
+                        subjectColor,
+                      });
+                      setAddedTopicIds((prev) => {
+                        const next = new Set(prev);
+                        next.add(topic.id);
+                        return next;
+                      });
+                    }}
+                    className={`px-2 py-1 rounded-md text-[11px] border flex items-center gap-0.5 transition ${
+                      isAdded
+                        ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text-2)]"
+                        : "border-[var(--hp-border)] hover:border-[var(--hp-border-strong)] text-[var(--hp-text-2)] hover:text-[var(--hp-text)]"
+                    }`}
+                  >
+                    <Plus className="w-3 h-3 stroke-[1.75]" />
+                    <span>{isAdded ? "담김" : "오늘"}</span>
+                  </button>
+                </div>
               </div>
 
-              {/* 1 ~ 5 회독 도장 */}
-              <div className="flex items-center gap-1.5">
+              {/* 1R ~ 5R 실제 날짜 + 완료/재복습/취소 3단 도장 */}
+              <div className="grid grid-cols-5 gap-1.5">
                 {ROUND_STAMPS.map((roundNo) => {
-                  const filled = rounds >= roundNo;
+                  const rec = recordByRound.get(roundNo);
+                  const isDone = rec?.status === "done";
+                  const isReview = rec?.status === "review";
+
                   return (
                     <button
                       key={roundNo}
                       type="button"
-                      onClick={() =>
-                        onMarkRound(
-                          topic.id,
-                          roundNo,
-                          topic.defaultKeyword || `${roundNo}회독`,
-                          topic.estimatedMinutes || 30
-                        )
-                      }
-                      className="flex-1 h-7 rounded-md text-[11px] hp-tabular font-medium border transition"
+                      onClick={() => onCycleRound(topic.id, roundNo, selectedDateISO)}
+                      className="py-1.5 px-1 rounded-md border flex flex-col items-center justify-center leading-tight transition"
                       style={{
-                        backgroundColor: filled ? `${subjectColor}` : "transparent",
-                        borderColor: filled ? subjectColor : "var(--hp-border)",
-                        color: filled ? "#FFFFFF" : "var(--hp-text-3)",
+                        backgroundColor: isDone
+                          ? subjectColor
+                          : isReview
+                            ? "rgba(199, 154, 75, 0.16)"
+                            : "transparent",
+                        borderColor: isDone
+                          ? subjectColor
+                          : isReview
+                            ? "var(--hp-warn)"
+                            : "var(--hp-border)",
+                        color: isDone
+                          ? "#FFFFFF"
+                          : isReview
+                            ? "var(--hp-warn)"
+                            : "var(--hp-text-3)",
                       }}
-                      aria-label={`${topic.title} ${roundNo}회독 기록`}
+                      aria-label={`${topic.title} ${roundNo}회독 토글`}
                     >
-                      {roundNo}R
+                      <span className="text-[11px] hp-tabular font-medium">
+                        {isReview ? `${roundNo}R 재` : `${roundNo}R`}
+                      </span>
+                      <span className="text-[9.5px] hp-tabular opacity-80 mt-0.5">
+                        {rec ? formatShortMMDD(rec.dateISO) : "-"}
+                      </span>
                     </button>
                   );
                 })}

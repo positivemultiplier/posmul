@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Loader2, RotateCw } from "lucide-react";
+import { ChevronRight, Loader2, RotateCw, X } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { SolveRunner } from "@/components/study/solve/SolveRunner";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
@@ -33,11 +33,23 @@ export default function StudySolvePage() {
 
   const [category, setCategory] = useState<"CHAPTER" | "ROUND">("CHAPTER");
   const [subjectFilter, setSubjectFilter] = useState<string>("전체");
+  const [chapterCodeFilter, setChapterCodeFilter] = useState<string | null>(null);
 
-  // 활성 풀이 세션 상태 (20제 1방 로드)
   const [activeSet, setActiveSet] = useState<StudySetSummary | null>(null);
   const [activeQuestions, setActiveQuestions] = useState<SolveQuestionItem[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+  // URL 쿼리(?chapter=CIV_03_AGENCY) 감지 -> 해당 단원으로 자동 필터링
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const ch = params.get("chapter");
+    if (ch) {
+      setCategory("CHAPTER");
+      setSubjectFilter("전체");
+      setChapterCodeFilter(ch);
+    }
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,17 +81,19 @@ export default function StudySolvePage() {
   const filteredSets = useMemo(() => {
     return sets.filter((s) => {
       if (s.category !== category) return false;
+      if (chapterCodeFilter) {
+        return s.setKey.includes(`::${chapterCodeFilter}::`);
+      }
       if (subjectFilter !== "전체" && s.subject !== subjectFilter) return false;
       return true;
     });
-  }, [sets, category, subjectFilter]);
+  }, [sets, category, subjectFilter, chapterCodeFilter]);
 
   const handleOpenSet = async (target: StudySetSummary) => {
     setActiveSet(target);
     setLoadingQuestions(true);
     setErrorMsg(null);
     try {
-      // 1시간 서버 캐시에서 최대 20제 1방 로드
       const res = await fetchSolveSetQuestionsAction(effectiveOwnerKey, target.setKey, {
         offset: 0,
         limit: 20,
@@ -137,7 +151,10 @@ export default function StudySolvePage() {
               </button>
               <button
                 type="button"
-                onClick={() => setCategory("ROUND")}
+                onClick={() => {
+                  setCategory("ROUND");
+                  setChapterCodeFilter(null);
+                }}
                 className={`py-1.5 rounded-md text-xs font-medium transition ${
                   category === "ROUND"
                     ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)]"
@@ -150,13 +167,16 @@ export default function StudySolvePage() {
 
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
               {SUBJECT_FILTERS.map((subj) => {
-                const selected = subjectFilter === subj;
+                const selected = !chapterCodeFilter && subjectFilter === subj;
                 const dotColor = subj === "전체" ? null : getMutedSubjectColor(subj);
                 return (
                   <button
                     key={subj}
                     type="button"
-                    onClick={() => setSubjectFilter(subj)}
+                    onClick={() => {
+                      setChapterCodeFilter(null);
+                      setSubjectFilter(subj);
+                    }}
                     className={`px-2.5 py-1 rounded-md text-[11px] flex items-center gap-1.5 whitespace-nowrap border transition ${
                       selected
                         ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text)] font-medium"
@@ -174,10 +194,25 @@ export default function StudySolvePage() {
                 );
               })}
             </div>
+
+            {chapterCodeFilter && (
+              <div className="flex items-center justify-between px-3 py-2 rounded-lg bg-[var(--hp-surface)] border border-[var(--hp-border-strong)] text-xs">
+                <span className="text-[var(--hp-text)]">
+                  선택 단원 필터 적용됨 ({filteredSets.length}개 세트)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setChapterCodeFilter(null)}
+                  className="text-[var(--hp-text-2)] hover:text-[var(--hp-text)] flex items-center gap-1"
+                >
+                  <X className="w-3.5 h-3.5 stroke-[1.5]" />
+                  <span>해제</span>
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="px-4 py-4 space-y-4">
-            {/* 약점 O/X 바로가기 바 */}
             <Link
               href="/study/ox?mode=weak"
               className="p-3.5 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] hover:border-[var(--hp-border-strong)] flex items-center justify-between gap-2 transition"
@@ -205,7 +240,9 @@ export default function StudySolvePage() {
             {loadingSets || loadingQuestions ? (
               <div className="py-16 flex flex-col items-center justify-center gap-2 text-xs text-[var(--hp-text-3)]">
                 <Loader2 className="w-5 h-5 animate-spin stroke-[1.5]" />
-                <span>{loadingQuestions ? "20제 세트 불러오는 중..." : "기출 목록 불러오는 중..."}</span>
+                <span>
+                  {loadingQuestions ? "20제 세트 불러오는 중..." : "기출 목록 불러오는 중..."}
+                </span>
               </div>
             ) : filteredSets.length === 0 ? (
               <div className="py-14 text-center text-xs text-[var(--hp-text-3)]">

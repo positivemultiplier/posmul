@@ -43,13 +43,14 @@ export function StudyFabSheet({ open, pathname, onClose, onToast }: StudyFabShee
     if (!clean) return;
     addTodo({
       title: clean,
+      subjectId: activeSubject?.id,
       subjectTitle: activeSubject?.shortTitle || activeSubject?.title || "일반",
       subjectColor: activeColor,
       dueDate: todayISO,
     });
     setTodoDraft("");
     onClose();
-    onToast("오늘 플래너 할 일에 추가했습니다.");
+    onToast("오늘 플래너와 타이머 목록에 추가했습니다.");
   };
 
   // 현재 탭에 맞춘 최우선 추천 액션 1개 (AI 스캔 제외)
@@ -64,10 +65,10 @@ export function StudyFabSheet({ open, pathname, onClose, onToast }: StudyFabShee
           if (quickTimer.active) {
             openTimerOverlay();
           } else {
-            const firstTopic = activeSubject?.units[0]?.topics[0];
             startQuickTimer({
-              id: firstTopic?.id || "quick-study",
-              title: firstTopic?.title || activeSubject?.title || "집중 학습",
+              id: activeSubject?.id || "quick-study",
+              subjectId: activeSubject?.id,
+              title: `${activeSubject?.shortTitle || activeSubject?.title || "학습"} 집중 학습`,
               subjectTitle: activeSubject?.shortTitle || activeSubject?.title || "학습",
               subjectColor: activeColor,
             });

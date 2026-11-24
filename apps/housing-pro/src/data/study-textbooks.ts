@@ -192,11 +192,36 @@ export function setTimetableSlotLayer(
 export interface StudyTodoItem {
   id: string;
   title: string;
+  subjectId?: string;
   subjectTitle: string;
   subjectColor: string;
   topicId?: string;
   dueDate: string; // YYYY-MM-DD
   completed: boolean;
+  /** 이 할 일에 실제 타이머로 누적된 순공 시간(초) */
+  loggedSeconds?: number;
+}
+
+/** 실제 집중 타이머 세션 기록 (초 단위 단일 진실 원천) */
+export interface StudySessionLog {
+  id: string;
+  dateISO: string;
+  subjectId: string;
+  subjectTitle: string;
+  subjectColor: string;
+  topicId?: string;
+  todoId?: string;
+  title: string;
+  startedAtMs: number;
+  endedAtMs: number;
+  seconds: number;
+}
+
+/** 단원별 회독 체크 기록 (순공시간과 완전 분리) */
+export interface TopicRoundRecord {
+  round: number; // 1 ~ 5
+  dateISO: string; // 실제 완료 날짜 YYYY-MM-DD
+  status: "done" | "review"; // done: 완료, review: 재복습 필요
 }
 
 export interface TextbookCatalogItem {

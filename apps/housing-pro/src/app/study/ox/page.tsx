@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { Check, ChevronRight, Loader2, Plus, RotateCw, Trash2, X } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
@@ -97,20 +98,9 @@ export default function StudyReviewOxPage() {
 
     try {
       if (tab === "weak") {
+        // 약점 선지가 0건일 때 몰래 빈출 카드로 대체하지 않고 실제 빈 상태를 정직하게 표시
         const res = await fetchUserWeakOxCardsAction(effectiveOwnerKey);
-        if (res.success && res.cards.length > 0) {
-          setCards(res.cards);
-        } else {
-          // 약점 선지가 아직 없으면 빈출 핵심 O/X 20제로 자동 이어주기
-          const freq = await fetchExamOxCardsAction({
-            subject: "ALL",
-            maxTier: 2,
-            onlyRepeated: true,
-            offset: 0,
-            limit: 20,
-          });
-          setCards(freq.success && freq.cards.length > 0 ? freq.cards : fallbackMockCards());
-        }
+        setCards(res.success ? res.cards : []);
       } else {
         const freq = await fetchExamOxCardsAction({
           subject: "ALL",
@@ -337,12 +327,35 @@ export default function StudyReviewOxPage() {
             <span>복습 카드 불러오는 중...</span>
           </div>
         ) : !currentCard ? (
-          <div className="py-14 px-4 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] text-center space-y-3">
+          <div className="py-12 px-4 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] text-center space-y-3">
             <div className="text-sm font-medium text-[var(--hp-text)]">
               {activeDeck.length === 0
-                ? "등록된 복습 카드가 없습니다."
+                ? tab === "weak"
+                  ? "아직 별표(★) 또는 오답(X)으로 체크한 약점 선지가 없습니다."
+                  : "등록된 복습 카드가 없습니다."
                 : "이번 복습 세트를 모두 완료했습니다."}
             </div>
+            {activeDeck.length === 0 && tab === "weak" && (
+              <div className="flex items-center justify-center gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTab("frequent");
+                    setIndex(0);
+                    setPicked(null);
+                  }}
+                  className="px-3.5 py-2 rounded-lg bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] text-xs font-medium"
+                >
+                  빈출 O/X 바로 풀기
+                </button>
+                <Link
+                  href="/study/solve"
+                  className="px-3.5 py-2 rounded-lg border border-[var(--hp-border-strong)] text-xs text-[var(--hp-text)]"
+                >
+                  기출 문제 풀기
+                </Link>
+              </div>
+            )}
             {activeDeck.length > 0 && (
               <button
                 type="button"

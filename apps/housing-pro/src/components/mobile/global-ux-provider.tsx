@@ -14,7 +14,6 @@ import { ConceptTrailDrawer } from "@/components/study/concept-trail-drawer";
 import { GlobalSpotlightSearch } from "@/components/mobile/global-spotlight-search";
 import { GroupFocusOverlay } from "@/components/study/timer/GroupFocusOverlay";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
-import { flattenTopics } from "@/data/study-textbooks";
 import { getMutedSubjectColor } from "@/lib/study-theme";
 
 const FONT_SCALE_STORAGE_KEY = "housing_pro_large_font_v1";
@@ -28,10 +27,12 @@ export interface QuickTimerState {
   active: boolean;
   paused: boolean;
   overlayOpen: boolean;
-  topicId: string;
-  topicTitle: string;
+  subjectId: string;
   subjectTitle: string;
   subjectColor: string;
+  topicId?: string;
+  todoId?: string;
+  topicTitle: string;
   elapsedSeconds: number;
   startedAtMs: number;
 }
@@ -39,8 +40,11 @@ export interface QuickTimerState {
 export interface StartTimerPayload {
   id: string;
   title: string;
+  subjectId?: string;
   subjectTitle: string;
   subjectColor?: string;
+  topicId?: string;
+  todoId?: string;
 }
 
 interface GlobalUxContextValue {
@@ -76,16 +80,18 @@ const INITIAL_TIMER: QuickTimerState = {
   active: false,
   paused: false,
   overlayOpen: false,
-  topicId: "",
-  topicTitle: "",
+  subjectId: "",
   subjectTitle: "",
   subjectColor: "#4F7CAC",
+  topicId: undefined,
+  todoId: undefined,
+  topicTitle: "",
   elapsedSeconds: 0,
   startedAtMs: 0,
 };
 
 export function GlobalUxProvider({ children }: { children: ReactNode }) {
-  const { subjects, recordStudySession } = useStudyCurriculum();
+  const { subjects, recordFocusSession } = useStudyCurriculum();
 
   const [theme, setTheme] = useState<StudyThemeMode>("dark");
   const [dailyGoalMinutes, setDailyGoalMinutesState] = useState<number>(360);
@@ -96,7 +102,6 @@ export function GlobalUxProvider({ children }: { children: ReactNode }) {
   const [recentConceptIds, setRecentConceptIds] = useState<string[]>([]);
   const [quickTimer, setQuickTimer] = useState<QuickTimerState>(INITIAL_TIMER);
 
-  // 저장된 테마·글자 크기·일일 목표·최근 개념 복원
   useEffect(() => {
     try {
       const savedTheme = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -128,11 +133,10 @@ export function GlobalUxProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch {
-      // 브라우저 스토리지 접근 불가 환경 무시
+      // 스토리지 접근 불가 환경 무시
     }
   }, []);
 
-  // 전역 집중 타이머 1초 틱
   useEffect(() => {
     if (!quickTimer.active || quickTimer.paused) return;
     const id = window.setInterval(() => {
@@ -151,7 +155,7 @@ export function GlobalUxProvider({ children }: { children: ReactNode }) {
       try {
         window.localStorage.setItem(THEME_STORAGE_KEY, next);
       } catch {
-        // 스토리지 쓰기 실패 무시
+        // 스토리지 오류 무시
       }
       if (next === "light") {
         document.documentElement.classList.add("hp-theme-light");
@@ -168,7 +172,7 @@ export function GlobalUxProvider({ children }: { children: ReactNode }) {
     try {
       window.localStorage.setItem(DAILY_GOAL_STORAGE_KEY, String(clamped));
     } catch {
-      // 스토리지 쓰기 실패 무시
+      // 스토리지 오류 무시
     }
   }, []);
 
@@ -178,7 +182,7 @@ export function GlobalUxProvider({ children }: { children: ReactNode }) {
       try {
         window.localStorage.setItem(FONT_SCALE_STORAGE_KEY, next ? "1" : "0");
       } catch {
-        // 스토리지 쓰기 실패 무시
+        // 스토리지 오류 무시
       }
       if (next) {
         document.documentElement.classList.add("hp-font-lg");
@@ -209,7 +213,7 @@ export function GlobalUxProvider({ children }: { children: ReactNode }) {
         try {
           window.localStorage.setItem(RECENT_CONCEPTS_STORAGE_KEY, JSON.stringify(next));
         } catch {
-          // 스토리지 쓰기 실패 무시
+          // 스토리지 오류 무시
         }
         return next;
       });
@@ -217,34 +221,51 @@ export function GlobalUxProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startQuickTimer = useCallback(
-    (topic?: StartTimerPayload) => {
+    (payload?: StartTimerPayload) => {
       const nowMs = Date.now();
-      if (topic) {
+      if (payload) {
+        const matchedSubj =
+          (payload.subjectId ? subjects.find((s) => s.id === payload.subjectId) : undefined) ||
+          subjects.find(
+            (s) =>
+              s.title === payload.subjectTitle ||
+              s.shortTitle === payload.subjectTitle ||
+              s.title.includes(payload.subjectTitle)
+          );
+        const resolvedSubjId = matchedSubj?.id || payload.subjectId || subjects[0]?.id || "custom";
+        const resolvedSubjTitle =
+          matchedSubj?.shortTitle || matchedSubj?.title || payload.subjectTitle;
         setQuickTimer({
           active: true,
           paused: false,
           overlayOpen: true,
-          topicId: topic.id,
-          topicTitle: topic.title,
-          subjectTitle: topic.subjectTitle,
-          subjectColor: getMutedSubjectColor(topic.subjectTitle, topic.subjectColor),
+          subjectId: resolvedSubjId,
+          subjectTitle: resolvedSubjTitle,
+          subjectColor: getMutedSubjectColor(
+            resolvedSubjTitle,
+            payload.subjectColor || matchedSubj?.color
+          ),
+          topicId: payload.topicId,
+          todoId: payload.todoId,
+          topicTitle: payload.title,
           elapsedSeconds: 0,
           startedAtMs: nowMs,
         });
         return;
       }
 
-      const flattened = flattenTopics(subjects);
-      const first = flattened[0];
-      const fallbackSubjTitle = first?.subject.title || "민법";
+      const firstSubj = subjects[0];
+      const fallbackSubjTitle = firstSubj?.shortTitle || firstSubj?.title || "민법";
       setQuickTimer({
         active: true,
         paused: false,
         overlayOpen: true,
-        topicId: first?.topic.id || "quick-study",
-        topicTitle: first?.topic.title || "집중 학습",
+        subjectId: firstSubj?.id || "custom",
         subjectTitle: fallbackSubjTitle,
-        subjectColor: getMutedSubjectColor(fallbackSubjTitle, first?.subject.color),
+        subjectColor: getMutedSubjectColor(fallbackSubjTitle, firstSubj?.color),
+        topicId: undefined,
+        todoId: undefined,
+        topicTitle: `${fallbackSubjTitle} 집중 학습`,
         elapsedSeconds: 0,
         startedAtMs: nowMs,
       });
@@ -267,18 +288,22 @@ export function GlobalUxProvider({ children }: { children: ReactNode }) {
   const stopAndSaveQuickTimer = useCallback(() => {
     const savedSeconds = quickTimer.elapsedSeconds;
     const topicTitle = quickTimer.topicTitle;
-    if (quickTimer.active && savedSeconds >= 5 && quickTimer.topicId) {
-      recordStudySession(
-        quickTimer.topicId,
-        savedSeconds,
-        undefined,
-        "done",
-        quickTimer.startedAtMs || undefined
-      );
+    // 5초 이상 집중한 실제 타이머 세션을 SSOT(studySessions)에 정확히 초 단위로 저장
+    if (quickTimer.active && savedSeconds >= 5) {
+      recordFocusSession({
+        subjectId: quickTimer.subjectId,
+        subjectTitle: quickTimer.subjectTitle,
+        subjectColor: quickTimer.subjectColor,
+        title: quickTimer.topicTitle,
+        seconds: savedSeconds,
+        startedAtMs: quickTimer.startedAtMs || undefined,
+        topicId: quickTimer.topicId,
+        todoId: quickTimer.todoId,
+      });
     }
     setQuickTimer(INITIAL_TIMER);
     return { savedSeconds, topicTitle };
-  }, [quickTimer, recordStudySession]);
+  }, [quickTimer, recordFocusSession]);
 
   const value = useMemo<GlobalUxContextValue>(
     () => ({

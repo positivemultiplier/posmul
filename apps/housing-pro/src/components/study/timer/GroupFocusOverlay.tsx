@@ -1,12 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronDown, Pause, Play, Square, User, Users } from "lucide-react";
+import { Check, ChevronDown, Pause, Play, Square, User, Users } from "lucide-react";
 import type { QuickTimerState } from "@/components/mobile/global-ux-provider";
 import { useStudyGroupsStore } from "@/lib/study-groups-store";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
-import { useStudyCurriculum, makeMatrixKey } from "@/lib/study-curriculum-store";
-import { getTimetableSlotActual } from "@/data/study-textbooks";
+import { useStudyCurriculum } from "@/lib/study-curriculum-store";
+import { getStudySecondsForDate } from "@/lib/study-metrics";
 import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
 import {
   formatClockHHMMSS,
@@ -46,43 +46,25 @@ export function GroupFocusOverlay({
 
   const { joinedRooms, rooms, activeRoomId, setActiveRoomId } = useStudyGroupsStore();
   const { isLoggedIn, profile, setLocalPmpBalance } = useStudyAuth();
-  const { todayISO, subjects, matrixLogs, timetablesByDate } = useStudyCurriculum();
+  const { todayISO, studySessions, todos, toggleTodo } = useStudyCurriculum();
 
   const activeRoom = useMemo(() => {
     const found = joinedRooms.find((r) => r.id === activeRoomId);
     return found || joinedRooms[0] || rooms[0] || null;
   }, [joinedRooms, rooms, activeRoomId]);
 
-  // 오늘 이미 누적된 순공 시간 (초)
-  const baseTodaySeconds = useMemo(() => {
-    const todaySlots = timetablesByDate[todayISO] || {};
-    const slotMinByTopic = new Map<string, number>();
-    for (const slot of Object.values(todaySlots)) {
-      const actual = getTimetableSlotActual(slot);
-      if (actual?.topicId) {
-        slotMinByTopic.set(actual.topicId, (slotMinByTopic.get(actual.topicId) ?? 0) + 10);
-      }
-    }
-    let totalMin = 0;
-    for (const subj of subjects) {
-      for (const unit of subj.units) {
-        for (const topic of unit.topics) {
-          const log = matrixLogs[makeMatrixKey(topic.id, todayISO)];
-          const slotMin = slotMinByTopic.get(topic.id) ?? 0;
-          const loggedMin =
-            log?.actualMinutes !== undefined
-              ? log.actualMinutes
-              : log && (log.status === "done" || log.status === "partial") && log.minutes
-                ? log.minutes
-                : 0;
-          totalMin += Math.max(loggedMin, slotMin);
-        }
-      }
-    }
-    return totalMin * 60;
-  }, [subjects, matrixLogs, timetablesByDate, todayISO]);
+  // 오늘 실제 누적 순공시간(초) — SSOT(studySessions) 단일 집계
+  const baseTodaySeconds = useMemo(
+    () => getStudySecondsForDate(studySessions, todayISO),
+    [studySessions, todayISO]
+  );
 
-  // 그룹원 좌석 리스트 (나 + 그룹원, 이모지 0%)
+  // 현재 실행 중인 할 일 객체 (오버레이 안에서 즉시 완료 체크 가능)
+  const linkedTodo = useMemo(
+    () => (timer.todoId ? todos.find((t) => t.id === timer.todoId) ?? null : null),
+    [todos, timer.todoId]
+  );
+
   const seats = useMemo<NormalizedSeat[]>(() => {
     const myName = isLoggedIn ? profile.displayName || "나" : "나";
     const meSeat: NormalizedSeat = {
@@ -118,23 +100,25 @@ export function GroupFocusOverlay({
 
   const handleFinish = () => {
     const { savedSeconds, topicTitle } = onStopAndSave();
-    // 다음 실행 시 다시 그룹 화면이 기본으로 뜨도록 초기화
     setDisplayMode("group");
 
     if (savedSeconds >= 600) {
-      // 10분 이상 집중 완료 시 백그라운드 비동기 PMP 적립 (UI 블로킹 없음)
       void grantAppStudyPmpAction({ kind: "FOCUS" }).then((res) => {
         if (res.success && typeof res.newBalance === "number") {
           setLocalPmpBalance(res.newBalance);
         }
       });
       const mins = Math.round(savedSeconds / 60);
-      setFinishNotice(`${topicTitle} ${mins}분 타임라인 기록 · 집중 PMP 적립 요청됨`);
+      setFinishNotice(`${topicTitle} ${mins}분 기록 완료 · 집중 PMP 적립 요청됨`);
       window.setTimeout(() => setFinishNotice(null), 2600);
-    } else if (savedSeconds >= 5) {
-      const mins = Math.max(1, Math.round(savedSeconds / 60));
-      setFinishNotice(`${topicTitle} ${mins}분 플래너 타임라인에 자동 기록됨`);
+    } else if (savedSeconds >= 60) {
+      const mins = Math.floor(savedSeconds / 60);
+      const secs = savedSeconds % 60;
+      setFinishNotice(`${topicTitle} ${mins}분 ${secs}초 타임라인에 자동 기록됨`);
       window.setTimeout(() => setFinishNotice(null), 2400);
+    } else if (savedSeconds >= 5) {
+      setFinishNotice(`${topicTitle} ${savedSeconds}초 순공시간에 기록됨`);
+      window.setTimeout(() => setFinishNotice(null), 2200);
     }
   };
 
@@ -162,7 +146,6 @@ export function GroupFocusOverlay({
             <span>접기</span>
           </button>
 
-          {/* 그룹(기본) <-> 개인 집중 1탭 세그먼트 */}
           <div className="p-0.5 rounded-lg bg-[var(--hp-surface)] border border-[var(--hp-border)] grid grid-cols-2 gap-0.5">
             <button
               type="button"
@@ -191,10 +174,28 @@ export function GroupFocusOverlay({
           </div>
         </header>
 
+        {/* 연결된 플래너 할 일 즉시 완료 체크 바 */}
+        {linkedTodo && (
+          <div className="px-5 py-2.5 border-b border-[var(--hp-border)] bg-[var(--hp-surface)] flex items-center justify-between gap-2">
+            <span className="text-xs text-[var(--hp-text-2)] truncate">
+              진행 중 할 일: <strong className="font-medium text-[var(--hp-text)]">{linkedTodo.title}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => toggleTodo(linkedTodo.id)}
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium flex items-center gap-1 shrink-0 border transition ${
+                linkedTodo.completed
+                  ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] border-transparent"
+                  : "border-[var(--hp-border-strong)] text-[var(--hp-text)]"
+              }`}
+            >
+              <Check className="w-3 h-3 stroke-[2]" />
+              <span>{linkedTodo.completed ? "완료됨" : "완료 체크"}</span>
+            </button>
+          </div>
+        )}
+
         {displayMode === "group" ? (
-          /* ============================================================ */
-          /* 1. 그룹 우선 모드 (실행 시 기본 화면)                         */
-          /* ============================================================ */
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* 상단 컴팩트 세션 타이머 바 */}
             <section className="px-5 py-5 border-b border-[var(--hp-border)] flex items-center justify-between gap-3">
@@ -267,7 +268,7 @@ export function GroupFocusOverlay({
               </span>
             </div>
 
-            {/* 스터디 그룹원 실시간 좌석 그리드 (3열 미니멀) */}
+            {/* 스터디 그룹원 실시간 좌석 그리드 */}
             <div className="flex-1 overflow-y-auto px-5 py-4">
               <div className="grid grid-cols-3 gap-2.5">
                 {seats.map((seat) => (
@@ -313,9 +314,7 @@ export function GroupFocusOverlay({
             </div>
           </div>
         ) : (
-          /* ============================================================ */
-          /* 2. 개인 집중 모드 (대형 미니멀 시계 단독 노출)                 */
-          /* ============================================================ */
+          /* 개인 집중 모드 (대형 미니멀 시계 단독 노출) */
           <div className="flex-1 flex flex-col items-center justify-between px-6 py-12">
             <div className="text-center space-y-2">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--hp-surface)] border border-[var(--hp-border)] text-xs text-[var(--hp-text-2)]">

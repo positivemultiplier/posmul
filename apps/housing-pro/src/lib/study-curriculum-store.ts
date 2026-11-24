@@ -20,6 +20,8 @@ import {
   type StudySubjectNode,
   type MatrixCellLog,
   type StudyTodoItem,
+  type StudySessionLog,
+  type TopicRoundRecord,
   type TimetableSlotLog,
   addDaysISO,
   STUDY_DAY_RESET_HOUR,
@@ -211,6 +213,10 @@ export interface CurriculumPersistedState {
   >;
   /** bookId -> todos */
   todosByBook: Record<string, StudyTodoItem[]>;
+  /** 실제 타이머 집중 세션 로그 (순공시간 단일 진실 원천, 초 단위) */
+  studySessions?: StudySessionLog[];
+  /** 단원별 실제 회독 이력 (topicId -> TopicRoundRecord[]) */
+  roundsByTopic?: Record<string, TopicRoundRecord[]>;
   /** 접힌 과목 ID 목록 */
   collapsedSubjectIds: string[];
 }
@@ -267,6 +273,8 @@ function createDefaultState(todayISO: string): CurriculumPersistedState {
     todosByBook: {
       [defaultBook.id]: buildSeedTodos(defaultBook, todayISO),
     },
+    studySessions: [],
+    roundsByTopic: {},
     collapsedSubjectIds: [],
   };
 }
@@ -326,6 +334,11 @@ function readStoredState(todayISO: string): CurriculumPersistedState {
       logsByBook: parsed.logsByBook || fallback.logsByBook,
       customTopicsByBook: parsed.customTopicsByBook || {},
       todosByBook: parsed.todosByBook || fallback.todosByBook,
+      studySessions: Array.isArray(parsed.studySessions) ? parsed.studySessions : [],
+      roundsByTopic:
+        parsed.roundsByTopic && typeof parsed.roundsByTopic === "object"
+          ? parsed.roundsByTopic
+          : {},
       collapsedSubjectIds: Array.isArray(parsed.collapsedSubjectIds)
         ? parsed.collapsedSubjectIds
         : [],
@@ -599,6 +612,24 @@ function useStudyCurriculumInternal() {
         todosByBook: remote?.todosByBook
           ? { ...remote.todosByBook, ...prev.todosByBook }
           : prev.todosByBook,
+        studySessions: (() => {
+          const byId = new Map<string, StudySessionLog>();
+          for (const s of remote?.studySessions || []) byId.set(s.id, s);
+          for (const s of prev.studySessions || []) byId.set(s.id, s);
+          return Array.from(byId.values()).sort((a, b) => a.startedAtMs - b.startedAtMs);
+        })(),
+        roundsByTopic: (() => {
+          const merged: Record<string, TopicRoundRecord[]> = {
+            ...(remote?.roundsByTopic || {}),
+          };
+          for (const [tId, list] of Object.entries(prev.roundsByTopic || {})) {
+            const byRound = new Map<number, TopicRoundRecord>();
+            for (const r of merged[tId] || []) byRound.set(r.round, r);
+            for (const r of list || []) byRound.set(r.round, r);
+            merged[tId] = Array.from(byRound.values()).sort((a, b) => a.round - b.round);
+          }
+          return merged;
+        })(),
         customTopicsByBook: remote?.customTopicsByBook
           ? { ...remote.customTopicsByBook, ...prev.customTopicsByBook }
           : prev.customTopicsByBook,
@@ -2049,10 +2080,11 @@ function useStudyCurriculumInternal() {
     [activeBook, todayISO, updateState]
   );
 
-  /** 할일 추가 */
+  /** 할일 추가 (subjectId 필수 매칭으로 타이머·통계와 100% 연동) */
   const addTodo = useCallback(
     (params: {
       title: string;
+      subjectId?: string;
       subjectTitle: string;
       subjectColor: string;
       topicId?: string;
@@ -2060,6 +2092,16 @@ function useStudyCurriculumInternal() {
     }) => {
       const trimmed = params.title.trim();
       if (!trimmed) return;
+      const matchedSubject =
+        (params.subjectId ? subjects.find((s) => s.id === params.subjectId) : undefined) ||
+        subjects.find(
+          (s) =>
+            s.title === params.subjectTitle ||
+            s.shortTitle === params.subjectTitle ||
+            s.title.includes(params.subjectTitle)
+        );
+      const resolvedSubjectId = matchedSubject?.id || params.subjectId;
+
       updateState((prev) => {
         const current =
           prev.todosByBook[activeBook.id] ?? buildSeedTodos(activeBook, todayISO);
@@ -2069,13 +2111,15 @@ function useStudyCurriculumInternal() {
             ...prev.todosByBook,
             [activeBook.id]: [
               {
-                id: `todo-${Date.now()}`,
+                id: `todo-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
                 title: trimmed,
+                ...(resolvedSubjectId ? { subjectId: resolvedSubjectId } : {}),
                 subjectTitle: params.subjectTitle,
                 subjectColor: params.subjectColor,
                 topicId: params.topicId,
                 dueDate: params.dueDate || todayISO,
                 completed: false,
+                loggedSeconds: 0,
               },
               ...current,
             ],
@@ -2083,7 +2127,146 @@ function useStudyCurriculumInternal() {
         };
       });
     },
-    [activeBook, todayISO, updateState]
+    [activeBook, subjects, todayISO, updateState]
+  );
+
+  /** 실제 집중 타이머 세션 저장 (초 단위 단일 진실 원천 + 할일 누적 + 1분 이상 시 타임라인 시각화) */
+  const recordFocusSession = useCallback(
+    (params: {
+      subjectId: string;
+      subjectTitle: string;
+      subjectColor: string;
+      title: string;
+      seconds: number;
+      startedAtMs?: number;
+      topicId?: string;
+      todoId?: string;
+    }) => {
+      const safeSeconds = Math.max(0, Math.floor(params.seconds));
+      if (safeSeconds < 1) return;
+
+      const endedAtMs = Date.now();
+      const startedAtMs =
+        typeof params.startedAtMs === "number" && params.startedAtMs > 0
+          ? Math.min(params.startedAtMs, endedAtMs)
+          : endedAtMs - safeSeconds * 1000;
+      const dateISO = computeLogicalTodayISO(STUDY_DAY_RESET_HOUR, new Date(endedAtMs));
+
+      const matchedSubject =
+        subjects.find((s) => s.id === params.subjectId) ||
+        subjects.find(
+          (s) =>
+            s.title === params.subjectTitle ||
+            s.shortTitle === params.subjectTitle ||
+            s.title.includes(params.subjectTitle)
+        );
+      const resolvedSubjectId = matchedSubject?.id || params.subjectId || "custom";
+
+      updateState((prev) => {
+        const newSession: StudySessionLog = {
+          id: `sess-${endedAtMs}-${Math.random().toString(36).slice(2, 6)}`,
+          dateISO,
+          subjectId: resolvedSubjectId,
+          subjectTitle: params.subjectTitle,
+          subjectColor: params.subjectColor,
+          ...(params.topicId ? { topicId: params.topicId } : {}),
+          ...(params.todoId ? { todoId: params.todoId } : {}),
+          title: params.title,
+          startedAtMs,
+          endedAtMs,
+          seconds: safeSeconds,
+        };
+
+        // 1) 할 일 누적 시간 갱신
+        let nextTodosByBook = prev.todosByBook;
+        if (params.todoId) {
+          const currentTodos =
+            prev.todosByBook[activeBook.id] ?? buildSeedTodos(activeBook, todayISO);
+          nextTodosByBook = {
+            ...prev.todosByBook,
+            [activeBook.id]: currentTodos.map((t) =>
+              t.id === params.todoId
+                ? { ...t, loggedSeconds: (t.loggedSeconds ?? 0) + safeSeconds }
+                : t
+            ),
+          };
+        }
+
+        // 2) 60초(1분) 이상 집중 시에만 10분 타임라인 시각화 슬롯 자동 색칠
+        let nextTimetables = prev.timetablesByDate || {};
+        if (safeSeconds >= 60) {
+          const TEN_MIN_MS = 10 * 60 * 1000;
+          const startBucketMs = Math.floor(startedAtMs / TEN_MIN_MS) * TEN_MIN_MS;
+          const endBucketMs = Math.floor(endedAtMs / TEN_MIN_MS) * TEN_MIN_MS;
+          const bucketCount = Math.min(
+            144,
+            Math.max(1, Math.floor((endBucketMs - startBucketMs) / TEN_MIN_MS) + 1)
+          );
+          const copyTimetables: Record<string, Record<string, TimetableSlotLog>> = {
+            ...nextTimetables,
+          };
+          for (let i = 0; i < bucketCount; i += 1) {
+            const bucketDt = new Date(startBucketMs + i * TEN_MIN_MS);
+            const slotDateISO = computeLogicalTodayISO(STUDY_DAY_RESET_HOUR, bucketDt);
+            const sKey = `${bucketDt.getHours()}-${Math.floor(bucketDt.getMinutes() / 10)}`;
+            const dayMap: Record<string, TimetableSlotLog> = {
+              ...(copyTimetables[slotDateISO] || {}),
+            };
+            const updatedSlot = setTimetableSlotLayer(dayMap[sKey], "actual", {
+              color: params.subjectColor,
+              label: params.subjectTitle,
+              ...(params.topicId ? { topicId: params.topicId } : {}),
+            });
+            if (updatedSlot) {
+              dayMap[sKey] = updatedSlot;
+              copyTimetables[slotDateISO] = dayMap;
+            }
+          }
+          nextTimetables = copyTimetables;
+        }
+
+        return {
+          ...prev,
+          studySessions: [...(prev.studySessions || []), newSession],
+          todosByBook: nextTodosByBook,
+          timetablesByDate: nextTimetables,
+        };
+      }, safeSeconds);
+    },
+    [activeBook, subjects, todayISO, updateState]
+  );
+
+  /** 단원별 회독 도장 3단 순환: 미체크 -> 완료(오늘날짜) -> 재복습필요 -> 체크 해제(취소) */
+  const cycleTopicRound = useCallback(
+    (topicId: string, round: number, dateISO: string) => {
+      updateState((prev) => {
+        const prevMap = prev.roundsByTopic || {};
+        const currentList = [...(prevMap[topicId] || [])];
+        const existingIdx = currentList.findIndex((r) => r.round === round);
+
+        let nextList: TopicRoundRecord[];
+        if (existingIdx < 0) {
+          nextList = [...currentList, { round, dateISO, status: "done" }];
+        } else if (currentList[existingIdx].status === "done") {
+          nextList = currentList.map((r) =>
+            r.round === round ? { ...r, status: "review" } : r
+          );
+        } else {
+          // 3회째 탭 -> 완전 해제(취소)
+          nextList = currentList.filter((r) => r.round !== round);
+        }
+
+        nextList.sort((a, b) => a.round - b.round);
+        return {
+          ...prev,
+          roundsByTopic: {
+            ...prevMap,
+            [topicId]: nextList,
+          },
+        };
+      });
+    },
+    [updateState]
   );
 
   /** 할일 삭제 */
@@ -2126,6 +2309,8 @@ function useStudyCurriculumInternal() {
     chapterTotals,
     refreshDbSync,
     todos,
+    studySessions: state.studySessions || [],
+    roundsByTopic: state.roundsByTopic || {},
     collapsedSubjectIds: state.collapsedSubjectIds,
     selectTextbook,
     toggleBookActive,
@@ -2146,6 +2331,8 @@ function useStudyCurriculumInternal() {
     scheduleMultiDayPlan,
     carryOverTopicToNextDay,
     recordStudySession,
+    recordFocusSession,
+    cycleTopicRound,
     toggleSubjectCollapse,
     setAllSubjectsCollapsed,
     addCustomTopic,

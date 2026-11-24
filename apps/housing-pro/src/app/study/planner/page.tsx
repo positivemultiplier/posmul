@@ -6,6 +6,7 @@ import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useGlobalUx } from "@/components/mobile/global-ux-provider";
 import { addDaysISO, type StudyTodoItem } from "@/data/study-textbooks";
+import { getStudySecondsForDate } from "@/lib/study-metrics";
 import { getMutedSubjectColor } from "@/lib/study-theme";
 import { DailyTodoSection } from "@/components/study/planner/DailyTodoSection";
 import { TenMinuteTimeline } from "@/components/study/planner/TenMinuteTimeline";
@@ -18,7 +19,6 @@ const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"] as cons
 function getWeekDates(anchorISO: string): Array<{ iso: string; dayNum: number; weekday: string }> {
   const [y, m, d] = anchorISO.split("-").map(Number);
   const dt = new Date(y || 2026, (m || 1) - 1, d || 1);
-  // 월요일 시작으로 정렬
   const day = dt.getDay();
   const diffToMon = day === 0 ? -6 : 1 - day;
   const mondayISO = addDaysISO(anchorISO, diffToMon);
@@ -40,13 +40,15 @@ export default function StudyPlannerPage() {
     todayISO,
     subjects,
     todos,
-    matrixLogs,
+    studySessions,
+    roundsByTopic,
+    chapterTotals,
     timetablesByDate,
     addTodo,
     toggleTodo,
     deleteTodo,
     setTimetableSlots,
-    upsertMatrixCell,
+    cycleTopicRound,
   } = useStudyCurriculum();
   const { startQuickTimer } = useGlobalUx();
 
@@ -57,6 +59,11 @@ export default function StudyPlannerPage() {
   const yesterdayISO = useMemo(() => addDaysISO(selectedDateISO, -1), [selectedDateISO]);
   const daySlots = timetablesByDate[selectedDateISO] || {};
 
+  const selectedDayStudySeconds = useMemo(
+    () => getStudySecondsForDate(studySessions, selectedDateISO),
+    [studySessions, selectedDateISO]
+  );
+
   const monthLabel = useMemo(() => {
     const [y, m] = selectedDateISO.split("-");
     return `${y}년 ${Number(m)}월`;
@@ -64,26 +71,13 @@ export default function StudyPlannerPage() {
 
   const handleStartTimerForTodo = (todo: StudyTodoItem) => {
     startQuickTimer({
-      id: todo.topicId || `todo-${todo.id}`,
-      title: todo.title,
+      id: todo.id,
+      subjectId: todo.subjectId,
       subjectTitle: todo.subjectTitle,
       subjectColor: getMutedSubjectColor(todo.subjectTitle, todo.subjectColor),
-    });
-  };
-
-  // 회독 도장 클릭 시 해당 단원의 새 완료 날짜 키로 누적 기록
-  const handleMarkRound = (
-    topicId: string,
-    roundNo: number,
-    defaultKeyword: string,
-    minutes: number
-  ) => {
-    // 같은 날 중복 덮어쓰기를 피하기 위해 회독 번호별 오프셋 없이 선택일 또는 고유 키 기록
-    const targetISO = roundNo === 1 ? selectedDateISO : addDaysISO(selectedDateISO, -(roundNo - 1));
-    upsertMatrixCell(topicId, targetISO, {
-      keyword: `${roundNo}R ${defaultKeyword}`.slice(0, 14),
-      status: "done",
-      minutes,
+      topicId: todo.topicId,
+      todoId: todo.id,
+      title: todo.title,
     });
   };
 
@@ -91,7 +85,6 @@ export default function StudyPlannerPage() {
     <MobileAppShell>
       {/* 상단 고정 주간 날짜 스트립 + 2탭 세그먼트 */}
       <div className="px-4 pt-3 pb-3 border-b border-[var(--hp-border)] space-y-3 bg-[var(--hp-bg)]">
-        {/* 월 이동 + 오늘 버튼 */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1">
             <button
@@ -192,6 +185,7 @@ export default function StudyPlannerPage() {
               yesterdayISO={yesterdayISO}
               subjects={subjects}
               todos={todos}
+              studySessions={studySessions}
               onAddTodo={addTodo}
               onToggleTodo={toggleTodo}
               onDeleteTodo={deleteTodo}
@@ -202,18 +196,22 @@ export default function StudyPlannerPage() {
               selectedDateISO={selectedDateISO}
               subjects={subjects}
               daySlots={daySlots}
+              actualStudySeconds={selectedDayStudySeconds}
               onUpdateSlots={setTimetableSlots}
             />
           </>
         ) : (
           <RoundRoadmapSection
+            todayISO={todayISO}
             selectedDateISO={selectedDateISO}
             subjects={subjects}
-            matrixLogs={matrixLogs}
-            onMarkRound={handleMarkRound}
+            roundsByTopic={roundsByTopic}
+            chapterTotals={chapterTotals}
+            onCycleRound={cycleTopicRound}
             onAddTopicToToday={(params) =>
               addTodo({
                 title: params.title,
+                subjectId: params.subjectId,
                 subjectTitle: params.subjectTitle,
                 subjectColor: params.subjectColor,
                 topicId: params.topicId,
