@@ -7,9 +7,9 @@ import { GlobalUxProvider } from "@/components/mobile/global-ux-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Housing-Pro | Power J 스터디 · 기출 꼬리물기 지식 그래프",
+  title: "Housing-Pro | 수험 타이머 · 10분 플래너 · 기출 문제은행",
   description:
-    "Power J 회독 플래너 · 집중 타이머 · 주택관리사 기출 한정 꼬리물기 지식 그래프 & 현직 소장 Pro Second Brain",
+    "주택관리사 수험생을 위한 심플 그룹 타이머, 모트모트 10분 플래너, 0ms 기출 문제풀이 및 현직 소장 Pro 워크스페이스",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -26,7 +26,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   viewportFit: "cover",
-  themeColor: "#121216",
+  themeColor: "#0B0B0D",
 };
 
 export default function RootLayout({
@@ -38,7 +38,7 @@ export default function RootLayout({
 
   return (
     <html lang="ko">
-      <body className="min-h-screen bg-[#070709] text-slate-100 antialiased">
+      <body className="min-h-screen bg-[var(--hp-outer)] text-[var(--hp-text)] antialiased">
         <StudyAuthProvider>
           <StudyCurriculumProvider>
             <GlobalUxProvider>{children}</GlobalUxProvider>

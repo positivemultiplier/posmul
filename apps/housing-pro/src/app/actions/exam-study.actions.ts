@@ -3,6 +3,10 @@
 import { supabaseAdmin } from "@/lib/supabase";
 import { resolveOwnerKeyAndUser } from "@/lib/auth-provision";
 import { CURRICULUM_ORDER_MAP } from "@/data/study-textbooks";
+import {
+  getCachedExamQuestionCatalog,
+  getCachedSolveSetPublicBundle,
+} from "@/lib/exam-public-cache";
 
 export type LawStatus = "VALID" | "NEEDS_REVIEW" | "AMENDED_MODIFIED" | "DEPRECATED";
 
@@ -425,24 +429,10 @@ export async function fetchStudySolveSetsAction(clientKey: string): Promise<{
   error?: string;
 }> {
   try {
-    const { ownerKey } = await resolveOwnerKeyAndUser(clientKey);
-    const allRows: RawQuestionCatalogRow[] = [];
-    const PAGE = 1000;
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await supabaseAdmin
-        .schema("vertical_housing")
-        .from("exam_questions")
-        .select("id, exam_year, exam_round, exam_stage, subject, chapter_code, chapter_title, detail_code, detail_title")
-        .neq("law_status", "DEPRECATED")
-        .order("exam_year", { ascending: false })
-        .order("question_number", { ascending: true })
-        .range(from, from + PAGE - 1);
-
-      if (error) return { success: false, sets: [], weakOptionCount: 0, error: error.message };
-      if (!data || data.length === 0) break;
-      allRows.push(...(data as RawQuestionCatalogRow[]));
-      if (data.length < PAGE) break;
-    }
+    const [{ ownerKey }, allRows] = await Promise.all([
+      resolveOwnerKeyAndUser(clientKey),
+      getCachedExamQuestionCatalog(),
+    ]);
 
     const [{ data: qLogs }, { count: weakOptCnt }] = await Promise.all([
       supabaseAdmin
@@ -574,68 +564,13 @@ export async function fetchSolveSetQuestionsAction(
     const kind = parts[0];
     const requestedDifficulty: SolveDifficultyFilter = options?.difficultyFilter ?? "ALL";
     const maxQuestions = Math.max(1, Math.min(20, Math.floor(options?.maxQuestions ?? 20)));
+    const batchOffset = Math.max(0, Math.min(maxQuestions - 1, Math.floor(options?.offset ?? 0)));
+    const batchLimit = Math.max(
+      1,
+      Math.min(maxQuestions - batchOffset, Math.floor(options?.limit ?? 20))
+    );
 
-    const buildBaseQuery = (diff: SolveDifficultyFilter) => {
-      let q = supabaseAdmin
-        .schema("vertical_housing")
-        .from("exam_questions")
-        .select(
-          `
-          id,
-          exam_year,
-          exam_round,
-          exam_stage,
-          subject,
-          detail_code,
-          chapter_title,
-          importance_tier,
-          question_number,
-          question_type,
-          question_text,
-          box_content,
-          correct_options,
-          subjective_answer,
-          law_status,
-          amended_note,
-          original_snapshot,
-          metadata
-        `,
-          { count: "exact" }
-        )
-        .neq("law_status", "DEPRECATED");
-
-      if (diff === "SA") {
-        q = q.in("importance_tier", ["S", "A"]);
-      } else if (diff === "SAB") {
-        q = q.in("importance_tier", ["S", "A", "B"]);
-      }
-
-      if (kind === "CHAPTER") {
-        const [, stage, subject, code] = parts;
-        q = q
-          .eq("exam_stage", stage)
-          .eq("subject", subject)
-          .or(`detail_code.eq.${code},chapter_code.eq.${code}`)
-          .order("exam_year", { ascending: false })
-          .order("question_number", { ascending: true });
-      } else if (kind === "ROUND") {
-        const [, yearStr, roundStr, stage, subject] = parts;
-        q = q
-          .eq("exam_year", Number(yearStr))
-          .eq("exam_round", Number(roundStr))
-          .eq("exam_stage", stage)
-          .eq("subject", subject)
-          .order("question_number", { ascending: true });
-      }
-      return q;
-    };
-
-    let sliceIndex = 0;
-    if (kind === "CHAPTER") {
-      sliceIndex = Number(parts[4]) || 0;
-    } else if (kind === "ROUND") {
-      sliceIndex = Number(parts[5]) || 0;
-    } else {
+    if (kind !== "CHAPTER" && kind !== "ROUND") {
       return {
         success: false,
         questions: [],
@@ -647,89 +582,26 @@ export async function fetchSolveSetQuestionsAction(
       };
     }
 
-    const setBase = sliceIndex * 20;
-    const batchOffset = Math.max(0, Math.min(maxQuestions - 1, Math.floor(options?.offset ?? 0)));
-    const batchLimit = Math.max(
-      1,
-      Math.min(maxQuestions - batchOffset, Math.floor(options?.limit ?? 5))
-    );
-    const from = setBase + batchOffset;
-    const to = from + batchLimit - 1;
+    // 1시간 서버 캐시된 공개 문항+선지 번들 조회와 유저 인증을 병렬 실행
+    const [bundle, { ownerKey }] = await Promise.all([
+      getCachedSolveSetPublicBundle(setKey, requestedDifficulty, maxQuestions),
+      resolveOwnerKeyAndUser(clientKey),
+    ]);
 
-    let appliedDifficulty: SolveDifficultyFilter = requestedDifficulty;
-    let { data: qRows, count: totalMatchedInGroup, error: qErr } = await buildBaseQuery(
-      requestedDifficulty
-    ).range(from, to);
-
-    // 선택한 회독 난이도(예: S/A)로 조회 시 해당 세트에 0문항이면 자동으로 전체 등급으로 안전 폴백!
-    if (!qErr && batchOffset === 0 && (!qRows || qRows.length === 0) && requestedDifficulty !== "ALL") {
-      appliedDifficulty = "ALL";
-      const fallback = await buildBaseQuery("ALL").range(from, to);
-      qRows = fallback.data;
-      totalMatchedInGroup = fallback.count;
-      qErr = fallback.error;
-    }
-
-    if (qErr) {
-      return {
-        success: false,
-        questions: [],
-        totalInSet: 0,
-        hasMore: false,
-        nextOffset: batchOffset,
-        appliedDifficulty,
-        error: qErr.message,
-      };
-    }
-
-    const totalInSet = Math.max(
-      0,
-      Math.min(maxQuestions, (totalMatchedInGroup ?? setBase + (qRows?.length ?? 0)) - setBase)
-    );
-
-    const rawQuestions = (qRows ?? []) as Array<{
-      id: string;
-      exam_year: number;
-      exam_round: number;
-      exam_stage: string;
-      subject: string;
-      detail_code: string | null;
-      chapter_title: string | null;
-      importance_tier: string | null;
-      question_number: number;
-      question_type: "OBJECTIVE" | "SUBJECTIVE";
-      question_text: string;
-      box_content: string | null;
-      correct_options: number[] | null;
-      subjective_answer: string | null;
-      law_status: LawStatus | null;
-      amended_note: string | null;
-      original_snapshot: OriginalQuestionSnapshot | null;
-      metadata: { isNegativeQuestion?: boolean } | null;
-    }>;
-
-    if (rawQuestions.length === 0) {
+    const slicedQuestions = bundle.questions.slice(batchOffset, batchOffset + batchLimit);
+    if (slicedQuestions.length === 0) {
       return {
         success: true,
         questions: [],
-        totalInSet,
+        totalInSet: bundle.totalInSet,
         hasMore: false,
         nextOffset: batchOffset,
-        appliedDifficulty,
+        appliedDifficulty: bundle.appliedDifficulty,
       };
     }
 
-    const { ownerKey } = await resolveOwnerKeyAndUser(clientKey);
-    const qIds = rawQuestions.map((q) => q.id);
-    const [{ data: optRows, error: optErr }, { data: qLogs }, { data: optLogs }] = await Promise.all([
-      supabaseAdmin
-        .schema("vertical_housing")
-        .from("exam_options")
-        .select(
-          "id, question_id, option_number, option_text, is_correct, trap_summary, legal_citation, theory_section_code, repeat_count, appeared_citations, is_amended, amended_note, original_option_text"
-        )
-        .in("question_id", qIds)
-        .order("option_number", { ascending: true }),
+    const qIds = slicedQuestions.map((q) => q.id);
+    const [{ data: qLogs }, { data: optLogs }] = await Promise.all([
       supabaseAdmin
         .schema("vertical_housing")
         .from("study_question_logs")
@@ -744,18 +616,6 @@ export async function fetchSolveSetQuestionsAction(
         .in("question_id", qIds),
     ]);
 
-    if (optErr) {
-      return {
-        success: false,
-        questions: [],
-        totalInSet,
-        hasMore: false,
-        nextOffset: batchOffset,
-        appliedDifficulty,
-        error: optErr.message,
-      };
-    }
-
     const optsByQ = new Map<string, SolveOptionItem[]>();
     const optMarkMap = new Map<string, MarkStatus>(
       ((optLogs ?? []) as Array<{ option_id: string; mark_status: MarkStatus }>).map((l) => [
@@ -764,21 +624,9 @@ export async function fetchSolveSetQuestionsAction(
       ])
     );
 
-    for (const o of (optRows ?? []) as Array<{
-      id: string;
-      question_id: string;
-      option_number: number;
-      option_text: string;
-      is_correct: boolean;
-      trap_summary: string | null;
-      legal_citation: string | null;
-      theory_section_code: string | null;
-      repeat_count: number | null;
-      appeared_citations: OxCitationItem[] | null;
-      is_amended: boolean | null;
-      amended_note: string | null;
-      original_option_text: string | null;
-    }>) {
+    const qIdSet = new Set(qIds);
+    for (const o of bundle.options) {
+      if (!qIdSet.has(o.question_id)) continue;
       if (!optsByQ.has(o.question_id)) optsByQ.set(o.question_id, []);
       optsByQ.get(o.question_id)!.push({
         id: o.id,
@@ -789,7 +637,9 @@ export async function fetchSolveSetQuestionsAction(
         legalCitation: o.legal_citation ?? null,
         theorySectionCode: o.theory_section_code ?? null,
         repeatCount: o.repeat_count ?? 1,
-        appearedCitations: Array.isArray(o.appeared_citations) ? o.appeared_citations : [],
+        appearedCitations: Array.isArray(o.appeared_citations)
+          ? (o.appeared_citations as OxCitationItem[])
+          : [],
         isAmended: Boolean(o.is_amended),
         amendedNote: o.amended_note,
         originalOptionText: o.original_option_text,
@@ -808,7 +658,7 @@ export async function fetchSolveSetQuestionsAction(
       }>).map((l) => [l.question_id, l])
     );
 
-    const items: SolveQuestionItem[] = rawQuestions.map((q) => {
+    const items: SolveQuestionItem[] = slicedQuestions.map((q) => {
       const saved = qLogMap.get(q.id);
       return {
         id: q.id,
@@ -825,9 +675,9 @@ export async function fetchSolveSetQuestionsAction(
         boxContent: q.box_content,
         correctOptions: q.correct_options ?? [],
         subjectiveAnswer: q.subjective_answer,
-        lawStatus: q.law_status ?? "VALID",
+        lawStatus: (q.law_status as LawStatus) ?? "VALID",
         amendedNote: q.amended_note,
-        originalSnapshot: q.original_snapshot,
+        originalSnapshot: (q.original_snapshot as OriginalQuestionSnapshot | null) ?? null,
         isNegativeQuestion: Boolean(q.metadata?.isNegativeQuestion),
         options: optsByQ.get(q.id) ?? [],
         savedSelectedOption: saved?.selected_option ?? null,
@@ -839,15 +689,15 @@ export async function fetchSolveSetQuestionsAction(
     });
 
     const nextOffset = batchOffset + items.length;
-    const hasMore = items.length === batchLimit && nextOffset < totalInSet;
+    const hasMore = nextOffset < bundle.totalInSet;
 
     return {
       success: true,
       questions: items,
-      totalInSet,
+      totalInSet: bundle.totalInSet,
       hasMore,
       nextOffset,
-      appliedDifficulty,
+      appliedDifficulty: bundle.appliedDifficulty,
     };
   } catch (err) {
     return {
