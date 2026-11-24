@@ -7,6 +7,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Clock,
   RotateCw,
   Star,
   X,
@@ -18,6 +19,9 @@ import {
 } from "@/app/actions/exam-study.actions";
 import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
+import { useStudyCurriculum } from "@/lib/study-curriculum-store";
+import { useGlobalUx } from "@/components/mobile/global-ux-provider";
+import { getMutedSubjectColor } from "@/lib/study-theme";
 import {
   ConceptLinkedText,
   type KnowledgeTrailTarget,
@@ -95,6 +99,8 @@ export function SolveRunner({
   onSolvedCountChange,
 }: SolveRunnerProps) {
   const { effectiveOwnerKey, setLocalPmpBalance } = useStudyAuth();
+  const { todayISO, subjects, roundsByTopic, cycleTopicRound } = useStudyCurriculum();
+  const { quickTimer, startQuickTimer, openTimerOverlay } = useGlobalUx();
   const [index, setIndex] = useState(0);
   const [instantGrade, setInstantGrade] = useState(true);
   const [showSummary, setShowSummary] = useState(false);
@@ -376,11 +382,59 @@ export function SolveRunner({
     setShowSummary(true);
   };
 
+  // 현재 세트와 연결된 커리큘럼 과목·단원 매칭 (타이머 연동 & 세트 완료 시 회독 도장 직결)
+  const linkedCurriculum = useMemo(() => {
+    const firstQ = questions[0];
+    if (!firstQ) return null;
+    const matchedSubj = subjects.find(
+      (s) =>
+        s.title === firstQ.subject ||
+        s.shortTitle === firstQ.subject ||
+        s.title.includes(firstQ.subject)
+    );
+    let matchedTopicId: string | undefined;
+    if (firstQ.detailCode && matchedSubj) {
+      for (const u of matchedSubj.units) {
+        for (const t of u.topics) {
+          if (t.chapterCode === firstQ.detailCode) {
+            matchedTopicId = t.id;
+            break;
+          }
+        }
+      }
+    }
+    return {
+      subjectId: matchedSubj?.id,
+      subjectTitle: matchedSubj?.shortTitle || matchedSubj?.title || firstQ.subject,
+      subjectColor: getMutedSubjectColor(firstQ.subject, matchedSubj?.color),
+      topicId: matchedTopicId,
+    };
+  }, [questions, subjects]);
+
+  const handleToggleSolveTimer = () => {
+    if (quickTimer.active) {
+      openTimerOverlay();
+      return;
+    }
+    startQuickTimer({
+      id: `solve-${setKey}`,
+      subjectId: linkedCurriculum?.subjectId,
+      subjectTitle: linkedCurriculum?.subjectTitle || "문제 풀이",
+      subjectColor: linkedCurriculum?.subjectColor,
+      topicId: linkedCurriculum?.topicId,
+      title: setTitle,
+    });
+  };
+
   if (showSummary) {
     const accuracy =
       summaryStats.solved > 0
         ? Math.round((summaryStats.correct / summaryStats.solved) * 100)
         : 0;
+    const linkedTopicRounds = linkedCurriculum?.topicId
+      ? roundsByTopic[linkedCurriculum.topicId] || []
+      : [];
+
     return (
       <div className="px-4 py-8 space-y-6">
         <div className="text-center space-y-2">
@@ -391,6 +445,45 @@ export function SolveRunner({
             {summaryStats.weakMarks}건 수집됨
           </div>
         </div>
+
+        {/* 문제 완료 -> 단원 회독 도장 1탭 직결 */}
+        {linkedCurriculum?.topicId && (
+          <div className="p-3.5 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] space-y-2.5">
+            <div className="text-xs font-medium text-[var(--hp-text)]">
+              이 단원 회독 도장 바로 기록
+            </div>
+            <div className="grid grid-cols-5 gap-1.5">
+              {[1, 2, 3, 4, 5].map((roundNo) => {
+                const rec = linkedTopicRounds.find((r) => r.round === roundNo);
+                const isDone = rec?.status === "done";
+                const isReview = rec?.status === "review";
+                return (
+                  <button
+                    key={roundNo}
+                    type="button"
+                    onClick={() => cycleTopicRound(linkedCurriculum.topicId!, roundNo, todayISO)}
+                    className="py-2 rounded-md border text-xs hp-tabular font-medium transition"
+                    style={{
+                      backgroundColor: isDone
+                        ? linkedCurriculum.subjectColor
+                        : isReview
+                          ? "rgba(199, 154, 75, 0.16)"
+                          : "transparent",
+                      borderColor: isDone
+                        ? linkedCurriculum.subjectColor
+                        : isReview
+                          ? "var(--hp-warn)"
+                          : "var(--hp-border)",
+                      color: isDone ? "#FFFFFF" : isReview ? "var(--hp-warn)" : "var(--hp-text-3)",
+                    }}
+                  >
+                    {isReview ? `${roundNo}R 재` : `${roundNo}R`}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-2.5">
           {summaryStats.weakMarks > 0 && (
@@ -438,14 +531,30 @@ export function SolveRunner({
 
         <div className="text-xs font-medium truncate">{setTitle}</div>
 
-        <button
-          type="button"
-          onClick={() => setInstantGrade((prev) => !prev)}
-          className="px-2 py-1 rounded-md border border-[var(--hp-border)] text-[11px] text-[var(--hp-text-2)] shrink-0"
-          title="즉시 채점 / 일괄 채점 전환"
-        >
-          {instantGrade ? "즉시채점" : "일괄채점"}
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={handleToggleSolveTimer}
+            className={`px-2 py-1 rounded-md border text-[11px] flex items-center gap-1 ${
+              quickTimer.active
+                ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text)]"
+                : "border-[var(--hp-border)] text-[var(--hp-text-2)]"
+            }`}
+            title="문제 풀이 시간 순공 타이머 연동"
+          >
+            <Clock className="w-3 h-3 stroke-[1.5]" />
+            <span>{quickTimer.active ? "측정중" : "타이머"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setInstantGrade((prev) => !prev)}
+            className="px-2 py-1 rounded-md border border-[var(--hp-border)] text-[11px] text-[var(--hp-text-2)]"
+            title="즉시 채점 / 일괄 채점 전환"
+          >
+            {instantGrade ? "즉시채점" : "일괄채점"}
+          </button>
+        </div>
       </div>
 
       {/* 번호 퀵 점프 스트립 */}

@@ -1,7 +1,7 @@
 /**
  * Housing-Pro Study v2.0 미니멀 컬러 토큰 및 포맷 유틸리티
- * - 저채도 뮤트 과목 컬러 (형광/네온 배제)
- * - 타이포그래피 숫자 정렬 및 이니셜 생성
+ * - 사용자 지정 커스텀 컬러 최우선 존중
+ * - 구버전 형광 원색(#FF5A36 등)만 저채도 뮤트 팔레트로 자동 정규화
  */
 
 export const MUTED_SUBJECT_PALETTE: ReadonlyArray<{ keywords: string[]; hex: string }> = [
@@ -23,31 +23,40 @@ const FALLBACK_MUTED_HEXES = [
   "#6B9080",
 ] as const;
 
-/** 과목명 또는 기존 색상을 저채도 미니멀 과목 컬러로 정규화 */
-export function getMutedSubjectColor(subjectTitle: string, fallbackHex?: string, index = 0): string {
+const LEGACY_BRIGHT_COLORS = new Set([
+  "#FF5A36",
+  "#3B82F6",
+  "#10B981",
+  "#F59E0B",
+  "#EC4899",
+  "#A855F7",
+  "#06B6D4",
+  "#C4E538",
+  "#F97316",
+  "#7C3AED",
+  "#F43F5E",
+]);
+
+/**
+ * 과목 색상을 반환합니다.
+ * 1순위: 사용자가 지정한 유효한 커스텀 색상 (형광 레거시 색 제외)
+ * 2순위: 과목명 기반 기본 뮤트 색상
+ * 3순위: 인덱스 기반 뮤트 폴백 색상
+ */
+export function getMutedSubjectColor(subjectTitle: string, customHex?: string, index = 0): string {
+  const normalizedCustom = (customHex || "").trim().toUpperCase();
+  if (
+    /^#[0-9A-F]{6}$/.test(normalizedCustom) &&
+    !LEGACY_BRIGHT_COLORS.has(normalizedCustom)
+  ) {
+    return customHex!.trim();
+  }
+
   const clean = (subjectTitle || "").trim();
   for (const entry of MUTED_SUBJECT_PALETTE) {
     if (entry.keywords.some((kw) => clean.includes(kw))) {
       return entry.hex;
     }
-  }
-  const normalizedFallback = (fallbackHex || "").trim().toUpperCase();
-  // 기존 형광/원색 프리셋은 저채도 팔레트로 치환
-  const brightLegacyColors = new Set([
-    "#FF5A36",
-    "#3B82F6",
-    "#10B981",
-    "#F59E0B",
-    "#EC4899",
-    "#A855F7",
-    "#06B6D4",
-    "#C4E538",
-    "#F97316",
-    "#7C3AED",
-    "#F43F5E",
-  ]);
-  if (normalizedFallback && !brightLegacyColors.has(normalizedFallback)) {
-    return fallbackHex as string;
   }
   return FALLBACK_MUTED_HEXES[Math.abs(index) % FALLBACK_MUTED_HEXES.length];
 }

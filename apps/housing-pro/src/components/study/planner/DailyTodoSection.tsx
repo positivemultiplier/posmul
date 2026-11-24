@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Check, Play, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Check, Play, Plus, Settings2, Trash2 } from "lucide-react";
 import type {
   StudySessionLog,
   StudySubjectNode,
@@ -126,7 +127,7 @@ export function DailyTodoSection({
       {/* 3초 인라인 추가 */}
       <div className="p-3 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] space-y-2.5">
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {subjects.slice(0, 6).map((subj, idx) => {
+          {subjects.map((subj, idx) => {
             const color = getMutedSubjectColor(subj.title, subj.color, idx);
             const selected = idx === selectedSubjectIdx;
             return (
@@ -148,6 +149,14 @@ export function DailyTodoSection({
               </button>
             );
           })}
+          <Link
+            href="/study/more?tab=library"
+            className="px-2 py-1 rounded-md text-[11px] text-[var(--hp-text-3)] hover:text-[var(--hp-text)] flex items-center gap-1 whitespace-nowrap shrink-0"
+            title="과목 추가·수정"
+          >
+            <Settings2 className="w-3 h-3 stroke-[1.5]" />
+            <span>관리</span>
+          </Link>
         </div>
 
         <form

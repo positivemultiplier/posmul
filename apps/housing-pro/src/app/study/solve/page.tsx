@@ -6,6 +6,7 @@ import { ChevronRight, Loader2, RotateCw, X } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { SolveRunner } from "@/components/study/solve/SolveRunner";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
+import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import {
   fetchSolveSetQuestionsAction,
   fetchStudySolveSetsAction,
@@ -14,15 +15,6 @@ import {
   type StudySetSummary,
 } from "@/app/actions/exam-study.actions";
 import { getMutedSubjectColor } from "@/lib/study-theme";
-
-const SUBJECT_FILTERS = [
-  "전체",
-  "민법",
-  "회계원리",
-  "공동주택시설개론",
-  "주택관리관계법규",
-  "공동주택관리실무",
-] as const;
 
 type RoundPresetId = "1R" | "2R" | "3R" | "4R";
 
@@ -40,6 +32,7 @@ const ROUND_PRESETS: ReadonlyArray<{
 
 export default function StudySolvePage() {
   const { effectiveOwnerKey } = useStudyAuth();
+  const { subjects } = useStudyCurriculum();
 
   const [sets, setSets] = useState<StudySetSummary[]>([]);
   const [weakOptionCount, setWeakOptionCount] = useState(0);
@@ -96,6 +89,26 @@ export default function StudySolvePage() {
       cancelled = true;
     };
   }, [effectiveOwnerKey]);
+
+  const availableSubjects = useMemo(() => {
+    const ordered: string[] = [];
+    const seen = new Set<string>();
+    for (const s of sets) {
+      if (s.subject && !seen.has(s.subject)) {
+        seen.add(s.subject);
+        ordered.push(s.subject);
+      }
+    }
+    return ["전체", ...ordered];
+  }, [sets]);
+
+  const subjectColorByTitle = useMemo(() => {
+    const map = new Map<string, string>();
+    subjects.forEach((s, idx) => {
+      map.set(s.title, getMutedSubjectColor(s.title, s.color, idx));
+    });
+    return map;
+  }, [subjects]);
 
   const availableYears = useMemo(() => {
     const ys = new Set<string>();
@@ -237,11 +250,14 @@ export default function StudySolvePage() {
               </select>
             </div>
 
-            {/* 과목 필터 */}
+            {/* 과목 필터 (실제 데이터 기반 동적 생성) */}
             <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-              {SUBJECT_FILTERS.map((subj) => {
+              {availableSubjects.map((subj, idx) => {
                 const selected = !chapterCodeFilter && subjectFilter === subj;
-                const dotColor = subj === "전체" ? null : getMutedSubjectColor(subj);
+                const dotColor =
+                  subj === "전체"
+                    ? null
+                    : subjectColorByTitle.get(subj) || getMutedSubjectColor(subj, undefined, idx);
                 return (
                   <button
                     key={subj}
@@ -262,7 +278,7 @@ export default function StudySolvePage() {
                         style={{ backgroundColor: dotColor }}
                       />
                     )}
-                    <span>{subj.replace("공동주택", "").replace("주택관리", "")}</span>
+                    <span>{subj}</span>
                   </button>
                 );
               })}

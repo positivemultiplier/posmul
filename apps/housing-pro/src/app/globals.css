@@ -8,6 +8,7 @@
    전환 테마: 페이퍼 라이트 (html.hp-theme-light: #FFFFFF / #F7F7F8 / #111214)
    ========================================================================== */
 :root {
+  color-scheme: dark;
   --hp-outer: #050507;
   --hp-bg: #0b0b0d;
   --hp-surface: #141417;
@@ -31,6 +32,7 @@
 }
 
 html.hp-theme-light {
+  color-scheme: light;
   --hp-outer: #efeff2;
   --hp-bg: #ffffff;
   --hp-surface: #f7f7f8;

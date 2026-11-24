@@ -154,10 +154,10 @@ export function StudyFabSheet({ open, pathname, onClose, onToast }: StudyFabShee
           </button>
         </div>
 
-        {/* 1. 3초 할 일 1줄 즉시 입력 (어느 탭에서든 오늘 플래너에 등록) */}
+        {/* 1. 3초 할 일 1줄 즉시 입력 (활성 과목 전체 동적 표시) */}
         <div className="p-3 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] space-y-2.5">
           <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            {subjects.slice(0, 6).map((subj, idx) => {
+            {subjects.map((subj, idx) => {
               const color = getMutedSubjectColor(subj.title, subj.color, idx);
               const selected = idx === selectedSubjectIdx;
               return (

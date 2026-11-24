@@ -147,9 +147,9 @@ export function TenMinuteTimeline({
         </div>
       </div>
 
-      {/* 과목 브러시 팔레트 */}
+      {/* 과목 브러시 팔레트 (활성 과목 전체 동적 표시) */}
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
-        {subjects.slice(0, 6).map((subj, idx) => {
+        {subjects.map((subj, idx) => {
           const color = getMutedSubjectColor(subj.title, subj.color, idx);
           const selected = brushIndex === idx;
           return (

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
+import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { grantAppStudyPmpAction } from "@/app/actions/study-economy.actions";
 import {
   fetchExamOxCardsAction,
@@ -45,15 +46,6 @@ interface CustomOxCard {
 }
 
 const CUSTOM_OX_STORAGE_KEY = "housing_pro_custom_ox_v1";
-
-const SUBJECT_FILTERS = [
-  { key: "ALL", label: "전체" },
-  { key: "민법", label: "민법" },
-  { key: "회계원리", label: "회계" },
-  { key: "공동주택시설개론", label: "시설" },
-  { key: "주택관리관계법규", label: "법규" },
-  { key: "공동주택관리실무", label: "실무" },
-] as const;
 
 function getDistinctYearsLabel(card: ExamOxCardItem): string {
   const years = Array.from(new Set(card.appearedCitations.map((c) => c.year))).sort((a, b) => a - b);
@@ -91,6 +83,24 @@ function fallbackMockCards(): ExamOxCardItem[] {
 
 export default function StudyReviewOxPage() {
   const { effectiveOwnerKey, setLocalPmpBalance } = useStudyAuth();
+  const { subjects } = useStudyCurriculum();
+
+  const dynamicSubjectFilters = useMemo(() => {
+    const items: Array<{ key: string; label: string; color: string | null }> = [
+      { key: "ALL", label: "전체", color: null },
+    ];
+    const seen = new Set<string>();
+    subjects.forEach((s, idx) => {
+      if (seen.has(s.title)) return;
+      seen.add(s.title);
+      items.push({
+        key: s.title,
+        label: s.shortTitle || s.title,
+        color: getMutedSubjectColor(s.title, s.color, idx),
+      });
+    });
+    return items;
+  }, [subjects]);
 
   const [tab, setTab] = useState<ReviewTab>("weak");
   const [subjectFilter, setSubjectFilter] = useState<string>("ALL");
@@ -324,9 +334,8 @@ export default function StudyReviewOxPage() {
         {tab !== "custom" && (
           <div className="flex items-center justify-between gap-2">
             <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
-              {SUBJECT_FILTERS.map((f) => {
+              {dynamicSubjectFilters.map((f) => {
                 const active = subjectFilter === f.key;
-                const dot = f.key === "ALL" ? null : getMutedSubjectColor(f.key);
                 return (
                   <button
                     key={f.key}
@@ -338,10 +347,10 @@ export default function StudyReviewOxPage() {
                         : "border-transparent text-[var(--hp-text-3)]"
                     }`}
                   >
-                    {dot && (
+                    {f.color && (
                       <span
                         className="w-1.5 h-1.5 rounded-full shrink-0"
-                        style={{ backgroundColor: dot }}
+                        style={{ backgroundColor: f.color }}
                       />
                     )}
                     <span>{f.label}</span>
