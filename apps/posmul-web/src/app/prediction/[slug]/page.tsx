@@ -99,6 +99,7 @@ export default async function PredictionDetailPage({
         initialBriefing={dbDetailData.initialBriefing}
         initialForecasts={dbDetailData.initialForecasts}
         relatedNews={dbDetailData.relatedNews}
+        featureFlags={dbDetailData.featureFlags}
         slug={dbDetailData.slug}
       />
     );

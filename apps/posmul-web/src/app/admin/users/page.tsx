@@ -1,5 +1,7 @@
 "use client";
 
+import { DomainFeatureControlPanel } from "../components/DomainFeatureControlPanel";
+
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
@@ -232,6 +234,8 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
+      <DomainFeatureControlPanel domain="users" defaultExpanded={false} />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
         <div>

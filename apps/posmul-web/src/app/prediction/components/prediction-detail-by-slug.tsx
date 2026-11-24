@@ -15,6 +15,7 @@ import {
 } from "../../../bounded-contexts/prediction/domain/services/collective-intelligence-engine";
 import { analyzePredictionCapmAndEconomy } from "../../../bounded-contexts/prediction/domain/services/prediction-economic-model";
 import { getCachedPredictionDetailPublicData } from "./prediction-public-cache";
+import { getCachedEffectiveFeatureFlags } from "../../../shared/lib/feature-flags/feature-flags.server";
 import type { BalancedBriefingDTO } from "../../../bounded-contexts/prediction/domain/value-objects/briefing.types";
 import type { AiForecastDTO } from "../../../bounded-contexts/prediction/domain/value-objects/ai-forecast.types";
 import type { RelatedNewsItem } from "../../../bounded-contexts/prediction/infrastructure/adapters/naver-news.adapter";
@@ -79,18 +80,38 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
   initialBriefing: BalancedBriefingDTO | null;
   initialForecasts: AiForecastDTO[] | null;
   relatedNews: RelatedNewsItem[];
+  featureFlags: {
+    naverNews: boolean;
+    sportsBadge: boolean;
+    aiBriefing: boolean;
+    aiForecasts: boolean;
+    hourglass: boolean;
+    liveBanner: boolean;
+    allowBetting: boolean;
+  };
   slug: string;
 } | null> {
   const decodedSlug = decodeURIComponent(slug);
   const supabase = await createClient();
 
-  // 1단계 병렬: 15초 서버 캐시된 공개 게임 데이터 + 현재 유저 인증 세션 확인
-  const [publicData, userAuthRes] = await Promise.all([
+  // 1단계 병렬: 15초 서버 캐시된 공개 게임 데이터 + 60초 캐시 기능 플래그 + 현재 유저 인증 세션 확인
+  const [publicData, featureFlagsRes, userAuthRes] = await Promise.all([
     getCachedPredictionDetailPublicData(decodedSlug),
+    getCachedEffectiveFeatureFlags(),
     supabase.auth.getUser(),
   ]);
 
   if (!publicData) return null;
+  const fMap = featureFlagsRes.effectiveMap;
+  const detailFeatureFlags = {
+    naverNews: fMap["prediction.addon.naver_news"] !== false,
+    sportsBadge: fMap["prediction.addon.sports_badge"] !== false,
+    aiBriefing: fMap["prediction.addon.ai_briefing"] !== false,
+    aiForecasts: fMap["prediction.addon.ai_forecasts"] !== false,
+    hourglass: fMap["prediction.addon.hourglass"] !== false,
+    liveBanner: fMap["prediction.addon.live_banner"] !== false,
+    allowBetting: fMap["prediction.action.allow_betting"] !== false,
+  };
 
   const {
     dbGame,
@@ -405,6 +426,7 @@ export async function fetchPredictionDetailDataBySlug(slug: string): Promise<{
     initialBriefing,
     initialForecasts,
     relatedNews,
+    featureFlags: detailFeatureFlags,
     slug: decodedSlug,
   };
 }
@@ -424,6 +446,7 @@ export async function renderPredictionDetailBySlug(slug: string) {
       initialBriefing={data.initialBriefing}
       initialForecasts={data.initialForecasts}
       relatedNews={data.relatedNews}
+      featureFlags={data.featureFlags}
       slug={data.slug}
     />
   );

@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Award,
 } from "lucide-react";
+import { DomainFeatureControlPanel } from "../components/DomainFeatureControlPanel";
 
 interface NormalizedOption {
   id: string;
@@ -207,6 +208,9 @@ export default function AdminPredictionDashboard() {
           </Link>
           <span className="text-xs text-slate-500 font-mono">LIVE PREDICTION ADMIN ENGINE</span>
         </div>
+
+        {/* 도메인별 세부 기능 ON/OFF 제어 패널 */}
+        <DomainFeatureControlPanel domain="prediction" defaultExpanded={false} />
 
         {/* Header */}
         <div className="border-b border-slate-800 pb-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

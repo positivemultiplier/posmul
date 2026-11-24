@@ -20,6 +20,7 @@ import {
 import { supabaseAdmin } from "../../../../../lib/supabase/admin";
 import { createClient } from "../../../../../lib/supabase/server";
 import { getParticipatePredictionUseCase } from "../../../../../bounded-contexts/prediction/di-container";
+import { isFeatureEnabled } from "../../../../../shared/lib/feature-flags/feature-flags.server";
 
 export interface PlaceBetRequest {
   gameId: string;
@@ -46,6 +47,16 @@ export interface PlaceBetResponse {
  */
 export async function placeBet(request: PlaceBetRequest): Promise<PlaceBetResponse> {
   try {
+    // 0. 관리자 기능 ON/OFF 킬스위치 확인 (도메인 마스터 또는 참여 스위치 OFF 시 즉시 차단)
+    const bettingAllowed = await isFeatureEnabled("prediction.action.allow_betting");
+    if (!bettingAllowed) {
+      return {
+        success: false,
+        message: "현재 운영 점검으로 신규 예측 참여가 일시 중지되었습니다.",
+        error: "FEATURE_DISABLED",
+      };
+    }
+
     const supabase = await createClient();
 
     // 1. 현재 사용자 확인
@@ -381,6 +392,15 @@ export async function withdrawBet(
   gameSlug: string
 ): Promise<WithdrawBetResponse> {
   try {
+    const withdrawAllowed = await isFeatureEnabled("prediction.action.allow_withdraw");
+    if (!withdrawAllowed) {
+      return {
+        success: false,
+        message: "현재 운영 정책으로 예측 참여 철회가 일시 중지되었습니다.",
+        error: "FEATURE_DISABLED",
+      };
+    }
+
     const supabase = await createClient();
 
     // 1. 현재 사용자 확인

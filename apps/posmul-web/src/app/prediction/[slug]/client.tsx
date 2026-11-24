@@ -150,6 +150,15 @@ interface UniversalPredictionDetailClientProps {
   initialBriefing?: BalancedBriefingDTO | null;
   initialForecasts?: AiForecastDTO[] | null;
   relatedNews?: RelatedNewsItem[];
+  featureFlags?: {
+    naverNews: boolean;
+    sportsBadge: boolean;
+    aiBriefing: boolean;
+    aiForecasts: boolean;
+    hourglass: boolean;
+    liveBanner: boolean;
+    allowBetting: boolean;
+  };
 }
 
 type ChartTabType = "trend" | "distribution" | "my_bets";
@@ -366,7 +375,17 @@ export function UniversalPredictionDetailClient({
   initialBriefing,
   initialForecasts,
   relatedNews,
+  featureFlags,
 }: UniversalPredictionDetailClientProps) {
+  const flags = {
+    naverNews: featureFlags?.naverNews ?? true,
+    sportsBadge: featureFlags?.sportsBadge ?? true,
+    aiBriefing: featureFlags?.aiBriefing ?? true,
+    aiForecasts: featureFlags?.aiForecasts ?? true,
+    hourglass: featureFlags?.hourglass ?? true,
+    liveBanner: featureFlags?.liveBanner ?? true,
+    allowBetting: featureFlags?.allowBetting ?? true,
+  };
   const [chartTab, setChartTab] = useState<ChartTabType>("trend");
   const [isPending, startTransition] = useTransition();
 
@@ -1059,7 +1078,7 @@ export function UniversalPredictionDetailClient({
 
       <main className="max-w-6xl mx-auto px-4 py-6 space-y-6">
         {/* 연동된 실시간 라이브 응원톡 콤팩트 배너 (실제 개설된 경우만 LIVE 배너 노출) */}
-        {game.liveRoom ? (
+        {!flags.liveBanner ? null : game.liveRoom ? (
           <Link
             href={`/live/${game.liveRoom.id}`}
             className="flex items-center justify-between gap-3 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-950/60 via-rose-900/30 to-slate-900 border border-red-500/35 hover:border-red-400 transition group text-xs"
@@ -1112,12 +1131,14 @@ export function UniversalPredictionDetailClient({
             <div className="flex items-start gap-4">
               {/* 메인 피드 카드와 일치하는 스포츠 팀 컬러 SVG 배지 또는 마이크로 심볼 아바타 */}
               {(() => {
-                const sportsMatchup = extractSportsMatchupBadges({
-                  title: game.title,
-                  category: game.category,
-                  subcategory: game.subcategory,
-                  optionLabels: game.options.map((o) => o.label),
-                });
+                const sportsMatchup = flags.sportsBadge
+                  ? extractSportsMatchupBadges({
+                      title: game.title,
+                      category: game.category,
+                      subcategory: game.subcategory,
+                      optionLabels: game.options.map((o) => o.label),
+                    })
+                  : null;
                 if (sportsMatchup) {
                   return <SportsMatchupBadgeCluster matchup={sportsMatchup} variant="detail" />;
                 }
@@ -1330,37 +1351,41 @@ export function UniversalPredictionDetailClient({
             </Card>
 
             {/* 2. AI 균형 의사결정 브리핑 (유형별 고가독성 비교 뷰) */}
-            <div
-              ref={briefingSectionRef}
-              onClick={() => {
-                viewedBriefingRef.current = true;
-              }}
-            >
-              <BalancedDecisionBriefing
-                gameId={game.id}
-                gameTitle={game.title}
-                options={game.options}
-                selectedOptionId={selectedOption}
-                onSelectOption={setSelectedOption}
-                initialBriefing={initialBriefing}
-              />
-            </div>
+            {flags.aiBriefing && (
+              <div
+                ref={briefingSectionRef}
+                onClick={() => {
+                  viewedBriefingRef.current = true;
+                }}
+              >
+                <BalancedDecisionBriefing
+                  gameId={game.id}
+                  gameTitle={game.title}
+                  options={game.options}
+                  selectedOptionId={selectedOption}
+                  onSelectOption={setSelectedOption}
+                  initialBriefing={initialBriefing}
+                />
+              </div>
+            )}
 
             {/* 3. 연동된 AI 모델별 독립 예측 현황 */}
-            <div
-              ref={aiSectionRef}
-              onClick={() => {
-                viewedAiRef.current = true;
-              }}
-            >
-              <AiForecastSection
-                gameId={game.id}
-                initialForecasts={initialForecasts}
-              />
-            </div>
+            {flags.aiForecasts && (
+              <div
+                ref={aiSectionRef}
+                onClick={() => {
+                  viewedAiRef.current = true;
+                }}
+              >
+                <AiForecastSection
+                  gameId={game.id}
+                  initialForecasts={initialForecasts}
+                />
+              </div>
+            )}
 
             {/* 4. 관련 최신 뉴스 (네이버 뉴스 Open API · 30분 캐시 · 최신 기사 필터) */}
-            <RelatedNewsSection articles={relatedNews} />
+            {flags.naverNews && <RelatedNewsSection articles={relatedNews} />}
           </div>
 
           {/* ======================================================== */}
@@ -1368,7 +1393,9 @@ export function UniversalPredictionDetailClient({
           {/* ======================================================== */}
           <div className="space-y-5">
             {/* 상세페이지 황금 모래시계 위젯 (시선 집중 최상단 배치) */}
-            <MoneyWaveWaterfallCard totalPrizePool={Math.round(game.prizePool || 22817)} />
+            {flags.hourglass && (
+              <MoneyWaveWaterfallCard totalPrizePool={Math.round(game.prizePool || 22817)} />
+            )}
 
             {/* 시민 예측 참여 패널 (Binary / WDL / Ranking 맞춤형 단일 참여 플로우) */}
             <Card className="p-5 bg-gradient-to-b from-[#131b2e] via-[#0f172a] to-[#090b12] border-white/[0.1] space-y-4 shadow-2xl">

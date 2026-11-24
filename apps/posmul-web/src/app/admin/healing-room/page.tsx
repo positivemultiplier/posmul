@@ -1,5 +1,7 @@
 "use client";
 
+import { DomainFeatureControlPanel } from "../components/DomainFeatureControlPanel";
+
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
@@ -337,8 +339,9 @@ export default function AdminHealingRoomPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+      <div className="space-y-6">
+        <DomainFeatureControlPanel domain="healing_room" defaultExpanded={false} />
+        {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <div className="flex items-center gap-2">

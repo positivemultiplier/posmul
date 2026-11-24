@@ -30,6 +30,7 @@ import {
   AdminTableHead,
   AdminTableCell,
 } from "../components/shadcn-admin-ui";
+import { DomainFeatureControlPanel } from "../components/DomainFeatureControlPanel";
 
 interface AuditAccountItem {
   user_id: string;
@@ -151,6 +152,8 @@ export default function AdminEconomyPage() {
 
   return (
     <div className="space-y-6">
+      <DomainFeatureControlPanel domain="economy" defaultExpanded={false} />
+
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800/80 pb-4">
         <div>

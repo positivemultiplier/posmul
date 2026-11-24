@@ -23,6 +23,7 @@ import {
   ChevronRight,
   Sparkles,
   Music,
+  Sliders,
 } from "lucide-react";
 import { cn } from "@/shared/ui/utils/cn";
 import { AdminBadge } from "./shadcn-admin-ui";
@@ -48,6 +49,12 @@ const ADMIN_NAV_GROUPS: NavGroup[] = [
         label: "통합 커맨드 대시보드",
         icon: LayoutDashboard,
         badge: "v2.5",
+      },
+      {
+        href: "/admin/control",
+        label: "기능 ON/OFF 제어센터",
+        icon: Sliders,
+        badge: "OS",
       },
       {
         href: "/admin/users",

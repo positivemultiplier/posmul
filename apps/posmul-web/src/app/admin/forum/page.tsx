@@ -29,6 +29,7 @@ import {
   SlidersHorizontal,
   ChevronDown,
 } from "lucide-react";
+import { DomainFeatureControlPanel } from "../components/DomainFeatureControlPanel";
 
 interface ForumPostItem {
   id?: string;
@@ -495,7 +496,9 @@ export default function AdminForumPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-8 font-sans">
       <div className="max-w-7xl mx-auto space-y-8">
-        
+        {/* 도메인별 세부 기능 ON/OFF 제어 패널 */}
+        <DomainFeatureControlPanel domain="forum" defaultExpanded={false} />
+
         {/* Navigation Top */}
         <div className="flex justify-between items-center border-b border-slate-800 pb-4">
           <Link
@@ -636,44 +639,40 @@ export default function AdminForumPage() {
         <div className="flex border-b border-slate-800 gap-2">
           <button
             onClick={() => setActiveTab("posts")}
-            className={`px-5 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${
-              activeTab === "posts"
+            className={`px-5 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === "posts"
                 ? "border-purple-500 text-purple-400 bg-purple-500/10 rounded-t-xl"
                 : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
+              }`}
           >
             <MessageSquare className="w-4 h-4" />
             게시글 관리 ({stats.totalPosts.toLocaleString()})
           </button>
           <button
             onClick={() => setActiveTab("comments")}
-            className={`px-5 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${
-              activeTab === "comments"
+            className={`px-5 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === "comments"
                 ? "border-sky-500 text-sky-400 bg-sky-500/10 rounded-t-xl"
                 : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
+              }`}
           >
             <MessageCircle className="w-4 h-4" />
             댓글 & 의견 ({comments.length})
           </button>
           <button
             onClick={() => setActiveTab("ip-defense")}
-            className={`px-5 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${
-              activeTab === "ip-defense"
+            className={`px-5 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === "ip-defense"
                 ? "border-rose-500 text-rose-400 bg-rose-500/10 rounded-t-xl"
                 : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
+              }`}
           >
             <ShieldAlert className="w-4 h-4" />
             봇 방어 & IP 차단 ({activeBannedCount})
           </button>
           <button
             onClick={() => setActiveTab("banned-words")}
-            className={`px-5 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${
-              activeTab === "banned-words"
+            className={`px-5 py-3 text-sm font-bold flex items-center gap-2 border-b-2 transition ${activeTab === "banned-words"
                 ? "border-amber-500 text-amber-400 bg-amber-500/10 rounded-t-xl"
                 : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
+              }`}
           >
             <AlertTriangle className="w-4 h-4" />
             금지어 & 욕설 필터 ({bannedWords.length})
@@ -744,11 +743,10 @@ export default function AdminForumPage() {
                           <div className="flex flex-wrap justify-between items-start gap-2 mb-2">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span
-                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${
-                                  isPublished
+                                className={`px-2.5 py-1 rounded-lg text-xs font-semibold ${isPublished
                                     ? "bg-purple-950 text-purple-400 border border-purple-800/60"
                                     : "bg-slate-800 text-slate-500 border border-slate-700"
-                                }`}
+                                  }`}
                               >
                                 {isPublished ? "공개 게시됨" : "숨김 (비공개)"}
                               </span>
@@ -790,11 +788,10 @@ export default function AdminForumPage() {
                           <div className="flex flex-wrap gap-2">
                             <button
                               onClick={() => handleToggleStatus(pId, post.status)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center gap-1 ${
-                                isPublished
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition flex items-center gap-1 ${isPublished
                                   ? "bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700"
                                   : "bg-purple-950 border-purple-800 text-purple-300 hover:bg-purple-900"
-                              }`}
+                                }`}
                             >
                               {isPublished ? (
                                 <>
@@ -1042,13 +1039,12 @@ export default function AdminForumPage() {
                           </td>
                           <td className="py-3 px-3">
                             <span
-                              className={`px-2 py-0.5 rounded text-[11px] font-semibold ${
-                                b.banned_by?.includes("HONEYPOT")
+                              className={`px-2 py-0.5 rounded text-[11px] font-semibold ${b.banned_by?.includes("HONEYPOT")
                                   ? "bg-amber-950 text-amber-400 border border-amber-800/50"
                                   : b.banned_by?.includes("SPAM_PURGE")
-                                  ? "bg-rose-950 text-rose-400 border border-rose-800/50"
-                                  : "bg-blue-950 text-blue-400 border border-blue-800/50"
-                              }`}
+                                    ? "bg-rose-950 text-rose-400 border border-rose-800/50"
+                                    : "bg-blue-950 text-blue-400 border border-blue-800/50"
+                                }`}
                             >
                               {b.banned_by || "SYSTEM"}
                             </span>
@@ -1171,7 +1167,7 @@ export default function AdminForumPage() {
                       !bannedWordKeyword
                         ? true
                         : bw.word.toLowerCase().includes(bannedWordKeyword.toLowerCase()) ||
-                          (bw.reason && bw.reason.toLowerCase().includes(bannedWordKeyword.toLowerCase()))
+                        (bw.reason && bw.reason.toLowerCase().includes(bannedWordKeyword.toLowerCase()))
                     )
                     .map((bw) => (
                       <div

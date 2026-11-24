@@ -1,6 +1,7 @@
 import { createClient } from "../../lib/supabase/server";
 import { ClientPredictionGamesGrid, type SortOption } from "./components/ClientPredictionGamesGrid";
 import { getCachedActivePredictionFeed } from "./components/prediction-public-cache";
+import { getCachedEffectiveFeatureFlags } from "../../shared/lib/feature-flags/feature-flags.server";
 import {
   PredictionType,
   GameStatus,
@@ -29,15 +30,25 @@ export default async function PredictionPage({ searchParams }: PageProps) {
           ? "closing_soon"
           : "latest";
 
-  // 1단계 병렬: 15초 캐시된 공개 마켓 피드(캐시 히트 시 DB 0회) + 현재 유저 세션 확인
-  const [cachedFeed, userResult] = await Promise.all([
+  // 1단계 병렬: 15초 캐시된 공개 마켓 피드 + 60초 캐시된 기능 플래그 + 현재 유저 세션 확인
+  const [cachedFeed, featureFlagsData, userResult] = await Promise.all([
     getCachedActivePredictionFeed(),
+    getCachedEffectiveFeatureFlags(),
     supabase.auth.getUser(),
   ]);
 
+  const flags = featureFlagsData.effectiveMap;
   const user = userResult.data?.user ?? null;
   const { platformTotalPool } = cachedFeed;
-  let mappedGames = cachedFeed.mappedGames;
+  // Admin에서 OFF 처리한 카테고리 게임은 메인 피드에서 즉시 숨김
+  let mappedGames = cachedFeed.mappedGames.filter((g) => {
+    const cat = (g.category ?? "").toUpperCase();
+    if (cat === "ECONOMY" && flags["prediction.cat.economy"] === false) return false;
+    if (cat === "SPORTS" && flags["prediction.cat.sports"] === false) return false;
+    if (cat === "ENTERTAINMENT" && flags["prediction.cat.entertainment"] === false) return false;
+    if (cat === "POLITICS" && flags["prediction.cat.politics"] === false) return false;
+    return true;
+  });
 
   // 2단계: 로그인 유저일 때만 개인 활성 참여 내역 단 1쿼리 조회
   const userPredictionsResult = user
