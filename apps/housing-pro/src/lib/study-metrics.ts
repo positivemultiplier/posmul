@@ -94,6 +94,33 @@ export function getTotalSecondsInPeriod(
   return total;
 }
 
+/** 특정 날짜의 단원별 순공시간 맵(초) */
+export function getTopicSecondsForDate(
+  sessions: StudySessionLog[],
+  dateISO: string
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const s of sessions) {
+    if (s.dateISO !== dateISO || s.seconds <= 0 || !s.topicId) continue;
+    map.set(s.topicId, (map.get(s.topicId) ?? 0) + s.seconds);
+  }
+  return map;
+}
+
+/** 기간 내 단원별 순공시간 맵(초) */
+export function getTopicSecondsInPeriod(
+  sessions: StudySessionLog[],
+  allowedDates: Set<string> | null
+): Map<string, number> {
+  const map = new Map<string, number>();
+  for (const s of sessions) {
+    if (s.seconds <= 0 || !s.topicId) continue;
+    if (allowedDates && !allowedDates.has(s.dateISO)) continue;
+    map.set(s.topicId, (map.get(s.topicId) ?? 0) + s.seconds);
+  }
+  return map;
+}
+
 /** 특정 할 일(todo)에 누적된 순공시간(초) */
 export function getTodoLoggedSeconds(
   sessions: StudySessionLog[],

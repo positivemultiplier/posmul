@@ -167,10 +167,12 @@ export interface TopicOverrideItem {
   title?: string;
   defaultKeyword?: string;
   estimatedMinutes?: number;
-  color?: string; // 빈 문자열 전달 시 과목 기본색으로 초기화
+  color?: string; // 빈 문자열 전달 시 기본 자동 분산 색으로 초기화
   pageStart?: number | null; // null 전달 시 페이지 초기화
   pageEnd?: number | null;
   targetRounds?: number | null;
+  /** 단원 하위 소단원 목록 */
+  subItems?: string[];
 }
 
 export interface CurriculumPersistedState {
@@ -217,6 +219,8 @@ export interface CurriculumPersistedState {
   studySessions?: StudySessionLog[];
   /** 단원별 실제 회독 이력 (topicId -> TopicRoundRecord[]) */
   roundsByTopic?: Record<string, TopicRoundRecord[]>;
+  /** 과목별 단원 커스텀 정렬 순서 (subjectId -> ordered topicIds[]) */
+  topicOrderBySubject?: Record<string, string[]>;
   /** 접힌 과목 ID 목록 */
   collapsedSubjectIds: string[];
 }
@@ -275,6 +279,7 @@ function createDefaultState(todayISO: string): CurriculumPersistedState {
     },
     studySessions: [],
     roundsByTopic: {},
+    topicOrderBySubject: {},
     collapsedSubjectIds: [],
   };
 }
@@ -338,6 +343,10 @@ function readStoredState(todayISO: string): CurriculumPersistedState {
       roundsByTopic:
         parsed.roundsByTopic && typeof parsed.roundsByTopic === "object"
           ? parsed.roundsByTopic
+          : {},
+      topicOrderBySubject:
+        parsed.topicOrderBySubject && typeof parsed.topicOrderBySubject === "object"
+          ? parsed.topicOrderBySubject
           : {},
       collapsedSubjectIds: Array.isArray(parsed.collapsedSubjectIds)
         ? parsed.collapsedSubjectIds
@@ -630,6 +639,10 @@ function useStudyCurriculumInternal() {
           }
           return merged;
         })(),
+        topicOrderBySubject: {
+          ...(remote?.topicOrderBySubject || {}),
+          ...(prev.topicOrderBySubject || {}),
+        },
         customTopicsByBook: remote?.customTopicsByBook
           ? { ...remote.customTopicsByBook, ...prev.customTopicsByBook }
           : prev.customTopicsByBook,
@@ -795,6 +808,7 @@ function useStudyCurriculumInternal() {
 
     const overrides = state.subjectOverrides || {};
     const topicOvMap = state.topicOverrides || {};
+    const topicOrderMap = state.topicOrderBySubject || {};
     const archivedSet = new Set(state.archivedSubjectIds || []);
     const hiddenTopicSet = new Set(state.hiddenTopicIds || []);
 
@@ -803,6 +817,84 @@ function useStudyCurriculumInternal() {
       const resolvedStage = ov?.examStage ?? subject.examStage;
       const defaultCategory =
         resolvedStage === "1차" ? "주택관리사 1차" : "주택관리사 2차";
+
+      const mappedUnits = subject.units.map((unit) => {
+        const extra = mergedUnitTopics[unit.id] || [];
+        const combined = extra.length > 0 ? [...unit.topics, ...extra] : unit.topics;
+        return {
+          ...unit,
+          topics: combined
+            .filter((t) => !hiddenTopicSet.has(t.id))
+            .map((t) => {
+              const tOv = topicOvMap[t.id];
+              const existingColor =
+                "color" in t && typeof t.color === "string" ? t.color : undefined;
+              const existingPageStart =
+                "pageStart" in t && typeof t.pageStart === "number"
+                  ? t.pageStart
+                  : undefined;
+              const existingPageEnd =
+                "pageEnd" in t && typeof t.pageEnd === "number"
+                  ? t.pageEnd
+                  : undefined;
+              const existingTargetRounds =
+                "targetRounds" in t && typeof t.targetRounds === "number"
+                  ? t.targetRounds
+                  : undefined;
+              const existingSubItems =
+                "subItems" in t && Array.isArray(t.subItems) ? t.subItems : undefined;
+              if (!tOv) return t;
+              return {
+                ...t,
+                title: tOv.title ?? t.title,
+                defaultKeyword: tOv.defaultKeyword ?? t.defaultKeyword,
+                estimatedMinutes: tOv.estimatedMinutes ?? t.estimatedMinutes,
+                color: tOv.color === "" ? undefined : tOv.color ?? existingColor,
+                pageStart:
+                  tOv.pageStart === null
+                    ? undefined
+                    : typeof tOv.pageStart === "number"
+                      ? tOv.pageStart
+                      : existingPageStart,
+                pageEnd:
+                  tOv.pageEnd === null
+                    ? undefined
+                    : typeof tOv.pageEnd === "number"
+                      ? tOv.pageEnd
+                      : existingPageEnd,
+                targetRounds:
+                  tOv.targetRounds === null
+                    ? undefined
+                    : typeof tOv.targetRounds === "number"
+                      ? tOv.targetRounds
+                      : existingTargetRounds,
+                subItems: tOv.subItems !== undefined ? tOv.subItems : existingSubItems,
+              };
+            }),
+        };
+      });
+
+      // 사용자가 드래그/이동으로 지정한 과목 내 단원 순서 적용
+      const customOrder = topicOrderMap[subject.id];
+      let finalUnits = mappedUnits;
+      if (Array.isArray(customOrder) && customOrder.length > 0 && mappedUnits.length > 0) {
+        const orderRank = new Map(customOrder.map((id, i) => [id, i]));
+        const allFlatTopics = mappedUnits.flatMap((u) => u.topics);
+        allFlatTopics.sort((a, b) => {
+          const rA = orderRank.has(a.id) ? (orderRank.get(a.id) as number) : 99999;
+          const rB = orderRank.has(b.id) ? (orderRank.get(b.id) as number) : 99999;
+          return rA - rB;
+        });
+        const renumbered = allFlatTopics.map((t, idx) => ({
+          ...t,
+          topicNo: String(idx + 1).padStart(2, "0"),
+        }));
+        finalUnits = [
+          { ...mappedUnits[0], topics: renumbered },
+          ...mappedUnits.slice(1).map((u) => ({ ...u, topics: [] })),
+        ];
+      }
+
       return {
         ...subject,
         title: ov?.title ?? subject.title,
@@ -812,58 +904,7 @@ function useStudyCurriculumInternal() {
         category: ov?.category ?? subject.category ?? defaultCategory,
         targetRounds: ov?.targetRounds ?? subject.targetRounds ?? 3,
         isArchived: archivedSet.has(subject.id),
-        units: subject.units.map((unit) => {
-          const extra = mergedUnitTopics[unit.id] || [];
-          const combined = extra.length > 0 ? [...unit.topics, ...extra] : unit.topics;
-          return {
-            ...unit,
-            topics: combined
-              .filter((t) => !hiddenTopicSet.has(t.id))
-              .map((t) => {
-                const tOv = topicOvMap[t.id];
-                const existingColor =
-                  "color" in t && typeof t.color === "string" ? t.color : undefined;
-                const existingPageStart =
-                  "pageStart" in t && typeof t.pageStart === "number"
-                    ? t.pageStart
-                    : undefined;
-                const existingPageEnd =
-                  "pageEnd" in t && typeof t.pageEnd === "number"
-                    ? t.pageEnd
-                    : undefined;
-                const existingTargetRounds =
-                  "targetRounds" in t && typeof t.targetRounds === "number"
-                    ? t.targetRounds
-                    : undefined;
-                if (!tOv) return t;
-                return {
-                  ...t,
-                  title: tOv.title ?? t.title,
-                  defaultKeyword: tOv.defaultKeyword ?? t.defaultKeyword,
-                  estimatedMinutes: tOv.estimatedMinutes ?? t.estimatedMinutes,
-                  color: tOv.color === "" ? undefined : tOv.color ?? existingColor,
-                  pageStart:
-                    tOv.pageStart === null
-                      ? undefined
-                      : typeof tOv.pageStart === "number"
-                        ? tOv.pageStart
-                        : existingPageStart,
-                  pageEnd:
-                    tOv.pageEnd === null
-                      ? undefined
-                      : typeof tOv.pageEnd === "number"
-                        ? tOv.pageEnd
-                        : existingPageEnd,
-                  targetRounds:
-                    tOv.targetRounds === null
-                      ? undefined
-                      : typeof tOv.targetRounds === "number"
-                        ? tOv.targetRounds
-                        : existingTargetRounds,
-                };
-              }),
-          };
-        }),
+        units: finalUnits,
       };
     });
   }, [
@@ -874,6 +915,7 @@ function useStudyCurriculumInternal() {
     state.customTopicsByBook,
     state.subjectOverrides,
     state.topicOverrides,
+    state.topicOrderBySubject,
     state.archivedSubjectIds,
     state.hiddenTopicIds,
   ]);
@@ -2031,6 +2073,20 @@ function useStudyCurriculumInternal() {
     [updateState]
   );
 
+  /** 과목 내 단원 순서 드래그/이동 저장 */
+  const reorderSubjectTopics = useCallback(
+    (subjectId: string, orderedTopicIds: string[]) => {
+      updateState((prev) => ({
+        ...prev,
+        topicOrderBySubject: {
+          ...(prev.topicOrderBySubject || {}),
+          [subjectId]: orderedTopicIds,
+        },
+      }));
+    },
+    [updateState]
+  );
+
   /** 커스텀 목차 삭제 */
   const deleteCustomTopic = useCallback(
     (unitId: string, topicId: string) => {
@@ -2338,6 +2394,7 @@ function useStudyCurriculumInternal() {
     addCustomTopic,
     addCustomTopicsBulk,
     deleteCustomTopic,
+    reorderSubjectTopics,
     hideTopic,
     restoreHiddenTopic,
     toggleTodo,

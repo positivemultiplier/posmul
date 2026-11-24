@@ -9,7 +9,11 @@ import type {
   StudyTodoItem,
 } from "@/data/study-textbooks";
 import { getTodoLoggedSeconds } from "@/lib/study-metrics";
-import { formatCompactMinutes, getMutedSubjectColor } from "@/lib/study-theme";
+import {
+  formatCompactMinutes,
+  getMutedSubjectColor,
+  getMutedTopicColor,
+} from "@/lib/study-theme";
 
 interface DailyTodoSectionProps {
   selectedDateISO: string;
@@ -43,6 +47,7 @@ export function DailyTodoSection({
 }: DailyTodoSectionProps) {
   const [draft, setDraft] = useState("");
   const [selectedSubjectIdx, setSelectedSubjectIdx] = useState(0);
+  const [selectedTopicId, setSelectedTopicId] = useState<string>("");
 
   const dayTodos = useMemo(
     () => todos.filter((t) => t.dueDate === selectedDateISO),
@@ -64,18 +69,34 @@ export function DailyTodoSection({
     dayTodos.length > 0 ? Math.round((completedCount / dayTodos.length) * 100) : 0;
 
   const activeSubject = subjects[selectedSubjectIdx] || subjects[0];
-  const activeColor = activeSubject
-    ? getMutedSubjectColor(activeSubject.title, activeSubject.color, selectedSubjectIdx)
-    : "#4F7CAC";
+  const activeTopics = useMemo(
+    () => (activeSubject ? activeSubject.units.flatMap((u) => u.topics) : []),
+    [activeSubject]
+  );
+
+  const selectedTopicIdx = activeTopics.findIndex((t) => t.id === selectedTopicId);
+  const selectedTopic = selectedTopicIdx >= 0 ? activeTopics[selectedTopicIdx] : null;
+
+  const activeColor = selectedTopic
+    ? getMutedTopicColor(selectedTopic.color, selectedTopicIdx)
+    : activeSubject
+      ? getMutedSubjectColor(activeSubject.title, activeSubject.color, selectedSubjectIdx)
+      : "#4F7CAC";
 
   const handleSubmit = () => {
-    const clean = draft.trim();
-    if (!clean) return;
+    const typed = draft.trim();
+    const fallbackTitle = selectedTopic
+      ? `${selectedTopic.topicNo ? `${selectedTopic.topicNo}. ` : ""}${selectedTopic.title}`
+      : "";
+    const finalTitle = typed || fallbackTitle;
+    if (!finalTitle) return;
+
     onAddTodo({
-      title: clean,
+      title: finalTitle,
       subjectId: activeSubject?.id,
       subjectTitle: activeSubject?.shortTitle || activeSubject?.title || "일반",
       subjectColor: activeColor,
+      topicId: selectedTopic?.id,
       dueDate: selectedDateISO,
     });
     setDraft("");
@@ -87,7 +108,7 @@ export function DailyTodoSection({
         title: item.title,
         subjectId: item.subjectId,
         subjectTitle: item.subjectTitle,
-        subjectColor: getMutedSubjectColor(item.subjectTitle, item.subjectColor),
+        subjectColor: item.subjectColor,
         topicId: item.topicId,
         dueDate: selectedDateISO,
       });
@@ -104,7 +125,7 @@ export function DailyTodoSection({
           </span>
         </div>
         <span className="text-[11px] text-[var(--hp-text-3)]">
-          {dayTodos.length > 0 ? `달성 ${completionPct}% · 타이머 홈 자동 연동` : "타이머 홈 자동 연동"}
+          {dayTodos.length > 0 ? `달성 ${completionPct}% · 타이머 연동` : "단원별 계획 · 타이머 연동"}
         </span>
       </div>
 
@@ -124,8 +145,9 @@ export function DailyTodoSection({
         </button>
       )}
 
-      {/* 3초 인라인 추가 */}
-      <div className="p-3 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] space-y-2.5">
+      {/* 과목 -> 단원 -> 3초 인라인 입력 */}
+      <div className="p-3 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] space-y-2">
+        {/* 1줄: 활성 과목 전체 동적 칩 */}
         <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
           {subjects.map((subj, idx) => {
             const color = getMutedSubjectColor(subj.title, subj.color, idx);
@@ -134,7 +156,10 @@ export function DailyTodoSection({
               <button
                 key={subj.id}
                 type="button"
-                onClick={() => setSelectedSubjectIdx(idx)}
+                onClick={() => {
+                  setSelectedSubjectIdx(idx);
+                  setSelectedTopicId("");
+                }}
                 className={`px-2.5 py-1 rounded-md text-[11px] flex items-center gap-1.5 whitespace-nowrap border transition ${
                   selected
                     ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text)] font-medium"
@@ -152,30 +177,92 @@ export function DailyTodoSection({
           <Link
             href="/study/more?tab=library"
             className="px-2 py-1 rounded-md text-[11px] text-[var(--hp-text-3)] hover:text-[var(--hp-text)] flex items-center gap-1 whitespace-nowrap shrink-0"
-            title="과목 추가·수정"
+            title="과목·단원 관리"
           >
             <Settings2 className="w-3 h-3 stroke-[1.5]" />
             <span>관리</span>
           </Link>
         </div>
 
+        {/* 2줄: 선택된 과목의 단원 칩 (단원별 고유 색상 적용) */}
+        {activeTopics.length > 0 && (
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pt-0.5">
+            <button
+              type="button"
+              onClick={() => setSelectedTopicId("")}
+              className={`px-2 py-0.5 rounded text-[10.5px] whitespace-nowrap border ${
+                selectedTopicId === ""
+                  ? "bg-[var(--hp-bg)] border-[var(--hp-border-strong)] text-[var(--hp-text)]"
+                  : "border-transparent text-[var(--hp-text-3)]"
+              }`}
+            >
+              과목 전체
+            </button>
+            {activeTopics.map((topic, tIdx) => {
+              const tColor = getMutedTopicColor(topic.color, tIdx);
+              const selected = selectedTopicId === topic.id;
+              return (
+                <button
+                  key={topic.id}
+                  type="button"
+                  onClick={() => setSelectedTopicId(selected ? "" : topic.id)}
+                  className={`px-2 py-0.5 rounded text-[10.5px] flex items-center gap-1 whitespace-nowrap border transition ${
+                    selected
+                      ? "bg-[var(--hp-bg)] border-[var(--hp-border-strong)] text-[var(--hp-text)] font-medium"
+                      : "border-transparent text-[var(--hp-text-3)] hover:text-[var(--hp-text-2)]"
+                  }`}
+                >
+                  <span
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                    style={{ backgroundColor: tColor }}
+                  />
+                  <span className="max-w-[140px] truncate">
+                    {topic.topicNo ? `${topic.topicNo}. ` : ""}
+                    {topic.title}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* 선택된 단원에 소단원이 있으면 원탭 추천 칩 표시 */}
+        {selectedTopic?.subItems && selectedTopic.subItems.length > 0 && (
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+            {selectedTopic.subItems.map((sub, i) => (
+              <button
+                key={`${sub}-${i}`}
+                type="button"
+                onClick={() => setDraft(`${selectedTopic.title} - ${sub}`)}
+                className="px-2 py-0.5 rounded bg-[var(--hp-bg)] border border-[var(--hp-border)] text-[10px] text-[var(--hp-text-2)] whitespace-nowrap hover:text-[var(--hp-text)]"
+              >
+                + {sub}
+              </button>
+            ))}
+          </div>
+        )}
+
         <form
           onSubmit={(e) => {
             e.preventDefault();
             handleSubmit();
           }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 pt-0.5"
         >
           <input
             type="text"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
-            placeholder="할 일 입력 후 Enter (타이머 탭에도 즉시 표시)"
+            placeholder={
+              selectedTopic
+                ? `'${selectedTopic.title}' 바로 추가 또는 세부 메모 입력...`
+                : "할 일 입력 후 Enter..."
+            }
             className="flex-1 h-9 px-3 rounded-lg bg-[var(--hp-bg)] border border-[var(--hp-border)] focus:border-[var(--hp-border-strong)] text-xs text-[var(--hp-text)] placeholder:text-[var(--hp-text-3)] outline-none"
           />
           <button
             type="submit"
-            disabled={!draft.trim()}
+            disabled={!draft.trim() && !selectedTopic}
             className="h-9 px-3 rounded-lg bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] text-xs font-medium disabled:opacity-40 flex items-center gap-1 shrink-0"
           >
             <Plus className="w-3.5 h-3.5 stroke-[2]" />
@@ -187,12 +274,12 @@ export function DailyTodoSection({
       {/* 할 일 체크리스트 */}
       {dayTodos.length === 0 ? (
         <div className="py-7 text-center rounded-xl border border-dashed border-[var(--hp-border)] text-xs text-[var(--hp-text-3)]">
-          등록된 할 일이 없습니다. 위에서 추가하거나 회독표에서 단원을 담아보세요.
+          등록된 할 일이 없습니다. 위에서 과목·단원을 선택해 바로 추가해 보세요.
         </div>
       ) : (
         <ul className="divide-y divide-[var(--hp-border)] border-y border-[var(--hp-border)]">
           {dayTodos.map((item) => {
-            const dotColor = getMutedSubjectColor(item.subjectTitle, item.subjectColor);
+            const dotColor = item.subjectColor || getMutedSubjectColor(item.subjectTitle);
             const loggedSec = getTodoLoggedSeconds(
               studySessions,
               item.id,

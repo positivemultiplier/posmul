@@ -11,7 +11,11 @@ import {
   type StudySubjectNode,
   type TimetableSlotLog,
 } from "@/data/study-textbooks";
-import { formatCompactMinutes, getMutedSubjectColor } from "@/lib/study-theme";
+import {
+  formatCompactMinutes,
+  getMutedSubjectColor,
+  getMutedTopicColor,
+} from "@/lib/study-theme";
 
 interface TenMinuteTimelineProps {
   selectedDateISO: string;
@@ -34,17 +38,16 @@ export function TenMinuteTimeline({
   onUpdateSlots,
 }: TenMinuteTimelineProps) {
   const [brushIndex, setBrushIndex] = useState<number | "erase">(0);
+  const [selectedTopicId, setSelectedTopicId] = useState<string>("");
   const [rangeAnchorIdx, setRangeAnchorIdx] = useState<number | null>(null);
   const [showOvernight, setShowOvernight] = useState(false);
 
   const allHours = useMemo(() => getHoursFromReset(STUDY_DAY_RESET_HOUR), []);
-  // 기본 06:00~23:59 집중 노출, 새벽(05시 + 00~04시)은 접기/펼치기
   const visibleHours = useMemo(() => {
     if (showOvernight) return allHours;
     return allHours.filter((h) => h >= 6 && h <= 23);
   }, [allHours, showOvernight]);
 
-  // 전체 144칸의 선형 인덱스 <-> slotKey 매핑 (모바일 2탭 구간 색칠용)
   const orderedSlotKeys = useMemo(() => {
     const keys: string[] = [];
     for (const h of allHours) {
@@ -69,6 +72,15 @@ export function TenMinuteTimeline({
     return blocks * 10;
   }, [daySlots]);
 
+  const activeSubject =
+    brushIndex === "erase" ? null : subjects[brushIndex] || subjects[0] || null;
+  const activeTopics = useMemo(
+    () => (activeSubject ? activeSubject.units.flatMap((u) => u.topics) : []),
+    [activeSubject]
+  );
+  const activeTopicIdx = activeTopics.findIndex((t) => t.id === selectedTopicId);
+  const activeTopic = activeTopicIdx >= 0 ? activeTopics[activeTopicIdx] : null;
+
   const paintSlotRange = (fromIdx: number, toIdx: number, isSingleToggle: boolean) => {
     const start = Math.min(fromIdx, toIdx);
     const end = Math.max(fromIdx, toIdx);
@@ -76,8 +88,16 @@ export function TenMinuteTimeline({
     onUpdateSlots(selectedDateISO, (prev) => {
       const next = { ...prev };
       const subj = brushIndex === "erase" ? null : subjects[brushIndex] || subjects[0];
-      const color = subj ? getMutedSubjectColor(subj.title, subj.color, Number(brushIndex)) : "";
-      const label = subj ? subj.shortTitle || subj.title : "";
+      const paintColor = activeTopic
+        ? getMutedTopicColor(activeTopic.color, activeTopicIdx)
+        : subj
+          ? getMutedSubjectColor(subj.title, subj.color, Number(brushIndex))
+          : "";
+      const paintLabel = activeTopic
+        ? activeTopic.title
+        : subj
+          ? subj.shortTitle || subj.title
+          : "";
 
       for (let i = start; i <= end; i += 1) {
         const key = orderedSlotKeys[i];
@@ -92,14 +112,15 @@ export function TenMinuteTimeline({
         }
 
         const prevPlan = getTimetableSlotPlan(existing);
-        if (isSingleToggle && prevPlan && prevPlan.label === label) {
+        if (isSingleToggle && prevPlan && prevPlan.label === paintLabel) {
           const updated = setTimetableSlotLayer(existing, "plan", null);
           if (updated) next[key] = updated;
           else delete next[key];
         } else if (subj) {
           const updated = setTimetableSlotLayer(existing, "plan", {
-            color,
-            label,
+            color: paintColor,
+            label: paintLabel,
+            ...(activeTopic ? { topicId: activeTopic.id } : {}),
           });
           if (updated) next[key] = updated;
         }
@@ -108,7 +129,6 @@ export function TenMinuteTimeline({
     });
   };
 
-  // 모바일/PC 공통: 첫 탭은 단일 토글 + 시작점 설정, 두 번째 다른 칸 탭은 구간 일괄 색칠!
   const handleSlotTap = (slotKey: string) => {
     const idx = slotIndexMap.get(slotKey);
     if (idx === undefined) return;
@@ -138,7 +158,7 @@ export function TenMinuteTimeline({
           <p className="text-[11px] text-[var(--hp-text-3)] mt-0.5">
             {rangeAnchorIdx !== null
               ? "끝 칸을 탭하면 시작~끝 구간이 한 번에 채워집니다."
-              : "과목 선택 후 시작 칸 → 끝 칸 2번 탭으로 계획 블록 배치"}
+              : "과목·단원 브러시 선택 후 시작 칸 → 끝 칸 2번 탭"}
           </p>
         </div>
         <div className="text-right text-[11px] hp-tabular text-[var(--hp-text-2)] shrink-0">
@@ -147,7 +167,7 @@ export function TenMinuteTimeline({
         </div>
       </div>
 
-      {/* 과목 브러시 팔레트 (활성 과목 전체 동적 표시) */}
+      {/* 1줄: 과목 브러시 팔레트 (활성 과목 전체 동적 표시) */}
       <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
         {subjects.map((subj, idx) => {
           const color = getMutedSubjectColor(subj.title, subj.color, idx);
@@ -158,6 +178,7 @@ export function TenMinuteTimeline({
               type="button"
               onClick={() => {
                 setBrushIndex(idx);
+                setSelectedTopicId("");
                 setRangeAnchorIdx(null);
               }}
               className={`px-2.5 py-1.5 rounded-lg text-[11px] flex items-center gap-1.5 whitespace-nowrap border transition ${
@@ -179,6 +200,7 @@ export function TenMinuteTimeline({
           type="button"
           onClick={() => {
             setBrushIndex("erase");
+            setSelectedTopicId("");
             setRangeAnchorIdx(null);
           }}
           className={`px-2.5 py-1.5 rounded-lg text-[11px] flex items-center gap-1 whitespace-nowrap border transition ${
@@ -201,6 +223,54 @@ export function TenMinuteTimeline({
           </button>
         )}
       </div>
+
+      {/* 2줄: 선택 과목의 단원 브러시 (단원별 고유 색상으로 타임라인 배치) */}
+      {brushIndex !== "erase" && activeTopics.length > 0 && (
+        <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedTopicId("");
+              setRangeAnchorIdx(null);
+            }}
+            className={`px-2 py-1 rounded text-[10.5px] whitespace-nowrap border ${
+              selectedTopicId === ""
+                ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text)] font-medium"
+                : "border-transparent text-[var(--hp-text-3)]"
+            }`}
+          >
+            과목 전체
+          </button>
+          {activeTopics.map((topic, tIdx) => {
+            const tColor = getMutedTopicColor(topic.color, tIdx);
+            const selected = selectedTopicId === topic.id;
+            return (
+              <button
+                key={topic.id}
+                type="button"
+                onClick={() => {
+                  setSelectedTopicId(selected ? "" : topic.id);
+                  setRangeAnchorIdx(null);
+                }}
+                className={`px-2 py-1 rounded text-[10.5px] flex items-center gap-1 whitespace-nowrap border transition ${
+                  selected
+                    ? "bg-[var(--hp-surface-2)] border-[var(--hp-border-strong)] text-[var(--hp-text)] font-medium"
+                    : "border-transparent text-[var(--hp-text-3)] hover:text-[var(--hp-text-2)]"
+                }`}
+              >
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ backgroundColor: tColor }}
+                />
+                <span className="max-w-[130px] truncate">
+                  {topic.topicNo ? `${topic.topicNo}. ` : ""}
+                  {topic.title}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* 10분 타임라인 그리드 */}
       <div className="rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] overflow-hidden">
@@ -271,7 +341,6 @@ export function TenMinuteTimeline({
           ))}
         </div>
 
-        {/* 새벽 시간대(00~05시) 접기/펼치기 토글 */}
         <button
           type="button"
           onClick={() => setShowOvernight((prev) => !prev)}
@@ -291,7 +360,6 @@ export function TenMinuteTimeline({
         </button>
       </div>
 
-      {/* 범례 */}
       <div className="flex items-center justify-end gap-4 text-[11px] text-[var(--hp-text-3)]">
         <span className="flex items-center gap-1.5">
           <span className="w-3 h-2 rounded-[2px] bg-[#4F7CAC]" />

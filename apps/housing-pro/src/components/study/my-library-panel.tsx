@@ -8,7 +8,6 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
-  EyeOff,
   Minus,
   Pencil,
   Plus,
@@ -17,6 +16,7 @@ import {
   X,
 } from "lucide-react";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
+import { TopicListEditor } from "@/components/study/topic-list-editor";
 import { getMutedSubjectColor } from "@/lib/study-theme";
 
 const MUTED_COLOR_CHOICES = [
@@ -33,10 +33,7 @@ const MUTED_COLOR_CHOICES = [
 type ExamTrackPreset = "all" | "stage1" | "stage2";
 
 /**
- * 과목 · 회독 목표 · 단원 통합 설정 패널 (Study v2.0 확장형)
- * - 과목명 · 분류(자유 라벨/차수) · 목표 회독수(1~5R) · 뮤트 컬러 인라인 편집
- * - 단원명 인라인 편집 · 커스텀 단원 추가/삭제 · 숨김/일괄 복원
- * - 내부 흰색 스크롤바 없이 자연스러운 페이지 스크롤
+ * 과목 · 회독 목표 · 단원(순서·소단원·단원별 색상) 통합 설정 패널
  */
 export function MyLibraryPanel() {
   const {
@@ -54,12 +51,12 @@ export function MyLibraryPanel() {
     deleteSubject,
     addCustomTopic,
     deleteCustomTopic,
+    reorderSubjectTopics,
     hideTopic,
     restoreHiddenTopic,
   } = useStudyCurriculum();
 
   const [expandedSubjectId, setExpandedSubjectId] = useState<string | null>(null);
-  const [newTopicDraftBySubj, setNewTopicDraftBySubj] = useState<Record<string, string>>({});
   const [showAddSubject, setShowAddSubject] = useState(false);
   const [newSubjTitle, setNewSubjTitle] = useState("");
   const [newSubjCategory, setNewSubjCategory] = useState("공통");
@@ -67,16 +64,10 @@ export function MyLibraryPanel() {
   const [newSubjTargetRounds, setNewSubjTargetRounds] = useState(3);
   const [newSubjTopicsRaw, setNewSubjTopicsRaw] = useState("");
 
-  // 과목 인라인 편집 상태
   const [editingSubjId, setEditingSubjId] = useState<string | null>(null);
   const [editSubjTitle, setEditSubjTitle] = useState("");
   const [editSubjCategory, setEditSubjCategory] = useState("");
   const [editSubjStage, setEditSubjStage] = useState<"1차" | "2차">("2차");
-
-  // 단원 인라인 편집 상태
-  const [editingTopicId, setEditingTopicId] = useState<string | null>(null);
-  const [editTopicTitle, setEditTopicTitle] = useState("");
-
   const [notice, setNotice] = useState<string | null>(null);
 
   const showNotice = (msg: string) => {
@@ -84,7 +75,6 @@ export function MyLibraryPanel() {
     window.setTimeout(() => setNotice(null), 2600);
   };
 
-  // 현재 전체 과목에 1차·2차 구분이 모두 있을 때만 트랙 전환 바를 동적 노출
   const allKnownSubjects = useMemo(
     () => [...subjects, ...archivedSubjects],
     [subjects, archivedSubjects]
@@ -113,13 +103,11 @@ export function MyLibraryPanel() {
         (track === "stage1" && subj.examStage === "1차") ||
         (track === "stage2" && subj.examStage === "2차");
       const isArchived = archivedSubjects.some((a) => a.id === subj.id);
-
       if (shouldShow && isArchived) restoreSubject(subj.id);
       else if (!shouldShow && !isArchived) archiveSubject(subj.id);
     }
-
     const label = track === "all" ? "전체 과목" : track === "stage1" ? "1차 과목" : "2차 과목";
-    showNotice(`${label} 구성으로 정리했습니다. 기존 회독·순공 기록은 유지됩니다.`);
+    showNotice(`${label} 구성으로 정리했습니다. 기존 기록은 유지됩니다.`);
   };
 
   const handleAddCustomSubject = () => {
@@ -129,7 +117,6 @@ export function MyLibraryPanel() {
       .split(",")
       .map((s) => s.trim())
       .filter(Boolean);
-
     const color = MUTED_COLOR_CHOICES[subjects.length % MUTED_COLOR_CHOICES.length];
     const created = addCustomSubject({
       title: clean,
@@ -139,23 +126,14 @@ export function MyLibraryPanel() {
       topicTitles: topicTitles.length > 0 ? topicTitles : [`${clean} 기본 단원`],
     });
     if (created?.subjectId) {
-      updateSubjectCustomization(created.subjectId, {
-        targetRounds: newSubjTargetRounds,
-      });
+      updateSubjectCustomization(created.subjectId, { targetRounds: newSubjTargetRounds });
     }
     setNewSubjTitle("");
     setNewSubjTopicsRaw("");
     setNewSubjCategory("공통");
     setNewSubjTargetRounds(3);
     setShowAddSubject(false);
-    showNotice(`'${clean}' 과목을 추가했습니다. 타이머·플래너·회독표에 즉시 반영됩니다.`);
-  };
-
-  const startEditSubject = (subj: (typeof subjects)[number]) => {
-    setEditingSubjId(subj.id);
-    setEditSubjTitle(subj.title);
-    setEditSubjCategory(subj.category || subj.examStage);
-    setEditSubjStage(subj.examStage);
+    showNotice(`'${clean}' 과목을 추가했습니다.`);
   };
 
   const saveEditSubject = (subjectId: string) => {
@@ -171,14 +149,6 @@ export function MyLibraryPanel() {
     showNotice("과목 정보를 수정했습니다.");
   };
 
-  const saveEditTopic = (topicId: string) => {
-    const clean = editTopicTitle.trim();
-    if (!clean) return;
-    updateTopicCustomization(topicId, { title: clean });
-    setEditingTopicId(null);
-    showNotice("단원 이름을 수정했습니다.");
-  };
-
   return (
     <div className="space-y-6 text-[var(--hp-text)]">
       {notice && (
@@ -187,13 +157,13 @@ export function MyLibraryPanel() {
         </div>
       )}
 
-      {/* ① 시험 D-Day & 동적 트랙 선택 */}
+      {/* ① 학습 구성 & 시험일 */}
       <section className="p-4 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] space-y-3.5">
         <div className="flex items-center justify-between gap-2">
           <div>
             <h2 className="text-xs font-medium text-[var(--hp-text)]">학습 구성 · 시험일</h2>
             <p className="text-[11px] text-[var(--hp-text-3)] mt-0.5">
-              활성 과목은 타이머·플래너·회독표·통계에 자동 연동됩니다.
+              활성 과목과 단원은 타이머·플래너·회독표·통계에 자동 반영됩니다.
             </p>
           </div>
           <Link
@@ -220,7 +190,7 @@ export function MyLibraryPanel() {
                 className={`py-2 rounded-lg text-xs border transition ${
                   activeTrack === item.id
                     ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] border-transparent font-medium"
-                    : "bg-[var(--hp-bg)] border-[var(--hp-border)] text-[var(--hp-text-2)] hover:text-[var(--hp-text)]"
+                    : "bg-[var(--hp-bg)] border-[var(--hp-border)] text-[var(--hp-text-2)]"
                 }`}
               >
                 {item.label}
@@ -242,7 +212,7 @@ export function MyLibraryPanel() {
         </label>
       </section>
 
-      {/* ② 활성 과목 관리 (인라인 이름·분류·목표회독·컬러·단원 편집) */}
+      {/* ② 활성 과목 & 단원 관리 */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <div>
@@ -250,7 +220,7 @@ export function MyLibraryPanel() {
               활성 과목 ({subjects.length})
             </h2>
             <p className="text-[11px] text-[var(--hp-text-3)] mt-0.5">
-              과목명·색상·목표 회독수·단원명을 자유롭게 수정할 수 있습니다.
+              과목을 펼쳐 단원 순서(드래그)·단원별 색상·소단원을 설정하세요.
             </p>
           </div>
           <button
@@ -263,7 +233,6 @@ export function MyLibraryPanel() {
           </button>
         </div>
 
-        {/* 내 과목 / 교재 5초 인라인 추가 폼 */}
         {showAddSubject && (
           <div className="p-3.5 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border-strong)] space-y-2.5">
             <div className="text-xs font-medium">새 과목 · 교재 추가</div>
@@ -298,7 +267,7 @@ export function MyLibraryPanel() {
               type="text"
               value={newSubjTopicsRaw}
               onChange={(e) => setNewSubjTopicsRaw(e.target.value)}
-              placeholder="단원명 쉼표(,) 구분 입력 (선택, 예: 1강 총칙, 2강 물권)"
+              placeholder="단원명 쉼표(,) 구분 입력 (선택)"
               className="w-full h-9 px-3 rounded-lg bg-[var(--hp-bg)] border border-[var(--hp-border)] text-xs text-[var(--hp-text)] placeholder:text-[var(--hp-text-3)] outline-none"
             />
             <div className="flex items-center justify-between gap-2">
@@ -309,7 +278,11 @@ export function MyLibraryPanel() {
                     type="button"
                     onClick={() => {
                       setNewSubjStage(st);
-                      if (newSubjCategory === "공통" || newSubjCategory === "1차" || newSubjCategory === "2차") {
+                      if (
+                        newSubjCategory === "공통" ||
+                        newSubjCategory === "1차" ||
+                        newSubjCategory === "2차"
+                      ) {
                         setNewSubjCategory(st);
                       }
                     }}
@@ -344,8 +317,6 @@ export function MyLibraryPanel() {
             const allTopics = subj.units.flatMap((u) =>
               u.topics.map((t) => ({ unitId: u.id, topic: t }))
             );
-            const firstUnitId = subj.units[0]?.id;
-            const topicDraft = newTopicDraftBySubj[subj.id] || "";
 
             return (
               <li
@@ -353,7 +324,6 @@ export function MyLibraryPanel() {
                 className="rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] overflow-hidden"
               >
                 <div className="p-3.5 space-y-3">
-                  {/* 과목 인라인 편집 모드 vs 기본 표시 모드 */}
                   {isEditingThis ? (
                     <div className="space-y-2">
                       <input
@@ -423,7 +393,6 @@ export function MyLibraryPanel() {
                         </div>
                       </button>
 
-                      {/* 목표 회독수 조절 + 과목 수정(연필) + 보관/삭제 */}
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           type="button"
@@ -432,7 +401,7 @@ export function MyLibraryPanel() {
                               targetRounds: Math.max(1, targetRounds - 1),
                             })
                           }
-                          className="w-6 h-6 rounded-md border border-[var(--hp-border)] flex items-center justify-center text-[var(--hp-text-2)] hover:text-[var(--hp-text)]"
+                          className="w-6 h-6 rounded-md border border-[var(--hp-border)] flex items-center justify-center text-[var(--hp-text-2)]"
                           aria-label="목표 회독 감소"
                         >
                           <Minus className="w-3 h-3 stroke-[1.75]" />
@@ -447,7 +416,7 @@ export function MyLibraryPanel() {
                               targetRounds: Math.min(5, targetRounds + 1),
                             })
                           }
-                          className="w-6 h-6 rounded-md border border-[var(--hp-border)] flex items-center justify-center text-[var(--hp-text-2)] hover:text-[var(--hp-text)]"
+                          className="w-6 h-6 rounded-md border border-[var(--hp-border)] flex items-center justify-center text-[var(--hp-text-2)]"
                           aria-label="목표 회독 증가"
                         >
                           <Plus className="w-3 h-3 stroke-[1.75]" />
@@ -455,8 +424,13 @@ export function MyLibraryPanel() {
 
                         <button
                           type="button"
-                          onClick={() => startEditSubject(subj)}
-                          className="w-7 h-7 rounded-md hover:bg-[var(--hp-bg)] flex items-center justify-center text-[var(--hp-text-3)] hover:text-[var(--hp-text)] ml-0.5"
+                          onClick={() => {
+                            setEditingSubjId(subj.id);
+                            setEditSubjTitle(subj.title);
+                            setEditSubjCategory(subj.category || subj.examStage);
+                            setEditSubjStage(subj.examStage);
+                          }}
+                          className="w-7 h-7 rounded-md hover:bg-[var(--hp-bg)] flex items-center justify-center text-[var(--hp-text-3)] hover:text-[var(--hp-text)]"
                           title="과목명·분류 수정"
                           aria-label={`${subj.title} 수정`}
                         >
@@ -478,7 +452,7 @@ export function MyLibraryPanel() {
                             type="button"
                             onClick={() => archiveSubject(subj.id)}
                             className="w-7 h-7 rounded-md hover:bg-[var(--hp-bg)] flex items-center justify-center text-[var(--hp-text-3)] hover:text-[var(--hp-text)]"
-                            title="과목 보관(숨기기)"
+                            title="과목 보관"
                             aria-label="과목 보관"
                           >
                             <Archive className="w-3.5 h-3.5 stroke-[1.5]" />
@@ -488,7 +462,6 @@ export function MyLibraryPanel() {
                     </div>
                   )}
 
-                  {/* 저채도 뮤트 8색 컬러 선택 */}
                   <div className="flex items-center gap-1.5 pl-6">
                     {MUTED_COLOR_CHOICES.map((hex) => {
                       const active = color.toUpperCase() === hex.toUpperCase();
@@ -510,134 +483,23 @@ export function MyLibraryPanel() {
                   </div>
                 </div>
 
-                {/* 펼침: 단원 인라인 추가 · 이름 수정 · 숨김/삭제 (내부 스크롤바 제거) */}
                 {isExpanded && (
-                  <div className="px-3.5 pb-3.5 pt-3 border-t border-[var(--hp-border)] bg-[var(--hp-bg)]/50 space-y-2.5">
-                    {firstUnitId && (
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          const clean = topicDraft.trim();
-                          if (!clean) return;
-                          addCustomTopic(firstUnitId, clean, clean.slice(0, 6), 30);
-                          setNewTopicDraftBySubj((prev) => ({ ...prev, [subj.id]: "" }));
-                        }}
-                        className="flex items-center gap-1.5"
-                      >
-                        <input
-                          type="text"
-                          value={topicDraft}
-                          onChange={(e) =>
-                            setNewTopicDraftBySubj((prev) => ({
-                              ...prev,
-                              [subj.id]: e.target.value,
-                            }))
-                          }
-                          placeholder="이 과목에 커스텀 단원 추가..."
-                          className="flex-1 h-8 px-2.5 rounded-md bg-[var(--hp-bg)] border border-[var(--hp-border)] text-xs text-[var(--hp-text)] placeholder:text-[var(--hp-text-3)] outline-none"
-                        />
-                        <button
-                          type="submit"
-                          disabled={!topicDraft.trim()}
-                          className="h-8 px-2.5 rounded-md bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] text-xs font-medium disabled:opacity-40"
-                        >
-                          추가
-                        </button>
-                      </form>
-                    )}
-
-                    <ul className="divide-y divide-[var(--hp-border)]">
-                      {allTopics.map(({ unitId, topic }) => {
-                        const isEditingTopic = editingTopicId === topic.id;
-                        const isCustomTopic = topic.id.startsWith("custom-");
-
-                        return (
-                          <li
-                            key={topic.id}
-                            className="py-2 flex items-center justify-between gap-2 text-xs"
-                          >
-                            {isEditingTopic ? (
-                              <div className="flex items-center gap-1.5 flex-1">
-                                <input
-                                  type="text"
-                                  value={editTopicTitle}
-                                  onChange={(e) => setEditTopicTitle(e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") saveEditTopic(topic.id);
-                                  }}
-                                  className="flex-1 h-7 px-2 rounded bg-[var(--hp-bg)] border border-[var(--hp-border-strong)] text-xs text-[var(--hp-text)] outline-none"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => saveEditTopic(topic.id)}
-                                  className="h-7 px-2 rounded bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] text-[11px] font-medium"
-                                >
-                                  저장
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingTopicId(null)}
-                                  className="p-1 text-[var(--hp-text-3)]"
-                                  aria-label="취소"
-                                >
-                                  <X className="w-3.5 h-3.5 stroke-[1.5]" />
-                                </button>
-                              </div>
-                            ) : (
-                              <>
-                                <span className="truncate text-[var(--hp-text-2)] flex-1">
-                                  {topic.topicNo ? `${topic.topicNo}. ` : ""}
-                                  {topic.title}
-                                </span>
-                                <div className="flex items-center gap-0.5 shrink-0">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingTopicId(topic.id);
-                                      setEditTopicTitle(topic.title);
-                                    }}
-                                    className="p-1 rounded text-[var(--hp-text-3)] hover:text-[var(--hp-text)]"
-                                    title="단원명 수정"
-                                    aria-label={`${topic.title} 이름 수정`}
-                                  >
-                                    <Pencil className="w-3 h-3 stroke-[1.5]" />
-                                  </button>
-                                  {isCustomTopic ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => deleteCustomTopic(unitId, topic.id)}
-                                      className="p-1 rounded text-[var(--hp-text-3)] hover:text-[var(--hp-danger)]"
-                                      title="커스텀 단원 삭제"
-                                      aria-label={`${topic.title} 삭제`}
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5 stroke-[1.5]" />
-                                    </button>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => hideTopic(topic.id)}
-                                      className="p-1 rounded text-[var(--hp-text-3)] hover:text-[var(--hp-text)]"
-                                      title="단원 숨기기"
-                                      aria-label={`${topic.title} 숨기기`}
-                                    >
-                                      <EyeOff className="w-3.5 h-3.5 stroke-[1.5]" />
-                                    </button>
-                                  )}
-                                </div>
-                              </>
-                            )}
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
+                  <TopicListEditor
+                    subjectId={subj.id}
+                    firstUnitId={subj.units[0]?.id}
+                    topics={allTopics}
+                    onAddTopic={addCustomTopic}
+                    onUpdateTopic={updateTopicCustomization}
+                    onDeleteCustomTopic={deleteCustomTopic}
+                    onHideTopic={hideTopic}
+                    onReorderTopics={reorderSubjectTopics}
+                  />
                 )}
               </li>
             );
           })}
         </ul>
 
-        {/* 숨긴 단원 일괄 복원 */}
         {hiddenTopicIds.length > 0 && (
           <button
             type="button"
@@ -652,7 +514,6 @@ export function MyLibraryPanel() {
           </button>
         )}
 
-        {/* 보관된 과목 복구 */}
         {archivedSubjects.length > 0 && (
           <div className="pt-3 border-t border-[var(--hp-border)] space-y-2">
             <div className="text-[11px] font-medium text-[var(--hp-text-3)]">
@@ -670,7 +531,7 @@ export function MyLibraryPanel() {
                   <button
                     type="button"
                     onClick={() => restoreSubject(subj.id)}
-                    className="px-2.5 py-1 rounded-md border border-[var(--hp-border-strong)] text-[11px] text-[var(--hp-text)] flex items-center gap-1 shrink-0 hover:bg-[var(--hp-surface-2)]"
+                    className="px-2.5 py-1 rounded-md border border-[var(--hp-border-strong)] text-[11px] text-[var(--hp-text)] flex items-center gap-1 shrink-0"
                   >
                     <ArchiveRestore className="w-3 h-3 stroke-[1.5]" />
                     <span>복구</span>

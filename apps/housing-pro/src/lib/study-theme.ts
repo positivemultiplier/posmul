@@ -23,6 +23,20 @@ const FALLBACK_MUTED_HEXES = [
   "#6B9080",
 ] as const;
 
+/** 단원별 기본 분산용 저채도 뮤트 10색 팔레트 */
+export const TOPIC_MUTED_PALETTE = [
+  "#4F7CAC", // 슬레이트 블루
+  "#C97B63", // 테라코타
+  "#5B8C73", // 세이지 그린
+  "#7D6FA3", // 뮤트 라벤더
+  "#B89B5E", // 앤틱 머스타드
+  "#5B8A9A", // 스틸 틸
+  "#B06C7A", // 더스티 로즈
+  "#7A8C5B", // 올리브
+  "#8A7360", // 웜 토프
+  "#6A7B9C", // 인디고 그레이
+] as const;
+
 const LEGACY_BRIGHT_COLORS = new Set([
   "#FF5A36",
   "#3B82F6",
@@ -59,6 +73,19 @@ export function getMutedSubjectColor(subjectTitle: string, customHex?: string, i
     }
   }
   return FALLBACK_MUTED_HEXES[Math.abs(index) % FALLBACK_MUTED_HEXES.length];
+}
+
+/**
+ * 단원별 색상 반환:
+ * 1순위: 사용자가 단원에 직접 지정한 유효한 커스텀 색상
+ * 2순위: 단원 순번 기반 기본 분산 저채도 뮤트 컬러 (단원마다 서로 다른 색)
+ */
+export function getMutedTopicColor(customHex?: string, topicIndex = 0): string {
+  const normalized = (customHex || "").trim().toUpperCase();
+  if (/^#[0-9A-F]{6}$/.test(normalized) && !LEGACY_BRIGHT_COLORS.has(normalized)) {
+    return customHex!.trim();
+  }
+  return TOPIC_MUTED_PALETTE[Math.abs(topicIndex) % TOPIC_MUTED_PALETTE.length];
 }
 
 /** 초 단위를 HH:MM:SS 형태로 포맷 */

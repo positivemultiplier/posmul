@@ -1,24 +1,26 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Check, ChevronRight, Play, Plus, Users } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Play, Plus, Users } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useStudyGroupsStore } from "@/lib/study-groups-store";
 import { useGlobalUx } from "@/components/mobile/global-ux-provider";
 import { getSavedPersonaMode } from "@/lib/pro-workspace-store";
-import type { StudyTodoItem } from "@/data/study-textbooks";
+import type { StudyTodoItem, StudyTopicNode } from "@/data/study-textbooks";
 import {
   getStudySecondsForDate,
   getSubjectSecondsForDate,
   getTodoLoggedSeconds,
+  getTopicSecondsForDate,
 } from "@/lib/study-metrics";
 import {
   formatClockHHMMSS,
   formatCompactMinutes,
   getMutedSubjectColor,
+  getMutedTopicColor,
 } from "@/lib/study-theme";
 
 const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"] as const;
@@ -35,13 +37,15 @@ export default function SimpleTimerHomePage() {
   const { joinedRooms, rooms, activeRoomId } = useStudyGroupsStore();
   const { dailyGoalMinutes, quickTimer, startQuickTimer, openTimerOverlay } = useGlobalUx();
 
+  // 과목 펼침 상태 -> 소속 단원 목록(단원별 컬러·오늘 순공·원탭 시작) 표시
+  const [expandedSubjectId, setExpandedSubjectId] = useState<string | null>(null);
+
   useEffect(() => {
     if (getSavedPersonaMode() === "pro") {
       router.replace("/pro");
     }
   }, [router]);
 
-  // 오늘 플래너에 등록된 할 일을 과목별로 정확히 매칭
   const todayTodosBySubject = useMemo(() => {
     const map = new Map<string, StudyTodoItem[]>();
     const todayTodos = todos.filter((t) => t.dueDate === todayISO);
@@ -64,10 +68,14 @@ export default function SimpleTimerHomePage() {
     return map;
   }, [todos, todayISO, subjects]);
 
-  // 과목별 실제 순공시간(초) — SSOT(studySessions) 단일 집계
   const subjectSecondsMap = useMemo(
     () => getSubjectSecondsForDate(studySessions, subjects, todayISO),
     [studySessions, subjects, todayISO]
+  );
+
+  const topicSecondsMap = useMemo(
+    () => getTopicSecondsForDate(studySessions, todayISO),
+    [studySessions, todayISO]
   );
 
   const subjectRows = useMemo(() => {
@@ -77,16 +85,18 @@ export default function SimpleTimerHomePage() {
       const isRunningThis = quickTimer.active && quickTimer.subjectId === subj.id;
       const liveSec = baseSec + (isRunningThis ? quickTimer.elapsedSeconds : 0);
       const dayTodos = todayTodosBySubject.get(subj.id) || [];
+      const flatTopics = subj.units.flatMap((u) => u.topics);
 
       return {
         id: subj.id,
         title: subj.title,
         shortTitle: subj.shortTitle || subj.title,
-        examStage: subj.examStage,
+        categoryLabel: subj.category || subj.examStage,
         color,
         liveSeconds: liveSec,
         isRunning: isRunningThis,
         dayTodos,
+        topics: flatTopics,
       };
     });
   }, [subjects, subjectSecondsMap, quickTimer, todayTodosBySubject]);
@@ -115,7 +125,7 @@ export default function SimpleTimerHomePage() {
   }, [activeGroup]);
 
   const handleStartSubject = (row: (typeof subjectRows)[number]) => {
-    if (quickTimer.active && quickTimer.subjectId === row.id) {
+    if (quickTimer.active && quickTimer.subjectId === row.id && !quickTimer.topicId) {
       openTimerOverlay();
       return;
     }
@@ -124,10 +134,30 @@ export default function SimpleTimerHomePage() {
       id: nextPendingTodo?.id || row.id,
       subjectId: row.id,
       subjectTitle: row.shortTitle,
-      subjectColor: row.color,
+      subjectColor: nextPendingTodo?.subjectColor || row.color,
       topicId: nextPendingTodo?.topicId,
       todoId: nextPendingTodo?.id,
       title: nextPendingTodo ? nextPendingTodo.title : `${row.shortTitle} 집중 학습`,
+    });
+  };
+
+  const handleStartTopic = (
+    row: (typeof subjectRows)[number],
+    topic: StudyTopicNode,
+    topicIdx: number
+  ) => {
+    if (quickTimer.active && quickTimer.topicId === topic.id) {
+      openTimerOverlay();
+      return;
+    }
+    const tColor = getMutedTopicColor(topic.color, topicIdx);
+    startQuickTimer({
+      id: topic.id,
+      subjectId: row.id,
+      subjectTitle: row.shortTitle,
+      subjectColor: tColor,
+      topicId: topic.id,
+      title: `${topic.topicNo ? `${topic.topicNo}. ` : ""}${topic.title}`,
     });
   };
 
@@ -140,7 +170,7 @@ export default function SimpleTimerHomePage() {
       id: todo.id,
       subjectId: row.id,
       subjectTitle: row.shortTitle,
-      subjectColor: row.color,
+      subjectColor: todo.subjectColor || row.color,
       topicId: todo.topicId,
       todoId: todo.id,
       title: todo.title,
@@ -190,11 +220,11 @@ export default function SimpleTimerHomePage() {
           )}
         </section>
 
-        {/* ② 과목별 타이머 + 오늘 플래너 할 일 실시간 연동 리스트 */}
+        {/* ② 과목 · 단원별 타이머 + 오늘 플래너 할 일 리스트 */}
         <section className="px-5 py-4 flex-1">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-xs font-medium text-[var(--hp-text-3)]">
-              과목 및 오늘 계획 ({totalTodayTodos}건)
+              과목 탭하여 단원 선택 · 오늘 계획 {totalTodayTodos}건
             </h2>
             <Link
               href="/study/planner"
@@ -206,118 +236,191 @@ export default function SimpleTimerHomePage() {
           </div>
 
           <ul className="divide-y divide-[var(--hp-border)]">
-            {subjectRows.map((row) => (
-              <li key={row.id} className="py-3.5 space-y-2.5">
-                {/* 과목 메인 행 */}
-                <div className="flex items-center justify-between gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleStartSubject(row)}
-                    className="flex items-center gap-3 min-w-0 flex-1 text-left"
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full shrink-0"
-                      style={{ backgroundColor: row.color }}
-                    />
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium text-[var(--hp-text)] truncate">
-                        {row.title}
-                      </div>
-                      <div className="text-[11px] text-[var(--hp-text-3)] mt-0.5">
-                        {row.examStage}
-                        {row.dayTodos.length > 0 ? ` · 오늘 할 일 ${row.dayTodos.length}건` : ""}
-                      </div>
-                    </div>
-                  </button>
-
-                  <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm hp-tabular text-[var(--hp-text-2)]">
-                      {formatClockHHMMSS(row.liveSeconds)}
-                    </span>
+            {subjectRows.map((row) => {
+              const isExpanded = expandedSubjectId === row.id;
+              return (
+                <li key={row.id} className="py-3.5 space-y-2.5">
+                  {/* 과목 메인 행 (좌측 탭 시 단원 펼침, 우측 ▶ 탭 시 즉시 시작) */}
+                  <div className="flex items-center justify-between gap-3">
                     <button
                       type="button"
-                      onClick={() => handleStartSubject(row)}
-                      className={`w-9 h-9 rounded-full border flex items-center justify-center transition ${
-                        row.isRunning
-                          ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] border-transparent"
-                          : "border-[var(--hp-border-strong)] text-[var(--hp-text)] hover:bg-[var(--hp-surface)]"
-                      }`}
-                      aria-label={`${row.title} 타이머 시작`}
+                      onClick={() => setExpandedSubjectId(isExpanded ? null : row.id)}
+                      className="flex items-center gap-2.5 min-w-0 flex-1 text-left"
                     >
-                      <Play className="w-3.5 h-3.5 stroke-[1.75] translate-x-[0.5px]" />
+                      {isExpanded ? (
+                        <ChevronDown className="w-3.5 h-3.5 stroke-[1.5] text-[var(--hp-text-3)] shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 stroke-[1.5] text-[var(--hp-text-3)] shrink-0" />
+                      )}
+                      <span
+                        className="w-2 h-2 rounded-full shrink-0"
+                        style={{ backgroundColor: row.color }}
+                      />
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium text-[var(--hp-text)] truncate">
+                          {row.title}
+                        </div>
+                        <div className="text-[11px] text-[var(--hp-text-3)] mt-0.5">
+                          {row.topics.length}단원
+                          {row.dayTodos.length > 0 ? ` · 오늘 할 일 ${row.dayTodos.length}건` : ""}
+                        </div>
+                      </div>
                     </button>
+
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-sm hp-tabular text-[var(--hp-text-2)]">
+                        {formatClockHHMMSS(row.liveSeconds)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleStartSubject(row)}
+                        className={`w-9 h-9 rounded-full border flex items-center justify-center transition ${
+                          row.isRunning
+                            ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] border-transparent"
+                            : "border-[var(--hp-border-strong)] text-[var(--hp-text)] hover:bg-[var(--hp-surface)]"
+                        }`}
+                        aria-label={`${row.title} 타이머 시작`}
+                      >
+                        <Play className="w-3.5 h-3.5 stroke-[1.75] translate-x-[0.5px]" />
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* 이 과목에 연결된 오늘 플래너 할 일 (체크 & 개별 실행) */}
-                {row.dayTodos.length > 0 && (
-                  <ul className="pl-5 space-y-1.5">
-                    {row.dayTodos.map((todo) => {
-                      const isTodoRunning = quickTimer.active && quickTimer.todoId === todo.id;
-                      const loggedSec =
-                        getTodoLoggedSeconds(studySessions, todo.id, todo.loggedSeconds ?? 0) +
-                        (isTodoRunning ? quickTimer.elapsedSeconds : 0);
+                  {/* 오늘 플래너 할 일 (항상 노출) */}
+                  {row.dayTodos.length > 0 && (
+                    <ul className="pl-5 space-y-1.5">
+                      {row.dayTodos.map((todo) => {
+                        const isTodoRunning = quickTimer.active && quickTimer.todoId === todo.id;
+                        const loggedSec =
+                          getTodoLoggedSeconds(studySessions, todo.id, todo.loggedSeconds ?? 0) +
+                          (isTodoRunning ? quickTimer.elapsedSeconds : 0);
 
-                      return (
-                        <li
-                          key={todo.id}
-                          className="flex items-center justify-between gap-2 py-1 px-2.5 rounded-lg bg-[var(--hp-surface)] border border-[var(--hp-border)]"
-                        >
-                          <button
-                            type="button"
-                            onClick={() => toggleTodo(todo.id)}
-                            className="flex items-center gap-2 min-w-0 flex-1 text-left"
+                        return (
+                          <li
+                            key={todo.id}
+                            className="flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg bg-[var(--hp-surface)] border border-[var(--hp-border)]"
                           >
-                            <span
-                              className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center shrink-0 ${
-                                todo.completed
-                                  ? "bg-[var(--hp-accent)] border-[var(--hp-accent)] text-[var(--hp-accent-fg)]"
-                                  : "border-[var(--hp-border-strong)]"
-                              }`}
+                            <button
+                              type="button"
+                              onClick={() => toggleTodo(todo.id)}
+                              className="flex items-center gap-2 min-w-0 flex-1 text-left"
                             >
-                              {todo.completed && <Check className="w-2.5 h-2.5 stroke-[2.2]" />}
-                            </span>
-                            <span
-                              className={`text-xs truncate ${
-                                todo.completed
-                                  ? "line-through text-[var(--hp-text-3)]"
-                                  : "text-[var(--hp-text)]"
-                              }`}
-                            >
-                              {todo.title}
-                            </span>
-                          </button>
-
-                          <div className="flex items-center gap-2 shrink-0">
-                            {loggedSec > 0 && (
-                              <span className="text-[10.5px] hp-tabular text-[var(--hp-text-3)]">
-                                {loggedSec >= 60
-                                  ? formatCompactMinutes(Math.floor(loggedSec / 60))
-                                  : `${loggedSec}s`}
+                              <span
+                                className={`w-3.5 h-3.5 rounded-[3px] border flex items-center justify-center shrink-0 ${
+                                  todo.completed
+                                    ? "bg-[var(--hp-accent)] border-[var(--hp-accent)] text-[var(--hp-accent-fg)]"
+                                    : "border-[var(--hp-border-strong)]"
+                                }`}
+                              >
+                                {todo.completed && <Check className="w-2.5 h-2.5 stroke-[2.2]" />}
                               </span>
-                            )}
-                            {!todo.completed && (
+                              <span
+                                className="w-1.5 h-1.5 rounded-full shrink-0"
+                                style={{ backgroundColor: todo.subjectColor || row.color }}
+                              />
+                              <span
+                                className={`text-xs truncate ${
+                                  todo.completed
+                                    ? "line-through text-[var(--hp-text-3)]"
+                                    : "text-[var(--hp-text)]"
+                                }`}
+                              >
+                                {todo.title}
+                              </span>
+                            </button>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              {loggedSec > 0 && (
+                                <span className="text-[10.5px] hp-tabular text-[var(--hp-text-3)]">
+                                  {loggedSec >= 60
+                                    ? formatCompactMinutes(Math.floor(loggedSec / 60))
+                                    : `${loggedSec}s`}
+                                </span>
+                              )}
+                              {!todo.completed && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartTodo(row, todo)}
+                                  className={`w-6 h-6 rounded-full border flex items-center justify-center transition ${
+                                    isTodoRunning
+                                      ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] border-transparent"
+                                      : "border-[var(--hp-border)] hover:border-[var(--hp-border-strong)] text-[var(--hp-text-2)]"
+                                  }`}
+                                  aria-label={`${todo.title} 타이머 시작`}
+                                >
+                                  <Play className="w-2.5 h-2.5 stroke-[2] translate-x-[0.5px]" />
+                                </button>
+                              )}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+
+                  {/* 펼침: 과목 소속 단원별 타이머 (각 단원 고유 색상 + 오늘 단원 순공) */}
+                  {isExpanded && row.topics.length > 0 && (
+                    <ul className="pl-5 pt-1 space-y-1">
+                      {row.topics.map((topic, tIdx) => {
+                        const tColor = getMutedTopicColor(topic.color, tIdx);
+                        const isTopicRunning =
+                          quickTimer.active && quickTimer.topicId === topic.id;
+                        const tSec =
+                          (topicSecondsMap.get(topic.id) ?? 0) +
+                          (isTopicRunning ? quickTimer.elapsedSeconds : 0);
+
+                        return (
+                          <li
+                            key={topic.id}
+                            className="flex items-center justify-between gap-2 py-1.5 px-2.5 rounded-lg border border-[var(--hp-border)] hover:border-[var(--hp-border-strong)] transition"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleStartTopic(row, topic, tIdx)}
+                              className="flex items-start gap-2 min-w-0 flex-1 text-left"
+                            >
+                              <span
+                                className="w-2 h-2 rounded-full mt-1 shrink-0"
+                                style={{ backgroundColor: tColor }}
+                              />
+                              <div className="min-w-0">
+                                <div className="text-xs text-[var(--hp-text)] truncate">
+                                  {topic.topicNo ? `${topic.topicNo}. ` : ""}
+                                  {topic.title}
+                                </div>
+                                {topic.subItems && topic.subItems.length > 0 && (
+                                  <div className="text-[10px] text-[var(--hp-text-3)] truncate mt-0.5">
+                                    {topic.subItems.join(" · ")}
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[11px] hp-tabular text-[var(--hp-text-3)]">
+                                {formatClockHHMMSS(tSec)}
+                              </span>
                               <button
                                 type="button"
-                                onClick={() => handleStartTodo(row, todo)}
+                                onClick={() => handleStartTopic(row, topic, tIdx)}
                                 className={`w-6 h-6 rounded-full border flex items-center justify-center transition ${
-                                  isTodoRunning
+                                  isTopicRunning
                                     ? "bg-[var(--hp-accent)] text-[var(--hp-accent-fg)] border-transparent"
-                                    : "border-[var(--hp-border)] hover:border-[var(--hp-border-strong)] text-[var(--hp-text-2)]"
+                                    : "border-[var(--hp-border)] text-[var(--hp-text-2)] hover:text-[var(--hp-text)]"
                                 }`}
-                                aria-label={`${todo.title} 타이머 시작`}
+                                aria-label={`${topic.title} 타이머 시작`}
                               >
                                 <Play className="w-2.5 h-2.5 stroke-[2] translate-x-[0.5px]" />
                               </button>
-                            )}
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </li>
-            ))}
+                            </div>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                </li>
+              );
+            })}
           </ul>
         </section>
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { AlertCircle, ArrowRight } from "lucide-react";
+import { AlertCircle, ArrowRight, ChevronDown, ChevronRight } from "lucide-react";
 import { MobileAppShell } from "@/components/mobile/mobile-app-shell";
 import { useStudyCurriculum } from "@/lib/study-curriculum-store";
 import { useStudyAuth } from "@/components/auth/study-auth-provider";
@@ -12,13 +12,18 @@ import {
   computeStudyStreakDays,
   getSubjectSecondsInPeriod,
   getTopicCompletedRoundCount,
+  getTopicSecondsInPeriod,
   getTotalSecondsInPeriod,
 } from "@/lib/study-metrics";
 import {
   fetchStudyAnalyticsAction,
   type StudyAnalyticsResult,
 } from "@/app/actions/exam-study.actions";
-import { formatCompactMinutes, getMutedSubjectColor } from "@/lib/study-theme";
+import {
+  formatCompactMinutes,
+  getMutedSubjectColor,
+  getMutedTopicColor,
+} from "@/lib/study-theme";
 
 type StatsPeriod = "day" | "week" | "month" | "all";
 
@@ -35,6 +40,7 @@ export default function StudyStatsPage() {
   const { dailyGoalMinutes } = useGlobalUx();
 
   const [period, setPeriod] = useState<StatsPeriod>("week");
+  const [expandedSubjectId, setExpandedSubjectId] = useState<string | null>(null);
   const [analytics, setAnalytics] = useState<StudyAnalyticsResult | null>(null);
 
   useEffect(() => {
@@ -62,7 +68,7 @@ export default function StudyStatsPage() {
     return set;
   }, [period, periodDays, todayISO]);
 
-  // 순공시간 SSOT: studySessions 단일 집계 (회독 체크/10분 블록 뻥튀기 0%)
+  // 순공시간 SSOT: 과목별 + 단원별 동시 집계
   const totalSeconds = useMemo(
     () => getTotalSecondsInPeriod(studySessions, allowedDates),
     [studySessions, allowedDates]
@@ -79,26 +85,52 @@ export default function StudyStatsPage() {
     [studySessions, subjects, allowedDates]
   );
 
-  const subjectBreakdown = useMemo(() => {
-    return subjects.map((subj, idx) => ({
-      id: subj.id,
-      title: subj.shortTitle || subj.title,
-      color: getMutedSubjectColor(subj.title, subj.color, idx),
-      seconds: subjectSecondsMap.get(subj.id) ?? 0,
-      minutes: Math.floor((subjectSecondsMap.get(subj.id) ?? 0) / 60),
-    }));
-  }, [subjects, subjectSecondsMap]);
+  const topicSecondsMap = useMemo(
+    () => getTopicSecondsInPeriod(studySessions, allowedDates),
+    [studySessions, allowedDates]
+  );
 
-  // 전체 회독 달성률 & 취약 단원 TOP 5 (재복습 필요 + 회독 부족 + 기출 정답률 반영)
-  const { roundAchievePct, weakTopics } = useMemo(() => {
-    const topicAccuracyByCode = new Map<string, { accuracyPct: number | null; solved: number }>();
+  const topicAccuracyByCode = useMemo(() => {
+    const map = new Map<string, { accuracyPct: number | null; solved: number }>();
     for (const t of analytics?.topics || []) {
-      topicAccuracyByCode.set(t.chapterCode, {
-        accuracyPct: t.accuracyPct,
-        solved: t.solvedCount,
-      });
+      map.set(t.chapterCode, { accuracyPct: t.accuracyPct, solved: t.solvedCount });
     }
+    return map;
+  }, [analytics]);
 
+  // 과목별 기본 집계 + 소속 단원별 세부 드릴다운 데이터
+  const subjectBreakdown = useMemo(() => {
+    return subjects.map((subj, idx) => {
+      const subjSec = subjectSecondsMap.get(subj.id) ?? 0;
+      const flatTopics = subj.units.flatMap((u) => u.topics).map((topic, tIdx) => {
+        const tSec = topicSecondsMap.get(topic.id) ?? 0;
+        const examMeta = topic.chapterCode ? topicAccuracyByCode.get(topic.chapterCode) : undefined;
+        return {
+          id: topic.id,
+          chapterCode: topic.chapterCode,
+          title: `${topic.topicNo ? `${topic.topicNo}. ` : ""}${topic.title}`,
+          color: getMutedTopicColor(topic.color, tIdx),
+          seconds: tSec,
+          minutes: Math.floor(tSec / 60),
+          rounds: getTopicCompletedRoundCount(roundsByTopic, topic.id),
+          accuracyPct: examMeta?.accuracyPct ?? null,
+        };
+      });
+
+      return {
+        id: subj.id,
+        title: subj.shortTitle || subj.title,
+        fullTitle: subj.title,
+        color: getMutedSubjectColor(subj.title, subj.color, idx),
+        seconds: subjSec,
+        minutes: Math.floor(subjSec / 60),
+        topics: flatTopics,
+      };
+    });
+  }, [subjects, subjectSecondsMap, topicSecondsMap, topicAccuracyByCode, roundsByTopic]);
+
+  // 전체 회독 달성률 & 취약 단원 TOP 5
+  const { roundAchievePct, weakTopics } = useMemo(() => {
     let targetUnits = 0;
     let achievedUnits = 0;
     const rows: Array<{
@@ -110,40 +142,32 @@ export default function StudyStatsPage() {
       rounds: number;
       needsReview: boolean;
       accuracyPct: number | null;
-      solvedCount: number;
     }> = [];
 
-    subjects.forEach((subj, idx) => {
-      const color = getMutedSubjectColor(subj.title, subj.color, idx);
+    subjects.forEach((subj) => {
       const targetR = subj.targetRounds ?? 3;
-      for (const unit of subj.units) {
-        for (const topic of unit.topics) {
-          const recs = roundsByTopic[topic.id] || [];
-          const rounds = getTopicCompletedRoundCount(roundsByTopic, topic.id);
-          const needsReview = recs.some((r) => r.status === "review");
-          targetUnits += targetR;
-          achievedUnits += Math.min(targetR, rounds);
+      const flatTopics = subj.units.flatMap((u) => u.topics);
+      flatTopics.forEach((topic, tIdx) => {
+        const recs = roundsByTopic[topic.id] || [];
+        const rounds = getTopicCompletedRoundCount(roundsByTopic, topic.id);
+        const needsReview = recs.some((r) => r.status === "review");
+        targetUnits += targetR;
+        achievedUnits += Math.min(targetR, rounds);
 
-          const examMeta = topic.chapterCode
-            ? topicAccuracyByCode.get(topic.chapterCode)
-            : undefined;
-
-          rows.push({
-            topicId: topic.id,
-            chapterCode: topic.chapterCode,
-            subjectTitle: subj.shortTitle || subj.title,
-            color,
-            topicTitle: `${topic.topicNo ? `${topic.topicNo}. ` : ""}${topic.title}`,
-            rounds,
-            needsReview,
-            accuracyPct: examMeta?.accuracyPct ?? null,
-            solvedCount: examMeta?.solved ?? 0,
-          });
-        }
-      }
+        const examMeta = topic.chapterCode ? topicAccuracyByCode.get(topic.chapterCode) : undefined;
+        rows.push({
+          topicId: topic.id,
+          chapterCode: topic.chapterCode,
+          subjectTitle: subj.shortTitle || subj.title,
+          color: getMutedTopicColor(topic.color, tIdx),
+          topicTitle: `${topic.topicNo ? `${topic.topicNo}. ` : ""}${topic.title}`,
+          rounds,
+          needsReview,
+          accuracyPct: examMeta?.accuracyPct ?? null,
+        });
+      });
     });
 
-    // 우선순위: 재복습 표시(review) > 기출 정답률 낮은 순 > 회독 수 적은 순
     rows.sort((a, b) => {
       if (a.needsReview !== b.needsReview) return a.needsReview ? -1 : 1;
       const aAcc = a.accuracyPct ?? 101;
@@ -156,9 +180,8 @@ export default function StudyStatsPage() {
       roundAchievePct: targetUnits > 0 ? Math.round((achievedUnits / targetUnits) * 100) : 0,
       weakTopics: rows.slice(0, 5),
     };
-  }, [subjects, roundsByTopic, analytics]);
+  }, [subjects, roundsByTopic, topicAccuracyByCode]);
 
-  // 목표 달성률
   const activeDatesCount = useMemo(() => {
     const set = new Set(studySessions.map((s) => s.dateISO));
     return Math.max(1, set.size);
@@ -171,7 +194,6 @@ export default function StudyStatsPage() {
       ? Math.min(100, Math.round((totalSeconds / targetTotalSeconds) * 100))
       : 0;
 
-  // 과목 편식 경고
   const imbalanceWarning = useMemo(() => {
     if (totalSeconds < 1800 || subjectBreakdown.length < 2) return null;
     const top = [...subjectBreakdown].sort((a, b) => b.seconds - a.seconds)[0];
@@ -188,7 +210,6 @@ export default function StudyStatsPage() {
     return null;
   }, [subjectBreakdown, totalSeconds]);
 
-  // 순수 SVG 도넛 차트
   const donutSegments = useMemo(() => {
     const r = 42;
     const circumference = 2 * Math.PI * r;
@@ -238,7 +259,7 @@ export default function StudyStatsPage() {
       </div>
 
       <div className="px-4 py-5 space-y-7">
-        {/* ① 핵심 3숫자 (실제 타이머 순공 SSOT) */}
+        {/* ① 핵심 3숫자 + 기출·회독 요약 */}
         <section className="space-y-2.5">
           <div className="grid grid-cols-3 gap-2">
             <div className="p-3.5 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)]">
@@ -259,7 +280,6 @@ export default function StudyStatsPage() {
             </div>
           </div>
 
-          {/* 기출 풀이 · 정답률 & 회독 달성률 요약 바 */}
           <div className="grid grid-cols-2 gap-2">
             <div className="px-3.5 py-2.5 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] flex items-center justify-between text-xs">
               <span className="text-[var(--hp-text-3)]">기출 정답률</span>
@@ -277,58 +297,125 @@ export default function StudyStatsPage() {
           </div>
         </section>
 
-        {/* ② 순수 SVG 과목 밸런스 + 편식 경고 */}
+        {/* ② 과목별 집계 + 과목 탭 시 세부 단원 드릴다운 */}
         <section className="space-y-3">
-          <h2 className="text-xs font-medium text-[var(--hp-text-2)]">과목 밸런스</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-medium text-[var(--hp-text-2)]">과목 밸런스</h2>
+            <span className="text-[11px] text-[var(--hp-text-3)]">과목 탭 시 단원별 상세</span>
+          </div>
 
-          <div className="p-4 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] flex items-center gap-5">
-            <svg viewBox="0 0 100 100" className="w-24 h-24 shrink-0 -rotate-90">
-              <circle
-                cx="50"
-                cy="50"
-                r={donutSegments.r}
-                fill="none"
-                stroke="var(--hp-surface-2)"
-                strokeWidth="9"
-              />
-              {donutSegments.arcs.map((arc) => (
+          <div className="p-4 rounded-xl bg-[var(--hp-surface)] border border-[var(--hp-border)] space-y-4">
+            <div className="flex items-center gap-5">
+              <svg viewBox="0 0 100 100" className="w-24 h-24 shrink-0 -rotate-90">
                 <circle
-                  key={arc.id}
                   cx="50"
                   cy="50"
                   r={donutSegments.r}
                   fill="none"
-                  stroke={arc.color}
+                  stroke="var(--hp-surface-2)"
                   strokeWidth="9"
-                  strokeDasharray={arc.dasharray}
-                  strokeDashoffset={arc.dashoffset}
                 />
-              ))}
-            </svg>
+                {donutSegments.arcs.map((arc) => (
+                  <circle
+                    key={arc.id}
+                    cx="50"
+                    cy="50"
+                    r={donutSegments.r}
+                    fill="none"
+                    stroke={arc.color}
+                    strokeWidth="9"
+                    strokeDasharray={arc.dasharray}
+                    strokeDashoffset={arc.dashoffset}
+                  />
+                ))}
+              </svg>
 
-            <ul className="flex-1 space-y-2 min-w-0">
-              {subjectBreakdown.map((s) => {
-                const pct =
-                  totalSeconds > 0 ? Math.round((s.seconds / totalSeconds) * 100) : 0;
+              <ul className="flex-1 space-y-1.5 min-w-0">
+                {subjectBreakdown.map((s) => {
+                  const pct = totalSeconds > 0 ? Math.round((s.seconds / totalSeconds) * 100) : 0;
+                  const isOpen = expandedSubjectId === s.id;
+                  return (
+                    <li key={s.id}>
+                      <button
+                        type="button"
+                        onClick={() => setExpandedSubjectId(isOpen ? null : s.id)}
+                        className="w-full py-1 flex items-center justify-between gap-2 text-xs hover:opacity-80 transition text-left"
+                      >
+                        <span className="flex items-center gap-1.5 min-w-0">
+                          {isOpen ? (
+                            <ChevronDown className="w-3 h-3 stroke-[1.5] text-[var(--hp-text-3)] shrink-0" />
+                          ) : (
+                            <ChevronRight className="w-3 h-3 stroke-[1.5] text-[var(--hp-text-3)] shrink-0" />
+                          )}
+                          <span
+                            className="w-2 h-2 rounded-full shrink-0"
+                            style={{ backgroundColor: s.color }}
+                          />
+                          <span className="truncate text-[var(--hp-text)]">{s.title}</span>
+                        </span>
+                        <span className="hp-tabular text-[var(--hp-text-2)] shrink-0">
+                          {s.seconds > 0 && s.minutes === 0
+                            ? `${s.seconds}s`
+                            : formatCompactMinutes(s.minutes)}{" "}
+                          · {pct}%
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+
+            {/* 선택한 과목의 단원별 세부 통계 드릴다운 */}
+            {expandedSubjectId &&
+              (() => {
+                const target = subjectBreakdown.find((s) => s.id === expandedSubjectId);
+                if (!target) return null;
                 return (
-                  <li key={s.id} className="flex items-center justify-between gap-2 text-xs">
-                    <span className="flex items-center gap-2 min-w-0">
-                      <span
-                        className="w-2 h-2 rounded-full shrink-0"
-                        style={{ backgroundColor: s.color }}
-                      />
-                      <span className="truncate text-[var(--hp-text)]">{s.title}</span>
-                    </span>
-                    <span className="hp-tabular text-[var(--hp-text-2)] shrink-0">
-                      {s.seconds > 0 && s.minutes === 0
-                        ? `${s.seconds}s`
-                        : formatCompactMinutes(s.minutes)}{" "}
-                      · {pct}%
-                    </span>
-                  </li>
+                  <div className="pt-3 border-t border-[var(--hp-border)] space-y-2">
+                    <div className="flex items-center justify-between text-[11px] text-[var(--hp-text-2)]">
+                      <span className="font-medium">{target.fullTitle} 단원별 상세</span>
+                      <span className="hp-tabular text-[var(--hp-text-3)]">
+                        {target.topics.length}단원
+                      </span>
+                    </div>
+                    <ul className="divide-y divide-[var(--hp-border)]">
+                      {target.topics.map((t) => {
+                        const sharePct =
+                          target.seconds > 0 ? Math.round((t.seconds / target.seconds) * 100) : 0;
+                        return (
+                          <li key={t.id} className="py-2 space-y-1 text-xs">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="flex items-center gap-1.5 min-w-0">
+                                <span
+                                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                                  style={{ backgroundColor: t.color }}
+                                />
+                                <span className="truncate text-[var(--hp-text)]">{t.title}</span>
+                              </span>
+                              <span className="hp-tabular text-[11px] text-[var(--hp-text-2)] shrink-0">
+                                {t.seconds > 0 && t.minutes === 0
+                                  ? `${t.seconds}s`
+                                  : formatCompactMinutes(t.minutes)}{" "}
+                                · {t.rounds}R
+                                {t.accuracyPct !== null ? ` · ${t.accuracyPct}%` : ""}
+                              </span>
+                            </div>
+                            {sharePct > 0 && (
+                              <div className="h-[2px] w-full rounded-full bg-[var(--hp-bg)] overflow-hidden">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{ width: `${sharePct}%`, backgroundColor: t.color }}
+                                />
+                              </div>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
                 );
-              })}
-            </ul>
+              })()}
           </div>
 
           {imbalanceWarning && (
